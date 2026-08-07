@@ -81,6 +81,22 @@ export const findAuditLogsByOrg = async (
 	});
 };
 
+export const deleteAuditLogsBefore = (cutoff: Date) =>
+	db.auditLog.deleteMany({ where: { createdAt: { lt: cutoff } } });
+
+export const searchAuditLogs = (
+	text: string,
+	opts: { take?: number; skip?: number } = {},
+) => {
+	const { take = 50, skip = 0 } = opts;
+	return db.auditLog.findMany({
+		where: { action: { contains: text } },
+		take,
+		skip,
+		orderBy: { createdAt: "desc" },
+	});
+};
+
 export const countAuditLogsByOrg = async (
 	organizationId: string,
 	opts: { action?: string } = {},

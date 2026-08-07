@@ -1,4 +1,4 @@
-import { db } from "@fuutu/db";
+import { searchAuditLogs, searchNotifications } from "@fuutu/db";
 import { searchConfig } from "../config";
 import type {
 	SearchDocument,
@@ -23,16 +23,9 @@ export const postgresProvider: SearchProvider = {
 		const results: SearchResult[] = [];
 
 		if (!query.collection || query.collection === "notifications") {
-			const notifications = await db.notification.findMany({
-				where: {
-					OR: [
-						{ title: { contains: query.text } },
-						{ body: { contains: query.text } },
-					],
-				},
+			const notifications = await searchNotifications(query.text, {
 				take: limit,
 				skip: offset,
-				orderBy: { createdAt: "desc" },
 			});
 			for (const n of notifications) {
 				results.push({
@@ -46,11 +39,9 @@ export const postgresProvider: SearchProvider = {
 		}
 
 		if (!query.collection || query.collection === "audit-logs") {
-			const logs = await db.auditLog.findMany({
-				where: { action: { contains: query.text } },
+			const logs = await searchAuditLogs(query.text, {
 				take: limit,
 				skip: offset,
-				orderBy: { createdAt: "desc" },
 			});
 			for (const log of logs) {
 				results.push({

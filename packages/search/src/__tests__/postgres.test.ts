@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@fuutu/db", () => ({
-	db: {
-		notification: { findMany: vi.fn() },
-		auditLog: { findMany: vi.fn() },
-	},
+	searchNotifications: vi.fn(),
+	searchAuditLogs: vi.fn(),
 }));
 
 vi.mock("@fuutu/logs", () => ({
@@ -16,12 +14,12 @@ vi.mock("@fuutu/logs", () => ({
 	}),
 }));
 
-import { db } from "@fuutu/db";
+import { searchAuditLogs, searchNotifications } from "@fuutu/db";
 import { postgresProvider } from "../providers/postgres";
 import { testSearchProviderContract } from "./provider-contract.test";
 
-vi.mocked(db.notification.findMany).mockResolvedValue([]);
-vi.mocked(db.auditLog.findMany).mockResolvedValue([]);
+vi.mocked(searchNotifications).mockResolvedValue([]);
+vi.mocked(searchAuditLogs).mockResolvedValue([]);
 
 testSearchProviderContract("postgres", () => postgresProvider, {
 	searchBehavior: "resolves",
@@ -31,12 +29,12 @@ testSearchProviderContract("postgres", () => postgresProvider, {
 
 describe("PostgresProvider", () => {
 	beforeEach(() => {
-		vi.mocked(db.notification.findMany).mockReset();
-		vi.mocked(db.auditLog.findMany).mockReset();
+		vi.mocked(searchNotifications).mockReset();
+		vi.mocked(searchAuditLogs).mockReset();
 	});
 
 	it("searches notifications and audit logs by default", async () => {
-		vi.mocked(db.notification.findMany).mockResolvedValue([
+		vi.mocked(searchNotifications).mockResolvedValue([
 			{
 				id: "n1",
 				userId: "u1",
@@ -48,7 +46,7 @@ describe("PostgresProvider", () => {
 				readAt: null,
 			},
 		]);
-		vi.mocked(db.auditLog.findMany).mockResolvedValue([
+		vi.mocked(searchAuditLogs).mockResolvedValue([
 			{
 				id: "a1",
 				action: "user.login",
@@ -62,15 +60,15 @@ describe("PostgresProvider", () => {
 
 		const results = await postgresProvider.search({ text: "hello" });
 
-		expect(db.notification.findMany).toHaveBeenCalledTimes(1);
-		expect(db.auditLog.findMany).toHaveBeenCalledTimes(1);
+		expect(searchNotifications).toHaveBeenCalledTimes(1);
+		expect(searchAuditLogs).toHaveBeenCalledTimes(1);
 		expect(results).toHaveLength(2);
 		expect(results[0]?.collection).toBe("notifications");
 		expect(results[1]?.collection).toBe("audit-logs");
 	});
 
 	it("filters by collection when specified", async () => {
-		vi.mocked(db.auditLog.findMany).mockResolvedValue([
+		vi.mocked(searchAuditLogs).mockResolvedValue([
 			{
 				id: "a1",
 				action: "user.login",
@@ -87,8 +85,8 @@ describe("PostgresProvider", () => {
 			collection: "audit-logs",
 		});
 
-		expect(db.notification.findMany).not.toHaveBeenCalled();
-		expect(db.auditLog.findMany).toHaveBeenCalledTimes(1);
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).toHaveBeenCalledTimes(1);
 		expect(results).toHaveLength(1);
 		expect(results[0]?.collection).toBe("audit-logs");
 	});

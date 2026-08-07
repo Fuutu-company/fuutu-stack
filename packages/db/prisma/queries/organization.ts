@@ -22,3 +22,16 @@ export const getInvitationOrganizationId = (invitationId: string) =>
 		where: { id: invitationId },
 		select: { organizationId: true },
 	});
+
+export const findPendingInvitation = (email: string) =>
+	db.invitation.findFirst({
+		where: {
+			email: email.toLowerCase(),
+			status: "pending",
+			expiresAt: { gt: new Date() },
+		},
+		select: { id: true },
+	});
+
+export const countOrganizationMembers = (organizationId: string) =>
+	db.member.count({ where: { organizationId } });

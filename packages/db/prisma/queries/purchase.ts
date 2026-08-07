@@ -36,3 +36,9 @@ export const getPurchaseByProviderSubscriptionId = (
 	db.purchase.findUnique({
 		where: { provider_subscriptionId: { provider, subscriptionId } },
 	});
+
+export const getTrialingSubscriptions = () =>
+	db.purchase.findMany({
+		where: { type: "SUBSCRIPTION", status: "TRIALING" },
+		include: { user: { select: { locale: true } } },
+	});

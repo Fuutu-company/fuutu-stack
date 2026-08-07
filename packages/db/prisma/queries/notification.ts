@@ -57,3 +57,18 @@ export const markAllRead = (userId: string) =>
 		where: { userId, readAt: null },
 		data: { readAt: new Date() },
 	});
+
+export const searchNotifications = (
+	text: string,
+	opts: { take?: number; skip?: number } = {},
+) => {
+	const { take = 50, skip = 0 } = opts;
+	return db.notification.findMany({
+		where: {
+			OR: [{ title: { contains: text } }, { body: { contains: text } }],
+		},
+		take,
+		skip,
+		orderBy: { createdAt: "desc" },
+	});
+};

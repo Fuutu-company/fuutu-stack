@@ -23,3 +23,8 @@ export const setLastActiveOrganization = (
 
 export const setPaymentsCustomerId = (id: string, paymentsCustomerId: string) =>
 	db.user.update({ where: { id }, data: { paymentsCustomerId } });
+
+export const updateUserProfile = (
+	id: string,
+	data: { name?: string; image?: string },
+) => db.user.update({ where: { id }, data });

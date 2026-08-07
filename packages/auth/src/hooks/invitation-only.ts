@@ -7,7 +7,7 @@
  * Implemented as a `databaseHooks.user.create.before` guard that throws a
  * Better-Auth `APIError` to short-circuit the sign-up endpoint.
  */
-import { db } from "@fuutu/db";
+import { findPendingInvitation } from "@fuutu/db";
 import { APIError } from "better-auth/api";
 import { authConfig } from "../config";
 
@@ -23,14 +23,7 @@ export async function assertInvitationForSignup(user: {
 		});
 	}
 
-	const invite = await db.invitation.findFirst({
-		where: {
-			email,
-			status: "pending",
-			expiresAt: { gt: new Date() },
-		},
-		select: { id: true },
-	});
+	const invite = await findPendingInvitation(email);
 
 	if (!invite) {
 		throw new APIError("FORBIDDEN", {

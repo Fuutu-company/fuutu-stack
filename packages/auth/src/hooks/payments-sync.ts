@@ -6,7 +6,7 @@
  * `@fuutu/payments`. Failures are logged but never propagate —
  * auth flows must not block on payment-provider availability.
  */
-import { db, getPurchasesByUserId } from "@fuutu/db";
+import { countOrganizationMembers, getPurchasesByUserId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import {
 	cancelAllSubscriptionsForOrganization,
@@ -24,7 +24,7 @@ export async function syncSeatsForOrganization(
 	organizationId: string,
 ): Promise<void> {
 	try {
-		const seats = await db.member.count({ where: { organizationId } });
+		const seats = await countOrganizationMembers(organizationId);
 		await updateSeatsInOrganizationSubscription(organizationId, seats);
 	} catch (err) {
 		log.error("syncSeatsForOrganization failed", {
