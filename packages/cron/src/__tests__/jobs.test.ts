@@ -14,10 +14,8 @@ vi.mock("@fuutu/webhooks", () => ({
 }));
 
 vi.mock("@fuutu/db", () => ({
-	db: {
-		auditLog: { deleteMany: vi.fn() },
-		purchase: { findMany: vi.fn() },
-	},
+	deleteAuditLogsBefore: vi.fn(),
+	getTrialingSubscriptions: vi.fn(),
 	notificationExists: vi.fn().mockResolvedValue(false),
 }));
 
@@ -51,7 +49,11 @@ vi.mock("@fuutu/telemetry", () => ({
 	pingTelemetry: vi.fn(),
 }));
 
-import { db, notificationExists } from "@fuutu/db";
+import {
+	deleteAuditLogsBefore,
+	getTrialingSubscriptions,
+	notificationExists,
+} from "@fuutu/db";
 import { getMessagesForLocale } from "@fuutu/i18n";
 import { pingTelemetry } from "@fuutu/telemetry";
 import { processPendingDeliveries } from "@fuutu/webhooks";
@@ -87,19 +89,19 @@ describe("webhookRetryJob", () => {
 
 describe("auditLogCleanupJob", () => {
 	beforeEach(() => {
-		vi.mocked(db.auditLog.deleteMany).mockReset();
+		vi.mocked(deleteAuditLogsBefore).mockReset();
 	});
 
 	it("deletes old audit logs and returns count", async () => {
-		vi.mocked(db.auditLog.deleteMany).mockResolvedValue({ count: 42 });
+		vi.mocked(deleteAuditLogsBefore).mockResolvedValue({ count: 42 });
 		const result = await auditLogCleanupJob.run();
 		expect(result.success).toBe(true);
 		expect(result.processed).toBe(42);
-		expect(db.auditLog.deleteMany).toHaveBeenCalledTimes(1);
+		expect(deleteAuditLogsBefore).toHaveBeenCalledTimes(1);
 	});
 
 	it("returns failure on error", async () => {
-		vi.mocked(db.auditLog.deleteMany).mockRejectedValue(
+		vi.mocked(deleteAuditLogsBefore).mockRejectedValue(
 			new Error("permission denied"),
 		);
 		const result = await auditLogCleanupJob.run();
@@ -110,14 +112,14 @@ describe("auditLogCleanupJob", () => {
 
 describe("subscriptionReminderJob", () => {
 	beforeEach(() => {
-		vi.mocked(db.purchase.findMany).mockReset();
+		vi.mocked(getTrialingSubscriptions).mockReset();
 		vi.mocked(notificationExists).mockReset();
 		vi.mocked(notificationExists).mockResolvedValue(false);
 		vi.mocked(getMessagesForLocale).mockClear();
 	});
 
 	it("sends notifications for trialing subscriptions", async () => {
-		vi.mocked(db.purchase.findMany).mockResolvedValue([
+		vi.mocked(getTrialingSubscriptions).mockResolvedValue([
 			{
 				id: "p1",
 				userId: "u1",
@@ -138,7 +140,7 @@ describe("subscriptionReminderJob", () => {
 	});
 
 	it("skips purchases without userId", async () => {
-		vi.mocked(db.purchase.findMany).mockResolvedValue([
+		vi.mocked(getTrialingSubscriptions).mockResolvedValue([
 			{ id: "p1", userId: null, subscriptionId: "sub-1", user: null },
 		] as never);
 		const result = await subscriptionReminderJob.run();
@@ -146,7 +148,7 @@ describe("subscriptionReminderJob", () => {
 	});
 
 	it("skips purchases that already have a reminder notification today (idempotency)", async () => {
-		vi.mocked(db.purchase.findMany).mockResolvedValue([
+		vi.mocked(getTrialingSubscriptions).mockResolvedValue([
 			{
 				id: "p1",
 				userId: "u1",
@@ -162,7 +164,7 @@ describe("subscriptionReminderJob", () => {
 	});
 
 	it("loads messages for each user's locale", async () => {
-		vi.mocked(db.purchase.findMany).mockResolvedValue([
+		vi.mocked(getTrialingSubscriptions).mockResolvedValue([
 			{
 				id: "p1",
 				userId: "u1",
@@ -184,7 +186,7 @@ describe("subscriptionReminderJob", () => {
 	});
 
 	it("falls back to en when user locale is null", async () => {
-		vi.mocked(db.purchase.findMany).mockResolvedValue([
+		vi.mocked(getTrialingSubscriptions).mockResolvedValue([
 			{
 				id: "p1",
 				userId: "u1",

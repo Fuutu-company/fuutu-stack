@@ -10,14 +10,10 @@ vi.mock("@fuutu/ai", () => ({
 }));
 
 vi.mock("@fuutu/db", () => ({
-	db: {
-		user: {
-			update: vi.fn(),
-		},
-	},
+	updateUserProfile: vi.fn(),
 }));
 
-const { db } = await import("@fuutu/db");
+const { updateUserProfile: updateUserProfileDb } = await import("@fuutu/db");
 
 const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
@@ -55,7 +51,7 @@ describe("users.updateProfile", () => {
 	});
 
 	it("updates the user profile with valid input", async () => {
-		vi.mocked(db.user.update).mockResolvedValue({
+		vi.mocked(updateUserProfileDb).mockResolvedValue({
 			id: "user-1",
 			email: "test@fuutu.local",
 			name: "Updated Name",
@@ -70,9 +66,9 @@ describe("users.updateProfile", () => {
 			{ context: authenticatedContext },
 		);
 
-		expect(db.user.update).toHaveBeenCalledWith({
-			where: { id: "user-1" },
-			data: { name: "Updated Name", image: "https://example.com/avatar.png" },
+		expect(updateUserProfileDb).toHaveBeenCalledWith("user-1", {
+			name: "Updated Name",
+			image: "https://example.com/avatar.png",
 		});
 		expect(result).toEqual({
 			id: "user-1",
