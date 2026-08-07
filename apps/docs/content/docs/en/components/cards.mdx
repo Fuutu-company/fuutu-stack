@@ -1,0 +1,52 @@
+---
+title: Cards
+description: Grid layout for feature highlights and navigation links.
+tags: ["components", "cards"]
+---
+
+Cards create a responsive grid of clickable items. Great for landing pages
+and navigation.
+
+## Basic cards
+
+<Cards>
+	<Card title="Getting Started" href="../getting-started/introduction" icon="rocket" />
+	<Card title="Guides" href="../guides/markdown" icon="book-open" />
+	<Card title="Components" href="../components/callout" icon="blocks" />
+	<Card title="API Reference" href="../api-reference/overview" icon="code" />
+</Cards>
+
+## Cards with descriptions
+
+<Cards>
+	<Card title="Installation" href="../getting-started/installation" icon="download">
+		Get the docs app running locally.
+	</Card>
+	<Card title="Configuration" href="../getting-started/configuration" icon="settings">
+		Configure frontmatter, i18n, and theming.
+	</Card>
+	<Card title="Search" href="../guides/search" icon="search">
+		Built-in full-text search.
+	</Card>
+	<Card title="Theming" href="../guides/theming" icon="palette">
+		Dark mode and CSS variables.
+	</Card>
+</Cards>
+
+## External links
+
+<Cards>
+	<Card title="Fumadocs" href="https://fumadocs.dev" icon="external-link" />
+	<Card title="Next.js" href="https://nextjs.org" icon="external-link" />
+	<Card title="Tailwind CSS" href="https://tailwindcss.com" icon="external-link" />
+</Cards>
+
+## Usage
+
+```mdx
+<Cards>
+  <Card title="Title" href="/path" icon="rocket">
+    Optional description text.
+  </Card>
+</Cards>
+```

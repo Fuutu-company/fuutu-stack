@@ -1,0 +1,27 @@
+{
+	"onboarding": {
+		"title": "Willkommen bei Fuutu Stack",
+		"description": "Lass uns dein Konto in wenigen Schritten einrichten.",
+		"step": "Schritt {current} von {total}",
+		"profile": {
+			"heading": "Dein Profil",
+			"fullName": "Vollständiger Name",
+			"placeholder": "Max Mustermann",
+			"continue": "Weiter"
+		},
+		"org": {
+			"heading": "Organisation erstellen",
+			"description": "Mit Organisationen kannst du im Team zusammenarbeiten. Du kannst diesen Schritt überspringen und später eine erstellen.",
+			"name": "Organisationsname",
+			"placeholder": "Acme GmbH",
+			"create": "Organisation erstellen",
+			"skip": "Vorerst überspringen"
+		},
+		"done": {
+			"heading": "Alles bereit",
+			"description": "Dein Konto ist einsatzbereit. Auf zum Dashboard.",
+			"cta": "Zum Dashboard"
+		},
+		"failed": "Onboarding-Schritt konnte nicht gespeichert werden."
+	}
+}

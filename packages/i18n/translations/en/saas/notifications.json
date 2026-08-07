@@ -1,0 +1,23 @@
+{
+	"notifications": {
+		"title": "Notifications",
+		"description": "Your recent activity and alerts.",
+		"markAllRead": "Mark all as read",
+		"marking": "Marking…",
+		"markAllReadError": "Failed to mark notifications as read.",
+		"markReadError": "Failed to mark notification as read.",
+		"empty": "No notifications",
+		"loading": "Loading notifications…",
+		"emptyDescription": "You're all caught up!",
+		"unread": "unread",
+		"bellAria": "Notifications",
+		"moreThanNine": "9+",
+		"viewAll": "View all",
+		"types": {
+			"info": "Info",
+			"success": "Success",
+			"warning": "Warning",
+			"error": "Error"
+		}
+	}
+}

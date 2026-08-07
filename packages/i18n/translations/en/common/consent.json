@@ -1,0 +1,8 @@
+{
+	"consent": {
+		"title": "We use privacy-friendly analytics",
+		"description": "Help us improve Fuutu Stack by allowing anonymous usage analytics. No cookies, no personal data — you can change your mind any time.",
+		"accept": "Accept",
+		"deny": "Decline"
+	}
+}

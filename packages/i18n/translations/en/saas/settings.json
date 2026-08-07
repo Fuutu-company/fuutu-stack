@@ -1,0 +1,107 @@
+{
+	"settings": {
+		"title": "Settings",
+		"account": {
+			"title": "Account",
+			"language": {
+				"title": "Language",
+				"description": "Select your preferred language",
+				"notifications": {
+					"success": "Language updated successfully",
+					"error": "Failed to update language"
+				}
+			}
+		},
+		"tabs": {
+			"profile": "Profile",
+			"security": "Security",
+			"sessions": "Sessions",
+			"danger": "Danger zone",
+			"billing": "Billing"
+		},
+		"profile": {
+			"title": "Profile",
+			"description": "Update your personal information.",
+			"fullName": "Full name",
+			"fullNamePlaceholder": "Jane Doe",
+			"emailLabel": "Email",
+			"saved": "Profile updated.",
+			"failed": "Could not update profile."
+		},
+		"changePassword": {
+			"title": "Change password",
+			"description": "Your other sessions will be signed out after changing.",
+			"current": "Current password",
+			"new": "New password",
+			"confirm": "Confirm new password",
+			"submit": "Update password",
+			"submitting": "Updating…",
+			"mismatch": "Passwords do not match",
+			"success": "Password changed.",
+			"failed": "Could not change password."
+		},
+		"twoFactor": {
+			"title": "Two-factor authentication",
+			"description": "Add an extra layer of security to your account.",
+			"enable": "Enable 2FA",
+			"disable": "Disable 2FA",
+			"statusEnabled": "Enabled",
+			"statusDisabled": "Disabled",
+			"currentPassword": "Current password",
+			"currentPasswordPlaceholder": "Required to change 2FA",
+			"qrTitle": "Scan the QR code",
+			"qrDescription": "Use your authenticator app, then save the backup codes below.",
+			"qrManualEntry": "Can't scan? Enter the setup key manually",
+			"backupCodes": "Backup codes",
+			"backupCodesHint": "Store these somewhere safe — each can be used once.",
+			"done": "I've saved them",
+			"failed": "Could not change 2FA settings."
+		},
+		"passkeys": {
+			"title": "Passkeys",
+			"description": "Sign in without a password using your device's biometrics.",
+			"add": "Add passkey",
+			"adding": "Adding…",
+			"none": "No passkeys yet.",
+			"removeSr": "Remove passkey",
+			"defaultName": "Passkey",
+			"addedOn": "Added {date}",
+			"failed": "Could not change passkey."
+		},
+		"sessions": {
+			"title": "Active sessions",
+			"description": "Sign out devices you no longer use.",
+			"current": "Current",
+			"revoke": "Revoke",
+			"revokeAll": "Revoke all other sessions",
+			"none": "No active sessions.",
+			"failed": "Could not revoke session."
+		},
+		"danger": {
+			"title": "Delete account",
+			"description": "This permanently deletes your account and all its data.",
+			"button": "Delete account",
+			"confirmTitle": "Delete this account?",
+			"confirmDescription": "This action cannot be undone. All your data will be permanently removed.",
+			"confirmPassword": "Confirm password",
+			"confirmCta": "Yes, delete",
+			"failed": "Could not delete account."
+		},
+		"billing": {
+			"title": "Billing",
+			"description": "Manage your subscription and payment method.",
+			"manageHint": "Upgrade or change your plan anytime.",
+			"upgrade": "Upgrade plan"
+		},
+		"emailChange": {
+			"title": "Change email",
+			"description": "Request an email change. A verification link will be sent to your new address.",
+			"newEmail": "New email",
+			"newEmailPlaceholder": "new@example.com",
+			"submit": "Send verification",
+			"sending": "Sending…",
+			"sent": "Verification email sent. Check your new inbox.",
+			"failed": "Could not request email change."
+		}
+	}
+}

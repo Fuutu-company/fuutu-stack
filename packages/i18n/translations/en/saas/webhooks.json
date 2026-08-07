@@ -1,0 +1,102 @@
+{
+	"webhooks": {
+		"title": "Webhooks",
+		"description": "Send real-time event notifications to your services.",
+		"create": "Add webhook",
+		"creating": "Creating…",
+		"empty": "No webhooks yet",
+		"emptyDescription": "Add a webhook endpoint to receive event notifications.",
+		"emptyCta": "Add webhook",
+		"col": {
+			"url": "URL",
+			"events": "Events",
+			"active": "Active",
+			"lastDelivery": "Last delivery",
+			"createdAt": "Created",
+			"actions": "Actions"
+		},
+		"events": {
+			"subscription": {
+				"created": "Subscription created",
+				"updated": "Subscription updated",
+				"canceled": "Subscription canceled"
+			},
+			"invoice": {
+				"paid": "Invoice paid",
+				"created": "Invoice created"
+			},
+			"user": {
+				"created": "User created",
+				"updated": "User updated"
+			},
+			"organization": {
+				"created": "Organization created",
+				"updated": "Organization updated"
+			},
+			"member": {
+				"invited": "Member invited",
+				"removed": "Member removed"
+			}
+		},
+		"createDialog": {
+			"title": "Add webhook",
+			"description": "Enter the URL to receive events and select which events to subscribe to.",
+			"urlLabel": "Endpoint URL",
+			"urlPlaceholder": "https://your-service.com/webhook",
+			"eventsLabel": "Events to subscribe",
+			"submit": "Create webhook"
+		},
+		"editDialog": {
+			"title": "Edit webhook",
+			"description": "Update the URL, events, or active state.",
+			"urlLabel": "Endpoint URL",
+			"eventsLabel": "Events to subscribe",
+			"activeLabel": "Active",
+			"submit": "Save changes",
+			"saving": "Saving…"
+		},
+		"secretDialog": {
+			"title": "Your webhook secret",
+			"description": "Copy this signing secret now — you won't be able to see it again.",
+			"copy": "Copy",
+			"copied": "Copied!",
+			"done": "I've copied it"
+		},
+		"deleteDialog": {
+			"title": "Delete webhook?",
+			"description": "This endpoint will stop receiving events immediately.",
+			"confirm": "Delete"
+		},
+		"deliveries": {
+			"title": "Delivery history",
+			"status": {
+				"success": "Success",
+				"failed": "Failed",
+				"pending": "Pending",
+				"retrying": "Retrying"
+			},
+			"col": {
+				"status": "Status",
+				"responseCode": "Response",
+				"timestamp": "Timestamp",
+				"event": "Event"
+			},
+			"empty": "No deliveries yet.",
+			"show": "Show deliveries",
+			"hide": "Hide"
+		},
+		"edit": "Edit",
+		"delete": "Delete",
+		"deleteAria": "Delete webhook",
+		"yes": "Yes",
+		"no": "No",
+		"never": "Never",
+		"loading": "Loading webhooks…",
+		"failed": "Could not perform this action.",
+		"created": "Webhook created.",
+		"updated": "Webhook updated.",
+		"deleted": "Webhook deleted.",
+		"deleteError": "Failed to delete webhook. Please try again.",
+		"updateError": "Failed to update webhook. Please try again."
+	}
+}

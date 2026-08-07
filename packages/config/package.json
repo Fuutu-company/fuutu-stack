@@ -1,0 +1,17 @@
+{
+	"name": "@fuutu/config",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./index.ts",
+		"./theme.css": {
+			"style": "./theme.css",
+			"default": "./theme.css"
+		},
+		"./tsconfig.base.json": {
+			"default": "./tsconfig.base.json"
+		},
+		"./assets/*": "./assets/*"
+	}
+}

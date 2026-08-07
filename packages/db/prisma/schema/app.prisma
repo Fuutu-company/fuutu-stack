@@ -1,0 +1,215 @@
+// ──────────────────────────────────────────────────────────────────────────
+// Fuutu domain models. Live in the `app` Postgres schema so they're clearly
+// separated from Better-Auth managed tables (which sit in `auth`).
+// ──────────────────────────────────────────────────────────────────────────
+
+enum PurchaseType {
+  SUBSCRIPTION
+  ONE_TIME
+
+  @@schema("app")
+}
+
+enum PurchaseStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+  INCOMPLETE
+
+  @@schema("app")
+}
+
+model Purchase {
+  id             String         @id @default(cuid())
+  type           PurchaseType
+  status         PurchaseStatus
+  provider       String
+  priceId        String
+  productId      String?
+  subscriptionId String?
+  customerId     String?
+  quantity       Int            @default(1)
+  // Polymorphic owner: exactly one of userId / organizationId must be set.
+  userId         String?
+  user           User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([provider, subscriptionId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("purchase")
+  @@schema("app")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_log")
+  @@schema("app")
+}
+
+model ApiKey {
+  id             String        @id @default(cuid())
+  key            String        @unique // hashed full key (sha256)
+  prefix         String // visible prefix shown in UI (e.g. "futu_sk_abc...")
+  name           String
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime      @default(now())
+  revokedAt      DateTime?
+
+  @@index([userId])
+  @@index([organizationId])
+  @@map("api_key")
+  @@schema("app")
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerInvoiceId String?
+  url               String?
+  pdfUrl            String?
+  amount            Decimal          @db.Decimal(10,2)
+  currency          String        @default("USD")
+  status            String // "paid", "open", "void", "uncollectible"
+  issuedAt          DateTime
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([status])
+  @@map("invoice")
+  @@schema("app")
+}
+
+model Webhook {
+  id             String           @id @default(cuid())
+  url            String
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  secret         String // HMAC signing secret
+  events         String[] // array of event types
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  deliveries     WebhookDelivery[]
+
+  @@index([organizationId])
+  @@map("webhook")
+  @@schema("app")
+}
+
+model WebhookDelivery {
+  id           String    @id @default(cuid())
+  webhookId    String
+  webhook      Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  eventId      String
+  eventType    String
+  payload      Json
+  status       String // "success", "failed", "pending", "retrying"
+  responseCode Int?
+  responseBody String?
+  attempt      Int       @default(1)
+  attemptedAt  DateTime  @default(now())
+  nextRetryAt  DateTime?
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([nextRetryAt])
+  @@map("webhook_delivery")
+  @@schema("app")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "billing", "org", "auth", "system", etc.
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([readAt])
+  @@index([createdAt])
+  @@map("notification")
+  @@schema("app")
+}
+
+model ChatConversation {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String          @default("New conversation")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  messages       ChatMessage[]
+
+  @@index([userId])
+  @@index([organizationId])
+  @@map("chat_conversation")
+  @@schema("app")
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // "user", "assistant", "system"
+  content        String
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId])
+  @@map("chat_message")
+  @@schema("app")
+}
+
+model Contact {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String
+  company        String?
+  phone          String?
+  status         String        @default("lead") // "lead", "qualified", "proposal", "won", "lost"
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("contact")
+  @@schema("app")
+}

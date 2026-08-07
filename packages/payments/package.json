@@ -1,0 +1,36 @@
+{
+	"name": "@fuutu/payments",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config.ts"
+		},
+		"./features": {
+			"default": "./src/features.ts"
+		},
+		"./plans": {
+			"default": "./src/plans.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/db": "workspace:*",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"@polar-sh/sdk": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

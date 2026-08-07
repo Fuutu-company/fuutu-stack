@@ -1,0 +1,71 @@
+---
+title: Steps
+description: Numbered step sequences for tutorials and procedures.
+tags: ["components", "steps"]
+---
+
+Steps create numbered, visual step sequences. Perfect for tutorials and
+installation guides.
+
+## Basic steps
+
+<Steps>
+	### First step
+
+  Do this first.
+
+	### Second step
+
+  Then do this.
+
+	### Third step
+
+  Finally, do this.
+</Steps>
+
+## Steps with code
+
+<Steps>
+	### Install the package
+
+  ```bash
+  pnpm add @fuutu/ui
+  ```
+
+	### Import the component
+
+  ```tsx
+  import { Button } from "@fuutu/ui";
+  ```
+
+	### Use it
+
+  ```tsx
+  <Button>Click me</Button>
+  ```
+
+	### Verify
+
+  <Callout type="success">
+    You should see a button on your page.
+  </Callout>
+</Steps>
+
+## Usage
+
+```mdx
+<Steps>
+  ### First step
+
+  Do this first.
+
+  ### Second step
+
+  Then do this.
+</Steps>
+```
+
+<Callout type="info">
+  Steps are automatically numbered. Use `###` (h3) headings inside
+  `<Steps>` to create each step.
+</Callout>

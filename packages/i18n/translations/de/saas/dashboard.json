@@ -1,0 +1,57 @@
+{
+	"dashboard": {
+		"title": "Dashboard",
+		"welcome": "Willkommen zurück! Hier läuft dein Stack.",
+		"stats": {
+			"authEvents": "Letzte Auth-Ereignisse",
+			"authEventsDescription": "Protokollierte Sicherheitsereignisse",
+			"plansConfigured": "Pläne konfiguriert",
+			"plansConfiguredDescription": "Verfügbare Zahlungs-Tiers",
+			"providersSwappable": "Austauschbare Provider",
+			"providersSwappableDescription": "Domänen mit austauschbaren Backends",
+			"localesShipped": "Sprachen verfügbar",
+			"localesShippedDescription": "Unterstützte Sprachen"
+		},
+		"activity": {
+			"title": "Letzte Aktivität",
+			"empty": "Keine letzten Aktivitäten",
+			"error": "Letzte Aktivitäten konnten nicht geladen werden",
+			"justNow": "gerade eben",
+			"minutesAgo": "{n, plural, one {vor # Minute} other {vor # Minuten}}",
+			"hoursAgo": "{n, plural, one {vor # Stunde} other {vor # Stunden}}",
+			"daysAgo": "{n, plural, one {vor # Tag} other {vor # Tagen}}",
+			"unknownUser": "Unbekannt",
+			"unknownAction": "hat eine Aktion ausgeführt",
+			"signedIn": "hat sich angemeldet",
+			"signedOut": "hat sich abgemeldet",
+			"signedUp": "hat sich registriert",
+			"sessionCreated": "hat eine Sitzung gestartet",
+			"createdOrg": "hat eine Organisation erstellt",
+			"invitedMember": "hat ein Mitglied eingeladen",
+			"acceptedInvite": "hat eine Einladung angenommen",
+			"changedPlan": "hat den Abrechnungsplan geändert",
+			"changedRole": "hat eine Mitgliederrolle geändert",
+			"switchedLocale": "hat die Sprache gewechselt",
+			"updatedProfile": "hat das Profil aktualisiert",
+			"verifiedEmail": "hat die E-Mail verifiziert"
+		},
+		"quickActions": {
+			"title": "Schnellaktionen",
+			"inviteMember": "Mitglied einladen",
+			"createOrg": "Organisation erstellen",
+			"configureBilling": "Abrechnung konfigurieren"
+		},
+		"orgSelection": {
+			"title": "Organisation auswählen",
+			"subtitle": "Wähle eine Organisation zum Arbeiten oder erstelle eine neue.",
+			"createNew": "Neue Organisation",
+			"noOrgs": "Du bist noch in keiner Organisation",
+			"noOrgsDescription": "Erstelle deine erste Organisation, um loszulegen.",
+			"members": "{count, plural, =0 {Keine Mitglieder} =1 {1 Mitglied} other {# Mitglieder}}"
+		},
+		"freePlan": "Kostenlos",
+		"backToOrgs": "Zurück zu Organisationen",
+		"backToPersonal": "Zurück zum persönlichen Konto",
+		"viewOrganizations": "Organisationen ansehen"
+	}
+}

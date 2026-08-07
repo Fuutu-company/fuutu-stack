@@ -1,0 +1,8 @@
+{
+	"cron": {
+		"subscriptionReminder": {
+			"title": "Subscription reminder",
+			"body": "Your trial subscription is ending soon."
+		}
+	}
+}

@@ -1,0 +1,52 @@
+---
+title: Search
+description: Built-in full-text search powered by Orama.
+tags: ["guides", "search"]
+---
+
+The docs template ships with **built-in search** powered by Orama. No external
+service required.
+
+## How it works
+
+1. The search index is built at build time from your MDX content
+2. A search API route at `/[locale]/api/search` serves the index
+3. The search dialog is triggered with `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux)
+
+<Callout type="info">
+  Try it now — press <kbd>Cmd</kbd> + <kbd>K</kbd> to open the search dialog.
+</Callout>
+
+## Configuration
+
+The search API route is in `src/app/[locale]/api/search/route.ts`:
+
+```ts title="src/app/[locale]/api/search/route.ts"
+import { createFromSource } from "fumadocs-core/search/server";
+import { source } from "@/lib/source";
+
+export const { GET } = createFromSource(source, {
+  language: "english",
+});
+```
+
+## Language support
+
+Orama supports multiple languages. Change the `language` option to match your
+content:
+
+```ts
+export const { GET } = createFromSource(source, {
+  language: "german", // for German content
+});
+```
+
+<Callout type="warn">
+  If you serve multiple locales, you may need separate search routes per
+  locale with the appropriate language setting.
+</Callout>
+
+## Customizing the search dialog
+
+The search dialog is part of `fumadocs-ui` and is included in the `DocsLayout`
+automatically. No extra configuration needed.

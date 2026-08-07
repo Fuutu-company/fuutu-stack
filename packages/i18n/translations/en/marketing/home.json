@@ -1,0 +1,148 @@
+{
+	"home": {
+		"metaTitle": "Enterprise-grade. Ship in days.",
+		"hero": {
+			"title": "Enterprise-grade.",
+			"titleHighlight": "Ship in days.",
+			"description": "The production stack built for AI-speed development. Every best practice pre-wired, every provider swappable — from idea to live in days, not months.",
+			"cta": {
+				"getStarted": "Get the stack",
+				"viewDocs": "See what's inside"
+			},
+			"benefit": {
+				"openSource": "Fuutu Business License",
+				"typescript": "100% TypeScript, strict",
+				"edgeReady": "Provider-swappable"
+			},
+			"glassCard": {
+				"ready": "Ship-ready stack"
+			},
+			"pillar": {
+				"auth": {
+					"title": "Auth & sessions",
+					"desc": "Sign-up, OAuth, MFA, RBAC — done"
+				},
+				"billing": {
+					"title": "Billing & plans",
+					"desc": "Polar-powered, plan catalog, webhooks"
+				},
+				"swappable": {
+					"title": "Provider-swappable",
+					"desc": "Mail, storage, payments — one line swap"
+				},
+				"speed": {
+					"title": "Ship in a week",
+					"desc": "Not a template — a production codebase"
+				}
+			}
+		},
+		"cta": {
+			"title": "Ready to ship?",
+			"description": "Clone the repo, configure your providers, and you're live in minutes.",
+			"getStarted": "Get started",
+			"viewDocs": "Read the docs"
+		},
+		"testimonials": {
+			"title": "Loved by builders",
+			"description": "Teams ship faster on Fuutu — here's what they say.",
+			"items": [
+				{
+					"quote": "Fuutu let us go from empty repo to paying customers in two weeks. The auth + payments wiring alone saved us a month.",
+					"author": "Sara Lindqvist",
+					"role": "Founder, Northwave Labs"
+				},
+				{
+					"quote": "I've shipped four SaaS products on bespoke stacks. This is the first one where I didn't reach for a single workaround.",
+					"author": "Daniel Okafor",
+					"role": "Staff Engineer, Mercator"
+				},
+				{
+					"quote": "The provider-pattern is exactly how I'd build it myself — except it already works on day one.",
+					"author": "Mei-Ling Tan",
+					"role": "CTO, Vellum AI"
+				}
+			]
+		},
+		"faq": {
+			"title": "Frequently asked questions",
+			"description": "Everything you need to know before you clone the repo.",
+			"items": [
+				{
+					"q": "Do I need a license to use Fuutu?",
+					"a": "Free for individuals and companies up to 10 employees or 250k € annual revenue. Beyond that, an Enterprise license is required. See LICENSE.md for the full terms."
+				},
+				{
+					"q": "Can I swap the payment / mail / storage provider?",
+					"a": "Yes. Every external dependency lives behind a provider interface — switch by changing one line of config and dropping in the SDK. Polar, Plunk and S3 ship active in v1; Stripe, Resend, R2 and others are skeletons."
+				},
+				{
+					"q": "Is the code production-ready?",
+					"a": "v1 ships with rate limiting, audit logging, CSRF, secure cookies, RBAC and Playwright E2E tests. Add your own monitoring + backups and you're production-ready."
+				},
+				{
+					"q": "Why next-intl over a custom i18n layer?",
+					"a": "Native App-Router support, type-safe message keys, ICU plurals and zero runtime cost. Locales live in @fuutu/i18n with a smart fallback chain."
+				}
+			]
+		},
+		"features": {
+			"expand": "Expand {label}",
+			"featureListAria": "Feature list",
+			"items": {
+				"dashboard": {
+					"label": "Dashboard",
+					"title": "Your whole product,\nready on day one.",
+					"description": "Fuutu Stack ships a fully functional SaaS dashboard: auth, billing, orgs, settings, API docs — all pre-wired and production-ready.",
+					"frameLabel": "Dashboard"
+				},
+				"auth": {
+					"label": "Auth & Security",
+					"title": "Auth in minutes,\nnot weeks.",
+					"description": "OAuth, magic links, passkeys, MFA, session management and RBAC — all pre-configured with Better Auth.",
+					"frameLabel": "Sign-in"
+				},
+				"payments": {
+					"label": "Payments",
+					"title": "Billing that ships\nout of the box.",
+					"description": "Polar-powered subscriptions, one-time purchases and webhooks. Swap to Stripe by changing one config line.",
+					"frameLabel": "Choose plan"
+				},
+				"i18n": {
+					"label": "i18n",
+					"title": "Ship globally\nfrom the start.",
+					"description": "next-intl with EN + DE out of the box. Add a locale in one JSON file — every component picks it up automatically.",
+					"frameLabel": "Locale switch"
+				},
+				"rbac": {
+					"label": "RBAC & Orgs",
+					"title": "Fine-grained roles\nfor every team.",
+					"description": "owner → admin → member → viewer. Organisation invites, role changes and audit logs — wired into every API route.",
+					"frameLabel": "Team settings"
+				},
+				"api": {
+					"label": "Type-safe API",
+					"title": "oRPC + OpenAPI,\nzero boilerplate.",
+					"description": "Every route is fully typed end-to-end via oRPC. Auto-generated OpenAPI docs ship at /api/docs on day one.",
+					"frameLabel": "API docs"
+				},
+				"providers": {
+					"label": "Swappable Providers",
+					"title": "Swap any provider\nwithout touching routes.",
+					"description": "Every domain (mail, storage, analytics, payments) is a typed interface. Change the active provider in one config line.",
+					"frameLabel": "Provider config"
+				}
+			},
+			"hero": {
+				"heading": "Your whole product,\nready on day one.",
+				"subheading": "Fuutu Stack ships a fully functional SaaS dashboard: auth, billing, orgs, settings, API docs — all pre-wired and production-ready."
+			},
+			"row": {
+				"heading": "Everything your SaaS needs."
+			},
+			"showcase": {
+				"heading": "Built to scale from day one.",
+				"subheading": "Every feature ships production-hardened — RBAC, type-safe API, swappable providers. Click a feature to see it in action."
+			}
+		}
+	}
+}

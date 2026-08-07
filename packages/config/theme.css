@@ -1,0 +1,354 @@
+/**
+ * Fuutu Stack — Theme CSS (4-Token Design System)
+ *
+ * ╔═══════════════════════════════════════════════════════════════════════╗
+ * ║  HOW TO CUSTOMIZE                                                     ║
+ * ║  Edit ONLY the 4 base tokens in the `:root` block below:              ║
+ * ║    --brand         → your brand / primary accent color                ║
+ * ║    --neutral       → base hue for greys, bg, text, borders            ║
+ * ║    --success       → success/positive state (optional, has default)   ║
+ * ║    --destructive   → error/danger state (optional, has default)       ║
+ * ║  Plus: --radius, --font-sans, --font-mono.                            ║
+ * ║                                                                       ║
+ * ║  Everything else (--background, --card, --muted, --border, --chart-*, ║
+ * ║  --sidebar-*, …) is DERIVED via oklch(from ...) and updates auto.     ║
+ * ║                                                                       ║
+ * ║  Dark mode (`.dark`) mirrors this exactly: 4 base tokens only, then   ║
+ * ║  the same oklch(from …) derivations with an inverted lightness curve. ║
+ * ║  See UI package documentation for component/token conventions.           ║
+ * ╚═══════════════════════════════════════════════════════════════════════╝
+ *
+ * Note: Fonts are imported in each app's globals.css.
+ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * @source — extend Tailwind v4's JIT class scanning to shared packages.
+ * Without these, arbitrary utilities used inside @fuutu/ui (e.g.
+ * `w-[var(--sidebar-width)]`) never get compiled and render at 0px.
+ * Paths are relative to this file (packages/config/theme.css).
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@source "../ui/src/**/*.{ts,tsx}";
+@source "../mail/src/**/*.{ts,tsx}";
+@source "../analytics/src/**/*.{ts,tsx}";
+
+/* Class-based dark mode — next-themes toggles .dark on <html>.
+ * Without this, Tailwind v4 defaults to prefers-color-scheme. */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+	 * BASE TOKENS — edit these 4 colors to rebrand the whole stack.
+	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+	--brand: oklch(0.45 0.22 270); /* primary brand color         */
+	--neutral: oklch(0.13 0.03 260); /* dark neutral (text)         */
+	--success: oklch(0.65 0.18 150); /* success state               */
+	--destructive: oklch(0.6 0.2 25); /* error / danger              */
+
+	--radius: 0.75rem;
+	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+	--font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+	 * DERIVED TOKENS — auto-generated from the 4 base tokens.
+	 * Do NOT edit by hand. Change the base tokens above instead.
+	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+	/* Surfaces (from --neutral hue, progressively lighter) */
+	--background: oklch(from var(--neutral) 0.99 0.003 h);
+	--foreground: var(--neutral);
+	--card: oklch(from var(--neutral) 1 0 h);
+	--card-foreground: var(--neutral);
+	--popover: oklch(from var(--neutral) 1 0 h);
+	--popover-foreground: var(--neutral);
+
+	--muted: oklch(from var(--neutral) 0.96 0.008 h);
+	--muted-foreground: oklch(from var(--neutral) 0.45 0.03 h);
+	--accent: oklch(from var(--neutral) 0.94 0.015 h);
+	--accent-foreground: var(--neutral);
+	--secondary: oklch(from var(--neutral) 0.96 0.008 h);
+	--secondary-foreground: var(--neutral);
+
+	--border: oklch(from var(--neutral) 0.92 0.008 h);
+	--input: oklch(from var(--neutral) 0.92 0.008 h);
+
+	/* Brand — auto-contrast foreground (white on dark brand, black on light).
+	 * `clamp(0, (0.5 - l) * 100, 1)` becomes a step function at l = 0.5:
+	 *   l < 0.5 → 1 (white)    l > 0.5 → 0 (black).
+	 * The trailing `/ 1` forces full opacity so a user-provided alpha on
+	 * --brand / --success / --destructive can't bleed into buttons. */
+	--primary: oklch(from var(--brand) l c h / 1);
+	--primary-foreground: oklch(
+		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
+		1
+	);
+	--ring: var(--brand);
+
+	/* State */
+	--destructive-foreground: oklch(
+		from var(--destructive) clamp(0, (0.5 - l) * 100, 1) 0 h /
+		1
+	);
+	--success-foreground: oklch(
+		from var(--success) clamp(0, (0.5 - l) * 100, 1) 0 h /
+		1
+	);
+
+	/* Charts — harmonic rotations around --brand */
+	--chart-1: var(--brand);
+	--chart-2: oklch(from var(--brand) l c calc(h + 60));
+	--chart-3: oklch(from var(--brand) l c calc(h + 120));
+	--chart-4: oklch(from var(--brand) l c calc(h + 180));
+	--chart-5: oklch(from var(--brand) l c calc(h + 240));
+
+	/* Sidebar */
+	--sidebar: oklch(from var(--neutral) 0.98 0.006 h);
+	--sidebar-foreground: var(--neutral);
+	--sidebar-primary: oklch(from var(--brand) l c h / 1);
+	--sidebar-primary-foreground: oklch(
+		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
+		1
+	);
+	--sidebar-accent: oklch(from var(--neutral) 0.94 0.015 h);
+	--sidebar-accent-foreground: var(--neutral);
+	--sidebar-border: oklch(from var(--neutral) 0.92 0.008 h);
+	--sidebar-ring: var(--brand);
+}
+
+.dark {
+	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+	 * BASE TOKENS (dark) — same 4-token discipline as :root.
+	 * Edit these 4 to rebrand dark mode; everything else derives.
+	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+	--brand: oklch(0.68 0.2 270); /* brightened for contrast on dark bg  */
+	--neutral: oklch(0.98 0.005 260); /* inverted: now the light reference   */
+	--success: oklch(0.72 0.17 150); /* brightened equivalent               */
+	--destructive: oklch(0.68 0.2 25); /* brightened equivalent             */
+
+	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+	 * DERIVED TOKENS (dark) — mirror :root formulas with a dark
+	 * lightness curve. Hue is always pulled from the base tokens.
+	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+	/* Surfaces (from --neutral hue, progressively darker) */
+	--background: oklch(from var(--neutral) 0.11 0.025 h);
+	--foreground: var(--neutral);
+	--card: oklch(from var(--neutral) 0.14 0.03 h);
+	--card-foreground: var(--neutral);
+	--popover: oklch(from var(--neutral) 0.14 0.03 h);
+	--popover-foreground: var(--neutral);
+
+	--muted: oklch(from var(--neutral) 0.2 0.04 h);
+	--muted-foreground: oklch(from var(--neutral) 0.7 0.03 h);
+	--accent: oklch(from var(--neutral) 0.22 0.05 h);
+	--accent-foreground: var(--neutral);
+	--secondary: oklch(from var(--neutral) 0.2 0.04 h);
+	--secondary-foreground: var(--neutral);
+
+	--border: oklch(from var(--neutral) 1 0 h / 10%);
+	--input: oklch(from var(--neutral) 1 0 h / 15%);
+
+	/* Brand — auto-contrast foreground (see :root explanation). */
+	--primary: oklch(from var(--brand) l c h / 1);
+	--primary-foreground: oklch(
+		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
+		1
+	);
+	--ring: var(--brand);
+
+	/* State */
+	--destructive-foreground: oklch(
+		from var(--destructive) clamp(0, (0.6 - l) * 100, 1) 0 h /
+		1
+	);
+	--success-foreground: oklch(
+		from var(--success) clamp(0, (0.6 - l) * 100, 1) 0 h /
+		1
+	);
+
+	/* Charts — harmonic rotations around --brand */
+	--chart-1: var(--brand);
+	--chart-2: oklch(from var(--brand) l c calc(h + 60));
+	--chart-3: oklch(from var(--brand) l c calc(h + 120));
+	--chart-4: oklch(from var(--brand) l c calc(h + 180));
+	--chart-5: oklch(from var(--brand) l c calc(h + 240));
+
+	/* Sidebar */
+	--sidebar: oklch(from var(--neutral) 0.14 0.03 h);
+	--sidebar-foreground: var(--neutral);
+	--sidebar-primary: oklch(from var(--brand) l c h / 1);
+	--sidebar-primary-foreground: oklch(
+		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
+		1
+	);
+	--sidebar-accent: oklch(from var(--neutral) 0.2 0.04 h);
+	--sidebar-accent-foreground: var(--neutral);
+	--sidebar-border: oklch(from var(--neutral) 1 0 h / 10%);
+	--sidebar-ring: var(--brand);
+}
+
+/**
+ * Tailwind v4: expose CSS variables as theme tokens so utilities like
+ * `bg-background`, `text-foreground`, `border-border`, `bg-primary`, etc.
+ * are generated. Without this block, all custom color classes silently fail.
+ */
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+
+	--color-brand: var(--brand);
+	--color-neutral: var(--neutral);
+
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+
+	--font-sans: var(--font-sans);
+	--font-mono: var(--font-mono);
+}
+
+@layer base {
+	* {
+		@apply border-border;
+	}
+	body {
+		@apply bg-background text-foreground;
+		font-family: var(--font-sans);
+	}
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * MeshGradient — animated CSS mesh gradient utility
+ * Controlled via CSS custom properties:
+ *   --mg-1      primary color   (default: var(--primary))
+ *   --mg-2      secondary color (default: lighter primary tint)
+ *   --mg-3      base color      (default: var(--background))
+ *   --mg-speed  animation duration, e.g. 12s (set to 0s to disable)
+ *   --mg-opacity overall opacity
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@keyframes mg-drift-1 {
+	0%,
+	100% {
+		transform: translate(0%, 0%) scale(1);
+	}
+	33% {
+		transform: translate(8%, -12%) scale(1.08);
+	}
+	66% {
+		transform: translate(-6%, 8%) scale(0.96);
+	}
+}
+@keyframes mg-drift-2 {
+	0%,
+	100% {
+		transform: translate(0%, 0%) scale(1);
+	}
+	40% {
+		transform: translate(-10%, 6%) scale(1.1);
+	}
+	70% {
+		transform: translate(7%, -9%) scale(0.94);
+	}
+}
+@keyframes mg-drift-3 {
+	0%,
+	100% {
+		transform: translate(0%, 0%) scale(1);
+	}
+	50% {
+		transform: translate(5%, 10%) scale(1.06);
+	}
+}
+
+.mesh-gradient {
+	--mg-1: var(--primary);
+	--mg-2: oklch(from var(--primary) calc(l + 0.15) calc(c * 0.6) calc(h + 40));
+	--mg-3: var(--background);
+	--mg-speed: 12s;
+	--mg-opacity: 1;
+
+	opacity: var(--mg-opacity);
+	overflow: hidden;
+}
+
+.mg-layer-1,
+.mg-layer-2,
+.mg-layer-3 {
+	position: absolute;
+	inset: -20%;
+	border-radius: 50%;
+	will-change: transform;
+}
+
+.mg-layer-1 {
+	background: radial-gradient(
+		ellipse 70% 60% at 40% 40%,
+		var(--mg-1) 0%,
+		transparent 70%
+	);
+	opacity: 0.55;
+	animation: mg-drift-1 var(--mg-speed) ease-in-out infinite;
+}
+
+.mg-layer-2 {
+	background: radial-gradient(
+		ellipse 65% 55% at 65% 60%,
+		var(--mg-2) 0%,
+		transparent 70%
+	);
+	opacity: 0.45;
+	animation: mg-drift-2 calc(var(--mg-speed) * 1.3) ease-in-out infinite;
+}
+
+.mg-layer-3 {
+	background: radial-gradient(
+		ellipse 80% 70% at 50% 80%,
+		var(--mg-3) 0%,
+		transparent 65%
+	);
+	opacity: 0.35;
+	animation: mg-drift-3 calc(var(--mg-speed) * 0.9) ease-in-out infinite;
+}

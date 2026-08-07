@@ -1,0 +1,79 @@
+---
+title: Code Blocks
+description: Syntax highlighting, line highlighting, diffs, titles, and more.
+tags: ["guides", "code"]
+---
+
+Code blocks are powered by **Shiki** for syntax highlighting. They support
+titles, line numbers, line highlighting, diffs, and more.
+
+## Basic code block
+
+```ts
+function greet(name: string): string {
+  return `Hello, ${name}!`;
+}
+```
+
+## With title
+
+```ts title="src/lib/greet.ts"
+function greet(name: string): string {
+  return `Hello, ${name}!`;
+}
+```
+
+## Line highlighting
+
+```ts {2-3}
+function greet(name: string): string {
+  // highlighted lines
+  const message = `Hello, ${name}!`;
+  return message;
+}
+```
+
+## Word highlighting
+
+```ts /greet/
+function greet(name: string): string {
+  return `Hello, ${name}!`;
+}
+
+const result = greet("World");
+```
+
+## Diff
+
+```ts
+function greet(name: string): string {
+- return `Hello!`;
++ return `Hello, ${name}!`;
+}
+```
+
+## Multiple features combined
+
+```ts title="src/lib/utils.ts" {3} /transform/
+function transform(input: string): string {
+  const trimmed = input.trim();
+  const result = trimmed.toUpperCase(); // highlighted
+  return result;
+}
+```
+
+## Copy button
+
+<Callout type="info">
+  Every code block has a copy button in the top-right corner. Try it on any
+  block above.
+</Callout>
+
+## Language icons
+
+Code blocks can show language icons. The `lucideIconsPlugin` is configured in
+`src/lib/source.ts`.
+
+## Inline code
+
+Use backticks for `inline code` in paragraphs.

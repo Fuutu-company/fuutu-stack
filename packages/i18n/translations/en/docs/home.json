@@ -1,0 +1,37 @@
+{
+	"title": "Fuutu Stack Docs",
+	"subtitle": "Production-grade documentation powered by Fumadocs",
+	"description": "A ready-to-use documentation template that ships with the Fuutu Stack. Built with Fumadocs, Next.js, and Tailwind CSS. Every Fumadocs feature is showcased as a modifiable example.",
+	"metaTitle": "Fuutu Stack Docs — Production-grade Documentation",
+	"metaDescription": "A ready-to-use documentation template with Fumadocs, Next.js, and Tailwind CSS. Full i18n, OpenAPI docs, search, and dark mode out of the box.",
+	"exploreDocs": "Explore Docs",
+	"viewOnGithub": "View on GitHub",
+	"features": {
+		"title": "Everything you need",
+		"subtitle": "Built-in examples for every Fumadocs feature — delete what you don't need, keep what you do.",
+		"mdx": {
+			"title": "MDX Content",
+			"description": "Write docs in MDX with full component support"
+		},
+		"search": {
+			"title": "Full-Text Search",
+			"description": "Built-in search powered by Orama"
+		},
+		"darkMode": {
+			"title": "Dark Mode",
+			"description": "Seamless light/dark theme toggle"
+		},
+		"i18n": {
+			"title": "Internationalization",
+			"description": "Multi-language support with next-intl"
+		},
+		"openapi": {
+			"title": "OpenAPI Docs",
+			"description": "Interactive API documentation from specs"
+		},
+		"codeBlocks": {
+			"title": "Code Blocks",
+			"description": "Syntax highlighting with copy, diff, and more"
+		}
+	}
+}

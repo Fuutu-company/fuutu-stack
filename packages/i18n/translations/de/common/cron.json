@@ -1,0 +1,8 @@
+{
+	"cron": {
+		"subscriptionReminder": {
+			"title": "Abonnement-Erinnerung",
+			"body": "Deine Testphase endet bald."
+		}
+	}
+}

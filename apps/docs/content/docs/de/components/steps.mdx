@@ -1,0 +1,71 @@
+---
+title: Steps
+description: Nummerierte Schrittfolgen für Tutorials und Verfahren.
+tags: ["components", "steps"]
+---
+
+Steps erstellen nummerierte, visuelle Schrittfolgen. Perfekt für Tutorials und
+Installationsanleitungen.
+
+## Grundlegende Steps
+
+<Steps>
+	### Erster Schritt
+
+  Mache dies zuerst.
+
+	### Zweiter Schritt
+
+  Dann mache das.
+
+	### Dritter Schritt
+
+  Schließlich mache das.
+</Steps>
+
+## Steps mit Code
+
+<Steps>
+	### Installiere das Paket
+
+  ```bash
+  pnpm add @fuutu/ui
+  ```
+
+	### Importiere die Komponente
+
+  ```tsx
+  import { Button } from "@fuutu/ui";
+  ```
+
+	### Verwende sie
+
+  ```tsx
+  <Button>Klick mich</Button>
+  ```
+
+	### Verifiziere
+
+  <Callout type="success">
+    Du solltest einen Button auf deiner Seite sehen.
+  </Callout>
+</Steps>
+
+## Verwendung
+
+```mdx
+<Steps>
+  ### Erster Schritt
+
+  Mache dies zuerst.
+
+  ### Zweiter Schritt
+
+  Dann mache das.
+</Steps>
+```
+
+<Callout type="info">
+  Steps werden automatisch nummeriert. Verwende `###` (h3) Überschriften innerhalb
+  von `<Steps>`, um jeden Schritt zu erstellen.
+</Callout>

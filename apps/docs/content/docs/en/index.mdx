@@ -1,0 +1,51 @@
+---
+title: Introduction
+description: A ready-to-use documentation template that ships with the Fuutu Stack.
+---
+
+This is the **docs template** bundled with the Fuutu Stack. It showcases every
+Fumadocs feature as a modifiable example — delete what you don't need, keep
+what you do.
+
+## What's inside
+
+<Cards>
+	<Card title="Getting Started" href="./getting-started/introduction" icon="rocket">
+		Learn the basics and set up your first docs page.
+	</Card>
+	<Card title="Guides" href="./guides/markdown" icon="book-open">
+		Deep dives into MDX, code blocks, search, and theming.
+	</Card>
+	<Card title="Components" href="./components/callout" icon="blocks">
+		Every Fumadocs UI component with live examples.
+	</Card>
+	<Card title="API Reference" href="./api-reference/overview" icon="code">
+		Interactive API docs from an OpenAPI spec.
+	</Card>
+</Cards>
+
+## Quick start
+
+Add MDX files to `apps/docs/content/docs/en/` and they appear in the sidebar
+automatically. Use `meta.json` files to control navigation order, titles, and
+icons.
+
+```mdx title="content/docs/en/getting-started/introduction.mdx"
+---
+title: Introduction
+description: Your first docs page.
+---
+
+# Hello World
+
+Write **Markdown** and use <Callout>components</Callout> inline.
+```
+
+## Features
+
+<Callout type="info">
+  This template ships with full i18n support (en/de), dark mode, search,
+  and OpenAPI integration — all wired into the Fuutu Stack patterns.
+</Callout>
+
+See [fumadocs.dev](https://fumadocs.dev) for the full Fumadocs documentation.

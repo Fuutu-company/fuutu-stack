@@ -1,0 +1,57 @@
+{
+	"admin": {
+		"dashboard": {
+			"title": "Admin",
+			"description": "Verwalte Benutzer und prüfe Audit-Logs.",
+			"usersCard": "Benutzer verwalten",
+			"usersCardDescription": "Suchen, sperren und Rollen vergeben.",
+			"auditLogsCard": "Audit-Logs",
+			"auditLogsCardDescription": "Alle sicherheitsrelevanten Aktionen einsehen."
+		},
+		"users": {
+			"title": "Benutzer",
+			"description": "Suche, sperre und verwalte Rollen für alle Plattform-Benutzer.",
+			"searchPlaceholder": "Nach E-Mail suchen…",
+			"empty": "Keine Benutzer gefunden.",
+			"role": "Rolle",
+			"roleValue": {
+				"admin": "Admin",
+				"user": "Benutzer",
+				"member": "Mitglied",
+				"owner": "Inhaber"
+			},
+			"email": "E-Mail",
+			"createdAt": "Erstellt",
+			"actions": "Aktionen",
+			"status": "Status",
+			"banned": "Gesperrt",
+			"active": "Aktiv",
+			"ban": "Sperren",
+			"unban": "Entsperren",
+			"makeAdmin": "Zum Admin machen",
+			"makeUser": "Zum Benutzer machen",
+			"makeAdminAria": "Zum Admin machen",
+			"makeUserAria": "Zum Benutzer machen",
+			"banAria": "Benutzer sperren",
+			"unbanAria": "Benutzer entsperren",
+			"defaultBanReason": "Verstoß gegen die Nutzungsbedingungen",
+			"failed": "Aktion fehlgeschlagen.",
+			"banError": "Sperrstatus konnte nicht aktualisiert werden. Bitte erneut versuchen.",
+			"roleError": "Rolle konnte nicht aktualisiert werden. Bitte erneut versuchen."
+		},
+		"auditLogs": {
+			"title": "Audit-Logs",
+			"description": "Kürzliche sicherheitsrelevante Ereignisse auf der Plattform.",
+			"col": {
+				"time": "Zeit",
+				"action": "Aktion",
+				"user": "Benutzer",
+				"ip": "IP"
+			},
+			"prev": "Zurück",
+			"next": "Weiter",
+			"page": "Seite {page} · {total}",
+			"empty": "Keine Audit-Logs."
+		}
+	}
+}

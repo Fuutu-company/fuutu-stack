@@ -1,0 +1,45 @@
+{
+	"name": "@fuutu/db",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./index.ts"
+		},
+		"./*": {
+			"default": "./*.ts"
+		}
+	},
+	"scripts": {
+		"db:push": "dotenv -c -e ../../.env -- prisma db push",
+		"db:generate": "dotenv -c -e ../../.env -- prisma generate",
+		"db:migrate": "dotenv -c -e ../../.env -- prisma migrate dev",
+		"db:studio": "dotenv -c -e ../../.env -- prisma studio",
+		"db:start": "docker compose up -d",
+		"db:watch": "docker compose up",
+		"db:stop": "docker compose stop",
+		"db:down": "docker compose down",
+		"db:seed": "dotenv -c -e ../../.env -- node --import tsx/esm ./prisma/seed.ts"
+	},
+	"dependencies": {
+		"@better-auth/utils": "catalog:",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"@fuutu/utils": "workspace:*",
+		"@prisma/adapter-pg": "catalog:",
+		"@prisma/client": "catalog:",
+		"decimal.js": "catalog:",
+		"dotenv": "catalog:",
+		"pg": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"@types/pg": "catalog:",
+		"prisma": "^7.9.1",
+		"prisma-zod-generator": "^3.1.0",
+		"tsx": "^4.23.5",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

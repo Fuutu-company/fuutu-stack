@@ -1,0 +1,7 @@
+{
+	"changelog": {
+		"title": "Changelog",
+		"description": "Jedes Release in chronologischer Reihenfolge.",
+		"empty": "Noch keine Releases."
+	}
+}

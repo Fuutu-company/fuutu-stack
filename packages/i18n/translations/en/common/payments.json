@@ -1,0 +1,108 @@
+{
+	"payments": {
+		"choosePlan": {
+			"title": "Choose your plan",
+			"description": "Pick the plan that fits your stage. Upgrade or downgrade anytime.",
+			"redirecting": "Redirecting…",
+			"error": "Checkout failed",
+			"unavailable": "Payments are not configured for this environment.",
+			"popular": "Most popular",
+			"monthly": "Monthly",
+			"yearly": "Yearly",
+			"yearlyBadge": "Save 17%"
+		},
+		"planInterval": "{plan} · {interval}",
+		"features": {
+			"groups": {
+				"auth": "Authentication",
+				"orgs": "Organizations & Teams",
+				"api": "API & Developer",
+				"infrastructure": "Infrastructure",
+				"support": "Support"
+			},
+			"auth": {
+				"passkeys": "Passkeys (biometric sign-in)",
+				"sso": "SAML / enterprise SSO"
+			},
+			"orgs": {
+				"orgs": "Organizations",
+				"members": "Members per organization",
+				"audit": "Audit log retention"
+			},
+			"api": {
+				"keys": "API keys",
+				"webhooks": "Outbound webhooks"
+			},
+			"infrastructure": {
+				"storage": "Storage"
+			},
+			"support": {
+				"community": "Community support",
+				"email": "Priority email support",
+				"dedicated": "Dedicated support channel",
+				"sla": "Custom SLA"
+			},
+			"tooltips": {
+				"auth_passkeys": "Sign in with Face ID, Touch ID, or a hardware key — no password required.",
+				"auth_saml": "Connect your existing identity provider (Okta, Azure AD, Google Workspace) via SAML 2.0.",
+				"orgs_orgs": "Group users into organizations with shared billing, roles, and settings.",
+				"orgs_members": "Maximum number of users that can be invited into a single organization.",
+				"orgs_audit_log_days": "How many days of activity logs are retained for compliance and debugging.",
+				"api_api_keys": "Programmatic API keys scoped to your account for server-to-server access.",
+				"api_webhooks": "Receive real-time HTTP callbacks when events occur in your account."
+			}
+		},
+		"plans": {
+			"free": {
+				"name": "Free",
+				"description": "Everything you need to get started.",
+				"priceSuffix": "/ forever",
+				"yearlyPriceSuffix": "/ forever",
+				"ctaLabel": "Get started free",
+				"featureLabels": {
+					"orgs_orgs": "1 organization",
+					"orgs_members": "Up to 5 members",
+					"api_keys": "2 API keys",
+					"infrastructure_storage": "500 MB storage",
+					"support_community": "Community support"
+				}
+			},
+			"pro": {
+				"name": "Pro",
+				"description": "For teams that need more power and scale.",
+				"priceSuffix": "/ month",
+				"yearlyPriceSuffix": "/ year",
+				"ctaLabel": "Upgrade to Pro",
+				"featureLabels": {
+					"auth_passkeys": "Passkeys (biometric sign-in)",
+					"orgs_orgs": "Up to 10 organizations",
+					"orgs_members": "Up to 50 members",
+					"orgs_audit": "Audit log — 30 days",
+					"api_keys": "Unlimited API keys",
+					"api_webhooks": "Outbound webhooks",
+					"infrastructure_storage": "50 GB storage",
+					"support_email": "Priority email support"
+				}
+			},
+			"enterprise": {
+				"name": "Enterprise",
+				"description": "For large organizations with specific compliance and support needs.",
+				"priceSuffix": "",
+				"yearlyPriceSuffix": "",
+				"ctaLabel": "Contact sales",
+				"featureLabels": {
+					"auth_passkeys": "Passkeys (biometric sign-in)",
+					"auth_sso": "SAML / enterprise SSO",
+					"orgs_orgs": "Unlimited organizations",
+					"orgs_members": "Unlimited members",
+					"orgs_audit": "Unlimited audit log retention",
+					"api_keys": "Unlimited API keys",
+					"api_webhooks": "Outbound webhooks",
+					"infrastructure_storage": "Unlimited storage",
+					"support_dedicated": "Dedicated support channel",
+					"support_sla": "Custom SLA"
+				}
+			}
+		}
+	}
+}

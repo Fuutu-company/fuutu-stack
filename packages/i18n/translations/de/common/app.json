@@ -1,0 +1,8 @@
+{
+	"app": {
+		"brand": "Fuutu Stack",
+		"tagline": "Starter Stack",
+		"groupApplication": "Anwendung",
+		"groupAdministration": "Administration"
+	}
+}

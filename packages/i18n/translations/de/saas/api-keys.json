@@ -1,0 +1,53 @@
+{
+	"apiKeys": {
+		"title": "API-Schlüssel",
+		"description": "Erstelle und verwalte API-Schlüssel für programmatischen Zugriff.",
+		"create": "API-Schlüssel erstellen",
+		"creating": "Erstelle…",
+		"empty": "Noch keine API-Schlüssel",
+		"emptyDescription": "Erstelle deinen ersten API-Schlüssel, um loszulegen.",
+		"emptyCta": "API-Schlüssel erstellen",
+		"col": {
+			"name": "Name",
+			"prefix": "Schlüssel",
+			"lastUsed": "Zuletzt verwendet",
+			"createdAt": "Erstellt",
+			"status": "Status",
+			"actions": "Aktionen"
+		},
+		"status": {
+			"active": "Aktiv",
+			"revoked": "Widerrufen",
+			"expired": "Abgelaufen"
+		},
+		"neverUsed": "Nie",
+		"createDialog": {
+			"title": "API-Schlüssel erstellen",
+			"description": "Gib deinem Schlüssel einen Namen zur späteren Identifikation. Du kannst optional ein Ablaufdatum festlegen.",
+			"nameLabel": "Schlüsselname",
+			"namePlaceholder": "Produktionsserver",
+			"expiryLabel": "Ablaufdatum (optional)",
+			"expiryPlaceholder": "Datum wählen",
+			"submit": "Schlüssel erstellen"
+		},
+		"createdDialog": {
+			"title": "Dein neuer API-Schlüssel",
+			"description": "Kopiere diesen Schlüssel jetzt — du kannst ihn später nicht mehr sehen.",
+			"copy": "Kopieren",
+			"copied": "Kopiert!",
+			"done": "Habe ich kopiert"
+		},
+		"revokeDialog": {
+			"title": "API-Schlüssel widerrufen?",
+			"description": "Dieser Schlüssel funktioniert sofort nicht mehr. Diese Aktion kann nicht rückgängig gemacht werden.",
+			"confirm": "Schlüssel widerrufen",
+			"revoking": "Widerrufe…"
+		},
+		"revoke": "Widerrufen",
+		"loading": "API-Schlüssel werden geladen…",
+		"failed": "Aktion konnte nicht durchgeführt werden.",
+		"created": "API-Schlüssel erstellt.",
+		"revoked": "API-Schlüssel widerrufen.",
+		"revokeError": "API-Schlüssel konnte nicht widerrufen werden. Bitte erneut versuchen."
+	}
+}

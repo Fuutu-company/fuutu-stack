@@ -1,0 +1,48 @@
+---
+title: API Overview
+description: Interactive API documentation from an OpenAPI spec.
+tags: ["api", "openapi"]
+---
+
+The Fuutu Stack docs template includes **interactive API documentation**
+powered by `fumadocs-openapi`. It generates pages from an OpenAPI spec with
+code examples, schema display, and a try-it-out playground.
+
+## How it works
+
+1. An OpenAPI spec lives at `content/openapi/example.json`
+2. The `fumadocs-openapi` package generates virtual pages from the spec
+3. Pages are served at `/docs/{tag}/{operationId}` within the docs layout
+4. Each endpoint gets its own interactive page
+
+<Callout type="info">
+  The OpenAPI spec in this template is a **sample** — replace it with your
+  own to document your real API.
+</Callout>
+
+## What's in the sample spec
+
+The sample spec includes endpoints for:
+
+- **Auth**: sign in, sign up
+- **Organizations**: list, create, get by slug
+- **Billing**: create checkout, get subscription
+
+## Replace with your spec
+
+1. Replace `content/openapi/example.json` with your OpenAPI spec
+2. Update the `input` path in `src/lib/openapi.ts` if needed
+3. The pages regenerate automatically
+
+<Callout type="warn">
+  The OpenAPI spec must be valid OpenAPI 3.0 or 3.1. Validate your spec at
+  [editor.swagger.io](https://editor.swagger.io) before using it.
+</Callout>
+
+## Next steps
+
+<Cards>
+	<Card title="View Endpoints" href="./endpoints" icon="arrow-right">
+		See the interactive API playground.
+	</Card>
+</Cards>

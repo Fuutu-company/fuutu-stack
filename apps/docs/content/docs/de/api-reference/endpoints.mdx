@@ -1,0 +1,43 @@
+---
+title: Endpunkte
+description: Interaktiver API-Playground für alle Beispiel-Endpunkte.
+tags: ["api", "openapi", "playground"]
+---
+
+Der interaktive API-Playground wird unter `/[locale]/openapi` bereitgestellt. Jeder
+Endpunkt aus der OpenAPI-Spezifikation erhält seine eigene Seite mit:
+
+- Anfrage/Antwort-Schema-Anzeige
+- Code-Beispielen in mehreren Sprachen
+- Try-it-out-Playground (erfordert `@scalar/api-client-react`)
+
+## Verfügbare Endpunkte
+
+### Auth
+
+- `POST /auth/sign-in` — Authentifizierung mit E-Mail und Passwort
+- `POST /auth/sign-up` — Neues Konto erstellen
+
+### Organisationen
+
+- `GET /organizations` — Organisationen des Benutzers auflisten
+- `POST /organizations` — Neue Organisation erstellen
+- `GET /organizations/{slug}` — Organisation nach Slug abrufen
+
+### Billing
+
+- `POST /billing/checkout` — Polar-Checkout-Sitzung erstellen
+- `GET /billing/subscription` — Aktuelles Abonnement abrufen
+
+## Playground besuchen
+
+<Cards>
+	<Card title="Open API Playground" href="../../openapi" icon="external-link">
+		Öffne die interaktive API-Dokumentation.
+	</Card>
+</Cards>
+
+<Callout type="info">
+  Der Playground verwendet `@scalar/api-client-react` für die Try-it-out-Funktion.
+  Stelle sicher, dass es in deinen Abhängigkeiten installiert ist.
+</Callout>

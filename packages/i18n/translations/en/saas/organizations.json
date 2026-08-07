@@ -1,0 +1,90 @@
+{
+	"organizations": {
+		"list": {
+			"title": "Organizations",
+			"description": "Collaborate with your team across multiple workspaces.",
+			"create": "Create organization",
+			"createHeading": "New organization",
+			"name": "Organization name",
+			"namePlaceholder": "Acme Inc.",
+			"submit": "Create",
+			"submitting": "Creating…",
+			"empty": "No organizations yet",
+			"emptyDescription": "Create your first organization to invite teammates and manage shared resources.",
+			"failed": "Could not create organization.",
+			"slugTaken": "This slug is already taken. Please choose a different name.",
+			"slug": "Slug",
+			"slugPlaceholder": "acme-inc"
+		},
+		"settings": {
+			"general": "General",
+			"generalDescription": "Update your organization's display name.",
+			"name": "Name",
+			"members": "Members",
+			"membersDescription": "Invite teammates and manage roles.",
+			"invitePlaceholder": "teammate@company.com",
+			"roleMember": "Member",
+			"roleAdmin": "Admin",
+			"roleOwner": "Owner",
+			"roleSelectLabel": "Role",
+			"sendInvite": "Invite",
+			"sending": "Inviting…",
+			"activeMembers": "Active members",
+			"removeMember": "Remove",
+			"pendingInvitations": "Pending invitations",
+			"cancelInvite": "Cancel invite",
+			"danger": "Danger zone",
+			"dangerDescription": "Permanently delete this organization.",
+			"deleteOrg": "Delete organization",
+			"deleteTitle": "Delete this organization?",
+			"deleteDescription": "All members will lose access. This action cannot be undone.",
+			"deleteCta": "Yes, delete",
+			"failed": "Action failed.",
+			"billing": "Billing",
+			"billingDescription": "Manage your organization's subscription and payment method.",
+			"billingManageHint": "Upgrade or change your organization's plan anytime.",
+			"billingUpgrade": "Upgrade plan",
+			"billingCurrentPlan": "Current plan",
+			"billingNoPlan": "No active subscription",
+			"billingNoPlanHint": "Choose a plan below to get started.",
+			"billingManagePortal": "Manage billing",
+			"billingPortalHint": "Update payment method, download invoices, or cancel.",
+			"billingCurrent": "Current plan",
+			"billingChoosePlan": "Choose a plan",
+			"billingChoosePlanHint": "Upgrade or downgrade anytime. Your organization will be billed for the new plan.",
+			"auditLog": {
+				"title": "Audit log",
+				"description": "Security-relevant events for this organization.",
+				"filterAll": "All events",
+				"filterMember": "Member changes",
+				"filterBilling": "Billing",
+				"filterSettings": "Settings",
+				"filterAuth": "Authentication"
+			},
+			"apiKeys": {
+				"title": "API keys",
+				"description": "Manage programmatic access keys."
+			},
+			"webhooks": {
+				"title": "Webhooks",
+				"description": "Manage event delivery endpoints."
+			},
+			"invoices": {
+				"title": "Invoices",
+				"description": "View and download billing history."
+			},
+			"logo": {
+				"title": "Organization logo",
+				"description": "Upload a logo to display in the sidebar and settings.",
+				"upload": "Upload logo",
+				"uploading": "Uploading…",
+				"remove": "Remove logo",
+				"removing": "Removing…",
+				"hint": "PNG, JPG or WebP. Max 5 MB.",
+				"saved": "Logo updated.",
+				"failed": "Could not update logo.",
+				"tooLarge": "File is too large. Maximum 5 MB."
+			}
+		}
+	}
+}

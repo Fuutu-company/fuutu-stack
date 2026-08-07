@@ -1,0 +1,35 @@
+{
+	"name": "@fuutu/mail",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config/defaults.ts"
+		},
+		"./templates": {
+			"default": "./src/templates/index.ts"
+		},
+		"./providers/*": {
+			"default": "./src/providers/*.ts"
+		},
+		"./templates/*": {
+			"default": "./src/templates/*.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/env": "workspace:*",
+		"@fuutu/i18n": "workspace:*",
+		"@fuutu/logs": "workspace:*"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

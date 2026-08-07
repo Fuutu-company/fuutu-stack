@@ -1,0 +1,100 @@
+---
+title: Konfiguration
+description: Konfiguriere Frontmatter-Schemas, i18n und Theming für deine Dokumentation.
+tags: ["getting-started", "config"]
+---
+
+## Frontmatter-Schema
+
+Die Datei `source.config.ts` definiert das Zod-Schema für dein MDX-Frontmatter.
+Die Vorlage erweitert das Standard-Schema um benutzerdefinierte Felder:
+
+```ts title="source.config.ts"
+import { defineConfig, defineDocs, frontmatterSchema } from "fumadocs-mdx/config";
+import { z } from "zod";
+
+export const docs = defineDocs({
+  dir: "content/docs",
+  docs: {
+    schema: frontmatterSchema.extend({
+      tags: z.array(z.string()).optional(),
+      author: z.string().optional(),
+      draft: z.boolean().optional(),
+    }),
+  },
+});
+```
+
+### Verfügbare Frontmatter-Felder
+
+<TypeTable
+  type={{
+    title: { type: "string", description: "Seitentitel (erforderlich)" },
+    description: { type: "string", description: "Kurze Zusammenfassung für Suche + OG" },
+    tags: { type: "string[]", description: "Tag-Liste zum Filtern" },
+    author: { type: "string", description: "Autorenname" },
+    draft: { type: "boolean", description: "In der Produktion ausblenden" },
+    full: { type: "boolean", description: "Seite in voller Breite rendern" },
+  }}
+/>
+
+## Meta-Dateien
+
+`meta.json`-Dateien steuern die Sidebar-Navigation. Platziere sie in jedem Inhaltsordner:
+
+```json title="content/docs/de/getting-started/meta.json"
+{
+  "title": "Erste Schritte",
+  "icon": "rocket",
+  "pages": ["introduction", "installation", "configuration"]
+}
+```
+
+### Meta-Optionen
+
+<TypeTable
+  type={{
+    title: { type: "string", description: "Anzeigename in der Sidebar" },
+    icon: { type: "string", description: "Lucide-Icon-Name" },
+    pages: { type: "string[]", description: "Geordnete Seitenliste" },
+    separator: { type: "boolean", description: "Trennlinie vor diesem Abschnitt hinzufügen" },
+  }}
+/>
+
+## i18n-Konfiguration
+
+Die Dokumentations-App unterstützt mehrere Locales. Der Inhalt ist nach Locale organisiert:
+
+<Files>
+	<Folder name="content/docs" defaultOpen>
+		<Folder name="en" defaultOpen>
+			<File name="meta.json" />
+			<File name="index.mdx" />
+		</Folder>
+		<Folder name="de">
+			<File name="meta.json" />
+			<File name="index.mdx" />
+		</Folder>
+	</Folder>
+</Files>
+
+Konfiguriere die Locales in `src/lib/i18n.ts`:
+
+```ts title="src/lib/i18n.ts"
+import { defineI18n } from "fumadocs-core/i18n";
+
+export const i18n = defineI18n({
+  defaultLanguage: "en",
+  languages: ["en", "de"],
+});
+```
+
+## Theming
+
+Dark Mode wird von `next-themes` über den `ThemeProvider` gehandhabt. Die Theme-Tokens
+stammen aus `@fuutu/config/theme.css`.
+
+<Callout type="info">
+  Um Farben anzupassen, bearbeite `packages/config/theme.css` — Änderungen gelten
+  für alle Apps (saas, marketing, docs).
+</Callout>

@@ -1,0 +1,90 @@
+{
+	"organizations": {
+		"list": {
+			"title": "Organisationen",
+			"description": "Arbeite mit deinem Team über mehrere Workspaces hinweg.",
+			"create": "Organisation erstellen",
+			"createHeading": "Neue Organisation",
+			"name": "Organisationsname",
+			"namePlaceholder": "Acme GmbH",
+			"submit": "Erstellen",
+			"submitting": "Erstelle…",
+			"empty": "Noch keine Organisationen",
+			"emptyDescription": "Erstelle deine erste Organisation, um Teammitglieder einzuladen und gemeinsame Ressourcen zu verwalten.",
+			"failed": "Organisation konnte nicht erstellt werden.",
+			"slugTaken": "Dieser Slug ist bereits vergeben. Bitte wähle einen anderen Namen.",
+			"slug": "Slug",
+			"slugPlaceholder": "acme-gmbh"
+		},
+		"settings": {
+			"general": "Allgemein",
+			"generalDescription": "Aktualisiere den Anzeigenamen der Organisation.",
+			"name": "Name",
+			"members": "Teammitglieder",
+			"membersDescription": "Lade Teammitglieder ein und verwalte Rollen.",
+			"invitePlaceholder": "teammitglied@firma.de",
+			"roleMember": "Teammitglied",
+			"roleAdmin": "Admin",
+			"roleOwner": "Inhaber",
+			"roleSelectLabel": "Rolle",
+			"sendInvite": "Einladen",
+			"sending": "Lade ein…",
+			"activeMembers": "Aktive Teammitglieder",
+			"removeMember": "Entfernen",
+			"pendingInvitations": "Offene Einladungen",
+			"cancelInvite": "Einladung zurückziehen",
+			"danger": "Gefahrenzone",
+			"dangerDescription": "Lösche diese Organisation unwiderruflich.",
+			"deleteOrg": "Organisation löschen",
+			"deleteTitle": "Organisation wirklich löschen?",
+			"deleteDescription": "Alle Mitglieder verlieren Zugriff. Diese Aktion ist nicht umkehrbar.",
+			"deleteCta": "Ja, löschen",
+			"failed": "Aktion fehlgeschlagen.",
+			"billing": "Abrechnung",
+			"billingDescription": "Verwalte das Abonnement und die Zahlungsmethode deiner Organisation.",
+			"billingManageHint": "Upgrade oder ändere den Plan deiner Organisation jederzeit.",
+			"billingUpgrade": "Plan upgraden",
+			"billingCurrentPlan": "Aktueller Plan",
+			"billingNoPlan": "Kein aktives Abonnement",
+			"billingNoPlanHint": "Wähle unten einen Plan, um loszulegen.",
+			"billingManagePortal": "Abrechnung verwalten",
+			"billingPortalHint": "Zahlungsmethode aktualisieren, Rechnungen herunterladen oder kündigen.",
+			"billingCurrent": "Aktueller Plan",
+			"billingChoosePlan": "Plan wählen",
+			"billingChoosePlanHint": "Upgrade oder Downgrade jederzeit. Deine Organisation wird für den neuen Plan abgerechnet.",
+			"auditLog": {
+				"title": "Audit-Log",
+				"description": "Sicherheitsrelevante Ereignisse für diese Organisation.",
+				"filterAll": "Alle Ereignisse",
+				"filterMember": "Mitgliederänderungen",
+				"filterBilling": "Abrechnung",
+				"filterSettings": "Einstellungen",
+				"filterAuth": "Authentifizierung"
+			},
+			"apiKeys": {
+				"title": "API-Schlüssel",
+				"description": "Programmatische Zugriffsschlüssel verwalten."
+			},
+			"webhooks": {
+				"title": "Webhooks",
+				"description": "Ereignis-Zustellungsendpunkte verwalten."
+			},
+			"invoices": {
+				"title": "Rechnungen",
+				"description": "Abrechnungshistorie ansehen und herunterladen."
+			},
+			"logo": {
+				"title": "Organisationslogo",
+				"description": "Lade ein Logo hoch, das in der Seitenleiste und den Einstellungen angezeigt wird.",
+				"upload": "Logo hochladen",
+				"uploading": "Lade hoch…",
+				"remove": "Logo entfernen",
+				"removing": "Entferne…",
+				"hint": "PNG, JPG oder WebP. Max 5 MB.",
+				"saved": "Logo aktualisiert.",
+				"failed": "Logo konnte nicht aktualisiert werden.",
+				"tooLarge": "Datei ist zu groß. Maximum 5 MB."
+			}
+		}
+	}
+}

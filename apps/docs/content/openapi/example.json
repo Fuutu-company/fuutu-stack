@@ -1,0 +1,489 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Fuutu Stack API",
+		"version": "1.0.0",
+		"description": "Example API spec for the Fuutu Stack docs app. Replace this with your own OpenAPI spec to generate interactive API documentation."
+	},
+	"servers": [
+		{
+			"url": "https://api.example.com/v1",
+			"description": "Production"
+		},
+		{
+			"url": "http://localhost:3000/api",
+			"description": "Local development"
+		}
+	],
+	"tags": [
+		{
+			"name": "Auth",
+			"description": "Authentication and session management"
+		},
+		{
+			"name": "Organizations",
+			"description": "Organization management endpoints"
+		},
+		{
+			"name": "Billing",
+			"description": "Billing and subscription endpoints"
+		}
+	],
+	"paths": {
+		"/auth/sign-in": {
+			"post": {
+				"tags": ["Auth"],
+				"summary": "Sign in",
+				"description": "Authenticate a user with email and password. Returns a session cookie.",
+				"operationId": "signIn",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["email", "password"],
+								"properties": {
+									"email": {
+										"type": "string",
+										"format": "email",
+										"description": "User email address"
+									},
+									"password": {
+										"type": "string",
+										"minLength": 8,
+										"description": "User password"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Successfully signed in",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"$ref": "#/components/schemas/User"
+										},
+										"session": {
+											"$ref": "#/components/schemas/Session"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Invalid credentials",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/sign-up": {
+			"post": {
+				"tags": ["Auth"],
+				"summary": "Sign up",
+				"description": "Create a new user account with email and password.",
+				"operationId": "signUp",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["email", "password", "name"],
+								"properties": {
+									"email": {
+										"type": "string",
+										"format": "email"
+									},
+									"password": {
+										"type": "string",
+										"minLength": 8
+									},
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 100
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Account created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"$ref": "#/components/schemas/User"
+										}
+									}
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Email already registered",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/organizations": {
+			"get": {
+				"tags": ["Organizations"],
+				"summary": "List organizations",
+				"description": "Get all organizations the authenticated user belongs to.",
+				"operationId": "listOrganizations",
+				"security": [{ "session": [] }],
+				"responses": {
+					"200": {
+						"description": "List of organizations",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Organization"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Organizations"],
+				"summary": "Create organization",
+				"description": "Create a new organization. The authenticated user becomes the owner.",
+				"operationId": "createOrganization",
+				"security": [{ "session": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["name"],
+								"properties": {
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 100
+									},
+									"slug": {
+										"type": "string",
+										"pattern": "^[a-z0-9-]+$",
+										"description": "URL-friendly slug. Auto-generated from name if omitted."
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Organization created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Organization"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/organizations/{slug}": {
+			"get": {
+				"tags": ["Organizations"],
+				"summary": "Get organization",
+				"description": "Get a single organization by its slug.",
+				"operationId": "getOrganization",
+				"security": [{ "session": [] }],
+				"parameters": [
+					{
+						"name": "slug",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string"
+						},
+						"description": "Organization slug"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Organization details",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Organization"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Organization not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/billing/checkout": {
+			"post": {
+				"tags": ["Billing"],
+				"summary": "Create checkout session",
+				"description": "Create a Polar checkout session for upgrading to a paid plan.",
+				"operationId": "createCheckout",
+				"security": [{ "session": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["productId"],
+								"properties": {
+									"productId": {
+										"type": "string",
+										"description": "Polar product ID"
+									},
+									"successUrl": {
+										"type": "string",
+										"format": "url",
+										"description": "URL to redirect to after successful payment"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Checkout URL",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"url": {
+											"type": "string",
+											"format": "url",
+											"description": "Polar checkout URL"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/billing/subscription": {
+			"get": {
+				"tags": ["Billing"],
+				"summary": "Get subscription",
+				"description": "Get the current billing subscription for the authenticated user or organization.",
+				"operationId": "getSubscription",
+				"security": [{ "session": [] }],
+				"responses": {
+					"200": {
+						"description": "Subscription details",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Subscription"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"session": {
+				"type": "apiKey",
+				"in": "cookie",
+				"name": "session"
+			}
+		},
+		"schemas": {
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"name": {
+						"type": "string"
+					},
+					"image": {
+						"type": "string",
+						"format": "uri",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"Session": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"userId": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"expiresAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"Organization": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"name": {
+						"type": "string"
+					},
+					"slug": {
+						"type": "string"
+					},
+					"logo": {
+						"type": "string",
+						"format": "uri",
+						"nullable": true
+					},
+					"memberCount": {
+						"type": "integer"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"Subscription": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"plan": {
+						"type": "string",
+						"enum": ["free", "pro", "enterprise"]
+					},
+					"status": {
+						"type": "string",
+						"enum": ["active", "canceled", "past_due", "trialing"]
+					},
+					"currentPeriodEnd": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"Error": {
+				"type": "object",
+				"required": ["message"],
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Human-readable error message"
+					},
+					"code": {
+						"type": "string",
+						"description": "Machine-readable error code"
+					}
+				}
+			}
+		}
+	}
+}

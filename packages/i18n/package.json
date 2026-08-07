@@ -1,0 +1,23 @@
+{
+	"name": "@fuutu/i18n",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./index.ts",
+		"./config": "./config.ts",
+		"./types": "./types.ts"
+	},
+	"scripts": {
+		"check-translations": "node scripts/check-translations.mjs",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"deepmerge": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

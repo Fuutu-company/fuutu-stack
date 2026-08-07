@@ -1,0 +1,100 @@
+---
+title: Configuration
+description: Configure frontmatter schemas, i18n, and theming for your docs.
+tags: ["getting-started", "config"]
+---
+
+## Frontmatter schema
+
+The `source.config.ts` file defines the Zod schema for your MDX frontmatter.
+The template extends the default schema with custom fields:
+
+```ts title="source.config.ts"
+import { defineConfig, defineDocs, frontmatterSchema } from "fumadocs-mdx/config";
+import { z } from "zod";
+
+export const docs = defineDocs({
+  dir: "content/docs",
+  docs: {
+    schema: frontmatterSchema.extend({
+      tags: z.array(z.string()).optional(),
+      author: z.string().optional(),
+      draft: z.boolean().optional(),
+    }),
+  },
+});
+```
+
+### Available frontmatter fields
+
+<TypeTable
+  type={{
+    title: { type: "string", description: "Page title (required)" },
+    description: { type: "string", description: "Short summary for search + OG" },
+    tags: { type: "string[]", description: "Tag list for filtering" },
+    author: { type: "string", description: "Author name" },
+    draft: { type: "boolean", description: "Hide from production" },
+    full: { type: "boolean", description: "Render page in full width" },
+  }}
+/>
+
+## Meta files
+
+`meta.json` files control sidebar navigation. Place them in any content folder:
+
+```json title="content/docs/en/getting-started/meta.json"
+{
+  "title": "Getting Started",
+  "icon": "rocket",
+  "pages": ["introduction", "installation", "configuration"]
+}
+```
+
+### Meta options
+
+<TypeTable
+  type={{
+    title: { type: "string", description: "Display name in sidebar" },
+    icon: { type: "string", description: "Lucide icon name" },
+    pages: { type: "string[]", description: "Ordered page list" },
+    separator: { type: "boolean", description: "Add divider before this section" },
+  }}
+/>
+
+## i18n configuration
+
+The docs app supports multiple locales. Content is organized by locale:
+
+<Files>
+	<Folder name="content/docs" defaultOpen>
+		<Folder name="en" defaultOpen>
+			<File name="meta.json" />
+			<File name="index.mdx" />
+		</Folder>
+		<Folder name="de">
+			<File name="meta.json" />
+			<File name="index.mdx" />
+		</Folder>
+	</Folder>
+</Files>
+
+Configure locales in `src/lib/i18n.ts`:
+
+```ts title="src/lib/i18n.ts"
+import { defineI18n } from "fumadocs-core/i18n";
+
+export const i18n = defineI18n({
+  defaultLanguage: "en",
+  languages: ["en", "de"],
+});
+```
+
+## Theming
+
+Dark mode is handled by `next-themes` via the `ThemeProvider`. The theme
+tokens come from `@fuutu/config/theme.css`.
+
+<Callout type="info">
+  To customize colors, edit `packages/config/theme.css` — changes apply
+  across all apps (saas, marketing, docs).
+</Callout>
