@@ -6,6 +6,10 @@
   <img src="./assets/readme/features.svg" alt="Fuutu Stack — enterprise features, autonomous AI workflow, agent harness, and tech stack" width="100%" />
 </p>
 
+<p align="center">
+  <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://stack.fuutu.com">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
+</p>
+
 ---
 
 ## Quick Start

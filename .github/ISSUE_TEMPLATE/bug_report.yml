@@ -8,6 +8,7 @@ body:
       value: |
         Thanks for taking the time to report a bug! Please fill out the information below.
         If this is a security vulnerability, **do not file a public issue** — see [SECURITY.md](https://github.com/Fuutu-company/fuutu-stack/blob/main/SECURITY.md).
+        For quick help, join our [Discord](https://discord.gg/fF7fgQ7jZ3) and open a support ticket in `#help`.
   - type: textarea
     id: description
     attributes:

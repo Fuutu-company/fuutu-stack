@@ -2,6 +2,8 @@
 
 Thanks for your interest in contributing! Fuutu Stack is a commercial open-source project under the [Fuutu Business License](./LICENSE.md). Community contributions are welcome and appreciated.
 
+> **Need help?** Join our [Discord](https://discord.gg/fF7fgQ7jZ3) — open a support ticket in `#help` and we'll get you unblocked.
+
 ## Quick Start
 
 ```bash

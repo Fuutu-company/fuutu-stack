@@ -7,6 +7,7 @@ body:
     attributes:
       value: |
         Thanks for suggesting a feature! Please describe what you'd like and why.
+        For quick discussion, join our [Discord](https://discord.gg/fF7fgQ7jZ3) — `#roadmap-talk` channel.
   - type: textarea
     id: problem
     attributes:
