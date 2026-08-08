@@ -160,5 +160,5 @@ Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[stack.fuutu.com/pricin
 
 - **Documentation**: [stack.fuutu.com/docs](https://stack.fuutu.com/docs)
 - **Pricing**: [stack.fuutu.com/pricing](https://stack.fuutu.com/pricing)
-- **Support**: [devin.ai/support](https://devin.ai/support)
+- **Support**: [stack.fuutu.com](https://stack.fuutu.com)
 - **License**: [LICENSE.md](./LICENSE.md)
