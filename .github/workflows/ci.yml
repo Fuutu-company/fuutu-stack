@@ -664,14 +664,14 @@ jobs:
 
       - name: Download SaaS report
         if: always() && steps.check.outputs.status == 'visual_changes'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: playwright-saas-report
           path: report/saas
 
       - name: Download Marketing report
         if: always() && steps.check.outputs.status == 'visual_changes'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: playwright-marketing-report
           path: report/marketing
