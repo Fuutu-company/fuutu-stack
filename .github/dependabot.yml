@@ -4,9 +4,10 @@
 version: 2
 
 updates:
-  # npm dependencies — weekly
+  # npm dependencies — weekly → develop
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -23,9 +24,10 @@ updates:
           - "minor"
           - "patch"
 
-  # GitHub Actions — weekly
+  # GitHub Actions — weekly → develop
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
