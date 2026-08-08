@@ -119,7 +119,7 @@ jobs:
 
       - name: Post PR comment if issues found
         if: always() && github.event_name == 'pull_request' && steps.check-translations.outputs.TRANSLATION_ISSUES == '1'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -175,7 +175,7 @@ jobs:
 
       - name: Post PR comment if outdated packages found
         if: always() && github.event_name == 'pull_request' && steps.check-outdated.outputs.OUTDATED_FOUND == '1'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -709,7 +709,7 @@ jobs:
 
       - name: Post visual changes warning with report link
         if: steps.check.outputs.status == 'visual_changes'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const branch = '${{ github.base_ref }}';
@@ -744,7 +744,7 @@ jobs:
 
       - name: Post all-clear comment
         if: steps.check.outputs.status == 'no_changes'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.issues.createComment({
@@ -755,7 +755,7 @@ jobs:
 
       - name: Post tests-incomplete warning
         if: steps.check.outputs.status == 'tests_incomplete'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const saas = '${{ steps.check.outputs.saas_result }}';
@@ -784,7 +784,7 @@ jobs:
 
       - name: Post E2E coverage comment
         if: always() && needs.e2e-marketing.outputs.coverage_available == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const pct = '${{ needs.e2e-marketing.outputs.coverage_pct }}';
