@@ -390,7 +390,7 @@ jobs:
       - run: pnpm install
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
@@ -405,7 +405,7 @@ jobs:
           fi
 
       - name: Cache visual regression baselines (SaaS)
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: saas-visual-cache
         with:
           path: apps/saas/tests/visual.spec.ts-snapshots
@@ -516,7 +516,7 @@ jobs:
       - run: pnpm install
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
@@ -531,7 +531,7 @@ jobs:
           fi
 
       - name: Cache visual regression baselines (Marketing)
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: marketing-visual-cache
         with:
           path: apps/marketing/tests/visual.spec.ts-snapshots
