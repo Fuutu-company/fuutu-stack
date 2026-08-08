@@ -58,7 +58,7 @@ catalog:
   "@iconify/icons-circle-flags": ^1.2.41
   "@iconify/react": ^6.0.2
   shadcn: ^4.16.1
-  streamdown: ^1.6.10
+  streamdown: ^2.5.0
   # Data / API
   "@tanstack/react-query": ^5.101.4
   "@tanstack/react-query-devtools": ^5.101.4
