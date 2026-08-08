@@ -1,0 +1,30 @@
+{
+	"name": "@fuutu/ai",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@ai-sdk/devtools": "catalog:",
+		"@ai-sdk/google": "catalog:",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"ai": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

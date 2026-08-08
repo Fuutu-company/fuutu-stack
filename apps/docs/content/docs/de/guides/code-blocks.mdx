@@ -1,0 +1,79 @@
+---
+title: Code-Blöcke
+description: Syntax-Highlighting, Zeilen-Highlighting, Diffs, Titel und mehr.
+tags: ["guides", "code"]
+---
+
+Code-Blöcke werden von **Shiki** für Syntax-Highlighting angetrieben. Sie unterstützen
+Titel, Zeilennummern, Zeilen-Highlighting, Diffs und mehr.
+
+## Grundlegender Code-Block
+
+```ts
+function greet(name: string): string {
+  return `Hello, ${name}!`;
+}
+```
+
+## Mit Titel
+
+```ts title="src/lib/greet.ts"
+function greet(name: string): string {
+  return `Hello, ${name}!`;
+}
+```
+
+## Zeilen-Highlighting
+
+```ts {2-3}
+function greet(name: string): string {
+  // hervorgehobene Zeilen
+  const message = `Hello, ${name}!`;
+  return message;
+}
+```
+
+## Wort-Highlighting
+
+```ts /greet/
+function greet(name: string): string {
+  return `Hello, ${name}!`;
+}
+
+const result = greet("World");
+```
+
+## Diff
+
+```ts
+function greet(name: string): string {
+	- return `Hello!`;
+	+ return `Hello, ${name}!`;
+}
+```
+
+## Mehrere Features kombiniert
+
+```ts title="src/lib/utils.ts" {3} /transform/
+function transform(input: string): string {
+  const trimmed = input.trim();
+  const result = trimmed.toUpperCase(); // hervorgehoben
+  return result;
+}
+```
+
+## Copy-Button
+
+<Callout type="info">
+  Jeder Code-Block hat einen Copy-Button in der oberen rechten Ecke. Probiere es
+  bei einem der Blöcke oben aus.
+</Callout>
+
+## Sprach-Icons
+
+Code-Blöcke können Sprach-Icons anzeigen. Das `lucideIconsPlugin` ist in
+`src/lib/source.ts` konfiguriert.
+
+## Inline-Code
+
+Verwende Backticks für `Inline-Code` in Absätzen.

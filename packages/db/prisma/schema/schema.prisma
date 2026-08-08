@@ -1,0 +1,16 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../generated"
+  engineType = "client"
+}
+
+generator zod {
+  provider = "prisma-zod-generator"
+  output   = "../zod"
+  config   = "./zod-generator.config.json"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["auth", "app"]
+}

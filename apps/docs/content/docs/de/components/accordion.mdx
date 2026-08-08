@@ -1,0 +1,68 @@
+---
+title: Accordion
+description: Zusammenklappbare Abschnitte für FAQs und erweiterbaren Inhalt.
+tags: ["components", "accordion"]
+---
+
+Accordions erstellen zusammenklappbare Abschnitte. Großartig für FAQs und Inhalte,
+die nicht standardmäßig sichtbar sein müssen.
+
+## Grundlegendes Accordion
+
+<Accordions>
+	<Accordion title="Was ist der Fuutu Stack?">
+    Der Fuutu Stack ist ein produktionsreifes TypeScript-SaaS-Starter-Kit.
+  </Accordion>
+	<Accordion title="Ist Fumadocs kostenlos?">
+    Ja, Fumadocs ist Open Source und kostenlos zu verwenden.
+  </Accordion>
+	<Accordion title="Kann ich die Dokumentations-App anpassen?">
+    Absolut — jede Komponente kann überschrieben werden. Lösche jede Beispiel-Seite
+    und ersetze sie durch deinen eigenen Inhalt.
+  </Accordion>
+</Accordions>
+
+## Accordion mit Code
+
+<Accordions>
+	<Accordion title="Wie füge ich eine neue Seite hinzu?">
+    Erstelle eine MDX-Datei in `content/docs/de/`:
+
+```bash
+touch apps/docs/content/docs/de/meine-seite.mdx
+```
+
+    Füge Frontmatter und Inhalt hinzu:
+
+```mdx
+---
+title: Meine Seite
+description: Eine neue Dokumentationsseite.
+---
+
+# Hallo Welt
+```
+  </Accordion>
+	<Accordion title="Wie ändere ich die Sidebar-Reihenfolge?">
+    Bearbeite die `meta.json`-Datei im entsprechenden Inhaltsordner:
+
+```json
+{
+  "pages": ["erste-seite", "zweite-seite", "dritte-seite"]
+}
+```
+  </Accordion>
+</Accordions>
+
+## Verwendung
+
+```mdx
+<Accordions>
+  <Accordion title="Frage 1">
+    Antwort 1
+  </Accordion>
+  <Accordion title="Frage 2">
+    Antwort 2
+  </Accordion>
+</Accordions>
+```

@@ -1,0 +1,29 @@
+{
+	"name": "@fuutu/storage",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/env": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"@aws-sdk/client-s3": "catalog:",
+		"@aws-sdk/s3-request-presigner": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

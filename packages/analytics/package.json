@@ -1,0 +1,44 @@
+{
+	"name": "@fuutu/analytics",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config.ts"
+		},
+		"./consent": {
+			"default": "./src/consent.tsx"
+		},
+		"./script": {
+			"default": "./src/script.tsx"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/env": "workspace:*",
+		"@fuutu/i18n": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"@fuutu/ui": "workspace:*"
+	},
+	"peerDependencies": {
+		"next": "catalog:",
+		"next-intl": "catalog:",
+		"react": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"@types/react": "catalog:",
+		"next": "catalog:",
+		"next-intl": "catalog:",
+		"react": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

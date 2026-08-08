@@ -1,0 +1,189 @@
+// ──────────────────────────────────────────────────────────────────────────
+// Better-Auth managed models. Keep this file aligned with `better-auth
+// generate` output. All models live in the `auth` Postgres schema so we can
+// regenerate without touching domain tables.
+// ──────────────────────────────────────────────────────────────────────────
+
+model User {
+  id                       String    @id
+  name                     String
+  email                    String
+  emailVerified            Boolean   @default(false)
+  image                    String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  role                     String?
+  banned                   Boolean?  @default(false)
+  banReason                String?
+  banExpires               DateTime?
+  locale                   String?
+  twoFactorEnabled         Boolean?  @default(false)
+  // Fuutu custom fields (exposed via better-auth additionalFields)
+  onboardingComplete       Boolean   @default(false)
+  username                 String?   @unique
+  paymentsCustomerId       String?
+  lastActiveOrganizationId String?
+
+  sessions      Session[]
+  accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
+  passkeys      Passkey[]
+  twoFactors    TwoFactor[]
+  purchases        Purchase[]
+  auditLogs        AuditLog[]
+  apiKeys          ApiKey[]
+  invoices         Invoice[]
+  notifications    Notification[]
+  chatConversations ChatConversation[]
+
+  @@unique([email])
+  @@map("user")
+  @@schema("auth")
+}
+
+model Session {
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+  impersonatedBy       String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+  @@schema("auth")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+  @@schema("auth")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+  @@schema("auth")
+}
+
+model Organization {
+  id                 String   @id
+  name               String
+  slug               String
+  logo               String?
+  createdAt          DateTime
+  metadata           String?
+  // Fuutu custom fields
+  paymentsCustomerId String?
+
+  members     Member[]
+  invitations Invitation[]
+  purchases   Purchase[]
+  apiKeys     ApiKey[]
+  invoices    Invoice[]
+  webhooks    Webhook[]
+  chatConversations ChatConversation[]
+  contacts    Contact[]
+
+  @@unique([slug])
+  @@map("organization")
+  @@schema("auth")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("member")
+  @@schema("auth")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
+  @@schema("auth")
+}
+
+// Better-Auth passkey plugin
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime? @default(now())
+  aaguid       String?
+
+  @@index([userId])
+  @@map("passkey")
+  @@schema("auth")
+}
+
+// Better-Auth twoFactor plugin
+model TwoFactor {
+  id          String  @id
+  secret      String
+  backupCodes String
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Added in better-auth 1.6: gate sign-in on verified TOTP enrollment.
+  // Default true keeps legacy rows signed-in-capable.
+  verified    Boolean @default(true)
+
+  @@index([userId])
+  @@map("two_factor")
+  @@schema("auth")
+}

@@ -1,0 +1,29 @@
+{
+	"name": "@fuutu/webhooks",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/db": "workspace:*",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

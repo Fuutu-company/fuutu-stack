@@ -1,0 +1,45 @@
+{
+	"name": "@fuutu/api",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/ai": "workspace:*",
+		"@fuutu/auth": "workspace:*",
+		"@fuutu/config": "workspace:*",
+		"@fuutu/db": "workspace:*",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/i18n": "workspace:*",
+		"@fuutu/license": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"@fuutu/payments": "workspace:*",
+		"@fuutu/rbac": "workspace:*",
+		"@fuutu/storage": "workspace:*",
+		"@fuutu/telemetry": "workspace:*",
+		"@fuutu/utils": "workspace:*",
+		"@orpc/client": "catalog:",
+		"@orpc/openapi": "catalog:",
+		"@orpc/server": "catalog:",
+		"@orpc/zod": "catalog:",
+		"@prisma/client": "catalog:",
+		"dotenv": "catalog:",
+		"hono": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"undici-types": "catalog:",
+		"vitest": "catalog:"
+	}
+}

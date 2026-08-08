@@ -1,0 +1,27 @@
+{
+	"onboarding": {
+		"title": "Welcome to Fuutu Stack",
+		"description": "Let's get your account ready in a couple of steps.",
+		"step": "Step {current} of {total}",
+		"profile": {
+			"heading": "Your profile",
+			"fullName": "Full name",
+			"placeholder": "Jane Doe",
+			"continue": "Continue"
+		},
+		"org": {
+			"heading": "Create an organization",
+			"description": "Organizations let you collaborate with your team. You can skip this and create one later.",
+			"name": "Organization name",
+			"placeholder": "Acme Inc.",
+			"create": "Create organization",
+			"skip": "Skip for now"
+		},
+		"done": {
+			"heading": "You're all set",
+			"description": "Your account is ready. Let's go to the dashboard.",
+			"cta": "Go to dashboard"
+		},
+		"failed": "Could not save onboarding step."
+	}
+}

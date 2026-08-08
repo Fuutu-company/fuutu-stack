@@ -1,0 +1,57 @@
+{
+	"admin": {
+		"dashboard": {
+			"title": "Admin",
+			"description": "Manage users and inspect audit logs.",
+			"usersCard": "Manage users",
+			"usersCardDescription": "Search, ban and promote users.",
+			"auditLogsCard": "Audit logs",
+			"auditLogsCardDescription": "Inspect all sensitive actions."
+		},
+		"users": {
+			"title": "Users",
+			"description": "Search, ban, and manage roles for all platform users.",
+			"searchPlaceholder": "Search by email…",
+			"empty": "No users found.",
+			"role": "Role",
+			"roleValue": {
+				"admin": "Admin",
+				"user": "User",
+				"member": "Member",
+				"owner": "Owner"
+			},
+			"email": "Email",
+			"createdAt": "Created",
+			"actions": "Actions",
+			"status": "Status",
+			"banned": "Banned",
+			"active": "Active",
+			"ban": "Ban",
+			"unban": "Unban",
+			"makeAdmin": "Make admin",
+			"makeUser": "Make user",
+			"makeAdminAria": "Make admin",
+			"makeUserAria": "Make user",
+			"banAria": "Ban user",
+			"unbanAria": "Unban user",
+			"defaultBanReason": "Violation of terms",
+			"failed": "Action failed.",
+			"banError": "Failed to update ban status. Please try again.",
+			"roleError": "Failed to update role. Please try again."
+		},
+		"auditLogs": {
+			"title": "Audit logs",
+			"description": "Recent security-relevant events across the platform.",
+			"col": {
+				"time": "Time",
+				"action": "Action",
+				"user": "User",
+				"ip": "IP"
+			},
+			"prev": "Previous",
+			"next": "Next",
+			"page": "Page {page} · {total}",
+			"empty": "No audit logs."
+		}
+	}
+}

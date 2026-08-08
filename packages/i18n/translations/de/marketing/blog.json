@@ -1,0 +1,8 @@
+{
+	"blog": {
+		"title": "Blog",
+		"description": "Notizen aus dem Team — Produkt-Updates, Engineering-Deep-Dives und Geschichten vom Weg zum Launch.",
+		"empty": "Noch keine Beiträge. Schau bald wieder vorbei.",
+		"backToList": "Zurück zur Übersicht"
+	}
+}

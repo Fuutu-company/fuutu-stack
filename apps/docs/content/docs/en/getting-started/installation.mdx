@@ -1,0 +1,90 @@
+---
+title: Installation
+description: Get the docs app running locally in under a minute.
+tags: ["getting-started", "setup"]
+---
+
+## Prerequisites
+
+- Node.js ≥ 20
+- pnpm 10.11+
+- The Fuutu Stack monorepo cloned
+
+## Steps
+
+<Steps>
+	### Install dependencies
+
+  From the monorepo root:
+
+  ```bash title="Terminal"
+  pnpm install
+  ```
+
+	### Start the dev server
+
+  ```bash title="Terminal"
+  pnpm dev:docs
+  ```
+
+  The docs app runs on `http://localhost:4000`.
+
+	### Open your browser
+
+  Navigate to `http://localhost:4000/en/docs` to see the documentation.
+
+  <Callout type="success">
+    You should see the docs sidebar with all example pages.
+  </Callout>
+
+	### Start writing
+
+  Create a new MDX file in `content/docs/en/`:
+
+  ```bash title="Terminal"
+  touch apps/docs/content/docs/en/my-page.mdx
+  ```
+
+  Add frontmatter:
+
+  ```mdx title="my-page.mdx"
+  ---
+  title: My Page
+  description: A brand new docs page.
+  ---
+
+  # Hello World
+
+  Your content here.
+  ```
+
+  It appears in the sidebar automatically.
+</Steps>
+
+## Package manager options
+
+<Tabs items={["pnpm", "npm", "yarn"]} defaultIndex={0}>
+	<Tab value="pnpm">
+```bash
+pnpm install
+pnpm dev:docs
+```
+  </Tab>
+	<Tab value="npm">
+```bash
+npm install
+npm run dev:docs
+```
+  </Tab>
+	<Tab value="yarn">
+```bash
+yarn install
+yarn dev:docs
+```
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+  The Fuutu Stack uses pnpm. Other package managers may work but are not
+  officially supported.
+</Callout>

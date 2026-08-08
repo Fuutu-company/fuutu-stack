@@ -1,0 +1,3 @@
+{
+	"extends": "@fuutu/tsconfig/base.json"
+}

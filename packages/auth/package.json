@@ -1,0 +1,37 @@
+{
+	"name": "@fuutu/auth",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./client": {
+			"default": "./src/client.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {},
+	"dependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/db": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"@fuutu/mail": "workspace:*",
+		"@fuutu/payments": "workspace:*",
+		"@fuutu/rbac": "workspace:*",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/utils": "workspace:*",
+		"@better-auth/passkey": "catalog:",
+		"@polar-sh/better-auth": "catalog:",
+		"@polar-sh/sdk": "catalog:",
+		"better-auth": "catalog:",
+		"dotenv": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

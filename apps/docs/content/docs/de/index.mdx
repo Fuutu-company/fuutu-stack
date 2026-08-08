@@ -1,0 +1,50 @@
+---
+title: Einführung
+description: Eine einsatzbereite Dokumentationsvorlage, die mit dem Fuutu Stack ausgeliefert wird.
+---
+
+Dies ist die **Dokumentationsvorlage**, die mit dem Fuutu Stack gebündelt ist. Sie zeigt
+jedes Fumadocs-Feature als anpassbares Beispiel — lösche, was du nicht brauchst, behalte,
+was du brauchst.
+
+## Was drin ist
+
+<Cards>
+	<Card title="Erste Schritte" href="./getting-started/introduction" icon="rocket">
+		Lerne die Grundlagen und richte deine erste Dokumentationsseite ein.
+	</Card>
+	<Card title="Anleitungen" href="./guides/markdown" icon="book-open">
+		Detaillierte Einblicke in MDX, Code-Blöcke, Suche und Theming.
+	</Card>
+	<Card title="Komponenten" href="./components/callout" icon="blocks">
+		Jede Fumadocs-UI-Komponente mit Live-Beispielen.
+	</Card>
+	<Card title="API-Referenz" href="./api-reference/overview" icon="code">
+		Interaktive API-Dokumentation aus einer OpenAPI-Spezifikation.
+	</Card>
+</Cards>
+
+## Schnellstart
+
+Füge MDX-Dateien zu `apps/docs/content/docs/de/` hinzu und sie erscheinen automatisch
+in der Sidebar. Verwende `meta.json`-Dateien, um die Reihenfolge, Titel und Icons zu steuern.
+
+```mdx title="content/docs/de/getting-started/introduction.mdx"
+---
+title: Einführung
+description: Deine erste Dokumentationsseite.
+---
+
+# Hallo Welt
+
+Schreibe **Markdown** und verwende <Callout>Komponenten</Callout> inline.
+```
+
+## Features
+
+<Callout type="info">
+  Diese Vorlage verfügt über vollständige i18n-Unterstützung (en/de), Dark Mode, Suche
+  und OpenAPI-Integration — alles in die Fuutu-Stack-Muster integriert.
+</Callout>
+
+Siehe [fumadocs.dev](https://fumadocs.dev) für die vollständige Fumadocs-Dokumentation.

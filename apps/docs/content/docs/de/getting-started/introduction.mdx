@@ -1,0 +1,76 @@
+---
+title: Einführung
+description: Erfahre, was die Fuutu-Stack-Dokumentationsvorlage bietet und wie sie strukturiert ist.
+tags: ["getting-started", "beginner"]
+---
+
+Willkommen zur **Fuutu-Stack-Dokumentationsvorlage** — eine produktionsreife
+Dokumentations-App, die mit Fumadocs, Next.js und Tailwind CSS erstellt wurde.
+
+## Warum diese Vorlage?
+
+<Callout type="info">
+  Dies ist ein **Starter-Baustein**. Jede Seite ist ein eigenständiges Beispiel.
+  Lösche, was du nicht brauchst, und ersetze es durch deinen eigenen Inhalt.
+</Callout>
+
+## Was ist enthalten
+
+| Feature | Status |
+|---------|--------|
+| MDX-Inhalt | ✅ Bereit |
+| Volltextsuche | ✅ Bereit |
+| Dark Mode | ✅ Bereit |
+| i18n (en/de) | ✅ Bereit |
+| OpenAPI-Dokumentation | ✅ Bereit |
+| OG-Bild-Generierung | ✅ Bereit |
+| LLM-freundliche Routes | ✅ Bereit |
+| Kit-Fingerprint | ✅ Bereit |
+
+## Projektstruktur
+
+<Files>
+	<Folder name="apps/docs" defaultOpen>
+		<Folder name="content/docs" defaultOpen>
+			<Folder name="en" defaultOpen>
+				<File name="meta.json" />
+				<File name="index.mdx" />
+				<Folder name="getting-started">
+					<File name="meta.json" />
+					<File name="introduction.mdx" />
+				</Folder>
+			</Folder>
+			<Folder name="de">
+				<File name="meta.json" />
+				<File name="index.mdx" />
+			</Folder>
+		</Folder>
+		<Folder name="src">
+			<Folder name="app">
+				<File name="layout.tsx" />
+				<Folder name="[locale]">
+					<File name="layout.tsx" />
+					<File name="page.tsx" />
+					<Folder name="docs">
+						<File name="layout.tsx" />
+					</Folder>
+				</Folder>
+			</Folder>
+			<Folder name="lib">
+				<File name="source.ts" />
+				<File name="i18n.ts" />
+			</Folder>
+		</Folder>
+	</Folder>
+</Files>
+
+## Nächste Schritte
+
+<Cards>
+	<Card title="Installation" href="./installation" icon="download">
+		So installierst und startest du die Dokumentations-App.
+	</Card>
+	<Card title="Konfiguration" href="./configuration" icon="settings">
+		Konfiguriere Frontmatter, i18n und Theming.
+	</Card>
+</Cards>

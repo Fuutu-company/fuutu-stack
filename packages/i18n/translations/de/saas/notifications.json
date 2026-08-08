@@ -1,0 +1,23 @@
+{
+	"notifications": {
+		"title": "Benachrichtigungen",
+		"description": "Deine letzten Aktivitäten und Benachrichtigungen.",
+		"markAllRead": "Alle als gelesen markieren",
+		"marking": "Markiere…",
+		"markAllReadError": "Benachrichtigungen konnten nicht als gelesen markiert werden.",
+		"markReadError": "Benachrichtigung konnte nicht als gelesen markiert werden.",
+		"empty": "Keine Benachrichtigungen",
+		"loading": "Benachrichtigungen werden geladen…",
+		"emptyDescription": "Du bist auf dem neuesten Stand!",
+		"unread": "ungelesen",
+		"bellAria": "Benachrichtigungen",
+		"moreThanNine": "9+",
+		"viewAll": "Alle anzeigen",
+		"types": {
+			"info": "Info",
+			"success": "Erfolg",
+			"warning": "Warnung",
+			"error": "Fehler"
+		}
+	}
+}

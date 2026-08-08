@@ -1,0 +1,107 @@
+{
+	"settings": {
+		"title": "Einstellungen",
+		"account": {
+			"title": "Konto",
+			"language": {
+				"title": "Sprache",
+				"description": "Wähle deine bevorzugte Sprache",
+				"notifications": {
+					"success": "Sprache erfolgreich aktualisiert",
+					"error": "Sprache konnte nicht aktualisiert werden"
+				}
+			}
+		},
+		"tabs": {
+			"profile": "Profil",
+			"security": "Sicherheit",
+			"sessions": "Sitzungen",
+			"danger": "Gefahrenzone",
+			"billing": "Abrechnung"
+		},
+		"profile": {
+			"title": "Profil",
+			"description": "Aktualisiere deine persönlichen Daten.",
+			"fullName": "Vollständiger Name",
+			"fullNamePlaceholder": "Max Mustermann",
+			"emailLabel": "E-Mail",
+			"saved": "Profil aktualisiert.",
+			"failed": "Profil konnte nicht aktualisiert werden."
+		},
+		"changePassword": {
+			"title": "Passwort ändern",
+			"description": "Andere Sitzungen werden nach dem Ändern abgemeldet.",
+			"current": "Aktuelles Passwort",
+			"new": "Neues Passwort",
+			"confirm": "Neues Passwort bestätigen",
+			"submit": "Passwort aktualisieren",
+			"submitting": "Aktualisiere…",
+			"mismatch": "Passwörter stimmen nicht überein",
+			"success": "Passwort geändert.",
+			"failed": "Passwort konnte nicht geändert werden."
+		},
+		"twoFactor": {
+			"title": "Zwei-Faktor-Authentifizierung",
+			"description": "Füge deinem Konto eine zusätzliche Sicherheitsebene hinzu.",
+			"enable": "2FA aktivieren",
+			"disable": "2FA deaktivieren",
+			"statusEnabled": "Aktiviert",
+			"statusDisabled": "Deaktiviert",
+			"currentPassword": "Aktuelles Passwort",
+			"currentPasswordPlaceholder": "Erforderlich, um 2FA zu ändern",
+			"qrTitle": "QR-Code scannen",
+			"qrDescription": "Scanne den Code mit deiner Authenticator-App und sichere die Backup-Codes unten.",
+			"qrManualEntry": "Kein Scan möglich? Setup-Schlüssel manuell eingeben",
+			"backupCodes": "Backup-Codes",
+			"backupCodesHint": "Speichere sie sicher — jeder Code ist nur einmal nutzbar.",
+			"done": "Ich habe sie gespeichert",
+			"failed": "2FA-Einstellungen konnten nicht geändert werden."
+		},
+		"passkeys": {
+			"title": "Passkeys",
+			"description": "Anmelden ohne Passwort über die Biometrie deines Geräts.",
+			"add": "Passkey hinzufügen",
+			"adding": "Füge hinzu…",
+			"none": "Noch keine Passkeys.",
+			"removeSr": "Passkey entfernen",
+			"defaultName": "Passkey",
+			"addedOn": "Hinzugefügt am {date}",
+			"failed": "Passkey konnte nicht geändert werden."
+		},
+		"sessions": {
+			"title": "Aktive Sitzungen",
+			"description": "Melde Geräte ab, die du nicht mehr nutzt.",
+			"current": "Aktuell",
+			"revoke": "Beenden",
+			"revokeAll": "Alle anderen Sitzungen beenden",
+			"none": "Keine aktiven Sitzungen.",
+			"failed": "Sitzung konnte nicht beendet werden."
+		},
+		"danger": {
+			"title": "Konto löschen",
+			"description": "Dies löscht dein Konto und alle Daten unwiderruflich.",
+			"button": "Konto löschen",
+			"confirmTitle": "Konto wirklich löschen?",
+			"confirmDescription": "Diese Aktion ist nicht umkehrbar. Alle Daten werden dauerhaft entfernt.",
+			"confirmPassword": "Passwort bestätigen",
+			"confirmCta": "Ja, löschen",
+			"failed": "Konto konnte nicht gelöscht werden."
+		},
+		"billing": {
+			"title": "Abrechnung",
+			"description": "Verwalte dein Abonnement und deine Zahlungsmethode.",
+			"manageHint": "Upgrade oder ändere deinen Plan jederzeit.",
+			"upgrade": "Plan upgraden"
+		},
+		"emailChange": {
+			"title": "E-Mail ändern",
+			"description": "Beantrage eine E-Mail-Änderung. Ein Bestätigungslink wird an deine neue Adresse gesendet.",
+			"newEmail": "Neue E-Mail",
+			"newEmailPlaceholder": "neu@beispiel.de",
+			"submit": "Bestätigung senden",
+			"sending": "Sendet…",
+			"sent": "Bestätigungs-E-Mail gesendet. Prüfe dein neues Postfach.",
+			"failed": "E-Mail-Änderung konnte nicht beantragt werden."
+		}
+	}
+}

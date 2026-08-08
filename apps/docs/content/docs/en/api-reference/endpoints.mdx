@@ -1,0 +1,35 @@
+---
+title: Endpoints
+description: Interactive API playground for all sample endpoints.
+tags: ["api", "openapi", "playground"]
+---
+
+The interactive API playground is integrated into the docs. Each endpoint from
+the OpenAPI spec gets its own page with:
+
+- Request/response schema display
+- Code examples in multiple languages
+- Try-it-out playground (requires `@scalar/api-client-react`)
+
+## Available endpoints
+
+### Auth
+
+- [POST /auth/sign-in](../auth/signIn) — Authenticate with email and password
+- [POST /auth/sign-up](../auth/signUp) — Create a new account
+
+### Organizations
+
+- [GET /organizations](../organizations/listOrganizations) — List user's organizations
+- [POST /organizations](../organizations/createOrganization) — Create a new organization
+- [GET /organizations/`{slug}`](../organizations/getOrganization) — Get organization by slug
+
+### Billing
+
+- [POST /billing/checkout](../billing/createCheckout) — Create a Polar checkout session
+- [GET /billing/subscription](../billing/getSubscription) — Get current subscription
+
+<Callout type="info">
+  The playground uses `@scalar/api-client-react` for the try-it-out feature.
+  Make sure it's installed in your dependencies.
+</Callout>

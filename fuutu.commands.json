@@ -1,0 +1,33 @@
+{
+	"ports": [
+		{ "port": 3000, "label": "SaaS" },
+		{ "port": 3001, "label": "Marketing" },
+		{ "port": 3003, "label": "Mail Preview" },
+		{ "port": 4000, "label": "Docs" },
+		{ "port": 5432, "label": "PostgreSQL" },
+		{ "port": 9000, "label": "MinIO" }
+	],
+	"commands": [
+		{
+			"label": "Reset DB (hard)",
+			"script": "pnpm db:stop && pnpm db:start && pnpm db:push && pnpm db:seed",
+			"group": "database",
+			"description": "Wipe + restart Postgres, push schema, seed",
+			"ai": "Stops the Docker Postgres container, restarts it, pushes the Prisma schema, and seeds demo data. Use this when the DB is in a broken state or after a schema overhaul. Requires Docker to be running."
+		},
+		{
+			"label": "Full reset",
+			"script": "pnpm install && pnpm db:push && pnpm dev",
+			"group": "custom",
+			"description": "Install, migrate, run dev",
+			"ai": "Reinstalls all pnpm workspace dependencies, applies the latest Prisma schema, then starts all dev servers (SaaS on :3000, Marketing on :3001). Run this after pulling major changes."
+		},
+		{
+			"label": "Check everything",
+			"script": "pnpm check && pnpm check-types",
+			"group": "lint",
+			"description": "Biome + TypeScript — must be green before commit",
+			"ai": "Runs Biome formatter+linter with auto-fix, then tsc --noEmit across all workspaces. Both must exit 0 before any git commit. Fix Biome issues first, then type errors."
+		}
+	]
+}

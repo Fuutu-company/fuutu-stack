@@ -1,0 +1,12 @@
+{
+	"extends": "@fuutu/tsconfig/nextjs.json",
+	"compilerOptions": {
+		"paths": {
+			"@/*": ["./src/*"],
+			"@marketing/*": ["./src/modules/marketing/*"],
+			"@shared/*": ["./src/modules/shared/*"]
+		}
+	},
+	"include": ["./**/*.ts", "./**/*.tsx"],
+	"exclude": ["./node_modules"]
+}

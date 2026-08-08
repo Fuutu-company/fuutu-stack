@@ -1,0 +1,54 @@
+{
+	"name": "@fuutu/utils",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "vitest run"
+	},
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./cn": {
+			"default": "./src/cn.ts"
+		},
+		"./redirect": {
+			"default": "./src/redirect.ts"
+		},
+		"./hash": {
+			"default": "./src/hash.ts"
+		},
+		"./invariant": {
+			"default": "./src/invariant.ts"
+		},
+		"./slugify": {
+			"default": "./src/slugify.ts"
+		},
+		"./base-url": {
+			"default": "./src/base-url.ts"
+		},
+		"./rate-limit": {
+			"default": "./src/rate-limit.ts"
+		},
+		"./use-locale-theme-image": {
+			"default": "./src/use-locale-theme-image.ts"
+		}
+	},
+	"dependencies": {
+		"clsx": "catalog:",
+		"tailwind-merge": "catalog:"
+	},
+	"peerDependencies": {
+		"next-intl": "catalog:",
+		"next-themes": "catalog:",
+		"react": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"@types/react": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

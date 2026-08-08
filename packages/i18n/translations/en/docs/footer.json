@@ -1,0 +1,16 @@
+{
+	"builtWith": "Built with Fuutu Stack",
+	"rights": "All rights reserved.",
+	"product": "Product",
+	"resources": "Resources",
+	"company": "Company",
+	"documentation": "Documentation",
+	"gettingStarted": "Getting Started",
+	"guides": "Guides",
+	"components": "Components",
+	"apiReference": "API Reference",
+	"marketing": "Marketing",
+	"saasApp": "SaaS App",
+	"github": "GitHub",
+	"license": "License"
+}

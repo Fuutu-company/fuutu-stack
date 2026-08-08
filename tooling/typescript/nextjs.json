@@ -1,0 +1,16 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"display": "Fuutu Next.js",
+	"extends": "./base.json",
+	"compilerOptions": {
+		"target": "ES2017",
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"allowJs": true,
+		"jsx": "react-jsx",
+		"incremental": true,
+		"noUncheckedIndexedAccess": false,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"plugins": [{ "name": "next" }]
+	}
+}

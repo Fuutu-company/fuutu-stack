@@ -1,0 +1,30 @@
+{
+	// Workspace Tasks — Run via Ctrl+Shift+P → "Tasks: Run Task"
+	//
+	// This file collects useful workspace-scoped commands for the Fuutu Stack.
+	// Add new entries to the "tasks" array below. Each task can be run from the
+	// Command Palette and shows its output in a dedicated terminal panel.
+	//
+	// Conventions:
+	//   - "label"   : short, human-readable name shown in the picker
+	//   - "detail"  : longer explanation shown under the label
+	//   - "type"    : "shell" (runs in PowerShell on Windows) or "process"
+	//   - "command" : the actual command string
+	//   - "problemMatcher": [] disables VS-Code's automatic error-pattern parsing
+	//                       (use when output is informational, not compiler errors)
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Biome: Kill stale LSP daemons",
+			"detail": "Stops all running biome.exe processes. Use when the Biome VS-Code extension throws 'Cannot call write after a stream was destroyed' or stops responding. After running this task, reload the window (Ctrl+Shift+P → 'Reload Window') so the extension spawns a fresh server.",
+			"type": "shell",
+			"command": "Get-Process biome -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'Biome processes killed. Now reload the window.' -ForegroundColor Green",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			}
+		}
+	]
+}

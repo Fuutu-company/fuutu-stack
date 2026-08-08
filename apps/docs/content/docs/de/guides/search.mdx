@@ -1,0 +1,52 @@
+---
+title: Suche
+description: Integrierte Volltextsuche powered by Orama.
+tags: ["guides", "search"]
+---
+
+Die Dokumentationsvorlage verfügt über eine **integrierte Suche**, die von Orama angetrieben wird.
+Kein externer Service erforderlich.
+
+## Wie es funktioniert
+
+1. Der Suchindex wird zur Build-Zeit aus deinem MDX-Inhalt erstellt
+2. Eine Such-API-Route unter `/[locale]/api/search` stellt den Index bereit
+3. Der Suchdialog wird mit `Cmd+K` (macOS) oder `Ctrl+K` (Windows/Linux) ausgelöst
+
+<Callout type="info">
+  Probiere es jetzt aus — drücke <kbd>Cmd</kbd> + <kbd>K</kbd>, um den Suchdialog zu öffnen.
+</Callout>
+
+## Konfiguration
+
+Die Such-API-Route befindet sich in `src/app/[locale]/api/search/route.ts`:
+
+```ts title="src/app/[locale]/api/search/route.ts"
+import { createFromSource } from "fumadocs-core/search/server";
+import { source } from "@/lib/source";
+
+export const { GET } = createFromSource(source, {
+  language: "english",
+});
+```
+
+## Sprachunterstützung
+
+Orama unterstützt mehrere Sprachen. Ändere die `language`-Option, um sie an deinen
+Inhalt anzupassen:
+
+```ts
+export const { GET } = createFromSource(source, {
+  language: "german", // für deutschen Inhalt
+});
+```
+
+<Callout type="warn">
+  Wenn du mehrere Locales bedienst, benötigst du möglicherweise separate Suchrouten
+  pro Locale mit der entsprechenden Spracheinstellung.
+</Callout>
+
+## Anpassen des Suchdialogs
+
+Der Suchdialog ist Teil von `fumadocs-ui` und wird automatisch im `DocsLayout`
+eingebunden. Keine zusätzliche Konfiguration erforderlich.

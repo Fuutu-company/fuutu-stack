@@ -1,0 +1,68 @@
+---
+title: Accordion
+description: Collapsible sections for FAQs and expandable content.
+tags: ["components", "accordion"]
+---
+
+Accordions create collapsible sections. Great for FAQs and content that
+doesn't need to be visible by default.
+
+## Basic accordion
+
+<Accordions>
+	<Accordion title="What is the Fuutu Stack?">
+    The Fuutu Stack is a production-grade TypeScript SaaS starter kit.
+  </Accordion>
+	<Accordion title="Is Fumadocs free?">
+    Yes, Fumadocs is open source and free to use.
+  </Accordion>
+	<Accordion title="Can I customize the docs app?">
+    Absolutely — every component can be overridden. Delete any example page
+    and replace with your own content.
+  </Accordion>
+</Accordions>
+
+## Accordion with code
+
+<Accordions>
+	<Accordion title="How do I add a new page?">
+    Create an MDX file in `content/docs/en/`:
+
+```bash
+touch apps/docs/content/docs/en/my-page.mdx
+```
+
+    Add frontmatter and content:
+
+```mdx
+---
+title: My Page
+description: A new docs page.
+---
+
+# Hello World
+```
+  </Accordion>
+	<Accordion title="How do I change the sidebar order?">
+    Edit the `meta.json` file in the relevant content folder:
+
+```json
+{
+  "pages": ["first-page", "second-page", "third-page"]
+}
+```
+  </Accordion>
+</Accordions>
+
+## Usage
+
+```mdx
+<Accordions>
+  <Accordion title="Question 1">
+    Answer 1
+  </Accordion>
+  <Accordion title="Question 2">
+    Answer 2
+  </Accordion>
+</Accordions>
+```

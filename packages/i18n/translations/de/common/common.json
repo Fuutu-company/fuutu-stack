@@ -1,0 +1,16 @@
+{
+	"common": {
+		"loading": "Lädt...",
+		"error": "Ein Fehler ist aufgetreten",
+		"success": "Erfolg",
+		"cancel": "Abbrechen",
+		"save": "Speichern",
+		"saving": "Speichert…",
+		"submit": "Absenden",
+		"notAvailable": "—",
+		"errors": {
+			"somethingWentWrong": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+			"retry": "Erneut versuchen"
+		}
+	}
+}

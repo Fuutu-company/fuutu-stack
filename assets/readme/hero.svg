@@ -1,0 +1,80 @@
+<svg viewBox="0 0 880 420" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fuutu Stack — enterprise-grade TypeScript SaaS starter kit">
+  <title>Fuutu Stack — enterprise-grade TypeScript SaaS starter kit with fair licensing</title>
+
+  <!-- Background: near-black -->
+  <rect width="880" height="420" rx="12" fill="#08090A"/>
+  <!-- Subtle border -->
+  <rect x="1" y="1" width="878" height="418" rx="11" fill="none" stroke="#1F1F23" stroke-width="1"/>
+
+  <!-- ===== LOGO + TITLE ===== -->
+  <g transform="translate(40, 40) scale(0.045)">
+    <path d="M 263.76364,256.78182 V 426.01259 H 432.99441 V 256.78182 Z m 190.38462,0 v 169.23077 h 66.32225 102.90851 21.15385 169.23077 V 256.78182 H 644.53287 623.37902 520.47051 Z M 263.76364,447.16644 V 616.3972 H 432.99441 V 447.16644 Z m 190.38462,0 V 616.3972 H 623.37902 V 447.16644 Z M 263.76364,637.55105 V 806.78182 H 432.99441 V 637.55105 Z" fill="#F7F8F8" transform="matrix(1.8181818,0,0,1.8181818,-467.57024,-454.87603)"/>
+  </g>
+
+  <!-- Title: big, bold, white -->
+  <text x="110" y="72" font-family="system-ui, -apple-system, sans-serif" font-size="40" font-weight="800" fill="#F7F8F8" letter-spacing="-1.5">
+    Fuutu Stack
+  </text>
+  <text x="110" y="100" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="500" fill="#8A8F98">
+    Enterprise-grade TypeScript SaaS starter kit
+  </text>
+  <text x="110" y="125" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#6B6F76">
+    Not a toy project. Battle-tested, modular by design, AI-native from day one.
+  </text>
+
+  <!-- ===== STATS — 3 per row, 2 rows, bigger fonts ===== -->
+  <g font-family="system-ui, -apple-system, sans-serif">
+    <!-- Row 1 -->
+    <rect x="40" y="150" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="170" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">20+</text>
+    <text x="170" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">packages</text>
+
+    <rect x="310" y="150" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="440" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">93%</text>
+    <text x="440" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">test coverage</text>
+
+    <rect x="580" y="150" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="710" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">854</text>
+    <text x="710" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">tests passing</text>
+
+    <!-- Row 2 -->
+    <rect x="40" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="170" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">10+</text>
+    <text x="170" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">AI agents parallel</text>
+
+    <rect x="310" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="440" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">4</text>
+    <text x="440" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">production apps</text>
+
+    <rect x="580" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="710" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">0</text>
+    <text x="710" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">vendor lock-in</text>
+  </g>
+
+  <!-- ===== FAIR LICENSE BANNER ===== -->
+  <rect x="40" y="310" width="800" height="90" rx="10" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+
+  <!-- Shield icon: monochrome -->
+  <g transform="translate(65, 330)">
+    <path d="M 20 2 L 36 9 L 36 24 C 36 33 28 40 20 43 C 12 40 4 33 4 24 L 4 9 Z" fill="none" stroke="#8A8F98" stroke-width="2"/>
+    <path d="M 13 22 L 18 28 L 28 15" fill="none" stroke="#F7F8F8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="125" y="348" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#F7F8F8">
+    Fair License
+  </text>
+  <text x="125" y="372" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#8A8F98">
+    Free for small teams (≤ 10 employees or ≤ $250k revenue).
+  </text>
+  <text x="125" y="390" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#8A8F98">
+    Enterprise license above. No reselling as a competing kit.
+  </text>
+
+  <!-- Right side: stack.fuutu.com = ORANGE (primary CTA) · sub-links = blue -->
+  <text x="820" y="348" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#FF4B1A">
+    stack.fuutu.com →
+  </text>
+  <text x="820" y="372" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#6B6F76">
+    <tspan fill="#3B82F6">docs</tspan> · <tspan fill="#3B82F6">pricing</tspan> · <tspan fill="#3B82F6">MCP</tspan> · <tspan fill="#3B82F6">license</tspan>
+  </text>
+</svg>

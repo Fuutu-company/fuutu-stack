@@ -1,0 +1,24 @@
+{
+	"name": "@fuutu/env",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./saas": "./src/saas.ts",
+		"./marketing": "./src/marketing.ts",
+		"./docs": "./src/docs.ts"
+	},
+	"dependencies": {
+		"@t3-oss/env-core": "catalog:",
+		"@t3-oss/env-nextjs": "catalog:",
+		"dotenv": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

@@ -1,0 +1,102 @@
+{
+	"webhooks": {
+		"title": "Webhooks",
+		"description": "Sende Echtzeit-Ereignisbenachrichtigungen an deine Dienste.",
+		"create": "Webhook hinzufügen",
+		"creating": "Erstelle…",
+		"empty": "Noch keine Webhooks",
+		"emptyDescription": "Füge einen Webhook-Endpunkt hinzu, um Ereignisbenachrichtigungen zu erhalten.",
+		"emptyCta": "Webhook hinzufügen",
+		"col": {
+			"url": "URL",
+			"events": "Ereignisse",
+			"active": "Aktiv",
+			"lastDelivery": "Letzte Zustellung",
+			"createdAt": "Erstellt",
+			"actions": "Aktionen"
+		},
+		"events": {
+			"subscription": {
+				"created": "Abonnement erstellt",
+				"updated": "Abonnement aktualisiert",
+				"canceled": "Abonnement gekündigt"
+			},
+			"invoice": {
+				"paid": "Rechnung bezahlt",
+				"created": "Rechnung erstellt"
+			},
+			"user": {
+				"created": "Benutzer erstellt",
+				"updated": "Benutzer aktualisiert"
+			},
+			"organization": {
+				"created": "Organisation erstellt",
+				"updated": "Organisation aktualisiert"
+			},
+			"member": {
+				"invited": "Mitglied eingeladen",
+				"removed": "Mitglied entfernt"
+			}
+		},
+		"createDialog": {
+			"title": "Webhook hinzufügen",
+			"description": "Gib die URL ein, die Ereignisse empfangen soll, und wähle die zu abonnierenden Ereignisse.",
+			"urlLabel": "Endpunkt-URL",
+			"urlPlaceholder": "https://dein-service.de/webhook",
+			"eventsLabel": "Zu abonnierende Ereignisse",
+			"submit": "Webhook erstellen"
+		},
+		"editDialog": {
+			"title": "Webhook bearbeiten",
+			"description": "URL, Ereignisse oder aktiven Status aktualisieren.",
+			"urlLabel": "Endpunkt-URL",
+			"eventsLabel": "Zu abonnierende Ereignisse",
+			"activeLabel": "Aktiv",
+			"submit": "Änderungen speichern",
+			"saving": "Speichert…"
+		},
+		"secretDialog": {
+			"title": "Dein Webhook-Geheimnis",
+			"description": "Kopiere dieses Signatur-Geheimnis jetzt — du kannst es später nicht mehr sehen.",
+			"copy": "Kopieren",
+			"copied": "Kopiert!",
+			"done": "Habe ich kopiert"
+		},
+		"deleteDialog": {
+			"title": "Webhook löschen?",
+			"description": "Dieser Endpunkt wird sofort keine Ereignisse mehr empfangen.",
+			"confirm": "Löschen"
+		},
+		"deliveries": {
+			"title": "Zustellungsverlauf",
+			"status": {
+				"success": "Erfolgreich",
+				"failed": "Fehlgeschlagen",
+				"pending": "Ausstehend",
+				"retrying": "Erneut versuchend"
+			},
+			"col": {
+				"status": "Status",
+				"responseCode": "Antwort",
+				"timestamp": "Zeitstempel",
+				"event": "Ereignis"
+			},
+			"empty": "Noch keine Zustellungen.",
+			"show": "Zustellungen anzeigen",
+			"hide": "Ausblenden"
+		},
+		"edit": "Bearbeiten",
+		"delete": "Löschen",
+		"deleteAria": "Webhook löschen",
+		"yes": "Ja",
+		"no": "Nein",
+		"never": "Nie",
+		"loading": "Webhooks werden geladen…",
+		"failed": "Aktion konnte nicht durchgeführt werden.",
+		"created": "Webhook erstellt.",
+		"updated": "Webhook aktualisiert.",
+		"deleted": "Webhook gelöscht.",
+		"deleteError": "Webhook konnte nicht gelöscht werden. Bitte erneut versuchen.",
+		"updateError": "Webhook konnte nicht aktualisiert werden. Bitte erneut versuchen."
+	}
+}

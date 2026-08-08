@@ -1,0 +1,64 @@
+---
+title: TypeTable
+description: Display TypeScript types and configuration options in a table.
+tags: ["components", "type-table"]
+---
+
+TypeTable renders TypeScript types in a readable table format. Perfect for
+API docs and configuration references.
+
+## Basic TypeTable
+
+<TypeTable
+  type={{
+    name: { type: "string", description: "The user's display name" },
+    age: { type: "number", description: "User age in years" },
+    isActive: { type: "boolean", description: "Whether the user is active" },
+  }}
+/>
+
+## With enum types
+
+<TypeTable
+  type={{
+    plan: {
+      type: "'free' | 'pro' | 'enterprise'",
+      description: "The subscription plan",
+    },
+    status: {
+      type: "'active' | 'canceled' | 'past_due'",
+      description: "Subscription status",
+    },
+  }}
+/>
+
+## Configuration reference example
+
+<TypeTable
+  type={{
+    baseUrl: {
+      type: "string",
+      description: "Base URL for docs pages",
+      default: '"/docs"',
+    },
+    i18n: {
+      type: "I18nConfig",
+      description: "Internationalization configuration",
+    },
+    plugins: {
+      type: "SourcePlugin[]",
+      description: "Source plugins (e.g. lucideIconsPlugin)",
+    },
+  }}
+/>
+
+## Usage
+
+```mdx
+<TypeTable
+  type={{
+    name: { type: "string", description: "Display name" },
+    age: { type: "number", description: "Age in years" },
+  }}
+/>
+```

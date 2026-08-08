@@ -1,0 +1,74 @@
+{
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "biomejs.biome",
+	"editor.formatOnPaste": false,
+	"files.autoSave": "onFocusChange",
+	"editor.tabSize": 2,
+	"editor.insertSpaces": false,
+	"editor.detectIndentation": false,
+	"files.trimTrailingWhitespace": true,
+	"files.insertFinalNewline": true,
+	"files.trimFinalNewlines": true,
+	"editor.bracketPairColorization.enabled": true,
+	"editor.guides.bracketPairs": "active",
+	"editor.inlineSuggest.enabled": true,
+	"editor.suggestSelection": "first",
+	"editor.quickSuggestions": {
+		"strings": true
+	},
+	"explorer.confirmDelete": false,
+	"explorer.confirmDragAndDrop": false,
+	"breadcrumbs.enabled": true,
+	"editor.minimap.enabled": false,
+	"workbench.editor.enablePreview": false,
+	"search.exclude": {
+		"**/.next": true,
+		"**/node_modules": true,
+		"**/dist": true,
+		"**/.turbo": true,
+		"**/pnpm-lock.yaml": true
+	},
+	"files.watcherExclude": {
+		"**/.next/**": true,
+		"**/node_modules/**": true,
+		"**/dist/**": true,
+		"**/.turbo/**": true,
+		"**/.source/**": true,
+		"**/prisma/generated/**": true,
+		"**/prisma/zod/**": true,
+		"**/test-results/**": true,
+		"**/playwright-report/**": true
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[javascriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"editor.codeActionsOnSave": {
+		"source.organizeImports.biome": "explicit"
+	},
+	"biome.requireConfiguration": true,
+	"biome.runtime.strategy": "node",
+	"css.validate": false,
+	"less.validate": false,
+	"scss.validate": false,
+
+	// i18n-ally (lokalise.i18n-ally) — minimal config, rely on defaults
+	"i18n-ally.localesPaths": ["packages/i18n/translations"],
+	"i18n-ally.keystyle": "nested",
+	"i18n-ally.enabledFrameworks": ["next-intl"],
+	"i18n-ally.tabStyle": "tab"
+}

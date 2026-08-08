@@ -1,0 +1,80 @@
+---
+title: Theming
+description: Dark Mode, CSS-Variablen und Theme-Anpassung.
+tags: ["guides", "theme"]
+---
+
+Die Dokumentations-App verwendet **CSS-Variablen** für Theming, mit Dark Mode powered by
+`next-themes`.
+
+## Dark Mode
+
+Dark Mode wird vom `ThemeProvider` in
+`src/modules/shared/providers/theme-provider.tsx` gehandhabt:
+
+```tsx title="src/modules/shared/providers/theme-provider.tsx"
+"use client";
+import { config } from "@fuutu/config";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+export function ThemeProvider({ children }) {
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme={config.theme.defaultMode}
+      enableSystem={false}
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
+  );
+}
+```
+
+<Callout type="info">
+  Das Standard-Theme wird von `config.theme.defaultMode` in
+  `@fuutu/config` gesteuert. Ändere es dort, um alle Apps zu beeinflussen.
+</Callout>
+
+## CSS-Variablen
+
+Fumadocs verwendet `--color-fd-*` CSS-Variablen. Das Theme wird aus zwei Quellen importiert:
+
+1. **Fuutu-Stack-Theme**: `@fuutu/config/theme.css` — gemeinsam für alle Apps
+2. **Fumadocs-Neutral-Theme**: `fumadocs-ui/css/neutral.css` — docs-spezifisch
+
+```css title="src/app/global.css"
+@import "tailwindcss";
+@import "@fuutu/config/theme.css";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+```
+
+## Farben anpassen
+
+Um Fumadocs-Farben zu überschreiben, füge CSS-Variablen in `global.css` hinzu:
+
+```css title="src/app/global.css"
+:root {
+  --color-fd-primary: oklch(0.55 0.25 260);
+}
+
+.dark {
+  --color-fd-primary: oklch(0.65 0.25 260);
+}
+```
+
+<Callout type="warn">
+  Der Fuutu Stack verwendet OKLCH-Farben für bessere Wahrnehmungsuniformität. Siehe
+  die `better-colors`-Skill für Anleitungen zur OKLCH-Farbenverwendung.
+</Callout>
+
+## Theme-Presets
+
+Fumadocs wird mit mehreren Theme-Presets ausgeliefert:
+
+- `fumadocs-ui/css/neutral.css` — neutrales Grau (aktuell)
+- `fumadocs-ui/css/blue.css` — blauer Akzent
+- `fumadocs-ui/css/green.css` — grüner Akzent
+
+Tausche den Import in `global.css`, um die Akzentfarbe zu ändern.

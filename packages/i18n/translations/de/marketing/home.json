@@ -1,0 +1,148 @@
+{
+	"home": {
+		"metaTitle": "Enterprise-grade. In Tagen live.",
+		"hero": {
+			"title": "Enterprise-grade.",
+			"titleHighlight": "In Tagen live.",
+			"description": "Der Production-Stack für AI-Speed-Development. Best Practices vorgekabelt, jeder Provider austauschbar — von der Idee zur Live-App in Tagen, nicht Monaten.",
+			"cta": {
+				"getStarted": "Stack holen",
+				"viewDocs": "Features ansehen"
+			},
+			"benefit": {
+				"openSource": "Fuutu Business License",
+				"typescript": "100% TypeScript, strict",
+				"edgeReady": "Provider-austauschbar"
+			},
+			"glassCard": {
+				"ready": "Sofort einsatzbereit"
+			},
+			"pillar": {
+				"auth": {
+					"title": "Auth & Sessions",
+					"desc": "Registrierung, OAuth, MFA, RBAC — fertig"
+				},
+				"billing": {
+					"title": "Billing & Pläne",
+					"desc": "Polar, Plan-Katalog, Webhooks"
+				},
+				"swappable": {
+					"title": "Provider-austauschbar",
+					"desc": "Mail, Storage, Payments — eine Zeile"
+				},
+				"speed": {
+					"title": "In einer Woche live",
+					"desc": "Kein Template — eine Produktions-Codebase"
+				}
+			}
+		},
+		"cta": {
+			"title": "Bereit zu starten?",
+			"description": "Repo klonen, Provider konfigurieren — und in Minuten live.",
+			"getStarted": "Jetzt loslegen",
+			"viewDocs": "Dokumentation lesen"
+		},
+		"testimonials": {
+			"title": "Beliebt bei Buildern",
+			"description": "Teams shippen mit Fuutu schneller — das sagen sie dazu.",
+			"items": [
+				{
+					"quote": "Mit Fuutu sind wir in zwei Wochen vom leeren Repo zu zahlenden Kunden gekommen. Allein das Auth- und Payments-Setup hat uns einen Monat gespart.",
+					"author": "Sara Lindqvist",
+					"role": "Gründerin, Northwave Labs"
+				},
+				{
+					"quote": "Ich habe vier SaaS-Produkte auf eigenen Stacks gebaut. Das ist das erste, bei dem ich keinen einzigen Workaround brauchte.",
+					"author": "Daniel Okafor",
+					"role": "Staff Engineer, Mercator"
+				},
+				{
+					"quote": "Das Provider-Pattern ist exakt so, wie ich es selbst bauen würde — nur dass es ab Tag eins funktioniert.",
+					"author": "Mei-Ling Tan",
+					"role": "CTO, Vellum AI"
+				}
+			]
+		},
+		"faq": {
+			"title": "Häufige Fragen",
+			"description": "Alles, was du wissen musst, bevor du das Repo klonst.",
+			"items": [
+				{
+					"q": "Brauche ich eine Lizenz, um Fuutu zu nutzen?",
+					"a": "Kostenlos für Einzelpersonen und Firmen bis 10 Mitarbeiter:innen oder 250k € Jahresumsatz. Darüber hinaus ist eine Enterprise-Lizenz erforderlich. Die vollständigen Bedingungen findest du in der LICENSE.md."
+				},
+				{
+					"q": "Kann ich Payment-, Mail- oder Storage-Provider tauschen?",
+					"a": "Ja. Jede externe Abhängigkeit läuft hinter einem Provider-Interface — eine Config-Zeile ändern, SDK einsetzen, fertig. Polar, Plunk und S3 sind in v1 aktiv; Stripe, Resend, R2 und weitere als Skeletons."
+				},
+				{
+					"q": "Ist der Code produktionsreif?",
+					"a": "v1 liefert Rate-Limiting, Audit-Logging, CSRF, sichere Cookies, RBAC und Playwright-E2E-Tests. Plus dein eigenes Monitoring + Backups — und du bist live."
+				},
+				{
+					"q": "Warum next-intl statt eigener i18n-Schicht?",
+					"a": "Native App-Router-Unterstützung, typsichere Message-Keys, ICU-Plurale und null Runtime-Kosten. Locales leben in @fuutu/i18n mit smarter Fallback-Kette."
+				}
+			]
+		},
+		"features": {
+			"expand": "{label} aufklappen",
+			"featureListAria": "Feature-Liste",
+			"items": {
+				"dashboard": {
+					"label": "Dashboard",
+					"title": "Dein gesamtes Produkt,\nfertig ab Tag eins.",
+					"description": "Fuutu Stack liefert ein vollständiges SaaS-Dashboard: Auth, Billing, Orgs, Einstellungen, API-Docs — alles verdrahtet und produktionsbereit.",
+					"frameLabel": "Dashboard"
+				},
+				"auth": {
+					"label": "Auth & Security",
+					"title": "Auth in Minuten,\nnicht Wochen.",
+					"description": "OAuth, Magic Links, Passkeys, MFA, Session-Management und RBAC — alles vorkonfiguriert mit Better Auth.",
+					"frameLabel": "Sign-in"
+				},
+				"payments": {
+					"label": "Payments",
+					"title": "Billing, das ab Tag\n eins funktioniert.",
+					"description": "Polar-powered Abonnements, Einmalkäufe und Webhooks. Wechsle zu Stripe mit einer Config-Zeile.",
+					"frameLabel": "Plan wählen"
+				},
+				"i18n": {
+					"label": "i18n",
+					"title": "Global ab Tag\n eins.",
+					"description": "next-intl mit EN + DE out of the box. Füge eine Locale in einer JSON-Datei hinzu — jede Komponente übernimmt sie automatisch.",
+					"frameLabel": "Locale-Switch"
+				},
+				"rbac": {
+					"label": "RBAC & Orgs",
+					"title": "Feingranulare Rollen\nfür jedes Team.",
+					"description": "owner → admin → member → viewer. Organisation-Einladungen, Rollenwechsel und Audit-Logs — in jede API-Route integriert.",
+					"frameLabel": "Team-Einstellungen"
+				},
+				"api": {
+					"label": "Type-safe API",
+					"title": "oRPC + OpenAPI,\nnull Boilerplate.",
+					"description": "Jede Route ist vollständig typsicher via oRPC. Auto-generierte OpenAPI-Docs unter /api/docs ab Tag eins.",
+					"frameLabel": "API-Docs"
+				},
+				"providers": {
+					"label": "Swappable Providers",
+					"title": "Jeden Provider tauschen,\nohne Routes anzufassen.",
+					"description": "Jede Domain (Mail, Storage, Analytics, Payments) ist ein typisiertes Interface. Ändere den aktiven Provider in einer Config-Zeile.",
+					"frameLabel": "Provider-Config"
+				}
+			},
+			"hero": {
+				"heading": "Dein gesamtes Produkt,\nfertig ab Tag eins.",
+				"subheading": "Fuutu Stack liefert ein vollständiges SaaS-Dashboard: Auth, Billing, Orgs, Einstellungen, API-Docs — alles verdrahtet und produktionsbereit."
+			},
+			"row": {
+				"heading": "Alles, was dein SaaS braucht."
+			},
+			"showcase": {
+				"heading": "Von Tag eins auf Skalierung ausgelegt.",
+				"subheading": "Jedes Feature wird produktionsgehärtet geliefert — RBAC, typsichere API, austauschbare Provider. Klick auf ein Feature, um es in Aktion zu sehen."
+			}
+		}
+	}
+}

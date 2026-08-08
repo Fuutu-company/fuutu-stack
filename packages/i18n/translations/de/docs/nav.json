@@ -1,0 +1,15 @@
+{
+	"docs": "Dokumentation",
+	"home": "Startseite",
+	"search": "Suche",
+	"theme": "Design",
+	"light": "Hell",
+	"dark": "Dunkel",
+	"toggleTheme": "Design wechseln",
+	"english": "English",
+	"german": "Deutsch",
+	"language": "Sprache",
+	"switchLanguage": "Sprache wechseln",
+	"github": "GitHub",
+	"getStarted": "Loslegen"
+}
