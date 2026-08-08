@@ -33,17 +33,78 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 
 ## Features
 
-- **Next.js 16** (App Router, React 19, Turbopack) + **TypeScript** strict
-- **Hono 4** + **oRPC 1.12** — end-to-end type-safe API with auto-OpenAPI
-- **Better-Auth 1.6** — Email/Password, Magic-Link, OAuth, 2FA, Passkeys, Username, Organizations, Admin, Ban, Invitation-only
-- **Prisma 7** on PostgreSQL 16 (split `auth` + `app` schemas, generated Zod)
-- **TailwindCSS v4** (OKLCH theme) + **shadcn/ui** (framework-agnostic)
+### Authentication & Security
+- **Email/Password** with password policy + validation
+- **Magic-Link** sign-in
+- **OAuth** social login
+- **2FA** (TOTP) + **Passkeys** (WebAuthn)
+- **Organizations** — multi-tenant, members, invitations, seat syncing
+- **RBAC** — granular role-based access control
+- **Admin panel** — user management, ban, admin override
+- **Invitation-only signup** — gate registration by domain or allowlist
+- **Rate limiting** — per-endpoint, configurable
+- **CSP** + **HSTS** + **open-redirect guard**
+- **Audit logs** — immutable, paginated, org-scoped, auto-retention
+
+### API & Backend
+- **Hono 4** server (mounted at `/api/[[...rest]]`)
+- **oRPC 1.12** — end-to-end type-safe API with auto-OpenAPI spec
+- **Zod** validation on every input
+- **API keys** — generate, revoke, scoped access
+- **Webhooks** — signed delivery, retry with backoff, idempotent
+- **Cron jobs** — audit-log cleanup, subscription reminders, telemetry ping, webhook retry
+
+### Database & ORM
+- **Prisma 7** on PostgreSQL 16
+- Split `auth` + `app` schemas
+- Generated Zod schemas from Prisma types
+- ORM-agnostic export — queries isolated in `@fuutu/db`
+
+### Frontend & UI
+- **Next.js 16** (App Router, React 19, Turbopack)
+- **TailwindCSS v4** with OKLCH theme
+- **shadcn/ui** — framework-agnostic shared components (`@fuutu/ui`)
 - **next-intl 4** — `en` + `de`, 100% translation policy
-- **Provider-swappable** — Plunk (mail), Polar (payments), S3 + MinIO (storage), Umami (analytics)
+- **MediaFrame** — locale-aware images, CSP-safe
+
+### Provider-Swappable Architecture
+Every domain behind an interface — swap providers without touching business logic:
+
+| Domain | Interface | Active | Skeletons |
+|---|---|---|---|
+| **Mail** | `MailProvider` | Plunk | Resend, SendGrid, Mailgun… |
+| **Payments** | `PaymentProvider` | Polar | Stripe, Paddle, LemonSqueezy… |
+| **Storage** | `StorageProvider` | S3 + MinIO | Cloudflare R2, Azure Blob… |
+| **Analytics** | `AnalyticsProvider` | Umami | Plausible, PostHog, GA… |
+| **AI** | `AIProvider` | Google | OpenAI, Anthropic, Noop… |
+| **Search** | `SearchProvider` | — | MeiliSearch, Typesense, Algolia… |
+| **Content** | `ContentProvider` | — | MDX, CMS, headless… |
+
+### AI-Native
 - **AI provider-swappable** — Google / OpenAI / Anthropic / Noop
+- **Chat module** — conversations, messages, streaming
 - **MCP-ready** — Model Context Protocol integration for LLM agents
-- **Security** — rate-limit, CSP, HSTS, open-redirect guard, audit log
+- **AI agent harness** via Fuutu MCP (see Developer Experience below)
+
+### App Modules (SaaS)
+- **Dashboard** — overview, activity feed
+- **Chat** — AI conversations with streaming
+- **CRM** — contacts, pipeline
+- **Notifications** — in-app, multi-channel
+- **Organizations** — team management, invitations
+- **Onboarding** — guided setup flow
+- **Settings** — profile, API keys, billing
+- **Admin** — audit logs, user management
+- **Billing** — plans, subscriptions, invoices
+
+### Infrastructure
 - **Turborepo** + pnpm workspaces (version-catalog)
+- **Biome** — format + lint (replaces ESLint + Prettier)
+- **Vitest** — unit + integration tests (854+ passing, 93% coverage)
+- **Playwright** — E2E tests (saas + marketing)
+- **Telemetry** — build-time + runtime, non-blocking
+- **License compliance** — 5 fingerprint emission points, kit integrity
+- **Logging** — `createLogger({ scope })` with provider interface
 
 ---
 
@@ -57,19 +118,31 @@ fuutu-stack/
 │   ├── docs/             # documentation (port 4000)
 │   └── mail-preview/     # mail template preview (dev only)
 ├── packages/
+│   ├── ai/               # AI provider-swappable (Google/OpenAI/Anthropic/Noop)
+│   ├── analytics/        # AnalyticsProvider interface + Umami
 │   ├── api/              # oRPC routers + Hono server
 │   ├── auth/             # Better Auth (server + client)
+│   ├── config/           # cross-cutting config + theme.css
+│   ├── content/          # ContentProvider interface + active provider
+│   ├── cron/             # scheduled jobs (audit cleanup, reminders, telemetry)
 │   ├── db/               # Prisma client + queries (ORM-agnostic export)
-│   ├── ui/               # shared UI components (framework-agnostic)
+│   ├── env/              # environment validation (@t3-oss/env-nextjs)
+│   ├── i18n/             # next-intl utilities + i18nConfig
+│   ├── license/          # checkLicense(), getLicenseMode() — compliance
+│   ├── logs/             # createLogger({ scope }) + provider interface
 │   ├── mail/             # MailProvider interface + templates
+│   ├── notifications/    # in-app + multi-channel notifications
 │   ├── payments/         # PaymentProvider interface + Polar
+│   ├── rbac/             # role-based access control
+│   ├── search/           # SearchProvider interface
 │   ├── storage/          # StorageProvider interface + S3/MinIO
-│   ├── analytics/        # AnalyticsProvider interface + Umami
-│   ├── ai/               # AI provider-swappable (Google/OpenAI/Anthropic)
-│   ├── i18n/ env/ config/ logs/ utils/ rbac/ content/
-│   └── license/ telemetry/   # Fuutu Business License compliance
+│   ├── telemetry/        # build-time + runtime telemetry helpers
+│   ├── test-utils/       # shared test fixtures + helpers
+│   ├── ui/               # shared UI components (framework-agnostic)
+│   ├── utils/            # cn, getSafeRedirect, slugify, hash, invariant
+│   └── webhooks/         # signed delivery, retry, idempotent
 ├── tooling/
-│   ├── typescript/       # shared tsconfigs
+│   ├── typescript/       # shared tsconfigs (base / nextjs / react-library)
 │   └── tailwind/         # shared Tailwind preset + theme.css
 ```
 
