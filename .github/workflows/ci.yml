@@ -24,7 +24,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -54,7 +54,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -87,7 +87,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -149,7 +149,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -276,7 +276,7 @@ jobs:
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
       FUUTU_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -309,7 +309,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -374,7 +374,7 @@ jobs:
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
       FUUTU_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -500,7 +500,7 @@ jobs:
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
       FUUTU_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
