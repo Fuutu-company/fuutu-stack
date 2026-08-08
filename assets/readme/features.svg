@@ -1,0 +1,219 @@
+<svg viewBox="0 0 1200 780" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fuutu Stack — enterprise features, autonomous AI workflow, agent harness, and tech stack">
+  <title>Fuutu Stack — enterprise features, autonomous AI workflow, and tech stack</title>
+
+  <!-- Background: near-black -->
+  <rect width="1200" height="780" rx="12" fill="#08090A"/>
+
+  <!-- Subtle border: almost invisible -->
+  <rect x="1" y="1" width="1198" height="778" rx="11" fill="none" stroke="#1F1F23" stroke-width="1"/>
+
+  <!-- ===== SECTION 1: Enterprise Feature Wall ===== -->
+  <!-- Section header: muted, not colored -->
+  <text x="60" y="45" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#6B6F76" letter-spacing="2">
+    ENTERPRISE FEATURES — NOT BOLT-ONS, BUILT IN
+  </text>
+  <text x="60" y="72" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#F7F8F8">
+    Everything a production SaaS needs. No glue code, no config hell, no surprises.
+  </text>
+
+  <!-- Row 1 -->
+  <g font-family="system-ui, -apple-system, sans-serif">
+    <rect x="60" y="95" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="80" y="122" font-size="15" font-weight="700" fill="#F7F8F8">Audit Logs</text>
+    <text x="80" y="142" font-size="12" font-weight="400" fill="#8A8F98">Immutable, paginated,</text>
+    <text x="80" y="158" font-size="12" font-weight="400" fill="#8A8F98">org-scoped, auto-retention</text>
+
+    <rect x="285" y="95" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="305" y="122" font-size="15" font-weight="700" fill="#F7F8F8">Organizations</text>
+    <text x="305" y="142" font-size="12" font-weight="400" fill="#8A8F98">Multi-tenant, members,</text>
+    <text x="305" y="158" font-size="12" font-weight="400" fill="#8A8F98">invitations, seat syncing</text>
+
+    <rect x="510" y="95" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="530" y="122" font-size="15" font-weight="700" fill="#F7F8F8">RBAC + Admin</text>
+    <text x="530" y="142" font-size="12" font-weight="400" fill="#8A8F98">Granular permissions,</text>
+    <text x="530" y="158" font-size="12" font-weight="400" fill="#8A8F98">ban, admin panel built in</text>
+
+    <rect x="735" y="95" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="755" y="122" font-size="15" font-weight="700" fill="#F7F8F8">2FA + Passkeys</text>
+    <text x="755" y="142" font-size="12" font-weight="400" fill="#8A8F98">OAuth, magic-link,</text>
+    <text x="755" y="158" font-size="12" font-weight="400" fill="#8A8F98">invitation-only signup</text>
+
+    <rect x="960" y="95" width="180" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="980" y="122" font-size="15" font-weight="700" fill="#F7F8F8">Rate Limiting</text>
+    <text x="980" y="142" font-size="12" font-weight="400" fill="#8A8F98">Per-endpoint, CSP,</text>
+    <text x="980" y="158" font-size="12" font-weight="400" fill="#8A8F98">HSTS, redirect guard</text>
+  </g>
+
+  <!-- Row 2 -->
+  <g font-family="system-ui, -apple-system, sans-serif">
+    <rect x="60" y="190" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="80" y="217" font-size="15" font-weight="700" fill="#F7F8F8">Modular Architecture</text>
+    <text x="80" y="237" font-size="12" font-weight="400" fill="#8A8F98">Every domain cleanly</text>
+    <text x="80" y="253" font-size="12" font-weight="400" fill="#8A8F98">separated &amp; swappable</text>
+
+    <rect x="285" y="190" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="305" y="217" font-size="15" font-weight="700" fill="#F7F8F8">Type-Safe API</text>
+    <text x="305" y="237" font-size="12" font-weight="400" fill="#8A8F98">oRPC + Zod, end-to-end</text>
+    <text x="305" y="253" font-size="12" font-weight="400" fill="#8A8F98">auto OpenAPI spec</text>
+
+    <rect x="510" y="190" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="530" y="217" font-size="15" font-weight="700" fill="#F7F8F8">Webhooks + Cron</text>
+    <text x="530" y="237" font-size="12" font-weight="400" fill="#8A8F98">Signed delivery, retry,</text>
+    <text x="530" y="253" font-size="12" font-weight="400" fill="#8A8F98">scheduled jobs, idempotent</text>
+
+    <rect x="735" y="190" width="210" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="755" y="217" font-size="15" font-weight="700" fill="#F7F8F8">i18n + Notifications</text>
+    <text x="755" y="237" font-size="12" font-weight="400" fill="#8A8F98">en/de, next-intl,</text>
+    <text x="755" y="253" font-size="12" font-weight="400" fill="#8A8F98">in-app, multi-channel</text>
+
+    <rect x="960" y="190" width="180" height="80" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="980" y="217" font-size="15" font-weight="700" fill="#F7F8F8">Telemetry</text>
+    <text x="980" y="237" font-size="12" font-weight="400" fill="#8A8F98">Built-in, non-blocking,</text>
+    <text x="980" y="253" font-size="12" font-weight="400" fill="#8A8F98">license-compliance ready</text>
+  </g>
+
+  <!-- ===== SECTION 2: Autonomous AI Workflow ===== -->
+  <!-- Panel: monochrome, no orange tint -->
+  <rect x="60" y="295" width="1080" height="150" rx="10" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+
+  <!-- Section header: muted -->
+  <text x="80" y="325" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#6B6F76" letter-spacing="2">
+    AUTONOMOUS AI WORKFLOW
+  </text>
+  <text x="80" y="355" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#F7F8F8">
+    Ship complex features in record time
+  </text>
+  <text x="80" y="380" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#8A8F98">
+    Orchestrator dispatches 10+ specialized subagents in parallel — harvest, implementer,</text>
+  <text x="80" y="398" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#8A8F98">
+    verifier, designer, synthesizer. TDD by default, browser-verified, auto-committed.
+  </text>
+  <text x="80" y="416" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#6B6F76">
+    Built-in skills: brainstorm → plan → implement → verify → commit. <tspan fill="#3B82F6" font-weight="500">No manual babysitting.</tspan>
+  </text>
+
+  <!-- Agent flow visualization (right side) -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600">
+    <!-- Orchestrator node: BLUE (active/selected state indicator) -->
+    <rect x="870" y="330" width="100" height="30" rx="6" fill="#0A0A0E" stroke="#3B82F6" stroke-width="1.5"/>
+    <text x="920" y="350" text-anchor="middle" fill="#3B82F6">Orchestrator</text>
+
+    <!-- Agent nodes: monochrome -->
+    <rect x="770" y="385" width="65" height="24" rx="4" fill="#0A0A0E" stroke="#1F1F23" stroke-width="1"/>
+    <text x="802" y="401" text-anchor="middle" fill="#8A8F98">harvest</text>
+
+    <rect x="845" y="385" width="75" height="24" rx="4" fill="#0A0A0E" stroke="#1F1F23" stroke-width="1"/>
+    <text x="882" y="401" text-anchor="middle" fill="#8A8F98">implement</text>
+
+    <rect x="930" y="385" width="60" height="24" rx="4" fill="#0A0A0E" stroke="#1F1F23" stroke-width="1"/>
+    <text x="960" y="401" text-anchor="middle" fill="#8A8F98">verify</text>
+
+    <rect x="1000" y="385" width="60" height="24" rx="4" fill="#0A0A0E" stroke="#1F1F23" stroke-width="1"/>
+    <text x="1030" y="401" text-anchor="middle" fill="#8A8F98">design</text>
+
+    <rect x="1070" y="385" width="65" height="24" rx="4" fill="#0A0A0E" stroke="#1F1F23" stroke-width="1"/>
+    <text x="1102" y="401" text-anchor="middle" fill="#8A8F98">synthesize</text>
+
+    <!-- Connection lines: subtle, not colored -->
+    <g stroke="#3B82F6" stroke-width="1" stroke-opacity="0.15" fill="none">
+      <path d="M 920 360 L 802 385"/>
+      <path d="M 920 360 L 882 385"/>
+      <path d="M 920 360 L 960 385"/>
+      <path d="M 920 360 L 1030 385"/>
+      <path d="M 920 360 L 1102 385"/>
+    </g>
+
+    <text x="935" y="425" text-anchor="middle" font-size="11" font-weight="400" fill="#6B6F76">↑ parallel dispatch, no bottlenecks</text>
+  </g>
+
+  <!-- ===== SECTION 3: Tech Stack Badges ===== -->
+  <text x="60" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#6B6F76" letter-spacing="2">
+    BUILT WITH
+  </text>
+
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600">
+    <rect x="60" y="490" width="85" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="102" y="508" text-anchor="middle" fill="#F7F8F8">Next.js 16</text>
+
+    <rect x="155" y="490" width="65" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="187" y="508" text-anchor="middle" fill="#F7F8F8">Hono 4</text>
+
+    <rect x="230" y="490" width="85" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="272" y="508" text-anchor="middle" fill="#F7F8F8">oRPC 1.12</text>
+
+    <rect x="325" y="490" width="110" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="380" y="508" text-anchor="middle" fill="#F7F8F8">Better Auth 1.6</text>
+
+    <rect x="445" y="490" width="75" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="482" y="508" text-anchor="middle" fill="#F7F8F8">Prisma 7</text>
+
+    <rect x="530" y="490" width="95" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="577" y="508" text-anchor="middle" fill="#F7F8F8">Tailwind v4</text>
+
+    <rect x="635" y="490" width="80" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="675" y="508" text-anchor="middle" fill="#F7F8F8">Postgres 16</text>
+
+    <rect x="725" y="490" width="80" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="765" y="508" text-anchor="middle" fill="#F7F8F8">Turborepo</text>
+
+    <rect x="815" y="490" width="60" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="845" y="508" text-anchor="middle" fill="#F7F8F8">pnpm</text>
+
+    <rect x="885" y="490" width="65" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="917" y="508" text-anchor="middle" fill="#F7F8F8">Vitest</text>
+
+    <rect x="960" y="490" width="85" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="1002" y="508" text-anchor="middle" fill="#F7F8F8">Playwright</text>
+
+    <rect x="1055" y="490" width="85" height="28" rx="5" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+    <text x="1097" y="508" text-anchor="middle" fill="#F7F8F8">Biome + Zod</text>
+  </g>
+
+  <!-- ===== SECTION 4: Developer Experience — Plugin + MCP ===== -->
+  <text x="60" y="555" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#6B6F76" letter-spacing="2">
+    DEVELOPER EXPERIENCE — VS CODE EXTENSION + FUUTU MCP
+  </text>
+  <text x="60" y="582" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#F7F8F8">
+    Companion extension in the Marketplace. AI agent harness via Fuutu MCP.
+  </text>
+
+  <!-- 2-column layout: Extension (left) / MCP Harness (right) -->
+
+  <!-- Column 1: VS Code Extension (Marketplace) -->
+  <rect x="60" y="605" width="540" height="155" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+  <text x="80" y="630" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#F7F8F8">VS Code Extension</text>
+  <text x="80" y="648" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#6B6F76">Marketplace: "Fuutu Stack Companion" · VS Code · Cursor</text>
+
+  <text x="80" y="672" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">Project Health</text>
+  <text x="220" y="672" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">— port monitor, kill ports, service status</text>
+
+  <text x="80" y="692" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">Commands Panel</text>
+  <text x="220" y="692" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">— run any pnpm script with one click</text>
+
+  <text x="80" y="712" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">Docs &amp; Wiki</text>
+  <text x="220" y="712" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">— architecture, rules, guides in-sidebar</text>
+
+  <text x="80" y="732" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">13 Commands</text>
+  <text x="220" y="732" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">— dev, build, check, db:studio, kill port…</text>
+
+  <text x="80" y="752" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#3B82F6">→ install from VS Code Marketplace · VS Code · Cursor</text>
+
+  <!-- Column 2: Fuutu MCP -->
+  <rect x="620" y="605" width="520" height="155" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
+  <text x="640" y="630" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#F7F8F8">Fuutu MCP</text>
+  <text x="640" y="648" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#6B6F76">AI agent harness · 28 skills · 5 subagents · 21 rules</text>
+
+  <text x="640" y="672" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">28 Skills</text>
+  <text x="730" y="672" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">TDD, debugging, browser-verify, self-learning…</text>
+
+  <text x="640" y="692" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">5 Subagents</text>
+  <text x="730" y="692" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">harvest, implementer, verifier, synthesizer…</text>
+
+  <text x="640" y="712" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">21 Rules</text>
+  <text x="730" y="712" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">auth, backend, frontend, ui, testing, security…</text>
+
+  <text x="640" y="732" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#F7F8F8">+ Scaffolding</text>
+  <text x="730" y="732" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="400" fill="#8A8F98">new packages, routes, provider swaps, migrations…</text>
+
+  <text x="640" y="752" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#3B82F6">→ activate via Fuutu MCP · Cursor · Devin · Windsurf · VS Code</text>
+</svg>
