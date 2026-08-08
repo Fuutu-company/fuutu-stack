@@ -1,3 +1,5 @@
+> ⚠️ **Target `develop`, not `main`** — if the base branch says `main`, change it to `develop`. Only hotfixes target `main` directly.
+
 ## Description
 
 <!-- Brief description of what this PR does -->
