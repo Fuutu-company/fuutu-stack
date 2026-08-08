@@ -1,0 +1,152 @@
+---
+title: Markdown & MDX
+description: A complete showcase of every MDX feature available in the docs template.
+tags: ["guides", "mdx"]
+---
+
+This page demonstrates **every MDX feature** available in the Fuutu Stack docs
+template. Use it as a reference when writing your own content.
+
+## Basic Markdown
+
+Standard Markdown works out of the box:
+
+- **Bold** text
+- *Italic* text
+- ~~Strikethrough~~ text
+- `inline code`
+- [Links](https://fumadocs.dev)
+
+> Blockquotes are supported too.
+
+### Lists
+
+1. Ordered list item 1
+2. Ordered list item 2
+3. Ordered list item 3
+
+- Unordered item
+- Another item
+  - Nested item
+
+### Tables
+
+| Feature | Enabled | Notes |
+|---------|---------|-------|
+| Search | ✅ | Orama-powered |
+| Dark mode | ✅ | next-themes |
+| i18n | ✅ | en/de |
+
+## Callouts
+
+<Callout type="info">
+  **Info callout** — for general information and tips.
+</Callout>
+
+<Callout type="warn">
+  **Warning callout** — for important caveats.
+</Callout>
+
+<Callout type="error">
+  **Error callout** — for critical warnings.
+</Callout>
+
+<Callout type="success">
+  **Success callout** — for confirming actions.
+</Callout>
+
+<Callout type="idea">
+  **Idea callout** — for suggestions and best practices.
+</Callout>
+
+## Cards
+
+<Cards>
+	<Card title="Getting Started" href="../getting-started/introduction" icon="rocket" />
+	<Card title="Components" href="../components/callout" icon="blocks" />
+	<Card title="API Reference" href="../api-reference/overview" icon="code" />
+	<Card title="External Link" href="https://fumadocs.dev" icon="external-link" />
+</Cards>
+
+## Tabs
+
+<Tabs items={["TypeScript", "JavaScript", "Python"]}>
+	<Tab value="TypeScript">
+```ts
+const greeting: string = "Hello, World!";
+console.log(greeting);
+```
+	</Tab>
+	<Tab value="JavaScript">
+```js
+const greeting = "Hello, World!";
+console.log(greeting);
+```
+	</Tab>
+	<Tab value="Python">
+```py
+greeting = "Hello, World!"
+print(greeting)
+```
+	</Tab>
+</Tabs>
+
+## Steps
+
+<Steps>
+	### First step
+
+  Do this first.
+
+	### Second step
+
+  Then do this.
+
+	### Third step
+
+  Finally, do this.
+</Steps>
+
+## Accordion
+
+<Accordions>
+	<Accordion title="What is Fumadocs?">
+    Fumadocs is a documentation framework for React applications.
+  </Accordion>
+	<Accordion title="Is it free?">
+    Yes, Fumadocs is open source and free to use.
+  </Accordion>
+	<Accordion title="Can I customize it?">
+    Absolutely — every component can be overridden.
+  </Accordion>
+</Accordions>
+
+## File Tree
+
+<Files>
+	<Folder name="project" defaultOpen>
+		<File name="package.json" />
+		<File name="tsconfig.json" />
+		<Folder name="src">
+			<File name="index.ts" />
+			<File name="utils.ts" />
+		</Folder>
+	</Folder>
+</Files>
+
+## TypeTable
+
+<TypeTable
+  type={{
+    name: { type: "string", description: "The user's display name" },
+    age: { type: "number", description: "User age in years" },
+    isActive: { type: "boolean", description: "Whether the user is active" },
+    roles: { type: "'admin' | 'user' | 'guest'", description: "User role" },
+  }}
+/>
+
+## Images
+
+Images are zoomable by default:
+
+<img src="/favicon/favicon.svg" alt="Fuutu favicon" width={64} height={64} />

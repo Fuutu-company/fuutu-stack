@@ -1,0 +1,14 @@
+{
+	"name": "@fuutu/tailwind-config",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./index.css",
+		"./theme.css": "./theme.css"
+	},
+	"files": [
+		"index.css",
+		"theme.css"
+	]
+}

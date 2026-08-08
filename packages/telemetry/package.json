@@ -1,0 +1,29 @@
+{
+	"name": "@fuutu/telemetry",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		}
+	},
+	"bin": {
+		"fuutu-telemetry-ping": "./bin/ping.mjs"
+	},
+	"scripts": {
+		"ping": "node ./bin/ping.mjs",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/license": "workspace:*"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

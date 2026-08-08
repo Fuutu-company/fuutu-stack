@@ -1,0 +1,20 @@
+{
+	"pricing": {
+		"eyebrow": "Pricing",
+		"title": "Simple, transparent pricing",
+		"description": "Choose the plan that fits your stage. Upgrade or downgrade any time.",
+		"moreFeatures": "more features",
+		"seeAll": "See all features",
+		"watchDemo": "Watch demo",
+		"enterprise": {
+			"dedicated_support": "Dedicated support",
+			"dedicated_support_desc": "A named engineer on call for your team.",
+			"dedicated_app": "Dedicated instance",
+			"dedicated_app_desc": "Isolated deployment — your data never shared.",
+			"sla": "SLA guarantee",
+			"sla_desc": "99.9% uptime with response-time commitments.",
+			"custom_integrations": "Custom integrations",
+			"custom_integrations_desc": "We build the connectors you need."
+		}
+	}
+}

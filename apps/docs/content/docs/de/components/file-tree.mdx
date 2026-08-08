@@ -1,0 +1,68 @@
+---
+title: Dateibaum
+description: Visualisiere Projektstrukturen mit interaktiven Dateibäumen.
+tags: ["components", "file-tree"]
+---
+
+Die `Files`-Komponente rendert interaktive Dateibäume. Ordner sind zusammenklappbar.
+
+## Grundlegender Dateibaum
+
+<Files>
+	<Folder name="src" defaultOpen>
+		<File name="index.ts" />
+		<File name="utils.ts" />
+		<Folder name="components">
+			<File name="Button.tsx" />
+			<File name="Card.tsx" />
+		</Folder>
+	</Folder>
+	<File name="package.json" />
+	<File name="tsconfig.json" />
+</Files>
+
+## Fuutu-Stack-Struktur
+
+<Files>
+	<Folder name="apps/docs" defaultOpen>
+		<Folder name="content/docs" defaultOpen>
+			<Folder name="en" defaultOpen>
+				<File name="meta.json" />
+				<File name="index.mdx" />
+				<Folder name="getting-started">
+					<File name="meta.json" />
+					<File name="introduction.mdx" />
+				</Folder>
+			</Folder>
+		</Folder>
+		<Folder name="src">
+			<Folder name="app">
+				<File name="layout.tsx" />
+				<Folder name="[locale]">
+					<File name="layout.tsx" />
+					<File name="page.tsx" />
+				</Folder>
+			</Folder>
+			<Folder name="lib">
+				<File name="source.ts" />
+				<File name="i18n.ts" />
+			</Folder>
+		</Folder>
+		<File name="package.json" />
+		<File name="source.config.ts" />
+	</Folder>
+</Files>
+
+## Verwendung
+
+```mdx
+<Files>
+  <Folder name="src" defaultOpen>
+    <File name="index.ts" />
+    <Folder name="components">
+      <File name="Button.tsx" />
+    </Folder>
+  </Folder>
+  <File name="package.json" />
+</Files>
+```

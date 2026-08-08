@@ -1,0 +1,25 @@
+{
+	"name": "@fuutu/mail-preview",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev --port 3003",
+		"build": "next build",
+		"start": "next start --port 3003",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@fuutu/i18n": "workspace:*",
+		"@fuutu/mail": "workspace:*",
+		"next": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"@types/node": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"typescript": "catalog:"
+	}
+}

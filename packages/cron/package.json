@@ -1,0 +1,32 @@
+{
+	"name": "@fuutu/cron",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./config": {
+			"default": "./src/config.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/db": "workspace:*",
+		"@fuutu/i18n": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"@fuutu/notifications": "workspace:*",
+		"@fuutu/payments": "workspace:*",
+		"@fuutu/telemetry": "workspace:*",
+		"@fuutu/webhooks": "workspace:*"
+	},
+	"devDependencies": {
+		"@fuutu/test-utils": "workspace:*",
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

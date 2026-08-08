@@ -1,0 +1,81 @@
+---
+title: Theming
+description: Dark mode, CSS variables, and theme customization.
+tags: ["guides", "theme"]
+---
+
+The docs app uses **CSS variables** for theming, with dark mode powered by
+`next-themes`.
+
+## Dark mode
+
+Dark mode is handled by the `ThemeProvider` in
+`src/modules/shared/providers/theme-provider.tsx`:
+
+```tsx title="src/modules/shared/providers/theme-provider.tsx"
+"use client";
+import { config } from "@fuutu/config";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+export function ThemeProvider({ children }) {
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme={config.theme.defaultMode}
+      enableSystem={false}
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
+  );
+}
+```
+
+<Callout type="info">
+  The default theme is controlled by `config.theme.defaultMode` in
+  `@fuutu/config`. Change it there to affect all apps.
+</Callout>
+
+## CSS variables
+
+Fumadocs uses `--color-fd-*` CSS variables. The theme is imported from two
+sources:
+
+1. **Fuutu Stack theme**: `@fuutu/config/theme.css` — shared across all apps
+2. **Fumadocs neutral theme**: `fumadocs-ui/css/neutral.css` — docs-specific
+
+```css title="src/app/global.css"
+@import "tailwindcss";
+@import "@fuutu/config/theme.css";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+```
+
+## Customizing colors
+
+To override Fumadocs colors, add CSS variables in `global.css`:
+
+```css title="src/app/global.css"
+:root {
+  --color-fd-primary: oklch(0.55 0.25 260);
+}
+
+.dark {
+  --color-fd-primary: oklch(0.65 0.25 260);
+}
+```
+
+<Callout type="warn">
+  The Fuutu Stack uses OKLCH colors for better perceptual uniformity. See
+  the `better-colors` skill for guidance on OKLCH color usage.
+</Callout>
+
+## Theme presets
+
+Fumadocs ships with multiple theme presets:
+
+- `fumadocs-ui/css/neutral.css` — neutral gray (current)
+- `fumadocs-ui/css/blue.css` — blue accent
+- `fumadocs-ui/css/green.css` — green accent
+
+Swap the import in `global.css` to change the accent color.

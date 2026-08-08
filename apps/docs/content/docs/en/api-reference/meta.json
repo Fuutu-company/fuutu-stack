@@ -1,0 +1,5 @@
+{
+	"title": "API Reference",
+	"icon": "code",
+	"pages": ["overview", "endpoints"]
+}

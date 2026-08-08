@@ -1,0 +1,12 @@
+/**
+ * Fuutu Stack - Global Styles
+ *
+ * All theme configuration is in: packages/config/theme.css
+ * Config settings: packages/config/index.ts
+ */
+
+@import "tailwindcss";
+@import "@fuutu/config/theme.css";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@import "fumadocs-openapi/css/preset.css";

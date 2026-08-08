@@ -1,0 +1,73 @@
+---
+title: Tabs
+description: Tabbed content for showing multiple options or languages.
+tags: ["components", "tabs"]
+---
+
+Tabs let you show multiple options in a compact space. They're great for
+multi-language code examples.
+
+## Basic tabs
+
+<Tabs items={["npm", "pnpm", "yarn"]}>
+	<Tab value="npm">
+```bash
+npm install
+```
+  </Tab>
+	<Tab value="pnpm">
+```bash
+pnpm install
+```
+  </Tab>
+	<Tab value="yarn">
+```bash
+yarn install
+```
+  </Tab>
+</Tabs>
+
+## With default index
+
+<Tabs items={["TypeScript", "JavaScript"]} defaultIndex={1}>
+	<Tab value="TypeScript">
+```ts
+const x: number = 42;
+```
+  </Tab>
+	<Tab value="JavaScript">
+```js
+const x = 42;
+```
+  </Tab>
+</Tabs>
+
+## Grouped tabs
+
+Tabs with the same `groupId` share their selected index across pages:
+
+<Tabs items={["Vite", "Webpack"]} groupId="bundler">
+	<Tab value="Vite">
+```bash
+npx vite build
+```
+  </Tab>
+	<Tab value="Webpack">
+```bash
+npx webpack --mode production
+```
+  </Tab>
+</Tabs>
+
+## Usage
+
+```mdx
+<Tabs items={["Option A", "Option B"]}>
+  <Tab value="Option A">
+    Content for option A.
+  </Tab>
+  <Tab value="Option B">
+    Content for option B.
+  </Tab>
+</Tabs>
+```

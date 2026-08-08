@@ -1,0 +1,57 @@
+{
+	"dashboard": {
+		"title": "Dashboard",
+		"welcome": "Welcome back! Here's what's happening with your stack.",
+		"stats": {
+			"authEvents": "Recent auth events",
+			"authEventsDescription": "Security events logged",
+			"plansConfigured": "Plans configured",
+			"plansConfiguredDescription": "Payment tiers available",
+			"providersSwappable": "Providers swappable",
+			"providersSwappableDescription": "Domains with pluggable backends",
+			"localesShipped": "Locales shipped",
+			"localesShippedDescription": "Languages supported"
+		},
+		"activity": {
+			"title": "Recent activity",
+			"empty": "No recent activity",
+			"error": "Failed to load recent activity",
+			"justNow": "just now",
+			"minutesAgo": "{n, plural, one {#m ago} other {#m ago}}",
+			"hoursAgo": "{n, plural, one {#h ago} other {#h ago}}",
+			"daysAgo": "{n, plural, one {#d ago} other {#d ago}}",
+			"unknownUser": "Unknown",
+			"unknownAction": "performed an action",
+			"signedIn": "signed in",
+			"signedOut": "signed out",
+			"signedUp": "signed up",
+			"sessionCreated": "started a session",
+			"createdOrg": "created an organization",
+			"invitedMember": "invited a member",
+			"acceptedInvite": "accepted an invitation",
+			"changedPlan": "changed the billing plan",
+			"changedRole": "changed a member role",
+			"switchedLocale": "switched locale",
+			"updatedProfile": "updated profile",
+			"verifiedEmail": "verified email"
+		},
+		"quickActions": {
+			"title": "Quick actions",
+			"inviteMember": "Invite member",
+			"createOrg": "Create organization",
+			"configureBilling": "Configure billing"
+		},
+		"orgSelection": {
+			"title": "Select an organization",
+			"subtitle": "Choose an organization to work in, or create a new one.",
+			"createNew": "New organization",
+			"noOrgs": "You're not in any organization yet",
+			"noOrgsDescription": "Create your first organization to get started.",
+			"members": "{count, plural, =0 {No members} =1 {1 member} other {# members}}"
+		},
+		"freePlan": "Free",
+		"backToOrgs": "Back to organizations",
+		"backToPersonal": "Back to personal account",
+		"viewOrganizations": "View organizations"
+	}
+}

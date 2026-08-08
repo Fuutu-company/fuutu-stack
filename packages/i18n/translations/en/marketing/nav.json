@@ -1,0 +1,17 @@
+{
+	"nav": {
+		"features": "Features",
+		"pricing": "Pricing",
+		"docs": "Docs",
+		"blog": "Blog",
+		"changelog": "Changelog",
+		"signIn": "Sign in",
+		"getStarted": "Get started",
+		"badges": {
+			"new": "New"
+		},
+		"toggleTheme": "Toggle theme",
+		"toggleMenu": "Toggle menu",
+		"switchLanguage": "Switch language"
+	}
+}

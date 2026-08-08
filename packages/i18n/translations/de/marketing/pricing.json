@@ -1,0 +1,20 @@
+{
+	"pricing": {
+		"eyebrow": "Preise",
+		"title": "Einfache, transparente Preise",
+		"description": "Wähle den Plan, der zu deiner Phase passt. Upgrade oder Downgrade jederzeit möglich.",
+		"moreFeatures": "weitere Features",
+		"seeAll": "Alle Features ansehen",
+		"watchDemo": "Demo ansehen",
+		"enterprise": {
+			"dedicated_support": "Dedizierter Support",
+			"dedicated_support_desc": "Ein fester Engineer für dein Team.",
+			"dedicated_app": "Dedizierte Instanz",
+			"dedicated_app_desc": "Isoliertes Deployment — deine Daten nie geteilt.",
+			"sla": "SLA-Garantie",
+			"sla_desc": "99,9% Uptime mit Response-Time-Zusagen.",
+			"custom_integrations": "Custom Integrationen",
+			"custom_integrations_desc": "Wir bauen die Konnektoren, die du brauchst."
+		}
+	}
+}

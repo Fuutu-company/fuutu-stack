@@ -1,0 +1,108 @@
+{
+	"payments": {
+		"choosePlan": {
+			"title": "Plan wählen",
+			"description": "Wähle den Plan, der zu deiner Phase passt. Upgrade oder Downgrade jederzeit.",
+			"unavailable": "Bezahlung ist in dieser Umgebung nicht konfiguriert.",
+			"redirecting": "Weiterleiten…",
+			"error": "Checkout fehlgeschlagen",
+			"popular": "Am beliebtesten",
+			"monthly": "Monatlich",
+			"yearly": "Jährlich",
+			"yearlyBadge": "17 % sparen"
+		},
+		"planInterval": "{plan} · {interval}",
+		"features": {
+			"groups": {
+				"auth": "Authentifizierung",
+				"orgs": "Organisationen & Teams",
+				"api": "API & Entwickler",
+				"infrastructure": "Infrastruktur",
+				"support": "Support"
+			},
+			"auth": {
+				"passkeys": "Passkeys (biometrische Anmeldung)",
+				"sso": "SAML / Enterprise-SSO"
+			},
+			"orgs": {
+				"orgs": "Organisationen",
+				"members": "Mitglieder pro Organisation",
+				"audit": "Audit-Log-Aufbewahrung"
+			},
+			"api": {
+				"keys": "API-Schlüssel",
+				"webhooks": "Ausgehende Webhooks"
+			},
+			"infrastructure": {
+				"storage": "Speicher"
+			},
+			"support": {
+				"community": "Community-Support",
+				"email": "Priority-E-Mail-Support",
+				"dedicated": "Dedizierter Support-Kanal",
+				"sla": "Individuelle SLA"
+			},
+			"tooltips": {
+				"auth_passkeys": "Anmelden mit Face ID, Touch ID oder einem Hardware-Schlüssel – kein Passwort erforderlich.",
+				"auth_saml": "Verbinde deinen bestehenden Identity-Provider (Okta, Azure AD, Google Workspace) über SAML 2.0.",
+				"orgs_orgs": "Benutzer in Organisationen mit gemeinsamer Abrechnung, Rollen und Einstellungen gruppieren.",
+				"orgs_members": "Maximale Anzahl an Benutzern, die in eine Organisation eingeladen werden können.",
+				"orgs_audit_log_days": "Wie viele Tage Aktivitätsprotokolle für Compliance und Debugging aufbewahrt werden.",
+				"api_api_keys": "Programmatische API-Schlüssel für deinen Account für Server-zu-Server-Zugriff.",
+				"api_webhooks": "Erhalte Echtzeit-HTTP-Callbacks, wenn Ereignisse in deinem Account auftreten."
+			}
+		},
+		"plans": {
+			"free": {
+				"name": "Free",
+				"description": "Alles, was du zum Starten brauchst.",
+				"priceSuffix": "/ dauerhaft",
+				"yearlyPriceSuffix": "/ dauerhaft",
+				"ctaLabel": "Kostenlos starten",
+				"featureLabels": {
+					"orgs_orgs": "1 Organisation",
+					"orgs_members": "Bis zu 5 Mitglieder",
+					"api_keys": "2 API-Schlüssel",
+					"infrastructure_storage": "500 MB Speicher",
+					"support_community": "Community-Support"
+				}
+			},
+			"pro": {
+				"name": "Pro",
+				"description": "Für Teams, die mehr Leistung und Skalierung brauchen.",
+				"priceSuffix": "/ Monat",
+				"yearlyPriceSuffix": "/ Jahr",
+				"ctaLabel": "Auf Pro upgraden",
+				"featureLabels": {
+					"auth_passkeys": "Passkeys (biometrische Anmeldung)",
+					"orgs_orgs": "Bis zu 10 Organisationen",
+					"orgs_members": "Bis zu 50 Mitglieder",
+					"orgs_audit": "Audit-Log — 30 Tage",
+					"api_keys": "Unbegrenzte API-Schlüssel",
+					"api_webhooks": "Ausgehende Webhooks",
+					"infrastructure_storage": "50 GB Speicher",
+					"support_email": "Priority-E-Mail-Support"
+				}
+			},
+			"enterprise": {
+				"name": "Enterprise",
+				"description": "Für große Organisationen mit speziellen Compliance- und Support-Anforderungen.",
+				"priceSuffix": "",
+				"yearlyPriceSuffix": "",
+				"ctaLabel": "Vertrieb kontaktieren",
+				"featureLabels": {
+					"auth_passkeys": "Passkeys (biometrische Anmeldung)",
+					"auth_sso": "SAML / Enterprise-SSO",
+					"orgs_orgs": "Unbegrenzte Organisationen",
+					"orgs_members": "Unbegrenzte Mitglieder",
+					"orgs_audit": "Unbegrenzte Audit-Log-Aufbewahrung",
+					"api_keys": "Unbegrenzte API-Schlüssel",
+					"api_webhooks": "Ausgehende Webhooks",
+					"infrastructure_storage": "Unbegrenzter Speicher",
+					"support_dedicated": "Dedizierter Support-Kanal",
+					"support_sla": "Individuelle SLA"
+				}
+			}
+		}
+	}
+}

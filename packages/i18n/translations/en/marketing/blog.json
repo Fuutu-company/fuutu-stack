@@ -1,0 +1,8 @@
+{
+	"blog": {
+		"title": "Blog",
+		"description": "Notes from the team — product updates, engineering deep-dives, and stories from the road to launch.",
+		"empty": "No posts yet. Check back soon.",
+		"backToList": "Back to all posts"
+	}
+}

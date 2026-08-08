@@ -1,0 +1,76 @@
+---
+title: Introduction
+description: Learn what the Fuutu Stack docs template offers and how it's structured.
+tags: ["getting-started", "beginner"]
+---
+
+Welcome to the **Fuutu Stack docs template** — a production-ready
+documentation app built with Fumadocs, Next.js, and Tailwind CSS.
+
+## Why this template?
+
+<Callout type="info">
+  This is a **starter building block**. Every page is a self-contained
+  example. Delete what you don't need and replace with your own content.
+</Callout>
+
+## What's included
+
+| Feature | Status |
+|---------|--------|
+| MDX content | ✅ Ready |
+| Full-text search | ✅ Ready |
+| Dark mode | ✅ Ready |
+| i18n (en/de) | ✅ Ready |
+| OpenAPI docs | ✅ Ready |
+| OG image generation | ✅ Ready |
+| LLM-friendly routes | ✅ Ready |
+| Kit fingerprint | ✅ Ready |
+
+## Project structure
+
+<Files>
+	<Folder name="apps/docs" defaultOpen>
+		<Folder name="content/docs" defaultOpen>
+			<Folder name="en" defaultOpen>
+				<File name="meta.json" />
+				<File name="index.mdx" />
+				<Folder name="getting-started">
+					<File name="meta.json" />
+					<File name="introduction.mdx" />
+				</Folder>
+			</Folder>
+			<Folder name="de">
+				<File name="meta.json" />
+				<File name="index.mdx" />
+			</Folder>
+		</Folder>
+		<Folder name="src">
+			<Folder name="app">
+				<File name="layout.tsx" />
+				<Folder name="[locale]">
+					<File name="layout.tsx" />
+					<File name="page.tsx" />
+					<Folder name="docs">
+						<File name="layout.tsx" />
+					</Folder>
+				</Folder>
+			</Folder>
+			<Folder name="lib">
+				<File name="source.ts" />
+				<File name="i18n.ts" />
+			</Folder>
+		</Folder>
+	</Folder>
+</Files>
+
+## Next steps
+
+<Cards>
+	<Card title="Installation" href="./installation" icon="download">
+		How to install and run the docs app.
+	</Card>
+	<Card title="Configuration" href="./configuration" icon="settings">
+		Configure frontmatter, i18n, and theming.
+	</Card>
+</Cards>

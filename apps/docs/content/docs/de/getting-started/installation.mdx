@@ -1,0 +1,90 @@
+---
+title: Installation
+description: Starte die Dokumentations-App lokal in unter einer Minute.
+tags: ["getting-started", "setup"]
+---
+
+## Voraussetzungen
+
+- Node.js ≥ 20
+- pnpm 10.11+
+- Das Fuutu-Stack-Monorepo geklont
+
+## Schritte
+
+<Steps>
+	### Abhängigkeiten installieren
+
+  Vom Monorepo-Root aus:
+
+  ```bash title="Terminal"
+  pnpm install
+  ```
+
+	### Dev-Server starten
+
+  ```bash title="Terminal"
+  pnpm dev:docs
+  ```
+
+  Die Dokumentations-App läuft auf `http://localhost:4000`.
+
+	### Browser öffnen
+
+  Navigiere zu `http://localhost:4000/de/docs`, um die Dokumentation zu sehen.
+
+  <Callout type="success">
+    Du solltest die Dokumentations-Sidebar mit allen Beispielseiten sehen.
+  </Callout>
+
+	### Schreiben beginnen
+
+  Erstelle eine neue MDX-Datei in `content/docs/de/`:
+
+  ```bash title="Terminal"
+  touch apps/docs/content/docs/de/meine-seite.mdx
+  ```
+
+  Füge Frontmatter hinzu:
+
+  ```mdx title="meine-seite.mdx"
+  ---
+  title: Meine Seite
+  description: Eine brandneue Dokumentationsseite.
+  ---
+
+  # Hallo Welt
+
+  Dein Inhalt hier.
+  ```
+
+  Sie erscheint automatisch in der Sidebar.
+</Steps>
+
+## Paket-Manager-Optionen
+
+<Tabs items={["pnpm", "npm", "yarn"]} defaultIndex={0}>
+	<Tab value="pnpm">
+```bash
+pnpm install
+pnpm dev:docs
+```
+  </Tab>
+	<Tab value="npm">
+```bash
+npm install
+npm run dev:docs
+```
+  </Tab>
+	<Tab value="yarn">
+```bash
+yarn install
+yarn dev:docs
+```
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+  Der Fuutu Stack verwendet pnpm. Andere Paket-Manager funktionieren möglicherweise,
+  werden aber nicht offiziell unterstützt.
+</Callout>

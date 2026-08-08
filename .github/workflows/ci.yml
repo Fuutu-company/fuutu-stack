@@ -1,0 +1,808 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.11.0"
+  FUUTU_TELEMETRY_DISABLED: "1"
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Filter changed files
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.base_ref }}"
+            git fetch origin "$BASE" --depth=1
+            DIFF=$(git diff --name-only "origin/$BASE" HEAD)
+          else
+            DIFF=$(git diff --name-only HEAD~1 HEAD)
+          fi
+
+          # Check if any code files changed
+          if echo "$DIFF" | grep -qE '^(apps/.*\.(ts|tsx)|packages/.*\.(ts|tsx)|turbo\.json|package\.json|pnpm-workspace\.yaml|\.github/workflows/ci\.yml)$'; then
+            echo "code=true" >> $GITHUB_OUTPUT
+          else
+            echo "code=false" >> $GITHUB_OUTPUT
+          fi
+
+  lint-and-types:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install
+
+      - run: pnpm db:generate
+
+      - run: pnpm check
+
+      - run: pnpm check-types
+
+  # ─────────────────────────────────────────────────────────
+  # Translation Checks — non-blocking, posts PR comment on issues
+  # ─────────────────────────────────────────────────────────
+  translations:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install
+
+      - name: Run translation checks
+        id: check-translations
+        continue-on-error: true
+        run: |
+          echo "## Translation Checks" > /tmp/translation-report.md
+          echo "" >> /tmp/translation-report.md
+          if pnpm check-translations 2>&1 | tee /tmp/check-translations.log; then
+            echo "✅ All translation checks passed." >> /tmp/translation-report.md
+          else
+            echo "❌ Translation checks failed:" >> /tmp/translation-report.md
+            echo "" >> /tmp/translation-report.md
+            echo '```' >> /tmp/translation-report.md
+            cat /tmp/check-translations.log >> /tmp/translation-report.md
+            echo '```' >> /tmp/translation-report.md
+            echo "TRANSLATION_ISSUES=1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post PR comment if issues found
+        if: always() && github.event_name == 'pull_request' && steps.check-translations.outputs.TRANSLATION_ISSUES == '1'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/translation-report.md', 'utf-8');
+            const body = [
+              '## ⚠️ Translation Issues Detected',
+              '',
+              report,
+              '',
+              '> The pipeline did **not** fail — this is a warning only. Fix the issues above before merging.',
+            ].join('\n');
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+  # ─────────────────────────────────────────────────────────
+  # Dependency Audit — non-blocking, posts PR comment on outdated packages
+  # ─────────────────────────────────────────────────────────
+  dependency-audit:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install
+
+      - name: Check for outdated packages
+        id: check-outdated
+        continue-on-error: true
+        run: |
+          pnpm outdated -r --format list > /tmp/outdated.log 2>&1 || true
+          if [ -s /tmp/outdated.log ] && grep -q "=>" /tmp/outdated.log; then
+            echo "OUTDATED_FOUND=1" >> $GITHUB_OUTPUT
+          else
+            echo "OUTDATED_FOUND=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post PR comment if outdated packages found
+        if: always() && github.event_name == 'pull_request' && steps.check-outdated.outputs.OUTDATED_FOUND == '1'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('/tmp/outdated.log', 'utf-8');
+
+            // Parse the outdated list format
+            const lines = output.split('\n');
+            const packages = [];
+            let currentPkg = null;
+
+            for (const line of lines) {
+              if (line.includes('=>')) {
+                const [current, latest] = line.split('=>').map(s => s.trim());
+                if (currentPkg) {
+                  currentPkg.current = current;
+                  currentPkg.latest = latest;
+                  packages.push(currentPkg);
+                }
+              } else if (line.trim() && !line.includes('Dependents')) {
+                currentPkg = { name: line.trim(), current: '', latest: '' };
+              }
+            }
+
+            // Categorize by major bump vs minor/patch
+            // For 0.x packages, a minor version bump IS a major (breaking) change per semver.
+            const autoUpdateable = [];
+            const majorBumps = [];
+
+            for (const pkg of packages) {
+              const currentParts = pkg.current.split('.').map(Number);
+              const latestParts = pkg.latest.split('.').map(Number);
+              const currentMajor0 = currentParts[0];
+              const latestMajor0 = latestParts[0];
+
+              let isMajorBump = false;
+              if (latestMajor0 > currentMajor0) {
+                // Standard major bump (e.g. 5.x → 7.x)
+                isMajorBump = true;
+              } else if (currentMajor0 === 0 && latestMajor0 === 0) {
+                // 0.x packages: minor bump = breaking change per semver
+                // e.g. 0.4.x → 0.5.x is a MAJOR bump
+                const currentMinor = currentParts[1] || 0;
+                const latestMinor = latestParts[1] || 0;
+                if (latestMinor > currentMinor) {
+                  isMajorBump = true;
+                }
+              }
+
+              if (isMajorBump) {
+                majorBumps.push(pkg);
+              } else {
+                autoUpdateable.push(pkg);
+              }
+            }
+
+            // Build markdown table
+            let body = `## ⚠️ Dependency Audit\n\n`;
+            body += `**${packages.length} outdated package(s)** — ${autoUpdateable.length} auto-updateable, ${majorBumps.length} require manual catalog range update\n\n`;
+
+            if (autoUpdateable.length > 0) {
+              body += `### Auto-updateable (minor/patch)\n\n`;
+              body += `| Package | Current | Latest | Type |\n`;
+              body += `|---------|---------|--------|------|\n`;
+              for (const pkg of autoUpdateable) {
+                body += `| \`${pkg.name}\` | ${pkg.current} | ${pkg.latest} | minor/patch |\n`;
+              }
+              body += `\n`;
+            }
+
+            if (majorBumps.length > 0) {
+              body += `### Major bump — manual catalog range update required\n\n`;
+              body += `| Package | Current | Latest | Type |\n`;
+              body += `|---------|---------|--------|------|\n`;
+              for (const pkg of majorBumps) {
+                body += `| \`${pkg.name}\` | ${pkg.current} | ${pkg.latest} | **MAJOR** |\n`;
+              }
+              body += `\n`;
+            }
+
+            body += `> The pipeline did **not** fail — this is a warning only. Major bumps require manual catalog range updates in \`pnpm-workspace.yaml\`.`;
+
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
+      BETTER_AUTH_SECRET: gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
+      BETTER_AUTH_URL: http://localhost:3000
+      EMAIL_PROVIDER: console
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+      FUUTU_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install
+
+      - run: pnpm db:generate
+
+      - run: pnpm build
+        env:
+          FUUTU_TELEMETRY_DISABLED: "1"
+
+  # ─────────────────────────────────────────────────────────
+  # Unit / Integration tests — Vitest across all packages
+  # Runs in parallel with build + E2E jobs
+  # ─────────────────────────────────────────────────────────
+  unit-tests:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install
+
+      - run: pnpm db:generate
+
+      - run: pnpm test
+        env:
+          FUUTU_TELEMETRY_DISABLED: "1"
+
+  # ─────────────────────────────────────────────────────────
+  # E2E + Visual Regression — SaaS
+  #
+  # PR workflow:
+  #   1. Restore baselines from base branch (develop or main)
+  #   2. Run non-visual tests → must pass (pipeline fails if they don't)
+  #   3. Run visual tests → warn only, upload diffs as artifacts
+  #   4. Post PR comment: "⚠️ Visual changes detected — review screenshots"
+  #
+  # Merge workflow (push to main or develop):
+  #   1. Restore baselines from current branch
+  #   2. Run --update-snapshots → baselines updated
+  #   3. Run all tests → must pass
+  #   4. Save updated baselines to cache (keyed by branch)
+  # ─────────────────────────────────────────────────────────
+  e2e-saas:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      visual_failed: ${{ steps.saas-visual.outcome == 'failure' }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fuutu-stack
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
+      BETTER_AUTH_SECRET: gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
+      BETTER_AUTH_URL: http://localhost:3000
+      EMAIL_PROVIDER: console
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+      FUUTU_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
+
+      - name: Determine baseline branch
+        id: branch
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "name=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Cache visual regression baselines (SaaS)
+        uses: actions/cache@v5
+        id: saas-visual-cache
+        with:
+          path: apps/saas/tests/visual.spec.ts-snapshots
+          key: visual-saas-${{ runner.os }}-${{ steps.branch.outputs.name }}-v2
+          restore-keys: |
+            visual-saas-${{ runner.os }}-
+
+      - run: pnpm -F @fuutu/saas exec playwright install --with-deps
+
+      - name: Create .env for dotenv-cli
+        run: |
+          cat > .env << 'EOF'
+          DATABASE_URL=postgresql://postgres:password@localhost:5432/fuutu-stack
+          BETTER_AUTH_SECRET=gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
+          BETTER_AUTH_URL=http://localhost:3000
+          EMAIL_PROVIDER=console
+          NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
+          FUUTU_TELEMETRY_DISABLED=1
+          FUUTU_DISABLE_RATE_LIMIT=1
+          EOF
+
+      - run: pnpm db:generate
+
+      - run: pnpm db:push
+
+      - run: pnpm db:seed
+        env:
+          NODE_ENV: development
+
+      - name: Build SaaS app
+        run: pnpm -F @fuutu/saas build
+        env:
+          FUUTU_TELEMETRY_DISABLED: "1"
+
+      # ── PR: compare against base branch baselines ──
+      - name: Generate baselines if cache miss (first run for this branch)
+        if: steps.saas-visual-cache.outputs.cache-hit != 'true'
+        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Run non-visual tests (must pass, chromium only)
+        run: pnpm -F @fuutu/saas exec playwright test --grep-invert "visual regression" --project=chromium
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Run visual tests (PR — chromium only, warn only)
+        id: saas-visual
+        if: github.event_name == 'pull_request'
+        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --project=chromium
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Update baselines (merge to develop — chromium + mobile-safari only)
+        if: github.event_name == 'push' && github.ref_name == 'develop'
+        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Update baselines (merge to main — all browsers)
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-saas-report
+          path: |
+            apps/saas/playwright-report
+            apps/saas/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────
+  # E2E + Visual Regression — Marketing
+  # Same workflow as SaaS, no database needed
+  # ─────────────────────────────────────────────────────────
+  e2e-marketing:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      visual_failed: ${{ steps.marketing-visual.outcome == 'failure' }}
+      coverage_pct: ${{ steps.coverage.outputs.pct }}
+      coverage_available: ${{ steps.coverage.outputs.available }}
+      coverage_scripts: ${{ steps.coverage.outputs.scripts }}
+    env:
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+      FUUTU_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
+
+      - name: Determine baseline branch
+        id: branch
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "name=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Cache visual regression baselines (Marketing)
+        uses: actions/cache@v5
+        id: marketing-visual-cache
+        with:
+          path: apps/marketing/tests/visual.spec.ts-snapshots
+          key: visual-marketing-${{ runner.os }}-${{ steps.branch.outputs.name }}-v3
+          restore-keys: |
+            visual-marketing-${{ runner.os }}-
+
+      - run: pnpm -F @fuutu/marketing exec playwright install --with-deps
+
+      - name: Create .env for dotenv-cli
+        run: |
+          cat > .env << 'EOF'
+          NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
+          FUUTU_TELEMETRY_DISABLED=1
+          EOF
+
+      - name: Build Marketing app
+        run: pnpm -F @fuutu/marketing build
+        env:
+          FUUTU_TELEMETRY_DISABLED: "1"
+
+      # ── PR: compare against base branch baselines ──
+      - name: Generate baselines if cache miss (first run for this branch)
+        if: steps.marketing-visual-cache.outputs.cache-hit != 'true'
+        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Run non-visual tests (must pass, chromium only)
+        run: pnpm -F @fuutu/marketing exec playwright test --grep-invert "visual regression" --project=chromium
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Run E2E with coverage (chromium only)
+        id: marketing-coverage
+        if: github.event_name == 'pull_request'
+        run: pnpm -F @fuutu/marketing exec playwright test --grep-invert "visual regression" --project=chromium --workers=1
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+          COVERAGE: "1"
+
+      - name: Read coverage summary
+        if: always() && steps.marketing-coverage.outcome != 'skipped'
+        id: coverage
+        run: |
+          if [ -f apps/marketing/coverage-v8/coverage-summary.json ]; then
+            PCT=$(jq -r '.overall.pct' apps/marketing/coverage-v8/coverage-summary.json)
+            USED=$(jq -r '.overall.used' apps/marketing/coverage-v8/coverage-summary.json)
+            TOTAL=$(jq -r '.overall.total' apps/marketing/coverage-v8/coverage-summary.json)
+            SCRIPTS=$(jq -r '.scripts | length' apps/marketing/coverage-v8/coverage-summary.json)
+            echo "pct=$PCT" >> $GITHUB_OUTPUT
+            echo "used=$USED" >> $GITHUB_OUTPUT
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+            echo "scripts=$SCRIPTS" >> $GITHUB_OUTPUT
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.marketing-coverage.outcome != 'skipped'
+        with:
+          name: marketing-coverage-report
+          path: apps/marketing/coverage-v8/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Run visual tests (PR — chromium only, warn only)
+        id: marketing-visual
+        if: github.event_name == 'pull_request'
+        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --project=chromium
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Update baselines (merge to develop — chromium + mobile-safari only)
+        if: github.event_name == 'push' && github.ref_name == 'develop'
+        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Update baselines (merge to main — all browsers)
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-marketing-report
+          path: |
+            apps/marketing/playwright-report
+            apps/marketing/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────
+  # Visual Report — deploy HTML report to GitHub Pages + PR comment
+  # Runs after e2e jobs, only on PRs
+  # Requires: Repo Settings → Pages → Source: GitHub Actions
+  # ─────────────────────────────────────────────────────────
+  visual-report:
+    needs: [e2e-saas, e2e-marketing]
+    if: always() && github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Check if e2e jobs ran
+        id: check
+        run: |
+          SAAS_RESULT="${{ needs.e2e-saas.result }}"
+          MKT_RESULT="${{ needs.e2e-marketing.result }}"
+          SAAS_VISUAL="${{ needs.e2e-saas.outputs.visual_failed }}"
+          MKT_VISUAL="${{ needs.e2e-marketing.outputs.visual_failed }}"
+
+          # Distinguish: visual diffs found vs tests ran clean vs tests didn't complete
+          if [ "$SAAS_VISUAL" = "true" ] || [ "$MKT_VISUAL" = "true" ]; then
+            echo "status=visual_changes" >> $GITHUB_OUTPUT
+          elif [ "$SAAS_RESULT" = "success" ] && [ "$MKT_RESULT" = "success" ]; then
+            echo "status=no_changes" >> $GITHUB_OUTPUT
+          else
+            # One or both e2e jobs failed/skipped/cancelled before reaching the visual step
+            echo "status=tests_incomplete" >> $GITHUB_OUTPUT
+            echo "saas_result=$SAAS_RESULT" >> $GITHUB_OUTPUT
+            echo "mkt_result=$MKT_RESULT" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download SaaS report
+        if: always() && steps.check.outputs.status == 'visual_changes'
+        uses: actions/download-artifact@v7
+        with:
+          name: playwright-saas-report
+          path: report/saas
+
+      - name: Download Marketing report
+        if: always() && steps.check.outputs.status == 'visual_changes'
+        uses: actions/download-artifact@v7
+        with:
+          name: playwright-marketing-report
+          path: report/marketing
+
+      - name: Create report index page
+        if: steps.check.outputs.status == 'visual_changes'
+        run: |
+          mkdir -p report
+          cat > report/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8"><title>Playwright Visual Report</title></head>
+          <body style="font-family: system-ui; max-width: 600px; margin: 80px auto; padding: 20px;">
+          <h1>Playwright Visual Report</h1>
+          <p>Choose a report:</p>
+          <ul style="font-size: 18px; line-height: 2;">
+          <li><a href="saas/playwright-report/index.html">SaaS Report</a></li>
+          <li><a href="marketing/playwright-report/index.html">Marketing Report</a></li>
+          </ul>
+          </body>
+          </html>
+          EOF
+
+      # ── GitHub Pages deploy (disabled until repo is public) ──
+      # To re-enable: uncomment these steps + add `permissions: pages: write, id-token: write` + `environment: name: github-pages`
+      # - name: Upload Pages artifact
+      #   if: steps.check.outputs.status == 'visual_changes'
+      #   uses: actions/upload-pages-artifact@v5
+      #   with:
+      #     path: report
+      # - name: Deploy to GitHub Pages
+      #   if: steps.check.outputs.status == 'visual_changes'
+      #   id: deploy
+      #   uses: actions/deploy-pages@v5
+
+      - name: Post visual changes warning with report link
+        if: steps.check.outputs.status == 'visual_changes'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = '${{ github.base_ref }}';
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            const runId = '${{ github.run_id }}';
+            const artifactUrl = `https://github.com/${repo}/actions/runs/${runId}`;
+            const prUrl = `https://github.com/${repo}/pull/${context.issue.number}`;
+            const pagesUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/`;
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: [
+                '## ⚠️ Visual Changes Detected',
+                '',
+                'UI changes were found during visual regression testing.',
+                '',
+                '**Links:**',
+                `- 📦 [Download Report Artifact](${artifactUrl}) — download & unzip, then open \`playwright-report/index.html\` in your browser`,
+                `- 🌐 [View Report on GitHub Pages](${pagesUrl}) — *(available once Pages is enabled)*`,
+                `- 🔗 [View PR](${prUrl})`,
+                '',
+                'In the report you\'ll see expected vs actual vs diff for every changed page.',
+                '',
+                '**What to do:**',
+                '1. Download the artifact, open the HTML report, review the visual diffs',
+                '2. If the changes are **intentional** → merge this PR',
+                `3. Merging will automatically update the baselines for \`${branch}\``,
+                '',
+                '> The pipeline did **not** fail — this is a warning only. Non-visual tests must still pass.',
+              ].join('\n')
+            });
+
+      - name: Post all-clear comment
+        if: steps.check.outputs.status == 'no_changes'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: '## ✅ No Visual Changes\n\nVisual regression tests passed — no UI changes detected.'
+            });
+
+      - name: Post tests-incomplete warning
+        if: steps.check.outputs.status == 'tests_incomplete'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const saas = '${{ steps.check.outputs.saas_result }}';
+            const mkt = '${{ steps.check.outputs.mkt_result }}';
+            const runId = '${{ github.run_id }}';
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            const runUrl = `https://github.com/${repo}/actions/runs/${runId}`;
+            const lines = [
+              '## ⚠️ Visual Regression Did Not Complete',
+              '',
+              'Visual regression tests did **not** run to completion — no "all clear" can be given.',
+              '',
+              '**E2E job results:**',
+              `- SaaS: \`${saas}\``,
+              `- Marketing: \`${mkt}\``,
+              '',
+              `👉 Check the [failed run](${runUrl}) and re-run the failed jobs before merging.`,
+              '',
+              '> This comment replaces the previous false "No Visual Changes" message that was posted when e2e jobs failed before reaching the visual step.',
+            ];
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: lines.join('\n')
+            });
+
+      - name: Post E2E coverage comment
+        if: always() && needs.e2e-marketing.outputs.coverage_available == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pct = '${{ needs.e2e-marketing.outputs.coverage_pct }}';
+            const scripts = '${{ needs.e2e-marketing.outputs.coverage_scripts }}';
+            const runId = '${{ github.run_id }}';
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            const artifactUrl = `https://github.com/${repo}/actions/runs/${runId}`;
+            const emoji = parseInt(pct) >= 90 ? '🟢' : parseInt(pct) >= 70 ? '🟡' : '🔴';
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: [
+                '## 📊 E2E Code Coverage — Marketing',
+                '',
+                `${emoji} **${pct}%** coverage — ${scripts} scripts analyzed`,
+                '',
+                `- 📦 [Download full report](${artifactUrl}) — open \`coverage-report.md\` for per-script breakdown`,
+                '',
+                '> Collected via Playwright V8 coverage during E2E tests. Measures JS executed by browser during test runs.',
+              ].join('\n')
+            });

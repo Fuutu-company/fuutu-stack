@@ -1,0 +1,152 @@
+---
+title: Markdown & MDX
+description: Eine vollständige Übersicht aller MDX-Features in der Dokumentationsvorlage.
+tags: ["guides", "mdx"]
+---
+
+Diese Seite zeigt **jedes MDX-Feature**, das in der Fuutu-Stack-Dokumentationsvorlage
+verfügbar ist. Verwende sie als Referenz beim Schreiben deines eigenen Inhalts.
+
+## Grundlegendes Markdown
+
+Standard-Markdown funktioniert sofort:
+
+- **Fetter** Text
+- *Kursiver* Text
+- ~~Durchgestrichener~~ Text
+- `Inline-Code`
+- [Links](https://fumadocs.dev)
+
+> Blockquotes werden ebenfalls unterstützt.
+
+### Listen
+
+1. Geordneter Listeneintrag 1
+2. Geordneter Listeneintrag 2
+3. Geordneter Listeneintrag 3
+
+- Ungeordneter Eintrag
+- Ein weiterer Eintrag
+  - Verschachtelter Eintrag
+
+### Tabellen
+
+| Feature | Aktiviert | Hinweise |
+|---------|-----------|----------|
+| Suche | ✅ | Orama-powered |
+| Dark Mode | ✅ | next-themes |
+| i18n | ✅ | en/de |
+
+## Callouts
+
+<Callout type="info">
+  **Info-Callout** — für allgemeine Informationen und Tipps.
+</Callout>
+
+<Callout type="warn">
+  **Warn-Callout** — für wichtige Vorbehalte.
+</Callout>
+
+<Callout type="error">
+  **Fehler-Callout** — für kritische Warnungen.
+</Callout>
+
+<Callout type="success">
+  **Erfolg-Callout** — zum Bestätigen von Aktionen.
+</Callout>
+
+<Callout type="idea">
+  **Idee-Callout** — für Vorschläge und Best Practices.
+</Callout>
+
+## Cards
+
+<Cards>
+	<Card title="Erste Schritte" href="../getting-started/introduction" icon="rocket" />
+	<Card title="Komponenten" href="../components/callout" icon="blocks" />
+	<Card title="API-Referenz" href="../api-reference/overview" icon="code" />
+	<Card title="Externer Link" href="https://fumadocs.dev" icon="external-link" />
+</Cards>
+
+## Tabs
+
+<Tabs items={["TypeScript", "JavaScript", "Python"]}>
+	<Tab value="TypeScript">
+```ts
+const greeting: string = "Hello, World!";
+console.log(greeting);
+```
+  </Tab>
+	<Tab value="JavaScript">
+```js
+const greeting = "Hello, World!";
+console.log(greeting);
+```
+  </Tab>
+	<Tab value="Python">
+```py
+greeting = "Hello, World!"
+print(greeting)
+```
+  </Tab>
+</Tabs>
+
+## Steps
+
+<Steps>
+	### Erster Schritt
+
+  Mache dies zuerst.
+
+	### Zweiter Schritt
+
+  Dann mache das.
+
+	### Dritter Schritt
+
+  Schließlich mache das.
+</Steps>
+
+## Accordion
+
+<Accordions>
+	<Accordion title="Was ist Fumadocs?">
+    Fumadocs ist ein Dokumentations-Framework für React-Anwendungen.
+  </Accordion>
+	<Accordion title="Ist es kostenlos?">
+    Ja, Fumadocs ist Open Source und kostenlos zu verwenden.
+  </Accordion>
+	<Accordion title="Kann ich es anpassen?">
+    Absolut — jede Komponente kann überschrieben werden.
+  </Accordion>
+</Accordions>
+
+## Dateibaum
+
+<Files>
+	<Folder name="project" defaultOpen>
+		<File name="package.json" />
+		<File name="tsconfig.json" />
+		<Folder name="src">
+			<File name="index.ts" />
+			<File name="utils.ts" />
+		</Folder>
+	</Folder>
+</Files>
+
+## TypeTable
+
+<TypeTable
+  type={{
+    name: { type: "string", description: "Der Anzeigename des Benutzers" },
+    age: { type: "number", description: "Alter des Benutzers in Jahren" },
+    isActive: { type: "boolean", description: "Ob der Benutzer aktiv ist" },
+    roles: { type: "'admin' | 'user' | 'guest'", description: "Benutzerrolle" },
+  }}
+/>
+
+## Bilder
+
+Bilder sind standardmäßig zoombar:
+
+<img src="/favicon/favicon.svg" alt="Fuutu favicon" width={64} height={64} />

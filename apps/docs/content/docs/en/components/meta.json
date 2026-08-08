@@ -1,0 +1,13 @@
+{
+	"title": "Components",
+	"icon": "blocks",
+	"pages": [
+		"callout",
+		"tabs",
+		"steps",
+		"file-tree",
+		"cards",
+		"accordion",
+		"type-table"
+	]
+}

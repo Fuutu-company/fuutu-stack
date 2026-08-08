@@ -1,0 +1,53 @@
+{
+	"apiKeys": {
+		"title": "API Keys",
+		"description": "Create and manage API keys for programmatic access.",
+		"create": "Create API key",
+		"creating": "Creating…",
+		"empty": "No API keys yet",
+		"emptyDescription": "Create your first API key to get started.",
+		"emptyCta": "Create API key",
+		"col": {
+			"name": "Name",
+			"prefix": "Key",
+			"lastUsed": "Last used",
+			"createdAt": "Created",
+			"status": "Status",
+			"actions": "Actions"
+		},
+		"status": {
+			"active": "Active",
+			"revoked": "Revoked",
+			"expired": "Expired"
+		},
+		"neverUsed": "Never",
+		"createDialog": {
+			"title": "Create API key",
+			"description": "Give your key a name to identify it later. You can optionally set an expiry date.",
+			"nameLabel": "Key name",
+			"namePlaceholder": "Production server",
+			"expiryLabel": "Expiry date (optional)",
+			"expiryPlaceholder": "Pick a date",
+			"submit": "Create key"
+		},
+		"createdDialog": {
+			"title": "Your new API key",
+			"description": "Copy this key now — you won't be able to see it again.",
+			"copy": "Copy",
+			"copied": "Copied!",
+			"done": "I've copied it"
+		},
+		"revokeDialog": {
+			"title": "Revoke API key?",
+			"description": "This key will stop working immediately. This action cannot be undone.",
+			"confirm": "Revoke key",
+			"revoking": "Revoking…"
+		},
+		"revoke": "Revoke",
+		"loading": "Loading API keys…",
+		"failed": "Could not perform this action.",
+		"created": "API key created.",
+		"revoked": "API key revoked.",
+		"revokeError": "Failed to revoke API key. Please try again."
+	}
+}

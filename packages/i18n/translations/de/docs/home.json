@@ -1,0 +1,37 @@
+{
+	"title": "Fuutu Stack Dokumentation",
+	"subtitle": "Produktionsreife Dokumentation mit Fumadocs",
+	"description": "Eine gebrauchsfertige Dokumentationsvorlage, die mit dem Fuutu Stack geliefert wird. Gebaut mit Fumadocs, Next.js und Tailwind CSS. Jede Fumadocs-Funktion wird als anpassbares Beispiel gezeigt.",
+	"metaTitle": "Fuutu Stack Dokumentation — Produktionsreife Doku",
+	"metaDescription": "Eine gebrauchsfertige Dokumentationsvorlage mit Fumadocs, Next.js und Tailwind CSS. Vollständige i18n, OpenAPI-Docs, Suche und Dark Mode out of the box.",
+	"exploreDocs": "Dokumentation erkunden",
+	"viewOnGithub": "Auf GitHub ansehen",
+	"features": {
+		"title": "Alles was du brauchst",
+		"subtitle": "Eingebaute Beispiele für jede Fumadocs-Funktion — lösche was du nicht brauchst, behalte was du brauchst.",
+		"mdx": {
+			"title": "MDX-Inhalte",
+			"description": "Schreibe Dokumentation in MDX mit voller Komponentenunterstützung"
+		},
+		"search": {
+			"title": "Volltextsuche",
+			"description": "Eingebaute Suche powered by Orama"
+		},
+		"darkMode": {
+			"title": "Dark Mode",
+			"description": "Nahtloser Wechsel zwischen Hell und Dunkel"
+		},
+		"i18n": {
+			"title": "Internationalisierung",
+			"description": "Mehrsprachige Unterstützung mit next-intl"
+		},
+		"openapi": {
+			"title": "OpenAPI-Docs",
+			"description": "Interaktive API-Dokumentation aus Specs"
+		},
+		"codeBlocks": {
+			"title": "Code-Blöcke",
+			"description": "Syntax-Highlighting mit Copy, Diff und mehr"
+		}
+	}
+}

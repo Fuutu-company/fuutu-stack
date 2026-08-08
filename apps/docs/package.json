@@ -1,0 +1,46 @@
+{
+	"name": "@fuutu/docs",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"build": "next build",
+		"dev": "next dev --port=4000",
+		"start": "next start --port=4000",
+		"check-types": "fumadocs-mdx && next typegen && tsc --noEmit",
+		"postinstall": "fumadocs-mdx"
+	},
+	"dependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/i18n": "workspace:*",
+		"@fuutu/ui": "workspace:*",
+		"@fuutu/utils": "workspace:*",
+		"@iconify/icons-circle-flags": "catalog:",
+		"@iconify/react": "catalog:",
+		"@scalar/api-client-react": "catalog:",
+		"fumadocs-core": "16.14.0",
+		"fumadocs-mdx": "15.2.2",
+		"fumadocs-openapi": "catalog:",
+		"fumadocs-ui": "16.14.0",
+		"geist": "catalog:",
+		"lucide-react": "catalog:",
+		"next": "catalog:",
+		"next-intl": "catalog:",
+		"next-themes": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"tailwind-merge": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"@tailwindcss/postcss": "catalog:",
+		"@types/mdx": "^2.0.14",
+		"@types/node": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"postcss": "^8.5.25",
+		"tailwindcss": "catalog:",
+		"typescript": "catalog:"
+	}
+}

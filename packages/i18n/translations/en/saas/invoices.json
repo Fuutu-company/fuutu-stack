@@ -1,0 +1,31 @@
+{
+	"invoices": {
+		"title": "Invoices",
+		"description": "View and download your billing history.",
+		"empty": "No invoices yet",
+		"emptyDescription": "Invoices will appear here once you have an active subscription.",
+		"emptyCta": "Choose a plan",
+		"loading": "Loading invoices…",
+		"failed": "Failed to load invoices. Please try again.",
+		"col": {
+			"date": "Date",
+			"amount": "Amount",
+			"status": "Status",
+			"actions": "Actions"
+		},
+		"status": {
+			"paid": "Paid",
+			"open": "Open",
+			"void": "Void",
+			"draft": "Draft"
+		},
+		"filter": {
+			"label": "Filter",
+			"all": "All time",
+			"last30": "Last 30 days",
+			"last90": "Last 90 days"
+		},
+		"download": "Download PDF",
+		"noPdf": "Not available"
+	}
+}

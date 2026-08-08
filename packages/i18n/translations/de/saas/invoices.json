@@ -1,0 +1,31 @@
+{
+	"invoices": {
+		"title": "Rechnungen",
+		"description": "Deine Abrechnungshistorie ansehen und herunterladen.",
+		"empty": "Noch keine Rechnungen",
+		"emptyDescription": "Rechnungen erscheinen hier, sobald du ein aktives Abonnement hast.",
+		"emptyCta": "Plan wählen",
+		"loading": "Rechnungen werden geladen…",
+		"failed": "Rechnungen konnten nicht geladen werden. Bitte erneut versuchen.",
+		"col": {
+			"date": "Datum",
+			"amount": "Betrag",
+			"status": "Status",
+			"actions": "Aktionen"
+		},
+		"status": {
+			"paid": "Bezahlt",
+			"open": "Offen",
+			"void": "Storniert",
+			"draft": "Entwurf"
+		},
+		"filter": {
+			"label": "Filter",
+			"all": "Gesamter Zeitraum",
+			"last30": "Letzte 30 Tage",
+			"last90": "Letzte 90 Tage"
+		},
+		"download": "PDF herunterladen",
+		"noPdf": "Nicht verfügbar"
+	}
+}

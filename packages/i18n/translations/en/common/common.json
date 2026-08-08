@@ -1,0 +1,16 @@
+{
+	"common": {
+		"loading": "Loading...",
+		"error": "An error occurred",
+		"success": "Success",
+		"cancel": "Cancel",
+		"save": "Save",
+		"saving": "Saving…",
+		"submit": "Submit",
+		"notAvailable": "—",
+		"errors": {
+			"somethingWentWrong": "Something went wrong. Please try again.",
+			"retry": "Retry"
+		}
+	}
+}

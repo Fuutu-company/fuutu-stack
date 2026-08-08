@@ -1,0 +1,34 @@
+{
+	"chat": {
+		"title": "AI Chat",
+		"description": "Konversations-Interface powered by Vercel AI SDK.",
+		"comingSoon": "Bald verfügbar",
+		"features": {
+			"streaming": "Streaming-Antworten",
+			"multiModel": "Multi-Modell-Support",
+			"toolCalling": "Tool-Calling & Funktionsausführung",
+			"rag": "RAG mit deinen Daten"
+		},
+		"notifyPlaceholder": "E-Mail für Updates",
+		"notifyButton": "Benachrichtigen",
+		"poweredBy": "Powered by @fuutu/ai",
+		"newConversation": "Neue Konversation",
+		"deleteConversation": "Konversation löschen",
+		"sendMessage": "Senden",
+		"messagePlaceholder": "Schreibe deine Nachricht…",
+		"emptyConversation": "Beginne eine Konversation, indem du unten eine Nachricht sendest.",
+		"conversationDeleted": "Konversation gelöscht",
+		"you": "Du",
+		"assistant": "Assistent",
+		"system": "System",
+		"deleteConfirmation": "Möchtest du diese Konversation wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+		"cancel": "Abbrechen",
+		"confirmDelete": "Löschen",
+		"conversations": "Konversationen",
+		"loadingConversations": "Konversationen werden geladen…",
+		"noConversations": "Noch keine Konversationen",
+		"deleteConversationAria": "Konversation löschen",
+		"sendError": "Nachricht konnte nicht gesendet werden. Bitte erneut versuchen.",
+		"deleteError": "Konversation konnte nicht gelöscht werden. Bitte erneut versuchen."
+	}
+}

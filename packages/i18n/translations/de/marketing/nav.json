@@ -1,0 +1,17 @@
+{
+	"nav": {
+		"features": "Funktionen",
+		"pricing": "Preise",
+		"docs": "Dokumentation",
+		"blog": "Blog",
+		"changelog": "Changelog",
+		"signIn": "Anmelden",
+		"getStarted": "Jetzt starten",
+		"badges": {
+			"new": "Neu"
+		},
+		"toggleTheme": "Theme wechseln",
+		"toggleMenu": "Menü öffnen",
+		"switchLanguage": "Sprache wechseln"
+	}
+}

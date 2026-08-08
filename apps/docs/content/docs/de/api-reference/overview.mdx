@@ -1,0 +1,48 @@
+---
+title: API-Übersicht
+description: Interaktive API-Dokumentation aus einer OpenAPI-Spezifikation.
+tags: ["api", "openapi"]
+---
+
+Die Fuutu-Stack-Dokumentationsvorlage enthält **interaktive API-Dokumentation**
+powered by `fumadocs-openapi`. Sie generiert Seiten aus einer OpenAPI-Spezifikation mit
+Code-Beispielen, Schema-Anzeige und einem Try-it-out-Playground.
+
+## Wie es funktioniert
+
+1. Eine OpenAPI-Spezifikation liegt unter `content/openapi/example.json`
+2. Das `fumadocs-openapi`-Paket generiert virtuelle Seiten aus der Spezifikation
+3. Seiten werden unter `/[locale]/openapi/[[...slug]]` bereitgestellt
+4. Jeder Endpunkt erhält seine eigene interaktive Seite
+
+<Callout type="info">
+  Die OpenAPI-Spezifikation in dieser Vorlage ist ein **Beispiel** — ersetze sie durch
+  deine eigene, um deine echte API zu dokumentieren.
+</Callout>
+
+## Was in der Beispielspezifikation enthalten ist
+
+Die Beispielspezifikation enthält Endpunkte für:
+
+- **Auth**: Anmelden, Registrieren
+- **Organisationen**: Liste, Erstellen, Abrufen nach Slug
+- **Billing**: Checkout erstellen, Abonnement abrufen
+
+## Ersetzen durch deine Spezifikation
+
+1. Ersetze `content/openapi/example.json` durch deine OpenAPI-Spezifikation
+2. Aktualisiere den `input`-Pfad in `src/lib/openapi.ts` falls nötig
+3. Die Seiten werden automatisch neu generiert
+
+<Callout type="warn">
+  Die OpenAPI-Spezifikation muss gültiges OpenAPI 3.0 oder 3.1 sein. Validiere deine
+  Spezifikation unter [editor.swagger.io](https://editor.swagger.io), bevor du sie verwendest.
+</Callout>
+
+## Nächste Schritte
+
+<Cards>
+	<Card title="Endpunkte anzeigen" href="./endpoints" icon="arrow-right">
+		Siehe den interaktiven API-Playground.
+	</Card>
+</Cards>
