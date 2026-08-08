@@ -22,9 +22,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    ignore:
-      # Ignore major updates — handle manually
-      - update-types: ["version-update:semver-major"]
 
   # GitHub Actions — weekly
   - package-ecosystem: "github-actions"
