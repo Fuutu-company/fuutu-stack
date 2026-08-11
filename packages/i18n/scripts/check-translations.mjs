@@ -100,6 +100,10 @@ function extractUsedKeys() {
 		/\buseTranslations\(["'`]([^"'`]+)["'`]\)/g,
 		// Template literals: t(`prefix.${var}`) → extract "prefix" as a used namespace
 		/\bt\(`([^`${}]+)\.\$\{[^}]+\}`/g,
+		// Property access: messages.cron.subscriptionReminder.title, messages.nav.docs
+		/\bmessages\.([a-zA-Z0-9_.]+)/g,
+		// labelKey: "key" pattern in footer/navbar
+		/\blabelKey:\s*["'`]([^"'`]+)["'`]/g,
 	];
 	for (const dir of sourceDirs) {
 		const files = scanTsFiles(dir);
