@@ -82,7 +82,7 @@ test.describe("key content visible", () => {
 	test("/en/contact renders contact info", async ({ page }) => {
 		await page.goto("/en/contact");
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-		await expect(page.locator("a[href^='mailto:']")).toBeVisible();
+		await expect(page.locator("a[href^='mailto:']").first()).toBeVisible();
 	});
 });
 
