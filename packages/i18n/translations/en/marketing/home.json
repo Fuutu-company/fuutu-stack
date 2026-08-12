@@ -64,24 +64,79 @@
 			]
 		},
 		"faq": {
+			"eyebrow": "FAQ",
 			"title": "Frequently asked questions",
 			"description": "Everything you need to know before you clone the repo.",
-			"items": [
+			"categoryAria": "FAQ categories",
+			"categories": [
 				{
-					"q": "Do I need a license to use Fuutu?",
-					"a": "Free for individuals and companies up to 10 employees or 250k € annual revenue. Beyond that, an Enterprise license is required. See LICENSE.md for the full terms."
+					"key": "license",
+					"label": "Licensing",
+					"description": "License terms, free tier limits, and commercial use.",
+					"items": [
+						{
+							"q": "Do I need a license to use Fuutu?",
+							"a": "Free for individuals and companies up to 10 employees or 250k € annual revenue. Beyond that, an Enterprise license is required. See LICENSE.md for the full terms."
+						},
+						{
+							"q": "What happens when I exceed the free tier limits?",
+							"a": "You have 30 days from crossing the threshold (10 employees or 250k € revenue) to obtain an Enterprise license. Until then, everything continues to work — no feature gating, no trial expiry."
+						},
+						{
+							"q": "Can I use Fuutu for commercial products?",
+							"a": "Yes. The free tier explicitly allows commercial use. Build, deploy, and sell your product — the same code runs in free and enterprise tiers."
+						},
+						{
+							"q": "Is the Enterprise license per-seat or per-company?",
+							"a": "Per legal entity, yearly. One license covers all employees and all projects within the same company. No per-seat counting, no usage tracking."
+						}
+					]
 				},
 				{
-					"q": "Can I swap the payment / mail / storage provider?",
-					"a": "Yes. Every external dependency lives behind a provider interface — switch by changing one line of config and dropping in the SDK. Polar, Plunk and S3 ship active in v1; Stripe, Resend, R2 and others are skeletons."
+					"key": "technical",
+					"label": "Technical",
+					"description": "Providers, databases, production readiness, and architecture.",
+					"items": [
+						{
+							"q": "Can I swap the payment / mail / storage provider?",
+							"a": "Yes. Every external dependency lives behind a provider interface — switch by changing one line of config and dropping in the SDK. Polar, Plunk and S3 ship active in v1; Stripe, Resend, R2 and others are skeletons."
+						},
+						{
+							"q": "Is the code production-ready?",
+							"a": "v1 ships with rate limiting, audit logging, CSRF, secure cookies, RBAC and Playwright E2E tests. Add your own monitoring + backups and you're production-ready."
+						},
+						{
+							"q": "Can I swap the database or ORM?",
+							"a": "The database layer is behind @fuutu/db which exports an ORM-agnostic query interface. Prisma is the default, but the query layer abstracts it. You can implement the interface for Drizzle or any other ORM."
+						},
+						{
+							"q": "Why next-intl over a custom i18n layer?",
+							"a": "Native App-Router support, type-safe message keys, ICU plurals and zero runtime cost. Locales live in @fuutu/i18n with a smart fallback chain."
+						}
+					]
 				},
 				{
-					"q": "Is the code production-ready?",
-					"a": "v1 ships with rate limiting, audit logging, CSRF, secure cookies, RBAC and Playwright E2E tests. Add your own monitoring + backups and you're production-ready."
-				},
-				{
-					"q": "Why next-intl over a custom i18n layer?",
-					"a": "Native App-Router support, type-safe message keys, ICU plurals and zero runtime cost. Locales live in @fuutu/i18n with a smart fallback chain."
+					"key": "development",
+					"label": "Development",
+					"description": "Updates, AI tooling, deployment, and what's in the box.",
+					"items": [
+						{
+							"q": "How do updates work?",
+							"a": "The kit is a git repository. You clone it, build your product on top, and pull updates from the upstream when new versions are released. Updates are free in all tiers."
+						},
+						{
+							"q": "Does the AI agent harness work with my tool?",
+							"a": "The codebase includes skills, subagent profiles, and rules that Cursor, Claude Code, Windsurf, and Devin understand natively. Your AI agents can navigate the monorepo, write code that follows the patterns, and verify their work."
+						},
+						{
+							"q": "Can I deploy on Vercel / Railway / self-hosted?",
+							"a": "Yes. The stack runs on any Node 20+ host. Vercel and Railway work out of the box. Self-hosting requires PostgreSQL 16+ and Node 20+. No vendor-specific runtime APIs are used."
+						},
+						{
+							"q": "What's included in the monorepo?",
+							"a": "23+ packages: auth, API (oRPC), database (Prisma), mail, payments, storage, analytics, i18n, RBAC, UI components, and more. Plus 4 apps: marketing, SaaS, docs, and mail preview."
+						}
+					]
 				}
 			]
 		},

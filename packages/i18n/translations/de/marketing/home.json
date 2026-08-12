@@ -64,24 +64,79 @@
 			]
 		},
 		"faq": {
+			"eyebrow": "FAQ",
 			"title": "Häufige Fragen",
 			"description": "Alles, was du wissen musst, bevor du das Repo klonst.",
-			"items": [
+			"categoryAria": "FAQ-Kategorien",
+			"categories": [
 				{
-					"q": "Brauche ich eine Lizenz, um Fuutu zu nutzen?",
-					"a": "Kostenlos für Einzelpersonen und Firmen bis 10 Mitarbeiter:innen oder 250k € Jahresumsatz. Darüber hinaus ist eine Enterprise-Lizenz erforderlich. Die vollständigen Bedingungen findest du in der LICENSE.md."
+					"key": "license",
+					"label": "Lizenz",
+					"description": "Lizenzbedingungen, Gratis-Tier-Grenzen und kommerzielle Nutzung.",
+					"items": [
+						{
+							"q": "Brauche ich eine Lizenz, um Fuutu zu nutzen?",
+							"a": "Kostenlos für Einzelpersonen und Firmen bis 10 Mitarbeiter:innen oder 250k € Jahresumsatz. Darüber hinaus ist eine Enterprise-Lizenz erforderlich. Die vollständigen Bedingungen findest du in der LICENSE.md."
+						},
+						{
+							"q": "Was passiert, wenn ich die Gratis-Grenzen überschreite?",
+							"a": "Du hast 30 Tage ab Überschreitung (10 Mitarbeiter:innen oder 250k € Umsatz), um eine Enterprise-Lizenz zu erwerben. Bis dahin funktioniert alles weiter — kein Feature-Gating, keine Testlaufzeit."
+						},
+						{
+							"q": "Kann ich Fuutu für kommerzielle Produkte nutzen?",
+							"a": "Ja. Die Gratis-Stufe erlaubt ausdrücklich kommerzielle Nutzung. Baue, deploye und verkaufe dein Produkt — derselbe Code läuft in Gratis- und Enterprise-Tier."
+						},
+						{
+							"q": "Ist die Enterprise-Lizenz pro Sitz oder pro Firma?",
+							"a": "Pro juristischer Person, jährlich. Eine Lizenz deckt alle Mitarbeiter:innen und alle Projekte innerhalb derselben Firma ab. Keine Zählung pro Sitz, kein Usage-Tracking."
+						}
+					]
 				},
 				{
-					"q": "Kann ich Payment-, Mail- oder Storage-Provider tauschen?",
-					"a": "Ja. Jede externe Abhängigkeit läuft hinter einem Provider-Interface — eine Config-Zeile ändern, SDK einsetzen, fertig. Polar, Plunk und S3 sind in v1 aktiv; Stripe, Resend, R2 und weitere als Skeletons."
+					"key": "technical",
+					"label": "Technisch",
+					"description": "Provider, Datenbanken, Produktionsreife und Architektur.",
+					"items": [
+						{
+							"q": "Kann ich Payment-, Mail- oder Storage-Provider tauschen?",
+							"a": "Ja. Jede externe Abhängigkeit läuft hinter einem Provider-Interface — eine Config-Zeile ändern, SDK einsetzen, fertig. Polar, Plunk und S3 sind in v1 aktiv; Stripe, Resend, R2 und weitere als Skeletons."
+						},
+						{
+							"q": "Ist der Code produktionsreif?",
+							"a": "v1 liefert Rate-Limiting, Audit-Logging, CSRF, sichere Cookies, RBAC und Playwright-E2E-Tests. Plus dein eigenes Monitoring + Backups — und du bist live."
+						},
+						{
+							"q": "Kann ich die Datenbank oder das ORM tauschen?",
+							"a": "Die Datenbank-Schicht liegt hinter @fuutu/db, das eine ORM-agnostische Query-Schnittstelle exportiert. Prisma ist der Default, aber die Query-Schicht abstrahiert das. Du kannst das Interface für Drizzle oder jedes andere ORM implementieren."
+						},
+						{
+							"q": "Warum next-intl statt eigener i18n-Schicht?",
+							"a": "Native App-Router-Unterstützung, typsichere Message-Keys, ICU-Plurale und null Runtime-Kosten. Locales leben in @fuutu/i18n mit smarter Fallback-Kette."
+						}
+					]
 				},
 				{
-					"q": "Ist der Code produktionsreif?",
-					"a": "v1 liefert Rate-Limiting, Audit-Logging, CSRF, sichere Cookies, RBAC und Playwright-E2E-Tests. Plus dein eigenes Monitoring + Backups — und du bist live."
-				},
-				{
-					"q": "Warum next-intl statt eigener i18n-Schicht?",
-					"a": "Native App-Router-Unterstützung, typsichere Message-Keys, ICU-Plurale und null Runtime-Kosten. Locales leben in @fuutu/i18n mit smarter Fallback-Kette."
+					"key": "development",
+					"label": "Entwicklung",
+					"description": "Updates, AI-Tooling, Deployment und was im Bundle enthalten ist.",
+					"items": [
+						{
+							"q": "Wie funktionieren Updates?",
+							"a": "Das Kit ist ein Git-Repository. Du klonst es, baust dein Produkt darauf auf und pullst Updates vom Upstream, wenn neue Versionen erscheinen. Updates sind in allen Tiers kostenlos."
+						},
+						{
+							"q": "Funktioniert das AI-Agent-Harness mit meinem Tool?",
+							"a": "Das Codebase enthält Skills, Subagent-Profile und Rules, die Cursor, Claude Code, Windsurf und Devin nativ verstehen. Deine AI-Agents können das Monorepo navigieren, Code nach den Patterns schreiben und ihre Arbeit verifizieren."
+						},
+						{
+							"q": "Kann ich auf Vercel / Railway / self-hosted deployen?",
+							"a": "Ja. Der Stack läuft auf jedem Node 20+-Host. Vercel und Railway funktionieren out of the box. Self-Hosting erfordert PostgreSQL 16+ und Node 20+. Keine vendor-spezifischen Runtime-APIs werden verwendet."
+						},
+						{
+							"q": "Was ist im Monorepo enthalten?",
+							"a": "23+ Packages: Auth, API (oRPC), Datenbank (Prisma), Mail, Payments, Storage, Analytics, i18n, RBAC, UI-Komponenten und mehr. Plus 4 Apps: Marketing, SaaS, Docs und Mail Preview."
+						}
+					]
 				}
 			]
 		},
