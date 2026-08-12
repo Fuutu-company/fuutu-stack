@@ -21,7 +21,9 @@ export function handleHashClick(
 	const hash = href.split("#")[1];
 	if (!hash) return;
 	if (pathname === "/") {
+		history.pushState(null, "", `#${hash}`);
 		document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+		window.dispatchEvent(new HashChangeEvent("hashchange"));
 	} else {
 		router.push("/");
 		scrollToHash(hash);

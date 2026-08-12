@@ -1,5 +1,7 @@
 {
 	"nav": {
+		"resources": "Ressourcen",
+		"home": "Startseite",
 		"features": "Funktionen",
 		"pricing": "Preise",
 		"docs": "Dokumentation",
@@ -12,6 +14,11 @@
 		},
 		"toggleTheme": "Theme wechseln",
 		"toggleMenu": "Menü öffnen",
-		"switchLanguage": "Sprache wechseln"
+		"switchLanguage": "Sprache wechseln",
+		"descriptions": {
+			"blog": "Guides, Tutorials und Ankündigungen",
+			"changelog": "Was in jedem Release neu ist",
+			"docs": "Vollständige API-Referenz und Guides"
+		}
 	}
 }
