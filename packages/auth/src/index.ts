@@ -1,6 +1,7 @@
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import { db, prismaAuditSink } from "@fuutu/db";
+import { prismaAuditSink } from "@fuutu/db";
+import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
 import { createLogger, setAuditSink } from "@fuutu/logs";
 import { paymentsConfig } from "@fuutu/payments/config";
@@ -10,6 +11,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import {
 	admin,
+	lastLoginMethod,
 	magicLink,
 	multiSession,
 	openAPI,
@@ -323,6 +325,11 @@ const authOptions = {
 		}),
 
 		multiSession(),
+
+		// Track the last authentication method (email, google, github, passkey,
+		// magic-link) in a cookie so the sign-in page can highlight the method
+		// the user used last time — prevents accidental duplicate accounts.
+		lastLoginMethod(),
 
 		...(authConfig.features.magicLink
 			? [

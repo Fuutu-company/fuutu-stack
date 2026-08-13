@@ -4,6 +4,7 @@ import type { BetterAuthClientOptions } from "better-auth";
 import {
 	adminClient,
 	inferAdditionalFields,
+	lastLoginMethodClient,
 	magicLinkClient,
 	multiSessionClient,
 	organizationClient,
@@ -39,6 +40,7 @@ const authClientOptions = {
 		usernameClient(),
 		passkeyClient(),
 		polarClient(),
+		lastLoginMethodClient(),
 	],
 } satisfies BetterAuthClientOptions;
 

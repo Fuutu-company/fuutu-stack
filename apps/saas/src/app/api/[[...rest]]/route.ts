@@ -7,7 +7,8 @@ import type { NextRequest } from "next/server";
  * Handles all /api/* requests and forwards them to the Hono app:
  * - /api/auth/** → Better Auth handler
  * - /api/rpc/** → oRPC handler
- * - /api-reference/** → OpenAPI documentation
+ * - /api/docs → OpenAPI documentation (Scalar UI)
+ * - /api/spec.json → OpenAPI specification JSON
  * - /api/health → Health check
  *
  * catch-all route handles all backend requests.

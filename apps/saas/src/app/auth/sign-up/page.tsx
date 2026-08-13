@@ -10,9 +10,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function SignUpPage() {
-	return (
-		<main className="container flex min-h-screen flex-col items-center justify-center p-4 md:p-6">
-			<AuthSignUp />
-		</main>
-	);
+	return <AuthSignUp />;
 }

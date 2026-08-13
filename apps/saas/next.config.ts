@@ -30,10 +30,11 @@ const securityHeaders = [
 		value: [
 			"default-src 'self'",
 			// React Compiler + next-themes inline script on first paint.
-			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline'`,
+			// Scalar CDN for OpenAPI docs at /api/docs.
+			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' https://cdn.jsdelivr.net`,
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https:",
-			"font-src 'self' data:",
+			"font-src 'self' data: https://fonts.scalar.com",
 			"connect-src 'self' https:",
 			"frame-ancestors 'none'",
 			"base-uri 'self'",

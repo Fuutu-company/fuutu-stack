@@ -1,6 +1,6 @@
 import { cn } from "../lib/utils";
 
-export type BrandLogoSize = "xs" | "sm" | "md" | "lg" | "xl";
+export type BrandLogoSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 
 export type BrandLogoProps = {
 	/** Visual size of the logo image itself */
@@ -17,6 +17,7 @@ const SIZE_MAP: Record<BrandLogoSize, string> = {
 	md: "size-6",
 	lg: "size-7",
 	xl: "size-9",
+	"2xl": "size-12",
 };
 
 export function BrandLogo({

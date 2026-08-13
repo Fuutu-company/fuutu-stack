@@ -5,8 +5,8 @@
 		".": {
 			"default": "./index.ts"
 		},
-		"./*": {
-			"default": "./*.ts"
+		"./internal/client": {
+			"default": "./prisma/client.ts"
 		}
 	},
 	"scripts": {

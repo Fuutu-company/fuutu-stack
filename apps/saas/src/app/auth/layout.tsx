@@ -1,3 +1,4 @@
+import { BrandLogo } from "@fuutu/ui";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
@@ -12,16 +13,15 @@ export default async function AuthLayout({
 
 	return (
 		<NextIntlClientProvider locale={locale} messages={messages}>
-			<div className="relative min-h-screen overflow-hidden bg-background">
-				<div
-					aria-hidden
-					className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]"
-				/>
-				<div
-					aria-hidden
-					className="pointer-events-none absolute top-1/2 left-1/2 h-[400px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/15 blur-[120px]"
-				/>
-				<div className="relative z-10">{children}</div>
+			<div className="relative flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
+				<a
+					href="/"
+					aria-label="Brand"
+					className="absolute top-6 left-6 flex items-center gap-2 font-semibold text-lg md:top-8 md:left-8"
+				>
+					<BrandLogo size="2xl" className="dark:invert" />
+				</a>
+				<div className="w-full max-w-sm md:max-w-4xl">{children}</div>
 			</div>
 		</NextIntlClientProvider>
 	);
