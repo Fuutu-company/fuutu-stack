@@ -15,9 +15,9 @@ import { publicProcedure } from "./procedures";
 
 export const router = publicProcedure.router({
 	users: usersRouter,
-	ai: aiRouter,
 	activity: activityRouter,
 	admin: adminRouter,
+	ai: aiRouter,
 	organizations: organizationsRouter,
 	payments: paymentsRouter,
 	storage: storageRouter,
