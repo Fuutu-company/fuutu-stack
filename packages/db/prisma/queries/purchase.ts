@@ -1,5 +1,9 @@
 import { db } from "../client";
-import type { PurchaseStatus } from "../generated/client";
+import type {
+	Purchase,
+	PurchaseStatus,
+	PurchaseType,
+} from "../generated/client";
 
 const ACTIVE_STATUSES: PurchaseStatus[] = ["ACTIVE", "TRIALING"];
 
@@ -42,3 +46,84 @@ export const getTrialingSubscriptions = () =>
 		where: { type: "SUBSCRIPTION", status: "TRIALING" },
 		include: { user: { select: { locale: true } } },
 	});
+
+export type CreatePurchaseInput = {
+	type: PurchaseType;
+	status: PurchaseStatus;
+	provider: string;
+	priceId: string;
+	productId?: string | null;
+	subscriptionId?: string | null;
+	customerId?: string | null;
+	quantity?: number;
+	currentPeriodEnd?: Date | null;
+	userId?: string | null;
+	organizationId?: string | null;
+	metadata?: unknown;
+};
+
+export const createPurchase = (input: CreatePurchaseInput): Promise<Purchase> =>
+	db.purchase.create({
+		data: {
+			type: input.type,
+			status: input.status,
+			provider: input.provider,
+			priceId: input.priceId,
+			productId: input.productId ?? null,
+			subscriptionId: input.subscriptionId ?? null,
+			customerId: input.customerId ?? null,
+			quantity: input.quantity ?? 1,
+			currentPeriodEnd: input.currentPeriodEnd ?? null,
+			userId: input.userId ?? null,
+			organizationId: input.organizationId ?? null,
+			metadata: input.metadata as never,
+		},
+	});
+
+export type UpdatePurchaseInput = {
+	id: string;
+	status?: PurchaseStatus;
+	priceId?: string;
+	productId?: string | null;
+	currentPeriodEnd?: Date | null;
+	customerId?: string | null;
+	userId?: string | null;
+	organizationId?: string | null;
+	metadata?: unknown;
+};
+
+export const updatePurchase = (input: UpdatePurchaseInput): Promise<Purchase> =>
+	db.purchase.update({
+		where: { id: input.id },
+		data: {
+			...(input.status !== undefined && { status: input.status }),
+			...(input.priceId !== undefined && { priceId: input.priceId }),
+			...(input.productId !== undefined && { productId: input.productId }),
+			...(input.currentPeriodEnd !== undefined && {
+				currentPeriodEnd: input.currentPeriodEnd,
+			}),
+			...(input.customerId !== undefined && { customerId: input.customerId }),
+			...(input.userId !== undefined && { userId: input.userId }),
+			...(input.organizationId !== undefined && {
+				organizationId: input.organizationId,
+			}),
+			...(input.currentPeriodEnd !== undefined && {
+				currentPeriodEnd: input.currentPeriodEnd,
+			}),
+			...(input.customerId !== undefined && { customerId: input.customerId }),
+			...(input.metadata !== undefined && {
+				metadata: input.metadata as never,
+			}),
+		},
+	});
+
+export const updatePaymentsCustomerId = (
+	userId: string,
+	customerId: string,
+): Promise<void> =>
+	db.user
+		.update({
+			where: { id: userId },
+			data: { paymentsCustomerId: customerId },
+		})
+		.then(() => undefined);

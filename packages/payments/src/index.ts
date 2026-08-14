@@ -3,8 +3,21 @@ export {
 	type BillingAttachedTo,
 	type BillingInterval,
 	type BillingType,
+	CREDIT_METERS,
+	CREDIT_TOPUPS,
+	CREDITS,
+	type CreditMeter,
+	type CreditTopupPackage,
 	FEATURE_CATALOG,
 	type FeatureEntry,
+	getCreditGrant,
+	getCreditTopupPriceId,
+	getCreditTopupsForMeter,
+	getMeter,
+	getMeterKeysForPlan,
+	getPlanIdForProductId,
+	getPriceIdForPlan,
+	getYearlyPriceIdForPlan,
 	LIMITS,
 	type LimitValue,
 	MARKETING_PLANS,
@@ -17,9 +30,13 @@ export {
 	type PlanId,
 	type PlanLimits,
 	type PlanTier,
+	PRICE_IDS,
 	paymentsConfig,
 	SAAS_PLANS,
+	setPriceIds,
+	YEARLY_PRICE_IDS,
 } from "./config";
+export { createCustomerForUser } from "./customers";
 export {
 	type CatalogFeature,
 	FEATURE_GROUPS,
@@ -39,27 +56,35 @@ export {
 	type PlanTranslationResolver,
 	type PlanTranslations,
 } from "./plans";
+export { creemPaymentProvider } from "./providers/creem";
 export { polarPaymentProvider } from "./providers/polar";
-export {
-	creemPaymentProvider,
-	dodopaymentsPaymentProvider,
-	lemonsqueezyPaymentProvider,
-	noopPaymentProvider,
-	stripePaymentProvider,
-} from "./providers/skeletons";
+export { noopPaymentProvider } from "./providers/skeletons";
+export { stripePaymentProvider } from "./providers/stripe";
 export { resolvePaymentProvider } from "./resolve";
 export {
 	cancelAllSubscriptionsForOrganization,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
+export {
+	getActivePlanId,
+	hasActiveSubscription,
+	processWebhookEvents,
+} from "./sync";
 export type {
-	CheckoutLinkInput,
-	CustomerPortalInput,
+	CheckoutInput,
+	CustomerInput,
 	PaymentProvider,
 	PaymentsWebhookHandler,
+	PortalInput,
+	ProviderEvent,
+	ProviderEventType,
+	PurchaseStatusLiteral,
+	SeatAwarePaymentProvider,
 	SetSeatsInput,
 } from "./types";
+export { isSeatAware } from "./types";
 export {
 	getPaymentsWebhookHandler,
+	handlePaymentsWebhook,
 	noopPaymentsWebhookHandler,
 } from "./webhook";

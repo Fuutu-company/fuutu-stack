@@ -27,7 +27,7 @@ export const createBillingPortal = protectedProcedure
 			await requireOrgRole(
 				input.organizationId,
 				context.user.id,
-				"member",
+				"admin",
 				context.headers,
 			);
 			const org = await getOrganizationById(input.organizationId);

@@ -199,6 +199,16 @@ function RegularCard({
 						{displaySuffix}
 					</span>
 				)}
+				{tier.seatCount && (
+					<span
+						className={cn(
+							"ml-2 text-xs",
+							hl ? "text-primary-foreground/70" : "text-muted-foreground",
+						)}
+					>
+						{tier.seatCount} seats
+					</span>
+				)}
 				{tier.description && (
 					<p
 						className={cn(

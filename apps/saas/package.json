@@ -30,7 +30,6 @@
 		"@orpc/client": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/tanstack-query": "catalog:",
-		"@polar-sh/better-auth": "catalog:",
 		"@prisma/client": "catalog:",
 		"@radix-ui/react-label": "catalog:",
 		"@radix-ui/react-separator": "catalog:",

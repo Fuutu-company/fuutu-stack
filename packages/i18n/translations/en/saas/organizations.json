@@ -52,6 +52,7 @@
 			"billingCurrent": "Current plan",
 			"billingChoosePlan": "Choose a plan",
 			"billingChoosePlanHint": "Upgrade or downgrade anytime. Your organization will be billed for the new plan.",
+			"credits": "Credits",
 			"auditLog": {
 				"title": "Audit log",
 				"description": "Security-relevant events for this organization.",

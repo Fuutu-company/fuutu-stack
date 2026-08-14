@@ -1,0 +1,38 @@
+{
+	"credits": {
+		"title": "Credits",
+		"description": "Manage your credit balances and usage",
+		"recurring": "Monthly allowance",
+		"topups": "Top-up packages",
+		"total": "Total remaining",
+		"remaining": "{count} remaining",
+		"remainingLabel": "Remaining",
+		"of": "{used} of {total}",
+		"buyMore": "Buy more credits",
+		"history": "Usage history",
+		"noHistory": "No usage yet",
+		"consumed": "Consumed",
+		"granted": "Granted",
+		"expired": "Expired",
+		"expiresAt": "Expires {date}",
+		"neverExpires": "Never expires",
+		"packages": "from {count} packages",
+		"source": {
+			"recurring": "Monthly",
+			"topup": "Top-up",
+			"overage": "Overage",
+			"refund": "Refund",
+			"admin_grant": "Granted",
+			"reset": "Reset"
+		},
+		"topup": {
+			"title": "Buy more credits",
+			"description": "Top up your credit balance with one-time purchases",
+			"buy": "Buy",
+			"popular": "Popular",
+			"perPackage": "per package",
+			"redirecting": "Redirecting to checkout...",
+			"unavailable": "Top-ups are not currently available."
+		}
+	}
+}

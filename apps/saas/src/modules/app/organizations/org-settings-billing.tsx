@@ -7,10 +7,19 @@ import {
 	buildPricingTiers,
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
-import { Badge, Button, Card, CardContent, PricingCompact } from "@fuutu/ui";
+import {
+	Badge,
+	Button,
+	Card,
+	CardContent,
+	PricingCompact,
+	SeatSelector,
+} from "@fuutu/ui";
 import { CreditCard, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+
+import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "org-billing" });
 
@@ -20,37 +29,35 @@ type FullOrg = {
 	slug: string;
 };
 
-type PolarSubscription = {
+type ActiveSubscription = {
 	id: string;
 	status: string;
 	productId: string;
-	productName?: string;
-	amount?: number;
-	currency?: string;
-	recurringInterval?: string;
-	currentPeriodStart?: Date;
 	currentPeriodEnd?: Date;
-	cancelAtPeriodEnd?: boolean;
 };
 
 export function OrgSettingsBilling({
 	slug,
-	polarEnabled,
-	productIds,
+	paymentsEnabled,
+	productIds: priceIds,
 }: {
 	slug: string;
-	polarEnabled: boolean;
-	/** Maps plan IDs to their provider-side product IDs (env-backed). */
+	paymentsEnabled: boolean;
+	/** Maps plan IDs to their provider-side price IDs (env-backed). */
 	productIds: Partial<Record<PlanId, string>>;
 }) {
 	const t = useTranslations();
 	const tp = useTranslations("payments");
 	const { data: activeOrg } = authClient.useActiveOrganization();
 	const [org, setOrg] = useState<FullOrg | null>(null);
-	const [subscriptions, setSubscriptions] = useState<PolarSubscription[]>([]);
+	const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [seatCount, setSeatCount] = useState(1);
+
+	// Check if any plan is seat-based
+	const hasSeatBasedPlan = Object.values(PLANS).some((plan) => plan.seatBased);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -58,81 +65,70 @@ export function OrgSettingsBilling({
 			const res = await authClient.organization.getFullOrganization({
 				query: { organizationSlug: slug },
 			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
 			const data = res.data as FullOrg | null;
 			if (data) {
 				setOrg(data);
-				// Fetch subscriptions for this org via referenceId.
-				// Only attempt when Polar is configured server-side to avoid 404s.
-				if (
-					polarEnabled &&
-					typeof authClient.customer?.subscriptions?.list === "function"
-				) {
+				// Fetch active subscription for this org from the Purchase table
+				if (paymentsEnabled) {
 					try {
-						const subRes = await authClient.customer.subscriptions.list({
-							query: {
-								active: true,
-								referenceId: data.id,
-							},
+						const sub = await orpc.payments.subscription.active.call({
+							organizationId: data.id,
 						});
-						if (subRes?.data?.result?.items) {
-							// Polar SDK 0.49+ returns a PageIterator — first page's
-							// items are in `.result.items`. Active subs for this org
-							// fit in one page. Better Auth returns a superset of
-							// PolarSubscription — narrowing is safe.
-							setSubscriptions(subRes.data.result.items as PolarSubscription[]);
+						if (sub) {
+							setActiveSub({
+								id: sub.id,
+								status: sub.status,
+								productId: sub.productId ?? "",
+								currentPeriodEnd: sub.currentPeriodEnd ?? undefined,
+							});
 						}
 					} catch (err) {
-						// Subscriptions endpoint may not be available in all envs
-						log.warn("subscriptions list failed", { err });
+						log.warn("subscription fetch failed", { err });
 					}
 				}
 			}
 		} finally {
 			setLoading(false);
 		}
-	}, [slug, polarEnabled]);
+	}, [slug, paymentsEnabled]);
 
 	useEffect(() => {
 		void load();
 	}, [load]);
 
-	const activeSub = subscriptions.find((s) => s.status === "active");
-	// Map the active subscription's provider productId to a plan ID by iterating
-	// configured plans. Product IDs are env-backed and injected via the
-	// `productIds` prop. Plans without a productId (free, custom billing) are
-	// skipped. Fallback: free.
+	// Map the active subscription's provider productId to a plan ID
 	const activePlanId: PlanId = (() => {
 		if (!activeSub?.productId) return "free";
 		for (const id of Object.keys(PLANS) as PlanId[]) {
-			const planProductId = productIds[id];
+			const planProductId = priceIds[id];
 			if (planProductId && planProductId === activeSub.productId) {
 				return id;
 			}
 		}
 		return "free";
 	})();
-	const intervalLabel =
-		activeSub?.recurringInterval === "year"
-			? tp("choosePlan.yearly")
-			: tp("choosePlan.monthly");
 
 	async function checkout(planId: PlanId) {
 		if (!org) return;
+		const priceId = priceIds[planId];
+		if (!priceId) {
+			setError(tp("choosePlan.unavailable"));
+			return;
+		}
 		setCheckoutLoading(planId);
 		setError(null);
 		try {
-			if (!polarEnabled || typeof authClient.checkout !== "function") {
-				setError(tp("choosePlan.unavailable"));
-				return;
-			}
-			const res = await authClient.checkout({
-				products: [planId],
-				referenceId: org.id,
+			const plan = PLANS[planId];
+			const seats = plan.seatBased ? seatCount : undefined;
+			const result = await orpc.payments.checkout.create.call({
+				priceId,
+				organizationId: org.id,
+				successUrl: `/organizations/${slug}/settings/billing`,
+				cancelUrl: `/organizations/${slug}/settings/billing`,
+				seats,
 			});
-			if (res?.error) {
-				log.error("checkout error", { err: res.error.message });
-				setError(tp("choosePlan.error"));
+			if (result?.url) {
+				window.location.href = result.url;
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
@@ -143,13 +139,17 @@ export function OrgSettingsBilling({
 	}
 
 	async function openPortal() {
-		if (polarEnabled && typeof authClient.customer?.portal === "function") {
-			try {
-				await authClient.customer.portal();
-			} catch (err) {
-				// Portal may not be configured
-				log.warn("portal failed", { err });
+		if (!org) return;
+		try {
+			const result = await orpc.payments.portal.open.call({
+				organizationId: org.id,
+				returnUrl: `/organizations/${slug}/settings/billing`,
+			});
+			if (result?.url) {
+				window.location.href = result.url;
 			}
+		} catch (err) {
+			log.warn("portal failed", { err });
 		}
 	}
 
@@ -185,6 +185,7 @@ export function OrgSettingsBilling({
 		onCtaClick: checkout,
 		loadingId: checkoutLoading,
 		allDisabled: checkoutLoading !== null,
+		seatCountFor: (id) => (PLANS[id].seatBased ? seatCount : undefined),
 	});
 
 	// Mark current plan as disabled (can't "upgrade" to current plan)
@@ -196,6 +197,9 @@ export function OrgSettingsBilling({
 			(tier.id === "free" && (!activeSub || activePlanId === "free")),
 		onCtaClick: activePlanId === tier.id ? undefined : tier.onCtaClick,
 	}));
+
+	// Get the Pro plan for seat selector (it's the seat-based plan)
+	const proPlan = PLANS.pro;
 
 	return (
 		<div className="space-y-6">
@@ -222,7 +226,7 @@ export function OrgSettingsBilling({
 									{activeSub
 										? tp("planInterval", {
 												plan: tp(`plans.${activePlanId}.name`),
-												interval: intervalLabel,
+												interval: tp("choosePlan.monthly"),
 											})
 										: t("organizations.settings.billingNoPlan")}
 								</p>
@@ -270,6 +274,24 @@ export function OrgSettingsBilling({
 				<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 					{error}
 				</div>
+			)}
+
+			{hasSeatBasedPlan && proPlan && (
+				<SeatSelector
+					seatCount={seatCount}
+					onChange={setSeatCount}
+					pricePerSeat={proPlan.amount}
+					currency={proPlan.currency}
+					interval={proPlan.interval}
+					translations={{
+						title: tp("seatSelector.title"),
+						seat: tp("seatSelector.seat"),
+						seats: tp("seatSelector.seats"),
+						perMonth: tp("seatSelector.perMonth"),
+						perYear: tp("seatSelector.perYear"),
+						description: tp("seatSelector.description"),
+					}}
+				/>
 			)}
 
 			<PricingCompact

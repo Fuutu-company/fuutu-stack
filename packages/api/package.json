@@ -16,6 +16,7 @@
 		"@fuutu/ai": "workspace:*",
 		"@fuutu/auth": "workspace:*",
 		"@fuutu/config": "workspace:*",
+		"@fuutu/credits": "workspace:*",
 		"@fuutu/db": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/i18n": "workspace:*",

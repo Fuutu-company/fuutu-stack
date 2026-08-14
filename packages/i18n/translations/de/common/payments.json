@@ -9,7 +9,17 @@
 			"popular": "Am beliebtesten",
 			"monthly": "Monatlich",
 			"yearly": "Jährlich",
-			"yearlyBadge": "17 % sparen"
+			"yearlyBadge": "17 % sparen",
+			"seats": "Sitze"
+		},
+		"seatSelector": {
+			"title": "Anzahl der Sitze",
+			"seat": "Sitz",
+			"seats": "Sitze",
+			"perMonth": "/Monat",
+			"perYear": "/Jahr",
+			"total": "Gesamt",
+			"description": "Sie werden für die Anzahl der ausgewählten Sitze abgerechnet. Sitze passen sich automatisch an, wenn Teammitglieder beitreten oder verlassen."
 		},
 		"planInterval": "{plan} · {interval}",
 		"features": {

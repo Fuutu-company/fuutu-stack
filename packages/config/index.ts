@@ -78,6 +78,13 @@ export const config = {
 		 */
 		organizationsMode: "on" as "off" | "on" | "forced",
 		payments: true,
+		/**
+		 * Credits system (usage-based metering + top-up packages).
+		 * When false: credit pages, tabs, and routes are hidden.
+		 * The @fuutu/credits package and webhook sync logic remain
+		 * in the codebase but are not surfaced to the user.
+		 */
+		credits: true,
 		aiChat: true,
 		crm: true,
 	},

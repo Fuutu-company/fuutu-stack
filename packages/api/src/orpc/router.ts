@@ -4,6 +4,7 @@ import { adminRouter } from "../modules/admin/router";
 import { aiRouter } from "../modules/ai/router";
 import { apiKeysRouter } from "../modules/api-keys/router";
 import { chatRouter } from "../modules/chat/router";
+import { creditsRouter } from "../modules/credits/router";
 import { crmRouter } from "../modules/crm/router";
 import { notificationsRouter } from "../modules/notifications/router";
 import { organizationsRouter } from "../modules/organizations/router";
@@ -26,6 +27,7 @@ export const router = publicProcedure.router({
 	notifications: notificationsRouter,
 	chat: chatRouter,
 	crm: crmRouter,
+	credits: creditsRouter,
 });
 
 export const appRouter = router;

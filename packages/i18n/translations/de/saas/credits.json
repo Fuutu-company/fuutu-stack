@@ -1,0 +1,38 @@
+{
+	"credits": {
+		"title": "Guthaben",
+		"description": "Verwalten Sie Ihre Guthaben und Nutzung",
+		"recurring": "Monatliches Kontingent",
+		"topups": "Aufladepakete",
+		"total": "Gesamt verbleibend",
+		"remaining": "{count} verbleibend",
+		"remainingLabel": "Verbleibend",
+		"of": "{used} von {total}",
+		"buyMore": "Mehr Guthaben kaufen",
+		"history": "Nutzungshistorie",
+		"noHistory": "Noch keine Nutzung",
+		"consumed": "Verbraucht",
+		"granted": "Gewährt",
+		"expired": "Abgelaufen",
+		"expiresAt": "Läuft ab {date}",
+		"neverExpires": "Läuft nie ab",
+		"packages": "aus {count} Paketen",
+		"source": {
+			"recurring": "Monatlich",
+			"topup": "Aufladung",
+			"overage": "Überbuchung",
+			"refund": "Rückerstattung",
+			"admin_grant": "Gewährt",
+			"reset": "Zurückgesetzt"
+		},
+		"topup": {
+			"title": "Weitere Credits kaufen",
+			"description": "Füllen Sie Ihr Credit-Guthaben mit einmaligen Käufen auf",
+			"buy": "Kaufen",
+			"popular": "Beliebt",
+			"perPackage": "pro Paket",
+			"redirecting": "Weiterleitung zum Checkout...",
+			"unavailable": "Top-Ups sind derzeit nicht verfügbar."
+		}
+	}
+}

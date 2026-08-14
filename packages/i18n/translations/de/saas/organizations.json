@@ -52,6 +52,7 @@
 			"billingCurrent": "Aktueller Plan",
 			"billingChoosePlan": "Plan wählen",
 			"billingChoosePlanHint": "Upgrade oder Downgrade jederzeit. Deine Organisation wird für den neuen Plan abgerechnet.",
+			"credits": "Guthaben",
 			"auditLog": {
 				"title": "Audit-Log",
 				"description": "Sicherheitsrelevante Ereignisse für diese Organisation.",

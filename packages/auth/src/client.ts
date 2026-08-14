@@ -1,5 +1,4 @@
 import { passkeyClient } from "@better-auth/passkey/client";
-import { polarClient } from "@polar-sh/better-auth/client";
 import type { BetterAuthClientOptions } from "better-auth";
 import {
 	adminClient,
@@ -27,7 +26,6 @@ import type { auth } from "./index";
  * - magicLinkClient: Magic link authentication
  * - multiSessionClient: Multiple device sessions
  * - organizationClient: Organization management
- * - polarClient: Polar payment integration
  */
 const authClientOptions = {
 	plugins: [
@@ -39,7 +37,6 @@ const authClientOptions = {
 		twoFactorClient(),
 		usernameClient(),
 		passkeyClient(),
-		polarClient(),
 		lastLoginMethodClient(),
 	],
 } satisfies BetterAuthClientOptions;

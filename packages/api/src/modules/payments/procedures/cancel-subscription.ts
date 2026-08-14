@@ -32,7 +32,7 @@ export const cancelSubscription = protectedProcedure
 			await requireOrgRole(
 				purchase.organizationId,
 				context.user.id,
-				"member",
+				"admin",
 				context.headers,
 			);
 		} else if (purchase.userId !== context.user.id) {

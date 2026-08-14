@@ -20,6 +20,8 @@ export interface PricingTier {
 	disabled?: boolean;
 	/** Optional Lucide-style icon rendered as plan identity mark. */
 	icon?: React.ComponentType<{ className?: string }>;
+	/** Seat count for seat-based plans (e.g. "5 seats"). */
+	seatCount?: number;
 }
 
 /**

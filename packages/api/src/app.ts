@@ -8,7 +8,7 @@ import {
 import { env } from "@fuutu/env/saas";
 import { checkLicense } from "@fuutu/license";
 import { createLogger } from "@fuutu/logs";
-import { getPaymentsWebhookHandler } from "@fuutu/payments";
+import { handlePaymentsWebhook } from "@fuutu/payments";
 import { pingTelemetry } from "@fuutu/telemetry";
 import { Hono, type Context as HonoContext } from "hono";
 import { cors } from "hono/cors";
@@ -86,7 +86,7 @@ export const app = new Hono()
 	// session to gate on. Do not move this below the `.use("*", createContext)`
 	// line or signature verification will break.
 	// BYPASS: provider HMAC signature over raw body — mounted before contextMiddleware, do not move
-	.all("/webhooks/payments", (c) => getPaymentsWebhookHandler()(c.req.raw))
+	.all("/webhooks/payments", (c) => handlePaymentsWebhook(c.req.raw))
 	// OpenAPI docs + spec: served before createContext so they render without a DB
 	// connection. The Scalar UI and spec are public — procedure-level auth still
 	// applies to actual API endpoints.

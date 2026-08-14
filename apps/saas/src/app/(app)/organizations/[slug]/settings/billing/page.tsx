@@ -12,14 +12,19 @@ export default async function BillingPage({ params }: Props) {
 		redirect("/dashboard");
 	}
 	const { slug } = await params;
-	const polarEnabled = Boolean(env.POLAR_ACCESS_TOKEN && env.POLAR_PRODUCT_ID);
+	const paymentsEnabled =
+		paymentsConfig.provider === "stripe"
+			? Boolean(env.STRIPE_SECRET_KEY)
+			: paymentsConfig.provider === "creem"
+				? Boolean(env.CREEM_API_KEY)
+				: false;
 	return (
 		<div className="mx-auto max-w-4xl">
 			<OrgSettingsBilling
 				slug={slug}
-				polarEnabled={polarEnabled}
+				paymentsEnabled={paymentsEnabled}
 				productIds={{
-					pro: env.POLAR_PRODUCT_ID ?? undefined,
+					pro: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
 				}}
 			/>
 		</div>

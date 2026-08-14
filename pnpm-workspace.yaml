@@ -73,8 +73,10 @@ catalog:
   "better-auth": ^1.6.25
   "@better-auth/passkey": ^1.6.25
   "@better-auth/utils": ^0.5.0
-  "@polar-sh/better-auth": ^1.8.4
+  "@polar-sh/better-auth": ^0.1.0
   "@polar-sh/sdk": ^0.49.0
+  # Payments — Stripe
+  stripe: ^22.0.0
   # AI
   ai: ^7.0.51
   "@ai-sdk/devtools": ^1.0.10

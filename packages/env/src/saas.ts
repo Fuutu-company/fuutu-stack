@@ -34,8 +34,22 @@ export const env = createEnv({
 		EMAIL_FROM: z.string().optional(),
 		RESEND_API_KEY: z.string().optional(),
 		PLUNK_API_KEY: z.string().optional(),
-		// Payments
+		// Payments — Polar
 		POLAR_WEBHOOK_SECRET: z.string().optional(),
+		// Payments — Stripe
+		STRIPE_SECRET_KEY: z.string().optional(),
+		STRIPE_WEBHOOK_SECRET: z.string().optional(),
+		// Payments — Creem
+		CREEM_API_KEY: z.string().optional(),
+		CREEM_WEBHOOK_SECRET: z.string().optional(),
+		CREEM_TEST_MODE: z
+			.enum(["true", "false"])
+			.optional()
+			.transform((v) => v === "true"),
+		// Payments — Plan price/product IDs (provider-agnostic)
+		// Set to your active provider's ID: Stripe price_id, Creem product_id, Polar product_id, etc.
+		PAYMENTS_PRO_PRICE_ID: z.string().optional(),
+		PAYMENTS_PRO_YEARLY_PRICE_ID: z.string().optional(),
 		// Storage (S3 / MinIO)
 		S3_ENDPOINT: z.string().optional(),
 		S3_REGION: z.string().optional(),
@@ -106,6 +120,13 @@ export const env = createEnv({
 		RESEND_API_KEY: process.env.RESEND_API_KEY,
 		PLUNK_API_KEY: process.env.PLUNK_API_KEY,
 		POLAR_WEBHOOK_SECRET: process.env.POLAR_WEBHOOK_SECRET,
+		STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+		STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+		CREEM_API_KEY: process.env.CREEM_API_KEY,
+		CREEM_WEBHOOK_SECRET: process.env.CREEM_WEBHOOK_SECRET,
+		CREEM_TEST_MODE: process.env.CREEM_TEST_MODE,
+		PAYMENTS_PRO_PRICE_ID: process.env.PAYMENTS_PRO_PRICE_ID,
+		PAYMENTS_PRO_YEARLY_PRICE_ID: process.env.PAYMENTS_PRO_YEARLY_PRICE_ID,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
 		S3_REGION: process.env.S3_REGION,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,

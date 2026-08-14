@@ -14,6 +14,8 @@ enum PurchaseStatus {
   ACTIVE
   TRIALING
   PAST_DUE
+  SCHEDULED_CANCEL
+  PAUSED
   CANCELED
   EXPIRED
   INCOMPLETE
@@ -31,6 +33,7 @@ model Purchase {
   subscriptionId String?
   customerId     String?
   quantity       Int            @default(1)
+  currentPeriodEnd DateTime?
   // Polymorphic owner: exactly one of userId / organizationId must be set.
   userId         String?
   user           User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -211,5 +214,81 @@ model Contact {
   @@index([organizationId])
   @@index([status])
   @@map("contact")
+  @@schema("app")
+}
+
+// ─── Credits ──────────────────────────────────────────────────────────────────
+
+model CreditBalance {
+  id              String   @id @default(cuid())
+  // Polymorphic owner: exactly one of userId/organizationId must be set
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  meterKey        String   // "ai_tokens", "api_calls", "documents", etc.
+
+  // Recurring (from subscription) — resets each period
+  recurringGranted  Int      @default(0)
+  recurringConsumed Int      @default(0)
+  recurringPeriodEnd DateTime
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, organizationId, meterKey])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([meterKey])
+  @@map("credit_balance")
+  @@schema("app")
+}
+
+model CreditPackage {
+  id              String   @id @default(cuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  meterKey        String
+  amount          Int      // total credits purchased
+  consumed        Int      @default(0)
+  remaining       Int      // amount - consumed
+
+  expiresAt       DateTime?  // null = never expires
+  purchaseId      String?    // FK to Purchase (type=ONE_TIME)
+  priority        Int      @default(10)  // lower = consumed first; recurring has implicit priority 0
+
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([meterKey])
+  @@index([expiresAt])
+  @@map("credit_package")
+  @@schema("app")
+}
+
+model CreditEvent {
+  id              String   @id @default(cuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  meterKey        String
+  amount          Int      // positive = consumption, negative = credit/refund
+  source          String   // "recurring" | "topup" | "overage" | "refund" | "admin_grant" | "reset"
+  packageId       String?  // if consumed from a top-up package
+  reason          String   // "ai_chat_message", "api_call", "document_upload", "monthly_reset", etc.
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([meterKey])
+  @@index([createdAt])
+  @@map("credit_event")
   @@schema("app")
 }

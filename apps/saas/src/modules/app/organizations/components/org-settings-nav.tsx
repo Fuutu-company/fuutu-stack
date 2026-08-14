@@ -23,6 +23,9 @@ export function OrgSettingsNav({ slug }: { slug: string }) {
 	if (paymentsConfig.billingAttachedTo === "organization") {
 		items.push({ key: "billing", href: `${base}/billing` });
 	}
+	if (paymentsConfig.creditsEnabled) {
+		items.push({ key: "credits", href: `${base}/credits` });
+	}
 	items.push(
 		{ key: "apiKeys", href: `${base}/api-keys` },
 		{ key: "webhooks", href: `${base}/webhooks` },
@@ -34,6 +37,7 @@ export function OrgSettingsNav({ slug }: { slug: string }) {
 		general: t("settings.general"),
 		members: t("settings.members"),
 		billing: t("settings.billing"),
+		credits: t("settings.credits"),
 		apiKeys: t("settings.apiKeys.title"),
 		webhooks: t("settings.webhooks.title"),
 		auditLog: t("settings.auditLog.title"),
