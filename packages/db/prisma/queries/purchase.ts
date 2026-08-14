@@ -1,5 +1,6 @@
 import { db } from "../client";
 import type {
+	Prisma,
 	Purchase,
 	PurchaseStatus,
 	PurchaseType,
@@ -76,7 +77,7 @@ export const createPurchase = (input: CreatePurchaseInput): Promise<Purchase> =>
 			currentPeriodEnd: input.currentPeriodEnd ?? null,
 			userId: input.userId ?? null,
 			organizationId: input.organizationId ?? null,
-			metadata: input.metadata as never,
+			metadata: input.metadata as Prisma.InputJsonValue,
 		},
 	});
 
@@ -107,12 +108,8 @@ export const updatePurchase = (input: UpdatePurchaseInput): Promise<Purchase> =>
 			...(input.organizationId !== undefined && {
 				organizationId: input.organizationId,
 			}),
-			...(input.currentPeriodEnd !== undefined && {
-				currentPeriodEnd: input.currentPeriodEnd,
-			}),
-			...(input.customerId !== undefined && { customerId: input.customerId }),
 			...(input.metadata !== undefined && {
-				metadata: input.metadata as never,
+				metadata: input.metadata as Prisma.InputJsonValue,
 			}),
 		},
 	});

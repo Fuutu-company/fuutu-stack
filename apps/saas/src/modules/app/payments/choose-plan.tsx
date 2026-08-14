@@ -1,6 +1,6 @@
 "use client";
 
-import { paymentsConfig, PLANS, type PlanId } from "@fuutu/payments/config";
+import { PLANS, type PlanId, paymentsConfig } from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
 	type PlanTranslations,

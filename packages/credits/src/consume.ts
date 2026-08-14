@@ -1,15 +1,22 @@
 import {
-	consumeFromCreditPackage,
-	createCreditEvent,
+	consumeCreditsTx,
 	getActiveCreditPackages,
 	getCreditBalance as getBalance,
-	incrementRecurringConsumed,
-	upsertCreditBalance,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { getMeter } from "@fuutu/payments/config";
+import { z } from "zod";
 
 const log = createLogger({ scope: "credits" });
+
+export const ConsumeCreditsSchema = z.object({
+	userId: z.string().optional(),
+	organizationId: z.string().optional(),
+	meterKey: z.string(),
+	amount: z.number().int().positive(),
+	reason: z.string(),
+	metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 export interface ConsumeCreditsParams {
 	userId?: string;
@@ -40,7 +47,8 @@ export interface ConsumeCreditsResult {
 export async function consumeCredits(
 	params: ConsumeCreditsParams,
 ): Promise<ConsumeCreditsResult> {
-	const { userId, organizationId, meterKey, amount, reason, metadata } = params;
+	const { userId, organizationId, meterKey, amount, reason, metadata } =
+		ConsumeCreditsSchema.parse(params);
 
 	if (!userId && !organizationId) {
 		throw new Error(
@@ -53,137 +61,33 @@ export async function consumeCredits(
 		throw new Error(`consumeCredits: unknown meter key "${meterKey}"`);
 	}
 
-	// 1. Get or create the balance
-	let balance = await getBalance({ userId, organizationId, meterKey });
-	if (!balance) {
-		// No balance exists — create one with 0 granted (user has no subscription credits)
-		balance = await upsertCreditBalance({
-			userId: userId ?? null,
-			organizationId: organizationId ?? null,
-			meterKey,
-			recurringGranted: 0,
-			recurringConsumed: 0,
-			recurringPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-		});
-	}
-
-	const recurringRemaining =
-		balance.recurringGranted - balance.recurringConsumed;
-	let remainingToConsume = amount;
-	let totalRemaining = 0;
-
-	// 2. Consume from recurring first
-	if (recurringRemaining > 0 && remainingToConsume > 0) {
-		const fromRecurring = Math.min(recurringRemaining, remainingToConsume);
-		await incrementRecurringConsumed(balance.id, fromRecurring);
-		await createCreditEvent({
-			userId: userId ?? null,
-			organizationId: organizationId ?? null,
-			meterKey,
-			amount: fromRecurring,
-			source: "recurring",
-			reason,
-			metadata: metadata ?? null,
-		});
-		remainingToConsume -= fromRecurring;
-		log.info("consumed from recurring", {
-			meterKey,
-			amount: fromRecurring,
-			remaining: recurringRemaining - fromRecurring,
-		});
-	}
-
-	// 3. If still need more, consume from top-up packages
-	if (remainingToConsume > 0) {
-		const packages = await getActiveCreditPackages({
-			userId,
-			organizationId,
-			meterKey,
-		});
-		for (const pkg of packages) {
-			if (remainingToConsume <= 0) break;
-			const fromPkg = Math.min(pkg.remaining, remainingToConsume);
-			await consumeFromCreditPackage(pkg.id, fromPkg);
-			await createCreditEvent({
-				userId: userId ?? null,
-				organizationId: organizationId ?? null,
-				meterKey,
-				amount: fromPkg,
-				source: "topup",
-				packageId: pkg.id,
-				reason,
-				metadata: metadata ?? null,
-			});
-			remainingToConsume -= fromPkg;
-			log.info("consumed from topup package", {
-				meterKey,
-				packageId: pkg.id,
-				amount: fromPkg,
-			});
-		}
-	}
-
-	// 4. If still need more and overage is allowed
-	if (remainingToConsume > 0 && meter.allowOverage) {
-		await incrementRecurringConsumed(balance.id, remainingToConsume);
-		await createCreditEvent({
-			userId: userId ?? null,
-			organizationId: organizationId ?? null,
-			meterKey,
-			amount: remainingToConsume,
-			source: "overage",
-			reason,
-			metadata: metadata ?? null,
-		});
-		log.warn("consumed as overage", { meterKey, amount: remainingToConsume });
-		remainingToConsume = 0;
-	}
-
-	// 5. If still need more and no overage — fail
-	if (remainingToConsume > 0) {
-		// Calculate total remaining for the response
-		const finalBalance = await getBalance({
-			userId,
-			organizationId,
-			meterKey,
-		});
-		const finalRecurring = finalBalance
-			? finalBalance.recurringGranted - finalBalance.recurringConsumed
-			: 0;
-		const packages = await getActiveCreditPackages({
-			userId,
-			organizationId,
-			meterKey,
-		});
-		const finalTopup = packages.reduce((sum, p) => sum + p.remaining, 0);
-		return {
-			ok: false,
-			consumed: amount - remainingToConsume,
-			remaining: Math.max(0, finalRecurring) + finalTopup,
-			source: "recurring",
-			error: "credits_exceeded",
-		};
-	}
-
-	// Success — calculate total remaining
-	const finalBalance = await getBalance({ userId, organizationId, meterKey });
-	const finalRecurring = finalBalance
-		? finalBalance.recurringGranted - finalBalance.recurringConsumed
-		: 0;
-	const packages = await getActiveCreditPackages({
+	const result = await consumeCreditsTx({
 		userId,
 		organizationId,
 		meterKey,
+		amount,
+		reason,
+		metadata,
+		allowOverage: meter.allowOverage ?? false,
 	});
-	const finalTopup = packages.reduce((sum, p) => sum + p.remaining, 0);
-	totalRemaining = Math.max(0, finalRecurring) + finalTopup;
 
-	return {
-		ok: true,
-		consumed: amount,
-		remaining: totalRemaining,
-		source: recurringRemaining >= amount ? "recurring" : "topup",
-	};
+	if (result.ok) {
+		log.info("consumed credits", {
+			meterKey,
+			amount,
+			source: result.source,
+			remaining: result.remaining,
+		});
+	} else {
+		log.warn("credits exceeded", {
+			meterKey,
+			requested: amount,
+			consumed: result.consumed,
+			remaining: result.remaining,
+		});
+	}
+
+	return result;
 }
 
 /**
@@ -212,7 +116,10 @@ export async function checkCredits(params: {
 		organizationId,
 		meterKey,
 	});
-	const topupRemaining = packages.reduce((sum, p) => sum + p.remaining, 0);
+	const topupRemaining = packages.reduce(
+		(sum: number, p: { remaining: number }) => sum + p.remaining,
+		0,
+	);
 	const totalRemaining = recurringRemaining + topupRemaining;
 
 	if (totalRemaining >= amount) {

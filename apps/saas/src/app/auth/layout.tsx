@@ -1,6 +1,6 @@
 import { BrandLogo } from "@fuutu/ui";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 export default async function AuthLayout({
@@ -10,13 +10,14 @@ export default async function AuthLayout({
 }) {
 	const locale = await getLocale();
 	const messages = await getMessages();
+	const t = await getTranslations("auth");
 
 	return (
 		<NextIntlClientProvider locale={locale} messages={messages}>
 			<div className="relative flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
 				<a
 					href="/"
-					aria-label="Brand"
+					aria-label={t("brand")}
 					className="absolute top-6 left-6 flex items-center gap-2 font-semibold text-lg md:top-8 md:left-8"
 				>
 					<BrandLogo size="2xl" className="dark:invert" />

@@ -7,7 +7,7 @@ import { protectedProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const packagesSchema = z.object({
-	organizationId: z.string().optional(),
+	organizationId: z.string().uuid().optional(),
 });
 
 export const getPackages = protectedProcedure

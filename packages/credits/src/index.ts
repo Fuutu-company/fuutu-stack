@@ -5,8 +5,17 @@ export {
 export {
 	type ConsumeCreditsParams,
 	type ConsumeCreditsResult,
+	ConsumeCreditsSchema,
 	checkCredits,
 	consumeCredits,
 } from "./consume";
-export { grantRecurringCredits, grantTopUpCredits } from "./grant";
-export { resetRecurringCredits } from "./reset";
+export {
+	GrantRecurringCreditsSchema,
+	GrantTopUpCreditsSchema,
+	grantRecurringCredits,
+	grantTopUpCredits,
+} from "./grant";
+export {
+	ResetRecurringCreditsSchema,
+	resetRecurringCredits,
+} from "./reset";

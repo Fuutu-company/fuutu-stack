@@ -17,6 +17,8 @@
 		"expiresAt": "Läuft ab {date}",
 		"neverExpires": "Läuft nie ab",
 		"packages": "aus {count} Paketen",
+		"loadError": "Fehler beim Laden der Credits",
+		"noBalances": "Keine Credit-Guthaben konfiguriert.",
 		"source": {
 			"recurring": "Monatlich",
 			"topup": "Aufladung",

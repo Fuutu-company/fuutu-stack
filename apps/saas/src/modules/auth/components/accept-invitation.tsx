@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { getSafeRedirect } from "@fuutu/auth/redirect";
 import { createLogger } from "@fuutu/logs";
 import { AuthCard, Button } from "@fuutu/ui";
 import { Building2 } from "lucide-react";
@@ -72,8 +73,10 @@ export function AcceptInvitation() {
 			const loggedIn = await checkSession();
 			if (!loggedIn) {
 				if (invitationId) {
+					const redirectPath = `/auth/accept-invitation?id=${invitationId}`;
+					const safeRedirect = getSafeRedirect(redirectPath);
 					router.replace(
-						`/auth/sign-in?redirect=${encodeURIComponent(`/auth/accept-invitation?id=${invitationId}`)}`,
+						`/auth/sign-in?redirect=${encodeURIComponent(safeRedirect)}`,
 					);
 				} else {
 					router.replace("/auth/sign-in");

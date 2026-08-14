@@ -11,6 +11,7 @@ build
 # Environment variables
 .env
 .env*.local
+.env.bak*
 
 # IDEs and editors
 .vscode/*
@@ -60,6 +61,9 @@ playwright/.cache
 .cache
 tmp
 temp
+*.bak
+*.bak[0-9]*
+
 
 *.next
 

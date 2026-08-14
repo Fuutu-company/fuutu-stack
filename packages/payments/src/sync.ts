@@ -14,10 +14,16 @@
  */
 
 import {
+	createCreditEvent,
 	createPurchase,
+	getCreditBalancesForOrganization,
+	getCreditBalancesForUser,
 	getPurchaseByProviderSubscriptionId,
 	getPurchasesByOrganizationId,
 	getPurchasesByUserId,
+	grantRecurringCreditsTx,
+	grantTopUpCreditsTx,
+	resetRecurringBalance,
 	setOrganizationPaymentsCustomerId,
 	setPaymentsCustomerId,
 	updatePurchase,
@@ -386,10 +392,19 @@ async function cancelOldSubscriptionsForOwner(
 					newSubscriptionId,
 				});
 			} catch (err) {
-				log.error("failed to cancel old subscription in DB", {
-					oldSubscriptionId: old.subscriptionId,
-					err: String(err),
-				});
+				// CRITICAL: Provider cancel succeeded but DB update failed.
+				// This creates a double-billing risk — the provider thinks
+				// the subscription is canceled, but our DB still shows it as active.
+				// Manual intervention may be required to reconcile.
+				log.error(
+					"CRITICAL: failed to mark old subscription as canceled in DB after provider cancel succeeded",
+					{
+						oldSubscriptionId: old.subscriptionId,
+						newSubscriptionId,
+						provider: provider.id,
+						err: String(err),
+					},
+				);
 			}
 		}
 	}
@@ -484,7 +499,6 @@ async function grantCreditsForSubscription(
 	const { CREDITS, getMeterKeysForPlan, getPlanIdForProductId } = await import(
 		"./config"
 	);
-	const { grantRecurringCredits } = await import("@fuutu/credits");
 
 	// Find the plan ID from the product/price ID (checks runtime map + env vars)
 	const planId = getPlanIdForProductId(event.productId);
@@ -502,7 +516,7 @@ async function grantCreditsForSubscription(
 	for (const meterKey of meterKeys) {
 		const grant = CREDITS[planId]?.[meterKey];
 		if (typeof grant === "number" && grant > 0) {
-			await grantRecurringCredits({
+			await grantRecurringCreditsInternal({
 				userId: userId ?? undefined,
 				organizationId: organizationId ?? undefined,
 				meterKey,
@@ -529,9 +543,7 @@ async function resetCreditsOnRenewal(
 ): Promise<void> {
 	if (!event.currentPeriodEnd || (!userId && !organizationId)) return;
 
-	const { resetRecurringCredits } = await import("@fuutu/credits");
-
-	await resetRecurringCredits({
+	await resetRecurringCreditsInternal({
 		userId: userId ?? undefined,
 		organizationId: organizationId ?? undefined,
 		newPeriodEnd: new Date(event.currentPeriodEnd),
@@ -542,14 +554,13 @@ async function resetCreditsOnRenewal(
 
 /**
  * Grant top-up credits for a one-time purchase.
- * The product ID must match a configured top-up product.
- * Top-up products are identified by a naming convention or explicit mapping.
+ * Top-up detection relies on metadata passed from the checkout:
+ * - Nested format: { credit_topup: { meterKey, amount, expiryDays? } }
+ * - Flat format: { topup_id, meter_key, amount, expiryDays? }
  *
- * For now, we check if the productId starts with "topup_" or contains "_topup_"
- * and extract the meter key and amount from the metadata.
- *
- * In a production system, you'd have a TOPUP_PRODUCTS config mapping
- * product IDs to (meterKey, amount, expiryDays).
+ * This is more robust than product ID string matching, as the metadata
+ * carries the actual meter key and amount regardless of the provider's
+ * product ID format.
  */
 async function grantTopUpCreditsForPurchase(
 	event: ProviderEvent,
@@ -581,13 +592,11 @@ async function grantTopUpCreditsForPurchase(
 		return;
 	}
 
-	const { grantTopUpCredits } = await import("@fuutu/credits");
-
 	const expiresAt = topupInfo.expiryDays
 		? new Date(Date.now() + topupInfo.expiryDays * 24 * 60 * 60 * 1000)
 		: null;
 
-	await grantTopUpCredits({
+	await grantTopUpCreditsInternal({
 		userId: userId ?? undefined,
 		organizationId: organizationId ?? undefined,
 		meterKey: topupInfo.meterKey,
@@ -603,4 +612,73 @@ async function grantTopUpCreditsForPurchase(
 		userId,
 		organizationId,
 	});
+}
+
+/**
+ * Internal helper: grant recurring credits.
+ * Delegates to @fuutu/db query layer (transactional).
+ */
+async function grantRecurringCreditsInternal(params: {
+	userId?: string;
+	organizationId?: string;
+	meterKey: string;
+	amount: number;
+	periodEnd: Date;
+}): Promise<void> {
+	await grantRecurringCreditsTx(params);
+	log.info("granted recurring credits", params);
+}
+
+/**
+ * Internal helper: reset recurring credits.
+ * Uses query functions from @fuutu/db (non-transactional, per-balance).
+ */
+async function resetRecurringCreditsInternal(params: {
+	userId?: string;
+	organizationId?: string;
+	newPeriodEnd: Date;
+	newGranted?: Record<string, number>;
+}): Promise<void> {
+	const { userId, organizationId, newPeriodEnd, newGranted } = params;
+
+	const balances = userId
+		? await getCreditBalancesForUser(userId)
+		: organizationId
+			? await getCreditBalancesForOrganization(organizationId)
+			: [];
+
+	for (const balance of balances) {
+		const newAmount = newGranted?.[balance.meterKey];
+		await resetRecurringBalance(balance.id, newPeriodEnd, newAmount);
+		await createCreditEvent({
+			userId: userId ?? null,
+			organizationId: organizationId ?? null,
+			meterKey: balance.meterKey,
+			amount: 0,
+			source: "reset",
+			reason: "period_reset",
+		});
+		log.info("reset recurring balance", {
+			meterKey: balance.meterKey,
+			newPeriodEnd,
+			newAmount,
+		});
+	}
+}
+
+/**
+ * Internal helper: grant top-up credits.
+ * Delegates to @fuutu/db query layer (transactional).
+ */
+async function grantTopUpCreditsInternal(params: {
+	userId?: string;
+	organizationId?: string;
+	meterKey: string;
+	amount: number;
+	expiresAt?: Date | null;
+	purchaseId?: string | null;
+	priority?: number;
+}): Promise<void> {
+	await grantTopUpCreditsTx(params);
+	log.info("granted top-up credits", params);
 }

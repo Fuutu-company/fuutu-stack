@@ -1,5 +1,5 @@
 import { db } from "../client";
-import type { CreditBalance } from "../generated/client";
+import type { CreditBalance, Prisma } from "../generated/client";
 
 export const getCreditBalance = (params: {
 	userId?: string;
@@ -98,3 +98,332 @@ export const resetRecurringBalance = (
 			...(newGranted !== undefined && { recurringGranted: newGranted }),
 		},
 	});
+
+// ─── Transactional operations ───────────────────────────────────────────────
+// These wrap multi-step credit operations in db.$transaction() so callers
+// never need direct access to the db client.
+
+export type ConsumeCreditsTxResult = {
+	ok: boolean;
+	consumed: number;
+	remaining: number;
+	source: "recurring" | "topup" | "overage";
+	error?: "credits_exceeded";
+};
+
+export const consumeCreditsTx = (params: {
+	userId?: string;
+	organizationId?: string;
+	meterKey: string;
+	amount: number;
+	reason: string;
+	metadata?: Record<string, unknown>;
+	allowOverage: boolean;
+}): Promise<ConsumeCreditsTxResult> => {
+	const {
+		userId,
+		organizationId,
+		meterKey,
+		amount,
+		reason,
+		metadata,
+		allowOverage,
+	} = params;
+
+	return db.$transaction(async (tx) => {
+		let balance = await tx.creditBalance.findFirst({
+			where: {
+				userId: userId ?? null,
+				organizationId: organizationId ?? null,
+				meterKey,
+			},
+		});
+		if (!balance) {
+			balance = await tx.creditBalance.create({
+				data: {
+					userId: userId ?? null,
+					organizationId: organizationId ?? null,
+					meterKey,
+					recurringGranted: 0,
+					recurringConsumed: 0,
+					recurringPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+				},
+			});
+		}
+
+		const recurringRemaining =
+			balance.recurringGranted - balance.recurringConsumed;
+		let remainingToConsume = amount;
+
+		// 1. Consume from recurring first
+		if (recurringRemaining > 0 && remainingToConsume > 0) {
+			const fromRecurring = Math.min(recurringRemaining, remainingToConsume);
+			await tx.creditBalance.update({
+				where: { id: balance.id },
+				data: { recurringConsumed: { increment: fromRecurring } },
+			});
+			await tx.creditEvent.create({
+				data: {
+					userId: userId ?? null,
+					organizationId: organizationId ?? null,
+					meterKey,
+					amount: fromRecurring,
+					source: "recurring",
+					reason,
+					metadata: (metadata ?? null) as Prisma.InputJsonValue,
+				},
+			});
+			remainingToConsume -= fromRecurring;
+		}
+
+		// 2. Consume from top-up packages
+		if (remainingToConsume > 0) {
+			const packages = await tx.creditPackage.findMany({
+				where: {
+					AND: [
+						{
+							OR: [
+								{ userId: userId ?? null },
+								{ organizationId: organizationId ?? null },
+							],
+						},
+						{ meterKey },
+						{ remaining: { gt: 0 } },
+						{
+							OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+						},
+					],
+				},
+				orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+			});
+			for (const pkg of packages) {
+				if (remainingToConsume <= 0) break;
+				const fromPkg = Math.min(pkg.remaining, remainingToConsume);
+				await tx.creditPackage.update({
+					where: { id: pkg.id },
+					data: {
+						consumed: { increment: fromPkg },
+						remaining: { decrement: fromPkg },
+					},
+				});
+				await tx.creditEvent.create({
+					data: {
+						userId: userId ?? null,
+						organizationId: organizationId ?? null,
+						meterKey,
+						amount: fromPkg,
+						source: "topup",
+						packageId: pkg.id,
+						reason,
+						metadata: (metadata ?? null) as Prisma.InputJsonValue,
+					},
+				});
+				remainingToConsume -= fromPkg;
+			}
+		}
+
+		// 3. Overage
+		if (remainingToConsume > 0 && allowOverage) {
+			await tx.creditBalance.update({
+				where: { id: balance.id },
+				data: { recurringConsumed: { increment: remainingToConsume } },
+			});
+			await tx.creditEvent.create({
+				data: {
+					userId: userId ?? null,
+					organizationId: organizationId ?? null,
+					meterKey,
+					amount: remainingToConsume,
+					source: "overage",
+					reason,
+					metadata: (metadata ?? null) as Prisma.InputJsonValue,
+				},
+			});
+			remainingToConsume = 0;
+		}
+
+		// 4. Not enough credits
+		if (remainingToConsume > 0) {
+			const finalBalance = await tx.creditBalance.findFirst({
+				where: {
+					userId: userId ?? null,
+					organizationId: organizationId ?? null,
+					meterKey,
+				},
+			});
+			const finalRecurring = finalBalance
+				? finalBalance.recurringGranted - finalBalance.recurringConsumed
+				: 0;
+			const packages = await tx.creditPackage.findMany({
+				where: {
+					AND: [
+						{
+							OR: [
+								{ userId: userId ?? null },
+								{ organizationId: organizationId ?? null },
+							],
+						},
+						{ meterKey },
+						{ remaining: { gt: 0 } },
+						{
+							OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+						},
+					],
+				},
+			});
+			const finalTopup = packages.reduce(
+				(sum: number, p: { remaining: number }) => sum + p.remaining,
+				0,
+			);
+			return {
+				ok: false,
+				consumed: amount - remainingToConsume,
+				remaining: Math.max(0, finalRecurring) + finalTopup,
+				source: "recurring" as const,
+				error: "credits_exceeded" as const,
+			};
+		}
+
+		// Success — calculate total remaining
+		const finalBalance = await tx.creditBalance.findFirst({
+			where: {
+				userId: userId ?? null,
+				organizationId: organizationId ?? null,
+				meterKey,
+			},
+		});
+		const finalRecurring = finalBalance
+			? finalBalance.recurringGranted - finalBalance.recurringConsumed
+			: 0;
+		const packages = await tx.creditPackage.findMany({
+			where: {
+				AND: [
+					{
+						OR: [
+							{ userId: userId ?? null },
+							{ organizationId: organizationId ?? null },
+						],
+					},
+					{ meterKey },
+					{ remaining: { gt: 0 } },
+					{
+						OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+					},
+				],
+			},
+		});
+		const finalTopup = packages.reduce(
+			(sum: number, p: { remaining: number }) => sum + p.remaining,
+			0,
+		);
+
+		return {
+			ok: true,
+			consumed: amount,
+			remaining: Math.max(0, finalRecurring) + finalTopup,
+			source:
+				recurringRemaining >= amount
+					? ("recurring" as const)
+					: ("topup" as const),
+		};
+	});
+};
+
+export const grantRecurringCreditsTx = (params: {
+	userId?: string;
+	organizationId?: string;
+	meterKey: string;
+	amount: number;
+	periodEnd: Date;
+}): Promise<void> => {
+	const { userId, organizationId, meterKey, amount, periodEnd } = params;
+
+	return db.$transaction(async (tx) => {
+		const existing = await tx.creditBalance.findFirst({
+			where: {
+				userId: userId ?? null,
+				organizationId: organizationId ?? null,
+				meterKey,
+			},
+		});
+
+		if (existing) {
+			await tx.creditBalance.update({
+				where: { id: existing.id },
+				data: {
+					recurringGranted: amount,
+					recurringConsumed: 0,
+					recurringPeriodEnd: periodEnd,
+				},
+			});
+		} else {
+			await tx.creditBalance.create({
+				data: {
+					userId: userId ?? null,
+					organizationId: organizationId ?? null,
+					meterKey,
+					recurringGranted: amount,
+					recurringConsumed: 0,
+					recurringPeriodEnd: periodEnd,
+				},
+			});
+		}
+
+		await tx.creditEvent.create({
+			data: {
+				userId: userId ?? null,
+				organizationId: organizationId ?? null,
+				meterKey,
+				amount,
+				source: "admin_grant",
+				reason: "subscription_grant",
+			},
+		});
+	});
+};
+
+export const grantTopUpCreditsTx = (params: {
+	userId?: string;
+	organizationId?: string;
+	meterKey: string;
+	amount: number;
+	expiresAt?: Date | null;
+	purchaseId?: string | null;
+	priority?: number;
+}): Promise<void> => {
+	const {
+		userId,
+		organizationId,
+		meterKey,
+		amount,
+		expiresAt,
+		purchaseId,
+		priority,
+	} = params;
+
+	return db.$transaction(async (tx) => {
+		await tx.creditPackage.create({
+			data: {
+				userId: userId ?? null,
+				organizationId: organizationId ?? null,
+				meterKey,
+				amount,
+				remaining: amount,
+				expiresAt: expiresAt ?? null,
+				purchaseId: purchaseId ?? null,
+				priority: priority ?? 10,
+			},
+		});
+
+		await tx.creditEvent.create({
+			data: {
+				userId: userId ?? null,
+				organizationId: organizationId ?? null,
+				meterKey,
+				amount,
+				source: "admin_grant",
+				reason: "topup_purchase",
+			},
+		});
+	});
+};

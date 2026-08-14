@@ -26,7 +26,7 @@ export const cancelSubscription = protectedProcedure
 			input.subscriptionId,
 		);
 		if (!purchase) {
-			throw new ORPCError("FORBIDDEN", { message: "Subscription not found" });
+			throw new ORPCError("NOT_FOUND", { message: "Subscription not found" });
 		}
 		if (purchase.organizationId) {
 			await requireOrgRole(

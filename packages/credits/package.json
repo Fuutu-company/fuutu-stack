@@ -14,7 +14,8 @@
 	"dependencies": {
 		"@fuutu/db": "workspace:*",
 		"@fuutu/logs": "workspace:*",
-		"@fuutu/payments": "workspace:*"
+		"@fuutu/payments": "workspace:*",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",

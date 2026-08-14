@@ -7,7 +7,7 @@ import { protectedProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const historySchema = z.object({
-	organizationId: z.string().optional(),
+	organizationId: z.string().uuid().optional(),
 	meterKey: z.string().optional(),
 	limit: z.number().int().min(1).max(100).default(50),
 });

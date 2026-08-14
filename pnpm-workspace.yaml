@@ -85,6 +85,9 @@ catalog:
   # DB
   "@prisma/client": ^7.9.1
   "@prisma/adapter-pg": ^7.9.1
+  prisma: ^7.9.1
+  "prisma-zod-generator": ^3.1.0
+  tsx: ^4.23.5
   decimal.js: ^10.6.0
   pg: ^8.22.0
   "@types/pg": ^8.20.3

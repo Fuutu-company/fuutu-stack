@@ -238,6 +238,7 @@ model CreditBalance {
   updatedAt      DateTime @updatedAt
 
   @@unique([userId, organizationId, meterKey])
+  @@check("userId IS NOT NULL OR organizationId IS NOT NULL")
   @@index([userId])
   @@index([organizationId])
   @@index([meterKey])
@@ -267,6 +268,7 @@ model CreditPackage {
   @@index([organizationId])
   @@index([meterKey])
   @@index([expiresAt])
+  @@check("remaining >= 0")
   @@map("credit_package")
   @@schema("app")
 }

@@ -24,11 +24,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const API_MODULES_DIR = join(
-	__dirname,
-	"..",
-	"modules",
-);
+const API_MODULES_DIR = join(__dirname, "..", "modules");
 
 /**
  * Recursively find all .ts files in a directory.
@@ -64,7 +60,7 @@ function isProcedureFile(content: string): boolean {
  */
 function acceptsOrganizationIdFromInput(content: string): boolean {
 	// Match: organizationId: z.string() (with optional modifiers)
-	return /organizationId\s*:\s*z\.string\(\)/.test(content);
+	return /organizationId\s*:\s*z\.string\(/.test(content);
 }
 
 /**
@@ -130,10 +126,8 @@ describe("IDOR Scanner — all API procedures", () => {
 		it(`${relPath}: organizationId from input must be guarded by requireOrgRole`, () => {
 			if (!isProtected) {
 				const reasons: string[] = [];
-				if (!hasRequireOrgRole)
-					reasons.push("no requireOrgRole() call found");
-				if (!isAdminProcedure)
-					reasons.push("not using adminProcedure");
+				if (!hasRequireOrgRole) reasons.push("no requireOrgRole() call found");
+				if (!isAdminProcedure) reasons.push("not using adminProcedure");
 				if (!handlerIgnoresOrgId)
 					reasons.push("handler uses input.organizationId without guard");
 
@@ -141,7 +135,7 @@ describe("IDOR Scanner — all API procedures", () => {
 					`IDOR VULNERABILITY: ${relPath} accepts organizationId from client input but has no authorization guard.\n` +
 						`  Issues: ${reasons.join(", ")}\n` +
 						`  Fix: Call requireOrgRole(input.organizationId, context.user.id, "member", context.headers) before using input.organizationId in a DB query.\n` +
-						`  See: packages/api/src/modules/api-keys/procedures/list.ts for the correct pattern.`,
+						"  See: packages/api/src/modules/api-keys/procedures/list.ts for the correct pattern.",
 				);
 			}
 		});

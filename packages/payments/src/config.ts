@@ -13,6 +13,7 @@
  */
 
 import { config } from "@fuutu/config";
+import { env } from "@fuutu/env/saas";
 import type { PaymentProvider } from "./types";
 
 // ─── 1. Provider ──────────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ export interface PaymentsConfig {
 }
 
 export const paymentsConfig: PaymentsConfig = {
-	provider: "creem",
+	provider: env.PAYMENTS_PROVIDER ?? "creem",
 	billingAttachedTo:
 		config.features.organizationsMode !== "off" ? "organization" : "user",
 	requireActiveSubscription: false,
@@ -107,14 +108,8 @@ export function getPlanIdForProductId(productId: string): PlanId | undefined {
 
 	// Fallback: read env vars directly (server-side only)
 	if (typeof process !== "undefined") {
-		const envMap: Record<string, PlanId> = {
-			PAYMENTS_PRO_PRICE_ID: "pro",
-			PAYMENTS_PRO_YEARLY_PRICE_ID: "pro",
-		};
-		for (const [envKey, planId] of Object.entries(envMap)) {
-			const envValue = process.env[envKey];
-			if (envValue === productId) return planId;
-		}
+		if (env.PAYMENTS_PRO_PRICE_ID === productId) return "pro";
+		if (env.PAYMENTS_PRO_YEARLY_PRICE_ID === productId) return "pro";
 	}
 
 	return undefined;
@@ -174,7 +169,13 @@ export function getCreditTopupPriceId(topupId: string): string | undefined {
 	const topup = CREDIT_TOPUPS.find((t) => t.id === topupId);
 	if (!topup) return undefined;
 	if (typeof process !== "undefined") {
-		return process.env[topup.priceIdEnvVar];
+		// Map dynamic priceIdEnvVar to the actual env var
+		const envVarMap: Record<string, string | undefined> = {
+			CREDITS_AI_TOKENS_100K_PRICE_ID: env.CREDITS_AI_TOKENS_100K_PRICE_ID,
+			CREDITS_AI_TOKENS_500K_PRICE_ID: env.CREDITS_AI_TOKENS_500K_PRICE_ID,
+			CREDITS_API_CALLS_50K_PRICE_ID: env.CREDITS_API_CALLS_50K_PRICE_ID,
+		};
+		return envVarMap[topup.priceIdEnvVar];
 	}
 	return undefined;
 }

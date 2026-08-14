@@ -50,6 +50,12 @@ export const env = createEnv({
 		// Set to your active provider's ID: Stripe price_id, Creem product_id, Polar product_id, etc.
 		PAYMENTS_PRO_PRICE_ID: z.string().optional(),
 		PAYMENTS_PRO_YEARLY_PRICE_ID: z.string().optional(),
+		// Payments — Credit top-up package price IDs
+		CREDITS_AI_TOKENS_100K_PRICE_ID: z.string().optional(),
+		CREDITS_AI_TOKENS_500K_PRICE_ID: z.string().optional(),
+		CREDITS_API_CALLS_50K_PRICE_ID: z.string().optional(),
+		// Payments — Provider selection
+		PAYMENTS_PROVIDER: z.enum(["polar", "stripe", "creem"]).optional(),
 		// Storage (S3 / MinIO)
 		S3_ENDPOINT: z.string().optional(),
 		S3_REGION: z.string().optional(),
@@ -127,6 +133,12 @@ export const env = createEnv({
 		CREEM_TEST_MODE: process.env.CREEM_TEST_MODE,
 		PAYMENTS_PRO_PRICE_ID: process.env.PAYMENTS_PRO_PRICE_ID,
 		PAYMENTS_PRO_YEARLY_PRICE_ID: process.env.PAYMENTS_PRO_YEARLY_PRICE_ID,
+		CREDITS_AI_TOKENS_100K_PRICE_ID:
+			process.env.CREDITS_AI_TOKENS_100K_PRICE_ID,
+		CREDITS_AI_TOKENS_500K_PRICE_ID:
+			process.env.CREDITS_AI_TOKENS_500K_PRICE_ID,
+		CREDITS_API_CALLS_50K_PRICE_ID: process.env.CREDITS_API_CALLS_50K_PRICE_ID,
+		PAYMENTS_PROVIDER: process.env.PAYMENTS_PROVIDER,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
 		S3_REGION: process.env.S3_REGION,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,

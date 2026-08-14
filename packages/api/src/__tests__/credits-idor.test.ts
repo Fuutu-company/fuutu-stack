@@ -60,11 +60,7 @@ describe("credits.balance — IDOR protection", () => {
 	});
 
 	it("returns balance for the current user when no organizationId", async () => {
-		await call(
-			creditsRouter.balance,
-			{},
-			{ context: authenticatedContext },
-		);
+		await call(creditsRouter.balance, {}, { context: authenticatedContext });
 
 		expect(getCreditBalanceSummary).toHaveBeenCalledWith({
 			userId: "user-1",
@@ -121,11 +117,7 @@ describe("credits.balance — IDOR protection", () => {
 
 	it("throws UNAUTHORIZED when unauthenticated", async () => {
 		await expect(
-			call(
-				creditsRouter.balance,
-				{},
-				{ context: unauthenticatedContext },
-			),
+			call(creditsRouter.balance, {}, { context: unauthenticatedContext }),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
 	});
 });
@@ -138,11 +130,7 @@ describe("credits.history — IDOR protection", () => {
 	});
 
 	it("returns events for the current user when no organizationId", async () => {
-		await call(
-			creditsRouter.history,
-			{},
-			{ context: authenticatedContext },
-		);
+		await call(creditsRouter.history, {}, { context: authenticatedContext });
 
 		expect(getCreditEventsForUser).toHaveBeenCalledWith("user-1", 50);
 		expect(getCreditEventsForOrganization).not.toHaveBeenCalled();
@@ -196,11 +184,7 @@ describe("credits.history — IDOR protection", () => {
 
 	it("throws UNAUTHORIZED when unauthenticated", async () => {
 		await expect(
-			call(
-				creditsRouter.history,
-				{},
-				{ context: unauthenticatedContext },
-			),
+			call(creditsRouter.history, {}, { context: unauthenticatedContext }),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
 	});
 });
@@ -213,11 +197,7 @@ describe("credits.packages — IDOR protection", () => {
 	});
 
 	it("returns packages for the current user when no organizationId", async () => {
-		await call(
-			creditsRouter.packages,
-			{},
-			{ context: authenticatedContext },
-		);
+		await call(creditsRouter.packages, {}, { context: authenticatedContext });
 
 		expect(getCreditPackagesForUser).toHaveBeenCalledWith("user-1");
 		expect(getCreditPackagesForOrganization).not.toHaveBeenCalled();
@@ -271,11 +251,7 @@ describe("credits.packages — IDOR protection", () => {
 
 	it("throws UNAUTHORIZED when unauthenticated", async () => {
 		await expect(
-			call(
-				creditsRouter.packages,
-				{},
-				{ context: unauthenticatedContext },
-			),
+			call(creditsRouter.packages, {}, { context: unauthenticatedContext }),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
 	});
 });

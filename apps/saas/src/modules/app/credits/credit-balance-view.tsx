@@ -59,11 +59,11 @@ export function CreditBalanceView() {
 			setHistory((historyRes as { events: CreditEvent[] }).events ?? []);
 		} catch (err) {
 			log.warn("credits fetch failed", { err });
-			setError("Failed to load credits");
+			setError(t("loadError"));
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [t]);
 
 	useEffect(() => {
 		void load();
@@ -91,9 +91,7 @@ export function CreditBalanceView() {
 			{balances.length === 0 ? (
 				<Card>
 					<CardContent className="p-6 md:p-8">
-						<p className="text-muted-foreground text-sm">
-							No credit balances configured.
-						</p>
+						<p className="text-muted-foreground text-sm">{t("noBalances")}</p>
 					</CardContent>
 				</Card>
 			) : (

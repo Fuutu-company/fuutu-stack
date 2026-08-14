@@ -17,6 +17,8 @@
 		"expiresAt": "Expires {date}",
 		"neverExpires": "Never expires",
 		"packages": "from {count} packages",
+		"loadError": "Failed to load credits",
+		"noBalances": "No credit balances configured.",
 		"source": {
 			"recurring": "Monthly",
 			"topup": "Top-up",

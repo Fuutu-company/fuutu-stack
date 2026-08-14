@@ -4,7 +4,7 @@ import { protectedProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const balanceSchema = z.object({
-	organizationId: z.string().optional(),
+	organizationId: z.string().uuid().optional(),
 });
 
 export const getBalance = protectedProcedure

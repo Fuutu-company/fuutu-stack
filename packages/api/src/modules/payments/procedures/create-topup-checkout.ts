@@ -3,6 +3,7 @@ import {
 	getCreditTopupPriceId,
 	resolvePaymentProvider,
 } from "@fuutu/payments";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
@@ -10,7 +11,7 @@ import { sanitizePaymentUrl } from "../shared";
 
 const topupSchema = z.object({
 	topupId: z.string().min(1),
-	organizationId: z.string().optional(),
+	organizationId: z.string().uuid().optional(),
 	successUrl: z.string().optional(),
 	cancelUrl: z.string().optional(),
 });
@@ -38,7 +39,9 @@ export const createTopupCheckout = protectedProcedure
 		const priceId = getCreditTopupPriceId(input.topupId);
 		const topup = CREDIT_TOPUPS.find((t) => t.id === input.topupId);
 		if (!priceId || !topup) {
-			throw new Error("Top-up package not available");
+			throw new ORPCError("NOT_FOUND", {
+				message: "Top-up package not available",
+			});
 		}
 		const provider = resolvePaymentProvider();
 		const result = await provider.createCheckoutLink({

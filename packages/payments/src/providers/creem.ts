@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import type {
@@ -196,7 +196,13 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			.update(bodyText)
 			.digest("hex");
 
-		if (computedSignature !== signature) {
+		// Use timing-safe comparison to prevent timing attacks
+		const computedBuffer = Buffer.from(computedSignature, "utf8");
+		const receivedBuffer = Buffer.from(signature, "utf8");
+		if (
+			computedBuffer.length !== receivedBuffer.length ||
+			!timingSafeEqual(computedBuffer, receivedBuffer)
+		) {
 			throw new Error("Invalid signature");
 		}
 

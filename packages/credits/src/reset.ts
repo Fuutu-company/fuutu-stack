@@ -5,8 +5,16 @@ import {
 	resetRecurringBalance,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
+import { z } from "zod";
 
 const log = createLogger({ scope: "credits:reset" });
+
+export const ResetRecurringCreditsSchema = z.object({
+	userId: z.string().optional(),
+	organizationId: z.string().optional(),
+	newPeriodEnd: z.date(),
+	newGranted: z.record(z.string(), z.number().int().positive()).optional(),
+});
 
 /**
  * Reset recurring balances for a new billing period.
@@ -18,7 +26,8 @@ export async function resetRecurringCredits(params: {
 	newPeriodEnd: Date;
 	newGranted?: Record<string, number>; // meterKey -> new amount (if plan changed)
 }): Promise<void> {
-	const { userId, organizationId, newPeriodEnd, newGranted } = params;
+	const { userId, organizationId, newPeriodEnd, newGranted } =
+		ResetRecurringCreditsSchema.parse(params);
 
 	const balances = userId
 		? await getCreditBalancesForUser(userId)

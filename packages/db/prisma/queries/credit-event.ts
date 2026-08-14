@@ -1,5 +1,5 @@
 import { db } from "../client";
-import type { CreditEvent } from "../generated/client";
+import type { CreditEvent, Prisma } from "../generated/client";
 
 export type CreateCreditEventInput = {
 	userId?: string | null;
@@ -24,7 +24,7 @@ export const createCreditEvent = (
 			source: input.source,
 			packageId: input.packageId ?? null,
 			reason: input.reason,
-			metadata: input.metadata as never,
+			metadata: input.metadata as Prisma.InputJsonValue,
 		},
 	});
 

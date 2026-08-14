@@ -24,7 +24,6 @@
 		"@fuutu/utils": "workspace:*",
 		"@better-auth/passkey": "catalog:",
 		"better-auth": "catalog:",
-		"dotenv": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

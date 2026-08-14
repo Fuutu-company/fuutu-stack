@@ -1,7 +1,26 @@
-import { createCreditEvent, upsertCreditBalance } from "@fuutu/db";
+import { grantRecurringCreditsTx, grantTopUpCreditsTx } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
+import { z } from "zod";
 
 const log = createLogger({ scope: "credits:grant" });
+
+export const GrantRecurringCreditsSchema = z.object({
+	userId: z.string().optional(),
+	organizationId: z.string().optional(),
+	meterKey: z.string(),
+	amount: z.number().int().positive(),
+	periodEnd: z.date(),
+});
+
+export const GrantTopUpCreditsSchema = z.object({
+	userId: z.string().optional(),
+	organizationId: z.string().optional(),
+	meterKey: z.string(),
+	amount: z.number().int().positive(),
+	expiresAt: z.date().nullable().optional(),
+	purchaseId: z.string().nullable().optional(),
+	priority: z.number().int().optional(),
+});
 
 /**
  * Grant recurring credits to a user or org (called on subscription activation/renewal).
@@ -14,24 +33,15 @@ export async function grantRecurringCredits(params: {
 	amount: number;
 	periodEnd: Date;
 }): Promise<void> {
-	const { userId, organizationId, meterKey, amount, periodEnd } = params;
+	const { userId, organizationId, meterKey, amount, periodEnd } =
+		GrantRecurringCreditsSchema.parse(params);
 
-	await upsertCreditBalance({
-		userId: userId ?? null,
-		organizationId: organizationId ?? null,
-		meterKey,
-		recurringGranted: amount,
-		recurringConsumed: 0,
-		recurringPeriodEnd: periodEnd,
-	});
-
-	await createCreditEvent({
-		userId: userId ?? null,
-		organizationId: organizationId ?? null,
+	await grantRecurringCreditsTx({
+		userId,
+		organizationId,
 		meterKey,
 		amount,
-		source: "admin_grant",
-		reason: "subscription_grant",
+		periodEnd,
 	});
 
 	log.info("granted recurring credits", {
@@ -64,28 +74,16 @@ export async function grantTopUpCredits(params: {
 		expiresAt,
 		purchaseId,
 		priority,
-	} = params;
+	} = GrantTopUpCreditsSchema.parse(params);
 
-	// Import here to avoid circular dependency at module load
-	const { createCreditPackage } = await import("@fuutu/db");
-
-	await createCreditPackage({
-		userId: userId ?? null,
-		organizationId: organizationId ?? null,
+	await grantTopUpCreditsTx({
+		userId,
+		organizationId,
 		meterKey,
 		amount,
-		expiresAt: expiresAt ?? null,
-		purchaseId: purchaseId ?? null,
-		priority: priority ?? 10,
-	});
-
-	await createCreditEvent({
-		userId: userId ?? null,
-		organizationId: organizationId ?? null,
-		meterKey,
-		amount,
-		source: "admin_grant",
-		reason: "topup_purchase",
+		expiresAt,
+		purchaseId,
+		priority,
 	});
 
 	log.info("granted top-up credits", {

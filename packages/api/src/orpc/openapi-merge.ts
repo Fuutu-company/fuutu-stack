@@ -1,5 +1,6 @@
 import { auth } from "@fuutu/auth";
 import { createLogger } from "@fuutu/logs";
+import { getBaseUrl } from "@fuutu/utils";
 
 const log = createLogger({ scope: "openapi-merge" });
 
@@ -14,7 +15,7 @@ const CACHE_TTL = 60_000;
 async function fetchBetterAuthSpec(): Promise<BetterAuthSpec | null> {
 	try {
 		const request = new Request(
-			new URL("/api/auth/open-api/generate-schema", "http://localhost:3000"),
+			new URL("/api/auth/open-api/generate-schema", getBaseUrl()),
 			{ method: "GET" },
 		);
 		const response = await auth.handler(request);
