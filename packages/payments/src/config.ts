@@ -13,7 +13,6 @@
  */
 
 import { config } from "@fuutu/config";
-import { env } from "@fuutu/env/saas";
 import type { PaymentProvider } from "./types";
 
 // ─── 1. Provider ──────────────────────────────────────────────────────────────
@@ -57,12 +56,31 @@ export interface PaymentsConfig {
 }
 
 export const paymentsConfig: PaymentsConfig = {
-	provider: env.PAYMENTS_PROVIDER ?? "creem",
+	// Active payment provider — edit this to switch between "polar", "stripe",
+	// "creem", "custom", or "noop".
+	// This is the primary configuration point for kit users.
+	//
+	// `config.ts` must stay client-safe (no `@fuutu/env/saas` import at module
+	// level) because client components import `paymentsConfig` for display logic.
+	// The SaaS app's `instrumentation.ts` can optionally override this at server
+	// startup via `setPaymentProvider(env.PAYMENTS_PROVIDER)` when the env var
+	// is set — useful for deploys where the provider differs per environment.
+	provider: "creem",
 	billingAttachedTo:
 		config.features.organizationsMode !== "off" ? "organization" : "user",
 	requireActiveSubscription: false,
 	creditsEnabled: config.features.credits ?? true,
 };
+
+/**
+ * Override the active payment provider at server-app startup.
+ * Called from the SaaS app's `instrumentation.ts` only when `PAYMENTS_PROVIDER`
+ * env var is set — otherwise the `paymentsConfig.provider` default above wins.
+ * Client components must never call this.
+ */
+export function setPaymentProvider(provider: PaymentProviderId): void {
+	paymentsConfig.provider = provider;
+}
 
 // ─── 1b. Price-ID mapping ───────────────────────────────────────────────────
 // Maps plan IDs to provider-side price IDs. This is populated by the app
@@ -95,24 +113,13 @@ export function getYearlyPriceIdForPlan(planId: PlanId): string | undefined {
  * Reverse lookup: given a provider-side product/price ID, find the plan ID.
  * Used by webhook sync to map active subscriptions back to plans.
  *
- * Checks PRICE_IDS first (populated by setPriceIds), then falls back to env vars
- * (server-side only). This ensures webhook handlers work even if setPriceIds()
- * was never called (e.g. in a pure API context).
+ * Checks the runtime-populated PRICE_IDS map only. For env-var fallback
+ * (server-only), use `getPlanIdForProductId` from `@fuutu/payments/config.server`.
  */
 export function getPlanIdForProductId(productId: string): PlanId | undefined {
-	// Check the runtime-populated map first
-	const fromRuntime = (Object.keys(PRICE_IDS) as PlanId[]).find(
+	return (Object.keys(PRICE_IDS) as PlanId[]).find(
 		(key) => PRICE_IDS[key] === productId,
 	);
-	if (fromRuntime) return fromRuntime;
-
-	// Fallback: read env vars directly (server-side only)
-	if (typeof process !== "undefined") {
-		if (env.PAYMENTS_PRO_PRICE_ID === productId) return "pro";
-		if (env.PAYMENTS_PRO_YEARLY_PRICE_ID === productId) return "pro";
-	}
-
-	return undefined;
 }
 
 // ─── 1c. Credit Top-Up Packages ─────────────────────────────────────────────────
@@ -165,20 +172,8 @@ export function getCreditTopupsForMeter(
 	return CREDIT_TOPUPS.filter((t) => t.meterKey === meterKey);
 }
 
-export function getCreditTopupPriceId(topupId: string): string | undefined {
-	const topup = CREDIT_TOPUPS.find((t) => t.id === topupId);
-	if (!topup) return undefined;
-	if (typeof process !== "undefined") {
-		// Map dynamic priceIdEnvVar to the actual env var
-		const envVarMap: Record<string, string | undefined> = {
-			CREDITS_AI_TOKENS_100K_PRICE_ID: env.CREDITS_AI_TOKENS_100K_PRICE_ID,
-			CREDITS_AI_TOKENS_500K_PRICE_ID: env.CREDITS_AI_TOKENS_500K_PRICE_ID,
-			CREDITS_API_CALLS_50K_PRICE_ID: env.CREDITS_API_CALLS_50K_PRICE_ID,
-		};
-		return envVarMap[topup.priceIdEnvVar];
-	}
-	return undefined;
-}
+// getCreditTopupPriceId lives in ./config.server (needs env access).
+// All callers are server-only (oRPC procedures, webhook sync).
 
 // ─── 2. Plans ─────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,5 @@
-import {
-	CREDIT_TOPUPS,
-	getCreditTopupPriceId,
-	resolvePaymentProvider,
-} from "@fuutu/payments";
+import { CREDIT_TOPUPS, resolvePaymentProvider } from "@fuutu/payments";
+import { getCreditTopupPriceId } from "@fuutu/payments/config.server";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";

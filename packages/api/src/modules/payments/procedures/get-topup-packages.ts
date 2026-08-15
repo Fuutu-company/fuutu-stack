@@ -1,4 +1,5 @@
-import { CREDIT_TOPUPS, getCreditTopupPriceId } from "@fuutu/payments";
+import { CREDIT_TOPUPS } from "@fuutu/payments";
+import { getCreditTopupPriceId } from "@fuutu/payments/config.server";
 import { protectedProcedure } from "../../../orpc";
 
 export const getTopupPackages = protectedProcedure

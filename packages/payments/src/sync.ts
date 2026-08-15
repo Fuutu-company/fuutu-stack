@@ -493,10 +493,10 @@ async function grantCreditsForSubscription(
 ): Promise<void> {
 	if (!event.productId || (!userId && !organizationId)) return;
 
-	// Import dynamically to avoid circular dependency (credits imports payments config)
-	const { CREDITS, getMeterKeysForPlan, getPlanIdForProductId } = await import(
-		"./config"
-	);
+	// Import dynamically to avoid circular dependency (credits imports payments config).
+	// Uses config.server for env-backed getPlanIdForProductId (sync.ts is server-only).
+	const { CREDITS, getMeterKeysForPlan } = await import("./config");
+	const { getPlanIdForProductId } = await import("./config.server");
 
 	// Find the plan ID from the product/price ID (checks runtime map + env vars)
 	const planId = getPlanIdForProductId(event.productId);

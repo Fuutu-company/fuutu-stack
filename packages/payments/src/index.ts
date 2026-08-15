@@ -11,7 +11,6 @@ export {
 	FEATURE_CATALOG,
 	type FeatureEntry,
 	getCreditGrant,
-	getCreditTopupPriceId,
 	getCreditTopupsForMeter,
 	getMeter,
 	getMeterKeysForPlan,
@@ -33,6 +32,7 @@ export {
 	PRICE_IDS,
 	paymentsConfig,
 	SAAS_PLANS,
+	setPaymentProvider,
 	setPriceIds,
 	YEARLY_PRICE_IDS,
 } from "./config";

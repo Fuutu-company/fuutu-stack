@@ -10,6 +10,9 @@
 		"./config": {
 			"default": "./src/config.ts"
 		},
+		"./config.server": {
+			"default": "./src/config.server.ts"
+		},
 		"./features": {
 			"default": "./src/features.ts"
 		},
