@@ -1,5 +1,18 @@
 import { config } from "@fuutu/config";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@fuutu/env/saas", () => ({
+	env: {
+		PAYMENTS_PROVIDER: "polar",
+		PAYMENTS_PRO_PRICE_ID: "test-pro-price",
+		PAYMENTS_PRO_YEARLY_PRICE_ID: "test-pro-yearly",
+		CREDITS_AI_TOKENS_100K_PRICE_ID: "test-100k",
+		CREDITS_AI_TOKENS_500K_PRICE_ID: "test-500k",
+		CREDITS_API_CALLS_50K_PRICE_ID: "test-50k",
+		NODE_ENV: "test",
+	},
+}));
+
 import {
 	FEATURE_CATALOG,
 	type FeatureEntry,

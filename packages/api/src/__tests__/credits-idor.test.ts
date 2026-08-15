@@ -36,7 +36,7 @@ const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
 
 const orgFixture = {
-	id: "org-1",
+	id: "12345678-1234-1234-8123-123456789abc",
 	name: "Acme",
 	slug: "acme",
 	createdAt: new Date("2024-01-01"),
@@ -45,7 +45,7 @@ const orgFixture = {
 };
 
 const foreignOrgFixture = {
-	id: "org-foreign",
+	id: "87654321-4321-4321-9123-210fedcba987",
 	name: "Foreign Corp",
 	slug: "foreign",
 	createdAt: new Date("2024-01-01"),
@@ -75,13 +75,13 @@ describe("credits.balance — IDOR protection", () => {
 
 		await call(
 			creditsRouter.balance,
-			{ organizationId: "org-1" },
+			{ organizationId: "12345678-1234-1234-8123-123456789abc" },
 			{ context: authenticatedContext },
 		);
 
 		expect(getCreditBalanceSummary).toHaveBeenCalledWith({
 			userId: undefined,
-			organizationId: "org-1",
+			organizationId: "12345678-1234-1234-8123-123456789abc",
 		});
 	});
 
@@ -93,7 +93,7 @@ describe("credits.balance — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.balance,
-				{ organizationId: "org-foreign" },
+				{ organizationId: "87654321-4321-4321-9123-210fedcba987" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -107,7 +107,7 @@ describe("credits.balance — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.balance,
-				{ organizationId: "org-nonexistent" },
+				{ organizationId: "99999999-9999-1999-9123-999999999999" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -143,11 +143,14 @@ describe("credits.history — IDOR protection", () => {
 
 		await call(
 			creditsRouter.history,
-			{ organizationId: "org-1" },
+			{ organizationId: "12345678-1234-1234-8123-123456789abc" },
 			{ context: authenticatedContext },
 		);
 
-		expect(getCreditEventsForOrganization).toHaveBeenCalledWith("org-1", 50);
+		expect(getCreditEventsForOrganization).toHaveBeenCalledWith(
+			"12345678-1234-1234-8123-123456789abc",
+			50,
+		);
 		expect(getCreditEventsForUser).not.toHaveBeenCalled();
 	});
 
@@ -159,7 +162,7 @@ describe("credits.history — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.history,
-				{ organizationId: "org-foreign" },
+				{ organizationId: "87654321-4321-4321-9123-210fedcba987" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -174,7 +177,7 @@ describe("credits.history — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.history,
-				{ organizationId: "org-nonexistent" },
+				{ organizationId: "99999999-9999-1999-9123-999999999999" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -210,11 +213,13 @@ describe("credits.packages — IDOR protection", () => {
 
 		await call(
 			creditsRouter.packages,
-			{ organizationId: "org-1" },
+			{ organizationId: "12345678-1234-1234-8123-123456789abc" },
 			{ context: authenticatedContext },
 		);
 
-		expect(getCreditPackagesForOrganization).toHaveBeenCalledWith("org-1");
+		expect(getCreditPackagesForOrganization).toHaveBeenCalledWith(
+			"12345678-1234-1234-8123-123456789abc",
+		);
 		expect(getCreditPackagesForUser).not.toHaveBeenCalled();
 	});
 
@@ -226,7 +231,7 @@ describe("credits.packages — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.packages,
-				{ organizationId: "org-foreign" },
+				{ organizationId: "87654321-4321-4321-9123-210fedcba987" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -241,7 +246,7 @@ describe("credits.packages — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.packages,
-				{ organizationId: "org-nonexistent" },
+				{ organizationId: "99999999-9999-1999-9123-999999999999" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });

@@ -138,18 +138,13 @@ async function processSingleEvent(
 	);
 
 	if (existing) {
-		// If the existing purchase has no userId but this event does,
-		// update it (covers the case where subscription.created arrived
-		// before checkout.completed and metadata wasn't on the subscription).
-		if (!existing.userId && userId) {
-			await updatePurchase({ id: existing.id, userId, organizationId });
-		}
 		await updateExistingPurchase(
 			existing.id,
 			event,
 			existing.status,
 			userId,
 			organizationId,
+			!existing.userId && userId ? userId : null,
 		);
 		return;
 	}
@@ -285,6 +280,7 @@ async function updateExistingPurchase(
 	currentStatus: PurchaseStatusLiteral | string | null,
 	userId: string | null,
 	organizationId: string | null,
+	userIdToSet: string | null = null,
 ): Promise<void> {
 	// Protected statuses: don't let a renewal event undo a scheduled cancel
 	const currentStatusLit = currentStatus as PurchaseStatusLiteral;
@@ -309,6 +305,7 @@ async function updateExistingPurchase(
 		// Still update period end and product if present
 		await updatePurchase({
 			id: purchaseId,
+			...(userIdToSet && { userId: userIdToSet }),
 			...(event.currentPeriodEnd !== undefined && {
 				currentPeriodEnd: event.currentPeriodEnd,
 			}),
@@ -319,6 +316,7 @@ async function updateExistingPurchase(
 
 	await updatePurchase({
 		id: purchaseId,
+		...(userIdToSet && { userId: userIdToSet }),
 		...(resolvedStatus && { status: resolvedStatus }),
 		...(event.currentPeriodEnd !== undefined && {
 			currentPeriodEnd: event.currentPeriodEnd,
