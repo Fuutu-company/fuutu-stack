@@ -9,7 +9,17 @@
 			"popular": "Most popular",
 			"monthly": "Monthly",
 			"yearly": "Yearly",
-			"yearlyBadge": "Save 17%"
+			"yearlyBadge": "Save 17%",
+			"seats": "seats"
+		},
+		"seatSelector": {
+			"title": "Number of seats",
+			"seat": "seat",
+			"seats": "seats",
+			"perMonth": "/month",
+			"perYear": "/year",
+			"total": "Total",
+			"description": "You'll be billed for the number of seats you select. Seats auto-adjust when team members join or leave."
 		},
 		"planInterval": "{plan} · {interval}",
 		"features": {

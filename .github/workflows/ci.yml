@@ -142,7 +142,7 @@ jobs:
   # ─────────────────────────────────────────────────────────
   dependency-audit:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && github.repository == 'Fuutu-company/fuutu-stack'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

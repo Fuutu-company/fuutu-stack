@@ -17,7 +17,8 @@
 			"security": "Sicherheit",
 			"sessions": "Sitzungen",
 			"danger": "Gefahrenzone",
-			"billing": "Abrechnung"
+			"billing": "Abrechnung",
+			"credits": "Guthaben"
 		},
 		"profile": {
 			"title": "Profil",

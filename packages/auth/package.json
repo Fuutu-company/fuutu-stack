@@ -23,10 +23,7 @@
 		"@fuutu/env": "workspace:*",
 		"@fuutu/utils": "workspace:*",
 		"@better-auth/passkey": "catalog:",
-		"@polar-sh/better-auth": "catalog:",
-		"@polar-sh/sdk": "catalog:",
 		"better-auth": "catalog:",
-		"dotenv": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

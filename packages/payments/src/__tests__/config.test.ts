@@ -1,5 +1,6 @@
 import { config } from "@fuutu/config";
 import { describe, expect, it } from "vitest";
+
 import {
 	FEATURE_CATALOG,
 	type FeatureEntry,

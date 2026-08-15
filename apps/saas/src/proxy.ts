@@ -45,6 +45,11 @@ const PUBLIC_PREFIXES = [
 	// signature scheme + smoke test — security: public proxy bypass requires
 	// webhook signature validation.
 	"/api/webhooks",
+	// reason: OpenAPI docs are public by design — developers need to explore
+	// the API without authentication. The oRPC handler itself gates procedures
+	// via protectedProcedure where needed.
+	"/api/docs",
+	"/api/spec.json",
 	"/auth",
 	"/image-proxy",
 ] as const;
@@ -88,5 +93,6 @@ export default proxy;
 export const config = {
 	matcher: [
 		"/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+		"/api/:path*",
 	],
 };

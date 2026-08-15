@@ -1,4 +1,5 @@
 import { ProfileForm } from "@app/settings";
+import { env } from "@fuutu/env/saas";
 import { paymentsConfig } from "@fuutu/payments/config";
 import {
 	Button,
@@ -12,12 +13,14 @@ import {
 import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { CreditBalanceView } from "@/modules/app/credits/credit-balance-view";
 import { ChangePasswordForm } from "@/modules/app/settings/components/change-password-form";
 import { DeleteAccountBlock } from "@/modules/app/settings/components/delete-account-block";
 import { EmailChangeForm } from "@/modules/app/settings/components/email-change-form";
 import { PasskeysBlock } from "@/modules/app/settings/components/passkeys-block";
 import { SessionsBlock } from "@/modules/app/settings/components/sessions-block";
 import { TwoFactorBlock } from "@/modules/app/settings/components/two-factor-block";
+import { UserSettingsBilling } from "@/modules/app/settings/components/user-billing";
 
 const BASE_TABS: readonly string[] = [
 	"profile",
@@ -25,7 +28,7 @@ const BASE_TABS: readonly string[] = [
 	"sessions",
 	"danger",
 ];
-const ALL_TABS: readonly string[] = [...BASE_TABS, "billing"];
+const ALL_TABS: readonly string[] = [...BASE_TABS, "billing", "credits"];
 type Tab = (typeof ALL_TABS)[number];
 
 export default async function SettingsPage({
@@ -36,7 +39,12 @@ export default async function SettingsPage({
 	const t = await getTranslations("settings");
 	const { tab } = await searchParams;
 	const showBillingTab = paymentsConfig.billingAttachedTo === "user";
-	const validTabs = showBillingTab ? ALL_TABS : BASE_TABS;
+	const showCreditsTab = paymentsConfig.creditsEnabled;
+	const validTabs = [
+		...BASE_TABS,
+		...(showBillingTab ? (["billing"] as const) : []),
+		...(showCreditsTab ? (["credits"] as const) : []),
+	];
 	const activeTab: Tab = validTabs.includes(tab as Tab)
 		? (tab as Tab)
 		: "profile";
@@ -55,6 +63,9 @@ export default async function SettingsPage({
 					<TabsTrigger value="danger">{t("tabs.danger")}</TabsTrigger>
 					{showBillingTab && (
 						<TabsTrigger value="billing">{t("tabs.billing")}</TabsTrigger>
+					)}
+					{showCreditsTab && (
+						<TabsTrigger value="credits">{t("tabs.credits")}</TabsTrigger>
 					)}
 				</TabsList>
 
@@ -90,7 +101,7 @@ export default async function SettingsPage({
 				</TabsContent>
 
 				{showBillingTab && (
-					<TabsContent value="billing" className="mt-6">
+					<TabsContent value="billing" className="mt-6 space-y-6">
 						<Card>
 							<CardContent className="space-y-6 p-6 md:p-8">
 								<div>
@@ -114,6 +125,16 @@ export default async function SettingsPage({
 								</Button>
 							</CardContent>
 						</Card>
+						<UserSettingsBilling
+							priceIds={{
+								pro: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
+							}}
+						/>
+					</TabsContent>
+				)}
+				{showCreditsTab && (
+					<TabsContent value="credits" className="mt-6">
+						<CreditBalanceView />
 					</TabsContent>
 				)}
 			</Tabs>

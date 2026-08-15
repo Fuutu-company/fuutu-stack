@@ -6,7 +6,7 @@ import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const cancelSubscriptionSchema = z.object({
-	subscriptionId: z.string().min(1),
+	subscriptionId: z.string().min(1).max(200),
 });
 
 export const cancelSubscription = protectedProcedure
@@ -26,13 +26,13 @@ export const cancelSubscription = protectedProcedure
 			input.subscriptionId,
 		);
 		if (!purchase) {
-			throw new ORPCError("FORBIDDEN", { message: "Subscription not found" });
+			throw new ORPCError("NOT_FOUND", { message: "Subscription not found" });
 		}
 		if (purchase.organizationId) {
 			await requireOrgRole(
 				purchase.organizationId,
 				context.user.id,
-				"member",
+				"admin",
 				context.headers,
 			);
 		} else if (purchase.userId !== context.user.id) {

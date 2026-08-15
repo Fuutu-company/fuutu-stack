@@ -8,14 +8,25 @@ import {
 import { env } from "@fuutu/env/saas";
 import { checkLicense } from "@fuutu/license";
 import { createLogger } from "@fuutu/logs";
-import { getPaymentsWebhookHandler } from "@fuutu/payments";
+import { handlePaymentsWebhook } from "@fuutu/payments";
 import { pingTelemetry } from "@fuutu/telemetry";
-import { Hono } from "hono";
+import { Hono, type Context as HonoContext } from "hono";
 import { cors } from "hono/cors";
 import { createContext } from "./context";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
 
 const log = createLogger({ scope: "api" });
+
+const docsHandler = async (c: HonoContext) => {
+	const { matched, response } = await openApiHandler.handle(c.req.raw, {
+		prefix: "/api",
+		context: { session: null, headers: c.req.raw.headers as Headers },
+	});
+	if (matched) {
+		return c.newResponse(response.body, response);
+	}
+	return c.notFound();
+};
 
 // Boot-time license cache warm-up. Fire-and-forget so import time is
 // not blocked on the network. `checkLicense()` is fail-soft (5 s timeout,
@@ -75,7 +86,12 @@ export const app = new Hono()
 	// session to gate on. Do not move this below the `.use("*", createContext)`
 	// line or signature verification will break.
 	// BYPASS: provider HMAC signature over raw body — mounted before contextMiddleware, do not move
-	.all("/webhooks/payments", (c) => getPaymentsWebhookHandler()(c.req.raw))
+	.all("/webhooks/payments", (c) => handlePaymentsWebhook(c.req.raw))
+	// OpenAPI docs + spec: served before createContext so they render without a DB
+	// connection. The Scalar UI and spec are public — procedure-level auth still
+	// applies to actual API endpoints.
+	.get("/docs", docsHandler)
+	.get("/spec.json", docsHandler)
 	.use("*", async (c, next) => {
 		const context = await createContext({ context: c });
 		const isRpc = c.req.path.includes("/rpc/");

@@ -8,6 +8,9 @@
 			"default": "./src/index.ts"
 		}
 	},
+	"scripts": {
+		"test": "vitest"
+	},
 	"dependencies": {},
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",

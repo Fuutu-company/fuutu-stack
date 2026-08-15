@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generatorVersion": "unknown",
-  "generatedAt": "2026-08-05T22:27:50.980Z",
+  "generatedAt": "2026-08-15T00:28:02.002Z",
   "outputPath": "/Users/rushalmosa/repo/fuutu-stack/packages/db/prisma/zod",
   "files": [
     "index.ts"

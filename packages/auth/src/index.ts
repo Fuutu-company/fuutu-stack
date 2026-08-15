@@ -1,15 +1,16 @@
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import { db, prismaAuditSink } from "@fuutu/db";
+import { prismaAuditSink } from "@fuutu/db";
+import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
 import { createLogger, setAuditSink } from "@fuutu/logs";
-import { paymentsConfig } from "@fuutu/payments/config";
-import { checkout, polar, portal } from "@polar-sh/better-auth";
+import { createCustomerForUser } from "@fuutu/payments";
 import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import {
 	admin,
+	lastLoginMethod,
 	magicLink,
 	multiSession,
 	openAPI,
@@ -26,7 +27,6 @@ import {
 	syncSeatsForOrganization,
 } from "./hooks/payments-sync";
 import { sendEmail } from "./lib/email";
-import { polarClient } from "./lib/payments";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
 // Postgres `AuditLog` table. Safe to call multiple times — last writer wins.
@@ -221,6 +221,17 @@ const authOptions = {
 				},
 				after: async (user) => {
 					await logSignUp({ id: user.id });
+					// Create a customer record at the active payment provider.
+					// Best-effort: a provider failure must never abort sign-up.
+					try {
+						await createCustomerForUser({
+							id: user.id,
+							email: user.email,
+							name: user.name,
+						});
+					} catch (err) {
+						log.warn("create customer on signup failed", { err: String(err) });
+					}
 					// Welcome email (uses the `new-user` template).
 					// Best-effort: a delivery failure must never abort sign-up.
 					try {
@@ -324,6 +335,11 @@ const authOptions = {
 
 		multiSession(),
 
+		// Track the last authentication method (email, google, github, passkey,
+		// magic-link) in a cookie so the sign-in page can highlight the method
+		// the user used last time — prevents accidental duplicate accounts.
+		lastLoginMethod(),
+
 		...(authConfig.features.magicLink
 			? [
 					magicLink({
@@ -337,32 +353,6 @@ const authOptions = {
 								},
 							});
 						},
-					}),
-				]
-			: []),
-
-		// Polar plugin (v1 active payments provider).
-		// Only mounted when:
-		//   - paymentsConfig selects "polar" AND
-		//   - an access token + product id are configured.
-		// This keeps the dev experience tolerant: missing env vars do not
-		// crash the Better-Auth bootstrap, they just disable payments.
-		...(paymentsConfig.provider === "polar" &&
-		env.POLAR_ACCESS_TOKEN &&
-		env.POLAR_PRODUCT_ID
-			? [
-					polar({
-						client: polarClient,
-						createCustomerOnSignUp: true,
-						enableCustomerPortal: true,
-						use: [
-							checkout({
-								products: [{ productId: env.POLAR_PRODUCT_ID, slug: "pro" }],
-								successUrl: env.POLAR_SUCCESS_URL,
-								authenticatedUsersOnly: true,
-							}),
-							portal(),
-						],
 					}),
 				]
 			: []),

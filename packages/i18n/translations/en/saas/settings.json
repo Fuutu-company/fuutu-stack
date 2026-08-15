@@ -17,7 +17,8 @@
 			"security": "Security",
 			"sessions": "Sessions",
 			"danger": "Danger zone",
-			"billing": "Billing"
+			"billing": "Billing",
+			"credits": "Credits"
 		},
 		"profile": {
 			"title": "Profile",

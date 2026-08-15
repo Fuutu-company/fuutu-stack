@@ -46,6 +46,8 @@ export interface BuildPricingTiersOptions {
 	loadingId?: PlanId | null;
 	/** Per-plan disabled state (while another CTA is pending). */
 	allDisabled?: boolean;
+	/** Per-plan seat count for seat-based plans. */
+	seatCountFor?: (id: PlanId) => number | undefined;
 }
 
 /**
@@ -71,6 +73,8 @@ export interface BuiltPricingTier {
 	ctaHref?: string;
 	onCtaClick?: () => void;
 	disabled?: boolean;
+	/** Seat count for seat-based plans (e.g. "5 seats"). */
+	seatCount?: number;
 }
 
 /**
@@ -80,7 +84,15 @@ export interface BuiltPricingTier {
 export function buildPricingTiers(
 	options: BuildPricingTiersOptions,
 ): BuiltPricingTier[] {
-	const { audience, t, onCtaClick, hrefFor, loadingId, allDisabled } = options;
+	const {
+		audience,
+		t,
+		onCtaClick,
+		hrefFor,
+		loadingId,
+		allDisabled,
+		seatCountFor,
+	} = options;
 	const showKey = audience === "saas" ? "showInSaas" : "showInMarketing";
 
 	return PLAN_IDS.filter((id) => (PLANS[id] as Plan)[showKey]).map((planId) => {
@@ -113,6 +125,7 @@ export function buildPricingTiers(
 			onCtaClick:
 				onCtaClick && !ctaDisabled ? () => onCtaClick(planId) : undefined,
 			disabled: ctaDisabled || isLoading || (allDisabled ?? false),
+			seatCount: seatCountFor?.(planId),
 		};
 	});
 }
