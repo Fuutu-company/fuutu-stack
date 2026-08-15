@@ -1,8 +1,7 @@
 import {
-	createCreditEvent,
 	getCreditBalancesForOrganization,
 	getCreditBalancesForUser,
-	resetRecurringBalance,
+	resetRecurringBalancesTx,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
@@ -19,6 +18,8 @@ export const ResetRecurringCreditsSchema = z.object({
 /**
  * Reset recurring balances for a new billing period.
  * Called on subscription.renewed webhook or by a cron job.
+ *
+ * Wrapped in a single transaction to ensure all resets succeed or fail together.
  */
 export async function resetRecurringCredits(params: {
 	userId?: string;
@@ -35,21 +36,19 @@ export async function resetRecurringCredits(params: {
 			? await getCreditBalancesForOrganization(organizationId)
 			: [];
 
+	await resetRecurringBalancesTx({
+		balances,
+		userId,
+		organizationId,
+		newPeriodEnd,
+		newGranted,
+	});
+
 	for (const balance of balances) {
-		const newAmount = newGranted?.[balance.meterKey];
-		await resetRecurringBalance(balance.id, newPeriodEnd, newAmount);
-		await createCreditEvent({
-			userId: userId ?? null,
-			organizationId: organizationId ?? null,
-			meterKey: balance.meterKey,
-			amount: 0,
-			source: "reset",
-			reason: "period_reset",
-		});
 		log.info("reset recurring balance", {
 			meterKey: balance.meterKey,
 			newPeriodEnd,
-			newAmount,
+			newAmount: newGranted?.[balance.meterKey],
 		});
 	}
 }

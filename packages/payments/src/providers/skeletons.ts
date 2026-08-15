@@ -17,6 +17,7 @@ function makeSkeleton(id: string): PaymentProvider {
 		);
 	return {
 		id,
+		ownsSeatSync: false,
 		createCheckoutLink: () => reject("createCheckoutLink"),
 		createCustomerPortalLink: () => reject("createCustomerPortalLink"),
 		createCustomer: () => reject("createCustomer"),

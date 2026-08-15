@@ -20,6 +20,7 @@ export interface SeatSelectorProps {
 	onChange: (n: number) => void;
 	pricePerSeat: number;
 	currency: string;
+	currencySymbol: string;
 	interval?: "month" | "year";
 	translations: SeatSelectorTranslations;
 	className?: string;
@@ -32,7 +33,7 @@ export function SeatSelector({
 	seatCount,
 	onChange,
 	pricePerSeat,
-	currency,
+	currencySymbol,
 	interval = "month",
 	translations,
 	className,
@@ -57,7 +58,6 @@ export function SeatSelector({
 	};
 
 	const total = (pricePerSeat * seatCount) / 100; // Convert cents to dollars
-	const currencySymbol = currency === "usd" ? "$" : currency;
 	const intervalLabel =
 		interval === "month" ? translations.perMonth : translations.perYear;
 	const seatLabel = seatCount === 1 ? translations.seat : translations.seats;

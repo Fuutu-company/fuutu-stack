@@ -46,7 +46,10 @@ export async function getCreditBalanceSummary(params: {
 		});
 		const topupTotal = packages.reduce((s, p) => s + p.amount, 0);
 		const topupConsumed = packages.reduce((s, p) => s + p.consumed, 0);
-		const topupRemaining = packages.reduce((s, p) => s + p.remaining, 0);
+		const topupRemaining = packages.reduce(
+			(s, p) => s + (p.amount - p.consumed),
+			0,
+		);
 
 		const recurringGranted = balance?.recurringGranted ?? 0;
 		const recurringConsumed = balance?.recurringConsumed ?? 0;

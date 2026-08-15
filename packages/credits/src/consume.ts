@@ -92,6 +92,10 @@ export async function consumeCredits(
 
 /**
  * Check if credits can be consumed without actually consuming them.
+ *
+ * This is a best-effort check for UI/display purposes. The actual consumeCredits
+ * function performs its own transactional validation, so a stale read here is not
+ * a security issue — it may only show outdated information to the user.
  */
 export async function checkCredits(params: {
 	userId?: string;
@@ -117,7 +121,7 @@ export async function checkCredits(params: {
 		meterKey,
 	});
 	const topupRemaining = packages.reduce(
-		(sum: number, p: { remaining: number }) => sum + p.remaining,
+		(sum: number, p) => sum + (p.amount - p.consumed),
 		0,
 	);
 	const totalRemaining = recurringRemaining + topupRemaining;

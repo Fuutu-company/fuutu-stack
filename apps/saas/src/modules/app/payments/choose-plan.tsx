@@ -6,7 +6,7 @@ import {
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
 import { PricingCompact, SeatSelector } from "@fuutu/ui";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { orpc } from "@/utils/orpc";
@@ -17,6 +17,7 @@ export function ChoosePlan({
 	priceIds: Partial<Record<PlanId, string>>;
 }) {
 	const t = useTranslations("payments");
+	const locale = useLocale();
 	const [loading, setLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [seatCount, setSeatCount] = useState(1);
@@ -78,6 +79,13 @@ export function ChoosePlan({
 
 	// Get the Pro plan for seat selector (it's the seat-based plan)
 	const proPlan = PLANS.pro;
+	const currencySymbol =
+		new Intl.NumberFormat(locale, {
+			style: "currency",
+			currency: proPlan.currency,
+		})
+			.formatToParts(0)
+			.find((part) => part.type === "currency")?.value ?? proPlan.currency;
 
 	return (
 		<div className="space-y-6">
@@ -93,6 +101,7 @@ export function ChoosePlan({
 					onChange={setSeatCount}
 					pricePerSeat={proPlan.amount}
 					currency={proPlan.currency}
+					currencySymbol={currencySymbol}
 					interval={proPlan.interval}
 					translations={{
 						title: t("seatSelector.title"),

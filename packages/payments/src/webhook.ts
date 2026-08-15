@@ -1,6 +1,9 @@
 /**
  * Shared webhook HTTP entry — provider-agnostic.
  *
+ * Webhooks bypass auth context: provider signs requests, no session needed.
+ * This handler is mounted before auth middleware in the API layer.
+ *
  * Mounted at `/api/webhooks/payments` in the SaaS app. This handler:
  *   1. Resolves the active provider
  *   2. Calls `provider.parseWebhook(request)` — provider verifies signature + parses

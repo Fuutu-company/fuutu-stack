@@ -6,24 +6,25 @@ export const getActiveCreditPackages = (params: {
 	organizationId?: string;
 	meterKey: string;
 }) =>
-	db.creditPackage.findMany({
-		where: {
-			AND: [
-				{
-					OR: [
-						{ userId: params.userId ?? null },
-						{ organizationId: params.organizationId ?? null },
-					],
-				},
-				{ meterKey: params.meterKey },
-				{ remaining: { gt: 0 } },
-				{
-					OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-				},
-			],
-		},
-		orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-	});
+	db.creditPackage
+		.findMany({
+			where: {
+				AND: [
+					{
+						OR: [
+							{ userId: params.userId ?? null },
+							{ organizationId: params.organizationId ?? null },
+						],
+					},
+					{ meterKey: params.meterKey },
+					{
+						OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+					},
+				],
+			},
+			orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+		})
+		.then((packages) => packages.filter((p) => p.amount - p.consumed > 0));
 
 export type CreateCreditPackageInput = {
 	userId?: string | null;
@@ -44,7 +45,6 @@ export const createCreditPackage = (
 			organizationId: input.organizationId ?? null,
 			meterKey: input.meterKey,
 			amount: input.amount,
-			remaining: input.amount,
 			expiresAt: input.expiresAt ?? null,
 			purchaseId: input.purchaseId ?? null,
 			priority: input.priority ?? 10,
@@ -56,7 +56,6 @@ export const consumeFromCreditPackage = (id: string, amount: number) =>
 		where: { id },
 		data: {
 			consumed: { increment: amount },
-			remaining: { decrement: amount },
 		},
 	});
 

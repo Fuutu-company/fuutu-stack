@@ -238,7 +238,6 @@ model CreditBalance {
   updatedAt      DateTime @updatedAt
 
   @@unique([userId, organizationId, meterKey])
-  @@check("userId IS NOT NULL OR organizationId IS NOT NULL")
   @@index([userId])
   @@index([organizationId])
   @@index([meterKey])
@@ -256,7 +255,6 @@ model CreditPackage {
   meterKey        String
   amount          Int      // total credits purchased
   consumed        Int      @default(0)
-  remaining       Int      // amount - consumed
 
   expiresAt       DateTime?  // null = never expires
   purchaseId      String?    // FK to Purchase (type=ONE_TIME)
@@ -268,7 +266,6 @@ model CreditPackage {
   @@index([organizationId])
   @@index([meterKey])
   @@index([expiresAt])
-  @@check("remaining >= 0")
   @@map("credit_package")
   @@schema("app")
 }

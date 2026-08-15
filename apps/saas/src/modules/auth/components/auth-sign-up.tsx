@@ -94,7 +94,7 @@ export function AuthSignUp({
 				return;
 			}
 
-			router.push(redirectTo as never);
+			router.push(redirectTo);
 			router.refresh();
 		} catch {
 			setError(t("signUpForm.errorUnexpected"));
@@ -141,7 +141,7 @@ export function AuthSignUp({
 					>
 						{t("signUpForm.privacy")}
 					</Link>
-					.
+					{t("signUpForm.termsPeriod")}
 				</>
 			}
 			{...props}

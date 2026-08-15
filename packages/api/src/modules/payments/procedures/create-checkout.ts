@@ -5,8 +5,8 @@ import { requireOrgRole } from "../../organizations/shared";
 import { sanitizePaymentUrl } from "../shared";
 
 const checkoutSchema = z.object({
-	priceId: z.string().min(1),
-	organizationId: z.string().optional(),
+	priceId: z.string().min(1).max(200),
+	organizationId: z.string().uuid().optional(),
 	successUrl: z.string().optional(),
 	cancelUrl: z.string().optional(),
 	seats: z.number().int().min(1).optional(),

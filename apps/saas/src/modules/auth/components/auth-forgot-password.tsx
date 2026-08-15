@@ -38,7 +38,7 @@ export function AuthForgotPassword({
 			});
 			setSubmitted(true);
 		} catch {
-			setError(t("forgotPasswordForm.error"));
+			setError(t("forgotPasswordForm.errorUnexpected"));
 		} finally {
 			setIsLoading(false);
 		}

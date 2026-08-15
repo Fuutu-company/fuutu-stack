@@ -158,10 +158,19 @@ export const consumeCreditsTx = (params: {
 		// 1. Consume from recurring first
 		if (recurringRemaining > 0 && remainingToConsume > 0) {
 			const fromRecurring = Math.min(recurringRemaining, remainingToConsume);
-			await tx.creditBalance.update({
-				where: { id: balance.id },
+			// Use conditional updateMany to prevent double-spend race condition
+			const result = await tx.creditBalance.updateMany({
+				where: {
+					id: balance.id,
+					recurringConsumed: {
+						lte: balance.recurringGranted - fromRecurring,
+					},
+				},
 				data: { recurringConsumed: { increment: fromRecurring } },
 			});
+			if (result.count === 0) {
+				throw new Error("Insufficient credits (concurrent consume)");
+			}
 			await tx.creditEvent.create({
 				data: {
 					userId: userId ?? null,
@@ -188,7 +197,6 @@ export const consumeCreditsTx = (params: {
 							],
 						},
 						{ meterKey },
-						{ remaining: { gt: 0 } },
 						{
 							OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
 						},
@@ -196,16 +204,25 @@ export const consumeCreditsTx = (params: {
 				},
 				orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
 			});
-			for (const pkg of packages) {
+			const activePackages = packages.filter((p) => p.amount - p.consumed > 0);
+			for (const pkg of activePackages) {
 				if (remainingToConsume <= 0) break;
-				const fromPkg = Math.min(pkg.remaining, remainingToConsume);
-				await tx.creditPackage.update({
-					where: { id: pkg.id },
+				const fromPkg = Math.min(pkg.amount - pkg.consumed, remainingToConsume);
+				// Use conditional updateMany to prevent double-spend race condition
+				const result = await tx.creditPackage.updateMany({
+					where: {
+						id: pkg.id,
+						consumed: { lte: pkg.amount - fromPkg },
+					},
 					data: {
 						consumed: { increment: fromPkg },
-						remaining: { decrement: fromPkg },
 					},
 				});
+				if (result.count === 0) {
+					throw new Error(
+						"Insufficient credits (concurrent consume from package)",
+					);
+				}
 				await tx.creditEvent.create({
 					data: {
 						userId: userId ?? null,
@@ -264,7 +281,6 @@ export const consumeCreditsTx = (params: {
 							],
 						},
 						{ meterKey },
-						{ remaining: { gt: 0 } },
 						{
 							OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
 						},
@@ -272,7 +288,7 @@ export const consumeCreditsTx = (params: {
 				},
 			});
 			const finalTopup = packages.reduce(
-				(sum: number, p: { remaining: number }) => sum + p.remaining,
+				(sum: number, p) => sum + (p.amount - p.consumed),
 				0,
 			);
 			return {
@@ -305,7 +321,6 @@ export const consumeCreditsTx = (params: {
 						],
 					},
 					{ meterKey },
-					{ remaining: { gt: 0 } },
 					{
 						OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
 					},
@@ -313,7 +328,7 @@ export const consumeCreditsTx = (params: {
 			},
 		});
 		const finalTopup = packages.reduce(
-			(sum: number, p: { remaining: number }) => sum + p.remaining,
+			(sum: number, p) => sum + (p.amount - p.consumed),
 			0,
 		);
 
@@ -348,7 +363,8 @@ export const grantRecurringCreditsTx = (params: {
 		});
 
 		if (existing) {
-			await tx.creditBalance.update({
+			// Use updateMany to ensure row still exists (atomic operation)
+			const result = await tx.creditBalance.updateMany({
 				where: { id: existing.id },
 				data: {
 					recurringGranted: amount,
@@ -356,6 +372,9 @@ export const grantRecurringCreditsTx = (params: {
 					recurringPeriodEnd: periodEnd,
 				},
 			});
+			if (result.count === 0) {
+				throw new Error("Failed to grant credits (balance not found)");
+			}
 		} else {
 			await tx.creditBalance.create({
 				data: {
@@ -408,7 +427,6 @@ export const grantTopUpCreditsTx = (params: {
 				organizationId: organizationId ?? null,
 				meterKey,
 				amount,
-				remaining: amount,
 				expiresAt: expiresAt ?? null,
 				purchaseId: purchaseId ?? null,
 				priority: priority ?? 10,
@@ -425,5 +443,39 @@ export const grantTopUpCreditsTx = (params: {
 				reason: "topup_purchase",
 			},
 		});
+	});
+};
+
+export const resetRecurringBalancesTx = async (params: {
+	balances: CreditBalance[];
+	userId?: string;
+	organizationId?: string;
+	newPeriodEnd: Date;
+	newGranted?: Record<string, number>;
+}): Promise<void> => {
+	const { balances, userId, organizationId, newPeriodEnd, newGranted } = params;
+
+	await db.$transaction(async (tx) => {
+		for (const balance of balances) {
+			const newAmount = newGranted?.[balance.meterKey];
+			await tx.creditBalance.update({
+				where: { id: balance.id },
+				data: {
+					recurringConsumed: 0,
+					recurringPeriodEnd: newPeriodEnd,
+					...(newAmount !== undefined && { recurringGranted: newAmount }),
+				},
+			});
+			await tx.creditEvent.create({
+				data: {
+					userId: userId ?? null,
+					organizationId: organizationId ?? null,
+					meterKey: balance.meterKey,
+					amount: 0,
+					source: "reset",
+					reason: "period_reset",
+				},
+			});
+		}
 	});
 };

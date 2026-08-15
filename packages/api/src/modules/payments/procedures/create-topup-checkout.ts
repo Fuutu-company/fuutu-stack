@@ -10,7 +10,7 @@ import { requireOrgRole } from "../../organizations/shared";
 import { sanitizePaymentUrl } from "../shared";
 
 const topupSchema = z.object({
-	topupId: z.string().min(1),
+	topupId: z.string().min(1).max(200),
 	organizationId: z.string().uuid().optional(),
 	successUrl: z.string().optional(),
 	cancelUrl: z.string().optional(),

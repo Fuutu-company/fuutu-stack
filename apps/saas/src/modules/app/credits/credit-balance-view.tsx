@@ -3,7 +3,7 @@
 import { createLogger } from "@fuutu/logs";
 import { Badge, Button, Card, CardContent, Progress } from "@fuutu/ui";
 import { Coins } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { orpc } from "@/utils/orpc";
@@ -40,6 +40,7 @@ type CreditEvent = {
 
 export function CreditBalanceView() {
 	const t = useTranslations("credits");
+	const locale = useLocale();
 	const [balances, setBalances] = useState<CreditBalanceSummary[]>([]);
 	const [history, setHistory] = useState<CreditEvent[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -187,7 +188,7 @@ export function CreditBalanceView() {
 											{t(`source.${event.source}`) || event.source}
 										</p>
 										<p className="text-muted-foreground text-xs">
-											{new Date(event.createdAt).toLocaleString()}
+											{new Date(event.createdAt).toLocaleString(locale)}
 										</p>
 									</div>
 									<Badge variant={event.amount > 0 ? "default" : "destructive"}>

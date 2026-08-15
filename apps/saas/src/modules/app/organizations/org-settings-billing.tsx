@@ -16,7 +16,7 @@ import {
 	SeatSelector,
 } from "@fuutu/ui";
 import { CreditCard, ExternalLink } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { orpc } from "@/utils/orpc";
@@ -48,6 +48,7 @@ export function OrgSettingsBilling({
 }) {
 	const t = useTranslations();
 	const tp = useTranslations("payments");
+	const locale = useLocale();
 	const { data: activeOrg } = authClient.useActiveOrganization();
 	const [org, setOrg] = useState<FullOrg | null>(null);
 	const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
@@ -200,6 +201,13 @@ export function OrgSettingsBilling({
 
 	// Get the Pro plan for seat selector (it's the seat-based plan)
 	const proPlan = PLANS.pro;
+	const currencySymbol =
+		new Intl.NumberFormat(locale, {
+			style: "currency",
+			currency: proPlan.currency,
+		})
+			.formatToParts(0)
+			.find((part) => part.type === "currency")?.value ?? proPlan.currency;
 
 	return (
 		<div className="space-y-6">
@@ -282,6 +290,7 @@ export function OrgSettingsBilling({
 					onChange={setSeatCount}
 					pricePerSeat={proPlan.amount}
 					currency={proPlan.currency}
+					currencySymbol={currencySymbol}
 					interval={proPlan.interval}
 					translations={{
 						title: tp("seatSelector.title"),

@@ -64,7 +64,7 @@ export function AuthSignIn({
 				return;
 			}
 
-			router.push(redirectTo as never);
+			router.push(redirectTo);
 			router.refresh();
 		} catch {
 			setError(t("signInForm.errorUnexpected"));
@@ -148,7 +148,7 @@ export function AuthSignIn({
 					>
 						{t("signInForm.privacy")}
 					</Link>
-					.
+					{t("signInForm.termsPeriod")}
 				</>
 			}
 			{...props}

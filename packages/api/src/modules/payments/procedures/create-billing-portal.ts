@@ -7,7 +7,7 @@ import { requireOrgRole } from "../../organizations/shared";
 import { sanitizePaymentUrl } from "../shared";
 
 const portalSchema = z.object({
-	organizationId: z.string().optional(),
+	organizationId: z.string().uuid().optional(),
 	returnUrl: z.string().optional(),
 });
 

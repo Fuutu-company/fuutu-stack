@@ -6,7 +6,7 @@ import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const cancelSubscriptionSchema = z.object({
-	subscriptionId: z.string().min(1),
+	subscriptionId: z.string().min(1).max(200),
 });
 
 export const cancelSubscription = protectedProcedure
