@@ -100,7 +100,7 @@ catalog:
   vitest: ^4.1.10
   "@vitest/coverage-v8": ^4.1.10
   "@vitest/ui": ^4.1.10
-  vite: ^7.3.6
+  vite: ^8.2.1
   # Tooling / Asset pipeline
   sharp: ^0.35.3
   "cross-env": ^10.1.0
