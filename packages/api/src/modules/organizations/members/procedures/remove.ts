@@ -1,12 +1,12 @@
 import { auth } from "@fuutu/auth";
-import { hasRoleAtLeast, toRbacRole } from "@fuutu/rbac";
+import { hasRoleAtLeast, PERMISSIONS, toRbacRole } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
 	protectedProcedure,
 } from "../../../../orpc";
-import { type OrgMember, requireOrgRole } from "../../shared";
+import { type OrgMember, requireOrgPermissionAccess } from "../../shared";
 
 const removeMemberSchema = z.object({
 	organizationId: z.string().min(1),
@@ -25,10 +25,10 @@ export const removeMember = protectedProcedure
 	})
 	.input(removeMemberSchema)
 	.handler(async ({ input, context }) => {
-		const org = await requireOrgRole(
+		const org = await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"admin",
+			PERMISSIONS.REMOVE_ORGANIZATION,
 			context.headers,
 		);
 		const actor = org.members?.find(

@@ -1,6 +1,6 @@
 import { countWebhooks, listWebhooks } from "@fuutu/db";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const listWebhooksSchema = z.object({
@@ -9,7 +9,7 @@ const listWebhooksSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listWebhooksProcedure = protectedProcedure
+export const listWebhooksProcedure = permissionProcedure("view:webhook")
 	.route({
 		method: "GET",
 		path: "/webhooks",

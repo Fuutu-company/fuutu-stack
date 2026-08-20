@@ -1,10 +1,11 @@
 import { auth } from "@fuutu/auth";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
 	protectedProcedure,
 } from "../../../../orpc";
-import { requireOrgRole } from "../../shared";
+import { requireOrgPermissionAccess } from "../../shared";
 
 const inviteMemberSchema = z.object({
 	organizationId: z.string().min(1),
@@ -24,11 +25,10 @@ export const inviteMember = protectedProcedure
 	})
 	.input(inviteMemberSchema)
 	.handler(async ({ input, context }) => {
-		const requiredRole = input.role === "owner" ? "owner" : "admin";
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			requiredRole,
+			PERMISSIONS.INVITE_ORGANIZATION,
 			context.headers,
 		);
 		const invitation = await auth.api.createInvitation({

@@ -1,7 +1,7 @@
 import { getUnreadCount } from "@fuutu/db";
-import { protectedProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc";
 
-export const getUnreadCountProcedure = protectedProcedure
+export const getUnreadCountProcedure = permissionProcedure("view:notification")
 	.route({
 		method: "GET",
 		path: "/notifications/unread-count",

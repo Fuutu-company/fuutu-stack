@@ -1,6 +1,7 @@
 import { resolveAIProvider } from "@fuutu/ai";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 
 const chatInputSchema = z.object({
 	messages: z
@@ -14,7 +15,7 @@ const chatInputSchema = z.object({
 		.max(50),
 });
 
-export const chat = protectedProcedure
+export const chat = permissionProcedure(PERMISSIONS.USE_AI)
 	.use(createRateLimitMiddleware({ endpoint: "aiChat" }))
 	.route({
 		method: "POST",

@@ -1,14 +1,14 @@
 import { getApiKey, revokeApiKey } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const apiKeyIdSchema = z.object({
 	id: z.string().uuid(),
 });
 
-export const revokeApiKeyProcedure = protectedProcedure
+export const revokeApiKeyProcedure = permissionProcedure("delete:api-key")
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",

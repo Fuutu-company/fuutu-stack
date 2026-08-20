@@ -1,13 +1,13 @@
 import { getCreditBalanceSummary } from "@fuutu/credits";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { permissionProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const balanceSchema = z.object({
 	organizationId: z.string().uuid().optional(),
 });
 
-export const getBalance = protectedProcedure
+export const getBalance = permissionProcedure("view:credit")
 	.route({
 		method: "GET",
 		path: "/credits/balance",
@@ -19,10 +19,10 @@ export const getBalance = protectedProcedure
 	.input(balanceSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
+				"view:credit",
 				context.headers,
 			);
 		}

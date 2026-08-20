@@ -1,6 +1,6 @@
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const BLOCKED_EXTENSIONS: readonly string[] = [
@@ -47,7 +47,7 @@ const uploadCreatePresignedSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const createPresigned = protectedProcedure
+export const createPresigned = permissionProcedure("view:storage")
 	.use(createRateLimitMiddleware({ endpoint: "storageMutation" }))
 	.route({
 		method: "POST",

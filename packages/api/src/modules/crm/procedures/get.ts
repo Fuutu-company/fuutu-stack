@@ -1,15 +1,15 @@
 import { getContact } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { permissionProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const getContactSchema = z.object({
 	id: z.string().min(1),
 	organizationId: z.string().min(1),
 });
 
-export const getContactProcedure = protectedProcedure
+export const getContactProcedure = permissionProcedure("view:crm")
 	.route({
 		method: "GET",
 		path: "/crm/contacts/{id}",
@@ -19,10 +19,10 @@ export const getContactProcedure = protectedProcedure
 	})
 	.input(getContactSchema)
 	.handler(async ({ input, context }) => {
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"member",
+			"view:crm",
 			context.headers,
 		);
 		const contact = await getContact(input.id, input.organizationId);

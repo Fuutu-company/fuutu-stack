@@ -1,13 +1,15 @@
 import { markRead } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 
 const markReadSchema = z.object({
 	id: z.string().min(1),
 });
 
-export const markNotificationReadProcedure = protectedProcedure
+export const markNotificationReadProcedure = permissionProcedure(
+	"update:notification",
+)
 	.use(createRateLimitMiddleware({ endpoint: "notificationMutation" }))
 	.route({
 		method: "POST",

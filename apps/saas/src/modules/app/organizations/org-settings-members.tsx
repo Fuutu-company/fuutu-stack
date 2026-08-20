@@ -2,7 +2,13 @@
 
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
-import { hasRoleAtLeast, toRbacRole } from "@fuutu/rbac";
+import {
+	AccessControl,
+	DEFAULT_ACCESS_POLICY,
+	hasPermission,
+	PERMISSIONS,
+	toRbacRole,
+} from "@fuutu/rbac";
 import {
 	Button,
 	Card,
@@ -19,6 +25,8 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 const log = createLogger({ scope: "org-members" });
+
+const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
 
 const ORG_ROLE_OWNER = "owner";
 
@@ -61,7 +69,11 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 		(m) => m.userId === currentUserId,
 	)?.role;
 	const canManageMembers = currentUserRole
-		? hasRoleAtLeast(toRbacRole(currentUserRole), "admin")
+		? hasPermission(
+				ac,
+				toRbacRole(currentUserRole),
+				PERMISSIONS.INVITE_ORGANIZATION,
+			)
 		: false;
 
 	const roleLabel: Record<string, string> = {

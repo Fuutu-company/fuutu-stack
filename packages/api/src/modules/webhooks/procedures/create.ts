@@ -1,6 +1,6 @@
 import { createWebhook } from "@fuutu/db";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const createWebhookSchema = z.object({
@@ -9,7 +9,7 @@ const createWebhookSchema = z.object({
 	events: z.array(z.string().min(1)).min(1),
 });
 
-export const createWebhookProcedure = protectedProcedure
+export const createWebhookProcedure = permissionProcedure("create:webhook")
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "POST",

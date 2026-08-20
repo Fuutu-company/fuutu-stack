@@ -2,11 +2,11 @@ import { deleteConversation } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import {
 	createRateLimitMiddleware,
-	protectedProcedure,
+	permissionProcedure,
 } from "../../../../orpc";
 import { conversationIdSchema } from "../../shared";
 
-export const deleteConversationProcedure = protectedProcedure
+export const deleteConversationProcedure = permissionProcedure("delete:chat")
 	.use(createRateLimitMiddleware({ endpoint: "chatConversation" }))
 	.route({
 		method: "DELETE",

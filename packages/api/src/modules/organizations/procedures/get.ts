@@ -2,10 +2,10 @@ import { auth } from "@fuutu/auth";
 import { getOrganizationBySlug } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc";
 import { requireOrgRole, slugSchema } from "../shared";
 
-export const getOrganization = protectedProcedure
+export const getOrganization = permissionProcedure("view:organization")
 	.route({
 		method: "GET",
 		path: "/organizations/{slug}",

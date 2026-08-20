@@ -1,6 +1,6 @@
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const fileDeleteSchema = z.object({
@@ -14,7 +14,7 @@ const fileDeleteSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const deleteObject = protectedProcedure
+export const deleteObject = permissionProcedure("delete:storage")
 	.use(createRateLimitMiddleware({ endpoint: "storageMutation" }))
 	.route({
 		method: "DELETE",

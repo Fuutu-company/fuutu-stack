@@ -1,7 +1,7 @@
 import { countContacts, listContacts } from "@fuutu/db";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { permissionProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const listContactsSchema = z.object({
 	organizationId: z.string().min(1),
@@ -11,7 +11,7 @@ const listContactsSchema = z.object({
 	search: z.string().optional(),
 });
 
-export const listContactsProcedure = protectedProcedure
+export const listContactsProcedure = permissionProcedure("view:crm")
 	.route({
 		method: "GET",
 		path: "/crm/contacts",
@@ -22,10 +22,10 @@ export const listContactsProcedure = protectedProcedure
 	})
 	.input(listContactsSchema)
 	.handler(async ({ input, context }) => {
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"member",
+			"view:crm",
 			context.headers,
 		);
 		const skip = (input.page - 1) * input.limit;

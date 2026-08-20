@@ -2,16 +2,16 @@ import { createConversation } from "@fuutu/db";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
-	protectedProcedure,
+	permissionProcedure,
 } from "../../../../orpc";
-import { requireOrgRole } from "../../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const createConversationSchema = z.object({
 	title: z.string().min(1).max(200).optional(),
 	organizationId: z.string().optional(),
 });
 
-export const createConversationProcedure = protectedProcedure
+export const createConversationProcedure = permissionProcedure("create:chat")
 	.use(createRateLimitMiddleware({ endpoint: "chatConversation" }))
 	.route({
 		method: "POST",
@@ -24,10 +24,10 @@ export const createConversationProcedure = protectedProcedure
 	.input(createConversationSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
+				"create:chat",
 				context.headers,
 			);
 		}

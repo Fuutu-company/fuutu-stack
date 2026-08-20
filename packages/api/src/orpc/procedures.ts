@@ -1,7 +1,15 @@
 import type { UserWithRole } from "@fuutu/auth/types";
-import { hasRoleAtLeast, toRbacRole } from "@fuutu/rbac";
+import {
+	AccessControl,
+	DEFAULT_ACCESS_POLICY,
+	hasPermission,
+	PERMISSIONS,
+	toRbacRole,
+} from "@fuutu/rbac";
 import { ORPCError, os } from "@orpc/server";
 import type { Context } from "../context";
+
+const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
 
 export const publicProcedure = os.$context<Context>();
 
@@ -21,22 +29,22 @@ export const protectedProcedure = publicProcedure.use(
 
 /**
  * Admin-only procedure
- * Requires authenticated user with admin-level role (owner or admin) via toRbacRole normalization.
+ * Requires authenticated user with VIEW_ADMIN permission.
  */
-export const adminProcedure = protectedProcedure.use(
-	async ({ context, next }) => {
+export const adminProcedure = permissionProcedure(PERMISSIONS.VIEW_ADMIN);
+
+/**
+ * Procedure that requires a specific permission.
+ * Checks the user's role against DEFAULT_ACCESS_POLICY via AccessControl.
+ */
+export function permissionProcedure(permission: string) {
+	return protectedProcedure.use(async ({ context, next }) => {
 		const role = toRbacRole(context.user.role);
-		if (!hasRoleAtLeast(role, "admin")) {
+		if (!hasPermission(ac, role, permission)) {
 			throw new ORPCError("FORBIDDEN", {
-				message: "Admin role required",
+				message: "Insufficient permissions",
 			});
 		}
-
-		return next({
-			context: {
-				user: context.user,
-				role,
-			},
-		});
-	},
-);
+		return next({ context: { user: context.user, role } });
+	});
+}

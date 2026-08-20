@@ -1,11 +1,12 @@
 import { auth } from "@fuutu/auth";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
 	protectedProcedure,
 } from "../../../../orpc";
-import { requireOrgRole } from "../../shared";
+import { requireOrgPermissionAccess } from "../../shared";
 
 const updateMemberRoleSchema = z.object({
 	organizationId: z.string().min(1),
@@ -24,10 +25,10 @@ export const updateMemberRole = protectedProcedure
 	})
 	.input(updateMemberRoleSchema)
 	.handler(async ({ input, context }) => {
-		const org = await requireOrgRole(
+		const org = await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"owner",
+			PERMISSIONS.UPDATE_ORGANIZATION,
 			context.headers,
 		);
 		const targetMember = org.members?.find((m) => m.id === input.memberId);

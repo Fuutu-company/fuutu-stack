@@ -1,7 +1,7 @@
 import { deleteWebhook } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const deleteWebhookSchema = z.object({
@@ -9,7 +9,7 @@ const deleteWebhookSchema = z.object({
 	organizationId: z.string().min(1),
 });
 
-export const deleteWebhookProcedure = protectedProcedure
+export const deleteWebhookProcedure = permissionProcedure("delete:webhook")
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "DELETE",

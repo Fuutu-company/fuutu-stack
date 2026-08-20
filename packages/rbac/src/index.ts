@@ -138,3 +138,5 @@ export function createPermissionChecker<TPermission extends Permission>(
 			permissions.every((p) => hasPermission(ac, role, p)),
 	};
 }
+
+export { DEFAULT_ACCESS_POLICY, PERMISSIONS } from "./policy";

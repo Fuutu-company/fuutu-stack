@@ -1,8 +1,11 @@
 import { auth } from "@fuutu/auth";
-import { isAdmin, type UserWithRole } from "@fuutu/auth/types";
+import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
+import { AccessControl, DEFAULT_ACCESS_POLICY, PERMISSIONS } from "@fuutu/rbac";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+
+const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
 
 /**
  * Get the current session (cached per request)
@@ -39,7 +42,9 @@ export async function requireAuth() {
 export async function requireAdmin() {
 	const session = await requireAuth();
 
-	if (!isAdmin(session.user as UserWithRole)) {
+	if (
+		!userHasPermission(ac, session.user as UserWithRole, PERMISSIONS.VIEW_ADMIN)
+	) {
 		redirect("/dashboard?error=forbidden");
 	}
 

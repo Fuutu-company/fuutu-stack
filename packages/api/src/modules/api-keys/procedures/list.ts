@@ -5,8 +5,8 @@ import {
 	listOrgApiKeys,
 } from "@fuutu/db";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { permissionProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const listApiKeysSchema = z.object({
 	organizationId: z.string().optional(),
@@ -14,7 +14,7 @@ const listApiKeysSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listApiKeysProcedure = protectedProcedure
+export const listApiKeysProcedure = permissionProcedure("view:api-key")
 	.route({
 		method: "GET",
 		path: "/api-keys",
@@ -27,10 +27,10 @@ export const listApiKeysProcedure = protectedProcedure
 	.handler(async ({ input, context }) => {
 		const skip = (input.page - 1) * input.limit;
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
+				"view:api-key",
 				context.headers,
 			);
 			const [items, total] = await Promise.all([

@@ -1,7 +1,9 @@
 import { markAllRead } from "@fuutu/db";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 
-export const markAllNotificationsReadProcedure = protectedProcedure
+export const markAllNotificationsReadProcedure = permissionProcedure(
+	"update:notification",
+)
 	.use(createRateLimitMiddleware({ endpoint: "notificationMutation" }))
 	.route({
 		method: "POST",

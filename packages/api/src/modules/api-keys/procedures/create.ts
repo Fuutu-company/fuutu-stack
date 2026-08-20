@@ -1,6 +1,6 @@
 import { createApiKey } from "@fuutu/db";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const createApiKeySchema = z.object({
@@ -9,7 +9,7 @@ const createApiKeySchema = z.object({
 	expiresAt: z.coerce.date().optional(),
 });
 
-export const createApiKeyProcedure = protectedProcedure
+export const createApiKeyProcedure = permissionProcedure("create:api-key")
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",

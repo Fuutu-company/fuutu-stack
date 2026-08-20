@@ -1,13 +1,13 @@
 import { auth } from "@fuutu/auth";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../shared";
 
 const deleteOrgSchema = z.object({
 	organizationId: z.string().min(1),
 });
 
-export const deleteOrganization = protectedProcedure
+export const deleteOrganization = permissionProcedure("delete:organization")
 	.use(createRateLimitMiddleware({ endpoint: "organizationMutation" }))
 	.route({
 		method: "DELETE",

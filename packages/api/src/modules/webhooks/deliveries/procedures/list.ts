@@ -1,7 +1,7 @@
 import { countDeliveries, getWebhook, listDeliveries } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../../../orpc";
+import { permissionProcedure } from "../../../../orpc";
 import { requireOrgRole } from "../../../organizations/shared";
 
 const listDeliveriesSchema = z.object({
@@ -11,7 +11,7 @@ const listDeliveriesSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listDeliveriesProcedure = protectedProcedure
+export const listDeliveriesProcedure = permissionProcedure("view:webhook")
 	.route({
 		method: "GET",
 		path: "/webhooks/{webhookId}/deliveries",

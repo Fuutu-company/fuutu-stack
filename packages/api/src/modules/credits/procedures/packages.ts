@@ -3,14 +3,14 @@ import {
 	getCreditPackagesForUser,
 } from "@fuutu/db";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { permissionProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const packagesSchema = z.object({
 	organizationId: z.string().uuid().optional(),
 });
 
-export const getPackages = protectedProcedure
+export const getPackages = permissionProcedure("view:credit")
 	.route({
 		method: "GET",
 		path: "/credits/packages",
@@ -22,10 +22,10 @@ export const getPackages = protectedProcedure
 	.input(packagesSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
+				"view:credit",
 				context.headers,
 			);
 		}

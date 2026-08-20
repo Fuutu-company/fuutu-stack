@@ -4,7 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
-	protectedProcedure,
+	permissionProcedure,
 } from "../../../../orpc";
 import { requireOrgRole } from "../../shared";
 
@@ -12,7 +12,7 @@ const revokeInvitationSchema = z.object({
 	invitationId: z.string().min(1),
 });
 
-export const revokeInvitation = protectedProcedure
+export const revokeInvitation = permissionProcedure("update:organization")
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
 		method: "DELETE",

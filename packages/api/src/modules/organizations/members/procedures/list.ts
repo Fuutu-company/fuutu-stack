@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure } from "../../../../orpc";
+import { permissionProcedure } from "../../../../orpc";
 import { requireOrgRole } from "../../shared";
 
 const listMembersSchema = z.object({
@@ -8,7 +8,7 @@ const listMembersSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listMembers = protectedProcedure
+export const listMembers = permissionProcedure("view:organization")
 	.route({
 		method: "GET",
 		path: "/organizations/{organizationId}/members",

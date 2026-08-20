@@ -7,7 +7,12 @@
  * thin helper type and a narrow guard so call sites don't have to cast.
  */
 
-import { hasRoleAtLeast, type Role, toRbacRole } from "@fuutu/rbac";
+import {
+	type AccessControl,
+	type Role,
+	hasPermission as rbacHasPermission,
+	toRbacRole,
+} from "@fuutu/rbac";
 
 export type UserRole = "admin" | "user";
 
@@ -39,9 +44,13 @@ export function getUserRole(user: UserWithRole | null | undefined): Role {
 }
 
 /**
- * Type guard: true when the user has admin privileges.
- * Normalizes comma-separated roles first — "admin,user" → admin.
+ * Check if a user has a specific permission via AccessControl.
+ * Normalizes the user's role first via `toRbacRole`.
  */
-export function isAdmin(user: UserWithRole | null | undefined): boolean {
-	return hasRoleAtLeast(toRbacRole(user?.role), "admin");
+export function userHasPermission(
+	ac: AccessControl,
+	user: UserWithRole | null | undefined,
+	permission: string,
+): boolean {
+	return rbacHasPermission(ac, toRbacRole(user?.role), permission);
 }

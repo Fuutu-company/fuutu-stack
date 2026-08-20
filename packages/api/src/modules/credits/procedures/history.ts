@@ -3,8 +3,8 @@ import {
 	getCreditEventsForUser,
 } from "@fuutu/db";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { permissionProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const historySchema = z.object({
 	organizationId: z.string().uuid().optional(),
@@ -12,7 +12,7 @@ const historySchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const getHistory = protectedProcedure
+export const getHistory = permissionProcedure("view:credit")
 	.route({
 		method: "GET",
 		path: "/credits/history",
@@ -23,10 +23,10 @@ export const getHistory = protectedProcedure
 	.input(historySchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
+				"view:credit",
 				context.headers,
 			);
 		}

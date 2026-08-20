@@ -64,10 +64,13 @@ function acceptsOrganizationIdFromInput(content: string): boolean {
 }
 
 /**
- * Check if a file calls `requireOrgRole` to verify membership.
+ * Check if a file calls `requireOrgRole` or `requireOrgPermissionAccess` to verify membership.
  */
 function callsRequireOrgRole(content: string): boolean {
-	return content.includes("requireOrgRole(");
+	return (
+		content.includes("requireOrgRole(") ||
+		content.includes("requireOrgPermissionAccess(")
+	);
 }
 
 /**

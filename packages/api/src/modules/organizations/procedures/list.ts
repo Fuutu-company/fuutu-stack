@@ -1,13 +1,13 @@
 import { auth } from "@fuutu/auth";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc";
 
 const listOrganizationsSchema = z.object({
 	page: z.number().int().min(1).default(1),
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listOrganizations = protectedProcedure
+export const listOrganizations = permissionProcedure("view:organization")
 	.route({
 		method: "GET",
 		path: "/organizations",

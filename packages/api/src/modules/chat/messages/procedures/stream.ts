@@ -5,7 +5,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
-	protectedProcedure,
+	permissionProcedure,
 } from "../../../../orpc";
 
 const log = createLogger({ scope: "chat-stream" });
@@ -18,7 +18,7 @@ const streamMessageSchema = z.object({
 	content: z.string().min(1).max(10000),
 });
 
-export const streamMessageProcedure = protectedProcedure
+export const streamMessageProcedure = permissionProcedure("view:chat")
 	.use(createRateLimitMiddleware({ endpoint: "aiChat" }))
 	.route({
 		method: "POST",

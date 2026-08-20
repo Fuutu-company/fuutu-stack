@@ -1,6 +1,6 @@
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const fileListSchema = z.object({
@@ -14,7 +14,7 @@ const fileListSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const listObjectsProcedure = protectedProcedure
+export const listObjectsProcedure = permissionProcedure("view:storage")
 	.route({
 		method: "GET",
 		path: "/storage/files",

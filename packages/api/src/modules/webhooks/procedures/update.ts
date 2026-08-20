@@ -1,7 +1,7 @@
 import { updateWebhook } from "@fuutu/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { requireOrgRole } from "../../organizations/shared";
 
 const updateWebhookSchema = z.object({
@@ -12,7 +12,7 @@ const updateWebhookSchema = z.object({
 	isActive: z.boolean().optional(),
 });
 
-export const updateWebhookProcedure = protectedProcedure
+export const updateWebhookProcedure = permissionProcedure("update:webhook")
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "PATCH",

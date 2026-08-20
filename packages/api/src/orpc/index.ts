@@ -2,6 +2,7 @@
 export { createRateLimitMiddleware } from "./middleware/rate-limit";
 export {
 	adminProcedure,
+	permissionProcedure,
 	protectedProcedure,
 	publicProcedure,
 } from "./procedures";
