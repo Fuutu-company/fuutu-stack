@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { analyticsConfig } from "../config";
 import { umamiAnalyticsProvider } from "../providers/umami";
 import { testAnalyticsProviderContract } from "./provider-contract.test";
 
@@ -39,5 +40,28 @@ describe("umami provider — window.umami integration", () => {
 		delete (globalThis as { umami?: unknown }).umami;
 		expect(() => umamiAnalyticsProvider.trackEvent("test")).not.toThrow();
 		expect(() => umamiAnalyticsProvider.trackPageview()).not.toThrow();
+	});
+
+	describe("getScriptProps", () => {
+		it("returns script props when websiteId is configured", () => {
+			const originalWebsiteId = analyticsConfig.websiteId;
+			analyticsConfig.websiteId = "test-website-id";
+			const props = umamiAnalyticsProvider.getScriptProps?.();
+			expect(props).not.toBeNull();
+			expect(props?.src).toContain("script.js");
+			expect(props?.strategy).toBe("afterInteractive");
+			expect(props?.attributes).toHaveProperty("data-website-id");
+			expect(props?.attributes).toHaveProperty("data-auto-track", "false");
+			expect(props?.attributes).toHaveProperty("defer", "");
+			analyticsConfig.websiteId = originalWebsiteId;
+		});
+
+		it("returns null when websiteId is not configured", () => {
+			const originalWebsiteId = analyticsConfig.websiteId;
+			analyticsConfig.websiteId = undefined;
+			const props = umamiAnalyticsProvider.getScriptProps?.();
+			expect(props).toBeNull();
+			analyticsConfig.websiteId = originalWebsiteId;
+		});
 	});
 });

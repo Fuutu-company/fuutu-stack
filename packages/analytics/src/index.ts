@@ -26,6 +26,7 @@ export type {
 	AnalyticsEventProps,
 	AnalyticsProvider,
 	AnalyticsProviderId,
+	AnalyticsScriptProps,
 } from "./types";
 
 const log = createLogger({ scope: "analytics:resolve" });

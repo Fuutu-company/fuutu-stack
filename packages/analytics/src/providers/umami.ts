@@ -1,4 +1,9 @@
-import type { AnalyticsEventProps, AnalyticsProvider } from "../types";
+import { analyticsConfig } from "../config";
+import type {
+	AnalyticsEventProps,
+	AnalyticsProvider,
+	AnalyticsScriptProps,
+} from "../types";
 
 interface UmamiGlobal {
 	track: (
@@ -37,5 +42,19 @@ export const umamiAnalyticsProvider: AnalyticsProvider = {
 		} catch {
 			// noop
 		}
+	},
+
+	getScriptProps(): AnalyticsScriptProps | null {
+		if (!analyticsConfig.websiteId) return null;
+		const src = analyticsConfig.scriptUrl ?? "https://cloud.umami.is/script.js";
+		return {
+			src,
+			strategy: "afterInteractive",
+			attributes: {
+				"data-website-id": analyticsConfig.websiteId,
+				"data-auto-track": "false",
+				defer: "",
+			},
+		};
 	},
 };
