@@ -72,6 +72,14 @@ export const env = createEnv({
 		// Observability
 		AXIOM_TOKEN: z.string().optional(),
 		AXIOM_DATASET: z.string().optional(),
+		// Logging
+		LOG_PROVIDER: z
+			.enum(["evlog", "console", "pino", "axiom", "noop"])
+			.default("evlog"),
+		LOG_AUDIT_SINK: z
+			.enum(["console", "db", "axiom", "noop"])
+			.default("console"),
+		LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 		// Fuutu Business License & Telemetry
 		FUUTU_LICENSE_KEY: z.string().optional(),
 		FUUTU_LICENSE_ENDPOINT: z.string().url().optional(),
@@ -150,6 +158,9 @@ export const env = createEnv({
 		MINIO_ROOT_PASSWORD: process.env.MINIO_ROOT_PASSWORD,
 		AXIOM_TOKEN: process.env.AXIOM_TOKEN,
 		AXIOM_DATASET: process.env.AXIOM_DATASET,
+		LOG_PROVIDER: process.env.LOG_PROVIDER,
+		LOG_AUDIT_SINK: process.env.LOG_AUDIT_SINK,
+		LOG_LEVEL: process.env.LOG_LEVEL,
 		FUUTU_LICENSE_KEY: process.env.FUUTU_LICENSE_KEY,
 		FUUTU_LICENSE_ENDPOINT: process.env.FUUTU_LICENSE_ENDPOINT,
 		FUUTU_TELEMETRY_ENDPOINT: process.env.FUUTU_TELEMETRY_ENDPOINT,

@@ -3,7 +3,7 @@ import { config } from "@fuutu/config";
 import { prismaAuditSink } from "@fuutu/db";
 import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
-import { createLogger, setAuditSink } from "@fuutu/logs";
+import { createLogger, logsConfig, setAuditSink } from "@fuutu/logs";
 import { createCustomerForUser } from "@fuutu/payments";
 import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
@@ -29,8 +29,12 @@ import {
 import { sendEmail } from "./lib/email";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
-// Postgres `AuditLog` table. Safe to call multiple times — last writer wins.
-setAuditSink(prismaAuditSink);
+// Postgres `AuditLog` table — but only when LOG_AUDIT_SINK=db (the default is
+// "console"). The logs package can't auto-resolve the db sink because
+// @fuutu/db depends on `pg` (Node-only) and would leak into client bundles.
+if (logsConfig.auditSink === "db") {
+	setAuditSink(prismaAuditSink);
+}
 
 const log = createLogger({ scope: "auth" });
 

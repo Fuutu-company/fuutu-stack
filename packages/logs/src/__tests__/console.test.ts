@@ -28,6 +28,13 @@ describe("console LogProvider — output surface", () => {
 		expect(warnSpy).toHaveBeenCalledWith("[x]", "careful", { a: 1 });
 		warnSpy.mockRestore();
 	});
+
+	it("handles empty context", () => {
+		const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+		consoleProvider.log("info", "hello", {});
+		expect(infoSpy).toHaveBeenCalledWith("", "hello");
+		infoSpy.mockRestore();
+	});
 });
 
 describe("console AuditSink — output surface", () => {

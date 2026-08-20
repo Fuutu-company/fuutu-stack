@@ -11,6 +11,9 @@
 	"scripts": {
 		"test": "vitest run"
 	},
+	"dependencies": {
+		"evlog": "catalog:"
+	},
 	"devDependencies": {
 		"@fuutu/test-utils": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",

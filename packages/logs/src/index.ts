@@ -1,4 +1,8 @@
+import { logsConfig } from "./config";
+import { axiomProvider } from "./providers/axiom";
 import { consoleProvider } from "./providers/console";
+import { evlogProvider } from "./providers/evlog";
+import { pinoProvider } from "./providers/pino";
 import { consoleAuditSink } from "./sinks/console";
 import type {
 	AuditEvent,
@@ -9,6 +13,8 @@ import type {
 	LogProvider,
 } from "./types";
 
+export type { AuditSinkId, LogProviderId } from "./config";
+export { logsConfig } from "./config";
 export type {
 	AuditEvent,
 	AuditLogger,
@@ -19,8 +25,32 @@ export type {
 	LogProvider,
 } from "./types";
 
-let activeProvider: LogProvider = consoleProvider;
-let activeAuditSink: AuditSink = consoleAuditSink;
+function resolveLogProvider(): LogProvider {
+	switch (logsConfig.provider) {
+		case "evlog":
+			return evlogProvider;
+		case "pino":
+			return pinoProvider;
+		case "axiom":
+			return axiomProvider;
+		default:
+			return consoleProvider;
+	}
+}
+
+function resolveAuditSink(): AuditSink {
+	// "db" sink is resolved at server boot (auth/src/index.ts) via
+	// setAuditSink(prismaAuditSink) — it can't live here because
+	// @fuutu/db depends on `pg` (Node-only) and would leak into
+	// client bundles. "axiom" skeleton falls back to console.
+	switch (logsConfig.auditSink) {
+		default:
+			return consoleAuditSink;
+	}
+}
+
+let activeProvider: LogProvider = resolveLogProvider();
+let activeAuditSink: AuditSink = resolveAuditSink();
 
 export function setLogProvider(provider: LogProvider): void {
 	activeProvider = provider;

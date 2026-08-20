@@ -9,9 +9,9 @@ const levelToMethod = {
 
 export const consoleProvider: LogProvider = {
 	log(level, message, context) {
-		const prefix = context.scope ? `[${context.scope}]` : "";
+		const prefix = context?.scope ? `[${context.scope}]` : "";
 		const method = levelToMethod[level];
-		if (context.meta && Object.keys(context.meta).length > 0) {
+		if (context?.meta && Object.keys(context.meta).length > 0) {
 			console[method](prefix, message, context.meta);
 		} else {
 			console[method](prefix, message);
