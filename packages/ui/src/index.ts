@@ -41,6 +41,7 @@ export * from "./components/textarea";
 export * from "./components/tooltip";
 
 // Hooks
+export * from "./hooks/use-locale-theme-image";
 export * from "./hooks/use-mobile";
 
 // Utilities

@@ -1439,6 +1439,9 @@ importers:
       lucide-react:
         specifier: 'catalog:'
         version: 1.28.0(react@19.2.8)
+      next-intl:
+        specifier: 'catalog:'
+        version: 4.13.5(@swc/helpers@0.5.23)(next@16.3.0(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@26.1.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
       next-themes:
         specifier: 'catalog:'
         version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -1479,15 +1482,6 @@ importers:
       clsx:
         specifier: 'catalog:'
         version: 2.1.1
-      next-intl:
-        specifier: 'catalog:'
-        version: 4.13.5(@swc/helpers@0.5.23)(next@16.3.0(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@26.1.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
-      next-themes:
-        specifier: 'catalog:'
-        version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react:
-        specifier: 'catalog:'
-        version: 19.2.8
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.6.0
@@ -1498,9 +1492,6 @@ importers:
       '@fuutu/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.18
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

@@ -30,24 +30,15 @@
 		},
 		"./rate-limit": {
 			"default": "./src/rate-limit.ts"
-		},
-		"./use-locale-theme-image": {
-			"default": "./src/use-locale-theme-image.ts"
 		}
 	},
 	"dependencies": {
 		"clsx": "catalog:",
 		"tailwind-merge": "catalog:"
 	},
-	"peerDependencies": {
-		"next-intl": "catalog:",
-		"next-themes": "catalog:",
-		"react": "catalog:"
-	},
 	"devDependencies": {
 		"@fuutu/test-utils": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
-		"@types/react": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:"
 	}
