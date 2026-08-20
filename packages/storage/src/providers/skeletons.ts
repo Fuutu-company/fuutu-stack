@@ -21,6 +21,5 @@ function makeSkeleton(id: string): StorageProvider {
 	};
 }
 
-export const r2StorageProvider = makeSkeleton("r2");
 export const supabaseStorageProvider = makeSkeleton("supabase");
 export const noopStorageProvider = makeSkeleton("noop");

@@ -14,6 +14,7 @@ import type {
 	SignedUploadResult,
 	StorageObject,
 	StorageProvider,
+	StorageStreamResult,
 } from "../types";
 
 /**
@@ -146,49 +147,60 @@ export const s3StorageProvider: StorageProvider = {
 				lastModified: o.LastModified,
 			}));
 	},
+
+	async getObjectStream(
+		bucket: string,
+		key: string,
+	): Promise<StorageStreamResult | null> {
+		const client = getClient();
+		try {
+			const res = await client.send(
+				new GetObjectCommand({ Bucket: bucket, Key: key }),
+			);
+			const body = res.Body as ReadableStream<Uint8Array> | undefined;
+			if (!body) return null;
+			return {
+				body,
+				contentType: res.ContentType ?? null,
+				contentLength: res.ContentLength ?? null,
+			};
+		} catch (err) {
+			const name = (err as { name?: string }).name ?? "";
+			if (name === "NoSuchKey" || name === "NotFound") {
+				log.warn("getObjectStream miss", { bucket, key });
+				return null;
+			}
+			log.error("getObjectStream failed", {
+				bucket,
+				key,
+				name,
+				err: String(err),
+			});
+			throw err;
+		}
+	},
 };
 
 /**
  * Stream an object directly from S3 — used by the image-proxy route in
  * `apps/saas` for private buckets (avoids exposing signed URLs on the
  * public web surface).
+ *
+ * @deprecated Use `s3StorageProvider.getObjectStream()` or `resolveStorageProvider().getObjectStream()` instead.
  */
 export async function fetchObjectStream(
 	bucket: string,
 	key: string,
 ): Promise<{
 	body: ReadableStream<Uint8Array>;
-	contentType: string | undefined;
-	contentLength: number | undefined;
+	contentType: string | null;
+	contentLength: number | null;
 } | null> {
-	const client = getClient();
-	try {
-		const res = await client.send(
-			new GetObjectCommand({ Bucket: bucket, Key: key }),
-		);
-		const body = res.Body as ReadableStream<Uint8Array> | undefined;
-		if (!body) return null;
-		return {
-			body,
-			contentType: res.ContentType,
-			contentLength: res.ContentLength,
-		};
-	} catch (err) {
-		// Distinguish legitimate 404 (object does not exist) from every
-		// other failure (AccessDenied, NoSuchBucket, network) — the
-		// image-proxy must not map a misconfigured IAM policy to a silent
-		// 404 because that obscures real ops problems.
-		const name = (err as { name?: string }).name ?? "";
-		if (name === "NoSuchKey" || name === "NotFound") {
-			log.warn("fetchObjectStream miss", { bucket, key });
-			return null;
-		}
-		log.error("fetchObjectStream failed", {
-			bucket,
-			key,
-			name,
-			err: String(err),
-		});
-		throw err;
-	}
+	const result = await s3StorageProvider.getObjectStream?.(bucket, key);
+	if (!result) return null;
+	return {
+		body: result.body,
+		contentType: result.contentType,
+		contentLength: result.contentLength,
+	};
 }

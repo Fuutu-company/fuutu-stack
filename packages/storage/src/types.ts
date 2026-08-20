@@ -52,10 +52,20 @@ export interface StorageObject {
 	lastModified: Date;
 }
 
+export interface StorageStreamResult {
+	body: ReadableStream<Uint8Array>;
+	contentType: string | null;
+	contentLength: number | null;
+}
+
 export interface StorageProvider {
 	readonly id: string;
 	getSignedUploadUrl(input: SignedUploadInput): Promise<SignedUploadResult>;
 	getSignedDownloadUrl(input: SignedDownloadInput): Promise<string>;
 	deleteObject(bucket: string, key: string): Promise<void>;
 	listObjects(bucket: string, prefix?: string): Promise<StorageObject[]>;
+	getObjectStream?(
+		bucket: string,
+		key: string,
+	): Promise<StorageStreamResult | null>;
 }

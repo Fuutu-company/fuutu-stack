@@ -3,7 +3,9 @@
  *
  * v1: S3-compatible provider with MinIO as the local dev backend.
  */
-export type StorageProviderId = "s3" | "r2" | "supabase" | "noop";
+import { env } from "@fuutu/env/saas";
+
+export type StorageProviderId = "s3" | "supabase" | "noop";
 
 export interface StorageBuckets {
 	avatars: string;
@@ -11,7 +13,7 @@ export interface StorageBuckets {
 }
 
 export interface StorageConfig {
-	provider: StorageProviderId;
+	provider: StorageProviderId | (() => StorageProviderId);
 	/** Default expiry for signed upload URLs (seconds). */
 	defaultUploadExpiry: number;
 	/** Default expiry for signed download URLs (seconds). */
@@ -26,7 +28,9 @@ export interface StorageConfig {
 }
 
 export const storageConfig: StorageConfig = {
-	provider: "s3",
+	get provider(): StorageProviderId {
+		return env.STORAGE_PROVIDER ?? "s3";
+	},
 	defaultUploadExpiry: 600,
 	defaultDownloadExpiry: 600,
 	buckets: {

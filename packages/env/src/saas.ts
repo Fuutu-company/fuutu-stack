@@ -57,6 +57,7 @@ export const env = createEnv({
 		// Payments — Provider selection
 		PAYMENTS_PROVIDER: z.enum(["polar", "stripe", "creem"]).optional(),
 		// Storage (S3 / MinIO)
+		STORAGE_PROVIDER: z.enum(["s3", "supabase", "noop"]).optional(),
 		S3_ENDPOINT: z.string().optional(),
 		S3_REGION: z.string().optional(),
 		S3_ACCESS_KEY_ID: z.string().optional(),
@@ -147,6 +148,7 @@ export const env = createEnv({
 			process.env.CREDITS_AI_TOKENS_500K_PRICE_ID,
 		CREDITS_API_CALLS_50K_PRICE_ID: process.env.CREDITS_API_CALLS_50K_PRICE_ID,
 		PAYMENTS_PROVIDER: process.env.PAYMENTS_PROVIDER,
+		STORAGE_PROVIDER: process.env.STORAGE_PROVIDER,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
 		S3_REGION: process.env.S3_REGION,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
