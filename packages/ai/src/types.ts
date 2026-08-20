@@ -30,4 +30,9 @@ export interface AIChatResponse {
 	role: "assistant";
 }
 
-export type AIProviderId = "google" | "openai" | "anthropic" | "noop";
+export type AIProviderId =
+	| "openrouter"
+	| "google"
+	| "openai"
+	| "anthropic"
+	| "noop";

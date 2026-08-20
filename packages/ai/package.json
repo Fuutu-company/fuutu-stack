@@ -15,6 +15,7 @@
 	"dependencies": {
 		"@ai-sdk/devtools": "catalog:",
 		"@ai-sdk/google": "catalog:",
+		"@ai-sdk/openai": "catalog:",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
 		"ai": "catalog:",

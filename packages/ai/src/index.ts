@@ -6,6 +6,7 @@ export { AnthropicProvider } from "./providers/anthropic";
 export { GoogleProvider } from "./providers/google";
 export { NoopProvider } from "./providers/noop";
 export { OpenAIProvider } from "./providers/openai";
+export { OpenRouterProvider } from "./providers/openrouter";
 export type {
 	AIChatOptions,
 	AIChatResponse,

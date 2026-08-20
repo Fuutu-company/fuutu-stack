@@ -16,8 +16,11 @@ export const env = createEnv({
 		GITHUB_CLIENT_SECRET: z.string().optional(),
 		GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
 		// AI
-		AI_PROVIDER: z.enum(["google", "openai", "anthropic", "noop"]).optional(),
+		AI_PROVIDER: z
+			.enum(["openrouter", "google", "openai", "anthropic", "noop"])
+			.optional(),
 		AI_API_KEY: z.string().optional(),
+		AI_BASE_URL: z.string().optional(),
 		AI_MODEL: z.string().optional(),
 		// Email
 		EMAIL_PROVIDER: z
@@ -128,6 +131,7 @@ export const env = createEnv({
 		GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 		AI_PROVIDER: process.env.AI_PROVIDER,
 		AI_API_KEY: process.env.AI_API_KEY,
+		AI_BASE_URL: process.env.AI_BASE_URL,
 		AI_MODEL: process.env.AI_MODEL,
 		NODE_ENV: process.env.NODE_ENV,
 		EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,

@@ -5,16 +5,21 @@ import { AnthropicProvider } from "./providers/anthropic";
 import { GoogleProvider } from "./providers/google";
 import { NoopProvider } from "./providers/noop";
 import { OpenAIProvider } from "./providers/openai";
+import { OpenRouterProvider } from "./providers/openrouter";
 import type { AIProvider, AIProviderId } from "./types";
 
 const log = createLogger({ scope: "ai:resolve" });
 
 /**
- * Resolve the API key for the google provider.
- * Falls back to the legacy `GOOGLE_GENERATIVE_AI_API_KEY` env var.
+ * Resolve the API key for the active provider.
+ * Falls back to the legacy `GOOGLE_GENERATIVE_AI_API_KEY` env var when the
+ * provider is `google` and `AI_API_KEY` is not set.
  */
-function resolveApiKey(): string | undefined {
-	return env.AI_API_KEY ?? env.GOOGLE_GENERATIVE_AI_API_KEY;
+function resolveApiKey(provider: AIProviderId): string | undefined {
+	if (provider === "google") {
+		return env.AI_API_KEY ?? env.GOOGLE_GENERATIVE_AI_API_KEY;
+	}
+	return env.AI_API_KEY;
 }
 
 /**
@@ -34,25 +39,50 @@ const openaiProvider = new OpenAIProvider();
 const anthropicProvider = new AnthropicProvider();
 
 let googleProvider: GoogleProvider | undefined;
+let openrouterProvider: OpenRouterProvider | undefined;
+
+function getGoogleProvider(): AIProvider {
+	const apiKey = resolveApiKey("google");
+	if (!apiKey) {
+		log.warn(
+			"AI_PROVIDER=google but AI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY) is not set — falling back to noop provider.",
+		);
+		return noopProvider;
+	}
+	if (!googleProvider) {
+		googleProvider = new GoogleProvider({
+			apiKey,
+			model: aiConfig.defaultModel,
+		});
+	}
+	return googleProvider;
+}
+
+function getOpenRouterProvider(): AIProvider {
+	const apiKey = resolveApiKey("openrouter");
+	if (!apiKey) {
+		log.warn(
+			"AI_PROVIDER=openrouter but AI_API_KEY is not set — falling back to noop provider.",
+		);
+		return noopProvider;
+	}
+	if (!openrouterProvider) {
+		openrouterProvider = new OpenRouterProvider({
+			apiKey,
+			baseURL: env.AI_BASE_URL,
+			model: aiConfig.defaultModel,
+			devtools: env.NODE_ENV === "development",
+		});
+	}
+	return openrouterProvider;
+}
 
 export function resolveAIProvider(): AIProvider {
 	switch (aiConfig.provider) {
-		case "google": {
-			const apiKey = resolveApiKey();
-			if (!apiKey) {
-				log.warn(
-					"AI_PROVIDER=google but AI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY) is not set — falling back to noop provider.",
-				);
-				return noopProvider;
-			}
-			if (!googleProvider) {
-				googleProvider = new GoogleProvider({
-					apiKey,
-					model: aiConfig.defaultModel,
-				});
-			}
-			return googleProvider;
-		}
+		case "openrouter":
+			return getOpenRouterProvider();
+		case "google":
+			return getGoogleProvider();
 		case "openai":
 			return openaiProvider;
 		case "anthropic":
@@ -69,22 +99,10 @@ export function resolveAIProvider(): AIProvider {
  */
 export function getAIProvider(id: AIProviderId): AIProvider {
 	switch (id) {
-		case "google": {
-			const apiKey = resolveApiKey();
-			if (!apiKey) {
-				log.warn(
-					"AI_PROVIDER=google but AI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY) is not set — falling back to noop provider.",
-				);
-				return noopProvider;
-			}
-			if (!googleProvider) {
-				googleProvider = new GoogleProvider({
-					apiKey,
-					model: aiConfig.defaultModel,
-				});
-			}
-			return googleProvider;
-		}
+		case "openrouter":
+			return getOpenRouterProvider();
+		case "google":
+			return getGoogleProvider();
 		case "openai":
 			return openaiProvider;
 		case "anthropic":

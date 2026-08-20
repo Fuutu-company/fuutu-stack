@@ -81,6 +81,7 @@ catalog:
   ai: ^7.0.51
   "@ai-sdk/devtools": ^1.0.10
   "@ai-sdk/google": ^4.0.33
+  "@ai-sdk/openai": ^4.0.33
   "@ai-sdk/react": ^4.0.54
   # DB
   "@prisma/client": ^7.9.1

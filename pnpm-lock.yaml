@@ -12,6 +12,9 @@ catalogs:
     '@ai-sdk/google':
       specifier: ^4.0.33
       version: 4.0.34
+    '@ai-sdk/openai':
+      specifier: ^4.0.33
+      version: 4.0.44
     '@ai-sdk/react':
       specifier: ^4.0.54
       version: 4.0.55
@@ -754,6 +757,9 @@ importers:
       '@ai-sdk/google':
         specifier: 'catalog:'
         version: 4.0.34(zod@4.4.3)
+      '@ai-sdk/openai':
+        specifier: 'catalog:'
+        version: 4.0.44(zod@4.4.3)
       '@fuutu/env':
         specifier: workspace:*
         version: link:../env
@@ -1168,9 +1174,6 @@ importers:
 
   packages/logs:
     dependencies:
-      '@fuutu/db':
-        specifier: workspace:*
-        version: link:../db
       evlog:
         specifier: 'catalog:'
         version: 2.26.0(@orpc/server@1.14.14)(ai@7.0.52(zod@4.4.3))(express@5.2.1)(hono@4.13.0)(next@16.3.0(@playwright/test@1.62.1)(@types/node@26.1.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@7.3.6(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.11)(yaml@2.9.0))
@@ -1559,14 +1562,30 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/openai@4.0.44':
+    resolution: {integrity: sha512-x3XjhKu5r7DKELWwE5WzCAKePkAqZXlgvat4eIiSm37MaQHk+n3qeJxmVcfqJWlQ2kkAld8+f7G3E3yjG+4ShQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider-utils@5.0.21':
     resolution: {integrity: sha512-Q4z27c5vqKuXZN65QuF7FVm+uvm3qxEioiQ+8c3s5xXlhbE1Y/SLGBB4BuF+UWia4KaDu2HmNpdR1RGW02/eGg==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/provider-utils@5.0.28':
+    resolution: {integrity: sha512-TnHUyd/rCYQqHg5RuiOaz/hUql6U+kbUaBW0Rp+0N5UhnAInA9CzzV0HXvuAAPwppDsK6fAx9Rd+tRawpJ/3pg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider@4.0.5':
     resolution: {integrity: sha512-9WAerTaPU2jcVi8dh8x27tySEuLur1Kfg7Go74GuCmsC/2MDSvrTkrK8ZrXWjryEevKfcPPmO1enveE7eqlzoA==}
+    engines: {node: '>=22'}
+
+  '@ai-sdk/provider@4.0.7':
+    resolution: {integrity: sha512-6or44XprPzKbr8zkmzosowSE0pxkvJcoojBL+mCZvPUt3kvXp3XSNqeVun9golb1acEfSo6yaEBRT18h2VU+1Q==}
     engines: {node: '>=22'}
 
   '@ai-sdk/react@4.0.55':
@@ -7648,6 +7667,12 @@ snapshots:
       pkce-challenge: 5.0.1
       zod: 4.4.3
 
+  '@ai-sdk/openai@4.0.44(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.7
+      '@ai-sdk/provider-utils': 5.0.28(zod@4.4.3)
+      zod: 4.4.3
+
   '@ai-sdk/provider-utils@5.0.21(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.5
@@ -7657,7 +7682,20 @@ snapshots:
       undici: 7.29.0
       zod: 4.4.3
 
+  '@ai-sdk/provider-utils@5.0.28(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.7
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.1.0
+      undici: 7.29.0
+      zod: 4.4.3
+
   '@ai-sdk/provider@4.0.5':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@4.0.7':
     dependencies:
       json-schema: 0.4.0
 

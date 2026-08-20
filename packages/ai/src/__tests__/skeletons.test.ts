@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AnthropicProvider } from "../providers/anthropic";
 import { NoopProvider } from "../providers/noop";
 import { OpenAIProvider } from "../providers/openai";
+import { OpenRouterProvider } from "../providers/openrouter";
 import { testAIProviderContract } from "./provider-contract.test";
 
 testAIProviderContract("openai", () => new OpenAIProvider(), {
@@ -16,6 +17,26 @@ testAIProviderContract("anthropic", () => new AnthropicProvider(), {
 
 testAIProviderContract("noop", () => new NoopProvider(), {
 	behavior: "resolves",
+});
+
+describe("openrouter provider — id and constructor", () => {
+	it("exposes id='openrouter'", () => {
+		const provider = new OpenRouterProvider({
+			apiKey: "test-key",
+		});
+		expect(provider.id).toBe("openrouter");
+	});
+
+	it("can be constructed with custom baseURL", () => {
+		expect(
+			() =>
+				new OpenRouterProvider({
+					apiKey: "test-key",
+					baseURL: "https://custom.example.com/v1",
+					model: "openai/gpt-4o-mini",
+				}),
+		).not.toThrow();
+	});
 });
 
 describe("noop provider — returns empty responses, never throws", () => {
