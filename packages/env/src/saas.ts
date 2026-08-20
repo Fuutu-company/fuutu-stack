@@ -22,6 +22,8 @@ export const env = createEnv({
 		AI_API_KEY: z.string().optional(),
 		AI_BASE_URL: z.string().optional(),
 		AI_MODEL: z.string().optional(),
+		// Cron
+		CRON_PROVIDER: z.enum(["inline", "trigger-dev"]).optional(),
 		// Email
 		EMAIL_PROVIDER: z
 			.enum([
@@ -133,6 +135,7 @@ export const env = createEnv({
 		AI_API_KEY: process.env.AI_API_KEY,
 		AI_BASE_URL: process.env.AI_BASE_URL,
 		AI_MODEL: process.env.AI_MODEL,
+		CRON_PROVIDER: process.env.CRON_PROVIDER,
 		NODE_ENV: process.env.NODE_ENV,
 		EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
 		EMAIL_FROM: process.env.EMAIL_FROM,

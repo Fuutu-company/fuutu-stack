@@ -16,6 +16,7 @@
 	},
 	"dependencies": {
 		"@fuutu/db": "workspace:*",
+		"@fuutu/env": "workspace:*",
 		"@fuutu/i18n": "workspace:*",
 		"@fuutu/logs": "workspace:*",
 		"@fuutu/notifications": "workspace:*",

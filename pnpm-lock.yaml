@@ -1010,6 +1010,9 @@ importers:
       '@fuutu/db':
         specifier: workspace:*
         version: link:../db
+      '@fuutu/env':
+        specifier: workspace:*
+        version: link:../env
       '@fuutu/i18n':
         specifier: workspace:*
         version: link:../i18n

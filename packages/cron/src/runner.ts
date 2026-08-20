@@ -1,53 +1,49 @@
 import { createLogger } from "@fuutu/logs";
-import { auditLogCleanupJob } from "./jobs/audit-log-cleanup";
-import { subscriptionReminderJob } from "./jobs/subscription-reminder";
-import { telemetryPingJob } from "./jobs/telemetry-ping";
-import { webhookRetryJob } from "./jobs/webhook-retry";
-import type { CronJob, CronJobResult } from "./types";
+import { cronConfig } from "./config";
+import { InlineJobRunner } from "./runners/inline";
+import { TriggerDevJobRunner } from "./runners/trigger-dev";
+import type { CronJobResult, JobRunner } from "./types";
 
-const log = createLogger({ scope: "cron:runner" });
+const log = createLogger({ scope: "cron:resolve" });
 
-const jobs: CronJob[] = [
-	webhookRetryJob,
-	auditLogCleanupJob,
-	subscriptionReminderJob,
-	telemetryPingJob,
-];
+const inlineRunner = new InlineJobRunner();
+const triggerDevRunner = new TriggerDevJobRunner();
 
 /**
- * Run a specific job by name.
+ * Resolve the active job runner from `cronConfig.runner`.
+ *
+ * Provider instances are cached as singletons (module-level) — consistent
+ * with mail/storage/ai. The inline runner is always available; the
+ * Trigger.dev runner is a skeleton that throws until wired up.
+ */
+export function resolveJobRunner(): JobRunner {
+	switch (cronConfig.runner) {
+		case "inline":
+			return inlineRunner;
+		case "trigger-dev":
+			return triggerDevRunner;
+		default:
+			throw new Error(`Unknown cron runner: ${cronConfig.runner}`);
+	}
+}
+
+/**
+ * Run a specific job by name via the active runner.
  */
 export async function runJob(name: string): Promise<CronJobResult> {
-	const job = jobs.find((j) => j.name === name);
-	if (!job) {
-		return {
-			success: false,
-			processed: 0,
-			errors: [`unknown job "${name}"`],
-		};
-	}
-	if (!job.enabled) {
-		log.info(`job "${name}" is disabled, skipping.`);
-		return { success: true, processed: 0, errors: [] };
-	}
-	return job.run();
+	return resolveJobRunner().run(name);
 }
 
 /**
- * Run all enabled jobs sequentially.
+ * Run all enabled jobs via the active runner.
  */
 export async function runAllJobs(): Promise<Record<string, CronJobResult>> {
-	const results: Record<string, CronJobResult> = {};
-	for (const job of jobs) {
-		if (!job.enabled) {
-			results[job.name] = { success: true, processed: 0, errors: [] };
-			continue;
-		}
-		results[job.name] = await job.run();
-	}
-	return results;
+	return resolveJobRunner().runAll();
 }
 
-export function listJobs(): CronJob[] {
-	return jobs;
+/**
+ * List all registered jobs via the active runner.
+ */
+export function listJobs() {
+	return resolveJobRunner().list();
 }

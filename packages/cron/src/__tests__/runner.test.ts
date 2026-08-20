@@ -1,14 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@fuutu/logs", () => ({
-	createLogger: () => ({
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		debug: vi.fn(),
-	}),
-}));
-
 vi.mock("@fuutu/webhooks", () => ({
 	processPendingDeliveries: vi.fn().mockResolvedValue({
 		processed: 3,
