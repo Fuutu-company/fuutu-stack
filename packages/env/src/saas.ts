@@ -79,9 +79,9 @@ export const env = createEnv({
 		AXIOM_TOKEN: z.string().optional(),
 		AXIOM_DATASET: z.string().optional(),
 		// Logging
-		LOG_PROVIDER: z
-			.enum(["evlog", "console", "pino", "axiom", "noop"])
-			.default("evlog"),
+		LOG_DRAIN: z
+			.enum(["console", "sentry", "axiom", "fs", "memory"])
+			.optional(),
 		LOG_AUDIT_SINK: z
 			.enum(["console", "db", "axiom", "noop"])
 			.default("console"),
@@ -167,7 +167,7 @@ export const env = createEnv({
 		MINIO_ROOT_PASSWORD: process.env.MINIO_ROOT_PASSWORD,
 		AXIOM_TOKEN: process.env.AXIOM_TOKEN,
 		AXIOM_DATASET: process.env.AXIOM_DATASET,
-		LOG_PROVIDER: process.env.LOG_PROVIDER,
+		LOG_DRAIN: process.env.LOG_DRAIN,
 		LOG_AUDIT_SINK: process.env.LOG_AUDIT_SINK,
 		LOG_LEVEL: process.env.LOG_LEVEL,
 		FUUTU_LICENSE_KEY: process.env.FUUTU_LICENSE_KEY,
