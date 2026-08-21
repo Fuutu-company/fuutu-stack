@@ -52,7 +52,7 @@ export const umamiAnalyticsProvider: AnalyticsProvider = {
 			strategy: "afterInteractive",
 			attributes: {
 				"data-website-id": analyticsConfig.websiteId,
-				"data-auto-track": "false",
+				"data-auto-track": "true",
 				defer: "",
 			},
 		};

@@ -51,7 +51,7 @@ describe("umami provider — window.umami integration", () => {
 			expect(props?.src).toContain("script.js");
 			expect(props?.strategy).toBe("afterInteractive");
 			expect(props?.attributes).toHaveProperty("data-website-id");
-			expect(props?.attributes).toHaveProperty("data-auto-track", "false");
+			expect(props?.attributes).toHaveProperty("data-auto-track", "true");
 			expect(props?.attributes).toHaveProperty("defer", "");
 			analyticsConfig.websiteId = originalWebsiteId;
 		});
