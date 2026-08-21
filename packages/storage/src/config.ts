@@ -2,6 +2,12 @@
  * Storage configuration — owned by @fuutu/storage.
  *
  * v1: S3-compatible provider with MinIO as the local dev backend.
+ *
+ * Bucket names are env-driven so each environment (dev, staging, prod)
+ * can point to its own physical buckets. This is critical when multiple
+ * environments share the same S3-compatible service (e.g. a single MinIO
+ * instance): dev buckets can be named `dev_avatars`, prod buckets
+ * `prod_avatars`, etc. — all controlled via env vars, no code changes.
  */
 import { env } from "@fuutu/env/saas";
 
@@ -18,7 +24,7 @@ export interface StorageConfig {
 	defaultUploadExpiry: number;
 	/** Default expiry for signed download URLs (seconds). */
 	defaultDownloadExpiry: number;
-	/** Logical → physical bucket name mapping. */
+	/** Logical → physical bucket name mapping (env-driven). */
 	buckets: StorageBuckets;
 	/** Per-bucket max upload size (bytes). Enforced at presign time. */
 	maxUploadBytes: {
@@ -33,9 +39,12 @@ export const storageConfig: StorageConfig = {
 	},
 	defaultUploadExpiry: 600,
 	defaultDownloadExpiry: 600,
-	buckets: {
-		avatars: "avatars",
-		organizationLogos: "organization-logos",
+	get buckets(): StorageBuckets {
+		return {
+			avatars: env.S3_BUCKET_AVATARS ?? "avatars",
+			organizationLogos:
+				env.S3_BUCKET_ORGANIZATION_LOGOS ?? "organization-logos",
+		};
 	},
 	maxUploadBytes: {
 		avatars: 5 * 1024 * 1024, // 5 MB
