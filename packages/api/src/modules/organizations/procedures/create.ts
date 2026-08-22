@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 import { slugSchema } from "../shared";
@@ -8,7 +9,9 @@ const createOrgSchema = z.object({
 	slug: slugSchema,
 });
 
-export const createOrganization = permissionProcedure("create:organization")
+export const createOrganization = permissionProcedure(
+	PERMISSIONS.ORGANIZATION.CREATE,
+)
 	.use(createRateLimitMiddleware({ endpoint: "organizationMutation" }))
 	.route({
 		method: "POST",

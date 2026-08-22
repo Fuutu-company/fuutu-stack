@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { permissionProcedure } from "../../../../orpc";
 import { requireOrgPermissionAccess } from "../../shared";
@@ -7,7 +8,9 @@ const listInvitationsSchema = z.object({
 	organizationId: z.string().min(1),
 });
 
-export const listInvitations = permissionProcedure("view:organization")
+export const listInvitations = permissionProcedure(
+	PERMISSIONS.ORGANIZATION.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/organizations/{organizationId}/invitations",
@@ -21,7 +24,7 @@ export const listInvitations = permissionProcedure("view:organization")
 		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"view:organization",
+			PERMISSIONS.ORGANIZATION.VIEW,
 			context.headers,
 		);
 		const invitations = await auth.api.listInvitations({

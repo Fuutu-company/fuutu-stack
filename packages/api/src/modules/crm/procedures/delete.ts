@@ -1,4 +1,5 @@
 import { deleteContact } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
@@ -9,7 +10,9 @@ const deleteContactSchema = z.object({
 	organizationId: z.string().min(1),
 });
 
-export const deleteContactProcedure = permissionProcedure("delete:crm")
+export const deleteContactProcedure = permissionProcedure(
+	PERMISSIONS.CRM.DELETE,
+)
 	.use(createRateLimitMiddleware({ endpoint: "crmContact" }))
 	.route({
 		method: "DELETE",
@@ -23,7 +26,7 @@ export const deleteContactProcedure = permissionProcedure("delete:crm")
 		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"delete:crm",
+			PERMISSIONS.CRM.DELETE,
 			context.headers,
 		);
 		const result = await deleteContact(input.id, input.organizationId);

@@ -1,8 +1,9 @@
 import { updateWebhook } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const updateWebhookSchema = z.object({
 	id: z.string().min(1),
@@ -12,7 +13,7 @@ const updateWebhookSchema = z.object({
 	isActive: z.boolean().optional(),
 });
 
-export const updateWebhookProcedure = permissionProcedure("update:webhook")
+export const updateWebhookProcedure = protectedProcedure
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "PATCH",
@@ -23,10 +24,10 @@ export const updateWebhookProcedure = permissionProcedure("update:webhook")
 	})
 	.input(updateWebhookSchema)
 	.handler(async ({ input, context }) => {
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"admin",
+			PERMISSIONS.WEBHOOK.UPDATE,
 			context.headers,
 		);
 		const result = await updateWebhook(input.id, input.organizationId, {

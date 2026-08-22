@@ -3,7 +3,7 @@
 import { authClient } from "@fuutu/auth/client";
 import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
-import { AccessControl, DEFAULT_ACCESS_POLICY, PERMISSIONS } from "@fuutu/rbac";
+import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
 import {
 	BrandLogo,
 	Sidebar,
@@ -30,7 +30,7 @@ import { NavUser } from "./nav-user";
 import { OrgSwitcher } from "./org-switcher";
 import { ThemeToggle } from "./theme-toggle";
 
-const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
+const ac = new SystemAccessControl(SYSTEM_POLICY);
 
 export function AppSidebar() {
 	const pathname = usePathname();
@@ -47,7 +47,7 @@ export function AppSidebar() {
 		if (isMobile) {
 			setOpenMobile(false);
 		}
-	}, [pathname, isMobile, setOpenMobile]);
+	}, [isMobile, setOpenMobile]);
 
 	return (
 		<Sidebar collapsible="icon">

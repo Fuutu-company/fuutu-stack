@@ -1,16 +1,18 @@
 import { auth } from "@fuutu/auth";
 import {
-	AccessControl,
-	DEFAULT_ACCESS_POLICY,
-	hasPermission,
+	hasOrgPermission,
 	hasRoleAtLeast,
-	type Role,
-	toRbacRole,
+	type KnownPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	type OrgRole,
+	toOrgRole,
 } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
-const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
+// Org AC — checks the user's ORG role (Better-Auth organization plugin: "owner"/"admin"/"member")
+const orgAC = new OrgAccessControl(ORG_POLICY);
 
 export const slugSchema = z
 	.string()
@@ -32,7 +34,7 @@ export type FullOrganization = NonNullable<
 export async function requireOrgRole(
 	organizationId: string,
 	userId: string,
-	minRole: Role,
+	minRole: OrgRole,
 	headers?: Headers,
 ): Promise<FullOrganization> {
 	const org = await auth.api.getFullOrganization({
@@ -46,7 +48,7 @@ export async function requireOrgRole(
 	if (!member) {
 		throw new ORPCError("FORBIDDEN", { message: "Not a member" });
 	}
-	if (!hasRoleAtLeast(toRbacRole(member.role), minRole)) {
+	if (!hasRoleAtLeast(toOrgRole(member.role), minRole)) {
 		throw new ORPCError("FORBIDDEN", {
 			message: `${minRole} role required`,
 		});
@@ -56,10 +58,10 @@ export async function requireOrgRole(
 
 export function requireOrgPermission(
 	member: { role: string | null | undefined },
-	permission: string,
+	permission: KnownPermission,
 ): void {
-	const role = toRbacRole(member.role);
-	if (!hasPermission(ac, role, permission)) {
+	const role = toOrgRole(member.role);
+	if (!hasOrgPermission(orgAC, role, permission)) {
 		throw new ORPCError("FORBIDDEN", { message: "Insufficient permissions" });
 	}
 }
@@ -67,7 +69,7 @@ export function requireOrgPermission(
 export async function requireOrgPermissionAccess(
 	organizationId: string,
 	userId: string,
-	permission: string,
+	permission: KnownPermission,
 	headers?: Headers,
 ): Promise<FullOrganization> {
 	const org = await auth.api.getFullOrganization({

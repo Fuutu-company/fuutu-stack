@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
 
@@ -7,7 +8,9 @@ const listOrganizationsSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listOrganizations = permissionProcedure("view:organization")
+export const listOrganizations = permissionProcedure(
+	PERMISSIONS.ORGANIZATION.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/organizations",

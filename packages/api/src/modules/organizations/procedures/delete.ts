@@ -1,13 +1,14 @@
 import { auth } from "@fuutu/auth";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../shared";
+import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../shared";
 
 const deleteOrgSchema = z.object({
 	organizationId: z.string().min(1),
 });
 
-export const deleteOrganization = permissionProcedure("delete:organization")
+export const deleteOrganization = protectedProcedure
 	.use(createRateLimitMiddleware({ endpoint: "organizationMutation" }))
 	.route({
 		method: "DELETE",
@@ -18,10 +19,10 @@ export const deleteOrganization = permissionProcedure("delete:organization")
 	})
 	.input(deleteOrgSchema)
 	.handler(async ({ input, context }) => {
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"owner",
+			PERMISSIONS.ORGANIZATION.DELETE,
 			context.headers,
 		);
 		await auth.api.deleteOrganization({

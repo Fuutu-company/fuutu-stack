@@ -86,7 +86,7 @@ export async function checkLicense(
 			reason?: string;
 		} | null;
 
-		if (!body || body.valid !== true || !body.mode) {
+		if (body?.valid !== true || !body.mode) {
 			return fallback(licenseKeyHash, now, body?.reason ?? "invalid response");
 		}
 

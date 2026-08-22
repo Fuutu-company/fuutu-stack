@@ -1,7 +1,8 @@
+import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const fileListSchema = z.object({
 	bucket: z.string().min(1),
@@ -14,7 +15,9 @@ const fileListSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const listObjectsProcedure = permissionProcedure("view:storage")
+export const listObjectsProcedure = permissionProcedure(
+	PERMISSIONS.STORAGE.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/storage/files",
@@ -26,10 +29,10 @@ export const listObjectsProcedure = permissionProcedure("view:storage")
 	.handler(async ({ input, context }) => {
 		let scope: string;
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
+				PERMISSIONS.STORAGE.VIEW,
 				context.headers,
 			);
 			scope = input.organizationId;

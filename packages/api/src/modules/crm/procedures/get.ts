@@ -1,4 +1,5 @@
 import { getContact } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
@@ -9,7 +10,7 @@ const getContactSchema = z.object({
 	organizationId: z.string().min(1),
 });
 
-export const getContactProcedure = permissionProcedure("view:crm")
+export const getContactProcedure = permissionProcedure(PERMISSIONS.CRM.VIEW)
 	.route({
 		method: "GET",
 		path: "/crm/contacts/{id}",
@@ -22,7 +23,7 @@ export const getContactProcedure = permissionProcedure("view:crm")
 		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"view:crm",
+			PERMISSIONS.CRM.VIEW,
 			context.headers,
 		);
 		const contact = await getContact(input.id, input.organizationId);

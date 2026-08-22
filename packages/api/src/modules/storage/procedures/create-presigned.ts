@@ -1,7 +1,8 @@
+import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
 import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const BLOCKED_EXTENSIONS: readonly string[] = [
 	".exe",
@@ -47,7 +48,7 @@ const uploadCreatePresignedSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const createPresigned = permissionProcedure("view:storage")
+export const createPresigned = permissionProcedure(PERMISSIONS.STORAGE.VIEW)
 	.use(createRateLimitMiddleware({ endpoint: "storageMutation" }))
 	.route({
 		method: "POST",
@@ -61,10 +62,10 @@ export const createPresigned = permissionProcedure("view:storage")
 	.handler(async ({ input, context }) => {
 		let prefix: string;
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
+				PERMISSIONS.STORAGE.VIEW,
 				context.headers,
 			);
 			prefix = input.organizationId;

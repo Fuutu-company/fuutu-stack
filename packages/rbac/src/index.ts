@@ -1,29 +1,53 @@
 /**
  * @fuutu/rbac — lightweight Role-Based Access Control primitives.
  *
- * Core ideas:
- *  - A small, ordered role hierarchy: `member < admin < owner`.
- *  - Resource-scoped permissions produced by `createResourcePermissions`
- *    (e.g. "view:posts", "update:posts"). No stringly-typed freestyle.
- *  - An `AccessControl` policy that maps roles → permission sets and
- *    exposes `.can(role, permission)` for runtime checks.
- *  - Convenience helpers (`hasPermission`, `canCRUD`, `createPermissionChecker`)
- *    so oRPC procedures and UI gates share one API.
+ * The stack has TWO independent role systems:
+ *
+ * 1. SYSTEM roles (Better-Auth `admin` plugin → `user.role`)
+ *    Values: "admin" | "user"  (no mapping needed — RBAC uses the same names)
+ *    No "owner" on system level — owner is an org-only concept.
+ *    Used by: permissionProcedure() / adminProcedure
+ *
+ * 2. ORG roles (Better-Auth `organization` plugin → `member.role`)
+ *    Values: "owner" | "admin" | "member"
+ *    Used by: requireOrgRole() / requireOrgPermission() / requireOrgPermissionAccess()
+ *
+ * Both systems use the same PERMISSIONS but have separate hierarchies,
+ * separate policies, and separate AccessControl instances.
  */
 
 export const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
 export type CrudAction = (typeof CRUD_ACTIONS)[number];
 
-export const ROLE_HIERARCHY = ["member", "admin", "owner"] as const;
-export type Role = (typeof ROLE_HIERARCHY)[number];
+// ─── System roles (Better-Auth admin plugin: "user" | "admin") ─────────────
+export const SYSTEM_ROLE_HIERARCHY = ["user", "admin"] as const;
+export type SystemRole = (typeof SYSTEM_ROLE_HIERARCHY)[number];
+
+// ─── Org roles (Better-Auth organization plugin: "member" | "admin" | "owner") ─
+export const ORG_ROLE_HIERARCHY = ["member", "admin", "owner"] as const;
+export type OrgRole = (typeof ORG_ROLE_HIERARCHY)[number];
 
 /**
- * Maps Better-Auth roles onto the `@fuutu/rbac` role hierarchy.
+ * Maps a Better-Auth SYSTEM role string onto the RBAC system role hierarchy.
  * Better-Auth stores roles as a comma-separated string (e.g. "admin,user").
- * Splits, trims, and picks the highest matching role.
+ * Returns `"user"` (lowest privilege) for unknown/empty values.
+ * Never returns "owner" — that's an org-only concept.
+ */
+export function toSystemRole(raw: string | null | undefined): SystemRole {
+	const parts = (raw ?? "")
+		.split(",")
+		.map((part) => part.trim())
+		.filter(Boolean);
+	if (parts.includes("admin")) return "admin";
+	return "user";
+}
+
+/**
+ * Maps a Better-Auth ORG role string onto the RBAC org role hierarchy.
+ * Better-Auth stores org member roles as "owner" | "admin" | "member".
  * Returns `"member"` (lowest privilege) for unknown/empty values.
  */
-export function toRbacRole(raw: string | null | undefined): Role {
+export function toOrgRole(raw: string | null | undefined): OrgRole {
 	const parts = (raw ?? "")
 		.split(",")
 		.map((part) => part.trim())
@@ -33,9 +57,27 @@ export function toRbacRole(raw: string | null | undefined): Role {
 	return "member";
 }
 
-/** True when `role` sits at or above `required` in the hierarchy. */
-export function hasRoleAtLeast(role: Role, required: Role): boolean {
-	return ROLE_HIERARCHY.indexOf(role) >= ROLE_HIERARCHY.indexOf(required);
+// ─── Backward compat: unified Role + toRbacRole (DEPRECATED) ───────────────
+// Kept for transition. Prefer toSystemRole() / toOrgRole().
+/** @deprecated Use `SystemRole` or `OrgRole` instead. */
+export type Role = SystemRole | OrgRole;
+/** @deprecated Use `toSystemRole()` or `toOrgRole()` instead. */
+export function toRbacRole(raw: string | null | undefined): Role {
+	const parts = (raw ?? "")
+		.split(",")
+		.map((part) => part.trim())
+		.filter(Boolean);
+	if (parts.includes("owner")) return "owner";
+	if (parts.includes("admin")) return "admin";
+	if (parts.includes("user")) return "user";
+	return "member";
+}
+
+/** True when `role` sits at or above `required` in the org hierarchy. */
+export function hasRoleAtLeast(role: OrgRole, required: OrgRole): boolean {
+	return (
+		ORG_ROLE_HIERARCHY.indexOf(role) >= ORG_ROLE_HIERARCHY.indexOf(required)
+	);
 }
 
 export type ResourcePermissions<TResource extends string> = {
@@ -64,59 +106,114 @@ export function createResourcePermissions<const TResource extends string>(
 
 export type Permission = string;
 
-export type AccessPolicy<TPermission extends Permission = Permission> = Record<
-	Role,
-	readonly TPermission[]
->;
+// ─── System policy types ───────────────────────────────────────────────────
+export type SystemAccessPolicy<TPermission extends Permission = Permission> =
+	Record<SystemRole, readonly TPermission[]>;
 
-export class AccessControl<TPermission extends Permission = Permission> {
-	constructor(private readonly policy: AccessPolicy<TPermission>) {}
+export class SystemAccessControl<TPermission extends Permission = Permission> {
+	constructor(private readonly policy: SystemAccessPolicy<TPermission>) {}
 
 	/**
 	 * True when `role` is granted `permission` — either directly or via a
-	 * higher role in the hierarchy (owner inherits admin inherits member).
+	 * higher role in the system hierarchy (admin inherits user).
 	 */
-	can(role: Role, permission: TPermission): boolean {
-		const idx = ROLE_HIERARCHY.indexOf(role);
+	can(role: SystemRole, permission: TPermission): boolean {
+		const idx = SYSTEM_ROLE_HIERARCHY.indexOf(role);
 		if (idx === -1) return false;
-		for (const r of ROLE_HIERARCHY.slice(0, idx + 1)) {
+		for (const r of SYSTEM_ROLE_HIERARCHY.slice(0, idx + 1)) {
 			if (this.policy[r].includes(permission)) return true;
 		}
 		return false;
 	}
 
-	permissionsFor(role: Role): readonly TPermission[] {
-		const idx = ROLE_HIERARCHY.indexOf(role);
+	permissionsFor(role: SystemRole): readonly TPermission[] {
+		const idx = SYSTEM_ROLE_HIERARCHY.indexOf(role);
 		if (idx === -1) return [];
 		const set = new Set<TPermission>();
-		for (const r of ROLE_HIERARCHY.slice(0, idx + 1)) {
+		for (const r of SYSTEM_ROLE_HIERARCHY.slice(0, idx + 1)) {
 			for (const p of this.policy[r]) set.add(p);
 		}
 		return Array.from(set);
 	}
 }
 
-export function hasPermission<TPermission extends Permission>(
-	ac: AccessControl<TPermission>,
-	role: Role | null | undefined,
+// ─── Org policy types ──────────────────────────────────────────────────────
+export type OrgAccessPolicy<TPermission extends Permission = Permission> =
+	Record<OrgRole, readonly TPermission[]>;
+
+export class OrgAccessControl<TPermission extends Permission = Permission> {
+	constructor(private readonly policy: OrgAccessPolicy<TPermission>) {}
+
+	/**
+	 * True when `role` is granted `permission` — either directly or via a
+	 * higher role in the org hierarchy (owner inherits admin inherits member).
+	 */
+	can(role: OrgRole, permission: TPermission): boolean {
+		const idx = ORG_ROLE_HIERARCHY.indexOf(role);
+		if (idx === -1) return false;
+		for (const r of ORG_ROLE_HIERARCHY.slice(0, idx + 1)) {
+			if (this.policy[r].includes(permission)) return true;
+		}
+		return false;
+	}
+
+	permissionsFor(role: OrgRole): readonly TPermission[] {
+		const idx = ORG_ROLE_HIERARCHY.indexOf(role);
+		if (idx === -1) return [];
+		const set = new Set<TPermission>();
+		for (const r of ORG_ROLE_HIERARCHY.slice(0, idx + 1)) {
+			for (const p of this.policy[r]) set.add(p);
+		}
+		return Array.from(set);
+	}
+}
+
+// ─── Convenience helpers ───────────────────────────────────────────────────
+export function hasSystemPermission<TPermission extends Permission>(
+	ac: SystemAccessControl<TPermission>,
+	role: SystemRole | null | undefined,
 	permission: TPermission,
 ): boolean {
 	if (!role) return false;
 	return ac.can(role, permission);
 }
 
+export function hasOrgPermission<TPermission extends Permission>(
+	ac: OrgAccessControl<TPermission>,
+	role: OrgRole | null | undefined,
+	permission: TPermission,
+): boolean {
+	if (!role) return false;
+	return ac.can(role, permission);
+}
+
+// ─── Polymorphic helpers (work with either SystemAccessControl or OrgAccessControl) ──
+type AnyAccessControl<TPermission extends Permission = Permission> =
+	| SystemAccessControl<TPermission>
+	| OrgAccessControl<TPermission>;
+
 /** Returns true when `role` has view/create/update/delete for `resource`. */
-export function canCRUD<TResource extends string>(
-	ac: AccessControl,
+export function canCRUD<
+	TResource extends string,
+	TPermission extends Permission,
+>(
+	ac: AnyAccessControl<TPermission>,
 	role: Role | null | undefined,
 	resource: TResource,
 ): Record<CrudAction, boolean> {
 	const perms = createResourcePermissions(resource);
+	const check = (p: string): boolean => {
+		if (!role) return false;
+		if (ac instanceof SystemAccessControl) {
+			return ac.can(role as SystemRole, p as TPermission);
+		}
+		return ac.can(role as OrgRole, p as TPermission);
+	};
 	return {
-		view: hasPermission(ac, role, perms.view),
-		create: hasPermission(ac, role, perms.create),
-		update: hasPermission(ac, role, perms.update),
-		delete: hasPermission(ac, role, perms.delete),
+		view: check(perms.view),
+		create: check(perms.create),
+		update: check(perms.update),
+		delete: check(perms.delete),
 	};
 }
 
@@ -126,17 +223,30 @@ export function canCRUD<TResource extends string>(
  * oRPC middleware contexts.
  */
 export function createPermissionChecker<TPermission extends Permission>(
-	ac: AccessControl<TPermission>,
+	ac: AnyAccessControl<TPermission>,
 	role: Role | null | undefined,
 ) {
+	const check = (p: TPermission): boolean => {
+		if (!role) return false;
+		if (ac instanceof SystemAccessControl) {
+			return ac.can(role as SystemRole, p);
+		}
+		return ac.can(role as OrgRole, p);
+	};
 	return {
 		role,
-		can: (permission: TPermission) => hasPermission(ac, role, permission),
+		can: (permission: TPermission) => check(permission),
 		canAny: (permissions: readonly TPermission[]) =>
-			permissions.some((p) => hasPermission(ac, role, p)),
+			permissions.some((p) => check(p)),
 		canAll: (permissions: readonly TPermission[]) =>
-			permissions.every((p) => hasPermission(ac, role, p)),
+			permissions.every((p) => check(p)),
 	};
 }
 
-export { DEFAULT_ACCESS_POLICY, PERMISSIONS } from "./policy";
+export {
+	DEFAULT_ACCESS_POLICY,
+	type KnownPermission,
+	ORG_POLICY,
+	PERMISSIONS,
+	SYSTEM_POLICY,
+} from "./policy";

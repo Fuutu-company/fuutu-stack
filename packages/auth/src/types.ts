@@ -8,10 +8,11 @@
  */
 
 import {
-	type AccessControl,
-	type Role,
-	hasPermission as rbacHasPermission,
-	toRbacRole,
+	type KnownPermission,
+	hasSystemPermission as rbacHasSystemPermission,
+	type SystemAccessControl,
+	type SystemRole,
+	toSystemRole,
 } from "@fuutu/rbac";
 
 export type UserRole = "admin" | "user";
@@ -35,22 +36,22 @@ export interface UserWithRole {
 }
 
 /**
- * Returns the effective role for a user, defaulting to "member".
+ * Returns the effective SYSTEM role for a user, defaulting to "member".
  * Normalizes Better-Auth comma-separated role strings (e.g. "admin,user")
- * to the canonical RBAC role via `toRbacRole`.
+ * to the canonical RBAC system role via `toSystemRole`.
  */
-export function getUserRole(user: UserWithRole | null | undefined): Role {
-	return toRbacRole(user?.role);
+export function getUserRole(user: UserWithRole | null | undefined): SystemRole {
+	return toSystemRole(user?.role);
 }
 
 /**
- * Check if a user has a specific permission via AccessControl.
- * Normalizes the user's role first via `toRbacRole`.
+ * Check if a user has a specific SYSTEM permission via SystemAccessControl.
+ * Normalizes the user's system role first via `toSystemRole`.
  */
 export function userHasPermission(
-	ac: AccessControl,
+	ac: SystemAccessControl,
 	user: UserWithRole | null | undefined,
-	permission: string,
+	permission: KnownPermission,
 ): boolean {
-	return rbacHasPermission(ac, toRbacRole(user?.role), permission);
+	return rbacHasSystemPermission(ac, toSystemRole(user?.role), permission);
 }

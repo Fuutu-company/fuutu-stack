@@ -1,18 +1,19 @@
 import { auth } from "@fuutu/auth";
 import { getInvitationOrganizationId } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
-	permissionProcedure,
+	protectedProcedure,
 } from "../../../../orpc";
-import { requireOrgRole } from "../../shared";
+import { requireOrgPermissionAccess } from "../../shared";
 
 const revokeInvitationSchema = z.object({
 	invitationId: z.string().min(1),
 });
 
-export const revokeInvitation = permissionProcedure("update:organization")
+export const revokeInvitation = protectedProcedure
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
 		method: "DELETE",
@@ -28,10 +29,10 @@ export const revokeInvitation = permissionProcedure("update:organization")
 		if (!invitation) {
 			throw new ORPCError("NOT_FOUND", { message: "Invitation not found" });
 		}
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			invitation.organizationId,
 			context.user.id,
-			"admin",
+			PERMISSIONS.REMOVE_ORGANIZATION,
 			context.headers,
 		);
 		await auth.api.cancelInvitation({

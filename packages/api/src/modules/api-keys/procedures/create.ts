@@ -1,7 +1,8 @@
 import { createApiKey } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const createApiKeySchema = z.object({
 	name: z.string().min(1).max(100),
@@ -9,7 +10,9 @@ const createApiKeySchema = z.object({
 	expiresAt: z.coerce.date().optional(),
 });
 
-export const createApiKeyProcedure = permissionProcedure("create:api-key")
+export const createApiKeyProcedure = permissionProcedure(
+	PERMISSIONS.API_KEY.CREATE,
+)
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",
@@ -22,10 +25,10 @@ export const createApiKeyProcedure = permissionProcedure("create:api-key")
 	.input(createApiKeySchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"admin",
+				PERMISSIONS.API_KEY.CREATE,
 				context.headers,
 			);
 		}

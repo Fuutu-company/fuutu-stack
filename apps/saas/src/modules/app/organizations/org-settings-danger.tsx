@@ -3,10 +3,11 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
-	AccessControl,
-	DEFAULT_ACCESS_POLICY,
-	hasPermission,
-	toRbacRole,
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
 } from "@fuutu/rbac";
 import {
 	AlertDialog,
@@ -28,7 +29,7 @@ import { useCallback, useEffect, useState } from "react";
 
 const log = createLogger({ scope: "org-danger" });
 
-const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
+const ac = new OrgAccessControl(ORG_POLICY);
 
 type Member = {
 	id: string;
@@ -57,7 +58,11 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 		(m) => m.userId === currentUserId,
 	)?.role;
 	const isOwner = currentUserRole
-		? hasPermission(ac, toRbacRole(currentUserRole), "delete:organization")
+		? hasOrgPermission(
+				ac,
+				toOrgRole(currentUserRole),
+				PERMISSIONS.ORGANIZATION.DELETE,
+			)
 		: false;
 
 	const load = useCallback(async () => {

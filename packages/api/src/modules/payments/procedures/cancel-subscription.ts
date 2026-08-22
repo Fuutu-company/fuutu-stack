@@ -1,9 +1,10 @@
 import { getPurchaseByProviderSubscriptionId } from "@fuutu/db";
 import { resolvePaymentProvider } from "@fuutu/payments";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const cancelSubscriptionSchema = z.object({
 	subscriptionId: z.string().min(1).max(200),
@@ -29,10 +30,10 @@ export const cancelSubscription = protectedProcedure
 			throw new ORPCError("NOT_FOUND", { message: "Subscription not found" });
 		}
 		if (purchase.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				purchase.organizationId,
 				context.user.id,
-				"admin",
+				PERMISSIONS.PAYMENT.UPDATE,
 				context.headers,
 			);
 		} else if (purchase.userId !== context.user.id) {

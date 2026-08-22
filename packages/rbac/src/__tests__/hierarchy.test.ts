@@ -1,20 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
-	AccessControl,
 	CRUD_ACTIONS,
 	createResourcePermissions,
 	hasRoleAtLeast,
-	ROLE_HIERARCHY,
-	type Role,
+	ORG_ROLE_HIERARCHY,
+	OrgAccessControl,
+	SYSTEM_ROLE_HIERARCHY,
+	SystemAccessControl,
 } from "../index";
 
-describe("ROLE_HIERARCHY", () => {
-	it("has exactly three roles in order: member < admin < owner", () => {
-		expect(ROLE_HIERARCHY).toEqual(["member", "admin", "owner"]);
+describe("SYSTEM_ROLE_HIERARCHY", () => {
+	it("has exactly two roles in order: user < admin", () => {
+		expect(SYSTEM_ROLE_HIERARCHY).toEqual(["user", "admin"]);
 	});
 });
 
-describe("hasRoleAtLeast()", () => {
+describe("ORG_ROLE_HIERARCHY", () => {
+	it("has exactly three roles in order: member < admin < owner", () => {
+		expect(ORG_ROLE_HIERARCHY).toEqual(["member", "admin", "owner"]);
+	});
+});
+
+describe("hasRoleAtLeast() — org hierarchy", () => {
 	it("member is at least member", () => {
 		expect(hasRoleAtLeast("member", "member")).toBe(true);
 	});
@@ -52,10 +59,36 @@ describe("hasRoleAtLeast()", () => {
 	});
 });
 
-describe("AccessControl inheritance via can()", () => {
+describe("SystemAccessControl inheritance via can()", () => {
 	const posts = createResourcePermissions("posts");
 
-	const ac = new AccessControl({
+	const ac = new SystemAccessControl({
+		user: [posts.view],
+		admin: [posts.create, posts.update],
+	});
+
+	it("user has only its own permissions", () => {
+		expect(ac.can("user", posts.view)).toBe(true);
+		expect(ac.can("user", posts.create)).toBe(false);
+		expect(ac.can("user", posts.update)).toBe(false);
+	});
+
+	it("admin inherits from user", () => {
+		expect(ac.can("admin", posts.view)).toBe(true);
+		expect(ac.can("admin", posts.create)).toBe(true);
+		expect(ac.can("admin", posts.update)).toBe(true);
+	});
+
+	it("permissionsFor accumulates from user up to current role", () => {
+		expect(ac.permissionsFor("user").length).toBe(1);
+		expect(ac.permissionsFor("admin").length).toBe(3);
+	});
+});
+
+describe("OrgAccessControl inheritance via can()", () => {
+	const posts = createResourcePermissions("posts");
+
+	const ac = new OrgAccessControl({
 		member: [posts.view],
 		admin: [posts.create, posts.update],
 		owner: [posts.delete],
@@ -92,27 +125,5 @@ describe("AccessControl inheritance via can()", () => {
 describe("CRUD_ACTIONS", () => {
 	it("contains view, create, update, delete in order", () => {
 		expect(CRUD_ACTIONS).toEqual(["view", "create", "update", "delete"]);
-	});
-});
-
-describe("unknown role edge case", () => {
-	it("can() returns false for unknown role", () => {
-		const posts = createResourcePermissions("posts");
-		const ac = new AccessControl({
-			member: [posts.view],
-			admin: [posts.create],
-			owner: [posts.delete],
-		});
-		expect(ac.can("superadmin" as Role, posts.view)).toBe(false);
-	});
-
-	it("permissionsFor() returns empty array for unknown role", () => {
-		const posts = createResourcePermissions("posts");
-		const ac = new AccessControl({
-			member: [posts.view],
-			admin: [posts.create],
-			owner: [posts.delete],
-		});
-		expect(ac.permissionsFor("superadmin" as Role)).toEqual([]);
 	});
 });

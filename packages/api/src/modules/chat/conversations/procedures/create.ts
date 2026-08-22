@@ -1,4 +1,5 @@
 import { createConversation } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import {
 	createRateLimitMiddleware,
@@ -11,7 +12,9 @@ const createConversationSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const createConversationProcedure = permissionProcedure("create:chat")
+export const createConversationProcedure = permissionProcedure(
+	PERMISSIONS.CHAT.CREATE,
+)
 	.use(createRateLimitMiddleware({ endpoint: "chatConversation" }))
 	.route({
 		method: "POST",
@@ -27,7 +30,7 @@ export const createConversationProcedure = permissionProcedure("create:chat")
 			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"create:chat",
+				PERMISSIONS.CHAT.CREATE,
 				context.headers,
 			);
 		}

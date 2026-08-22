@@ -4,6 +4,8 @@ import {
 	listApiKeys,
 	listOrgApiKeys,
 } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
+
 import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
@@ -14,7 +16,9 @@ const listApiKeysSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listApiKeysProcedure = permissionProcedure("view:api-key")
+export const listApiKeysProcedure = permissionProcedure(
+	PERMISSIONS.API_KEY.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/api-keys",
@@ -30,7 +34,7 @@ export const listApiKeysProcedure = permissionProcedure("view:api-key")
 			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"view:api-key",
+				PERMISSIONS.API_KEY.VIEW,
 				context.headers,
 			);
 			const [items, total] = await Promise.all([

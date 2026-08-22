@@ -1,14 +1,17 @@
 import { getApiKey, revokeApiKey } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const apiKeyIdSchema = z.object({
 	id: z.string().uuid(),
 });
 
-export const revokeApiKeyProcedure = permissionProcedure("delete:api-key")
+export const revokeApiKeyProcedure = permissionProcedure(
+	PERMISSIONS.API_KEY.DELETE,
+)
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",
@@ -25,10 +28,10 @@ export const revokeApiKeyProcedure = permissionProcedure("delete:api-key")
 			throw new ORPCError("NOT_FOUND", { message: "API key not found" });
 		}
 		if (key.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				key.organizationId,
 				context.user.id,
-				"admin",
+				PERMISSIONS.API_KEY.DELETE,
 				context.headers,
 			);
 			const result = await revokeApiKey(input.id, {

@@ -1,6 +1,7 @@
 import { resolveAIProvider } from "@fuutu/ai";
 import { addMessage, getConversation } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import {
@@ -18,7 +19,7 @@ const streamMessageSchema = z.object({
 	content: z.string().min(1).max(10000),
 });
 
-export const streamMessageProcedure = permissionProcedure("view:chat")
+export const streamMessageProcedure = permissionProcedure(PERMISSIONS.CHAT.VIEW)
 	.use(createRateLimitMiddleware({ endpoint: "aiChat" }))
 	.route({
 		method: "POST",

@@ -1,11 +1,11 @@
 import { auth } from "@fuutu/auth";
 import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
-import { AccessControl, DEFAULT_ACCESS_POLICY, PERMISSIONS } from "@fuutu/rbac";
+import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
+const ac = new SystemAccessControl(SYSTEM_POLICY);
 
 /**
  * Get the current session (cached per request)

@@ -5,7 +5,7 @@ import { telemetryPingJob } from "../jobs/telemetry-ping";
 import { webhookRetryJob } from "../jobs/webhook-retry";
 import type { CronJob, CronJobResult, JobRunner } from "../types";
 
-const log = createLogger({ scope: "cron:trigger-dev" });
+const _log = createLogger({ scope: "cron:trigger-dev" });
 
 const jobs: CronJob[] = [
 	webhookRetryJob,

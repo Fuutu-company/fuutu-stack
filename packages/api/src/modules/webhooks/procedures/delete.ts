@@ -1,15 +1,16 @@
 import { deleteWebhook } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const deleteWebhookSchema = z.object({
 	id: z.string().min(1),
 	organizationId: z.string().min(1),
 });
 
-export const deleteWebhookProcedure = permissionProcedure("delete:webhook")
+export const deleteWebhookProcedure = protectedProcedure
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "DELETE",
@@ -20,10 +21,10 @@ export const deleteWebhookProcedure = permissionProcedure("delete:webhook")
 	})
 	.input(deleteWebhookSchema)
 	.handler(async ({ input, context }) => {
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"admin",
+			PERMISSIONS.WEBHOOK.DELETE,
 			context.headers,
 		);
 		const result = await deleteWebhook(input.id, input.organizationId);

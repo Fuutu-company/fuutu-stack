@@ -3,11 +3,11 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
-	AccessControl,
-	DEFAULT_ACCESS_POLICY,
-	hasPermission,
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
 	PERMISSIONS,
-	toRbacRole,
+	toOrgRole,
 } from "@fuutu/rbac";
 import {
 	Button,
@@ -26,7 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 
 const log = createLogger({ scope: "org-members" });
 
-const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
+const ac = new OrgAccessControl(ORG_POLICY);
 
 const ORG_ROLE_OWNER = "owner";
 
@@ -69,9 +69,9 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 		(m) => m.userId === currentUserId,
 	)?.role;
 	const canManageMembers = currentUserRole
-		? hasPermission(
+		? hasOrgPermission(
 				ac,
-				toRbacRole(currentUserRole),
+				toOrgRole(currentUserRole),
 				PERMISSIONS.INVITE_ORGANIZATION,
 			)
 		: false;

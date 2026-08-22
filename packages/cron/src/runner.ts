@@ -4,7 +4,7 @@ import { InlineJobRunner } from "./runners/inline";
 import { TriggerDevJobRunner } from "./runners/trigger-dev";
 import type { CronJobResult, JobRunner } from "./types";
 
-const log = createLogger({ scope: "cron:resolve" });
+const _log = createLogger({ scope: "cron:resolve" });
 
 const inlineRunner = new InlineJobRunner();
 const triggerDevRunner = new TriggerDevJobRunner();

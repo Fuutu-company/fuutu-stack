@@ -1,7 +1,8 @@
 import { countWebhooks, listWebhooks } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { protectedProcedure } from "../../../orpc";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const listWebhooksSchema = z.object({
 	organizationId: z.string().min(1),
@@ -9,7 +10,7 @@ const listWebhooksSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listWebhooksProcedure = permissionProcedure("view:webhook")
+export const listWebhooksProcedure = protectedProcedure
 	.route({
 		method: "GET",
 		path: "/webhooks",
@@ -19,10 +20,10 @@ export const listWebhooksProcedure = permissionProcedure("view:webhook")
 	})
 	.input(listWebhooksSchema)
 	.handler(async ({ input, context }) => {
-		await requireOrgRole(
+		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"member",
+			PERMISSIONS.WEBHOOK.VIEW,
 			context.headers,
 		);
 		const skip = (input.page - 1) * input.limit;

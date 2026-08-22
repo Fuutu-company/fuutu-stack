@@ -1,7 +1,8 @@
 import { resolvePaymentProvider } from "@fuutu/payments";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 import { sanitizePaymentUrl } from "../shared";
 
 const checkoutSchema = z.object({
@@ -24,10 +25,10 @@ export const createCheckout = protectedProcedure
 	.input(checkoutSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"admin",
+				PERMISSIONS.PAYMENT.CREATE,
 				context.headers,
 			);
 		}

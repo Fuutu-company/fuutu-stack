@@ -1,5 +1,5 @@
 import { auth } from "@fuutu/auth";
-import { hasRoleAtLeast, PERMISSIONS, toRbacRole } from "@fuutu/rbac";
+import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import {
@@ -34,14 +34,14 @@ export const removeMember = protectedProcedure
 		const actor = org.members?.find(
 			(m: OrgMember) => m.userId === context.user.id,
 		);
-		const actorRole = toRbacRole(actor?.role);
+		const actorRole = toOrgRole(actor?.role);
 		const target = org.members?.find(
 			(m: OrgMember) =>
 				m.id === input.memberIdOrEmail ||
 				m.userId === input.memberIdOrEmail ||
 				m.email === input.memberIdOrEmail,
 		);
-		const targetRole = toRbacRole(target?.role);
+		const targetRole = toOrgRole(target?.role);
 		if (targetRole === "owner") {
 			throw new ORPCError("FORBIDDEN", { message: "Cannot remove owner" });
 		}

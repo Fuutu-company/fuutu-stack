@@ -2,6 +2,8 @@ import {
 	getCreditEventsForOrganization,
 	getCreditEventsForUser,
 } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
+
 import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
@@ -12,7 +14,7 @@ const historySchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const getHistory = permissionProcedure("view:credit")
+export const getHistory = permissionProcedure(PERMISSIONS.CREDIT.VIEW)
 	.route({
 		method: "GET",
 		path: "/credits/history",
@@ -26,7 +28,7 @@ export const getHistory = permissionProcedure("view:credit")
 			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"view:credit",
+				PERMISSIONS.CREDIT.VIEW,
 				context.headers,
 			);
 		}

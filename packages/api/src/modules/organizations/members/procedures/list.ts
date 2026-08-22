@@ -1,6 +1,7 @@
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { permissionProcedure } from "../../../../orpc";
-import { requireOrgRole } from "../../shared";
+import { requireOrgPermissionAccess } from "../../shared";
 
 const listMembersSchema = z.object({
 	organizationId: z.string().min(1),
@@ -8,7 +9,7 @@ const listMembersSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listMembers = permissionProcedure("view:organization")
+export const listMembers = permissionProcedure(PERMISSIONS.ORGANIZATION.VIEW)
 	.route({
 		method: "GET",
 		path: "/organizations/{organizationId}/members",
@@ -18,10 +19,10 @@ export const listMembers = permissionProcedure("view:organization")
 	})
 	.input(listMembersSchema)
 	.handler(async ({ input, context }) => {
-		const org = await requireOrgRole(
+		const org = await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			"member",
+			PERMISSIONS.ORGANIZATION.VIEW,
 			context.headers,
 		);
 		const members = org.members ?? [];

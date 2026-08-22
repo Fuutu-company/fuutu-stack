@@ -2,6 +2,8 @@ import {
 	getCreditPackagesForOrganization,
 	getCreditPackagesForUser,
 } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
+
 import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
@@ -10,7 +12,7 @@ const packagesSchema = z.object({
 	organizationId: z.string().uuid().optional(),
 });
 
-export const getPackages = permissionProcedure("view:credit")
+export const getPackages = permissionProcedure(PERMISSIONS.CREDIT.VIEW)
 	.route({
 		method: "GET",
 		path: "/credits/packages",
@@ -25,7 +27,7 @@ export const getPackages = permissionProcedure("view:credit")
 			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"view:credit",
+				PERMISSIONS.CREDIT.VIEW,
 				context.headers,
 			);
 		}

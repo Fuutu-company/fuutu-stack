@@ -1,9 +1,10 @@
 import { CREDIT_TOPUPS, resolvePaymentProvider } from "@fuutu/payments";
 import { getCreditTopupPriceId } from "@fuutu/payments/config.server";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 import { sanitizePaymentUrl } from "../shared";
 
 const topupSchema = z.object({
@@ -26,10 +27,10 @@ export const createTopupCheckout = protectedProcedure
 	.input(topupSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"admin",
+				PERMISSIONS.PAYMENT.CREATE,
 				context.headers,
 			);
 		}

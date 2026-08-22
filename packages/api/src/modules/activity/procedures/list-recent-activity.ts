@@ -1,11 +1,14 @@
 import { listAuditLogs } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { permissionProcedure } from "../../../orpc";
 
 /**
  * Recent activity feed for the dashboard.
  * Returns the last 10 audit-log entries for the current user.
  */
-export const listRecentActivityProcedure = permissionProcedure("view:activity")
+export const listRecentActivityProcedure = permissionProcedure(
+	PERMISSIONS.ACTIVITY.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/activity/recent",

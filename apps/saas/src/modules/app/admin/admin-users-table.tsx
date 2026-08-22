@@ -3,11 +3,11 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
-	AccessControl,
-	DEFAULT_ACCESS_POLICY,
-	hasPermission,
+	hasSystemPermission,
 	PERMISSIONS,
-	toRbacRole,
+	SYSTEM_POLICY,
+	SystemAccessControl,
+	toSystemRole,
 } from "@fuutu/rbac";
 import { Button, Card, CardContent, Input } from "@fuutu/ui";
 import { Ban, Check, Search, Shield, UserCheck } from "lucide-react";
@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 const log = createLogger({ scope: "admin-users" });
 
-const ac = new AccessControl(DEFAULT_ACCESS_POLICY);
+const ac = new SystemAccessControl(SYSTEM_POLICY);
 
 type AdminUser = {
 	id: string;
@@ -139,7 +139,7 @@ export function AdminUsersTable() {
 							</thead>
 							<tbody className="divide-y">
 								{users.map((u) => {
-									const rbacRole = toRbacRole(u.role);
+									const rbacRole = toSystemRole(u.role);
 									return (
 										<tr key={u.id}>
 											<td className="p-3">
@@ -153,7 +153,11 @@ export function AdminUsersTable() {
 											<td className="p-3">
 												<span
 													className={`rounded-full border px-2 py-0.5 font-medium text-xs ${
-														hasPermission(ac, rbacRole, PERMISSIONS.VIEW_ADMIN)
+														hasSystemPermission(
+															ac,
+															rbacRole,
+															PERMISSIONS.VIEW_ADMIN,
+														)
 															? "border-primary/30 bg-primary/10 text-primary"
 															: "bg-muted text-muted-foreground"
 													}`}
@@ -177,7 +181,7 @@ export function AdminUsersTable() {
 											</td>
 											<td className="p-3">
 												<div className="flex justify-end gap-1">
-													{hasPermission(
+													{hasSystemPermission(
 														ac,
 														rbacRole,
 														PERMISSIONS.VIEW_ADMIN,

@@ -28,7 +28,7 @@ export const updateMemberRole = protectedProcedure
 		const org = await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			PERMISSIONS.UPDATE_ORGANIZATION,
+			PERMISSIONS.ORGANIZATION.UPDATE,
 			context.headers,
 		);
 		const targetMember = org.members?.find((m) => m.id === input.memberId);

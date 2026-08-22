@@ -1,8 +1,9 @@
 import { markAllRead } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
 
 export const markAllNotificationsReadProcedure = permissionProcedure(
-	"update:notification",
+	PERMISSIONS.NOTIFICATION.UPDATE,
 )
 	.use(createRateLimitMiddleware({ endpoint: "notificationMutation" }))
 	.route({

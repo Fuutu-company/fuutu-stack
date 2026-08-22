@@ -275,9 +275,6 @@ export function MeshGradient({
 			}
 		};
 	}, [
-		color1 ?? null,
-		color2 ?? null,
-		color3 ?? null,
 		speed,
 		warpStrength,
 		warpFrequency,
@@ -287,6 +284,9 @@ export function MeshGradient({
 		grain,
 		contrast,
 		saturation,
+		color3,
+		color2,
+		color1,
 	]);
 
 	return (

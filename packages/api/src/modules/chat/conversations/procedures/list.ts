@@ -1,4 +1,5 @@
 import { countConversations, listConversations } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { permissionProcedure } from "../../../../orpc";
 import { requireOrgPermissionAccess } from "../../../organizations/shared";
@@ -9,7 +10,9 @@ const listConversationsSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listConversationsProcedure = permissionProcedure("view:chat")
+export const listConversationsProcedure = permissionProcedure(
+	PERMISSIONS.CHAT.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/chat/conversations",
@@ -24,7 +27,7 @@ export const listConversationsProcedure = permissionProcedure("view:chat")
 			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"view:chat",
+				PERMISSIONS.CHAT.VIEW,
 				context.headers,
 			);
 		}
