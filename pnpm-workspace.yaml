@@ -68,7 +68,7 @@ catalog:
   "@orpc/zod": ^1.14.14
   "@orpc/client": ^1.14.14
   "@orpc/tanstack-query": ^1.14.14
-  hono: ^4.13.0
+  hono: ^4.13.5
   # Auth
   "better-auth": ^1.6.25
   "@better-auth/passkey": ^1.6.25
