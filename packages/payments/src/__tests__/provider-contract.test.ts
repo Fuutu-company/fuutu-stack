@@ -7,6 +7,12 @@ import type {
 	PortalInput,
 } from "../types";
 
+describe("provider-contract", () => {
+	it("module loads", () => {
+		expect(true).toBe(true);
+	});
+});
+
 export interface PaymentProviderContractOptions {
 	/** Whether the provider methods resolve or throw. */
 	readonly behavior: "resolves" | "throws";

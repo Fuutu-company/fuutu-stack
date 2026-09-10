@@ -13,6 +13,14 @@ vi.mock("@fuutu/ai", () => ({
 	resolveAIProvider: vi.fn(),
 }));
 
+vi.mock("@fuutu/auth", () => ({
+	auth: {
+		api: {
+			getFullOrganization: vi.fn(),
+		},
+	},
+}));
+
 vi.mock("@fuutu/db", () => ({
 	db: {},
 }));

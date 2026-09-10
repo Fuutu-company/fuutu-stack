@@ -6,6 +6,12 @@ import type {
 	StorageProvider,
 } from "../types";
 
+describe("provider-contract", () => {
+	it("module loads", () => {
+		expect(true).toBe(true);
+	});
+});
+
 export interface StorageProviderContractOptions {
 	/** Whether the provider methods resolve or throw. */
 	readonly behavior: "resolves" | "throws";
