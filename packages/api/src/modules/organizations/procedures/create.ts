@@ -1,7 +1,8 @@
 import { auth } from "@fuutu/auth";
+import { countOrganizationsForUser } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 import { slugSchema } from "../shared";
 
 const createOrgSchema = z.object({
@@ -9,9 +10,13 @@ const createOrgSchema = z.object({
 	slug: slugSchema,
 });
 
-export const createOrganization = permissionProcedure(
-	PERMISSIONS.ORGANIZATION.CREATE,
-)
+export const createOrganization = authProcedure({
+	systemPermission: PERMISSIONS.ORGANIZATION.CREATE,
+	limit: {
+		key: "organizations",
+		count: async (ctx) => countOrganizationsForUser(ctx.user.id),
+	},
+})
 	.use(createRateLimitMiddleware({ endpoint: "organizationMutation" }))
 	.route({
 		method: "POST",

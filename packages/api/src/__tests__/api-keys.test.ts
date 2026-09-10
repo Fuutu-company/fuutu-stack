@@ -13,6 +13,8 @@ vi.mock("@fuutu/db", () => ({
 	revokeApiKey: vi.fn(),
 	deleteApiKey: vi.fn(),
 	getApiKey: vi.fn(),
+	getActiveSubscriptionForUser: vi.fn().mockResolvedValue(null),
+	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@fuutu/auth", () => ({

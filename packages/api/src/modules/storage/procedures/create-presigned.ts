@@ -1,8 +1,8 @@
 import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { resolveBucketOrThrow } from "../shared";
 
 const BLOCKED_EXTENSIONS: readonly string[] = [
 	".exe",
@@ -48,7 +48,10 @@ const uploadCreatePresignedSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const createPresigned = permissionProcedure(PERMISSIONS.STORAGE.VIEW)
+export const createPresigned = authProcedure({
+	systemPermission: PERMISSIONS.STORAGE.CREATE,
+	org: { permission: PERMISSIONS.STORAGE.CREATE, optional: true },
+})
 	.use(createRateLimitMiddleware({ endpoint: "storageMutation" }))
 	.route({
 		method: "POST",
@@ -60,22 +63,12 @@ export const createPresigned = permissionProcedure(PERMISSIONS.STORAGE.VIEW)
 	})
 	.input(uploadCreatePresignedSchema)
 	.handler(async ({ input, context }) => {
-		let prefix: string;
-		if (input.organizationId) {
-			await requireOrgPermissionAccess(
-				input.organizationId,
-				context.user.id,
-				PERMISSIONS.STORAGE.VIEW,
-				context.headers,
-			);
-			prefix = input.organizationId;
-		} else {
-			prefix = context.user.id;
-		}
+		const bucket = resolveBucketOrThrow(input.bucket);
+		const prefix = context.org?.id ?? context.user.id;
 		const scopedKey = `${prefix}/${input.key}`;
 		const provider = resolveStorageProvider();
 		const result = await provider.getSignedUploadUrl({
-			bucket: input.bucket,
+			bucket,
 			key: scopedKey,
 			contentType: input.contentType,
 			contentLength: input.contentLength,

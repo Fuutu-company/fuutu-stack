@@ -1,8 +1,7 @@
-import { createWebhook } from "@fuutu/db";
+import { countWebhooks, createWebhook } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 
 const createWebhookSchema = z.object({
 	organizationId: z.string().min(1),
@@ -10,7 +9,14 @@ const createWebhookSchema = z.object({
 	events: z.array(z.string().min(1)).min(1),
 });
 
-export const createWebhookProcedure = protectedProcedure
+export const createWebhookProcedure = authProcedure({
+	org: { permission: PERMISSIONS.WEBHOOK.CREATE },
+	plan: "pro",
+	limit: {
+		key: "webhooks",
+		count: async (ctx) => countWebhooks(ctx.org?.id ?? ""),
+	},
+})
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "POST",
@@ -18,16 +24,10 @@ export const createWebhookProcedure = protectedProcedure
 		tags: ["Webhooks"],
 		summary: "Create webhook",
 		description:
-			"Creates a new webhook endpoint. The signing secret is returned only once.",
+			"Creates a new webhook endpoint. The signing secret is returned only once. Requires a Pro plan.",
 	})
 	.input(createWebhookSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgPermissionAccess(
-			input.organizationId,
-			context.user.id,
-			PERMISSIONS.WEBHOOK.CREATE,
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const result = await createWebhook(
 			input.organizationId,
 			input.url,

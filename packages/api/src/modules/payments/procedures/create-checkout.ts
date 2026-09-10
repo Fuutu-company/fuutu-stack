@@ -1,8 +1,7 @@
 import { resolvePaymentProvider } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 import { sanitizePaymentUrl } from "../shared";
 
 const checkoutSchema = z.object({
@@ -13,7 +12,9 @@ const checkoutSchema = z.object({
 	seats: z.number().int().min(1).optional(),
 });
 
-export const createCheckout = protectedProcedure
+export const createCheckout = authProcedure({
+	org: { permission: PERMISSIONS.PAYMENT.CREATE, optional: true },
+})
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",
@@ -24,14 +25,6 @@ export const createCheckout = protectedProcedure
 	})
 	.input(checkoutSchema)
 	.handler(async ({ input, context }) => {
-		if (input.organizationId) {
-			await requireOrgPermissionAccess(
-				input.organizationId,
-				context.user.id,
-				PERMISSIONS.PAYMENT.CREATE,
-				context.headers,
-			);
-		}
 		const provider = resolvePaymentProvider();
 		// seats is used for seat-based plans (quantity on Stripe, units on Creem)
 		const result = await provider.createCheckoutLink({

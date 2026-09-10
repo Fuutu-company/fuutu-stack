@@ -1,8 +1,7 @@
-import { createApiKey } from "@fuutu/db";
+import { countApiKeys, countOrgApiKeys, createApiKey } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 
 const createApiKeySchema = z.object({
 	name: z.string().min(1).max(100),
@@ -10,9 +9,18 @@ const createApiKeySchema = z.object({
 	expiresAt: z.coerce.date().optional(),
 });
 
-export const createApiKeyProcedure = permissionProcedure(
-	PERMISSIONS.API_KEY.CREATE,
-)
+export const createApiKeyProcedure = authProcedure({
+	systemPermission: PERMISSIONS.API_KEY.CREATE,
+	org: {
+		permission: PERMISSIONS.API_KEY.CREATE,
+		optional: true,
+	},
+	limit: {
+		key: "apiKeys",
+		count: async (ctx) =>
+			ctx.org ? countOrgApiKeys(ctx.org.id) : countApiKeys(ctx.user.id),
+	},
+})
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",
@@ -24,14 +32,6 @@ export const createApiKeyProcedure = permissionProcedure(
 	})
 	.input(createApiKeySchema)
 	.handler(async ({ input, context }) => {
-		if (input.organizationId) {
-			await requireOrgPermissionAccess(
-				input.organizationId,
-				context.user.id,
-				PERMISSIONS.API_KEY.CREATE,
-				context.headers,
-			);
-		}
 		const result = await createApiKey(
 			context.user.id,
 			input.name,

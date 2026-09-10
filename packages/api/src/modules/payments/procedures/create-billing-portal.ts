@@ -3,8 +3,7 @@ import { resolvePaymentProvider } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 import { sanitizePaymentUrl } from "../shared";
 
 const portalSchema = z.object({
@@ -12,7 +11,9 @@ const portalSchema = z.object({
 	returnUrl: z.string().optional(),
 });
 
-export const createBillingPortal = protectedProcedure
+export const createBillingPortal = authProcedure({
+	org: { permission: PERMISSIONS.PAYMENT.UPDATE, optional: true },
+})
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",
@@ -25,12 +26,6 @@ export const createBillingPortal = protectedProcedure
 	.handler(async ({ input, context }) => {
 		let customerId: string | undefined;
 		if (input.organizationId) {
-			await requireOrgPermissionAccess(
-				input.organizationId,
-				context.user.id,
-				PERMISSIONS.PAYMENT.UPDATE,
-				context.headers,
-			);
 			const org = await getOrganizationById(input.organizationId);
 			if (!org) {
 				throw new ORPCError("NOT_FOUND", {

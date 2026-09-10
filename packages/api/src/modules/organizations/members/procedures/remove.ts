@@ -2,18 +2,17 @@ import { auth } from "@fuutu/auth";
 import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import {
-	createRateLimitMiddleware,
-	protectedProcedure,
-} from "../../../../orpc";
-import { type OrgMember, requireOrgPermissionAccess } from "../../shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../../orpc";
+import type { OrgMember } from "../../../organizations/shared";
 
 const removeMemberSchema = z.object({
 	organizationId: z.string().min(1),
 	memberIdOrEmail: z.string().min(1),
 });
 
-export const removeMember = protectedProcedure
+export const removeMember = authProcedure({
+	org: { permission: PERMISSIONS.REMOVE_ORGANIZATION },
+})
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
 		method: "DELETE",
@@ -25,17 +24,10 @@ export const removeMember = protectedProcedure
 	})
 	.input(removeMemberSchema)
 	.handler(async ({ input, context }) => {
-		const org = await requireOrgPermissionAccess(
-			input.organizationId,
-			context.user.id,
-			PERMISSIONS.REMOVE_ORGANIZATION,
-			context.headers,
-		);
-		const actor = org.members?.find(
-			(m: OrgMember) => m.userId === context.user.id,
-		);
-		const actorRole = toOrgRole(actor?.role);
-		const target = org.members?.find(
+		// context.org and context.orgRole are set by authorize middleware
+		// (org option is not optional, so both are guaranteed defined)
+		const actorRole = context.orgRole ?? "member";
+		const target = context.org?.members?.find(
 			(m: OrgMember) =>
 				m.id === input.memberIdOrEmail ||
 				m.userId === input.memberIdOrEmail ||

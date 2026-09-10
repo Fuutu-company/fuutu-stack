@@ -22,7 +22,12 @@ export const getOrganization = permissionProcedure(
 		if (!org) {
 			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 		}
-		await requireOrgPermissionAccess(org.id, context.user.id, PERMISSIONS.ORGANIZATION.VIEW, context.headers);
+		await requireOrgPermissionAccess(
+			org.id,
+			context.user.id,
+			PERMISSIONS.ORGANIZATION.VIEW,
+			context.headers,
+		);
 		const fullOrg = await auth.api.getFullOrganization({
 			query: { organizationId: org.id },
 			headers: context.headers,

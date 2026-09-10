@@ -13,7 +13,7 @@ export {
 	type StorageProviderId,
 	storageConfig,
 } from "./config";
-export { fetchObjectStream, s3StorageProvider } from "./providers/s3";
+export { s3StorageProvider } from "./providers/s3";
 export {
 	noopStorageProvider,
 	supabaseStorageProvider,
@@ -72,4 +72,33 @@ export async function getObjectStream(
 		throw new StorageStreamUnavailableError(provider.id);
 	}
 	return provider.getObjectStream(bucket, key);
+}
+
+/**
+ * Validates that a client-supplied bucket name is one of the configured
+ * physical buckets and returns it. Throws if the bucket is not configured.
+ *
+ * This is the security gate that prevents clients from requesting presigned
+ * URLs or listing/deleting objects in arbitrary S3 buckets. Every API
+ * procedure that accepts `bucket` from client input must call this.
+ *
+ * @param bucket - The bucket name from client input (must match a configured physical bucket)
+ * @returns The validated physical bucket name
+ * @throws {StorageBucketError} when the bucket is not in `storageConfig.buckets`
+ */
+export class StorageBucketError extends Error {
+	constructor(bucket: string) {
+		super(
+			`Bucket "${bucket}" is not configured. Allowed: ${Object.values(storageConfig.buckets).join(", ")}.`,
+		);
+		this.name = "StorageBucketError";
+	}
+}
+
+export function resolveBucket(bucket: string): string {
+	const allowed = Object.values(storageConfig.buckets);
+	if (!allowed.includes(bucket)) {
+		throw new StorageBucketError(bucket);
+	}
+	return bucket;
 }

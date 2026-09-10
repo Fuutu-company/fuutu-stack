@@ -50,6 +50,14 @@ export {
 	planIdToTier,
 } from "./features";
 export {
+	checkLimit,
+	getPlanLimit,
+	type LimitCheckResult,
+	meetsTier,
+	type ResolvedPlan,
+	resolveActivePlan,
+} from "./plan-resolver";
+export {
 	type BuildPricingTiersOptions,
 	type BuiltPricingTier,
 	buildPricingTiers,

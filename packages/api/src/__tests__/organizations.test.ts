@@ -24,6 +24,10 @@ vi.mock("@fuutu/auth", () => ({
 vi.mock("@fuutu/db", () => ({
 	getOrganizationBySlug: vi.fn(),
 	getInvitationOrganizationId: vi.fn(),
+	countOrganizationsForUser: vi.fn().mockResolvedValue(0),
+	countOrganizationMembers: vi.fn().mockResolvedValue(0),
+	getActiveSubscriptionForUser: vi.fn().mockResolvedValue(null),
+	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@fuutu/ai", () => ({

@@ -1,8 +1,8 @@
 import { auth } from "@fuutu/auth";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess, slugSchema } from "../shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { slugSchema } from "../shared";
 
 const updateOrgSchema = z.object({
 	organizationId: z.string().min(1),
@@ -10,7 +10,9 @@ const updateOrgSchema = z.object({
 	slug: slugSchema.optional(),
 });
 
-export const updateOrganization = protectedProcedure
+export const updateOrganization = authProcedure({
+	org: { permission: PERMISSIONS.ORGANIZATION.UPDATE },
+})
 	.use(createRateLimitMiddleware({ endpoint: "organizationMutation" }))
 	.route({
 		method: "PATCH",
@@ -22,12 +24,6 @@ export const updateOrganization = protectedProcedure
 	})
 	.input(updateOrgSchema)
 	.handler(async ({ input, context }) => {
-		await requireOrgPermissionAccess(
-			input.organizationId,
-			context.user.id,
-			PERMISSIONS.ORGANIZATION.UPDATE,
-			context.headers,
-		);
 		const org = await auth.api.updateOrganization({
 			body: {
 				organizationId: input.organizationId,

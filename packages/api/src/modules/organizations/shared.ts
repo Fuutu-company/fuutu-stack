@@ -31,16 +31,45 @@ export type FullOrganization = NonNullable<
 	Awaited<ReturnType<typeof auth.api.getFullOrganization>>
 >;
 
+/**
+ * Safely fetch an organization, returning `null` when it doesn't exist.
+ *
+ * Better-Auth's `getFullOrganization` throws an `APIError` with
+ * `code: "ORGANIZATION_NOT_FOUND"` (HTTP 400) instead of returning null.
+ * This helper normalizes that to `null` so callers can use a simple
+ * null-check and throw a clean `ORPCError("NOT_FOUND")`.
+ */
+export async function getOrgOrNull(
+	organizationId: string,
+	headers?: Headers,
+): Promise<FullOrganization | null> {
+	try {
+		const org = await auth.api.getFullOrganization({
+			query: { organizationId },
+			headers: headers ?? new Headers(),
+		});
+		return org;
+	} catch (e) {
+		// Better-Auth APIError: { name: "APIError", statusCode: 400, body.code: "ORGANIZATION_NOT_FOUND" }
+		if (
+			e instanceof Error &&
+			e.name === "APIError" &&
+			"statusCode" in e &&
+			(e as { statusCode: number }).statusCode === 400
+		) {
+			return null;
+		}
+		throw e;
+	}
+}
+
 export async function requireOrgRole(
 	organizationId: string,
 	userId: string,
 	minRole: OrgRole,
 	headers?: Headers,
 ): Promise<FullOrganization> {
-	const org = await auth.api.getFullOrganization({
-		query: { organizationId },
-		headers: headers ?? new Headers(),
-	});
+	const org = await getOrgOrNull(organizationId, headers);
 	if (!org) {
 		throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 	}
@@ -72,10 +101,7 @@ export async function requireOrgPermissionAccess(
 	permission: KnownPermission,
 	headers?: Headers,
 ): Promise<FullOrganization> {
-	const org = await auth.api.getFullOrganization({
-		query: { organizationId },
-		headers: headers ?? new Headers(),
-	});
+	const org = await getOrgOrNull(organizationId, headers);
 	if (!org) {
 		throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 	}

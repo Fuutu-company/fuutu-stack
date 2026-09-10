@@ -64,12 +64,22 @@ function acceptsOrganizationIdFromInput(content: string): boolean {
 }
 
 /**
- * Check if a file calls `requireOrgRole` or `requireOrgPermissionAccess` to verify membership.
+ * Check if a file calls `requireOrgRole` or `requireOrgPermissionAccess` to verify membership,
+ * OR uses `authProcedure({ org: ... })` which resolves org membership via the authorize middleware.
+ *
+ * `authProcedure({ org: { ..., optional: true } })` is also a valid guard:
+ * when `organizationId` IS present in the input, the middleware runs the full
+ * membership + permission check. When it's absent, the check is skipped — but
+ * the handler must not use `input.organizationId` in that case (the IDOR scanner's
+ * `handlerOnlyUsesContextUserId` check catches handlers that use orgId without a guard).
  */
 function callsRequireOrgRole(content: string): boolean {
 	return (
 		content.includes("requireOrgRole(") ||
-		content.includes("requireOrgPermissionAccess(")
+		content.includes("requireOrgPermissionAccess(") ||
+		// authProcedure with org option (required or optional) — the authorize
+		// middleware handles membership verification when orgId is present in input
+		/authProcedure\s*\(\s*\{[\s\S]*?org\s*:/.test(content)
 	);
 }
 

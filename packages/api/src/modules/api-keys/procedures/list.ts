@@ -7,8 +7,7 @@ import {
 import { PERMISSIONS } from "@fuutu/rbac";
 
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure } from "../../../orpc";
 
 const listApiKeysSchema = z.object({
 	organizationId: z.string().optional(),
@@ -16,9 +15,10 @@ const listApiKeysSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listApiKeysProcedure = permissionProcedure(
-	PERMISSIONS.API_KEY.VIEW,
-)
+export const listApiKeysProcedure = authProcedure({
+	systemPermission: PERMISSIONS.API_KEY.VIEW,
+	org: { permission: PERMISSIONS.API_KEY.VIEW, optional: true },
+})
 	.route({
 		method: "GET",
 		path: "/api-keys",
@@ -30,19 +30,13 @@ export const listApiKeysProcedure = permissionProcedure(
 	.input(listApiKeysSchema)
 	.handler(async ({ input, context }) => {
 		const skip = (input.page - 1) * input.limit;
-		if (input.organizationId) {
-			await requireOrgPermissionAccess(
-				input.organizationId,
-				context.user.id,
-				PERMISSIONS.API_KEY.VIEW,
-				context.headers,
-			);
+		if (context.org) {
 			const [items, total] = await Promise.all([
-				listOrgApiKeys(input.organizationId, {
+				listOrgApiKeys(context.org.id, {
 					take: input.limit,
 					skip,
 				}),
-				countOrgApiKeys(input.organizationId),
+				countOrgApiKeys(context.org.id),
 			]);
 			return {
 				items,

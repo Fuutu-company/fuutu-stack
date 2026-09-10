@@ -13,6 +13,11 @@ vi.mock("@fuutu/db", () => ({
 	getWebhook: vi.fn(),
 	listDeliveries: vi.fn(),
 	countDeliveries: vi.fn(),
+	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@fuutu/payments/config.server", () => ({
+	getPlanIdForProductId: vi.fn().mockReturnValue("pro"),
 }));
 
 vi.mock("@fuutu/auth", () => ({
@@ -36,6 +41,7 @@ const {
 	getWebhook,
 	listDeliveries,
 	countDeliveries,
+	getActiveSubscriptionForOrganization,
 } = await import("@fuutu/db");
 const { auth } = await import("@fuutu/auth");
 
@@ -60,6 +66,11 @@ describe("webhooks.create", () => {
 		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
 			orgFixture as never,
 		);
+		// Mock a pro subscription so the plan: "pro" check passes
+		vi.mocked(getActiveSubscriptionForOrganization).mockResolvedValue({
+			productId: "price_pro",
+			status: "ACTIVE",
+		} as never);
 	});
 
 	it("creates a webhook and returns the secret once", async () => {

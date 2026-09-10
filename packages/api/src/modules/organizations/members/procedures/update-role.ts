@@ -1,12 +1,8 @@
 import { auth } from "@fuutu/auth";
-import { PERMISSIONS } from "@fuutu/rbac";
+import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import {
-	createRateLimitMiddleware,
-	protectedProcedure,
-} from "../../../../orpc";
-import { requireOrgPermissionAccess } from "../../shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../../orpc";
 
 const updateMemberRoleSchema = z.object({
 	organizationId: z.string().min(1),
@@ -14,31 +10,33 @@ const updateMemberRoleSchema = z.object({
 	role: z.enum(["owner", "admin", "member"]),
 });
 
-export const updateMemberRole = protectedProcedure
+export const updateMemberRole = authProcedure({
+	org: { permission: PERMISSIONS.ORGANIZATION.UPDATE },
+})
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
 		method: "PATCH",
 		path: "/organizations/{organizationId}/members/{memberId}/role",
 		tags: ["Organizations"],
 		summary: "Update member role",
-		description: "Changes a member's role. Owner role required.",
+		description:
+			"Changes a member's role. Admin role required. Can only assign at or below your own role (owner can assign owner; admin can assign admin/member). Cannot change your own role.",
 	})
 	.input(updateMemberRoleSchema)
 	.handler(async ({ input, context }) => {
-		const org = await requireOrgPermissionAccess(
-			input.organizationId,
-			context.user.id,
-			PERMISSIONS.ORGANIZATION.UPDATE,
-			context.headers,
+		const actorRole = context.orgRole ?? "member";
+		const targetMember = context.org?.members?.find(
+			(m: { id: string; userId: string }) => m.id === input.memberId,
 		);
-		const targetMember = org.members?.find((m) => m.id === input.memberId);
-		if (
-			targetMember &&
-			targetMember.userId === context.user.id &&
-			input.role !== "owner"
-		) {
+		const targetRole = toOrgRole(input.role);
+		if (targetMember && targetMember.userId === context.user.id) {
 			throw new ORPCError("FORBIDDEN", {
-				message: "Cannot demote yourself",
+				message: "Cannot change your own role — use a transfer ownership flow",
+			});
+		}
+		if (!hasRoleAtLeast(actorRole, targetRole)) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cannot assign a role higher than your own",
 			});
 		}
 		const result = await auth.api.updateMemberRole({

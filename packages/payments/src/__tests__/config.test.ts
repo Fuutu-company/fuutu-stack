@@ -17,6 +17,7 @@ const LIMIT_KEYS: (keyof PlanLimits)[] = [
 	"organizations",
 	"membersPerOrg",
 	"apiKeys",
+	"webhooks",
 	"storageMb",
 	"auditLogDays",
 ];

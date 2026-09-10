@@ -276,6 +276,7 @@ export interface PlanLimits {
 	organizations: LimitValue;
 	membersPerOrg: LimitValue;
 	apiKeys: LimitValue;
+	webhooks: LimitValue;
 	storageMb: LimitValue;
 	auditLogDays: LimitValue;
 }
@@ -285,6 +286,7 @@ export const LIMITS = {
 		organizations: 1,
 		membersPerOrg: 5,
 		apiKeys: 2,
+		webhooks: false,
 		storageMb: 500,
 		auditLogDays: false,
 	},
@@ -292,6 +294,7 @@ export const LIMITS = {
 		organizations: 10,
 		membersPerOrg: 50,
 		apiKeys: "unlimited",
+		webhooks: 10,
 		storageMb: 50_000,
 		auditLogDays: 30,
 	},
@@ -299,6 +302,7 @@ export const LIMITS = {
 		organizations: "unlimited",
 		membersPerOrg: "unlimited",
 		apiKeys: "unlimited",
+		webhooks: "unlimited",
 		storageMb: "unlimited",
 		auditLogDays: "unlimited",
 	},
@@ -436,7 +440,7 @@ export const FEATURE_CATALOG = {
 	},
 	api: {
 		keys: { tier: "free", limitKey: "apiKeys" },
-		webhooks: { tier: "pro" },
+		webhooks: { tier: "pro", limitKey: "webhooks" },
 	},
 	infrastructure: {
 		storage: { tier: "free", limitKey: "storageMb" },

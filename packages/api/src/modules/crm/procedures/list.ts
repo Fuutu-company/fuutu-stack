@@ -1,8 +1,7 @@
 import { countContacts, listContacts } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure } from "../../../orpc";
 
 const listContactsSchema = z.object({
 	organizationId: z.string().min(1),
@@ -12,7 +11,9 @@ const listContactsSchema = z.object({
 	search: z.string().optional(),
 });
 
-export const listContactsProcedure = permissionProcedure(PERMISSIONS.CRM.VIEW)
+export const listContactsProcedure = authProcedure({
+	org: { permission: PERMISSIONS.CRM.VIEW },
+})
 	.route({
 		method: "GET",
 		path: "/crm/contacts",
@@ -22,13 +23,7 @@ export const listContactsProcedure = permissionProcedure(PERMISSIONS.CRM.VIEW)
 			"Returns paginated contacts for an organization, optionally filtered by status or search term.",
 	})
 	.input(listContactsSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgPermissionAccess(
-			input.organizationId,
-			context.user.id,
-			PERMISSIONS.CRM.VIEW,
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const skip = (input.page - 1) * input.limit;
 		const items = await listContacts(input.organizationId, {
 			take: input.limit,

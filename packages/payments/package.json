@@ -18,6 +18,9 @@
 		},
 		"./plans": {
 			"default": "./src/plans.ts"
+		},
+		"./plan-resolver": {
+			"default": "./src/plan-resolver.ts"
 		}
 	},
 	"scripts": {

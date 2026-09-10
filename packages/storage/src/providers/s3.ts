@@ -180,27 +180,3 @@ export const s3StorageProvider: StorageProvider = {
 		}
 	},
 };
-
-/**
- * Stream an object directly from S3 — used by the image-proxy route in
- * `apps/saas` for private buckets (avoids exposing signed URLs on the
- * public web surface).
- *
- * @deprecated Use `s3StorageProvider.getObjectStream()` or `resolveStorageProvider().getObjectStream()` instead.
- */
-export async function fetchObjectStream(
-	bucket: string,
-	key: string,
-): Promise<{
-	body: ReadableStream<Uint8Array>;
-	contentType: string | null;
-	contentLength: number | null;
-} | null> {
-	const result = await s3StorageProvider.getObjectStream?.(bucket, key);
-	if (!result) return null;
-	return {
-		body: result.body,
-		contentType: result.contentType,
-		contentLength: result.contentLength,
-	};
-}

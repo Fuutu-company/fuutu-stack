@@ -6,6 +6,7 @@ import { storageRouter } from "../modules/storage/router";
 
 vi.mock("@fuutu/storage", () => ({
 	resolveStorageProvider: vi.fn(),
+	resolveBucket: vi.fn((bucket: string) => bucket),
 }));
 
 vi.mock("@fuutu/ai", () => ({
@@ -136,6 +137,28 @@ describe("storage.upload.createPresigned", () => {
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
+	});
+
+	it("rejects unconfigured bucket name", async () => {
+		const { resolveBucket } = await import("@fuutu/storage");
+		vi.mocked(resolveBucket).mockImplementation(() => {
+			throw new Error("Bucket not configured");
+		});
+		vi.mocked(resolveStorageProvider).mockReturnValue(mockProvider as never);
+
+		await expect(
+			call(
+				storageRouter.upload.createPresigned,
+				{
+					bucket: "secret-backups",
+					key: "test.png",
+					contentType: "image/png",
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toBeDefined();
+
+		vi.mocked(resolveBucket).mockImplementation((b: string) => b);
 	});
 
 	it("rejects empty key", async () => {

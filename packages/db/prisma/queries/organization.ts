@@ -35,3 +35,6 @@ export const findPendingInvitation = (email: string) =>
 
 export const countOrganizationMembers = (organizationId: string) =>
 	db.member.count({ where: { organizationId } });
+
+export const countOrganizationsForUser = (userId: string) =>
+	db.organization.count({ where: { members: { some: { userId } } } });

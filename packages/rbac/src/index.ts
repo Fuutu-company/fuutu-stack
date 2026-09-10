@@ -57,21 +57,8 @@ export function toOrgRole(raw: string | null | undefined): OrgRole {
 	return "member";
 }
 
-// ─── Backward compat: unified Role + toRbacRole (DEPRECATED) ───────────────
-// Kept for transition. Prefer toSystemRole() / toOrgRole().
-/** @deprecated Use `SystemRole` or `OrgRole` instead. */
+/** Union of both role systems — used by polymorphic helpers (canCRUD, createPermissionChecker). */
 export type Role = SystemRole | OrgRole;
-/** @deprecated Use `toSystemRole()` or `toOrgRole()` instead. */
-export function toRbacRole(raw: string | null | undefined): Role {
-	const parts = (raw ?? "")
-		.split(",")
-		.map((part) => part.trim())
-		.filter(Boolean);
-	if (parts.includes("owner")) return "owner";
-	if (parts.includes("admin")) return "admin";
-	if (parts.includes("user")) return "user";
-	return "member";
-}
 
 /** True when `role` sits at or above `required` in the org hierarchy. */
 export function hasRoleAtLeast(role: OrgRole, required: OrgRole): boolean {

@@ -1,8 +1,7 @@
 import { createContact } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 
 const createContactSchema = z.object({
 	organizationId: z.string().min(1),
@@ -16,9 +15,9 @@ const createContactSchema = z.object({
 	notes: z.string().max(5000).optional(),
 });
 
-export const createContactProcedure = permissionProcedure(
-	PERMISSIONS.CRM.CREATE,
-)
+export const createContactProcedure = authProcedure({
+	org: { permission: PERMISSIONS.CRM.CREATE },
+})
 	.use(createRateLimitMiddleware({ endpoint: "crmContact" }))
 	.route({
 		method: "POST",
@@ -28,13 +27,7 @@ export const createContactProcedure = permissionProcedure(
 		description: "Creates a new contact in the specified organization.",
 	})
 	.input(createContactSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgPermissionAccess(
-			input.organizationId,
-			context.user.id,
-			PERMISSIONS.CRM.CREATE,
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const contact = await createContact({
 			organizationId: input.organizationId,
 			name: input.name,

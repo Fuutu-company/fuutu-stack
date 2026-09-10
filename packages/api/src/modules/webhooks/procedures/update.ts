@@ -2,8 +2,7 @@ import { updateWebhook } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
+import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 
 const updateWebhookSchema = z.object({
 	id: z.string().min(1),
@@ -13,7 +12,9 @@ const updateWebhookSchema = z.object({
 	isActive: z.boolean().optional(),
 });
 
-export const updateWebhookProcedure = protectedProcedure
+export const updateWebhookProcedure = authProcedure({
+	org: { permission: PERMISSIONS.WEBHOOK.UPDATE },
+})
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "PATCH",
@@ -23,13 +24,7 @@ export const updateWebhookProcedure = protectedProcedure
 		description: "Updates a webhook endpoint's URL, events, or active status.",
 	})
 	.input(updateWebhookSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgPermissionAccess(
-			input.organizationId,
-			context.user.id,
-			PERMISSIONS.WEBHOOK.UPDATE,
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const result = await updateWebhook(input.id, input.organizationId, {
 			...(input.url ? { url: input.url } : {}),
 			...(input.events ? { events: input.events } : {}),

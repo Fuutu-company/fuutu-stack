@@ -3,6 +3,13 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
+} from "@fuutu/rbac";
+import {
 	Button,
 	Card,
 	CardContent,
@@ -19,19 +26,41 @@ import { OrgLogoUpload } from "./components/org-logo-upload";
 
 const log = createLogger({ scope: "org-settings" });
 
+const ac = new OrgAccessControl(ORG_POLICY);
+
+type Member = {
+	id: string;
+	userId: string;
+	role: string;
+};
+
 type FullOrg = {
 	id: string;
 	name: string;
 	slug: string;
+	members?: Member[];
 };
 
 export function OrgSettingsGeneral({ slug }: { slug: string }) {
 	const t = useTranslations();
+	const { data: session } = authClient.useSession();
 	const [org, setOrg] = useState<FullOrg | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [name, setName] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
+
+	const currentUserId = session?.user?.id;
+	const currentUserRole = org?.members?.find(
+		(m) => m.userId === currentUserId,
+	)?.role;
+	const canEdit = currentUserRole
+		? hasOrgPermission(
+				ac,
+				toOrgRole(currentUserRole),
+				PERMISSIONS.ORGANIZATION.UPDATE,
+			)
+		: false;
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -122,17 +151,22 @@ export function OrgSettingsGeneral({ slug }: { slug: string }) {
 									value={name}
 									onChange={(e) => setName(e.target.value)}
 									required
+									disabled={!canEdit}
 								/>
 							</Field>
 						</FieldGroup>
-						<div className="flex items-center gap-3">
-							<Button type="submit" disabled={saving || !name.trim()}>
-								{saving ? t("common.saving") : t("common.save")}
-							</Button>
-							{status && (
-								<span className="text-muted-foreground text-sm">{status}</span>
-							)}
-						</div>
+						{canEdit && (
+							<div className="flex items-center gap-3">
+								<Button type="submit" disabled={saving || !name.trim()}>
+									{saving ? t("common.saving") : t("common.save")}
+								</Button>
+								{status && (
+									<span className="text-muted-foreground text-sm">
+										{status}
+									</span>
+								)}
+							</div>
+						)}
 					</form>
 				</CardContent>
 			</Card>

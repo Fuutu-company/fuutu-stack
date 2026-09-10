@@ -2,6 +2,13 @@
 
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
+import {
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
+} from "@fuutu/rbac";
 import { storageConfig } from "@fuutu/storage";
 import { Button, Card, CardContent } from "@fuutu/ui";
 import { slugify } from "@fuutu/utils";
@@ -15,20 +22,42 @@ const MAX_LOGO_SIZE = 5 * 1024 * 1024;
 
 const log = createLogger({ scope: "org-logo-upload" });
 
+const ac = new OrgAccessControl(ORG_POLICY);
+
+type Member = {
+	id: string;
+	userId: string;
+	role: string;
+};
+
 type FullOrg = {
 	id: string;
 	name: string;
 	slug: string;
 	logo?: string | null;
+	members?: Member[];
 };
 
 export function OrgLogoUpload({ slug }: { slug: string }) {
 	const t = useTranslations("organizations");
+	const { data: session } = authClient.useSession();
 	const [org, setOrg] = useState<FullOrg | null>(null);
 	const [uploading, setUploading] = useState(false);
 	const [removing, setRemoving] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const currentUserId = session?.user?.id;
+	const currentUserRole = org?.members?.find(
+		(m) => m.userId === currentUserId,
+	)?.role;
+	const canEdit = currentUserRole
+		? hasOrgPermission(
+				ac,
+				toOrgRole(currentUserRole),
+				PERMISSIONS.ORGANIZATION.UPDATE,
+			)
+		: false;
 
 	const loadOrg = useCallback(async () => {
 		try {
@@ -133,32 +162,34 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 						)}
 					</div>
 					<div className="space-y-2">
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={uploading}
-								onClick={() => fileInputRef.current?.click()}
-							>
-								<Upload className="size-4" />
-								{uploading
-									? t("settings.logo.uploading")
-									: t("settings.logo.upload")}
-							</Button>
-							{org.logo && (
+						{canEdit && (
+							<div className="flex items-center gap-2">
 								<Button
-									variant="ghost"
+									variant="outline"
 									size="sm"
-									disabled={removing}
-									onClick={handleRemove}
+									disabled={uploading}
+									onClick={() => fileInputRef.current?.click()}
 								>
-									<Trash2 className="size-4" />
-									{removing
-										? t("settings.logo.removing")
-										: t("settings.logo.remove")}
+									<Upload className="size-4" />
+									{uploading
+										? t("settings.logo.uploading")
+										: t("settings.logo.upload")}
 								</Button>
-							)}
-						</div>
+								{org.logo && (
+									<Button
+										variant="ghost"
+										size="sm"
+										disabled={removing}
+										onClick={handleRemove}
+									>
+										<Trash2 className="size-4" />
+										{removing
+											? t("settings.logo.removing")
+											: t("settings.logo.remove")}
+									</Button>
+								)}
+							</div>
+						)}
 						<p className="text-muted-foreground text-xs">
 							{t("settings.logo.hint")}
 						</p>
