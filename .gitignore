@@ -74,3 +74,6 @@ fuutu.config.ts
 .shadcn-staging/
 
 .pnpm-store
+
+# Temp working docs — not pushed, content lives in fuutu-stack-nextjs/wiki/
+docs/
