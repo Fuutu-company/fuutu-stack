@@ -48,6 +48,7 @@ import type { PlanId } from "@fuutu/payments/config";
 import { paymentsConfig } from "@fuutu/payments/config";
 import {
 	hasOrgPermission,
+	hasRoleAtLeast,
 	hasSystemPermission,
 	type KnownPermission,
 	ORG_POLICY,
@@ -94,7 +95,15 @@ export type AuthorizeOptions = {
 	systemPermission?: KnownPermission;
 	/** Resolve org from input, verify membership, check org-level permission. */
 	org?: {
-		permission: KnownPermission;
+		/** Permission to check against ORG_POLICY. Mutually exclusive with minRole. */
+		permission?: KnownPermission;
+		/**
+		 * Minimum org role required (role-based check).
+		 * Mutually exclusive with permission. Use this when you want a
+		 * simple role-threshold gate instead of a fine-grained permission.
+		 * Framework users can choose this for their own business logic.
+		 */
+		minRole?: OrgRole;
 		/** Which input field contains the organizationId. Default: "organizationId". */
 		idField?: string;
 		/** If true, skip org check when the field is absent/undefined. */
@@ -182,11 +191,21 @@ export async function runAuthorize(
 			throw new ORPCError("FORBIDDEN", { message: "Not a member" });
 		}
 		const orgRole = toOrgRole(member.role);
-		if (
-			options.org &&
-			!hasOrgPermission(orgAC, orgRole, options.org.permission)
-		) {
-			throw new ORPCError("FORBIDDEN", { message: "Insufficient permissions" });
+		// Check org authorization: either permission-based OR role-based (minRole)
+		if (options.org) {
+			if (options.org.permission) {
+				if (!hasOrgPermission(orgAC, orgRole, options.org.permission)) {
+					throw new ORPCError("FORBIDDEN", {
+						message: "Insufficient permissions",
+					});
+				}
+			} else if (options.org.minRole) {
+				if (!hasRoleAtLeast(orgRole, options.org.minRole)) {
+					throw new ORPCError("FORBIDDEN", {
+						message: `${options.org.minRole} role required`,
+					});
+				}
+			}
 		}
 		ctx.org = org;
 		ctx.orgRole = orgRole;
