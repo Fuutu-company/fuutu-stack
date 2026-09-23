@@ -12,11 +12,31 @@ import type { AIProviderId } from "./types";
  * routes to many model vendors behind a single API key. Set `AI_PROVIDER`
  * to `google`/`openai`/`anthropic`/`noop` to switch.
  */
+
+/** Per-provider default models — model ID formats differ per provider
+ * (OpenRouter is vendor-prefixed, Google/OpenAI/Anthropic are bare). */
+const DEFAULT_MODELS: Record<AIProviderId, string> = {
+	openrouter: "openai/gpt-4o-mini",
+	google: "gemini-2.0-flash",
+	openai: "gpt-4o-mini",
+	anthropic: "claude-haiku-4-5",
+	noop: "noop",
+};
+
 export const aiConfig = {
 	get provider(): AIProviderId {
 		return env.AI_PROVIDER ?? "openrouter";
 	},
+	/**
+	 * Default model for the *active* provider. Prefer
+	 * `aiConfig.defaultModelFor(id)` when the provider id is known —
+	 * this getter assumes the configured provider.
+	 */
 	get defaultModel(): string {
-		return env.AI_MODEL ?? "openai/gpt-4o-mini";
+		return this.defaultModelFor(this.provider);
+	},
+	/** `AI_MODEL` env override wins; otherwise the provider's default. */
+	defaultModelFor(provider: AIProviderId): string {
+		return env.AI_MODEL ?? DEFAULT_MODELS[provider];
 	},
 };

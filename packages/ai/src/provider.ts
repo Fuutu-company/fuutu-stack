@@ -52,7 +52,7 @@ function getGoogleProvider(): AIProvider {
 	if (!googleProvider) {
 		googleProvider = new GoogleProvider({
 			apiKey,
-			model: aiConfig.defaultModel,
+			model: aiConfig.defaultModelFor("google"),
 		});
 	}
 	return googleProvider;
@@ -70,7 +70,7 @@ function getOpenRouterProvider(): AIProvider {
 		openrouterProvider = new OpenRouterProvider({
 			apiKey,
 			baseURL: env.AI_BASE_URL,
-			model: aiConfig.defaultModel,
+			model: aiConfig.defaultModelFor("openrouter"),
 			devtools: env.NODE_ENV === "development",
 		});
 	}

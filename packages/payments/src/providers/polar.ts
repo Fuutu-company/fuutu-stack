@@ -39,7 +39,7 @@ function getClient(): Polar {
 
 function mapPolarEventToProviderEvent(
 	polarEventType: string,
-): ProviderEventType {
+): ProviderEventType | null {
 	switch (polarEventType) {
 		case "checkout.completed":
 			return "checkout.completed";
@@ -52,8 +52,10 @@ function mapPolarEventToProviderEvent(
 		case "subscription.revoked":
 			return "subscription.expired";
 		default:
-			log.warn("unknown polar event type", { polarEventType });
-			return "subscription.updated";
+			// Unmapped Polar events (order.paid, customer.created, …) are
+			// ignored — coercing them to subscription.updated would feed
+			// unrelated payloads into the purchase sync.
+			return null;
 	}
 }
 
@@ -103,6 +105,12 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		try {
 			const event = validateEvent(body, headers, env.POLAR_WEBHOOK_SECRET);
 			const eventType = mapPolarEventToProviderEvent(event.type);
+			if (!eventType) {
+				log.debug("ignoring unmapped polar event type", {
+					polarEventType: event.type,
+				});
+				return [];
+			}
 			const providerEvent: ProviderEvent = {
 				type: eventType,
 				metadata: event.data as Record<string, unknown>,
