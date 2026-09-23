@@ -1,8 +1,8 @@
-import "@fuutu/env/docs";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
+import { env } from "@fuutu/env/docs";
 import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
@@ -10,7 +10,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withMDX = createMDX();
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = env.NODE_ENV === "production";
 
 const securityHeaders = [
 	{ key: "X-Frame-Options", value: "DENY" },
@@ -68,6 +68,10 @@ const nextConfig: NextConfig = {
 		return [
 			{
 				source: "/docs/:path*.mdx",
+				destination: "/llms.mdx/docs/:path*",
+			},
+			{
+				source: "/:locale(en|de)/docs/:path*.mdx",
 				destination: "/llms.mdx/docs/:path*",
 			},
 		];

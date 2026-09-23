@@ -50,12 +50,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 	}
 
 	// Docs pages — all pages from the source (MDX + OpenAPI)
-	const pages = source.getPages();
-
 	if (i18nConfig.enabled) {
-		for (const page of pages) {
-			const path = page.url;
-			for (const locale of locales) {
+		for (const locale of locales) {
+			for (const page of source.getPages(locale)) {
+				// `page.url` already contains the locale prefix for
+				// non-default locales — rebuild the path from slugs so
+				// `localeUrl` can prefix each locale exactly once.
+				const path = `/docs${page.slugs.length > 0 ? `/${page.slugs.join("/")}` : ""}`;
 				entries.push({
 					url: localeUrl(base, locale, path),
 					lastModified: now,
@@ -66,7 +67,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 			}
 		}
 	} else {
-		for (const page of pages) {
+		for (const page of source.getPages()) {
 			entries.push({
 				url: `${base}${page.url}`,
 				lastModified: now,
