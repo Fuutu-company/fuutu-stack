@@ -36,7 +36,8 @@
 		"aria": {
 			"toggleNavigation": "Navigation umschalten",
 			"toggleTheme": "Design umschalten",
-			"switchLanguage": "Sprache wechseln"
+			"switchLanguage": "Sprache wechseln",
+			"loadingUserAccount": "Benutzerkonto wird geladen"
 		},
 		"breadcrumb": {
 			"dashboard": "Dashboard",

@@ -1,5 +1,5 @@
 {
-	"name": "fuutu-stack-nextjs",
+	"name": "fuutu-stack",
 	"private": true,
 	"workspaces": [
 		"apps/*",

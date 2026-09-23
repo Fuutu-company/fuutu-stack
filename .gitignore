@@ -47,6 +47,9 @@ lerna-debug.log*
 coverage
 coverage-v8
 .nyc_output
+
+# Generated artifacts with machine-local state (regenerated on prisma generate)
+.prisma-zod-generator-manifest.json
 # Playwright
 test-results
 playwright-report
@@ -75,5 +78,6 @@ fuutu.config.ts
 
 .pnpm-store
 
-# Temp working docs — not pushed, content lives in fuutu-stack-nextjs/wiki/
-docs/
+# Temp working docs — local only, not pushed (root only — do NOT match
+# apps/docs, that is the real Fumadocs app)
+/docs/

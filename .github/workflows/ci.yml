@@ -270,12 +270,15 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
-      BETTER_AUTH_SECRET: gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
       FUUTU_TELEMETRY_DISABLED: "1"
     steps:
+      # Throwaway per-run secret — never commit a real auth secret to CI.
+      - name: Generate CI auth secret
+        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 2
@@ -368,12 +371,15 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
-      BETTER_AUTH_SECRET: gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
       FUUTU_TELEMETRY_DISABLED: "1"
     steps:
+      # Throwaway per-run secret — never commit a real auth secret to CI.
+      - name: Generate CI auth secret
+        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 2
@@ -419,13 +425,14 @@ jobs:
         run: |
           cat > .env << 'EOF'
           DATABASE_URL=postgresql://postgres:password@localhost:5432/fuutu-stack
-          BETTER_AUTH_SECRET=gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
           BETTER_AUTH_URL=http://localhost:3000
           EMAIL_PROVIDER=console
           NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
           FUUTU_TELEMETRY_DISABLED=1
           FUUTU_DISABLE_RATE_LIMIT=1
           EOF
+          # Throwaway per-run secret — never commit a real auth secret.
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
 
       - run: pnpm db:generate
 

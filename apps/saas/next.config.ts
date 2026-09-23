@@ -1,14 +1,14 @@
-import "@fuutu/env/saas";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
+import { env } from "@fuutu/env/saas";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = env.NODE_ENV === "production";
 
 // Security headers applied to every SaaS response.
 // Known CSP compromise: `'unsafe-inline'` stays on `script-src` in every env

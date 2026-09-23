@@ -1,21 +1,21 @@
-import "@fuutu/env/marketing";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
+import { env } from "@fuutu/env/marketing";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = env.NODE_ENV === "production";
 
 // Security headers for the public marketing surface.
 // Slightly looser than SaaS: allows the Umami analytics script domain and
 // external fonts/images for blog/MDX content. Still blocks framing and
 // interest-cohort tracking.
 const umamiScript =
-	process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL ?? "https://cloud.umami.is";
+	env.NEXT_PUBLIC_UMAMI_SCRIPT_URL ?? "https://cloud.umami.is";
 const umamiOrigin = (() => {
 	try {
 		return new URL(umamiScript).origin;

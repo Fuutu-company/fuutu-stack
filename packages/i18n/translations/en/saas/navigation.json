@@ -36,7 +36,8 @@
 		"aria": {
 			"toggleNavigation": "Toggle navigation",
 			"toggleTheme": "Toggle theme",
-			"switchLanguage": "Switch language"
+			"switchLanguage": "Switch language",
+			"loadingUserAccount": "Loading user account"
 		},
 		"breadcrumb": {
 			"dashboard": "Dashboard",

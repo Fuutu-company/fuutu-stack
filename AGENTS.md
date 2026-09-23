@@ -18,7 +18,7 @@ One-liner       : Production-grade TypeScript SaaS starter kit sold under the Fu
 Current stage   : live (v1.0.0 shipped, post-launch iteration)
 Target users    : Developers / small teams building SaaS products who want a battle-tested monorepo base
 Core value prop : Opinionated, provider-swappable, license-compliant full-stack kit — saves weeks of boilerplate
-Tech decisions  : All kit defaults apply. Polar (payments), Plunk (mail), S3/MinIO (storage), Umami (analytics) active.
+Tech decisions  : All kit defaults apply. Creem (payments), Plunk (mail), S3/MinIO (storage), Umami (analytics) active.
 Open priorities : Clean up codebase to reach a publishable state — fix open TODOs, remove dead code, ensure pnpm check + check-types are green, all smoke tests pass
 Hard constraints: Kit fingerprint + telemetry must stay intact (LICENSE §7). No breaking public package exports without versioning. No new runtime deps without explicit approval.
 ```
@@ -121,7 +121,7 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 ## 3 · Workspace Structure
 
 ```
-fuutu-stack-nextjs/
+fuutu-stack/
 ├── apps/
 │   ├── marketing/     # @fuutu/marketing — Port 3001 — public site, locale-prefixed URLs
 │   ├── saas/          # @fuutu/saas      — Port 3000 — authed app + API

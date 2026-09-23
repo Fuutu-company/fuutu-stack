@@ -1,17 +1,17 @@
-name: fuutu-stack-nextjs
+name: fuutu-stack
 
 services:
   postgres:
     image: postgres
-    container_name: fuutu-stack-nextjs-postgres
+    container_name: fuutu-stack-postgres
     environment:
-      POSTGRES_DB: fuutu-stack-nextjs
+      POSTGRES_DB: fuutu-stack
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"
     volumes:
-      - fuutu-stack-nextjs_postgres_data:/var/lib/postgresql
+      - fuutu-stack_postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -23,7 +23,7 @@ services:
   # Production uses AWS S3 or Cloudflare R2 via the same provider.
   minio:
     image: minio/minio
-    container_name: fuutu-stack-nextjs-minio
+    container_name: fuutu-stack-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -32,7 +32,7 @@ services:
       - "9000:9000" # S3 API
       - "9001:9001" # Web console (http://localhost:9001)
     volumes:
-      - fuutu-stack-nextjs_minio_data:/data
+      - fuutu-stack_minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -45,7 +45,7 @@ services:
   # Idempotent via `mb --ignore-existing`.
   minio-bootstrap:
     image: minio/mc
-    container_name: fuutu-stack-nextjs-minio-bootstrap
+    container_name: fuutu-stack-minio-bootstrap
     depends_on:
       minio:
         condition: service_healthy
@@ -59,5 +59,5 @@ services:
     restart: "no"
 
 volumes:
-  fuutu-stack-nextjs_postgres_data:
-  fuutu-stack-nextjs_minio_data:
+  fuutu-stack_postgres_data:
+  fuutu-stack_minio_data:
