@@ -50,6 +50,10 @@ const PUBLIC_PREFIXES = [
 	// via protectedProcedure where needed.
 	"/api/docs",
 	"/api/spec.json",
+	// reason: cron trigger endpoint — schedulers authenticate via
+	// `Authorization: Bearer ${CRON_SECRET}` (shared secret), not a session
+	// cookie. The Hono route returns 501 when the secret is unset.
+	"/api/cron",
 	"/auth",
 	"/image-proxy",
 ] as const;

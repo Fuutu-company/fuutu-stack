@@ -6,7 +6,17 @@ export const env = createEnv({
 		DATABASE_URL: z.string().min(1),
 		BETTER_AUTH_SECRET: z.string().min(32),
 		BETTER_AUTH_URL: z.string().url(),
-		CORS_ORIGIN: z.string().optional().default("http://localhost:3000"),
+		// CORS origin for the Hono API — must be a concrete URL, never "*"
+		// (the API sends credentials; "*" + credentials is an invalid and
+		// dangerous combination that browsers reject anyway).
+		CORS_ORIGIN: z
+			.string()
+			.url()
+			.refine((v) => v !== "*", {
+				message: 'CORS_ORIGIN must be a concrete origin, not "*"',
+			})
+			.optional()
+			.default("http://localhost:3000"),
 		POLAR_ACCESS_TOKEN: z.string().optional(),
 		POLAR_PRODUCT_ID: z.string().optional(),
 		POLAR_SUCCESS_URL: z.string().optional(),
@@ -24,6 +34,10 @@ export const env = createEnv({
 		AI_MODEL: z.string().optional(),
 		// Cron
 		CRON_PROVIDER: z.enum(["inline", "trigger-dev"]).optional(),
+		// Bearer secret for the /api/cron trigger endpoint (Vercel Cron,
+		// cron-job.org, etc. send `Authorization: Bearer <CRON_SECRET>`).
+		// When unset the endpoint returns 501 — cron stays disabled.
+		CRON_SECRET: z.string().optional(),
 		// Email
 		EMAIL_PROVIDER: z
 			.enum([
@@ -75,7 +89,8 @@ export const env = createEnv({
 			.transform((v) => v === "true"),
 		MINIO_ROOT_USER: z.string().optional(),
 		MINIO_ROOT_PASSWORD: z.string().optional(),
-		// Observability
+		// Observability — consumed by the evlog drains selected via LOG_DRAIN
+		SENTRY_DSN: z.string().optional(),
 		AXIOM_TOKEN: z.string().optional(),
 		AXIOM_DATASET: z.string().optional(),
 		// Logging
@@ -136,6 +151,7 @@ export const env = createEnv({
 		AI_BASE_URL: process.env.AI_BASE_URL,
 		AI_MODEL: process.env.AI_MODEL,
 		CRON_PROVIDER: process.env.CRON_PROVIDER,
+		CRON_SECRET: process.env.CRON_SECRET,
 		NODE_ENV: process.env.NODE_ENV,
 		EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
 		EMAIL_FROM: process.env.EMAIL_FROM,
@@ -165,6 +181,7 @@ export const env = createEnv({
 		S3_FORCE_PATH_STYLE: process.env.S3_FORCE_PATH_STYLE,
 		MINIO_ROOT_USER: process.env.MINIO_ROOT_USER,
 		MINIO_ROOT_PASSWORD: process.env.MINIO_ROOT_PASSWORD,
+		SENTRY_DSN: process.env.SENTRY_DSN,
 		AXIOM_TOKEN: process.env.AXIOM_TOKEN,
 		AXIOM_DATASET: process.env.AXIOM_DATASET,
 		LOG_DRAIN: process.env.LOG_DRAIN,

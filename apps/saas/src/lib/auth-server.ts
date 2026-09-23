@@ -1,5 +1,6 @@
 import { auth } from "@fuutu/auth";
 import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
+import { getOrganizationBySlug } from "@fuutu/db";
 import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -68,6 +69,37 @@ export async function requireOnboarded() {
 		}
 	}
 	return session;
+}
+
+/**
+ * Require authentication AND membership in the organization identified by
+ * `slug`. Use this in org-scoped layouts — oRPC procedures still enforce
+ * org permissions server-side, but the layout guard keeps the page shell
+ * (nav, settings chrome) from rendering for non-members.
+ *
+ * Redirects to /organizations when the org doesn't exist or the user is
+ * not a member — mirrors the per-page checks (e.g. audit-log page).
+ */
+export async function requireOrgMembership(slug: string) {
+	const session = await requireOnboarded();
+
+	const org = await getOrganizationBySlug(slug);
+	if (!org) {
+		redirect("/organizations");
+	}
+
+	const fullOrg = await auth.api.getFullOrganization({
+		query: { organizationId: org.id },
+		headers: await headers(),
+	});
+	const isMember = fullOrg?.members?.some(
+		(m: { userId: string }) => m.userId === session.user.id,
+	);
+	if (!isMember) {
+		redirect("/organizations");
+	}
+
+	return { session, org };
 }
 
 /**

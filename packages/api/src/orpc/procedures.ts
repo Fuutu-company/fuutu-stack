@@ -24,11 +24,15 @@ export const protectedProcedure = publicProcedure.use(
 		if (!context.session?.user) {
 			throw new ORPCError("UNAUTHORIZED");
 		}
+		const user = context.session.user as UserWithRole;
+		// Reject banned users even with a still-valid session —
+		// mirrors the check in runAuthorize (middleware/authorize.ts).
+		if (user.banned) {
+			throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
+		}
 
 		return next({
-			context: {
-				user: context.session.user as UserWithRole,
-			},
+			context: { user },
 		});
 	},
 );

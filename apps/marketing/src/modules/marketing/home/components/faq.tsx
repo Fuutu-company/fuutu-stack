@@ -42,7 +42,9 @@ export function FAQ() {
 		<section className="py-24 md:py-32">
 			<script
 				type="application/ld+json"
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+				}}
 			/>
 			<div className="container mx-auto px-4">
 				<div className="mx-auto mb-12 max-w-2xl text-center">

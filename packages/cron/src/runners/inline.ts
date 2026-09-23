@@ -47,7 +47,18 @@ export class InlineJobRunner implements JobRunner {
 				results[job.name] = { success: true, processed: 0, errors: [] };
 				continue;
 			}
-			results[job.name] = await job.run();
+			try {
+				results[job.name] = await job.run();
+			} catch (error) {
+				// A crashing job must not prevent the remaining jobs from
+				// running — report it and continue.
+				log.error(`job "${job.name}" threw`, { err: error });
+				results[job.name] = {
+					success: false,
+					processed: 0,
+					errors: [error instanceof Error ? error.message : String(error)],
+				};
+			}
 		}
 		return results;
 	}

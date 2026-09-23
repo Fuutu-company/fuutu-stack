@@ -149,6 +149,12 @@ export async function runAuthorize(
 		throw new ORPCError("UNAUTHORIZED");
 	}
 	const user = context.session.user as UserWithRole;
+	// Banned users are rejected even if a session is still valid —
+	// banUser() revokes sessions, but a ban applied directly in the DB
+	// (or a stale session cache) must not grant API access.
+	if (user.banned) {
+		throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
+	}
 	const systemRole = toSystemRole(user.role);
 
 	const ctx: AuthorizeContext = { user, systemRole };

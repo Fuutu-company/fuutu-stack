@@ -1,11 +1,8 @@
-import { createLogger } from "@fuutu/logs";
 import { auditLogCleanupJob } from "../jobs/audit-log-cleanup";
 import { subscriptionReminderJob } from "../jobs/subscription-reminder";
 import { telemetryPingJob } from "../jobs/telemetry-ping";
 import { webhookRetryJob } from "../jobs/webhook-retry";
 import type { CronJob, CronJobResult, JobRunner } from "../types";
-
-const _log = createLogger({ scope: "cron:trigger-dev" });
 
 const jobs: CronJob[] = [
 	webhookRetryJob,
