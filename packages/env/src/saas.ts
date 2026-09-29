@@ -23,7 +23,6 @@ export const env = createEnv({
 			.optional()
 			.default("http://localhost:3000"),
 		POLAR_ACCESS_TOKEN: z.string().optional(),
-		POLAR_PRODUCT_ID: z.string().optional(),
 		POLAR_SUCCESS_URL: z.string().optional(),
 		GOOGLE_CLIENT_ID: z.string().optional(),
 		GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -155,7 +154,6 @@ export const env = createEnv({
 		BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
 		CORS_ORIGIN: process.env.CORS_ORIGIN,
 		POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN,
-		POLAR_PRODUCT_ID: process.env.POLAR_PRODUCT_ID,
 		POLAR_SUCCESS_URL: process.env.POLAR_SUCCESS_URL,
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,

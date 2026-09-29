@@ -76,7 +76,7 @@ jobs:
       - run: pnpm check-types
 
   # ─────────────────────────────────────────────────────────
-  # Translation Checks — non-blocking, posts PR comment on issues
+  # Translation Checks — blocking; also posts a PR comment on issues
   # ─────────────────────────────────────────────────────────
   translations:
     needs: changes

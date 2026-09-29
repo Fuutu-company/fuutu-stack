@@ -18,7 +18,7 @@ export interface GoogleProviderOptions {
 }
 
 /**
- * Google Gemini provider — v1 active.
+ * Google Gemini provider — functional, non-default (OpenRouter is the v1 default).
  *
  * Wraps `@ai-sdk/google` behind the `AIProvider` interface so callers stay
  * provider-agnostic. The devtools middleware is applied only when

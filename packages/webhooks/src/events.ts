@@ -10,7 +10,6 @@ export const WEBHOOK_EVENTS = [
 	"subscription.updated",
 	"subscription.canceled",
 	"invoice.paid",
-	"invoice.created",
 	"user.created",
 	"user.updated",
 	"organization.created",

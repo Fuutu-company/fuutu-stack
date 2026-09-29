@@ -82,10 +82,16 @@ export const polarPaymentProvider: PaymentProvider = {
 
 	async createCheckoutLink(input: CheckoutInput) {
 		const client = getClient();
+		// Without metadata, Polar webhook payloads carry no owner — the
+		// owner-XOR rule in sync.ts would skip them as ownerless.
+		const metadata: Record<string, string> = {};
+		if (input.userId) metadata.user_id = input.userId;
+		if (input.organizationId) metadata.organization_id = input.organizationId;
 		const checkout = await client.checkouts.create({
 			products: [input.priceId],
 			successUrl: input.successUrl ?? env.POLAR_SUCCESS_URL,
 			externalCustomerId: input.userId ?? input.organizationId,
+			metadata,
 		});
 		return { url: checkout.url };
 	},

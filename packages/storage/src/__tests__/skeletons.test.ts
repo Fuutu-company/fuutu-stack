@@ -3,7 +3,7 @@ import {
 	noopStorageProvider,
 	supabaseStorageProvider,
 } from "../providers/skeletons";
-import { testStorageProviderContract } from "./provider-contract.test";
+import { testStorageProviderContract } from "./provider-contract";
 
 testStorageProviderContract("supabase", () => supabaseStorageProvider, {
 	behavior: "throws",

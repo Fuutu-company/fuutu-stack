@@ -74,7 +74,7 @@ export function permissionProcedure(permission: KnownPermission) {
  *   - `organizationId` present → org-scoped → org permission is checked (system skipped)
  *   - `organizationId` absent   → user-scoped → system permission is checked (org skipped if optional)
  *
- * For dual-scoped resources (api-keys, crm, storage), set BOTH `systemPermission`
+ * For dual-scoped resources (api-keys, storage, payments), set BOTH `systemPermission`
  * and `org: { ..., optional: true }`. The same procedure then handles personal
  * and org actions — the input determines which permission is authoritative.
  *
@@ -94,7 +94,7 @@ export function permissionProcedure(permission: KnownPermission) {
  * export const deleteOrg = authProcedure({ org: { permission: PERMISSIONS.ORGANIZATION.DELETE } })
  *   .handler(...)
  *
- * // Dual-scoped (personal + org — api-keys, crm, storage)
+ * // Dual-scoped (personal + org — api-keys, storage, payments)
  * // orgId present → org check; orgId absent → system check
  * export const createApiKey = authProcedure({
  *   systemPermission: PERMISSIONS.API_KEY.CREATE,

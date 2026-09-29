@@ -22,8 +22,7 @@
 				"canceled": "Abonnement gekündigt"
 			},
 			"invoice": {
-				"paid": "Rechnung bezahlt",
-				"created": "Rechnung erstellt"
+				"paid": "Rechnung bezahlt"
 			},
 			"user": {
 				"created": "Benutzer erstellt",

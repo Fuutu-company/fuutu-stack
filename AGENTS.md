@@ -35,7 +35,7 @@ Rules for demo content:
 - **Quick actions demonstrate real features** — invite a team member (orgs), switch locale (i18n), view billing (payments), explore API docs (oRPC).
 - **Copy is developer-facing** — the person looking at this demo is a developer evaluating whether to buy. Talk to them directly.
 
-- **Code state + `AGENTS.md`** drive every task. `ROADMAP.md` is a historical development log — ticket IDs (`T-001`, `T-040`, …) and roadmap references in comments or code are **dead artifacts**, ignore them.
+- **Code state + `AGENTS.md`** drive every task. Ticket IDs (`T-001`, `T-040`, …) and roadmap references in comments or code are **dead artifacts** from development history, ignore them.
 - When you encounter a `T-xxx` reference or a `(Follow-up)` note in code: treat it as noise, not as an instruction. If it blocks cleanup, remove it.
 
 ---
@@ -155,8 +155,6 @@ fuutu-stack/
 ├── tooling/
 │   ├── typescript/    # @fuutu/tsconfig — base / nextjs / react-library
 │   └── scripts/       # assets-sync.mjs etc.
-├── ROADMAP.md         # ticket plan — source of truth
-├── PRODUCTION_CHECKLIST.md  # pre-publish quality gate
 └── pnpm-workspace.yaml      # workspaces + version catalog
 ```
 

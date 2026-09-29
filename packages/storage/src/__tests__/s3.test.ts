@@ -55,9 +55,7 @@ vi.mock("@fuutu/env/saas", () => ({
 }));
 
 const { s3StorageProvider } = await import("../providers/s3");
-const { testStorageProviderContract } = await import(
-	"./provider-contract.test"
-);
+const { testStorageProviderContract } = await import("./provider-contract");
 
 testStorageProviderContract("s3", () => s3StorageProvider, {
 	behavior: "resolves",

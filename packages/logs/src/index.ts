@@ -17,7 +17,7 @@
  * Drains are env-driven via LOG_DRAIN (comma-separated):
  *   LOG_DRAIN=""           → console only (default, always on)
  *   LOG_DRAIN="sentry"     → + Sentry Logs (needs SENTRY_DSN)
- *   LOG_DRAIN="axiom"      → + Axiom (needs AXIOM_API_KEY + AXIOM_DATASET)
+ *   LOG_DRAIN="axiom"      → + Axiom (needs AXIOM_TOKEN + AXIOM_DATASET)
  *   LOG_DRAIN="fs"         → + NDJSON files in .evlog/logs/
  *   LOG_DRAIN="memory"     → + in-memory ring buffer (dev/agents)
  *   LOG_DRAIN="sentry,fs"  → both

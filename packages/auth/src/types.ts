@@ -36,7 +36,7 @@ export interface UserWithRole {
 }
 
 /**
- * Returns the effective SYSTEM role for a user, defaulting to "member".
+ * Returns the effective SYSTEM role for a user, defaulting to "user".
  * Normalizes Better-Auth comma-separated role strings (e.g. "admin,user")
  * to the canonical RBAC system role via `toSystemRole`.
  */
