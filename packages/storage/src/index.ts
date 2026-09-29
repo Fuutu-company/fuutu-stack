@@ -1,4 +1,3 @@
-import { createLogger } from "@fuutu/logs";
 import type { StorageBuckets } from "./config";
 import { storageConfig } from "./config";
 import { s3StorageProvider } from "./providers/s3";
@@ -28,8 +27,6 @@ export type {
 	StorageStreamResult,
 } from "./types";
 
-const log = createLogger({ scope: "storage:resolve" });
-
 export class StorageStreamUnavailableError extends Error {
 	constructor(providerId: string) {
 		super(
@@ -55,8 +52,7 @@ export function resolveStorageProvider(): StorageProvider {
 		case "noop":
 			return noopStorageProvider;
 		default:
-			log.warn(`unknown provider "${providerId}", falling back to noop.`);
-			return noopStorageProvider;
+			throw new Error(`[storage] unknown provider "${providerId}".`);
 	}
 }
 

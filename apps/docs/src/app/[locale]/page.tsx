@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { defaultLocale, locales } from "@/i18n/config";
 import { baseOptions } from "@/lib/layout.shared";
+import { Link } from "@/navigation";
 
 interface HomePageProps {
 	params: Promise<{ locale: string }>;
@@ -60,12 +61,12 @@ export default async function HomePage({ params }: HomePageProps) {
 					{t("description")}
 				</p>
 				<div className="flex flex-wrap items-center justify-center gap-4">
-					<a
-						href={`/${locale}/docs`}
+					<Link
+						href="/docs"
 						className="inline-flex items-center justify-center rounded-lg bg-fd-primary px-6 py-3 font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
 					>
 						{t("exploreDocs")}
-					</a>
+					</Link>
 					<a
 						href="https://github.com/Fuutu-company/fuutu-stack"
 						target="_blank"

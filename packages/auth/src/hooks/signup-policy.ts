@@ -25,7 +25,7 @@ const SELF_SERVICE_SIGNUP_PATHS: ReadonlySet<string> = new Set([
 ]);
 
 /** `/callback/<provider>` covers every social provider callback. */
-function isSelfServiceSignupPath(path: string | undefined): boolean {
+export function isSelfServiceSignupPath(path: string | undefined): boolean {
 	if (!path) return false;
 	return SELF_SERVICE_SIGNUP_PATHS.has(path) || path.startsWith("/callback/");
 }

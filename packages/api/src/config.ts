@@ -67,6 +67,11 @@ export const apiConfig = {
 				maxRequests: 30,
 				windowMs: 60 * 1000,
 			},
+			// Search queries — moderate (DB scan cost per query)
+			search: {
+				maxRequests: 60,
+				windowMs: 60 * 1000,
+			},
 		},
 	},
 } as const;

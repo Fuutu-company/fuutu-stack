@@ -52,7 +52,7 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 				style={{
 					inset: "-120%",
 					background:
-						"radial-gradient(ellipse at center, oklch(var(--primary)/0.4) 0%, transparent 65%)",
+						"radial-gradient(ellipse at center, oklch(from var(--primary) l c h / 0.4) 0%, transparent 65%)",
 					filter: "blur(12px)",
 				}}
 			/>
@@ -61,7 +61,7 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 				className={cn(
 					"flex size-10 shrink-0 cursor-default items-center justify-center rounded-xl bg-background p-2 transition-all duration-300 sm:size-12 sm:p-2.5",
 					hovered
-						? "scale-[1.2] bg-primary/8 opacity-100 shadow-[0_0_0_1px_oklch(var(--primary)/0.3),0_0_16px_oklch(var(--primary)/0.15)]"
+						? "scale-[1.2] bg-primary/8 opacity-100 shadow-[0_0_0_1px_oklch(from_var(--primary)_l_c_h/0.3),0_0_16px_oklch(from_var(--primary)_l_c_h/0.15)]"
 						: "opacity-50",
 				)}
 			>

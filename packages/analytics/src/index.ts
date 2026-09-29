@@ -39,13 +39,23 @@ export function resolveAnalyticsProvider(): AnalyticsProvider {
 		case "umami":
 			return umamiAnalyticsProvider;
 		case "plausible":
-			return plausibleAnalyticsProvider;
 		case "pirsch":
-			return pirschAnalyticsProvider;
 		case "mixpanel":
-			return mixpanelAnalyticsProvider;
-		case "ga4":
-			return ga4AnalyticsProvider;
+		case "ga4": {
+			// Skeleton selections resolve to silent no-ops (deliberate:
+			// analytics must never break a render) — but a misconfigured
+			// env should at least surface once, at selection time.
+			const providers = {
+				plausible: plausibleAnalyticsProvider,
+				pirsch: pirschAnalyticsProvider,
+				mixpanel: mixpanelAnalyticsProvider,
+				ga4: ga4AnalyticsProvider,
+			} as const;
+			log.warn(
+				`analytics provider "${analyticsConfig.provider}" is a skeleton (not implemented) — events and scripts are no-ops.`,
+			);
+			return providers[analyticsConfig.provider];
+		}
 		case "noop":
 			return noopAnalyticsProvider;
 		default:

@@ -3,7 +3,8 @@ import { getCreditTopupPriceId } from "@fuutu/payments/config.server";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { protectedProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 import { sanitizePaymentUrl } from "../shared";
 
@@ -31,7 +32,7 @@ export const createTopupCheckout = protectedProcedure
 				input.organizationId,
 				context.user.id,
 				PERMISSIONS.PAYMENT.CREATE,
-				context.headers,
+				context,
 			);
 		}
 		const priceId = getCreditTopupPriceId(input.topupId);
@@ -49,6 +50,9 @@ export const createTopupCheckout = protectedProcedure
 			successUrl: sanitizePaymentUrl(input.successUrl),
 			cancelUrl: sanitizePaymentUrl(input.cancelUrl),
 			metadata: {
+				// One-time purchase — providers like Stripe need this to pick
+				// mode "payment" instead of "subscription".
+				mode: "payment",
 				topup_id: input.topupId,
 				meter_key: topup.meterKey,
 				amount: topup.amount,

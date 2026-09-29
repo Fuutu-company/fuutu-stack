@@ -1,7 +1,7 @@
 import { listAuditLogs } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc/procedures";
 
 /**
  * Recent activity feed for the dashboard.

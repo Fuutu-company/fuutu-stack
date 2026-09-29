@@ -1,14 +1,16 @@
 import { countWebhooks, createWebhook } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { validateWebhookUrl } from "@fuutu/webhooks";
+import { WEBHOOK_EVENTS } from "@fuutu/webhooks/events";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 
 const createWebhookSchema = z.object({
 	organizationId: z.string().min(1),
 	url: z.string().url(),
-	events: z.array(z.string().min(1)).min(1),
+	events: z.array(z.enum(WEBHOOK_EVENTS)).min(1),
 });
 
 export const createWebhookProcedure = authProcedure({

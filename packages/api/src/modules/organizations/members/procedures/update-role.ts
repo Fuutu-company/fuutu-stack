@@ -2,7 +2,8 @@ import { auth } from "@fuutu/auth";
 import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../../orpc";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../../orpc/procedures";
 
 const updateMemberRoleSchema = z.object({
 	organizationId: z.string().min(1),
@@ -26,7 +27,8 @@ export const updateMemberRole = authProcedure({
 	.handler(async ({ input, context }) => {
 		const actorRole = context.orgRole ?? "member";
 		const targetMember = context.org?.members?.find(
-			(m: { id: string; userId: string }) => m.id === input.memberId,
+			(m: { id: string; userId: string; role: string }) =>
+				m.id === input.memberId,
 		);
 		const targetRole = toOrgRole(input.role);
 		if (targetMember && targetMember.userId === context.user.id) {
@@ -37,6 +39,18 @@ export const updateMemberRole = authProcedure({
 		if (!hasRoleAtLeast(actorRole, targetRole)) {
 			throw new ORPCError("FORBIDDEN", {
 				message: "Cannot assign a role higher than your own",
+			});
+		}
+		// The actor must also outrank the target's CURRENT role — otherwise
+		// an admin could demote an owner and then remove them (remove.ts's
+		// owner guard no longer applies after the demotion).
+		const currentRole = toOrgRole(targetMember?.role);
+		if (
+			!hasRoleAtLeast(actorRole, "owner") &&
+			hasRoleAtLeast(currentRole, actorRole)
+		) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cannot change the role of a member with equal or higher role",
 			});
 		}
 		const result = await auth.api.updateMemberRole({

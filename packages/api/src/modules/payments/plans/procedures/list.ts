@@ -1,6 +1,6 @@
 import { buildPricingTiers } from "@fuutu/payments/plans";
 import { z } from "zod";
-import { publicProcedure } from "../../../../orpc";
+import { publicProcedure } from "../../../../orpc/procedures";
 
 /**
  * `buildPricingTiers` requires a `PlanTranslationResolver`, but the API

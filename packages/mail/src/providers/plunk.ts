@@ -26,16 +26,13 @@ export const plunkProvider: EmailProvider = {
 			);
 		}
 
-		// Plunk accepts a single `body` field + `type`. We send the HTML as
-		// the primary body (rich clients) and include the plain-text
-		// version via `subtype` when present — drops spam score and serves
-		// text-only clients without a second round-trip.
+		// Plunk `/v1/send` accepts a single `body` (HTML) field and
+		// auto-derives the plain-text alternative — there is no `type`/
+		// `subtype` field, so we send only what the API consumes.
 		const body = {
 			to: message.to,
 			subject: message.subject,
 			body: message.html,
-			type: "html" as const,
-			subtype: message.text,
 			from: message.from,
 			reply: message.replyTo,
 		};

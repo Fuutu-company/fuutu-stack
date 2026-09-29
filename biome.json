@@ -32,6 +32,12 @@
 			"!**/drizzle",
 			"!**/next-env.d.ts",
 			"!**/.shadcn-staging",
+			"!**/test-results",
+			"!**/playwright-report",
+			"!**/coverage-v8",
+			"!**/*-snapshots",
+			"!**/tests/.auth",
+			"!**/.evlog",
 			"!**/*.svg"
 		]
 	},

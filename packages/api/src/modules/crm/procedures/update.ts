@@ -2,7 +2,8 @@ import { updateContact } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 
 const updateContactSchema = z.object({
 	id: z.string().min(1),

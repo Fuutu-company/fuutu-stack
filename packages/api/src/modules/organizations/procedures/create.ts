@@ -4,7 +4,8 @@ import { createLogger } from "@fuutu/logs";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { dispatchEvent } from "@fuutu/webhooks";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 import { slugSchema } from "../shared";
 
 const log = createLogger({ scope: "api:organizations" });

@@ -3,7 +3,8 @@ import { resolvePaymentProvider } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 import { sanitizePaymentUrl } from "../shared";
 
 const portalSchema = z.object({

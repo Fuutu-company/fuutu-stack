@@ -2,7 +2,8 @@ import { getApiKey, revokeApiKey } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { permissionProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const apiKeyIdSchema = z.object({
@@ -32,7 +33,7 @@ export const revokeApiKeyProcedure = permissionProcedure(
 				key.organizationId,
 				context.user.id,
 				PERMISSIONS.API_KEY.DELETE,
-				context.headers,
+				context,
 			);
 			const result = await revokeApiKey(input.id, {
 				organizationId: key.organizationId,

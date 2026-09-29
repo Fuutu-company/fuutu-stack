@@ -5,18 +5,9 @@ vi.mock("@fuutu/db", () => ({
 	searchAuditLogs: vi.fn(),
 }));
 
-vi.mock("@fuutu/logs", () => ({
-	createLogger: () => ({
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		debug: vi.fn(),
-	}),
-}));
-
 import { searchAuditLogs, searchNotifications } from "@fuutu/db";
 import { postgresProvider } from "../providers/postgres";
-import { testSearchProviderContract } from "./provider-contract.test";
+import { testSearchProviderContract } from "./provider-contract";
 
 vi.mocked(searchNotifications).mockResolvedValue([]);
 vi.mocked(searchAuditLogs).mockResolvedValue([]);

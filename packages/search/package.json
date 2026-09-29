@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"@fuutu/db": "workspace:*",
-		"@fuutu/logs": "workspace:*"
+		"@fuutu/env": "workspace:*"
 	},
 	"devDependencies": {
 		"@fuutu/test-utils": "workspace:*",

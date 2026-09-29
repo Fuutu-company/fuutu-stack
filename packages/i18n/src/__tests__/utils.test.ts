@@ -164,4 +164,15 @@ describe("app-scoped loading", () => {
 		expect(messages).toHaveProperty("common");
 		expect(messages).not.toHaveProperty("auth");
 	});
+
+	it("merged messages keep marketing namespaces — docs stays nested", async () => {
+		// Docs `nav`/`home` must not shadow marketing's in the no-app merge.
+		const messages = await importLocale("en");
+		// Marketing nav content has `resources`; the docs nav.json carries
+		// `search`/`theme` keys. If docs overwrote top-level `nav`, `resources`
+		// would be gone.
+		expect(messages.nav).toHaveProperty("resources");
+		expect(messages.nav).not.toHaveProperty("search");
+		expect(messages.docs).toHaveProperty("nav");
+	});
 });

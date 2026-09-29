@@ -102,9 +102,9 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 			});
 
 			const logoUrl = `/image-proxy/organization-logos/${org.id}/${key}`;
-			await authClient.organization.update({
+			await orpc.organizations.update.call({
 				organizationId: org.id,
-				data: { logo: logoUrl },
+				logo: logoUrl,
 			});
 
 			setStatus(t("settings.logo.saved"));
@@ -123,9 +123,9 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 		setRemoving(true);
 		setStatus(null);
 		try {
-			await authClient.organization.update({
+			await orpc.organizations.update.call({
 				organizationId: org.id,
-				data: { logo: null },
+				logo: null,
 			});
 			setStatus(t("settings.logo.saved"));
 			await loadOrg();

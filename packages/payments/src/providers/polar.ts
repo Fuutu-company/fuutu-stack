@@ -87,6 +87,10 @@ export const polarPaymentProvider: PaymentProvider = {
 		const metadata: Record<string, string> = {};
 		if (input.userId) metadata.user_id = input.userId;
 		if (input.organizationId) metadata.organization_id = input.organizationId;
+		for (const [key, value] of Object.entries(input.metadata ?? {})) {
+			if (value === undefined || value === null) continue;
+			metadata[key] = String(value);
+		}
 		const checkout = await client.checkouts.create({
 			products: [input.priceId],
 			successUrl: input.successUrl ?? env.POLAR_SUCCESS_URL,

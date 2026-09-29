@@ -213,7 +213,7 @@
 				"rbac": {
 					"label": "RBAC & Orgs",
 					"title": "Fine-grained roles\nfor every team.",
-					"description": "owner → admin → member → viewer. Organisation invites, role changes and audit logs — wired into every API route.",
+					"description": "owner → admin → member. Organisation invites, role changes and audit logs — wired into every API route.",
 					"frameLabel": "Team settings"
 				},
 				"api": {

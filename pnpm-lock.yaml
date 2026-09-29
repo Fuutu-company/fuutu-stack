@@ -289,19 +289,6 @@ catalogs:
 importers:
 
   .:
-    dependencies:
-      '@fuutu/env':
-        specifier: workspace:*
-        version: link:packages/env
-      deepmerge:
-        specifier: 'catalog:'
-        version: 4.3.1
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.4.2
-      zod:
-        specifier: 'catalog:'
-        version: 4.4.3
     devDependencies:
       '@biomejs/biome':
         specifier: 2.5.7
@@ -430,12 +417,18 @@ importers:
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.3
+      tw-animate-css:
+        specifier: 'catalog:'
+        version: 1.4.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
 
   apps/mail-preview:
     dependencies:
+      '@fuutu/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@fuutu/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -858,9 +851,6 @@ importers:
       '@fuutu/env':
         specifier: workspace:*
         version: link:../env
-      '@fuutu/i18n':
-        specifier: workspace:*
-        version: link:../i18n
       '@fuutu/license':
         specifier: workspace:*
         version: link:../license
@@ -873,6 +863,9 @@ importers:
       '@fuutu/rbac':
         specifier: workspace:*
         version: link:../rbac
+      '@fuutu/search':
+        specifier: workspace:*
+        version: link:../search
       '@fuutu/storage':
         specifier: workspace:*
         version: link:../storage
@@ -885,9 +878,6 @@ importers:
       '@fuutu/webhooks':
         specifier: workspace:*
         version: link:../webhooks
-      '@orpc/client':
-        specifier: 'catalog:'
-        version: 1.14.14
       '@orpc/openapi':
         specifier: 'catalog:'
         version: 1.14.14
@@ -897,9 +887,6 @@ importers:
       '@orpc/zod':
         specifier: 'catalog:'
         version: 1.14.14(@orpc/contract@1.14.14)(@orpc/server@1.14.14)(zod@4.4.3)
-      '@prisma/client':
-        specifier: 'catalog:'
-        version: 7.9.1(prisma@7.9.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
       hono:
         specifier: 'catalog:'
         version: 4.13.0
@@ -1327,9 +1314,9 @@ importers:
       '@fuutu/db':
         specifier: workspace:*
         version: link:../db
-      '@fuutu/logs':
+      '@fuutu/env':
         specifier: workspace:*
-        version: link:../logs
+        version: link:../env
     devDependencies:
       '@fuutu/test-utils':
         specifier: workspace:*
@@ -1474,6 +1461,9 @@ importers:
       sonner:
         specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      tw-animate-css:
+        specifier: 'catalog:'
+        version: 1.4.0
     devDependencies:
       '@fuutu/config':
         specifier: workspace:*

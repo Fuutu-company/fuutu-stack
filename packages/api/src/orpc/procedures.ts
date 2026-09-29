@@ -30,6 +30,14 @@ export const protectedProcedure = publicProcedure.use(
 		if (user.banned) {
 			throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
 		}
+		// Org-scoped API keys are pinned to their org — user-level
+		// procedures (no organizationId) are always out of scope.
+		if (context.apiKey?.organizationId) {
+			throw new ORPCError("FORBIDDEN", {
+				message:
+					"Organization-scoped API keys cannot access user-level resources",
+			});
+		}
 
 		return next({
 			context: { user },

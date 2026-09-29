@@ -7,11 +7,20 @@ const mockGetPurchaseByProviderSubscriptionId = vi.fn();
 const mockGetPurchaseByCheckoutEventId = vi.fn();
 const mockGetPurchasesByOrganizationId = vi.fn();
 const mockGetPurchasesByUserId = vi.fn();
+const mockGetCreditBalance = vi.fn(
+	async (_opts: {
+		userId?: string;
+		organizationId?: string;
+		meterKey: string;
+	}): Promise<{ recurringGranted: number; recurringPeriodEnd: Date } | null> =>
+		null,
+);
 
 vi.mock("@fuutu/db", () => ({
 	createPurchase: mockCreatePurchase,
 	updatePurchase: mockUpdatePurchase,
 	getPurchaseByProviderSubscriptionId: mockGetPurchaseByProviderSubscriptionId,
+	getCreditBalance: mockGetCreditBalance,
 	getPurchaseByCheckoutEventId: mockGetPurchaseByCheckoutEventId,
 	getPurchasesByOrganizationId: mockGetPurchasesByOrganizationId,
 	getPurchasesByUserId: mockGetPurchasesByUserId,
@@ -76,6 +85,7 @@ function makeSubscriptionEvent(
 describe("processWebhookEvents", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockGetCreditBalance.mockReset().mockResolvedValue(null);
 	});
 
 	it("creates a new purchase on subscription.activated", async () => {
@@ -445,5 +455,70 @@ describe("processWebhookEvents", () => {
 				newGranted: { ai_tokens: 500_000, api_calls: 50_000 },
 			}),
 		);
+	});
+
+	it("re-attempts the credit grant on a redelivered subscription.activated", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+			userId: "user_123",
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				productId: "test-pro-price",
+				metadata: { user_id: "user_123" },
+			}),
+		]);
+
+		// Grant ran against the existing purchase — a failed first delivery
+		// (which propagates as 5xx) is recovered by the provider's retry.
+		expect(mockGrantRecurringCredits).toHaveBeenCalledTimes(2);
+	});
+
+	it("skips already-granted meters on redelivery (no duplicate credit_event)", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+			userId: "user_123",
+		});
+		const periodEnd = new Date("2027-01-01");
+		mockGetCreditBalance.mockImplementation(
+			async ({ meterKey }: { meterKey: string }) =>
+				meterKey === "ai_tokens"
+					? {
+							recurringGranted: 500_000,
+							recurringPeriodEnd: periodEnd,
+						}
+					: null,
+		);
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				productId: "test-pro-price",
+				currentPeriodEnd: periodEnd,
+				metadata: { user_id: "user_123" },
+			}),
+		]);
+
+		// ai_tokens balance already matches the grant → skipped;
+		// api_calls balance missing → granted.
+		expect(mockGrantRecurringCredits).toHaveBeenCalledTimes(1);
+		expect(mockGrantRecurringCredits).toHaveBeenCalledWith(
+			expect.objectContaining({ meterKey: "api_calls", amount: 50_000 }),
+		);
+	});
+
+	it("propagates a grant failure so the webhook handler returns 5xx", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue(null);
+		mockGetPurchasesByOrganizationId.mockResolvedValue([]);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_1" });
+		mockGrantRecurringCredits.mockRejectedValue(new Error("db down"));
+
+		await expect(
+			processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({ productId: "test-pro-price" }),
+			]),
+		).rejects.toThrow("1 webhook event(s) failed");
 	});
 });

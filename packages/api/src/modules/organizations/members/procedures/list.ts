@@ -1,6 +1,6 @@
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { permissionProcedure } from "../../../../orpc";
+import { permissionProcedure } from "../../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../shared";
 
 const listMembersSchema = z.object({
@@ -23,7 +23,7 @@ export const listMembers = permissionProcedure(PERMISSIONS.ORGANIZATION.VIEW)
 			input.organizationId,
 			context.user.id,
 			PERMISSIONS.ORGANIZATION.VIEW,
-			context.headers,
+			context,
 		);
 		const members = org.members ?? [];
 		const total = members.length;

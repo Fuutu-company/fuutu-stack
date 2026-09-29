@@ -1,7 +1,7 @@
 import { countContacts, listContacts } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { authProcedure } from "../../../orpc";
+import { authProcedure } from "../../../orpc/procedures";
 
 const listContactsSchema = z.object({
 	organizationId: z.string().min(1),

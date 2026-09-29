@@ -1,7 +1,7 @@
 import { countWebhooks, listWebhooks } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
+import { protectedProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const listWebhooksSchema = z.object({
@@ -24,7 +24,7 @@ export const listWebhooksProcedure = protectedProcedure
 			input.organizationId,
 			context.user.id,
 			PERMISSIONS.WEBHOOK.VIEW,
-			context.headers,
+			context,
 		);
 		const skip = (input.page - 1) * input.limit;
 		const [items, total] = await Promise.all([

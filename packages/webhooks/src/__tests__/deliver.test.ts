@@ -54,11 +54,7 @@ describe("deliverWebhook", () => {
 	});
 
 	it("sends POST with correct headers and body on success", async () => {
-		fetchMock.mockResolvedValue({
-			ok: true,
-			status: 200,
-			text: () => Promise.resolve("OK"),
-		});
+		fetchMock.mockResolvedValue(new Response("OK", { status: 200 }));
 
 		const result = await deliverWebhook(webhook, event);
 
@@ -89,11 +85,9 @@ describe("deliverWebhook", () => {
 	});
 
 	it("returns failure for non-ok response", async () => {
-		fetchMock.mockResolvedValue({
-			ok: false,
-			status: 500,
-			text: () => Promise.resolve("Internal Server Error"),
-		});
+		fetchMock.mockResolvedValue(
+			new Response("Internal Server Error", { status: 500 }),
+		);
 
 		const result = await deliverWebhook(webhook, event);
 
@@ -165,11 +159,9 @@ describe("deliverWebhook", () => {
 	});
 
 	it("caps the persisted response body at maxResponseBodyBytes", async () => {
-		fetchMock.mockResolvedValue({
-			ok: true,
-			status: 200,
-			text: () => Promise.resolve("x".repeat(200 * 1024)),
-		});
+		fetchMock.mockResolvedValue(
+			new Response("x".repeat(200 * 1024), { status: 200 }),
+		);
 
 		const result = await deliverWebhook(webhook, event);
 

@@ -5,7 +5,7 @@ import {
 import { PERMISSIONS } from "@fuutu/rbac";
 
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const historySchema = z.object({
@@ -29,7 +29,7 @@ export const getHistory = permissionProcedure(PERMISSIONS.CREDIT.VIEW)
 				input.organizationId,
 				context.user.id,
 				PERMISSIONS.CREDIT.VIEW,
-				context.headers,
+				context,
 			);
 		}
 		const events = input.organizationId

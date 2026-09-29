@@ -29,7 +29,7 @@ const PLAN_ICONS: Partial<Record<PlanId, PricingTier["icon"]>> = {
 };
 
 function hrefFor(id: PlanId): string | undefined {
-	if (id === "enterprise") return "mailto:license@fuutu.com";
+	if (id === "enterprise") return undefined; // uses PLANS.enterprise.marketingCtaHref
 	return `${urls.auth.signUp}?plan=${id}`;
 }
 

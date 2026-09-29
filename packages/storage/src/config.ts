@@ -20,10 +20,6 @@ export interface StorageBuckets {
 
 export interface StorageConfig {
 	provider: StorageProviderId | (() => StorageProviderId);
-	/** Default expiry for signed upload URLs (seconds). */
-	defaultUploadExpiry: number;
-	/** Default expiry for signed download URLs (seconds). */
-	defaultDownloadExpiry: number;
 	/** Logical → physical bucket name mapping (env-driven). */
 	buckets: StorageBuckets;
 	/** Per-bucket max upload size (bytes). Enforced at presign time. */
@@ -37,8 +33,6 @@ export const storageConfig: StorageConfig = {
 	get provider(): StorageProviderId {
 		return env.STORAGE_PROVIDER ?? "s3";
 	},
-	defaultUploadExpiry: 600,
-	defaultDownloadExpiry: 600,
 	get buckets(): StorageBuckets {
 		return {
 			avatars: env.S3_BUCKET_AVATARS ?? "avatars",

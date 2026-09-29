@@ -1,7 +1,7 @@
 import { getCreditBalanceSummary } from "@fuutu/credits";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const balanceSchema = z.object({
@@ -24,7 +24,7 @@ export const getBalance = permissionProcedure(PERMISSIONS.CREDIT.VIEW)
 				input.organizationId,
 				context.user.id,
 				PERMISSIONS.CREDIT.VIEW,
-				context.headers,
+				context,
 			);
 		}
 		const summary = await getCreditBalanceSummary({

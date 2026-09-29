@@ -199,6 +199,50 @@ describe("consumeCredits", () => {
 });
 
 describe("checkCredits", () => {
+	it("throws when neither userId nor organizationId is set", async () => {
+		await expect(
+			checkCredits({ meterKey: "ai_tokens", amount: 10 }),
+		).rejects.toThrow("either userId or organizationId must be set");
+	});
+
+	it("throws when both userId and organizationId are set (owner XOR)", async () => {
+		await expect(
+			checkCredits({
+				userId: "user-1",
+				organizationId: "org-1",
+				meterKey: "ai_tokens",
+				amount: 10,
+			}),
+		).rejects.toThrow("only one of userId or organizationId may be set");
+	});
+
+	it("rejects a non-positive amount via schema", async () => {
+		vi.mocked(getCreditBalance).mockResolvedValue({
+			recurringGranted: 100,
+			recurringConsumed: 0,
+		} as never);
+		vi.mocked(getActiveCreditPackages).mockResolvedValue([]);
+
+		await expect(
+			checkCredits({ userId: "user-1", meterKey: "ai_tokens", amount: 0 }),
+		).rejects.toThrow();
+		await expect(
+			checkCredits({ userId: "user-1", meterKey: "ai_tokens", amount: -5 }),
+		).rejects.toThrow();
+	});
+
+	it("rejects a non-integer amount via schema", async () => {
+		vi.mocked(getCreditBalance).mockResolvedValue({
+			recurringGranted: 100,
+			recurringConsumed: 0,
+		} as never);
+		vi.mocked(getActiveCreditPackages).mockResolvedValue([]);
+
+		await expect(
+			checkCredits({ userId: "user-1", meterKey: "ai_tokens", amount: 1.5 }),
+		).rejects.toThrow();
+	});
+
 	it("throws on unknown meter key", async () => {
 		await expect(
 			checkCredits({ userId: "user-1", meterKey: "unknown", amount: 10 }),

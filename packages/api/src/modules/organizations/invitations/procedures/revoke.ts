@@ -3,10 +3,8 @@ import { getInvitationOrganizationId } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import {
-	createRateLimitMiddleware,
-	protectedProcedure,
-} from "../../../../orpc";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { protectedProcedure } from "../../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../shared";
 
 const revokeInvitationSchema = z.object({
@@ -32,8 +30,8 @@ export const revokeInvitation = protectedProcedure
 		await requireOrgPermissionAccess(
 			invitation.organizationId,
 			context.user.id,
-			PERMISSIONS.REMOVE_ORGANIZATION,
-			context.headers,
+			PERMISSIONS.REMOVE_MEMBER,
+			context,
 		);
 		await auth.api.cancelInvitation({
 			body: { invitationId: input.invitationId },

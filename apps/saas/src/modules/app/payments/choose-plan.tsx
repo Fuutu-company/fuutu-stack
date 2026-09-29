@@ -1,5 +1,6 @@
 "use client";
 
+import { createLogger } from "@fuutu/logs";
 import { PLANS, type PlanId, paymentsConfig } from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
@@ -10,6 +11,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { orpc } from "@/utils/orpc";
+
+const log = createLogger({ scope: "choose-plan" });
 
 export function ChoosePlan({
 	priceIds,
@@ -52,7 +55,8 @@ export function ChoosePlan({
 				window.location.href = result.url;
 			}
 		} catch (e) {
-			setError((e as Error).message);
+			log.error("checkout failed", { err: e });
+			setError(t("choosePlan.error"));
 		} finally {
 			setLoading(null);
 		}

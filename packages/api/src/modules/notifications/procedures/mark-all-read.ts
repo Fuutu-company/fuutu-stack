@@ -1,7 +1,8 @@
 import { markAllRead } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { permissionProcedure } from "../../../orpc/procedures";
 
 export const markAllNotificationsReadProcedure = permissionProcedure(
 	PERMISSIONS.NOTIFICATION.UPDATE,

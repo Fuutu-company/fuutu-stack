@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const envState = vi.hoisted(() => ({ nodeEnv: "test" }));
+const envState = vi.hoisted(() => ({ allowPrivateUrls: false }));
 const lookupMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@fuutu/env/saas", () => ({
 	env: {
-		get NODE_ENV() {
-			return envState.nodeEnv;
+		get WEBHOOK_ALLOW_PRIVATE_URLS() {
+			return envState.allowPrivateUrls;
 		},
 	},
 }));
@@ -21,7 +21,7 @@ const PUBLIC_IP = { address: "93.184.216.34", family: 4 };
 
 describe("validateWebhookUrl", () => {
 	beforeEach(() => {
-		envState.nodeEnv = "test";
+		envState.allowPrivateUrls = false;
 		lookupMock.mockReset();
 		lookupMock.mockResolvedValue([PUBLIC_IP]);
 	});
@@ -32,7 +32,7 @@ describe("validateWebhookUrl", () => {
 		expect(result.reason).toBe("malformed URL");
 	});
 
-	it("rejects http:// outside development", async () => {
+	it("rejects http:// without the private-URLs opt-in", async () => {
 		const result = await validateWebhookUrl("http://example.com/hook");
 		expect(result.valid).toBe(false);
 		expect(result.reason).toContain("HTTPS");
@@ -138,9 +138,9 @@ describe("validateWebhookUrl", () => {
 		expect(lookupMock).not.toHaveBeenCalled();
 	});
 
-	describe("development mode", () => {
+	describe("WEBHOOK_ALLOW_PRIVATE_URLS opt-in", () => {
 		beforeEach(() => {
-			envState.nodeEnv = "development";
+			envState.allowPrivateUrls = true;
 		});
 
 		it("allows http:// for local testing", async () => {

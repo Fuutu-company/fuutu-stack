@@ -8,6 +8,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { getLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
+import { i18nUI } from "@/lib/i18n";
 import { ThemeProvider } from "@/modules/shared/providers/theme-provider";
 
 export const metadata = {
@@ -43,7 +44,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 			suppressHydrationWarning
 		>
 			<body className="flex min-h-screen flex-col">
-				<RootProvider>
+				<RootProvider i18n={i18nUI.provider(locale)}>
 					<ThemeProvider>{children}</ThemeProvider>
 				</RootProvider>
 			</body>

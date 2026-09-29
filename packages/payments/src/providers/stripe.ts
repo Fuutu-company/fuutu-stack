@@ -206,9 +206,15 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		const client = getClient();
 		const mode: "subscription" | "payment" =
 			input.metadata?.mode === "payment" ? "payment" : "subscription";
+		// Stripe metadata values must be strings; `mode` is a control key
+		// consumed here, not forwarded to Stripe.
 		const metadata: Record<string, string> = {};
 		if (input.userId) metadata.user_id = input.userId;
 		if (input.organizationId) metadata.organization_id = input.organizationId;
+		for (const [key, value] of Object.entries(input.metadata ?? {})) {
+			if (key === "mode" || value === undefined || value === null) continue;
+			metadata[key] = String(value);
+		}
 		const sessionParams: Stripe.Checkout.SessionCreateParams = {
 			mode,
 			line_items: [{ price: input.priceId, quantity: input.seats ?? 1 }],

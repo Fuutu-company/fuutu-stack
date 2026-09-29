@@ -2,7 +2,7 @@ import { getContact } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure } from "../../../orpc";
+import { authProcedure } from "../../../orpc/procedures";
 
 const getContactSchema = z.object({
 	id: z.string().min(1),

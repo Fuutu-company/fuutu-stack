@@ -59,6 +59,15 @@ describe("logsConfig", () => {
 		expect(logsConfig.level).toBe("debug");
 	});
 
+	it("rejects audit sink values with no implementation", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		process.env.LOG_AUDIT_SINK = "axiom";
+		expect(logsConfig.auditSink).toBe("console");
+		process.env.LOG_AUDIT_SINK = "noop";
+		expect(logsConfig.auditSink).toBe("console");
+		warn.mockRestore();
+	});
+
 	it("falls back to default on invalid auditSink", () => {
 		process.env.LOG_AUDIT_SINK = "bogus";
 		expect(logsConfig.auditSink).toBe("console");

@@ -34,7 +34,8 @@
 		"input-otp": "catalog:",
 		"lucide-react": "catalog:",
 		"ogl": "catalog:",
-		"sonner": "catalog:"
+		"sonner": "catalog:",
+		"tw-animate-css": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/config": "workspace:*",

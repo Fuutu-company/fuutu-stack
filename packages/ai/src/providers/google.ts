@@ -91,7 +91,10 @@ export class GoogleProvider implements AIProvider {
 				temperature: options?.temperature,
 				maxOutputTokens: options?.maxTokens,
 			});
-			const response = result.toUIMessageStreamResponse();
+			// Plain UTF-8 text chunks (not SSE UI-message frames) — the API
+			// accumulates the raw text for persistence and the client renders
+			// it directly as text/plain.
+			const response = result.toTextStreamResponse();
 			return (
 				response.body ??
 				new ReadableStream<Uint8Array>({

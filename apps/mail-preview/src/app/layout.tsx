@@ -1,9 +1,12 @@
+import { KIT_GENERATOR_META } from "@fuutu/config";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
 	title: "Fuutu · Mail Preview",
 	description: "Dev tool for @fuutu/mail templates.",
+	// `<meta name="generator">` fingerprint — mirrored on every surface.
+	generator: KIT_GENERATOR_META,
 	robots: { index: false, follow: false },
 	icons: {
 		icon: [

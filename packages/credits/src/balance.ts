@@ -3,7 +3,9 @@ import {
 	getCreditBalancesForOrganization,
 	getCreditBalancesForUser,
 } from "@fuutu/db";
+import { z } from "zod";
 import { CREDIT_METERS } from "./meters";
+import { ownerXorCheck } from "./owner";
 
 export interface CreditBalanceSummary {
 	meterKey: string;
@@ -24,11 +26,19 @@ export interface CreditBalanceSummary {
 	total: number;
 }
 
+export const GetCreditBalanceSummarySchema = ownerXorCheck(
+	z.object({
+		userId: z.string().optional(),
+		organizationId: z.string().optional(),
+	}),
+);
+
 export async function getCreditBalanceSummary(params: {
 	userId?: string;
 	organizationId?: string;
 }): Promise<CreditBalanceSummary[]> {
-	const { userId, organizationId } = params;
+	const { userId, organizationId } =
+		GetCreditBalanceSummarySchema.parse(params);
 	const balances = userId
 		? await getCreditBalancesForUser(userId)
 		: organizationId

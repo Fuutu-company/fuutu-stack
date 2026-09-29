@@ -1,6 +1,6 @@
 import type { UserWithRole } from "@fuutu/auth/types";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
+import { protectedProcedure } from "../../../orpc/procedures";
 
 export const getCurrentUser = protectedProcedure
 	.route({

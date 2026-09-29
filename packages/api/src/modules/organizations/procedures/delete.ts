@@ -1,7 +1,8 @@
 import { auth } from "@fuutu/auth";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 
 const deleteOrgSchema = z.object({
 	organizationId: z.string().min(1),

@@ -77,7 +77,7 @@ describe("webhooks.create", () => {
 		vi.mocked(createWebhook).mockResolvedValue({
 			id: "wh-1",
 			url: "https://example.com/webhook",
-			events: ["invoice.created"],
+			events: ["invoice.paid"],
 			secret: "whsec_abc123",
 			organizationId: "org-1",
 			isActive: true,
@@ -88,7 +88,7 @@ describe("webhooks.create", () => {
 			{
 				organizationId: "org-1",
 				url: "https://example.com/webhook",
-				events: ["invoice.created"],
+				events: ["invoice.paid"],
 			},
 			{ context: authenticatedContext },
 		);
@@ -96,7 +96,7 @@ describe("webhooks.create", () => {
 		expect(createWebhook).toHaveBeenCalledWith(
 			"org-1",
 			"https://example.com/webhook",
-			["invoice.created"],
+			["invoice.paid"],
 		);
 		expect(result).toMatchObject({ id: "wh-1", secret: "whsec_abc123" });
 	});
@@ -105,7 +105,11 @@ describe("webhooks.create", () => {
 		await expect(
 			call(
 				webhooksRouter.create,
-				{ organizationId: "org-1", url: "not-a-url", events: ["test"] },
+				{
+					organizationId: "org-1",
+					url: "not-a-url",
+					events: ["member.invited"],
+				},
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
@@ -132,7 +136,7 @@ describe("webhooks.create", () => {
 				{
 					organizationId: "",
 					url: "https://example.com/webhook",
-					events: ["test"],
+					events: ["member.invited"],
 				},
 				{ context: authenticatedContext },
 			),
@@ -146,7 +150,7 @@ describe("webhooks.create", () => {
 				{
 					organizationId: "org-1",
 					url: "https://example.com/webhook",
-					events: ["test"],
+					events: ["member.invited"],
 				},
 				{ context: unauthenticatedContext },
 			),
@@ -226,14 +230,14 @@ describe("webhooks.update", () => {
 				id: "wh-1",
 				organizationId: "org-1",
 				url: "https://example.com/new-webhook",
-				events: ["invoice.created", "invoice.paid"],
+				events: ["member.invited", "invoice.paid"],
 			},
 			{ context: authenticatedContext },
 		);
 
 		expect(updateWebhook).toHaveBeenCalledWith("wh-1", "org-1", {
 			url: "https://example.com/new-webhook",
-			events: ["invoice.created", "invoice.paid"],
+			events: ["member.invited", "invoice.paid"],
 		});
 		expect(result).toEqual({ success: true });
 	});

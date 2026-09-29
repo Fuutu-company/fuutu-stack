@@ -6,7 +6,7 @@ import {
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
 import { getMeter } from "./meters";
-import { ownerXorCheck, ownerXorIssue } from "./owner";
+import { ownerXorCheck } from "./owner";
 
 const log = createLogger({ scope: "credits" });
 
@@ -87,6 +87,15 @@ export async function consumeCredits(
 	return result;
 }
 
+export const CheckCreditsSchema = ownerXorCheck(
+	z.object({
+		userId: z.string().optional(),
+		organizationId: z.string().optional(),
+		meterKey: z.string(),
+		amount: z.number().int().positive(),
+	}),
+);
+
 /**
  * Check if credits can be consumed without actually consuming them.
  *
@@ -104,9 +113,8 @@ export async function checkCredits(params: {
 	remaining: number;
 	wouldUseTopup: boolean;
 }> {
-	const { userId, organizationId, meterKey, amount } = params;
-	const ownerIssue = ownerXorIssue({ userId, organizationId });
-	if (ownerIssue) throw new Error(`checkCredits: ${ownerIssue}`);
+	const { userId, organizationId, meterKey, amount } =
+		CheckCreditsSchema.parse(params);
 	const meter = getMeter(meterKey);
 	if (!meter) throw new Error(`checkCredits: unknown meter key "${meterKey}"`);
 

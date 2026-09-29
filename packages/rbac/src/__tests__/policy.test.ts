@@ -117,19 +117,15 @@ describe("ORG_POLICY", () => {
 		);
 	});
 	it("member cannot invite to organization", () => {
-		expect(
-			hasOrgPermission(ac, "member", PERMISSIONS.INVITE_ORGANIZATION),
-		).toBe(false);
+		expect(hasOrgPermission(ac, "member", PERMISSIONS.INVITE_MEMBER)).toBe(
+			false,
+		);
 	});
 	it("admin can invite to organization", () => {
-		expect(hasOrgPermission(ac, "admin", PERMISSIONS.INVITE_ORGANIZATION)).toBe(
-			true,
-		);
+		expect(hasOrgPermission(ac, "admin", PERMISSIONS.INVITE_MEMBER)).toBe(true);
 	});
 	it("admin can remove from organization", () => {
-		expect(hasOrgPermission(ac, "admin", PERMISSIONS.REMOVE_ORGANIZATION)).toBe(
-			true,
-		);
+		expect(hasOrgPermission(ac, "admin", PERMISSIONS.REMOVE_MEMBER)).toBe(true);
 	});
 	it("admin can update organization", () => {
 		expect(hasOrgPermission(ac, "admin", PERMISSIONS.ORGANIZATION.UPDATE)).toBe(
@@ -146,15 +142,13 @@ describe("ORG_POLICY", () => {
 			true,
 		);
 	});
-	it("owner can manage billing", () => {
-		expect(hasOrgPermission(ac, "owner", PERMISSIONS.MANAGE_BILLING)).toBe(
+	it("owner can manage billing via inherited admin payment permissions", () => {
+		expect(hasOrgPermission(ac, "owner", PERMISSIONS.PAYMENT.UPDATE)).toBe(
 			true,
 		);
 	});
 	it("owner inherits admin permissions", () => {
-		expect(hasOrgPermission(ac, "owner", PERMISSIONS.INVITE_ORGANIZATION)).toBe(
-			true,
-		);
+		expect(hasOrgPermission(ac, "owner", PERMISSIONS.INVITE_MEMBER)).toBe(true);
 	});
 
 	// Member base tier — mirrors system user for shared resources

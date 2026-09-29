@@ -4,7 +4,8 @@ import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { dispatchEvent } from "@fuutu/webhooks";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../../orpc";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../../orpc/procedures";
 import type { OrgMember } from "../../../organizations/shared";
 
 const log = createLogger({ scope: "api:organizations" });
@@ -15,7 +16,7 @@ const removeMemberSchema = z.object({
 });
 
 export const removeMember = authProcedure({
-	org: { permission: PERMISSIONS.REMOVE_ORGANIZATION },
+	org: { permission: PERMISSIONS.REMOVE_MEMBER },
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({

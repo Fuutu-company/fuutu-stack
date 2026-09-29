@@ -8,7 +8,7 @@ import {
 } from "@fuutu/config";
 import { runAllJobs, runJob } from "@fuutu/cron";
 import { env } from "@fuutu/env/saas";
-import { checkLicense } from "@fuutu/license";
+import { checkLicense, getLicenseMode } from "@fuutu/license";
 import { createLogger } from "@fuutu/logs";
 import { handlePaymentsWebhook } from "@fuutu/payments";
 import { pingTelemetry } from "@fuutu/telemetry";
@@ -22,7 +22,11 @@ const log = createLogger({ scope: "api" });
 const docsHandler = async (c: HonoContext) => {
 	const { matched, response } = await openApiHandler.handle(c.req.raw, {
 		prefix: "/api",
-		context: { session: null, headers: c.req.raw.headers as Headers },
+		context: {
+			session: null,
+			headers: c.req.raw.headers as Headers,
+			apiKey: null,
+		},
 	});
 	if (matched) {
 		return c.newResponse(response.body, response);
@@ -109,6 +113,9 @@ export const app = new Hono()
 		c.json({
 			name: KIT_NAME,
 			version: KIT_VERSION,
+			// License-mode reporting surface (LICENSE.md §6(5)) — reads the
+			// cache warmed by the boot-time checkLicense(), never blocks.
+			licenseMode: getLicenseMode(),
 		}),
 	)
 	// Mounted **before** createContext middleware: payment providers sign

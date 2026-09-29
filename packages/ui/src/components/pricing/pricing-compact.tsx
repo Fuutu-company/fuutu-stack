@@ -46,7 +46,7 @@ export function PricingCompact({
 				className="pointer-events-none absolute inset-0 -z-10"
 				style={{
 					background:
-						"radial-gradient(ellipse 70% 50% at 50% -5%, oklch(var(--primary)/0.12) 0%, transparent 65%)",
+						"radial-gradient(ellipse 70% 50% at 50% -5%, oklch(from var(--primary) l c h / 0.12) 0%, transparent 65%)",
 				}}
 			/>
 
@@ -143,7 +143,7 @@ function RegularCard({
 				<div
 					aria-hidden
 					className="pointer-events-none absolute inset-x-6 -bottom-4 -z-10 h-16 blur-2xl"
-					style={{ background: "oklch(var(--primary)/0.4)" }}
+					style={{ background: "oklch(from var(--primary) l c h / 0.4)" }}
 				/>
 			)}
 
@@ -283,7 +283,7 @@ function EnterpriseBanner({
 				className="absolute inset-x-0 top-0 h-1"
 				style={{
 					background:
-						"linear-gradient(90deg, transparent 0%, oklch(var(--primary)/0.5) 30%, oklch(var(--primary)/0.8) 50%, oklch(var(--primary)/0.5) 70%, transparent 100%)",
+						"linear-gradient(90deg, transparent 0%, oklch(from var(--primary) l c h / 0.5) 30%, oklch(from var(--primary) l c h / 0.8) 50%, oklch(from var(--primary) l c h / 0.5) 70%, transparent 100%)",
 				}}
 			/>
 			{/* Premium radial glow */}
@@ -292,14 +292,14 @@ function EnterpriseBanner({
 				className="pointer-events-none absolute inset-0 -z-10"
 				style={{
 					background:
-						"radial-gradient(ellipse 80% 60% at 20% 40%, oklch(var(--primary)/0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 85% 20%, oklch(var(--primary)/0.08) 0%, transparent 55%)",
+						"radial-gradient(ellipse 80% 60% at 20% 40%, oklch(from var(--primary) l c h / 0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 85% 20%, oklch(from var(--primary) l c h / 0.08) 0%, transparent 55%)",
 				}}
 			/>
 			{/* Subtle bottom glow */}
 			<div
 				aria-hidden
 				className="pointer-events-none absolute inset-x-8 -bottom-6 h-20 blur-3xl"
-				style={{ background: "oklch(var(--primary)/0.15)" }}
+				style={{ background: "oklch(from var(--primary) l c h / 0.15)" }}
 			/>
 
 			<div className="flex flex-col gap-8 p-8 md:flex-row md:items-center md:gap-12 md:p-10">
@@ -332,7 +332,7 @@ function EnterpriseBanner({
 						<div
 							aria-hidden
 							className="pointer-events-none absolute inset-0 -z-10 rounded-md blur-lg"
-							style={{ background: "oklch(var(--primary)/0.25)" }}
+							style={{ background: "oklch(from var(--primary) l c h / 0.25)" }}
 						/>
 						<PricingCTA tier={tier} LinkComponent={LinkComponent} />
 					</div>

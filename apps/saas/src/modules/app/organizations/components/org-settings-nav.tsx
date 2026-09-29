@@ -1,6 +1,14 @@
 "use client";
 
+import { authClient } from "@fuutu/auth/client";
 import { paymentsConfig } from "@fuutu/payments/config";
+import {
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
+} from "@fuutu/rbac";
 import { cn } from "@fuutu/ui";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,10 +19,21 @@ interface NavItem {
 	href: string;
 }
 
+const ac = new OrgAccessControl(ORG_POLICY);
+
 export function OrgSettingsNav({ slug }: { slug: string }) {
 	const t = useTranslations("organizations");
 	const pathname = usePathname();
 	const base = `/organizations/${slug}/settings`;
+
+	const { data: session } = authClient.useSession();
+	const { data: activeOrg } = authClient.useActiveOrganization();
+	const role = activeOrg?.members?.find(
+		(m) => m.userId === session?.user.id,
+	)?.role;
+	const canViewAuditLog = role
+		? hasOrgPermission(ac, toOrgRole(role), PERMISSIONS.AUDIT_LOG.VIEW)
+		: false;
 
 	const items: NavItem[] = [
 		{ key: "general", href: `${base}/general` },
@@ -29,9 +48,13 @@ export function OrgSettingsNav({ slug }: { slug: string }) {
 	items.push(
 		{ key: "apiKeys", href: `${base}/api-keys` },
 		{ key: "webhooks", href: `${base}/webhooks` },
-		{ key: "auditLog", href: `${base}/audit-log` },
-		{ key: "danger", href: `${base}/danger` },
 	);
+	// Audit log requires AUDIT_LOG.VIEW (admin+) — hide rather than
+	// link to a redirect dead-end for plain members.
+	if (canViewAuditLog) {
+		items.push({ key: "auditLog", href: `${base}/audit-log` });
+	}
+	items.push({ key: "danger", href: `${base}/danger` });
 
 	const labelMap: Record<string, string> = {
 		general: t("settings.general"),

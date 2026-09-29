@@ -11,10 +11,12 @@
 
 /** Drain identifiers — evlog adapter names. Console is always on (evlog default). */
 export type DrainId = "console" | "sentry" | "axiom" | "fs" | "memory";
-export type AuditSinkId = "console" | "db" | "axiom" | "noop";
+/** Audit sinks with a real implementation: console (built-in) or db
+ * (wired to `prismaAuditSink` by @fuutu/auth when LOG_AUDIT_SINK=db). */
+export type AuditSinkId = "console" | "db";
 
 const VALID_DRAINS = ["console", "sentry", "axiom", "fs", "memory"] as const;
-const VALID_SINKS = ["console", "db", "axiom", "noop"] as const;
+const VALID_SINKS = ["console", "db"] as const;
 const VALID_LEVELS = ["debug", "info", "warn", "error"] as const;
 
 /**

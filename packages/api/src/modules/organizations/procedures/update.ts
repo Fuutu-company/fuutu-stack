@@ -3,7 +3,8 @@ import { createLogger } from "@fuutu/logs";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { dispatchEvent } from "@fuutu/webhooks";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 import { slugSchema } from "../shared";
 
 const log = createLogger({ scope: "api:organizations" });
@@ -12,6 +13,7 @@ const updateOrgSchema = z.object({
 	organizationId: z.string().min(1),
 	name: z.string().min(1).max(100).optional(),
 	slug: slugSchema.optional(),
+	logo: z.string().max(2048).nullable().optional(),
 });
 
 export const updateOrganization = authProcedure({
@@ -34,6 +36,7 @@ export const updateOrganization = authProcedure({
 				data: {
 					...(input.name ? { name: input.name } : {}),
 					...(input.slug ? { slug: input.slug } : {}),
+					...(input.logo !== undefined ? { logo: input.logo } : {}),
 				},
 			},
 			headers: context.headers,
@@ -47,6 +50,7 @@ export const updateOrganization = authProcedure({
 					organizationId: input.organizationId,
 					...(input.name ? { name: input.name } : {}),
 					...(input.slug ? { slug: input.slug } : {}),
+					...(input.logo !== undefined ? { logo: input.logo } : {}),
 				},
 			});
 		} catch (err) {

@@ -284,7 +284,7 @@
 			"post": {
 				"tags": ["Billing"],
 				"summary": "Create checkout session",
-				"description": "Create a Polar checkout session for upgrading to a paid plan.",
+				"description": "Create a checkout session with the configured payment provider for upgrading to a paid plan.",
 				"operationId": "createCheckout",
 				"security": [{ "session": [] }],
 				"requestBody": {
@@ -297,7 +297,7 @@
 								"properties": {
 									"productId": {
 										"type": "string",
-										"description": "Polar product ID"
+										"description": "Product or price ID from the configured payment provider"
 									},
 									"successUrl": {
 										"type": "string",
@@ -320,7 +320,7 @@
 										"url": {
 											"type": "string",
 											"format": "url",
-											"description": "Polar checkout URL"
+											"description": "Checkout URL returned by the payment provider"
 										}
 									}
 								}

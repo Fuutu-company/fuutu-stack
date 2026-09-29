@@ -3,7 +3,7 @@ import { getOrganizationBySlug } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess, slugSchema } from "../shared";
 
 export const getOrganization = permissionProcedure(
@@ -26,7 +26,7 @@ export const getOrganization = permissionProcedure(
 			org.id,
 			context.user.id,
 			PERMISSIONS.ORGANIZATION.VIEW,
-			context.headers,
+			context,
 		);
 		const fullOrg = await auth.api.getFullOrganization({
 			query: { organizationId: org.id },

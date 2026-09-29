@@ -13,7 +13,7 @@
  * Data
  *   - 1 Organization "Acme" with both users as members
  *   - 5 sample AuditLog entries
- *   - 1 active Purchase (SUBSCRIPTION, provider=polar) for the org
+ *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org
  *   - 3 demo API keys for the admin (org-scoped, user-scoped, expired)
  *   - 4 demo invoices for the acme org (paid + open)
  *   - 2 demo webhooks for the acme org (active + inactive)
@@ -24,6 +24,7 @@
  */
 import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "@better-auth/utils/password";
+import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
 import { db } from "./client";
 
@@ -33,8 +34,7 @@ import { db } from "./client";
 // that do not verify, so the seeded users would fail to log in.
 
 async function main() {
-	// process.env.NODE_ENV is used directly here to avoid circular dependency with @fuutu/env
-	if (process.env.NODE_ENV === "production") {
+	if (env.NODE_ENV === "production") {
 		throw new Error(
 			"Refusing to seed in production. Set NODE_ENV=development.",
 		);
@@ -142,7 +142,7 @@ async function main() {
 	await db.purchase.upsert({
 		where: {
 			provider_subscriptionId: {
-				provider: "polar",
+				provider: "creem",
 				subscriptionId: "seed_sub_pro_org",
 			},
 		},
@@ -150,7 +150,7 @@ async function main() {
 		create: {
 			type: "SUBSCRIPTION",
 			status: "ACTIVE",
-			provider: "polar",
+			provider: "creem",
 			priceId: "seed_price_pro",
 			productId: "seed_product_pro",
 			subscriptionId: "seed_sub_pro_org",
@@ -218,9 +218,9 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_001",
-					url: "https://polar.sh/invoices/001",
-					pdfUrl: "https://polar.sh/invoices/001.pdf",
+					providerInvoiceId: "seed_inv_001",
+					url: "https://billing.acme.dev/invoices/001",
+					pdfUrl: "https://billing.acme.dev/invoices/001.pdf",
 					amount: 49.0,
 					currency: "USD",
 					status: "paid",
@@ -230,9 +230,9 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_002",
-					url: "https://polar.sh/invoices/002",
-					pdfUrl: "https://polar.sh/invoices/002.pdf",
+					providerInvoiceId: "seed_inv_002",
+					url: "https://billing.acme.dev/invoices/002",
+					pdfUrl: "https://billing.acme.dev/invoices/002.pdf",
 					amount: 49.0,
 					currency: "USD",
 					status: "paid",
@@ -242,8 +242,8 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_003",
-					url: "https://polar.sh/invoices/003",
+					providerInvoiceId: "seed_inv_003",
+					url: "https://billing.acme.dev/invoices/003",
 					amount: 149.0,
 					currency: "USD",
 					status: "open",
@@ -252,7 +252,7 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_004",
+					providerInvoiceId: "seed_inv_004",
 					amount: 49.0,
 					currency: "USD",
 					status: "void",
@@ -304,8 +304,8 @@ async function main() {
 					userId: admin.id,
 					type: "billing",
 					title: "Invoice paid",
-					body: "Invoice polar_inv_002 for $49.00 was paid successfully.",
-					data: { invoiceId: "polar_inv_002", amount: 49.0 },
+					body: "Invoice seed_inv_002 for $49.00 was paid successfully.",
+					data: { invoiceId: "seed_inv_002", amount: 49.0 },
 					readAt: mins(120),
 					createdAt: mins(180),
 				},

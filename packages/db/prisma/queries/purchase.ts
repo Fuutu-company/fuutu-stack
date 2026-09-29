@@ -44,19 +44,24 @@ export const getPurchaseByProviderSubscriptionId = (
 
 /**
  * Idempotency lookup for one-time checkouts: `metadata.checkoutEventId`
- * stores the provider's webhook event id (set by webhook sync). A partial
- * unique index on (provider, metadata->>'checkoutEventId') backs this.
+ * stores the provider's webhook event id (set by webhook sync). The partial
+ * unique index "purchase_provider_checkoutEventId_key" is on the text
+ * extraction `(provider, metadata ->> 'checkoutEventId')` — Prisma's JSON
+ * `path`+`equals` filter emits a jsonb `#>` comparison the index does not
+ * cover, so this uses parameterized raw SQL matching the index expression.
  */
-export const getPurchaseByCheckoutEventId = (
+export const getPurchaseByCheckoutEventId = async (
 	provider: string,
 	checkoutEventId: string,
-) =>
-	db.purchase.findFirst({
-		where: {
-			provider,
-			metadata: { path: ["checkoutEventId"], equals: checkoutEventId },
-		},
-	});
+): Promise<Purchase | null> => {
+	const rows = await db.$queryRaw<Purchase[]>`
+		SELECT * FROM "app"."purchase"
+		WHERE "provider" = ${provider}
+			AND "metadata" ->> 'checkoutEventId' = ${checkoutEventId}
+		LIMIT 1
+	`;
+	return rows[0] ?? null;
+};
 
 export const getTrialingSubscriptions = () =>
 	db.purchase.findMany({

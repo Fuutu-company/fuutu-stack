@@ -4,8 +4,14 @@ import type * as React from "react";
 
 import { cn } from "../lib/utils";
 
-function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
-	return <nav data-slot="breadcrumb" aria-label="breadcrumb" {...props} />;
+function Breadcrumb({
+	label = "Breadcrumb",
+	...props
+}: React.ComponentProps<"nav"> & {
+	/** Accessible label for the nav landmark (pass a localized value). */
+	label?: string;
+}) {
+	return <nav data-slot="breadcrumb" aria-label={label} {...props} />;
 }
 
 function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {

@@ -36,11 +36,18 @@ jobs:
             git fetch origin "$BASE" --depth=1
             DIFF=$(git diff --name-only "origin/$BASE" HEAD)
           else
-            DIFF=$(git diff --name-only HEAD~1 HEAD)
+            # Multi-commit pushes: diff the whole push, not just HEAD~1.
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE="HEAD~1"
+            fi
+            DIFF=$(git diff --name-only "$BEFORE" HEAD)
           fi
 
-          # Check if any code files changed
-          if echo "$DIFF" | grep -qE '^(apps/.*\.(ts|tsx)|packages/.*\.(ts|tsx)|turbo\.json|package\.json|pnpm-workspace\.yaml|\.github/workflows/ci\.yml)$'; then
+          # Code = anything that isn't pure docs/static assets. An allowlist
+          # misses real changes (nested package.json, .prisma, .mjs, .css,
+          # lockfile, i18n json, tooling/) and silently skips all gates.
+          if echo "$DIFF" | grep -qvE '\.(md|png|jpe?g|svg|webp|gif|ico|mp4|woff2?|ttf)$|(^|/)(README|CHANGELOG|LICENSE)(\.md)?$'; then
             echo "code=true" >> $GITHUB_OUTPUT
           else
             echo "code=false" >> $GITHUB_OUTPUT
@@ -71,7 +78,9 @@ jobs:
 
       - run: pnpm db:generate
 
-      - run: pnpm check
+      # check:ci (biome check, non-mutating) — `pnpm check` would --write
+      # autofix violations and exit green, so the gate never fails.
+      - run: pnpm check:ci
 
       - run: pnpm check-types
 
@@ -643,7 +652,9 @@ jobs:
   # Requires: Repo Settings → Pages → Source: GitHub Actions
   # ─────────────────────────────────────────────────────────
   visual-report:
-    needs: [e2e-saas, e2e-marketing]
+    # `changes` must be in needs — otherwise `needs.changes.outputs.code`
+    # evaluates empty and this job is silently skipped on every PR.
+    needs: [changes, e2e-saas, e2e-marketing]
     if: always() && github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     permissions:

@@ -2,7 +2,8 @@ import { updateUserProfile as updateUserProfileDb } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { dispatchEvent } from "@fuutu/webhooks";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { protectedProcedure } from "../../../orpc/procedures";
 
 const log = createLogger({ scope: "api:users" });
 

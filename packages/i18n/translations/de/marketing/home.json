@@ -213,7 +213,7 @@
 				"rbac": {
 					"label": "RBAC & Orgs",
 					"title": "Feingranulare Rollen\nfür jedes Team.",
-					"description": "owner → admin → member → viewer. Organisation-Einladungen, Rollenwechsel und Audit-Logs — in jede API-Route integriert.",
+					"description": "owner → admin → member. Organisation-Einladungen, Rollenwechsel und Audit-Logs — in jede API-Route integriert.",
 					"frameLabel": "Team-Einstellungen"
 				},
 				"api": {

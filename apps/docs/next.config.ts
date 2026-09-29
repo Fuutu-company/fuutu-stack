@@ -72,7 +72,7 @@ const nextConfig: NextConfig = {
 				destination: `/llms.mdx/${i18nConfig.defaultLocale}/docs/:path*`,
 			},
 			{
-				source: "/:locale(en|de)/docs/:path*.mdx",
+				source: `/:locale(${Object.keys(i18nConfig.locales).join("|")})/docs/:path*.mdx`,
 				destination: "/llms.mdx/:locale/docs/:path*",
 			},
 		];

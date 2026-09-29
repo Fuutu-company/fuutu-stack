@@ -1,7 +1,8 @@
 import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 import { resolveBucketOrThrow } from "../shared";
 
 const fileDeleteSchema = z.object({

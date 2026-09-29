@@ -26,6 +26,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "org-danger" });
 
@@ -88,7 +89,7 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 		setBusy("__delete__");
 		setDeleteError(null);
 		try {
-			await authClient.organization.delete({ organizationId: org.id });
+			await orpc.organizations.delete.call({ organizationId: org.id });
 			router.push("/organizations");
 			router.refresh();
 		} catch (e) {

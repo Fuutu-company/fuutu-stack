@@ -1,10 +1,8 @@
 import { deleteConversation } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
-import {
-	createRateLimitMiddleware,
-	permissionProcedure,
-} from "../../../../orpc";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { permissionProcedure } from "../../../../orpc/procedures";
 import { conversationIdSchema } from "../../shared";
 
 export const deleteConversationProcedure = permissionProcedure(

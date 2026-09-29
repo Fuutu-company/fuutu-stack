@@ -69,6 +69,7 @@ vi.mock("@fuutu/auth", () => ({
 vi.mock("@fuutu/db", () => ({
 	getActiveSubscriptionForUser: vi.fn().mockResolvedValue(null),
 	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
+	getOrganizationWithMembers: vi.fn(),
 }));
 
 import { PERMISSIONS } from "@fuutu/rbac";
@@ -208,5 +209,87 @@ describe("runAuthorize", () => {
 				{},
 			),
 		).rejects.toThrow(ORPCError);
+	});
+
+	// ─── API-key contexts (x-api-key) ──────────────────────────────────────────
+
+	it("api-key context: resolves org via DB, not the Better Auth endpoint", async () => {
+		const { getOrganizationWithMembers } = await import("@fuutu/db");
+		const { auth } = await import("@fuutu/auth");
+		vi.mocked(getOrganizationWithMembers).mockResolvedValue({
+			id: "org-1",
+			members: [
+				{
+					id: "m-1",
+					userId: "user-1",
+					role: "admin",
+					user: { email: "a@b.c" },
+				},
+			],
+		} as never);
+		vi.mocked(auth.api.getFullOrganization).mockClear();
+
+		const ctx = await runAuthorize(
+			{ org: { permission: PERMISSIONS.ORGANIZATION.VIEW, optional: true } },
+			makeContext({
+				apiKey: { id: "k-1", organizationId: null },
+			}) as unknown as Context,
+			{ organizationId: "org-1" },
+		);
+		expect(ctx.org?.id).toBe("org-1");
+		expect(ctx.orgRole).toBe("admin");
+		expect(getOrganizationWithMembers).toHaveBeenCalledWith("org-1");
+		// The BA endpoint cannot resolve a session from x-api-key — it must
+		// not be consulted for key-authenticated requests.
+		expect(auth.api.getFullOrganization).not.toHaveBeenCalled();
+	});
+
+	it("org-scoped api key is rejected on a different org", async () => {
+		await expect(
+			runAuthorize(
+				{ org: { permission: PERMISSIONS.ORGANIZATION.VIEW, optional: true } },
+				makeContext({
+					apiKey: { id: "k-1", organizationId: "org-1" },
+				}) as unknown as Context,
+				{ organizationId: "org-2" },
+			),
+		).rejects.toThrow(ORPCError);
+	});
+
+	it("org-scoped api key is rejected on user-scoped paths", async () => {
+		await expect(
+			runAuthorize(
+				{ org: { permission: PERMISSIONS.API_KEY.CREATE, optional: true } },
+				makeContext({
+					apiKey: { id: "k-1", organizationId: "org-1" },
+				}) as unknown as Context,
+				{},
+			),
+		).rejects.toThrow(ORPCError);
+	});
+
+	it("org-scoped api key passes on its own org", async () => {
+		const { getOrganizationWithMembers } = await import("@fuutu/db");
+		vi.mocked(getOrganizationWithMembers).mockResolvedValue({
+			id: "org-1",
+			members: [
+				{
+					id: "m-1",
+					userId: "user-1",
+					role: "member",
+					user: { email: "a@b.c" },
+				},
+			],
+		} as never);
+
+		const ctx = await runAuthorize(
+			{ org: { permission: PERMISSIONS.ORGANIZATION.VIEW } },
+			makeContext({
+				apiKey: { id: "k-1", organizationId: "org-1" },
+			}) as unknown as Context,
+			{ organizationId: "org-1" },
+		);
+		expect(ctx.org?.id).toBe("org-1");
+		expect(ctx.orgRole).toBe("member");
 	});
 });

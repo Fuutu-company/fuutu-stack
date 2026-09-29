@@ -20,20 +20,37 @@ export const slugSchema = z
 	.regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "Invalid slug format");
 
 import {
+	assertApiKeyOrgScope,
 	type FullOrganization,
 	getOrgOrNull,
 	type OrgMember,
+	resolveOrgForAccess,
 } from "../../orpc/middleware/authorize";
 
 export { type FullOrganization, getOrgOrNull, type OrgMember };
+
+/**
+ * Org-access context — pass `context` (or `{ headers, apiKey }`) so the
+ * helpers can resolve orgs via DB for API-key requests and enforce
+ * org-scoped key pinning.
+ */
+export type OrgAccessContext = {
+	headers?: Headers;
+	apiKey?: { organizationId: string | null } | null;
+};
 
 export async function requireOrgRole(
 	organizationId: string,
 	userId: string,
 	minRole: OrgRole,
-	headers?: Headers,
+	access?: OrgAccessContext,
 ): Promise<FullOrganization> {
-	const org = await getOrgOrNull(organizationId, headers);
+	assertApiKeyOrgScope(access?.apiKey ?? null, organizationId);
+	const org = await resolveOrgForAccess(
+		organizationId,
+		access?.headers,
+		access?.apiKey ?? null,
+	);
 	if (!org) {
 		throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 	}
@@ -63,9 +80,14 @@ export async function requireOrgPermissionAccess(
 	organizationId: string,
 	userId: string,
 	permission: KnownPermission,
-	headers?: Headers,
+	access?: OrgAccessContext,
 ): Promise<FullOrganization> {
-	const org = await getOrgOrNull(organizationId, headers);
+	assertApiKeyOrgScope(access?.apiKey ?? null, organizationId);
+	const org = await resolveOrgForAccess(
+		organizationId,
+		access?.headers,
+		access?.apiKey ?? null,
+	);
 	if (!org) {
 		throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 	}

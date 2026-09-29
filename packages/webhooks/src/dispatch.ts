@@ -7,13 +7,13 @@ import {
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
-import type { WebhookEventType } from "./events";
+import { WEBHOOK_EVENTS, type WebhookEventType } from "./events";
 
 const log = createLogger({ scope: "webhooks:dispatch" });
 
 const dispatchEventInput = z
 	.object({
-		event: z.string().min(1).max(200),
+		event: z.enum(WEBHOOK_EVENTS),
 		payload: z.record(z.string(), z.unknown()),
 		organizationId: z.string().min(1).optional(),
 		userId: z.string().min(1).optional(),

@@ -7,6 +7,9 @@
 		},
 		"./internal/client": {
 			"default": "./prisma/client.ts"
+		},
+		"./zod": {
+			"default": "./prisma/zod/index.ts"
 		}
 	},
 	"scripts": {

@@ -16,7 +16,7 @@ import {
 	FieldLabel,
 	Input,
 } from "@fuutu/ui";
-import { WEBHOOK_EVENTS } from "@fuutu/webhooks/events";
+import { WEBHOOK_EVENTS, type WebhookEventType } from "@fuutu/webhooks/events";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -44,11 +44,11 @@ export function WebhookCreateDialog({
 	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState("");
-	const [events, setEvents] = useState<string[]>([]);
+	const [events, setEvents] = useState<WebhookEventType[]>([]);
 	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	function toggleEvent(event: string) {
+	function toggleEvent(event: WebhookEventType) {
 		setEvents((prev) =>
 			prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
 		);

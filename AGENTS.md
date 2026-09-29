@@ -151,7 +151,7 @@ fuutu-stack/
 │   ├── telemetry/     # bin/ping.mjs (build-time) + pingTelemetry() (runtime)
 │   ├── webhooks/      # Webhook delivery worker (sign, deliver, retry)
 │   ├── test-utils/    # shared test helpers + architecture guard tests
-│   └── ai/            # AI provider-swappable package (Google/OpenAI/Anthropic/Noop)
+│   └── ai/            # AI provider-swappable package (OpenRouter/Google/OpenAI/Anthropic/Noop)
 ├── tooling/
 │   ├── typescript/    # @fuutu/tsconfig — base / nextjs / react-library
 │   └── scripts/       # assets-sync.mjs etc.

@@ -22,6 +22,7 @@ import {
 } from "@fuutu/credits";
 import {
 	createPurchase,
+	getCreditBalance,
 	getPurchaseByCheckoutEventId,
 	getPurchaseByProviderSubscriptionId,
 	getPurchasesByOrganizationId,
@@ -180,6 +181,18 @@ async function processSingleEvent(
 			existing.organizationId ?? organizationId,
 			userIdToSet,
 		);
+		// Redelivered activation: re-attempt the recurring credit grant.
+		// The original delivery may have created the purchase but failed
+		// the grant (which propagates as 5xx and triggers a provider retry).
+		// grantCreditsForSubscription skips meters whose balance already
+		// matches, so a successful first delivery is a no-op here.
+		if (isSubscriptionActivationType(type)) {
+			await grantCreditsForSubscription(
+				event,
+				existing.userId ?? userId,
+				existing.organizationId ?? organizationId,
+			);
+		}
 		return;
 	}
 
@@ -347,15 +360,10 @@ async function createNewSubscriptionPurchase(
 		organizationId,
 	});
 
-	// Grant recurring credits for the new subscription
-	try {
-		await grantCreditsForSubscription(event, userId, organizationId);
-	} catch (err) {
-		log.error("failed to grant credits for new subscription", {
-			subscriptionId: event.subscriptionId,
-			err: String(err),
-		});
-	}
+	// Grant recurring credits for the new subscription. Failures propagate
+	// so the provider retries — the redelivery path above re-attempts the
+	// grant against the already-created purchase.
+	await grantCreditsForSubscription(event, userId, organizationId);
 
 	await emitWebhookEvent("subscription.created", userId, organizationId, {
 		subscriptionId: event.subscriptionId,
@@ -418,16 +426,10 @@ async function updateExistingPurchase(
 	});
 	log.info("updated purchase", { purchaseId, status: resolvedStatus });
 
-	// Reset recurring credits on renewal
+	// Reset recurring credits on renewal. Failures propagate so the
+	// provider retries — redelivery re-runs this idempotent reset.
 	if (event.type === "subscription.renewed" && event.currentPeriodEnd) {
-		try {
-			await resetCreditsOnRenewal(event, userId, organizationId);
-		} catch (err) {
-			log.error("failed to reset credits on renewal", {
-				purchaseId,
-				err: String(err),
-			});
-		}
+		await resetCreditsOnRenewal(event, userId, organizationId);
 	}
 
 	await emitWebhookEvent(
@@ -656,6 +658,22 @@ async function grantCreditsForSubscription(
 	for (const [meterKey, grant] of Object.entries(
 		numericGrantsForPlan(planId),
 	)) {
+		// Idempotency: activation events are redelivered on retry. Skip
+		// meters whose balance already reflects this exact grant — the
+		// set-absolute write would be harmless, but the ledger must not
+		// record a duplicate credit_event per redelivery.
+		const existing = await getCreditBalance({
+			userId: userId ?? undefined,
+			organizationId: organizationId ?? undefined,
+			meterKey,
+		});
+		if (
+			existing &&
+			existing.recurringGranted === grant &&
+			existing.recurringPeriodEnd?.getTime() === periodEnd.getTime()
+		) {
+			continue;
+		}
 		await grantRecurringCredits({
 			userId: userId ?? undefined,
 			organizationId: organizationId ?? undefined,

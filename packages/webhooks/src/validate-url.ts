@@ -72,6 +72,10 @@ function embeddedIPv4(h: Hextets): string | null {
 	if (h[0] === 0x2002) {
 		return hextetPairToIPv4(h[1], h[2]);
 	}
+	// 2001::/32 — Teredo, embeds the IPv4 in the last 32 bits
+	if (h[0] === 0x2001 && h[1] === 0x0000) {
+		return hextetPairToIPv4(h[6], h[7]);
+	}
 	return null;
 }
 
@@ -110,20 +114,22 @@ function isBlockedIPv6(host: string): boolean {
 	if (h[0] >= 0xfc00 && h[0] <= 0xfdff) return true; // fc00::/7 unique-local
 	if (h[0] >= 0xfe80 && h[0] <= 0xfeff) return true; // fe80::/9 link-local + fec0::/10 site-local
 	if (h[0] === 0x2001 && h[1] === 0x0db8) return true; // 2001:db8::/32 documentation
+	if (h[0] >= 0xff00) return true; // ff00::/8 multicast
 	return false;
 }
 
 /**
  * Validate a webhook endpoint URL to prevent SSRF.
  *
- * Production (`NODE_ENV !== "development"`): HTTPS only. The hostname —
- * whether an IP literal or a DNS name — must not resolve to any
- * private/reserved address. Every resolved IP is checked (a DNS name like
- * `169.254.169.254.nip.io` can map a public-looking host to an internal IP).
+ * Default: HTTPS only. The hostname — whether an IP literal or a DNS name —
+ * must not resolve to any private/reserved address. Every resolved IP is
+ * checked (a DNS name like `169.254.169.254.nip.io` can map a public-looking
+ * host to an internal IP).
  *
- * Development: `http:` is allowed and private/loopback ranges are NOT blocked
- * so localhost receivers (`http://localhost:3000/hook`, Docker service names,
- * LAN IPs) work for local testing. Never relax this in production.
+ * Local testing: set `WEBHOOK_ALLOW_PRIVATE_URLS=1` to allow `http:` and
+ * private/loopback targets (localhost, Docker service names, LAN IPs).
+ * Deliberately an explicit opt-in env flag — never keyed on NODE_ENV, so a
+ * production deploy missing NODE_ENV fails closed, not open.
  *
  * Callers: webhook registration procedures (fail-fast for the user) and the
  * delivery worker (fail-safe at send time, right before `fetch`).
@@ -139,17 +145,17 @@ export async function validateWebhookUrl(
 		return { valid: false, reason: "malformed URL" };
 	}
 
-	const isDev = env.NODE_ENV === "development";
-	if (!isDev && parsed.protocol !== "https:") {
-		return { valid: false, reason: "must use HTTPS in production" };
+	const allowPrivate = env.WEBHOOK_ALLOW_PRIVATE_URLS === true;
+	if (!allowPrivate && parsed.protocol !== "https:") {
+		return { valid: false, reason: "must use HTTPS" };
 	}
-	if (isDev && parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+	if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
 		return { valid: false, reason: "must use HTTP or HTTPS" };
 	}
 
-	// Dev mode intentionally skips IP-range checks: local receivers
-	// (localhost, LAN, Docker networks) are legitimate targets there.
-	if (isDev) {
+	// Explicit opt-in skips IP-range checks: local receivers (localhost,
+	// LAN, Docker networks) are legitimate targets during development.
+	if (allowPrivate) {
 		return { valid: true };
 	}
 

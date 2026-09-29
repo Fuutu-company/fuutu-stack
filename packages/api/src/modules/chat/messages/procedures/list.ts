@@ -2,7 +2,7 @@ import { countMessages, getConversation, listMessages } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { permissionProcedure } from "../../../../orpc";
+import { permissionProcedure } from "../../../../orpc/procedures";
 import { conversationIdSchema } from "../../shared";
 
 const listMessagesSchema = conversationIdSchema.extend({

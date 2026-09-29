@@ -1,10 +1,8 @@
 import { createConversation } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import {
-	createRateLimitMiddleware,
-	permissionProcedure,
-} from "../../../../orpc";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { permissionProcedure } from "../../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const createConversationSchema = z.object({
@@ -31,7 +29,7 @@ export const createConversationProcedure = permissionProcedure(
 				input.organizationId,
 				context.user.id,
 				PERMISSIONS.CHAT.CREATE,
-				context.headers,
+				context,
 			);
 		}
 		const conversation = await createConversation(

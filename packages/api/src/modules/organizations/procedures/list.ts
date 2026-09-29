@@ -1,7 +1,7 @@
 import { auth } from "@fuutu/auth";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc/procedures";
 
 const listOrganizationsSchema = z.object({
 	page: z.number().int().min(1).default(1),

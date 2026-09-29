@@ -14,8 +14,8 @@ import { crud, PERMISSIONS } from "./permissions";
  * more resource access.
  *
  * - member: full CRUD on org resources (api-key, webhook, chat, storage, crm) + view credit/activity/payment
- * - admin:  everything member has + manage members, update org, manage billing portal
- * - owner:  everything admin has + delete org, manage billing
+ * - admin:  everything member has + manage members, update org, manage billing (checkout, portal, cancel)
+ * - owner:  everything admin has + delete org
  *
  * Note: Notifications are NOT here — they are always user-scoped (checked via SYSTEM_POLICY).
  */
@@ -37,11 +37,13 @@ export const ORG_POLICY: OrgAccessPolicy = {
 	admin: [
 		// Org management
 		PERMISSIONS.ORGANIZATION.UPDATE,
-		PERMISSIONS.INVITE_ORGANIZATION,
-		PERMISSIONS.REMOVE_ORGANIZATION,
+		PERMISSIONS.INVITE_MEMBER,
+		PERMISSIONS.REMOVE_MEMBER,
 		// Payment management (checkouts, billing portal, cancel subscription)
 		PERMISSIONS.PAYMENT.CREATE,
 		PERMISSIONS.PAYMENT.UPDATE,
+		// Org audit log is sensitive — admin-only within the org
+		PERMISSIONS.AUDIT_LOG.VIEW,
 	],
-	owner: [PERMISSIONS.ORGANIZATION.DELETE, PERMISSIONS.MANAGE_BILLING],
+	owner: [PERMISSIONS.ORGANIZATION.DELETE],
 };

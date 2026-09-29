@@ -11,6 +11,41 @@ import { validateWebhookUrl } from "./validate-url";
 const log = createLogger({ scope: "webhooks:deliver" });
 
 /**
+ * Read a response body with a hard byte cap — `res.text()` would buffer the
+ * full body before truncating, leaving worker memory unbounded. The reader
+ * cancels the stream as soon as the cap is hit.
+ */
+async function readCappedBody(
+	res: Response,
+	maxBytes: number,
+): Promise<string> {
+	if (!res.body) return "";
+	const reader = res.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done || !value) break;
+			const remaining = maxBytes - total;
+			if (value.length <= remaining) {
+				chunks.push(value);
+				total += value.length;
+			} else {
+				chunks.push(value.subarray(0, remaining));
+				total += remaining;
+				break;
+			}
+		}
+	} finally {
+		await reader.cancel().catch(() => undefined);
+	}
+	return new TextDecoder().decode(
+		chunks.length === 1 ? chunks[0] : Buffer.concat(chunks),
+	);
+}
+
+/**
  * Deliver a webhook event to an endpoint via HTTP POST.
  *
  * Sends the JSON payload with `X-Fuutu-Signature` (t=<timestamp>,v1=<hmac>),
@@ -63,11 +98,10 @@ export async function deliverWebhook(
 			// could otherwise 302 to an internal address (SSRF).
 			redirect: "error",
 		});
-		const text = await res.text();
-		const responseBody =
-			text.length > webhooksConfig.maxResponseBodyBytes
-				? text.slice(0, webhooksConfig.maxResponseBodyBytes)
-				: text;
+		const responseBody = await readCappedBody(
+			res,
+			webhooksConfig.maxResponseBodyBytes,
+		);
 		return {
 			success: res.ok,
 			responseCode: res.status,

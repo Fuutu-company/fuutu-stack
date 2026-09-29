@@ -60,7 +60,7 @@ export function PricingFull({
 					className="pointer-events-none absolute inset-0 -z-10"
 					style={{
 						background:
-							"radial-gradient(ellipse 70% 40% at 50% -5%, oklch(var(--primary)/0.1) 0%, transparent 60%)",
+							"radial-gradient(ellipse 70% 40% at 50% -5%, oklch(from var(--primary) l c h / 0.1) 0%, transparent 60%)",
 					}}
 				/>
 
@@ -208,8 +208,8 @@ function PlanHeader({
 					className="pointer-events-none absolute inset-x-6 -bottom-4 -z-10 h-12 blur-2xl"
 					style={{
 						background: hl
-							? "oklch(var(--primary)/0.45)"
-							: "oklch(var(--primary)/0.2)",
+							? "oklch(from var(--primary) l c h / 0.45)"
+							: "oklch(from var(--primary) l c h / 0.2)",
 					}}
 				/>
 			)}
@@ -498,7 +498,7 @@ function MobilePlanCard({
 					className="pointer-events-none absolute inset-x-0 top-0 h-px"
 					style={{
 						background:
-							"linear-gradient(90deg, transparent, oklch(var(--primary-foreground)/0.4), transparent)",
+							"linear-gradient(90deg, transparent, oklch(from var(--primary-foreground) l c h / 0.4), transparent)",
 					}}
 				/>
 			)}

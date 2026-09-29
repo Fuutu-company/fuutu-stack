@@ -23,6 +23,7 @@ import {
 import { Mail, UserMinus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "org-members" });
 
@@ -72,7 +73,7 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 		? hasOrgPermission(
 				ac,
 				toOrgRole(currentUserRole),
-				PERMISSIONS.INVITE_ORGANIZATION,
+				PERMISSIONS.INVITE_MEMBER,
 			)
 		: false;
 
@@ -106,17 +107,16 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 		setInviting(true);
 		setInviteError(null);
 		try {
-			const res = await authClient.organization.inviteMember({
+			await orpc.organizations.members.invite.call({
+				organizationId: org.id,
 				email: inviteEmail,
 				role: inviteRole,
-				organizationId: org.id,
 			});
-			if (res.error) {
-				setInviteError(t("organizations.settings.failed"));
-				return;
-			}
 			setInviteEmail("");
 			await load();
+		} catch (e) {
+			log.error("inviteMember failed", { err: e });
+			setInviteError(t("organizations.settings.failed"));
 		} finally {
 			setInviting(false);
 		}
@@ -127,9 +127,9 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 		setBusy(memberId);
 		setActionError(null);
 		try {
-			await authClient.organization.removeMember({
-				memberIdOrEmail: memberId,
+			await orpc.organizations.members.remove.call({
 				organizationId: org.id,
+				memberIdOrEmail: memberId,
 			});
 			await load();
 		} catch (e) {
@@ -144,7 +144,9 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 		setBusy(id);
 		setActionError(null);
 		try {
-			await authClient.organization.cancelInvitation({ invitationId: id });
+			await orpc.organizations.invitations.revoke.call({
+				invitationId: id,
+			});
 			await load();
 		} catch (e) {
 			log.error("cancelInvite failed", { err: e });

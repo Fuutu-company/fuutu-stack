@@ -3,7 +3,8 @@ import { resolvePaymentProvider } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { protectedProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const cancelSubscriptionSchema = z.object({
@@ -34,7 +35,7 @@ export const cancelSubscription = protectedProcedure
 				purchase.organizationId,
 				context.user.id,
 				PERMISSIONS.PAYMENT.UPDATE,
-				context.headers,
+				context,
 			);
 		} else if (purchase.userId !== context.user.id) {
 			throw new ORPCError("FORBIDDEN", { message: "Not the owner" });

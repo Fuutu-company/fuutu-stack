@@ -19,6 +19,25 @@ beforeEach(() => {
 });
 
 describe("getCreditBalanceSummary", () => {
+	it("throws when neither userId nor organizationId is set", async () => {
+		await expect(getCreditBalanceSummary({})).rejects.toThrow(
+			"either userId or organizationId must be set",
+		);
+		expect(getCreditBalancesForUser).not.toHaveBeenCalled();
+		expect(getCreditBalancesForOrganization).not.toHaveBeenCalled();
+	});
+
+	it("throws when both userId and organizationId are set (owner XOR)", async () => {
+		await expect(
+			getCreditBalanceSummary({
+				userId: "user-1",
+				organizationId: "org-1",
+			}),
+		).rejects.toThrow("only one of userId or organizationId may be set");
+		expect(getCreditBalancesForUser).not.toHaveBeenCalled();
+		expect(getCreditBalancesForOrganization).not.toHaveBeenCalled();
+	});
+
 	it("fetches balances for user when userId is set", async () => {
 		vi.mocked(getCreditBalancesForUser).mockResolvedValue([]);
 

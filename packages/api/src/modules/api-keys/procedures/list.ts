@@ -7,7 +7,7 @@ import {
 import { PERMISSIONS } from "@fuutu/rbac";
 
 import { z } from "zod";
-import { authProcedure } from "../../../orpc";
+import { authProcedure } from "../../../orpc/procedures";
 
 const listApiKeysSchema = z.object({
 	organizationId: z.string().optional(),

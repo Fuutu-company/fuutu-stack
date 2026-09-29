@@ -7,7 +7,10 @@ import type { StorageProvider } from "../types";
  * rather than dropping uploads.
  */
 function makeSkeleton(id: string): StorageProvider {
-	const notImpl = (fn: string) => () => {
+	// Async so callers always get a rejected promise — a synchronous
+	// throw inside a `Promise<...>` method would break `await`/`try-catch`
+	// expectations of the StorageProvider contract.
+	const notImpl = (fn: string) => async () => {
 		throw new Error(
 			`[storage:${id}] ${fn}() not implemented — skeleton provider.`,
 		);

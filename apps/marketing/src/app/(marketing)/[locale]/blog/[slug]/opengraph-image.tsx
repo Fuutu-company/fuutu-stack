@@ -1,7 +1,7 @@
 import { getPost } from "@fuutu/content";
 import { ImageResponse } from "next/og";
+import { getTranslations } from "next-intl/server";
 
-export const alt = "Fuutu Stack — Blog post";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -9,11 +9,22 @@ interface OgImageProps {
 	params: Promise<{ locale: string; slug: string }>;
 }
 
+export async function generateImageMetadata({ params }: OgImageProps) {
+	const { locale } = await params;
+	const tApp = await getTranslations({ locale, namespace: "app" });
+	const t = await getTranslations({ locale, namespace: "blog" });
+	return [{ alt: `${tApp("brand")} — ${t("title")}` }];
+}
+
 export default async function BlogOgImage({ params }: OgImageProps) {
-	const { slug } = await params;
+	const { locale, slug } = await params;
+	const tApp = await getTranslations({ locale, namespace: "app" });
+	const t = await getTranslations({ locale, namespace: "blog" });
 	const post = getPost(slug);
-	const title = post?.frontmatter.title ?? "Fuutu Stack";
-	const description = post?.frontmatter.description ?? "";
+	// Drafts must not leak through OG tags — same gate as the page route.
+	const visiblePost = post && !post.frontmatter.draft ? post : null;
+	const title = visiblePost?.frontmatter.title ?? tApp("brand");
+	const description = visiblePost?.frontmatter.description ?? "";
 
 	return new ImageResponse(
 		<div
@@ -38,7 +49,7 @@ export default async function BlogOgImage({ params }: OgImageProps) {
 					display: "flex",
 				}}
 			>
-				Fuutu Stack · Blog
+				{tApp("brand")} · {t("title")}
 			</div>
 			<div
 				style={{

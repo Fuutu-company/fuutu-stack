@@ -7,10 +7,9 @@ const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
 // Flat or nested. See wiki/guides/rbac.md for nested custom permission examples.
 const CUSTOM_PERMISSIONS = {
 	USE_AI: "use:ai",
-	MANAGE_BILLING: "manage:billing",
 	VIEW_ADMIN: "view:admin",
-	INVITE_ORGANIZATION: "invite:organization",
-	REMOVE_ORGANIZATION: "remove:organization",
+	INVITE_MEMBER: "invite:member",
+	REMOVE_MEMBER: "remove:member",
 } as const;
 
 // ─── CRUD resources ────────────────────────────────────────────

@@ -86,7 +86,7 @@ describe("GoogleProvider", () => {
 			},
 		});
 		vi.mocked(streamText).mockReturnValue({
-			toUIMessageStreamResponse: () =>
+			toTextStreamResponse: () =>
 				({
 					body: fakeBody,
 				}) as never,
@@ -103,7 +103,7 @@ describe("GoogleProvider", () => {
 
 	it("stream() returns an empty stream when the SDK response has no body", async () => {
 		vi.mocked(streamText).mockReturnValue({
-			toUIMessageStreamResponse: () => ({}) as never,
+			toTextStreamResponse: () => ({}) as never,
 		} as never);
 
 		const provider = new GoogleProvider({ apiKey: "test-key" });

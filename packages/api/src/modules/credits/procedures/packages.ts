@@ -5,7 +5,7 @@ import {
 import { PERMISSIONS } from "@fuutu/rbac";
 
 import { z } from "zod";
-import { permissionProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const packagesSchema = z.object({
@@ -28,7 +28,7 @@ export const getPackages = permissionProcedure(PERMISSIONS.CREDIT.VIEW)
 				input.organizationId,
 				context.user.id,
 				PERMISSIONS.CREDIT.VIEW,
-				context.headers,
+				context,
 			);
 		}
 		const packages = input.organizationId

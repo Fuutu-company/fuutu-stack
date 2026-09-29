@@ -1,7 +1,8 @@
 import { resolveAIProvider } from "@fuutu/ai";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { createRateLimitMiddleware, permissionProcedure } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { permissionProcedure } from "../../../orpc/procedures";
 
 const chatInputSchema = z.object({
 	messages: z
@@ -30,9 +31,9 @@ export const chat = permissionProcedure(PERMISSIONS.USE_AI)
 		const stream = await provider.stream(input.messages);
 		return new Response(stream, {
 			headers: {
-				"content-type": "text/event-stream",
+				// Providers yield raw UTF-8 text chunks, not SSE frames.
+				"content-type": "text/plain; charset=utf-8",
 				"cache-control": "no-cache",
-				connection: "keep-alive",
 			},
 		});
 	});

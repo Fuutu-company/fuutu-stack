@@ -5,7 +5,8 @@ import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { dispatchEvent } from "@fuutu/webhooks";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../../orpc";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../../orpc/procedures";
 
 const log = createLogger({ scope: "api:organizations" });
 
@@ -16,7 +17,7 @@ const inviteMemberSchema = z.object({
 });
 
 export const inviteMember = authProcedure({
-	org: { permission: PERMISSIONS.INVITE_ORGANIZATION },
+	org: { permission: PERMISSIONS.INVITE_MEMBER },
 	limit: {
 		key: "membersPerOrg",
 		count: async (ctx) => countOrganizationMembers(ctx.org?.id ?? ""),

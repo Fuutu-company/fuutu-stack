@@ -2,7 +2,8 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveMaxUploadBytes, resolveStorageProvider } from "@fuutu/storage";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 import { resolveBucketOrThrow } from "../shared";
 
 const BLOCKED_EXTENSIONS: readonly string[] = [

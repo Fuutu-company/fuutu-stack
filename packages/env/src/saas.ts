@@ -81,6 +81,10 @@ export const env = createEnv({
 		PAYMENTS_PROVIDER: z.enum(["polar", "stripe", "creem"]).optional(),
 		// Storage (S3 / MinIO)
 		STORAGE_PROVIDER: z.enum(["s3", "supabase", "noop"]).optional(),
+		// Search (@fuutu/search)
+		SEARCH_PROVIDER: z
+			.enum(["postgres", "meilisearch", "typesense", "noop"])
+			.optional(),
 		S3_ENDPOINT: z.string().optional(),
 		S3_REGION: z.string().optional(),
 		S3_ACCESS_KEY_ID: z.string().optional(),
@@ -112,9 +116,7 @@ export const env = createEnv({
 				},
 			)
 			.optional(),
-		LOG_AUDIT_SINK: z
-			.enum(["console", "db", "axiom", "noop"])
-			.default("console"),
+		LOG_AUDIT_SINK: z.enum(["console", "db"]).default("console"),
 		LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 		// Fuutu Business License & Telemetry
 		FUUTU_LICENSE_KEY: z.string().optional(),
@@ -125,6 +127,13 @@ export const env = createEnv({
 			.optional()
 			.transform((v) => v === "1" || v === "true"),
 		FUUTU_DISABLE_RATE_LIMIT: z
+			.enum(["0", "1", "true", "false"])
+			.optional()
+			.transform((v) => v === "1" || v === "true"),
+		// Explicit opt-in for outbound-webhook SSRF relaxation (http: +
+		// private/loopback targets). Needed for local receivers in dev —
+		// must NEVER be set in production.
+		WEBHOOK_ALLOW_PRIVATE_URLS: z
 			.enum(["0", "1", "true", "false"])
 			.optional()
 			.transform((v) => v === "1" || v === "true"),
@@ -186,6 +195,7 @@ export const env = createEnv({
 		CREDITS_API_CALLS_50K_PRICE_ID: process.env.CREDITS_API_CALLS_50K_PRICE_ID,
 		PAYMENTS_PROVIDER: process.env.PAYMENTS_PROVIDER,
 		STORAGE_PROVIDER: process.env.STORAGE_PROVIDER,
+		SEARCH_PROVIDER: process.env.SEARCH_PROVIDER,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
 		S3_REGION: process.env.S3_REGION,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
@@ -206,6 +216,7 @@ export const env = createEnv({
 		FUUTU_TELEMETRY_ENDPOINT: process.env.FUUTU_TELEMETRY_ENDPOINT,
 		FUUTU_TELEMETRY_DISABLED: process.env.FUUTU_TELEMETRY_DISABLED,
 		FUUTU_DISABLE_RATE_LIMIT: process.env.FUUTU_DISABLE_RATE_LIMIT,
+		WEBHOOK_ALLOW_PRIVATE_URLS: process.env.WEBHOOK_ALLOW_PRIVATE_URLS,
 	},
 	emptyStringAsUndefined: true,
 	// Escape hatch for builds/CI that intentionally run without a full env

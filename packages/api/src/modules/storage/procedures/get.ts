@@ -1,7 +1,7 @@
 import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
-import { authProcedure } from "../../../orpc";
+import { authProcedure } from "../../../orpc/procedures";
 import { resolveBucketOrThrow } from "../shared";
 
 const fileListSchema = z.object({

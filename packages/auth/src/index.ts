@@ -1,6 +1,10 @@
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import { getUserByEmail, prismaAuditSink } from "@fuutu/db";
+import {
+	getUserByEmail,
+	listOrganizationsForUser,
+	prismaAuditSink,
+} from "@fuutu/db";
 import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
 import { createLogger, logsConfig, setAuditSink } from "@fuutu/logs";
@@ -40,6 +44,32 @@ if (logsConfig.auditSink === "db") {
 }
 
 const log = createLogger({ scope: "auth" });
+
+/**
+ * Emit `user.created` when a user gains their first organization
+ * membership. Webhooks are org-scoped, so dispatching at account
+ * creation (before any membership exists) would enqueue zero
+ * deliveries — the event is emitted here instead, scoped to the org
+ * the user first joins. Best-effort: a dispatch failure must never
+ * abort the membership flow.
+ */
+async function emitUserCreatedOnFirstMembership(
+	userId: string,
+	organizationId: string,
+): Promise<void> {
+	try {
+		const orgs = await listOrganizationsForUser(userId);
+		if (orgs.length !== 1 || orgs[0]?.id !== organizationId) return;
+		const { dispatchEvent } = await import("@fuutu/webhooks");
+		await dispatchEvent({
+			event: "user.created",
+			organizationId,
+			payload: { userId, organizationId },
+		});
+	} catch (err) {
+		log.warn("user.created webhook dispatch failed", { err: String(err) });
+	}
+}
 
 const authOptions = {
 	database: prismaAdapter(db, {
@@ -236,7 +266,7 @@ const authOptions = {
 					// authConfig.signup gate (enabled / allowedDomains) on
 					// self-service paths, then the invitation-only gate.
 					assertSignupPolicy({ email: user.email }, ctx);
-					await assertInvitationForSignup({ email: user.email });
+					await assertInvitationForSignup({ email: user.email }, ctx);
 				},
 				after: async (user) => {
 					await logSignUp({ id: user.id });
@@ -265,20 +295,6 @@ const authOptions = {
 						});
 					} catch (err) {
 						log.warn("welcome email failed", { err: String(err) });
-					}
-					// Notify subscribed webhook endpoints. Best-effort —
-					// a dispatch failure must never abort sign-up.
-					try {
-						const { dispatchEvent } = await import("@fuutu/webhooks");
-						await dispatchEvent({
-							event: "user.created",
-							userId: user.id,
-							payload: { userId: user.id },
-						});
-					} catch (err) {
-						log.warn("user.created webhook dispatch failed", {
-							err: String(err),
-						});
 					}
 				},
 			},
@@ -355,9 +371,17 @@ const authOptions = {
 						organizationHooks: {
 							afterAddMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);
+								await emitUserCreatedOnFirstMembership(
+									member.userId,
+									member.organizationId,
+								);
 							},
-							afterAcceptInvitation: async ({ invitation }) => {
+							afterAcceptInvitation: async ({ invitation, member }) => {
 								await syncSeatsForOrganization(invitation.organizationId);
+								await emitUserCreatedOnFirstMembership(
+									member.userId,
+									invitation.organizationId,
+								);
 							},
 							afterRemoveMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);

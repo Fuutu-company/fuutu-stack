@@ -36,6 +36,7 @@
 
 import { auth } from "@fuutu/auth";
 import type { UserWithRole } from "@fuutu/auth/types";
+import { getOrganizationWithMembers } from "@fuutu/db";
 import {
 	checkLimit,
 	getPlanLimit,
@@ -61,7 +62,7 @@ import {
 	toSystemRole,
 } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
-import type { Context } from "../../context";
+import type { ApiKeyAuth, Context } from "../../context";
 
 // ─── Access Control instances (module-level singletons) ─────────────────────
 const systemAC = new SystemAccessControl(SYSTEM_POLICY);
@@ -108,6 +109,47 @@ export async function getOrgOrNull(
 			return null;
 		}
 		throw e;
+	}
+}
+
+/**
+ * Resolve an organization for org-access checks.
+ *
+ * API-key contexts can't go through Better Auth endpoints (no cookie
+ * session), so org + membership come straight from the DB — flattened
+ * into the same shape `getFullOrganization` returns for the fields the
+ * access checks rely on (members[].userId / role / email).
+ */
+export async function resolveOrgForAccess(
+	organizationId: string,
+	headers: Headers | undefined,
+	apiKey: Pick<ApiKeyAuth, "organizationId"> | null,
+): Promise<FullOrganization | null> {
+	if (apiKey) {
+		const org = await getOrganizationWithMembers(organizationId);
+		if (!org) return null;
+		const members = org.members.map(({ user, ...member }) => ({
+			...member,
+			email: user.email,
+		}));
+		return { ...org, members } as unknown as FullOrganization;
+	}
+	return getOrgOrNull(organizationId, headers);
+}
+
+/**
+ * Org-scoped API keys may only act on the org they were created for —
+ * anything else is a scope violation and fails closed.
+ */
+export function assertApiKeyOrgScope(
+	apiKey: Pick<ApiKeyAuth, "organizationId"> | null,
+	organizationId: string | undefined,
+): void {
+	if (!apiKey?.organizationId) return;
+	if (apiKey.organizationId !== organizationId) {
+		throw new ORPCError("FORBIDDEN", {
+			message: "API key is scoped to a different organization",
+		});
 	}
 }
 
@@ -199,9 +241,24 @@ export async function runAuthorize(
 	const orgId = options.org ? getInputField(input, orgIdField) : undefined;
 	const isOrgScoped = orgId !== undefined;
 
+	// Org-scoped API keys are pinned to their org — they can never reach
+	// user-scoped paths or a different org's resources.
+	if (
+		context.apiKey?.organizationId &&
+		context.apiKey.organizationId !== orgId
+	) {
+		throw new ORPCError("FORBIDDEN", {
+			message: "API key is scoped to a different organization",
+		});
+	}
+
 	// 3. Org-scoped: check org membership + org permission (the authority for org actions)
 	if (isOrgScoped) {
-		const org = await getOrgOrNull(orgId as string, context.headers);
+		const org = await resolveOrgForAccess(
+			orgId,
+			context.headers,
+			context.apiKey,
+		);
 		if (!org) {
 			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 		}
@@ -269,7 +326,7 @@ export async function runAuthorize(
 		}
 	}
 
-	// 6. Limit enforcement
+	// 7. Limit enforcement
 	if (options.limit) {
 		const limitValue = getPlanLimit(ctx.planId ?? "free", options.limit.key);
 		const currentCount = await options.limit.count(ctx);

@@ -22,6 +22,7 @@ import { Building2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { orpc } from "@/utils/orpc";
 import { OrgLogoUpload } from "./components/org-logo-upload";
 
 const log = createLogger({ scope: "org-settings" });
@@ -91,16 +92,12 @@ export function OrgSettingsGeneral({ slug }: { slug: string }) {
 		setSaving(true);
 		setStatus(null);
 		try {
-			const res = await authClient.organization.update({
-				organizationId: org.id,
-				data: { name },
-			});
-			setStatus(
-				res.error ? t("organizations.settings.failed") : t("common.success"),
-			);
-			if (!res.error) await load();
+			await orpc.organizations.update.call({ organizationId: org.id, name });
+			setStatus(t("common.success"));
+			await load();
 		} catch (error) {
 			log.error("organization rename failed", { err: error });
+			setStatus(t("organizations.settings.failed"));
 			toast.error(t("organizations.settings.failed"));
 		} finally {
 			setSaving(false);

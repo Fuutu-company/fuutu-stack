@@ -3,13 +3,14 @@
 	"private": true,
 	"workspaces": [
 		"apps/*",
-		"packages/*"
+		"packages/*",
+		"tooling/*"
 	],
 	"type": "module",
 	"scripts": {
 		"dev": "dotenv -c -- turbo dev",
 		"build": "cross-env NODE_ENV=production dotenv -c -- turbo build",
-		"prebuild": "node packages/telemetry/bin/ping.mjs",
+		"prebuild": "dotenv -c -- node packages/telemetry/bin/ping.mjs",
 		"postinstall": "node -e \"console.log('\\n  Fuutu Stack — Free for teams ≤ 10 employees & ≤ 250k EUR revenue.\\n  Above that: Enterprise license required (see LICENSE.md §3, §4).\\n  Get your key at https://stack.fuutu.com/pricing\\n  Opt-out of build-time telemetry: FUUTU_TELEMETRY_DISABLED=1\\n')\"",
 		"check-types": "turbo check-types",
 		"check:ci": "biome check .",
@@ -42,12 +43,6 @@
 		"check": "biome check --write .",
 		"check-translations": "node packages/i18n/scripts/check-translations.mjs",
 		"assets:sync": "node tooling/scripts/assets-sync.mjs"
-	},
-	"dependencies": {
-		"@fuutu/env": "workspace:*",
-		"deepmerge": "catalog:",
-		"dotenv": "catalog:",
-		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.7",

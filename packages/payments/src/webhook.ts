@@ -36,14 +36,26 @@ export const handlePaymentsWebhook: PaymentsWebhookHandler = async (
 		events = await provider.parseWebhook(request);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		// 401 = signature verification failure, 400 = malformed payload
-		const status = message.includes("signature") ? 401 : 400;
+		const lower = message.toLowerCase();
+		// Misconfiguration (missing webhook secret, provider not configured)
+		// is OUR problem → 500 so the provider retries after a fix.
+		// Signature failures → 401; everything else → 400 malformed.
+		const isMisconfig =
+			lower.includes("secret") || lower.includes("not configured");
+		const status = isMisconfig ? 500 : lower.includes("signature") ? 401 : 400;
 		log.warn("webhook parse failed", {
 			provider: provider.id,
 			status,
 			err: message,
 		});
-		return new Response(message, { status });
+		// Generic body — the raw provider error may leak internals.
+		const body =
+			status === 401
+				? "invalid signature"
+				: status === 500
+					? "webhook misconfigured"
+					: "malformed payload";
+		return new Response(body, { status });
 	}
 
 	if (events.length === 0) {

@@ -1,8 +1,10 @@
 export {
 	type CreditBalanceSummary,
+	GetCreditBalanceSummarySchema,
 	getCreditBalanceSummary,
 } from "./balance";
 export {
+	CheckCreditsSchema,
 	type ConsumeCreditsParams,
 	type ConsumeCreditsResult,
 	ConsumeCreditsSchema,

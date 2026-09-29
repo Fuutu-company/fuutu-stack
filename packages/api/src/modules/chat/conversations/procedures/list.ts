@@ -1,7 +1,7 @@
 import { countConversations, listConversations } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { permissionProcedure } from "../../../../orpc";
+import { permissionProcedure } from "../../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const listConversationsSchema = z.object({
@@ -28,7 +28,7 @@ export const listConversationsProcedure = permissionProcedure(
 				input.organizationId,
 				context.user.id,
 				PERMISSIONS.CHAT.VIEW,
-				context.headers,
+				context,
 			);
 		}
 		const skip = (input.page - 1) * input.limit;
