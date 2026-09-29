@@ -90,6 +90,12 @@ export const WebhookDeliveryScalarFieldEnumSchema = z.enum(['id', 'webhookId', '
 
 export type WebhookDeliveryScalarFieldEnum = z.infer<typeof WebhookDeliveryScalarFieldEnumSchema>;
 
+// File: CronJobRunScalarFieldEnum.schema.ts
+
+export const CronJobRunScalarFieldEnumSchema = z.enum(['id', 'jobKey', 'lastRunAt', 'lastStatus', 'lastError', 'createdAt', 'updatedAt'])
+
+export type CronJobRunScalarFieldEnum = z.infer<typeof CronJobRunScalarFieldEnumSchema>;
+
 // File: NotificationScalarFieldEnum.schema.ts
 
 export const NotificationScalarFieldEnumSchema = z.enum(['id', 'userId', 'type', 'title', 'body', 'data', 'readAt', 'createdAt'])
@@ -812,6 +818,82 @@ const webhookdeliveryscalarwherewithaggregatesinputSchema = z.object({
 }).strict();
 export const WebhookDeliveryScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.WebhookDeliveryScalarWhereWithAggregatesInput> = webhookdeliveryscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.WebhookDeliveryScalarWhereWithAggregatesInput>;
 export const WebhookDeliveryScalarWhereWithAggregatesInputObjectZodSchema = webhookdeliveryscalarwherewithaggregatesinputSchema;
+
+
+// File: CronJobRunWhereInput.schema.ts
+
+const cronjobrunwhereinputSchema = z.object({
+  AND: z.union([z.lazy(() => CronJobRunWhereInputObjectSchema), z.lazy(() => CronJobRunWhereInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => CronJobRunWhereInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => CronJobRunWhereInputObjectSchema), z.lazy(() => CronJobRunWhereInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  jobKey: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  lastRunAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  lastStatus: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  lastError: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+}).strict();
+export const CronJobRunWhereInputObjectSchema: z.ZodType<Prisma.CronJobRunWhereInput> = cronjobrunwhereinputSchema as unknown as z.ZodType<Prisma.CronJobRunWhereInput>;
+export const CronJobRunWhereInputObjectZodSchema = cronjobrunwhereinputSchema;
+
+
+// File: CronJobRunOrderByWithRelationInput.schema.ts
+const __makeSchema_CronJobRunOrderByWithRelationInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  jobKey: SortOrderSchema.optional(),
+  lastRunAt: SortOrderSchema.optional(),
+  lastStatus: SortOrderSchema.optional(),
+  lastError: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional()
+}).strict();
+export const CronJobRunOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.CronJobRunOrderByWithRelationInput> = __makeSchema_CronJobRunOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.CronJobRunOrderByWithRelationInput>;
+export const CronJobRunOrderByWithRelationInputObjectZodSchema = __makeSchema_CronJobRunOrderByWithRelationInput_schema();
+
+
+// File: CronJobRunWhereUniqueInput.schema.ts
+const __makeSchema_CronJobRunWhereUniqueInput_schema = () => z.object({
+  id: z.string().optional(),
+  jobKey: z.string().optional()
+}).strict();
+export const CronJobRunWhereUniqueInputObjectSchema: z.ZodType<Prisma.CronJobRunWhereUniqueInput> = __makeSchema_CronJobRunWhereUniqueInput_schema() as unknown as z.ZodType<Prisma.CronJobRunWhereUniqueInput>;
+export const CronJobRunWhereUniqueInputObjectZodSchema = __makeSchema_CronJobRunWhereUniqueInput_schema();
+
+
+// File: CronJobRunOrderByWithAggregationInput.schema.ts
+const __makeSchema_CronJobRunOrderByWithAggregationInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  jobKey: SortOrderSchema.optional(),
+  lastRunAt: SortOrderSchema.optional(),
+  lastStatus: SortOrderSchema.optional(),
+  lastError: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional(),
+  _count: z.lazy(() => CronJobRunCountOrderByAggregateInputObjectSchema).optional(),
+  _max: z.lazy(() => CronJobRunMaxOrderByAggregateInputObjectSchema).optional(),
+  _min: z.lazy(() => CronJobRunMinOrderByAggregateInputObjectSchema).optional()
+}).strict();
+export const CronJobRunOrderByWithAggregationInputObjectSchema: z.ZodType<Prisma.CronJobRunOrderByWithAggregationInput> = __makeSchema_CronJobRunOrderByWithAggregationInput_schema() as unknown as z.ZodType<Prisma.CronJobRunOrderByWithAggregationInput>;
+export const CronJobRunOrderByWithAggregationInputObjectZodSchema = __makeSchema_CronJobRunOrderByWithAggregationInput_schema();
+
+
+// File: CronJobRunScalarWhereWithAggregatesInput.schema.ts
+
+const cronjobrunscalarwherewithaggregatesinputSchema = z.object({
+  AND: z.union([z.lazy(() => CronJobRunScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => CronJobRunScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => CronJobRunScalarWhereWithAggregatesInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => CronJobRunScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => CronJobRunScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  jobKey: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  lastRunAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  lastStatus: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  lastError: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+}).strict();
+export const CronJobRunScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.CronJobRunScalarWhereWithAggregatesInput> = cronjobrunscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.CronJobRunScalarWhereWithAggregatesInput>;
+export const CronJobRunScalarWhereWithAggregatesInputObjectZodSchema = cronjobrunscalarwherewithaggregatesinputSchema;
 
 
 // File: NotificationWhereInput.schema.ts
@@ -3018,6 +3100,102 @@ const __makeSchema_WebhookDeliveryUncheckedUpdateManyInput_schema = () => z.obje
 }).strict();
 export const WebhookDeliveryUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.WebhookDeliveryUncheckedUpdateManyInput> = __makeSchema_WebhookDeliveryUncheckedUpdateManyInput_schema() as unknown as z.ZodType<Prisma.WebhookDeliveryUncheckedUpdateManyInput>;
 export const WebhookDeliveryUncheckedUpdateManyInputObjectZodSchema = __makeSchema_WebhookDeliveryUncheckedUpdateManyInput_schema();
+
+
+// File: CronJobRunCreateInput.schema.ts
+const __makeSchema_CronJobRunCreateInput_schema = () => z.object({
+  id: z.string().optional(),
+  jobKey: z.string(),
+  lastRunAt: z.coerce.date(),
+  lastStatus: z.string(),
+  lastError: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const CronJobRunCreateInputObjectSchema: z.ZodType<Prisma.CronJobRunCreateInput> = __makeSchema_CronJobRunCreateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunCreateInput>;
+export const CronJobRunCreateInputObjectZodSchema = __makeSchema_CronJobRunCreateInput_schema();
+
+
+// File: CronJobRunUncheckedCreateInput.schema.ts
+const __makeSchema_CronJobRunUncheckedCreateInput_schema = () => z.object({
+  id: z.string().optional(),
+  jobKey: z.string(),
+  lastRunAt: z.coerce.date(),
+  lastStatus: z.string(),
+  lastError: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const CronJobRunUncheckedCreateInputObjectSchema: z.ZodType<Prisma.CronJobRunUncheckedCreateInput> = __makeSchema_CronJobRunUncheckedCreateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunUncheckedCreateInput>;
+export const CronJobRunUncheckedCreateInputObjectZodSchema = __makeSchema_CronJobRunUncheckedCreateInput_schema();
+
+
+// File: CronJobRunUpdateInput.schema.ts
+const __makeSchema_CronJobRunUpdateInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  jobKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRunAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastStatus: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastError: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CronJobRunUpdateInputObjectSchema: z.ZodType<Prisma.CronJobRunUpdateInput> = __makeSchema_CronJobRunUpdateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunUpdateInput>;
+export const CronJobRunUpdateInputObjectZodSchema = __makeSchema_CronJobRunUpdateInput_schema();
+
+
+// File: CronJobRunUncheckedUpdateInput.schema.ts
+const __makeSchema_CronJobRunUncheckedUpdateInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  jobKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRunAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastStatus: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastError: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CronJobRunUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.CronJobRunUncheckedUpdateInput> = __makeSchema_CronJobRunUncheckedUpdateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunUncheckedUpdateInput>;
+export const CronJobRunUncheckedUpdateInputObjectZodSchema = __makeSchema_CronJobRunUncheckedUpdateInput_schema();
+
+
+// File: CronJobRunCreateManyInput.schema.ts
+const __makeSchema_CronJobRunCreateManyInput_schema = () => z.object({
+  id: z.string().optional(),
+  jobKey: z.string(),
+  lastRunAt: z.coerce.date(),
+  lastStatus: z.string(),
+  lastError: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional()
+}).strict();
+export const CronJobRunCreateManyInputObjectSchema: z.ZodType<Prisma.CronJobRunCreateManyInput> = __makeSchema_CronJobRunCreateManyInput_schema() as unknown as z.ZodType<Prisma.CronJobRunCreateManyInput>;
+export const CronJobRunCreateManyInputObjectZodSchema = __makeSchema_CronJobRunCreateManyInput_schema();
+
+
+// File: CronJobRunUpdateManyMutationInput.schema.ts
+const __makeSchema_CronJobRunUpdateManyMutationInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  jobKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRunAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastStatus: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastError: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CronJobRunUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.CronJobRunUpdateManyMutationInput> = __makeSchema_CronJobRunUpdateManyMutationInput_schema() as unknown as z.ZodType<Prisma.CronJobRunUpdateManyMutationInput>;
+export const CronJobRunUpdateManyMutationInputObjectZodSchema = __makeSchema_CronJobRunUpdateManyMutationInput_schema();
+
+
+// File: CronJobRunUncheckedUpdateManyInput.schema.ts
+const __makeSchema_CronJobRunUncheckedUpdateManyInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  jobKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRunAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastStatus: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastError: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CronJobRunUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.CronJobRunUncheckedUpdateManyInput> = __makeSchema_CronJobRunUncheckedUpdateManyInput_schema() as unknown as z.ZodType<Prisma.CronJobRunUncheckedUpdateManyInput>;
+export const CronJobRunUncheckedUpdateManyInputObjectZodSchema = __makeSchema_CronJobRunUncheckedUpdateManyInput_schema();
 
 
 // File: NotificationCreateInput.schema.ts
@@ -5851,6 +6029,48 @@ const __makeSchema_IntNullableWithAggregatesFilter_schema = () => z.object({
 }).strict();
 export const IntNullableWithAggregatesFilterObjectSchema: z.ZodType<Prisma.IntNullableWithAggregatesFilter> = __makeSchema_IntNullableWithAggregatesFilter_schema() as unknown as z.ZodType<Prisma.IntNullableWithAggregatesFilter>;
 export const IntNullableWithAggregatesFilterObjectZodSchema = __makeSchema_IntNullableWithAggregatesFilter_schema();
+
+
+// File: CronJobRunCountOrderByAggregateInput.schema.ts
+const __makeSchema_CronJobRunCountOrderByAggregateInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  jobKey: SortOrderSchema.optional(),
+  lastRunAt: SortOrderSchema.optional(),
+  lastStatus: SortOrderSchema.optional(),
+  lastError: SortOrderSchema.optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional()
+}).strict();
+export const CronJobRunCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CronJobRunCountOrderByAggregateInput> = __makeSchema_CronJobRunCountOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunCountOrderByAggregateInput>;
+export const CronJobRunCountOrderByAggregateInputObjectZodSchema = __makeSchema_CronJobRunCountOrderByAggregateInput_schema();
+
+
+// File: CronJobRunMaxOrderByAggregateInput.schema.ts
+const __makeSchema_CronJobRunMaxOrderByAggregateInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  jobKey: SortOrderSchema.optional(),
+  lastRunAt: SortOrderSchema.optional(),
+  lastStatus: SortOrderSchema.optional(),
+  lastError: SortOrderSchema.optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional()
+}).strict();
+export const CronJobRunMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CronJobRunMaxOrderByAggregateInput> = __makeSchema_CronJobRunMaxOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunMaxOrderByAggregateInput>;
+export const CronJobRunMaxOrderByAggregateInputObjectZodSchema = __makeSchema_CronJobRunMaxOrderByAggregateInput_schema();
+
+
+// File: CronJobRunMinOrderByAggregateInput.schema.ts
+const __makeSchema_CronJobRunMinOrderByAggregateInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  jobKey: SortOrderSchema.optional(),
+  lastRunAt: SortOrderSchema.optional(),
+  lastStatus: SortOrderSchema.optional(),
+  lastError: SortOrderSchema.optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional()
+}).strict();
+export const CronJobRunMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CronJobRunMinOrderByAggregateInput> = __makeSchema_CronJobRunMinOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunMinOrderByAggregateInput>;
+export const CronJobRunMinOrderByAggregateInputObjectZodSchema = __makeSchema_CronJobRunMinOrderByAggregateInput_schema();
 
 
 // File: NotificationCountOrderByAggregateInput.schema.ts
@@ -18989,6 +19209,49 @@ export const WebhookDeliveryMaxAggregateInputObjectSchema: z.ZodType<Prisma.Webh
 export const WebhookDeliveryMaxAggregateInputObjectZodSchema = __makeSchema_WebhookDeliveryMaxAggregateInput_schema();
 
 
+// File: CronJobRunCountAggregateInput.schema.ts
+const __makeSchema_CronJobRunCountAggregateInput_schema = () => z.object({
+  id: z.literal(true).optional(),
+  jobKey: z.literal(true).optional(),
+  lastRunAt: z.literal(true).optional(),
+  lastStatus: z.literal(true).optional(),
+  lastError: z.literal(true).optional(),
+  createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional(),
+  _all: z.literal(true).optional()
+}).strict();
+export const CronJobRunCountAggregateInputObjectSchema: z.ZodType<Prisma.CronJobRunCountAggregateInputType> = __makeSchema_CronJobRunCountAggregateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunCountAggregateInputType>;
+export const CronJobRunCountAggregateInputObjectZodSchema = __makeSchema_CronJobRunCountAggregateInput_schema();
+
+
+// File: CronJobRunMinAggregateInput.schema.ts
+const __makeSchema_CronJobRunMinAggregateInput_schema = () => z.object({
+  id: z.literal(true).optional(),
+  jobKey: z.literal(true).optional(),
+  lastRunAt: z.literal(true).optional(),
+  lastStatus: z.literal(true).optional(),
+  lastError: z.literal(true).optional(),
+  createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional()
+}).strict();
+export const CronJobRunMinAggregateInputObjectSchema: z.ZodType<Prisma.CronJobRunMinAggregateInputType> = __makeSchema_CronJobRunMinAggregateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunMinAggregateInputType>;
+export const CronJobRunMinAggregateInputObjectZodSchema = __makeSchema_CronJobRunMinAggregateInput_schema();
+
+
+// File: CronJobRunMaxAggregateInput.schema.ts
+const __makeSchema_CronJobRunMaxAggregateInput_schema = () => z.object({
+  id: z.literal(true).optional(),
+  jobKey: z.literal(true).optional(),
+  lastRunAt: z.literal(true).optional(),
+  lastStatus: z.literal(true).optional(),
+  lastError: z.literal(true).optional(),
+  createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional()
+}).strict();
+export const CronJobRunMaxAggregateInputObjectSchema: z.ZodType<Prisma.CronJobRunMaxAggregateInputType> = __makeSchema_CronJobRunMaxAggregateInput_schema() as unknown as z.ZodType<Prisma.CronJobRunMaxAggregateInputType>;
+export const CronJobRunMaxAggregateInputObjectZodSchema = __makeSchema_CronJobRunMaxAggregateInput_schema();
+
+
 // File: NotificationCountAggregateInput.schema.ts
 const __makeSchema_NotificationCountAggregateInput_schema = () => z.object({
   id: z.literal(true).optional(),
@@ -20255,6 +20518,20 @@ export const WebhookDeliverySelectObjectSchema: z.ZodType<Prisma.WebhookDelivery
 export const WebhookDeliverySelectObjectZodSchema = __makeSchema_WebhookDeliverySelect_schema();
 
 
+// File: CronJobRunSelect.schema.ts
+const __makeSchema_CronJobRunSelect_schema = () => z.object({
+  id: z.boolean().optional(),
+  jobKey: z.boolean().optional(),
+  lastRunAt: z.boolean().optional(),
+  lastStatus: z.boolean().optional(),
+  lastError: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional()
+}).strict();
+export const CronJobRunSelectObjectSchema: z.ZodType<Prisma.CronJobRunSelect> = __makeSchema_CronJobRunSelect_schema() as unknown as z.ZodType<Prisma.CronJobRunSelect>;
+export const CronJobRunSelectObjectZodSchema = __makeSchema_CronJobRunSelect_schema();
+
+
 // File: NotificationSelect.schema.ts
 const __makeSchema_NotificationSelect_schema = () => z.object({
   id: z.boolean().optional(),
@@ -20608,6 +20885,14 @@ const __makeSchema_WebhookDeliveryArgs_schema = () => z.object({
 }).strict();
 export const WebhookDeliveryArgsObjectSchema = __makeSchema_WebhookDeliveryArgs_schema();
 export const WebhookDeliveryArgsObjectZodSchema = __makeSchema_WebhookDeliveryArgs_schema();
+
+
+// File: CronJobRunArgs.schema.ts
+const __makeSchema_CronJobRunArgs_schema = () => z.object({
+  select: z.lazy(() => CronJobRunSelectObjectSchema).optional()
+}).strict();
+export const CronJobRunArgsObjectSchema = __makeSchema_CronJobRunArgs_schema();
+export const CronJobRunArgsObjectZodSchema = __makeSchema_CronJobRunArgs_schema();
 
 
 // File: NotificationArgs.schema.ts
@@ -22177,6 +22462,177 @@ export const WebhookDeliveryAggregateZodSchema = z.object({ orderBy: z.union([We
 export const WebhookDeliveryGroupBySchema: z.ZodType<Prisma.WebhookDeliveryGroupByArgs> = z.object({ where: WebhookDeliveryWhereInputObjectSchema.optional(), orderBy: z.union([WebhookDeliveryOrderByWithAggregationInputObjectSchema, WebhookDeliveryOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WebhookDeliveryScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WebhookDeliveryScalarFieldEnumSchema), _count: z.union([ z.literal(true), WebhookDeliveryCountAggregateInputObjectSchema ]).optional(), _min: WebhookDeliveryMinAggregateInputObjectSchema.optional(), _max: WebhookDeliveryMaxAggregateInputObjectSchema.optional(), _avg: WebhookDeliveryAvgAggregateInputObjectSchema.optional(), _sum: WebhookDeliverySumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WebhookDeliveryGroupByArgs>;
 
 export const WebhookDeliveryGroupByZodSchema = z.object({ where: WebhookDeliveryWhereInputObjectSchema.optional(), orderBy: z.union([WebhookDeliveryOrderByWithAggregationInputObjectSchema, WebhookDeliveryOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WebhookDeliveryScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WebhookDeliveryScalarFieldEnumSchema), _count: z.union([ z.literal(true), WebhookDeliveryCountAggregateInputObjectSchema ]).optional(), _min: WebhookDeliveryMinAggregateInputObjectSchema.optional(), _max: WebhookDeliveryMaxAggregateInputObjectSchema.optional(), _avg: WebhookDeliveryAvgAggregateInputObjectSchema.optional(), _sum: WebhookDeliverySumAggregateInputObjectSchema.optional() }).strict();
+
+// File: findUniqueCronJobRun.schema.ts
+
+export const CronJobRunFindUniqueSchema: z.ZodType<Prisma.CronJobRunFindUniqueArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.CronJobRunFindUniqueArgs>;
+
+export const CronJobRunFindUniqueZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema }).strict();
+
+// File: findUniqueOrThrowCronJobRun.schema.ts
+
+export const CronJobRunFindUniqueOrThrowSchema: z.ZodType<Prisma.CronJobRunFindUniqueOrThrowArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.CronJobRunFindUniqueOrThrowArgs>;
+
+export const CronJobRunFindUniqueOrThrowZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema }).strict();
+
+// File: findFirstCronJobRun.schema.ts
+
+// Select schema needs to be in file to prevent circular imports
+//------------------------------------------------------
+
+export const CronJobRunFindFirstSelectSchema__findFirstCronJobRun_schema: z.ZodType<Prisma.CronJobRunSelect> = z.object({
+    id: z.boolean().optional(),
+    jobKey: z.boolean().optional(),
+    lastRunAt: z.boolean().optional(),
+    lastStatus: z.boolean().optional(),
+    lastError: z.boolean().optional(),
+    createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional()
+  }).strict() as unknown as z.ZodType<Prisma.CronJobRunSelect>;
+
+export const CronJobRunFindFirstSelectZodSchema__findFirstCronJobRun_schema = z.object({
+    id: z.boolean().optional(),
+    jobKey: z.boolean().optional(),
+    lastRunAt: z.boolean().optional(),
+    lastStatus: z.boolean().optional(),
+    lastError: z.boolean().optional(),
+    createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional()
+  }).strict();
+
+export const CronJobRunFindFirstSchema: z.ZodType<Prisma.CronJobRunFindFirstArgs> = z.object({ select: CronJobRunFindFirstSelectSchema__findFirstCronJobRun_schema.optional(),  orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CronJobRunScalarFieldEnumSchema, CronJobRunScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunFindFirstArgs>;
+
+export const CronJobRunFindFirstZodSchema = z.object({ select: CronJobRunFindFirstSelectSchema__findFirstCronJobRun_schema.optional(),  orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CronJobRunScalarFieldEnumSchema, CronJobRunScalarFieldEnumSchema.array()]).optional() }).strict();
+
+// File: findFirstOrThrowCronJobRun.schema.ts
+
+// Select schema needs to be in file to prevent circular imports
+//------------------------------------------------------
+
+export const CronJobRunFindFirstOrThrowSelectSchema__findFirstOrThrowCronJobRun_schema: z.ZodType<Prisma.CronJobRunSelect> = z.object({
+    id: z.boolean().optional(),
+    jobKey: z.boolean().optional(),
+    lastRunAt: z.boolean().optional(),
+    lastStatus: z.boolean().optional(),
+    lastError: z.boolean().optional(),
+    createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional()
+  }).strict() as unknown as z.ZodType<Prisma.CronJobRunSelect>;
+
+export const CronJobRunFindFirstOrThrowSelectZodSchema__findFirstOrThrowCronJobRun_schema = z.object({
+    id: z.boolean().optional(),
+    jobKey: z.boolean().optional(),
+    lastRunAt: z.boolean().optional(),
+    lastStatus: z.boolean().optional(),
+    lastError: z.boolean().optional(),
+    createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional()
+  }).strict();
+
+export const CronJobRunFindFirstOrThrowSchema: z.ZodType<Prisma.CronJobRunFindFirstOrThrowArgs> = z.object({ select: CronJobRunFindFirstOrThrowSelectSchema__findFirstOrThrowCronJobRun_schema.optional(),  orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CronJobRunScalarFieldEnumSchema, CronJobRunScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunFindFirstOrThrowArgs>;
+
+export const CronJobRunFindFirstOrThrowZodSchema = z.object({ select: CronJobRunFindFirstOrThrowSelectSchema__findFirstOrThrowCronJobRun_schema.optional(),  orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CronJobRunScalarFieldEnumSchema, CronJobRunScalarFieldEnumSchema.array()]).optional() }).strict();
+
+// File: findManyCronJobRun.schema.ts
+
+// Select schema needs to be in file to prevent circular imports
+//------------------------------------------------------
+
+export const CronJobRunFindManySelectSchema__findManyCronJobRun_schema: z.ZodType<Prisma.CronJobRunSelect> = z.object({
+    id: z.boolean().optional(),
+    jobKey: z.boolean().optional(),
+    lastRunAt: z.boolean().optional(),
+    lastStatus: z.boolean().optional(),
+    lastError: z.boolean().optional(),
+    createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional()
+  }).strict() as unknown as z.ZodType<Prisma.CronJobRunSelect>;
+
+export const CronJobRunFindManySelectZodSchema__findManyCronJobRun_schema = z.object({
+    id: z.boolean().optional(),
+    jobKey: z.boolean().optional(),
+    lastRunAt: z.boolean().optional(),
+    lastStatus: z.boolean().optional(),
+    lastError: z.boolean().optional(),
+    createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional()
+  }).strict();
+
+export const CronJobRunFindManySchema: z.ZodType<Prisma.CronJobRunFindManyArgs> = z.object({ select: CronJobRunFindManySelectSchema__findManyCronJobRun_schema.optional(),  orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CronJobRunScalarFieldEnumSchema, CronJobRunScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunFindManyArgs>;
+
+export const CronJobRunFindManyZodSchema = z.object({ select: CronJobRunFindManySelectSchema__findManyCronJobRun_schema.optional(),  orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CronJobRunScalarFieldEnumSchema, CronJobRunScalarFieldEnumSchema.array()]).optional() }).strict();
+
+// File: countCronJobRun.schema.ts
+
+export const CronJobRunCountSchema: z.ZodType<Prisma.CronJobRunCountArgs> = z.object({ orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), CronJobRunCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunCountArgs>;
+
+export const CronJobRunCountZodSchema = z.object({ orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), CronJobRunCountAggregateInputObjectSchema ]).optional() }).strict();
+
+// File: createOneCronJobRun.schema.ts
+
+export const CronJobRunCreateOneSchema: z.ZodType<Prisma.CronJobRunCreateArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(),  data: z.union([CronJobRunCreateInputObjectSchema, CronJobRunUncheckedCreateInputObjectSchema]) }).strict() as unknown as z.ZodType<Prisma.CronJobRunCreateArgs>;
+
+export const CronJobRunCreateOneZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(),  data: z.union([CronJobRunCreateInputObjectSchema, CronJobRunUncheckedCreateInputObjectSchema]) }).strict();
+
+// File: createManyCronJobRun.schema.ts
+
+export const CronJobRunCreateManySchema: z.ZodType<Prisma.CronJobRunCreateManyArgs> = z.object({ data: z.union([ CronJobRunCreateManyInputObjectSchema, z.array(CronJobRunCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunCreateManyArgs>;
+
+export const CronJobRunCreateManyZodSchema = z.object({ data: z.union([ CronJobRunCreateManyInputObjectSchema, z.array(CronJobRunCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict();
+
+// File: createManyAndReturnCronJobRun.schema.ts
+
+export const CronJobRunCreateManyAndReturnSchema: z.ZodType<Prisma.CronJobRunCreateManyAndReturnArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(), data: z.union([ CronJobRunCreateManyInputObjectSchema, z.array(CronJobRunCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunCreateManyAndReturnArgs>;
+
+export const CronJobRunCreateManyAndReturnZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(), data: z.union([ CronJobRunCreateManyInputObjectSchema, z.array(CronJobRunCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict();
+
+// File: deleteOneCronJobRun.schema.ts
+
+export const CronJobRunDeleteOneSchema: z.ZodType<Prisma.CronJobRunDeleteArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.CronJobRunDeleteArgs>;
+
+export const CronJobRunDeleteOneZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema }).strict();
+
+// File: deleteManyCronJobRun.schema.ts
+
+export const CronJobRunDeleteManySchema: z.ZodType<Prisma.CronJobRunDeleteManyArgs> = z.object({ where: CronJobRunWhereInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunDeleteManyArgs>;
+
+export const CronJobRunDeleteManyZodSchema = z.object({ where: CronJobRunWhereInputObjectSchema.optional() }).strict();
+
+// File: updateOneCronJobRun.schema.ts
+
+export const CronJobRunUpdateOneSchema: z.ZodType<Prisma.CronJobRunUpdateArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(),  data: z.union([CronJobRunUpdateInputObjectSchema, CronJobRunUncheckedUpdateInputObjectSchema]), where: CronJobRunWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.CronJobRunUpdateArgs>;
+
+export const CronJobRunUpdateOneZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(),  data: z.union([CronJobRunUpdateInputObjectSchema, CronJobRunUncheckedUpdateInputObjectSchema]), where: CronJobRunWhereUniqueInputObjectSchema }).strict();
+
+// File: updateManyCronJobRun.schema.ts
+
+export const CronJobRunUpdateManySchema: z.ZodType<Prisma.CronJobRunUpdateManyArgs> = z.object({ data: CronJobRunUpdateManyMutationInputObjectSchema, where: CronJobRunWhereInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunUpdateManyArgs>;
+
+export const CronJobRunUpdateManyZodSchema = z.object({ data: CronJobRunUpdateManyMutationInputObjectSchema, where: CronJobRunWhereInputObjectSchema.optional() }).strict();
+
+// File: updateManyAndReturnCronJobRun.schema.ts
+
+export const CronJobRunUpdateManyAndReturnSchema: z.ZodType<Prisma.CronJobRunUpdateManyAndReturnArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(), data: CronJobRunUpdateManyMutationInputObjectSchema, where: CronJobRunWhereInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunUpdateManyAndReturnArgs>;
+
+export const CronJobRunUpdateManyAndReturnZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(), data: CronJobRunUpdateManyMutationInputObjectSchema, where: CronJobRunWhereInputObjectSchema.optional() }).strict();
+
+// File: upsertOneCronJobRun.schema.ts
+
+export const CronJobRunUpsertOneSchema: z.ZodType<Prisma.CronJobRunUpsertArgs> = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema, create: z.union([ CronJobRunCreateInputObjectSchema, CronJobRunUncheckedCreateInputObjectSchema ]), update: z.union([ CronJobRunUpdateInputObjectSchema, CronJobRunUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.CronJobRunUpsertArgs>;
+
+export const CronJobRunUpsertOneZodSchema = z.object({ select: CronJobRunSelectObjectSchema.optional(),  where: CronJobRunWhereUniqueInputObjectSchema, create: z.union([ CronJobRunCreateInputObjectSchema, CronJobRunUncheckedCreateInputObjectSchema ]), update: z.union([ CronJobRunUpdateInputObjectSchema, CronJobRunUncheckedUpdateInputObjectSchema ]) }).strict();
+
+// File: aggregateCronJobRun.schema.ts
+
+export const CronJobRunAggregateSchema: z.ZodType<Prisma.CronJobRunAggregateArgs> = z.object({ orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), CronJobRunCountAggregateInputObjectSchema ]).optional(), _min: CronJobRunMinAggregateInputObjectSchema.optional(), _max: CronJobRunMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunAggregateArgs>;
+
+export const CronJobRunAggregateZodSchema = z.object({ orderBy: z.union([CronJobRunOrderByWithRelationInputObjectSchema, CronJobRunOrderByWithRelationInputObjectSchema.array()]).optional(), where: CronJobRunWhereInputObjectSchema.optional(), cursor: CronJobRunWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), CronJobRunCountAggregateInputObjectSchema ]).optional(), _min: CronJobRunMinAggregateInputObjectSchema.optional(), _max: CronJobRunMaxAggregateInputObjectSchema.optional() }).strict();
+
+// File: groupByCronJobRun.schema.ts
+
+export const CronJobRunGroupBySchema: z.ZodType<Prisma.CronJobRunGroupByArgs> = z.object({ where: CronJobRunWhereInputObjectSchema.optional(), orderBy: z.union([CronJobRunOrderByWithAggregationInputObjectSchema, CronJobRunOrderByWithAggregationInputObjectSchema.array()]).optional(), having: CronJobRunScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(CronJobRunScalarFieldEnumSchema), _count: z.union([ z.literal(true), CronJobRunCountAggregateInputObjectSchema ]).optional(), _min: CronJobRunMinAggregateInputObjectSchema.optional(), _max: CronJobRunMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.CronJobRunGroupByArgs>;
+
+export const CronJobRunGroupByZodSchema = z.object({ where: CronJobRunWhereInputObjectSchema.optional(), orderBy: z.union([CronJobRunOrderByWithAggregationInputObjectSchema, CronJobRunOrderByWithAggregationInputObjectSchema.array()]).optional(), having: CronJobRunScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(CronJobRunScalarFieldEnumSchema), _count: z.union([ z.literal(true), CronJobRunCountAggregateInputObjectSchema ]).optional(), _min: CronJobRunMinAggregateInputObjectSchema.optional(), _max: CronJobRunMaxAggregateInputObjectSchema.optional() }).strict();
 
 // File: findUniqueNotification.schema.ts
 
@@ -25489,6 +25945,21 @@ export const WebhookDeliverySchema = z.object({
 });
 
 export type WebhookDeliveryType = z.infer<typeof WebhookDeliverySchema>;
+
+
+// File: CronJobRun.schema.ts
+
+export const CronJobRunSchema = z.object({
+  id: z.string(),
+  jobKey: z.string(),
+  lastRunAt: z.date(),
+  lastStatus: z.string(),
+  lastError: z.string().nullish(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type CronJobRunType = z.infer<typeof CronJobRunSchema>;
 
 
 // File: Notification.schema.ts

@@ -126,3 +126,23 @@ test.describe("organization settings — invite & members", () => {
 		});
 	});
 });
+
+test.describe("org membership guard", () => {
+	test("unknown org slug redirects to /organizations", async ({ page }) => {
+		// Regression: organizations/[slug] had no layout guard, so org pages
+		// rendered their shell for non-members / nonexistent orgs.
+		await page.goto("/organizations/no-such-org/dashboard");
+		await expect(page).toHaveURL(/\/organizations$/, { timeout: 10_000 });
+	});
+});
+
+test.describe("org membership guard (unauthenticated)", () => {
+	test.use({ storageState: { cookies: [], origins: [] } });
+
+	test("org dashboard redirects unauthenticated users to sign-in", async ({
+		page,
+	}) => {
+		await page.goto("/organizations/acme/dashboard");
+		await expect(page).toHaveURL(/\/auth\/sign-in/);
+	});
+});

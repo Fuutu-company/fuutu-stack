@@ -12,8 +12,8 @@ export async function getUserLocale(): Promise<Locale> {
 }
 
 export default getRequestConfig(async ({ requestLocale }) => {
-	// requestLocale comes from URL parameter [locale] for marketing routes
-	// For /app and /auth routes, requestLocale is undefined, then we use cookie
+	// requestLocale comes from the [locale] URL segment; without it (e.g. root
+	// not-found), fall back to the locale cookie.
 	let locale = (await requestLocale) as Locale | undefined;
 
 	if (!locale) {

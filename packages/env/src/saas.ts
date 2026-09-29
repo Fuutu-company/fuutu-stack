@@ -1,6 +1,11 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+// Must stay in sync with VALID_DRAINS in packages/logs/src/config.ts —
+// @fuutu/logs reads process.env.LOG_DRAIN directly (documented exception),
+// this schema is the app-facing validation for the same CSV format.
+const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
+
 export const env = createEnv({
 	server: {
 		DATABASE_URL: z.string().min(1),
@@ -94,8 +99,19 @@ export const env = createEnv({
 		AXIOM_TOKEN: z.string().optional(),
 		AXIOM_DATASET: z.string().optional(),
 		// Logging
+		// Comma-separated drain list, e.g. "sentry,fs" — each entry must be a
+		// known drain id (console is always on but allowed in the list).
 		LOG_DRAIN: z
-			.enum(["console", "sentry", "axiom", "fs", "memory"])
+			.string()
+			.refine(
+				(v) =>
+					v
+						.split(",")
+						.every((s) => LOG_DRAIN_VALUES.includes(s.trim().toLowerCase())),
+				{
+					message: `LOG_DRAIN must be a comma-separated list of: ${LOG_DRAIN_VALUES.join(", ")}`,
+				},
+			)
 			.optional(),
 		LOG_AUDIT_SINK: z
 			.enum(["console", "db", "axiom", "noop"])
@@ -194,4 +210,7 @@ export const env = createEnv({
 		FUUTU_DISABLE_RATE_LIMIT: process.env.FUUTU_DISABLE_RATE_LIMIT,
 	},
 	emptyStringAsUndefined: true,
+	// Escape hatch for builds/CI that intentionally run without a full env
+	// (e.g. bare `next build`). Set SKIP_ENV_VALIDATION=1 to skip.
+	skipValidation: !!process.env.SKIP_ENV_VALIDATION,
 });

@@ -11,6 +11,7 @@ import {
 	useState,
 } from "react";
 import { analyticsConfig } from "./config";
+import { buildConsentCookie } from "./consent-cookie";
 
 type ConsentStatus = "unknown" | "granted" | "denied";
 
@@ -34,17 +35,6 @@ function dispatchChange() {
 	}
 }
 
-function getCookieDomain(): string | undefined {
-	if (typeof window === "undefined") return undefined;
-	const hostname = window.location.hostname;
-	// localhost: cookies are shared across ports without explicit domain
-	if (hostname === "localhost" || hostname === "127.0.0.1") return undefined;
-	// production: set on parent domain so it's shared across subdomains
-	const parts = hostname.split(".");
-	if (parts.length >= 2) return `.${parts.slice(-2).join(".")}`;
-	return undefined;
-}
-
 export function readConsentCookie(): string | null {
 	if (typeof document === "undefined") return null;
 	const name = `${analyticsConfig.consentCookieName}=`;
@@ -58,24 +48,18 @@ export function readConsentCookie(): string | null {
 
 function writeConsentCookie(value: "granted" | "denied") {
 	if (typeof document === "undefined") return;
-	const domain = getCookieDomain();
-	const parts = [
-		`${analyticsConfig.consentCookieName}=${value}`,
-		`max-age=${analyticsConfig.consentCookieMaxAge}`,
-		"path=/",
-		"SameSite=Lax",
-	];
-	if (domain) {
-		parts.push(`domain=${domain}`);
-		parts.push("Secure");
-	}
-	document.cookie = parts.join("; ");
+	// Consent must be readable from JS (useConsent + <AnalyticsScript />),
+	// so httpOnly is not an option — SameSite=Lax still applies.
+	// biome-ignore lint/suspicious/noDocumentCookie: JS-readable consent cookie by design
+	document.cookie = buildConsentCookie(value, {
+		secure: window.location.protocol === "https:",
+	});
 }
 
 /**
- * Holds the user's analytics-consent decision. Reads/writes a cookie
- * so the choice survives reloads and is shared across subdomains
- * (e.g. stack.fuutu.com → stackapp.fuutu.com). Emits a
+ * Holds the user's analytics-consent decision. Reads/writes a host-scoped
+ * cookie so the choice survives reloads (cross-subdomain sharing is opt-in
+ * via `analyticsConfig.consentCookieDomain`). Emits a
  * `fuutu:consent` window event so <AnalyticsScript /> can react.
  */
 export function ConsentProvider({ children }: { children: ReactNode }) {

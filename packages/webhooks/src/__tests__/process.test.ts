@@ -17,6 +17,7 @@ const recoverStaleDeliveriesMock = vi.fn();
 const claimPendingDeliveriesMock = vi.fn();
 const getWebhookForDeliveryMock = vi.fn();
 const updateDeliveryStatusMock = vi.fn();
+const deliverWebhookMock = vi.fn();
 
 vi.mock("@fuutu/db", () => ({
 	recoverStaleDeliveries: (...args: unknown[]) =>
@@ -29,7 +30,41 @@ vi.mock("@fuutu/db", () => ({
 		updateDeliveryStatusMock(...args),
 }));
 
+vi.mock("../deliver", () => ({
+	deliverWebhook: (...args: unknown[]) => deliverWebhookMock(...args),
+}));
+
 import { processPendingDeliveries } from "../process";
+
+const activeWebhook = {
+	id: "wh-1",
+	url: "https://example.com/hook",
+	secret: "s",
+	events: ["test.event"],
+	isActive: true,
+};
+
+function makeDelivery(overrides: Record<string, unknown> = {}) {
+	return {
+		id: "del-1",
+		webhookId: "wh-1",
+		eventId: "evt-1",
+		eventType: "test.event",
+		payload: { foo: "bar" },
+		status: "processing",
+		responseCode: null,
+		responseBody: null,
+		attempt: 1,
+		attemptedAt: new Date(),
+		nextRetryAt: null,
+		...overrides,
+	};
+}
+
+function lastStatusUpdate() {
+	const calls = updateDeliveryStatusMock.mock.calls;
+	return calls[calls.length - 1]?.[1] as Record<string, unknown> | undefined;
+}
 
 describe("processPendingDeliveries", () => {
 	beforeEach(() => {
@@ -37,10 +72,11 @@ describe("processPendingDeliveries", () => {
 		claimPendingDeliveriesMock.mockReset();
 		getWebhookForDeliveryMock.mockReset();
 		updateDeliveryStatusMock.mockReset();
+		deliverWebhookMock.mockReset();
+		recoverStaleDeliveriesMock.mockResolvedValue({ count: 0 });
 	});
 
 	it("calls recoverStaleDeliveries before claiming pending deliveries", async () => {
-		recoverStaleDeliveriesMock.mockResolvedValue({ count: 0 });
 		claimPendingDeliveriesMock.mockResolvedValue([]);
 
 		await processPendingDeliveries();
@@ -51,12 +87,101 @@ describe("processPendingDeliveries", () => {
 	});
 
 	it("still claims deliveries when recoverStaleDeliveries finds none", async () => {
-		recoverStaleDeliveriesMock.mockResolvedValue({ count: 0 });
 		claimPendingDeliveriesMock.mockResolvedValue([]);
 
 		const result = await processPendingDeliveries();
 
 		expect(result).toEqual({ processed: 0, succeeded: 0, failed: 0 });
 		expect(claimPendingDeliveriesMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("marks a successful delivery as success", async () => {
+		const delivery = makeDelivery();
+		claimPendingDeliveriesMock.mockResolvedValue([delivery]);
+		getWebhookForDeliveryMock.mockResolvedValue(activeWebhook);
+		deliverWebhookMock.mockResolvedValue({
+			success: true,
+			responseCode: 200,
+			responseBody: "OK",
+			error: null,
+		});
+
+		const result = await processPendingDeliveries();
+
+		expect(result).toEqual({ processed: 1, succeeded: 1, failed: 0 });
+		expect(updateDeliveryStatusMock).toHaveBeenCalledWith("del-1", {
+			status: "success",
+			responseCode: 200,
+			responseBody: "OK",
+			attempt: 1,
+			nextRetryAt: null,
+		});
+	});
+
+	it("schedules a retry with backoff on failure below maxRetries", async () => {
+		const delivery = makeDelivery({ attempt: 1 });
+		claimPendingDeliveriesMock.mockResolvedValue([delivery]);
+		getWebhookForDeliveryMock.mockResolvedValue(activeWebhook);
+		deliverWebhookMock.mockResolvedValue({
+			success: false,
+			responseCode: 500,
+			responseBody: "err",
+			error: null,
+		});
+
+		const result = await processPendingDeliveries();
+
+		expect(result).toEqual({ processed: 1, succeeded: 0, failed: 1 });
+		const update = lastStatusUpdate();
+		expect(update?.status).toBe("retrying");
+		expect(update?.attempt).toBe(2);
+		expect(update?.nextRetryAt).toBeInstanceOf(Date);
+	});
+
+	it("marks the delivery failed when retries are exhausted", async () => {
+		const delivery = makeDelivery({ attempt: 5 });
+		claimPendingDeliveriesMock.mockResolvedValue([delivery]);
+		getWebhookForDeliveryMock.mockResolvedValue(activeWebhook);
+		deliverWebhookMock.mockResolvedValue({
+			success: false,
+			responseCode: 500,
+			responseBody: "err",
+			error: null,
+		});
+
+		const result = await processPendingDeliveries();
+
+		expect(result.failed).toBe(1);
+		const update = lastStatusUpdate();
+		expect(update?.status).toBe("failed");
+		expect(update?.nextRetryAt).toBeNull();
+	});
+
+	it("marks deliveries terminal-failed when the webhook is gone or inactive (no processing loop)", async () => {
+		const delivery = makeDelivery();
+		claimPendingDeliveriesMock.mockResolvedValue([delivery]);
+		getWebhookForDeliveryMock.mockResolvedValue(null);
+
+		const result = await processPendingDeliveries();
+
+		expect(result).toEqual({ processed: 1, succeeded: 0, failed: 1 });
+		const update = lastStatusUpdate();
+		expect(update?.status).toBe("failed");
+		expect(update?.nextRetryAt).toBeNull();
+		expect(deliverWebhookMock).not.toHaveBeenCalled();
+	});
+
+	it("marks deliveries terminal-failed on invalid payload instead of leaving them in processing", async () => {
+		const delivery = makeDelivery({ payload: "not-an-object" });
+		claimPendingDeliveriesMock.mockResolvedValue([delivery]);
+		getWebhookForDeliveryMock.mockResolvedValue(activeWebhook);
+
+		const result = await processPendingDeliveries();
+
+		expect(result).toEqual({ processed: 1, succeeded: 0, failed: 1 });
+		const update = lastStatusUpdate();
+		expect(update?.status).toBe("failed");
+		expect(update?.nextRetryAt).toBeNull();
+		expect(deliverWebhookMock).not.toHaveBeenCalled();
 	});
 });

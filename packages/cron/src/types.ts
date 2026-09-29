@@ -15,7 +15,7 @@ export interface CronJobResult {
 
 export interface CronJob {
 	readonly name: string;
-	/** Cron expression describing the intended cadence. Metadata only — the runner is triggered externally (e.g. via a scheduler or `runJob`/`runAllJobs`), not by an internal timer. */
+	/** Cron expression (5 fields) for the intended cadence. The inline runner honors it via persisted `lastRunAt` state; `runJob` force-runs regardless. */
 	readonly schedule: string;
 	readonly enabled: boolean;
 	run(): Promise<CronJobResult>;

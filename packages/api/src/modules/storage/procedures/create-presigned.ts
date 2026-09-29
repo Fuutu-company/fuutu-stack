@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@fuutu/rbac";
-import { resolveStorageProvider } from "@fuutu/storage";
+import { resolveMaxUploadBytes, resolveStorageProvider } from "@fuutu/storage";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 import { resolveBucketOrThrow } from "../shared";
@@ -44,7 +45,10 @@ const uploadCreatePresignedSchema = z.object({
 			},
 		),
 	contentType: z.string().min(1),
-	contentLength: z.number().int().min(0).optional(),
+	// Declared size is required: it is both validated against the
+	// per-bucket cap below and bound into the presigned URL, so the
+	// client cannot upload a different size.
+	contentLength: z.number().int().positive(),
 	organizationId: z.string().optional(),
 });
 
@@ -64,6 +68,14 @@ export const createPresigned = authProcedure({
 	.input(uploadCreatePresignedSchema)
 	.handler(async ({ input, context }) => {
 		const bucket = resolveBucketOrThrow(input.bucket);
+		// resolveBucketOrThrow already proved the bucket is configured, so
+		// resolveMaxUploadBytes cannot throw here.
+		const maxBytes = resolveMaxUploadBytes(bucket);
+		if (input.contentLength > maxBytes) {
+			throw new ORPCError("PAYLOAD_TOO_LARGE", {
+				message: "File exceeds the maximum upload size.",
+			});
+		}
 		const prefix = context.org?.id ?? context.user.id;
 		const scopedKey = `${prefix}/${input.key}`;
 		const provider = resolveStorageProvider();
@@ -72,6 +84,7 @@ export const createPresigned = authProcedure({
 			key: scopedKey,
 			contentType: input.contentType,
 			contentLength: input.contentLength,
+			maxSizeBytes: maxBytes,
 		});
 		return result;
 	});

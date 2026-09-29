@@ -7,7 +7,6 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { getLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
-import { Providers } from "@/modules/shared/providers";
 
 export const metadata = {
 	metadataBase: new URL(getBaseUrl({ defaultPort: 3001 })),
@@ -42,9 +41,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 			className={`${GeistSans.variable} ${GeistMono.variable}`}
 			suppressHydrationWarning
 		>
-			<body className="antialiased">
-				<Providers>{children}</Providers>
-			</body>
+			<body className="antialiased">{children}</body>
 		</html>
 	);
 }

@@ -309,6 +309,9 @@ export function OrgSettingsBilling({
 				monthlyLabel={tp("choosePlan.monthly")}
 				yearlyLabel={tp("choosePlan.yearly")}
 				yearlyBadge={tp("choosePlan.yearlyBadge")}
+				seatLabel={(n) =>
+					`${n} ${n === 1 ? tp("seatSelector.seat") : tp("seatSelector.seats")}`
+				}
 			/>
 		</div>
 	);

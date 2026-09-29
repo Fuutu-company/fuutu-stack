@@ -12,6 +12,7 @@
 		"prebuild": "node packages/telemetry/bin/ping.mjs",
 		"postinstall": "node -e \"console.log('\\n  Fuutu Stack — Free for teams ≤ 10 employees & ≤ 250k EUR revenue.\\n  Above that: Enterprise license required (see LICENSE.md §3, §4).\\n  Get your key at https://stack.fuutu.com/pricing\\n  Opt-out of build-time telemetry: FUUTU_TELEMETRY_DISABLED=1\\n')\"",
 		"check-types": "turbo check-types",
+		"check:ci": "biome check .",
 		"dev:saas": "dotenv -c -- turbo -F @fuutu/saas dev",
 		"dev:marketing": "dotenv -c -- turbo -F @fuutu/marketing dev",
 		"dev:docs": "dotenv -c -- turbo -F @fuutu/docs dev",

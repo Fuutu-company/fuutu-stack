@@ -14,27 +14,6 @@ vi.mock("@fuutu/logs", () => ({
 	}),
 }));
 
-vi.mock("@fuutu/payments/config", () => ({
-	getMeter: vi.fn((key: string) =>
-		key === "ai_tokens"
-			? {
-					key: "ai_tokens",
-					label: "AI Tokens",
-					unit: "tokens",
-					resetOn: "month",
-					allowOverage: true,
-				}
-			: key === "api_calls"
-				? {
-						key: "api_calls",
-						label: "API Calls",
-						unit: "count",
-						resetOn: "month",
-					}
-				: undefined,
-	),
-}));
-
 import {
 	consumeCreditsTx,
 	getActiveCreditPackages,
@@ -51,6 +30,18 @@ describe("consumeCredits", () => {
 		await expect(
 			consumeCredits({ meterKey: "ai_tokens", amount: 10, reason: "test" }),
 		).rejects.toThrow("either userId or organizationId must be set");
+	});
+
+	it("throws when both userId and organizationId are set (owner XOR)", async () => {
+		await expect(
+			consumeCredits({
+				userId: "user-1",
+				organizationId: "org-1",
+				meterKey: "ai_tokens",
+				amount: 10,
+				reason: "test",
+			}),
+		).rejects.toThrow();
 	});
 
 	it("throws on unknown meter key", async () => {

@@ -25,6 +25,7 @@
 		"@fuutu/storage": "workspace:*",
 		"@fuutu/ui": "workspace:*",
 		"@fuutu/utils": "workspace:*",
+		"@fuutu/webhooks": "workspace:*",
 		"@iconify/icons-circle-flags": "catalog:",
 		"@iconify/react": "catalog:",
 		"@orpc/client": "catalog:",

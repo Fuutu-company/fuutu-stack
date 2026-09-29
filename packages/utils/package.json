@@ -4,6 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"exports": {
@@ -37,7 +38,6 @@
 		"tailwind-merge": "catalog:"
 	},
 	"devDependencies": {
-		"@fuutu/test-utils": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"typescript": "catalog:",
 		"vitest": "catalog:"

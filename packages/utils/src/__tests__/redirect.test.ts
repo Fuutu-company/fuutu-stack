@@ -126,6 +126,22 @@ describe("getSafeRedirect", () => {
 		});
 	});
 
+	describe("percent-encoded bypass", () => {
+		it("returns /%5cevil.com as a literal relative path", () => {
+			// Safe: browsers do not percent-decode `%5c` to `\` in a Location
+			// path, so this can never normalize into `//evil.com`.
+			expect(getSafeRedirect("/%5cevil.com")).toBe("/%5cevil.com");
+		});
+
+		it("returns /%5C%5Cevil.com (uppercase, double-encoded-looking) as-is", () => {
+			expect(getSafeRedirect("/%5C%5Cevil.com")).toBe("/%5C%5Cevil.com");
+		});
+
+		it("rejects %2f%2fevil.com (no leading slash — falls through to URL parse)", () => {
+			expect(getSafeRedirect("%2f%2fevil.com")).toBe("/");
+		});
+	});
+
 	describe("control-character bypass", () => {
 		it("rejects /\\tevil.com (slash + tab)", () => {
 			expect(getSafeRedirect("/\tevil.com")).toBe("/");

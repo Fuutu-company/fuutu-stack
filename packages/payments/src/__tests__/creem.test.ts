@@ -98,6 +98,48 @@ describe("creem provider — SDK integration", () => {
 		expect(events[0]?.subscriptionId).toBe("sub_123");
 	});
 
+	it("parseWebhook throws on a signed but malformed payload", async () => {
+		const crypto = await import("node:crypto");
+		const body = JSON.stringify({ eventType: 123 });
+		const signature = crypto
+			.createHmac("sha256", "test-webhook-secret")
+			.update(body)
+			.digest("hex");
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "creem-signature": signature },
+			body,
+		});
+		await expect(creemPaymentProvider.parseWebhook(request)).rejects.toThrow(
+			"Malformed webhook payload",
+		);
+	});
+
+	it("parseWebhook surfaces the envelope event id for dedup", async () => {
+		const crypto = await import("node:crypto");
+		const body = JSON.stringify({
+			id: "evt_123",
+			eventType: "subscription.active",
+			object: {
+				id: "sub_123",
+				customer: "cust_123",
+				product: { id: "prod_123" },
+				status: "active",
+			},
+		});
+		const signature = crypto
+			.createHmac("sha256", "test-webhook-secret")
+			.update(body)
+			.digest("hex");
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "creem-signature": signature },
+			body,
+		});
+		const events = await creemPaymentProvider.parseWebhook(request);
+		expect(events[0]?.eventId).toBe("evt_123");
+	});
+
 	it("parseWebhook throws on missing signature", async () => {
 		const request = new Request("https://app.test/api/webhooks/payments", {
 			method: "POST",

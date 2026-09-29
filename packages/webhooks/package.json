@@ -9,10 +9,14 @@
 		},
 		"./config": {
 			"default": "./src/config.ts"
+		},
+		"./events": {
+			"default": "./src/events.ts"
 		}
 	},
 	"scripts": {
-		"test": "vitest run"
+		"test": "vitest run",
+		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@fuutu/db": "workspace:*",

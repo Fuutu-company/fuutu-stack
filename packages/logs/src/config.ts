@@ -47,9 +47,14 @@ function readEnv(
 	fallback: string,
 	allowed: readonly string[],
 ): string {
-	const raw = process.env[key];
-	const value = raw ?? fallback;
-	return allowed.includes(value) ? value : fallback;
+	const value = process.env[key] ?? fallback;
+	if (!allowed.includes(value)) {
+		console.warn(
+			`[logs] Invalid ${key} "${value}" — falling back to "${fallback}".`,
+		);
+		return fallback;
+	}
+	return value;
 }
 
 export const logsConfig = {

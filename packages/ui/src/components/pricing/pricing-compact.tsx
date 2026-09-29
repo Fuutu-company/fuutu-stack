@@ -6,6 +6,7 @@ import { cn } from "../../lib/utils";
 import { BillingToggle } from "./billing-toggle";
 import { PricingCTA } from "./pricing-cta";
 import type { PricingCompactProps, PricingTier } from "./types";
+import { resolveTierDisplay } from "./utils";
 
 /**
  * Home-page pricing variant.
@@ -22,13 +23,14 @@ export function PricingCompact({
 	tiers,
 	className,
 	popularLabel,
-	moreLabel = "more features",
+	moreLabel,
 	pricingHref,
-	seeAllLabel = "See all features",
+	seeAllLabel,
 	enterpriseHighlights,
+	seatLabel,
 	LinkComponent,
-	monthlyLabel = "Monthly",
-	yearlyLabel = "Yearly",
+	monthlyLabel,
+	yearlyLabel,
 	yearlyBadge,
 }: PricingCompactProps) {
 	const [isYearly, setIsYearly] = React.useState(false);
@@ -77,6 +79,7 @@ export function PricingCompact({
 						moreLabel={moreLabel}
 						pricingHref={pricingHref}
 						seeAllLabel={seeAllLabel}
+						seatLabel={seatLabel}
 						LinkComponent={LinkComponent}
 					/>
 				))}
@@ -104,27 +107,27 @@ function RegularCard({
 	moreLabel,
 	pricingHref,
 	seeAllLabel,
+	seatLabel,
 	LinkComponent,
 }: {
 	tier: PricingTier;
 	isYearly: boolean;
 	popularLabel?: string;
 	totalFeatures: number;
-	moreLabel: string;
+	moreLabel?: string;
 	pricingHref?: string;
-	seeAllLabel: string;
+	seeAllLabel?: string;
+	seatLabel?: (seatCount: number) => string;
 	LinkComponent?: PricingCompactProps["LinkComponent"];
 }) {
 	const hl = tier.highlighted;
 	const Icon = tier.icon;
 	const shown = tier.features.slice(0, 4);
 	const remaining = totalFeatures - shown.length;
-	const displayPrice =
-		isYearly && tier.yearlyPrice ? tier.yearlyPrice : tier.price;
-	const displaySuffix =
-		isYearly && tier.yearlyPriceSuffix
-			? tier.yearlyPriceSuffix
-			: tier.priceSuffix;
+	const { price: displayPrice, suffix: displaySuffix } = resolveTierDisplay(
+		tier,
+		isYearly,
+	);
 
 	return (
 		<div
@@ -199,14 +202,14 @@ function RegularCard({
 						{displaySuffix}
 					</span>
 				)}
-				{tier.seatCount && (
+				{tier.seatCount && seatLabel && (
 					<span
 						className={cn(
 							"ml-2 text-xs",
 							hl ? "text-primary-foreground/70" : "text-muted-foreground",
 						)}
 					>
-						{tier.seatCount} seats
+						{seatLabel(tier.seatCount)}
 					</span>
 				)}
 				{tier.description && (
@@ -242,7 +245,7 @@ function RegularCard({
 				))}
 			</ul>
 
-			{remaining > 0 && pricingHref && (
+			{remaining > 0 && pricingHref && moreLabel && seeAllLabel && (
 				<SeeAllLink
 					remaining={remaining}
 					moreLabel={moreLabel}

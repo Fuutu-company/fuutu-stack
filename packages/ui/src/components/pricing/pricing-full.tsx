@@ -15,6 +15,7 @@ import {
 import { BillingToggle } from "./billing-toggle";
 import { PricingCTA } from "./pricing-cta";
 import type { FeatureMatrixRow, PricingFullProps, PricingTier } from "./types";
+import { resolveTierDisplay } from "./utils";
 
 /**
  * Full pricing-page variant.
@@ -31,11 +32,14 @@ export function PricingFull({
 	featureGroupLabels = {},
 	className,
 	popularLabel,
-	watchLabel = "Watch demo",
-	customPriceLabel = "On request",
+	watchLabel,
+	customPriceLabel,
+	playLabel,
+	pauseLabel,
+	videoTitle,
 	LinkComponent,
-	monthlyLabel = "Monthly",
-	yearlyLabel = "Yearly",
+	monthlyLabel,
+	yearlyLabel,
 	yearlyBadge,
 }: PricingFullProps) {
 	const [isYearly, setIsYearly] = React.useState(false);
@@ -119,6 +123,9 @@ export function PricingFull({
 												row={row}
 												tiers={tiers}
 												watchLabel={watchLabel}
+												playLabel={playLabel}
+												pauseLabel={pauseLabel}
+												videoTitle={videoTitle}
 											/>
 										))}
 								</React.Fragment>
@@ -129,6 +136,9 @@ export function PricingFull({
 									row={row}
 									tiers={tiers}
 									watchLabel={watchLabel}
+									playLabel={playLabel}
+									pauseLabel={pauseLabel}
+									videoTitle={videoTitle}
 								/>
 							))}
 						</tbody>
@@ -168,22 +178,16 @@ function PlanHeader({
 	tier: PricingTier;
 	isYearly: boolean;
 	popularLabel?: string;
-	customPriceLabel: string;
+	customPriceLabel?: string;
 	LinkComponent?: PricingFullProps["LinkComponent"];
 }) {
 	const hl = tier.highlighted;
 	const Icon = tier.icon;
-	const isCustomPrice = tier.price === "—" || tier.price === "-";
-	const displayPrice = isCustomPrice
-		? customPriceLabel
-		: isYearly && tier.yearlyPrice
-			? tier.yearlyPrice
-			: tier.price;
-	const displaySuffix = isCustomPrice
-		? undefined
-		: isYearly && tier.yearlyPriceSuffix
-			? tier.yearlyPriceSuffix
-			: tier.priceSuffix;
+	const {
+		price: displayPrice,
+		suffix: displaySuffix,
+		isCustom: isCustomPrice,
+	} = resolveTierDisplay(tier, isYearly, customPriceLabel);
 	const isEnterprise = isCustomPrice;
 
 	return (
@@ -322,10 +326,16 @@ function FeatureRow({
 	row,
 	tiers,
 	watchLabel,
+	playLabel,
+	pauseLabel,
+	videoTitle,
 }: {
 	row: FeatureMatrixRow;
 	tiers: PricingTier[];
-	watchLabel: string;
+	watchLabel?: string;
+	playLabel?: string;
+	pauseLabel?: string;
+	videoTitle?: string;
 }) {
 	const [videoOpen, setVideoOpen] = React.useState(false);
 
@@ -359,7 +369,7 @@ function FeatureRow({
 										</TooltipContent>
 									</Tooltip>
 								)}
-								{row.videoSrc && (
+								{row.videoSrc && watchLabel && (
 									<Button
 										variant="ghost"
 										size="sm"
@@ -428,6 +438,9 @@ function FeatureRow({
 							filename={row.label}
 							autoPlay
 							className="w-full"
+							playLabel={playLabel}
+							pauseLabel={pauseLabel}
+							videoTitle={videoTitle}
 						/>
 					</DialogContent>
 				</Dialog>
@@ -454,22 +467,16 @@ function MobilePlanCard({
 	groups: string[];
 	featureGroupLabels: Record<string, string>;
 	popularLabel?: string;
-	customPriceLabel: string;
+	customPriceLabel?: string;
 	LinkComponent?: PricingFullProps["LinkComponent"];
 }) {
 	const hl = tier.highlighted;
 	const Icon = tier.icon;
-	const isCustomPrice = tier.price === "—" || tier.price === "-";
-	const displayPrice = isCustomPrice
-		? customPriceLabel
-		: isYearly && tier.yearlyPrice
-			? tier.yearlyPrice
-			: tier.price;
-	const displaySuffix = isCustomPrice
-		? undefined
-		: isYearly && tier.yearlyPriceSuffix
-			? tier.yearlyPriceSuffix
-			: tier.priceSuffix;
+	const { price: displayPrice, suffix: displaySuffix } = resolveTierDisplay(
+		tier,
+		isYearly,
+		customPriceLabel,
+	);
 
 	const includedRows = featureMatrix.filter((r) => {
 		const val = r.values[tier.id];

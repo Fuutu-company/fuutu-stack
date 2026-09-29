@@ -1,8 +1,4 @@
-import type {
-	AnalyticsProvider,
-	AnalyticsProviderId,
-	AnalyticsScriptProps,
-} from "../types";
+import type { AnalyticsProvider, AnalyticsProviderId } from "../types";
 
 /**
  * Skeleton analytics providers — inactive in v1.
@@ -10,11 +6,13 @@ import type {
  * They are intentionally silent (vs. the storage skeletons which throw):
  * a missing analytics provider must never break a page render. Activation
  * happens by replacing the body with the real SDK call.
+ *
+ * Skeletons expose NO `getScriptProps` — <AnalyticsScript /> must only ever
+ * inject a script for the active functional provider (Umami). Shipping
+ * script props here would inject real third-party URLs with placeholder
+ * IDs after consent. The expected script tag is noted per provider below.
  */
-function makeSkeleton(
-	id: AnalyticsProviderId,
-	scriptProps?: AnalyticsScriptProps | null,
-): AnalyticsProvider {
+function makeSkeleton(id: AnalyticsProviderId): AnalyticsProvider {
 	return {
 		id,
 		trackEvent() {
@@ -23,26 +21,19 @@ function makeSkeleton(
 		trackPageview() {
 			// not implemented — skeleton provider
 		},
-		getScriptProps: scriptProps !== undefined ? () => scriptProps : undefined,
 	};
 }
 
-export const plausibleAnalyticsProvider = makeSkeleton("plausible", {
-	src: "https://plausible.io/js/script.js",
-	strategy: "afterInteractive",
-	attributes: { "data-domain": "example.com" },
-});
+/** Activate: inject `https://plausible.io/js/script.js` + `data-domain`. */
+export const plausibleAnalyticsProvider = makeSkeleton("plausible");
 
-export const pirschAnalyticsProvider = makeSkeleton("pirsch", null);
+/** Server-side only — no script tag needed on activation. */
+export const pirschAnalyticsProvider = makeSkeleton("pirsch");
 
-export const mixpanelAnalyticsProvider = makeSkeleton("mixpanel", {
-	src: "https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js",
-	strategy: "afterInteractive",
-});
+/** Activate: inject `https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js`. */
+export const mixpanelAnalyticsProvider = makeSkeleton("mixpanel");
 
-export const ga4AnalyticsProvider = makeSkeleton("ga4", {
-	src: "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX",
-	strategy: "afterInteractive",
-});
+/** Activate: inject `https://www.googletagmanager.com/gtag/js?id=<G-*>`. */
+export const ga4AnalyticsProvider = makeSkeleton("ga4");
 
-export const noopAnalyticsProvider = makeSkeleton("noop", null);
+export const noopAnalyticsProvider = makeSkeleton("noop");

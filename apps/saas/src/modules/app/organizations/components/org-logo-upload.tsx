@@ -91,6 +91,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 				bucket: storageConfig.buckets.organizationLogos,
 				key,
 				contentType: file.type,
+				contentLength: file.size,
 				organizationId: org.id,
 			});
 

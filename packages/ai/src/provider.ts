@@ -14,6 +14,12 @@ const log = createLogger({ scope: "ai:resolve" });
  * Resolve the API key for the active provider.
  * Falls back to the legacy `GOOGLE_GENERATIVE_AI_API_KEY` env var when the
  * provider is `google` and `AI_API_KEY` is not set.
+ *
+ * Convention exception (AGENTS §6 "one active, rest skeletons"): this
+ * package ships TWO functional providers — `openrouter` (v1 default) and
+ * `google` (functional but non-default, kept for users on the legacy
+ * `GOOGLE_GENERATIVE_AI_API_KEY` env var). `openai`/`anthropic` remain
+ * throwing skeletons; `noop` is the dev/test provider.
  */
 function resolveApiKey(provider: AIProviderId): string | undefined {
 	if (provider === "google") {
@@ -53,6 +59,7 @@ function getGoogleProvider(): AIProvider {
 		googleProvider = new GoogleProvider({
 			apiKey,
 			model: aiConfig.defaultModelFor("google"),
+			devtools: env.NODE_ENV === "development",
 		});
 	}
 	return googleProvider;

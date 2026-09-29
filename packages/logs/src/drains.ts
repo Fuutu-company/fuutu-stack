@@ -56,15 +56,18 @@ let drainPromise: Promise<DrainFn[]> | null = null;
  * so that packages which only use console logging never pull in
  * `evlog/sentry`, `evlog/axiom`, etc.
  *
- * Returns an array of drain functions. If no extra drains are configured,
- * returns an empty array — evlog's built-in console output handles it.
+ * Async — callers must await it, otherwise drains silently never attach.
+ * The in-flight promise is shared so concurrent calls trigger one load.
+ * If no extra drains are configured, resolves to an empty array — evlog's
+ * built-in console output handles it.
  */
-export function resolveDrains(): DrainFn[] {
-	if (cachedDrains) return cachedDrains;
+export function resolveDrains(): Promise<DrainFn[]> {
+	if (cachedDrains) return Promise.resolve(cachedDrains);
 	if (!drainPromise) {
 		drainPromise = (async () => {
+			const configured = logsConfig.drains;
 			const drains: DrainFn[] = [];
-			for (const id of logsConfig.drains) {
+			for (const id of configured) {
 				try {
 					const drain = await loadDrain(id);
 					if (drain) drains.push(drain);
@@ -75,13 +78,16 @@ export function resolveDrains(): DrainFn[] {
 					);
 				}
 			}
+			if (configured.length > 0 && drains.length === 0) {
+				console.warn(
+					`[logs] LOG_DRAIN is set (${configured.join(",")}) but no drain attached — console only.`,
+				);
+			}
 			cachedDrains = drains;
 			return drains;
 		})();
 	}
-	// Return empty until async load completes — evlog's console output
-	// is always active, so no logs are lost during the brief startup window.
-	return cachedDrains ?? [];
+	return drainPromise;
 }
 
 /**

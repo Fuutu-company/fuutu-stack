@@ -73,18 +73,32 @@ export const s3StorageProvider: StorageProvider = {
 	): Promise<SignedUploadResult> {
 		const client = getClient();
 		const expiresIn = input.expiresInSeconds ?? 600;
-		if (input.maxSizeBytes !== undefined && input.maxSizeBytes <= 0) {
-			throw new Error(
-				"[storage:s3] maxSizeBytes must be positive when provided.",
-			);
+		if (input.maxSizeBytes !== undefined) {
+			if (input.maxSizeBytes <= 0) {
+				throw new Error(
+					"[storage:s3] maxSizeBytes must be positive when provided.",
+				);
+			}
+			// A presigned PUT can only pin an exact Content-Length, never a
+			// range — so `maxSizeBytes` is a validation cap, not something we
+			// can sign into the URL. Enforcing it therefore requires the
+			// declared `contentLength`.
+			if (input.contentLength === undefined) {
+				throw new Error(
+					"[storage:s3] contentLength is required when maxSizeBytes is set.",
+				);
+			}
+			if (input.contentLength > input.maxSizeBytes) {
+				throw new Error(
+					`[storage:s3] contentLength (${input.contentLength}) exceeds maxSizeBytes (${input.maxSizeBytes}).`,
+				);
+			}
 		}
-		// Bake the exact Content-Length into the signature. The client
-		// must then send that same length or S3 rejects the upload with
+		// Bake the declared Content-Length into the signature. The client
+		// must send that same length or S3 rejects the upload with
 		// SignatureDoesNotMatch — closing the "signed URL, unbounded
-		// upload" hole. If the caller did not pre-compute a size, we
-		// fall back to per-request cap (`maxSizeBytes`) so tuned bucket
-		// policies still enforce the ceiling.
-		const signedContentLength = input.contentLength ?? input.maxSizeBytes;
+		// upload" hole.
+		const signedContentLength = input.contentLength;
 		const command = new PutObjectCommand({
 			Bucket: input.bucket,
 			Key: input.key,

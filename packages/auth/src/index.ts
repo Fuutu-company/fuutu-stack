@@ -1,6 +1,6 @@
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import { prismaAuditSink } from "@fuutu/db";
+import { getUserByEmail, prismaAuditSink } from "@fuutu/db";
 import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
 import { createLogger, logsConfig, setAuditSink } from "@fuutu/logs";
@@ -8,6 +8,7 @@ import { createCustomerForUser } from "@fuutu/payments";
 import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { createAuthMiddleware } from "better-auth/api";
 import {
 	admin,
 	lastLoginMethod,
@@ -21,11 +22,13 @@ import {
 import { authConfig } from "./config";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
 import { assertInvitationForSignup } from "./hooks/invitation-only";
+import { assertPasswordPolicy } from "./hooks/password-policy";
 import {
 	cancelActiveSubscriptionsForOrganization,
 	cancelActiveSubscriptionsForUser,
 	syncSeatsForOrganization,
 } from "./hooks/payments-sync";
+import { assertSignupPolicy } from "./hooks/signup-policy";
 import { sendEmail } from "./lib/email";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
@@ -123,8 +126,18 @@ const authOptions = {
 		},
 	},
 
+	// Server-side enforcement of authConfig.passwordPolicy complexity rules
+	// (Better-Auth itself only checks min/max length). Runs for every
+	// endpoint that carries a plaintext password.
+	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			assertPasswordPolicy(ctx.path, ctx.body);
+		}),
+	},
+
 	emailAndPassword: {
 		enabled: authConfig.features.emailPassword,
+		disableSignUp: !authConfig.signup.enabled,
 		autoSignIn: !authConfig.signup.requireEmailVerification,
 		requireEmailVerification: authConfig.signup.requireEmailVerification,
 		minPasswordLength: authConfig.passwordPolicy.minLength,
@@ -219,8 +232,10 @@ const authOptions = {
 	databaseHooks: {
 		user: {
 			create: {
-				before: async (user) => {
-					// Invitation-only sign-up gate.
+				before: async (user, ctx) => {
+					// authConfig.signup gate (enabled / allowedDomains) on
+					// self-service paths, then the invitation-only gate.
+					assertSignupPolicy({ email: user.email }, ctx);
 					await assertInvitationForSignup({ email: user.email });
 				},
 				after: async (user) => {
@@ -250,6 +265,20 @@ const authOptions = {
 						});
 					} catch (err) {
 						log.warn("welcome email failed", { err: String(err) });
+					}
+					// Notify subscribed webhook endpoints. Best-effort —
+					// a dispatch failure must never abort sign-up.
+					try {
+						const { dispatchEvent } = await import("@fuutu/webhooks");
+						await dispatchEvent({
+							event: "user.created",
+							userId: user.id,
+							payload: { userId: user.id },
+						});
+					} catch (err) {
+						log.warn("user.created webhook dispatch failed", {
+							err: String(err),
+						});
 					}
 				},
 			},
@@ -287,7 +316,8 @@ const authOptions = {
 		username(),
 
 		// OpenAPI doc endpoint at `/api/auth/reference` (+ `/api/auth/open-api/generate-schema`).
-		openAPI(),
+		// Dev/staging only — not exposed in production.
+		...(env.NODE_ENV !== "production" ? [openAPI()] : []),
 
 		// Passkeys (WebAuthn). Since better-auth 1.5 this lives in
 		// its own dedicated package (`@better-auth/passkey`).
@@ -304,19 +334,28 @@ const authOptions = {
 		...(config.features.organizationsMode !== "off"
 			? [
 					organization({
-						async sendInvitationEmail({ email, id, organization }) {
+						async sendInvitationEmail({ email, id, organization, inviter }) {
 							const inviteUrl = `${env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000"}/auth/accept-invitation?id=${id}`;
-							await sendEmail({
-								to: email,
-								template: "organization-invitation",
-								data: {
-									organizationName: organization.name,
-									inviteUrl,
-								},
-							});
+							try {
+								await sendEmail({
+									to: email,
+									template: "organization-invitation",
+									data: {
+										organizationName: organization.name,
+										inviteUrl,
+										inviterName: inviter.user.name,
+										locale: (inviter.user as { locale?: "en" | "de" }).locale,
+									},
+								});
+							} catch (err) {
+								log.warn("invitation email failed", { err: String(err) });
+							}
 						},
 						// Sync seats with the payment provider on membership changes.
 						organizationHooks: {
+							afterAddMember: async ({ member }) => {
+								await syncSeatsForOrganization(member.organizationId);
+							},
 							afterAcceptInvitation: async ({ invitation }) => {
 								await syncSeatsForOrganization(invitation.organizationId);
 							},
@@ -347,15 +386,22 @@ const authOptions = {
 		...(authConfig.features.magicLink
 			? [
 					magicLink({
+						disableSignUp: !authConfig.signup.enabled,
 						sendMagicLink: async ({ email, url }) => {
-							await sendEmail({
-								to: email,
-								subject: "Sign in to your account",
-								template: "magic-link",
-								data: {
-									magicLinkUrl: url,
-								},
-							});
+							try {
+								const recipient = await getUserByEmail(email);
+								await sendEmail({
+									to: email,
+									template: "magic-link",
+									data: {
+										magicLinkUrl: url,
+										locale: (recipient as { locale?: "en" | "de" } | null)
+											?.locale,
+									},
+								});
+							} catch (err) {
+								log.warn("magic link email failed", { err: String(err) });
+							}
 						},
 					}),
 				]

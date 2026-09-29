@@ -6,7 +6,7 @@ import {
 	KIT_NAME,
 	KIT_VERSION,
 } from "@fuutu/config";
-import { runAllJobs } from "@fuutu/cron";
+import { runAllJobs, runJob } from "@fuutu/cron";
 import { env } from "@fuutu/env/saas";
 import { checkLicense } from "@fuutu/license";
 import { createLogger } from "@fuutu/logs";
@@ -135,6 +135,13 @@ export const app = new Hono()
 			timingSafeEqual(Buffer.from(header), Buffer.from(expected));
 		if (!ok) {
 			return c.json({ error: "unauthorized" }, 401);
+		}
+		// `?job=<name>` force-runs a single job regardless of its schedule;
+		// without it all due jobs run.
+		const jobName = c.req.query("job");
+		if (jobName) {
+			const result = await runJob(jobName);
+			return c.json({ ok: result.success, result });
 		}
 		const results = await runAllJobs();
 		return c.json({ ok: true, results });

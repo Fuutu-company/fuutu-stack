@@ -1,5 +1,6 @@
 import { listAuditLogs } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
+import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
 
 /**
@@ -16,6 +17,7 @@ export const listRecentActivityProcedure = permissionProcedure(
 		summary: "Recent activity",
 		description: "Last 10 audit-log entries for the current user.",
 	})
+	.input(z.object({}).optional())
 	.handler(async ({ context }) => {
 		const userId = context.user.id;
 		const items = await listAuditLogs({ userId, take: 10, skip: 0 });

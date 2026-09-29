@@ -4,6 +4,7 @@ import { FrameChrome } from "./frame-chrome";
 import { FrameContent } from "./frame-content";
 import { FrameIphone } from "./frame-iphone";
 import type { MediaFrameProps } from "./types";
+import { resolveAutoFilename } from "./utils";
 
 /**
  * Flexible media frame — placeholder, image, video, iframe, or custom children.
@@ -46,16 +47,16 @@ export function MediaFrame({
 	className,
 	expandable = false,
 	expandLabel,
+	playLabel,
+	pauseLabel,
+	videoTitle,
 }: MediaFrameProps) {
-	const autoFilename =
-		filename ??
-		(imageSrc
-			? (imageSrc.split("/").pop() ?? "app.localhost")
-			: videoSrc
-				? "video.embed"
-				: iframeSrc
-					? iframeSrc.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
-					: "app.localhost");
+	const autoFilename = resolveAutoFilename({
+		filename,
+		imageSrc,
+		videoSrc,
+		iframeSrc,
+	});
 
 	let frameContent: React.ReactNode;
 
@@ -77,6 +78,9 @@ export function MediaFrame({
 				width={width}
 				className={className}
 				autoFilename={autoFilename}
+				playLabel={playLabel}
+				pauseLabel={pauseLabel}
+				videoTitle={videoTitle}
 			>
 				{children}
 			</FrameIphone>
@@ -100,6 +104,9 @@ export function MediaFrame({
 				width={width}
 				className={className}
 				autoFilename={autoFilename}
+				playLabel={playLabel}
+				pauseLabel={pauseLabel}
+				videoTitle={videoTitle}
 			>
 				{children}
 			</FrameChrome>
@@ -125,6 +132,9 @@ export function MediaFrame({
 					height={height}
 					contentClassName={contentClassName}
 					rounded="rounded-2xl"
+					playLabel={playLabel}
+					pauseLabel={pauseLabel}
+					videoTitle={videoTitle}
 				>
 					{children}
 				</FrameContent>

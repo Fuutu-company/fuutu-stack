@@ -1,4 +1,5 @@
 import { createLogger } from "@fuutu/logs";
+import type { StorageBuckets } from "./config";
 import { storageConfig } from "./config";
 import { s3StorageProvider } from "./providers/s3";
 import {
@@ -101,4 +102,19 @@ export function resolveBucket(bucket: string): string {
 		throw new StorageBucketError(bucket);
 	}
 	return bucket;
+}
+
+/**
+ * Returns the configured upload-size cap (bytes) for a physical bucket
+ * name. Same gate as `resolveBucket` — throws `StorageBucketError` when
+ * the bucket is not in `storageConfig.buckets`.
+ */
+export function resolveMaxUploadBytes(bucket: string): number {
+	const entry = (
+		Object.entries(storageConfig.buckets) as [keyof StorageBuckets, string][]
+	).find(([, physical]) => physical === bucket);
+	if (!entry) {
+		throw new StorageBucketError(bucket);
+	}
+	return storageConfig.maxUploadBytes[entry[0]];
 }

@@ -50,7 +50,10 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 	switch (event.type) {
 		case "checkout.session.completed": {
 			const session = event.data.object as Stripe.Checkout.Session;
-			const subscriptionId = session.subscription as string | null;
+			const subscriptionId =
+				typeof session.subscription === "string"
+					? session.subscription
+					: (session.subscription?.id ?? null);
 			if (subscriptionId) {
 				// Subscription checkout — pass through so subscription.created
 				// handler picks it up. But we attach the session metadata so
@@ -58,16 +61,34 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 				return [
 					{
 						type: "checkout.completed",
+						eventId: event.id,
 						subscriptionId,
-						customerId: session.customer as string,
+						customerId:
+							typeof session.customer === "string"
+								? session.customer
+								: session.customer?.id,
 						metadata: session.metadata ?? undefined,
 					},
 				];
 			}
+			// One-time payment — the session payload carries no productId, so
+			// resolve the purchased price via the session's line items. A
+			// Stripe API error propagates → non-2xx → Stripe retries.
+			const client = getClient();
+			const lineItems = await client.checkout.sessions.listLineItems(
+				session.id,
+				{ limit: 1 },
+			);
+			const productId = lineItems.data[0]?.price?.id ?? undefined;
 			return [
 				{
 					type: "checkout.completed",
-					customerId: session.customer as string,
+					eventId: event.id,
+					customerId:
+						typeof session.customer === "string"
+							? session.customer
+							: session.customer?.id,
+					productId,
 					metadata: session.metadata ?? undefined,
 				},
 			];
@@ -78,6 +99,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 			return [
 				{
 					type: "subscription.activated",
+					eventId: event.id,
 					subscriptionId: subscription.id,
 					customerId: subscription.customer as string,
 					productId: subscription.items.data[0]?.price.id,
@@ -95,6 +117,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 			return [
 				{
 					type: "subscription.updated",
+					eventId: event.id,
 					subscriptionId: subscription.id,
 					customerId: subscription.customer as string,
 					productId: subscription.items.data[0]?.price.id,
@@ -112,6 +135,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 			return [
 				{
 					type: "subscription.canceled",
+					eventId: event.id,
 					subscriptionId: subscription.id,
 					customerId: subscription.customer as string,
 					status: "CANCELED",
@@ -133,6 +157,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 				return [
 					{
 						type: "subscription.renewed",
+						eventId: event.id,
 						subscriptionId,
 						customerId: invoice.customer as string,
 						status: "ACTIVE",
@@ -158,6 +183,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 				return [
 					{
 						type: "subscription.past_due",
+						eventId: event.id,
 						subscriptionId,
 						customerId: invoice.customer as string,
 						status: "PAST_DUE",

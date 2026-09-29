@@ -48,10 +48,9 @@ export const adminProcedure = permissionProcedure(PERMISSIONS.VIEW_ADMIN);
  * Checks the user's SYSTEM role (context.user.role) against SYSTEM_POLICY.
  *
  * This checks "is this user a system admin?" — NOT "is this user admin in org X?".
- * For org-scoped checks, use requireOrgPermissionAccess() in the handler.
- *
- * @deprecated Prefer `authProcedure({ systemPermission })` for new code.
- * Kept for backward compatibility — all existing procedures still work.
+ * For org-scoped checks, use requireOrgPermissionAccess() in the handler,
+ * or `authProcedure({ systemPermission, ... })` when you also need org /
+ * plan / limit resolution on the context.
  */
 export function permissionProcedure(permission: KnownPermission) {
 	return protectedProcedure.use(async ({ context, next }) => {

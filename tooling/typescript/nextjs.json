@@ -2,6 +2,12 @@
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"display": "Fuutu Next.js",
 	"extends": "./base.json",
+	"//": [
+		"Deliberate relaxations vs base.json (app glue code only — packages keep full strictness):",
+		"target ES2017 — create-next-app default; Next.js transpiles bundles itself, so a lower target only widens browser support, never weakens type-checking.",
+		"noUncheckedIndexedAccess off — app code does frequent positional/dict access (params, searchParams, segmented arrays); enabling it would force pervasive ?? guards across every route/component with no real safety gain at the app layer.",
+		"noUnusedLocals/noUnusedParameters off — Next.js route/lifecycle signatures (generateMetadata, layout params, unused request args) legitimately carry unused vars; Biome noUnusedVariables already reports real dead code at lint level."
+	],
 	"compilerOptions": {
 		"target": "ES2017",
 		"lib": ["dom", "dom.iterable", "esnext"],

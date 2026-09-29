@@ -1,12 +1,12 @@
 "use client";
 
+import { config } from "@fuutu/config";
 import { i18nConfig } from "@fuutu/i18n/config";
 import { PLAN_IDS } from "@fuutu/payments/config";
 import { StatsCard } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Globe, Layers, Tags } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { SWAPPABLE_DOMAINS_COUNT } from "@/lib/api-stats";
 import { orpc } from "@/utils/orpc";
 
 export function StatsOverview() {
@@ -29,7 +29,7 @@ export function StatsOverview() {
 		},
 		{
 			title: t("stats.providersSwappable"),
-			value: String(SWAPPABLE_DOMAINS_COUNT),
+			value: String(config.app.swappableDomains.length),
 			description: t("stats.providersSwappableDescription"),
 			icon: Layers,
 		},

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mock evlog's log so we can assert calls without real output.
 // vi.mock is hoisted to top of file by Vitest, so we use a factory.
@@ -23,6 +23,13 @@ const mockLog = evlogLog as unknown as {
 	error: ReturnType<typeof vi.fn>;
 	debug: ReturnType<typeof vi.fn>;
 };
+
+const ORIGINAL_LOG_LEVEL = process.env.LOG_LEVEL;
+
+afterEach(() => {
+	if (ORIGINAL_LOG_LEVEL === undefined) delete process.env.LOG_LEVEL;
+	else process.env.LOG_LEVEL = ORIGINAL_LOG_LEVEL;
+});
 
 describe("createLogger (compat facade)", () => {
 	it("returns a Logger with all 4 levels", () => {
@@ -67,6 +74,7 @@ describe("createLogger (compat facade)", () => {
 	});
 
 	it("delegates all levels correctly", () => {
+		process.env.LOG_LEVEL = "debug";
 		mockLog.debug.mockClear();
 		mockLog.info.mockClear();
 		mockLog.warn.mockClear();
@@ -80,6 +88,25 @@ describe("createLogger (compat facade)", () => {
 
 		expect(mockLog.debug).toHaveBeenCalledWith("s", "d");
 		expect(mockLog.info).toHaveBeenCalledWith("s", "i");
+		expect(mockLog.warn).toHaveBeenCalledWith("s", "w");
+		expect(mockLog.error).toHaveBeenCalledWith("s", "e");
+	});
+
+	it("filters out levels below LOG_LEVEL", () => {
+		process.env.LOG_LEVEL = "warn";
+		mockLog.debug.mockClear();
+		mockLog.info.mockClear();
+		mockLog.warn.mockClear();
+		mockLog.error.mockClear();
+
+		const log = createLogger({ scope: "s" });
+		log.debug("d");
+		log.info("i");
+		log.warn("w");
+		log.error("e");
+
+		expect(mockLog.debug).not.toHaveBeenCalled();
+		expect(mockLog.info).not.toHaveBeenCalled();
 		expect(mockLog.warn).toHaveBeenCalledWith("s", "w");
 		expect(mockLog.error).toHaveBeenCalledWith("s", "e");
 	});

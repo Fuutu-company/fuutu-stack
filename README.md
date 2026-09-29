@@ -186,7 +186,7 @@ The AI agent harness — 28 skills, 5 subagents, 21 rules — is delivered via t
 
 | Layer | Count | What it does |
 |---|---|---|
-| **Skills** | 28 | TDD, brainstorming, systematic-debugging, browser-verification, self-learning, commit-proposal, codebase-graph, review… — auto-invoked based on task context |
+| **Skills** | 27 | TDD, brainstorming, systematic-debugging, browser-verification, self-learning, commit-proposal, review… — auto-invoked based on task context |
 | **Subagents** | 5 | `harvest` (scan/grep/read) · `implementer` (code/TDD) · `verifier` (run/parse) · `synthesizer` (cross-ref) · `designer` (architecture) — cost-tiered, parallel dispatch |
 | **Rules** | 21 | global, auth, backend, frontend, ui, testing, security, i18n, rbac, logging, license, review… — enforced, not suggestions |
 | **Multi-host** | 4 editors | Cursor · Devin · Windsurf · VS Code |

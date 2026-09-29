@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mailgunProvider } from "../providers/mailgun";
 import { nodemailerProvider } from "../providers/nodemailer";
 import { postmarkProvider } from "../providers/postmark";
-import { testEmailProviderContract } from "./provider-contract.test";
+import { testEmailProviderContract } from "./provider-contract";
 
 testEmailProviderContract("mailgun", () => mailgunProvider, {
 	sendBehavior: "throws",

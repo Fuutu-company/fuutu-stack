@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
+import { getTranslations } from "next-intl/server";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+	const t = await getTranslations("app");
 	return {
-		name: "Fuutu Stack",
-		short_name: "Fuutu Stack",
-		description: "Fuutu Stack - Modern SaaS Starter",
+		name: t("brand"),
+		short_name: t("brand"),
+		description: t("description"),
 		start_url: "/",
 		display: "standalone",
 		background_color: "#ffffff",

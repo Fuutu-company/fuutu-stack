@@ -52,6 +52,7 @@ export function FeatureShowcase({
 }: FeatureShowcaseProps) {
 	const t = useTranslations("home.features.items");
 	const tExpand = useTranslations("home.features");
+	const tCommon = useTranslations("common");
 	const [activeIdx, setActiveIdx] = useState(0);
 
 	if (!items.length) return null;
@@ -126,6 +127,9 @@ export function FeatureShowcase({
 											imageAlt={chromeFrame.imageAlt}
 											videoSrc={chromeFrame.videoSrc}
 											iframeSrc={chromeFrame.iframeSrc}
+											playLabel={tCommon("play")}
+											pauseLabel={tCommon("pause")}
+											videoTitle={tCommon("video")}
 											size="1280 × 720"
 											sizePosition="bottom-left"
 											width="100%"
@@ -286,6 +290,9 @@ export function FeatureShowcase({
 										imageAlt={chromeFrame.imageAlt}
 										videoSrc={chromeFrame.videoSrc}
 										iframeSrc={chromeFrame.iframeSrc}
+										playLabel={tCommon("play")}
+										pauseLabel={tCommon("pause")}
+										videoTitle={tCommon("video")}
 										size="1280 × 720"
 										sizePosition="bottom-left"
 										width="100%"

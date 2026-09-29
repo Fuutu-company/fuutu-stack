@@ -33,6 +33,10 @@
 		"webhooks": "Webhooks",
 		"auditLog": "Audit log",
 		"invoices": "Invoices",
+		"sidebar": {
+			"title": "Sidebar",
+			"description": "Displays the mobile sidebar."
+		},
 		"aria": {
 			"toggleNavigation": "Toggle navigation",
 			"toggleTheme": "Toggle theme",

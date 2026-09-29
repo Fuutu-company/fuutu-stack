@@ -35,6 +35,7 @@ const ITEM_VARIANT = {
 export function FeatureRow({ items, heading, subheading }: FeatureRowProps) {
 	const t = useTranslations("home.features.items");
 	const tExpand = useTranslations("home.features");
+	const tCommon = useTranslations("common");
 	return (
 		<section className="py-20 md:py-28">
 			<div className="container mx-auto max-w-6xl px-4">
@@ -94,6 +95,9 @@ export function FeatureRow({ items, heading, subheading }: FeatureRowProps) {
 										imageAlt={frame.imageAlt}
 										videoSrc={frame.videoSrc}
 										iframeSrc={frame.iframeSrc}
+										playLabel={tCommon("play")}
+										pauseLabel={tCommon("pause")}
+										videoTitle={tCommon("video")}
 										size="1280 × 720"
 										sizePosition="bottom-left"
 										width="100%"

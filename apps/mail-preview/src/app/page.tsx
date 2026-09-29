@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { LOCALES, renderFixture, TEMPLATES } from "../fixtures";
 
 /**
@@ -68,19 +69,19 @@ export default function Home() {
 	);
 }
 
-const cell: React.CSSProperties = {
+const cell: CSSProperties = {
 	padding: "12px 16px",
 	fontSize: 14,
 	verticalAlign: "top",
 };
-const cellHead: React.CSSProperties = {
+const cellHead: CSSProperties = {
 	...cell,
 	textAlign: "left",
 	fontWeight: 600,
 	fontSize: 13,
 	color: "#374151",
 };
-const link: React.CSSProperties = {
+const link: CSSProperties = {
 	color: "#2563eb",
 	textDecoration: "none",
 	fontWeight: 500,

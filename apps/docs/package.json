@@ -18,10 +18,10 @@
 		"@iconify/icons-circle-flags": "catalog:",
 		"@iconify/react": "catalog:",
 		"@scalar/api-client-react": "catalog:",
-		"fumadocs-core": "16.14.0",
-		"fumadocs-mdx": "15.2.2",
+		"fumadocs-core": "catalog:",
+		"fumadocs-mdx": "catalog:",
 		"fumadocs-openapi": "catalog:",
-		"fumadocs-ui": "16.14.0",
+		"fumadocs-ui": "catalog:",
 		"geist": "catalog:",
 		"lucide-react": "catalog:",
 		"next": "catalog:",
@@ -29,7 +29,6 @@
 		"next-themes": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
-		"tailwind-merge": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

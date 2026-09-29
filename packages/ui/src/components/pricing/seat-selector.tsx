@@ -5,6 +5,13 @@ import type * as React from "react";
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { Input } from "../input";
+import {
+	clampSeatCount,
+	computeSeatTotal,
+	resolveSeatLabel,
+	SEAT_MAX,
+	SEAT_MIN,
+} from "./utils";
 
 export interface SeatSelectorTranslations {
 	title: string;
@@ -26,9 +33,6 @@ export interface SeatSelectorProps {
 	className?: string;
 }
 
-const MIN_SEATS = 1;
-const MAX_SEATS = 100;
-
 export function SeatSelector({
 	seatCount,
 	onChange,
@@ -39,13 +43,13 @@ export function SeatSelector({
 	className,
 }: SeatSelectorProps) {
 	const handleDecrement = () => {
-		if (seatCount > MIN_SEATS) {
+		if (seatCount > SEAT_MIN) {
 			onChange(seatCount - 1);
 		}
 	};
 
 	const handleIncrement = () => {
-		if (seatCount < MAX_SEATS) {
+		if (seatCount < SEAT_MAX) {
 			onChange(seatCount + 1);
 		}
 	};
@@ -53,14 +57,13 @@ export function SeatSelector({
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = Number.parseInt(e.target.value, 10);
 		if (Number.isNaN(value)) return;
-		const clamped = Math.max(MIN_SEATS, Math.min(MAX_SEATS, value));
-		onChange(clamped);
+		onChange(clampSeatCount(value));
 	};
 
-	const total = (pricePerSeat * seatCount) / 100; // Convert cents to dollars
+	const total = computeSeatTotal(pricePerSeat, seatCount);
 	const intervalLabel =
 		interval === "month" ? translations.perMonth : translations.perYear;
-	const seatLabel = seatCount === 1 ? translations.seat : translations.seats;
+	const seatLabel = resolveSeatLabel(seatCount, translations);
 
 	return (
 		<div className={cn("space-y-3", className)}>
@@ -77,7 +80,7 @@ export function SeatSelector({
 					variant="outline"
 					size="icon"
 					onClick={handleDecrement}
-					disabled={seatCount <= MIN_SEATS}
+					disabled={seatCount <= SEAT_MIN}
 					className="size-8"
 				>
 					<Minus className="size-4" />
@@ -85,8 +88,8 @@ export function SeatSelector({
 
 				<Input
 					type="number"
-					min={MIN_SEATS}
-					max={MAX_SEATS}
+					min={SEAT_MIN}
+					max={SEAT_MAX}
 					value={seatCount}
 					onChange={handleInputChange}
 					className="w-20 text-center"
@@ -97,7 +100,7 @@ export function SeatSelector({
 					variant="outline"
 					size="icon"
 					onClick={handleIncrement}
-					disabled={seatCount >= MAX_SEATS}
+					disabled={seatCount >= SEAT_MAX}
 					className="size-8"
 				>
 					<Plus className="size-4" />

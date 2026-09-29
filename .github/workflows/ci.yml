@@ -102,7 +102,6 @@ jobs:
 
       - name: Run translation checks
         id: check-translations
-        continue-on-error: true
         run: |
           echo "## Translation Checks" > /tmp/translation-report.md
           echo "" >> /tmp/translation-report.md
@@ -115,6 +114,7 @@ jobs:
             cat /tmp/check-translations.log >> /tmp/translation-report.md
             echo '```' >> /tmp/translation-report.md
             echo "TRANSLATION_ISSUES=1" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
       - name: Post PR comment if issues found
@@ -129,7 +129,7 @@ jobs:
               '',
               report,
               '',
-              '> The pipeline did **not** fail — this is a warning only. Fix the issues above before merging.',
+              '> The translations job **fails** on these issues — fix them before merging.',
             ].join('\n');
             github.rest.issues.createComment({
               ...context.repo,

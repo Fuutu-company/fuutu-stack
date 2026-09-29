@@ -150,6 +150,21 @@ model WebhookDelivery {
   @@schema("app")
 }
 
+// Tracks the last execution of each registered @fuutu/cron job so the
+// inline runner can honor per-job schedules across process restarts.
+model CronJobRun {
+  id         String   @id @default(cuid())
+  jobKey     String   @unique
+  lastRunAt  DateTime
+  lastStatus String // "success" | "error"
+  lastError  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("cron_job_run")
+  @@schema("app")
+}
+
 model Notification {
   id        String    @id @default(cuid())
   userId    String

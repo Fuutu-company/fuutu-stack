@@ -40,6 +40,12 @@ export type ProviderEventType =
  */
 export interface ProviderEvent {
 	type: ProviderEventType;
+	/**
+	 * Provider-side event/delivery id (Stripe `event.id`, Creem `id`,
+	 * Polar `webhook-id` header). Used to deduplicate one-time
+	 * `checkout.completed` redeliveries.
+	 */
+	eventId?: string;
 	subscriptionId?: string;
 	customerId?: string;
 	/** Provider-side product/price ID — mapped to a PlanId via config. */

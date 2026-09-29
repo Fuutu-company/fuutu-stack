@@ -14,7 +14,7 @@ vi.mock("@fuutu/logs", () => ({
 }));
 
 const { consoleProvider } = await import("../providers/console");
-const { testEmailProviderContract } = await import("./provider-contract.test");
+const { testEmailProviderContract } = await import("./provider-contract");
 type EmailMessage = import("../types").EmailMessage;
 
 testEmailProviderContract("console", () => consoleProvider, {

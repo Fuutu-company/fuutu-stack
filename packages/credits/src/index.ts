@@ -16,6 +16,11 @@ export {
 	grantTopUpCredits,
 } from "./grant";
 export {
+	CREDIT_METERS,
+	type CreditMeter,
+	getMeter,
+} from "./meters";
+export {
 	ResetRecurringCreditsSchema,
 	resetRecurringCredits,
 } from "./reset";

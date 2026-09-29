@@ -32,6 +32,9 @@ catalog:
   geist: ^1.7.2
   "lucide-react": ^1.28.0
   # Docs (Fumadocs)
+  "fumadocs-core": 16.14.0
+  "fumadocs-mdx": 15.2.2
+  "fumadocs-ui": 16.14.0
   "fumadocs-openapi": ^11.2.2
   "@scalar/api-client-react": ^2.0.30
   ogl: ^1.0.9

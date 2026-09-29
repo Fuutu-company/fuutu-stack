@@ -3,6 +3,7 @@ import {
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
 import { env } from "@fuutu/env/docs";
+import { i18nConfig } from "@fuutu/i18n/config";
 import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
@@ -68,11 +69,11 @@ const nextConfig: NextConfig = {
 		return [
 			{
 				source: "/docs/:path*.mdx",
-				destination: "/llms.mdx/docs/:path*",
+				destination: `/llms.mdx/${i18nConfig.defaultLocale}/docs/:path*`,
 			},
 			{
 				source: "/:locale(en|de)/docs/:path*.mdx",
-				destination: "/llms.mdx/docs/:path*",
+				destination: "/llms.mdx/:locale/docs/:path*",
 			},
 		];
 	},

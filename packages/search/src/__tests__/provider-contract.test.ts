@@ -21,6 +21,7 @@ export function testSearchProviderContract(
 		const query: SearchQuery = {
 			text: "test query",
 			limit: 10,
+			userId: "user-1",
 		};
 
 		it("exposes a non-empty id", () => {

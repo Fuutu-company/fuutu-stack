@@ -15,6 +15,7 @@ import {
 	ExternalLinkIcon,
 	MessageCircleIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 const cache = new Map<string, string>();
@@ -27,6 +28,7 @@ export function LLMCopyButton({
 }: {
 	markdownUrl: string;
 }) {
+	const t = useTranslations("pageActions");
 	const [isLoading, setLoading] = useState(false);
 	const [checked, onClick] = useCopyButton(async () => {
 		const cached = cache.get(markdownUrl);
@@ -64,7 +66,7 @@ export function LLMCopyButton({
 			onClick={onClick}
 		>
 			{checked ? <Check /> : <Copy />}
-			Copy Markdown
+			{t("copyMarkdown")}
 		</button>
 	);
 }
@@ -83,6 +85,7 @@ export function ViewOptions({
 	 */
 	githubUrl: string;
 }) {
+	const t = useTranslations("pageActions");
 	const items = useMemo(() => {
 		const fullMarkdownUrl =
 			typeof window !== "undefined"
@@ -92,7 +95,7 @@ export function ViewOptions({
 
 		return [
 			{
-				title: "Open in GitHub",
+				title: t("openInGithub"),
 				href: githubUrl,
 				icon: (
 					<svg fill="currentColor" role="img" viewBox="0 0 24 24">
@@ -102,7 +105,7 @@ export function ViewOptions({
 				),
 			},
 			{
-				title: "Open in Scira AI",
+				title: t("openInScira"),
 				href: `https://scira.ai/?${new URLSearchParams({
 					q,
 				})}`,
@@ -166,7 +169,7 @@ export function ViewOptions({
 				),
 			},
 			{
-				title: "Open in ChatGPT",
+				title: t("openInChatGpt"),
 				href: `https://chatgpt.com/?${new URLSearchParams({
 					hints: "search",
 					q,
@@ -184,7 +187,7 @@ export function ViewOptions({
 				),
 			},
 			{
-				title: "Open in Claude",
+				title: t("openInClaude"),
 				href: `https://claude.ai/new?${new URLSearchParams({
 					q,
 				})}`,
@@ -201,14 +204,14 @@ export function ViewOptions({
 				),
 			},
 			{
-				title: "Open in T3 Chat",
+				title: t("openInT3Chat"),
 				href: `https://t3.chat/new?${new URLSearchParams({
 					q,
 				})}`,
 				icon: <MessageCircleIcon />,
 			},
 		];
-	}, [githubUrl, markdownUrl]);
+	}, [githubUrl, markdownUrl, t]);
 
 	return (
 		<Popover>
@@ -221,7 +224,7 @@ export function ViewOptions({
 					}),
 				)}
 			>
-				Open
+				{t("open")}
 				<ChevronDown className="size-3.5 text-fd-muted-foreground" />
 			</PopoverTrigger>
 			<PopoverContent className="flex flex-col">

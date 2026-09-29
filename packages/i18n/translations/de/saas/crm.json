@@ -57,6 +57,10 @@
 		"companyPlaceholder": "Unternehmensname",
 		"phonePlaceholder": "+49 234 567 890",
 		"notesPlaceholder": "Zusätzliche Notizen…",
-		"selectStatus": "Status auswählen"
+		"selectStatus": "Status auswählen",
+		"nameRequired": "Name ist erforderlich",
+		"emailInvalid": "Geben Sie eine gültige E-Mail-Adresse ein",
+		"fieldTooLong": "Wert ist zu lang",
+		"statusInvalid": "Wählen Sie einen gültigen Status"
 	}
 }

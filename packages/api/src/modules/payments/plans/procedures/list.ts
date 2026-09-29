@@ -1,4 +1,5 @@
 import { buildPricingTiers } from "@fuutu/payments/plans";
+import { z } from "zod";
 import { publicProcedure } from "../../../../orpc";
 
 /**
@@ -31,6 +32,7 @@ export const listPlans = publicProcedure
 		summary: "List pricing plans",
 		description: "Returns all available pricing tiers for the SaaS audience.",
 	})
+	.input(z.object({}).optional())
 	.handler(async () => {
 		const tiers = buildPricingTiers({
 			audience: "saas",

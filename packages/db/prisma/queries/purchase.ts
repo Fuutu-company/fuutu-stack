@@ -42,6 +42,22 @@ export const getPurchaseByProviderSubscriptionId = (
 		where: { provider_subscriptionId: { provider, subscriptionId } },
 	});
 
+/**
+ * Idempotency lookup for one-time checkouts: `metadata.checkoutEventId`
+ * stores the provider's webhook event id (set by webhook sync). A partial
+ * unique index on (provider, metadata->>'checkoutEventId') backs this.
+ */
+export const getPurchaseByCheckoutEventId = (
+	provider: string,
+	checkoutEventId: string,
+) =>
+	db.purchase.findFirst({
+		where: {
+			provider,
+			metadata: { path: ["checkoutEventId"], equals: checkoutEventId },
+		},
+	});
+
 export const getTrialingSubscriptions = () =>
 	db.purchase.findMany({
 		where: { type: "SUBSCRIPTION", status: "TRIALING" },

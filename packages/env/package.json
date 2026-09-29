@@ -8,10 +8,13 @@
 		"./marketing": "./src/marketing.ts",
 		"./docs": "./src/docs.ts"
 	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
 	"dependencies": {
 		"@t3-oss/env-core": "catalog:",
 		"@t3-oss/env-nextjs": "catalog:",
-		"dotenv": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

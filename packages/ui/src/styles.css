@@ -1,14 +1,13 @@
 /**
  * @fuutu/ui - Base Styles
  *
- * Theme variables are defined in @fuutu/config/theme.css
- * This file only contains Tailwind directives for the UI package.
+ * Theme variables are defined in @fuutu/config/theme.css.
+ * This file is the Tailwind v4 CSS entry referenced by components.json
+ * (shadcn CLI). Apps import @fuutu/config/theme.css via their globals.css —
+ * this file is not bundled into any app.
  */
 
+@import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;

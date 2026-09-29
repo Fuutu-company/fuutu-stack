@@ -16,8 +16,10 @@ vi.mock("@fuutu/env/saas", () => ({
 	),
 }));
 
-const { __resetLicenseCache, checkLicense, getLicenseMode, hashLicenseKey } =
-	await import("../index");
+const { __resetLicenseCache } = await import("../check");
+const { checkLicense, getLicenseMode, hashLicenseKey } = await import(
+	"../index"
+);
 
 const originalFetch = globalThis.fetch;
 
@@ -112,6 +114,25 @@ describe("checkLicense()", () => {
 		globalThis.fetch = mockFetch;
 		await checkLicense({ force: true });
 		expect(mockFetch).not.toHaveBeenCalled();
+	});
+
+	it("falls back to the env key when options.licenseKey is an empty string", async () => {
+		envStub.FUUTU_LICENSE_KEY = "env-license-key";
+		const mockFetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		globalThis.fetch = mockFetch;
+		const status = await checkLicense({ licenseKey: "", force: true });
+		expect(mockFetch).toHaveBeenCalledTimes(1);
+		const [, opts] = mockFetch.mock.calls[0]!; // guaranteed by toHaveBeenCalledTimes
+		const body = JSON.parse((opts as RequestInit).body as string) as {
+			key: string;
+		};
+		expect(body.key).toBe("env-license-key");
+		expect(status.mode).toBe("mcp");
 	});
 
 	it("returns pro/mcp mode when fetch returns valid license", async () => {

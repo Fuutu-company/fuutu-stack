@@ -1,10 +1,18 @@
+import { getMessagesForLocale } from "@fuutu/i18n";
+import { i18nConfig } from "@fuutu/i18n/config";
 import type { MetadataRoute } from "next";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+	const messages = await getMessagesForLocale(
+		i18nConfig.defaultLocale,
+		"marketing",
+	);
+	const brand = messages.app.brand;
+
 	return {
-		name: "Fuutu Stack",
-		short_name: "Fuutu Stack",
-		description: "Fuutu Stack - Modern SaaS Starter",
+		name: brand,
+		short_name: brand,
+		description: `${brand} — ${messages.app.tagline}`,
 		start_url: "/",
 		display: "standalone",
 		background_color: "#ffffff",

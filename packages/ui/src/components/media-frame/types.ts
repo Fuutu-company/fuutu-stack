@@ -46,6 +46,12 @@ export type FrameContentProps = {
 	height?: number | string;
 	/** Extra className forwarded to the content wrapper */
 	contentClassName?: string;
+	/** Accessible label for the play button (video files only) */
+	playLabel?: string;
+	/** Accessible label for the pause button (video files only) */
+	pauseLabel?: string;
+	/** Accessible title for video embeds — defaults to `filename` */
+	videoTitle?: string;
 	/** Arbitrary children — highest priority, bypasses all built-in modes */
 	children?: React.ReactNode;
 };

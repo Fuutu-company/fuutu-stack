@@ -6,20 +6,6 @@ vi.mock("@fuutu/db", () => ({
 	getActiveCreditPackages: vi.fn(),
 }));
 
-vi.mock("@fuutu/payments/config", () => ({
-	CREDIT_METERS: [
-		{
-			key: "ai_tokens",
-			label: "AI Tokens",
-			unit: "tokens",
-			resetOn: "month",
-			allowOverage: true,
-		},
-		{ key: "api_calls", label: "API Calls", unit: "count", resetOn: "month" },
-		{ key: "documents", label: "Documents", unit: "count", resetOn: "month" },
-	],
-}));
-
 import {
 	getActiveCreditPackages,
 	getCreditBalancesForOrganization,

@@ -35,6 +35,7 @@ export function ApiKeyCreateDialog({
 	onCreated: (key: ApiKeyResult) => void;
 }) {
 	const t = useTranslations("apiKeys");
+	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
 	const [expiresAt, setExpiresAt] = useState("");
@@ -71,7 +72,7 @@ export function ApiKeyCreateDialog({
 					{t("create")}
 				</Button>
 			</DialogTrigger>
-			<DialogContent>
+			<DialogContent closeLabel={tCommon("close")}>
 				<form onSubmit={submit} className="space-y-4">
 					<DialogHeader>
 						<DialogTitle>{t("createDialog.title")}</DialogTitle>

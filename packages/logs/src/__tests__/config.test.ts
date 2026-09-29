@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { logsConfig } from "../config";
 
 const ORIGINAL = {
@@ -62,5 +62,23 @@ describe("logsConfig", () => {
 	it("falls back to default on invalid auditSink", () => {
 		process.env.LOG_AUDIT_SINK = "bogus";
 		expect(logsConfig.auditSink).toBe("console");
+	});
+
+	it("warns on invalid LOG_AUDIT_SINK (consistent with parseDrains)", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		process.env.LOG_AUDIT_SINK = "bogus";
+		expect(logsConfig.auditSink).toBe("console");
+		expect(warn).toHaveBeenCalledWith(
+			expect.stringContaining("LOG_AUDIT_SINK"),
+		);
+		warn.mockRestore();
+	});
+
+	it("warns on invalid LOG_LEVEL", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		process.env.LOG_LEVEL = "bogus";
+		expect(logsConfig.level).toBe("info");
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining("LOG_LEVEL"));
+		warn.mockRestore();
 	});
 });

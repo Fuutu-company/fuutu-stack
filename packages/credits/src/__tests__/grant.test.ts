@@ -57,6 +57,28 @@ describe("grantRecurringCredits", () => {
 		);
 	});
 
+	it("rejects when both userId and organizationId are set (owner XOR)", async () => {
+		await expect(
+			grantRecurringCredits({
+				userId: "user-1",
+				organizationId: "org-1",
+				meterKey: "ai_tokens",
+				amount: 100,
+				periodEnd: new Date(),
+			}),
+		).rejects.toThrow();
+	});
+
+	it("rejects when neither userId nor organizationId is set", async () => {
+		await expect(
+			grantRecurringCredits({
+				meterKey: "ai_tokens",
+				amount: 100,
+				periodEnd: new Date(),
+			}),
+		).rejects.toThrow();
+	});
+
 	it("rejects non-positive amount", async () => {
 		await expect(
 			grantRecurringCredits({
@@ -105,6 +127,23 @@ describe("grantRecurringCredits", () => {
 });
 
 describe("grantTopUpCredits", () => {
+	it("rejects when both userId and organizationId are set (owner XOR)", async () => {
+		await expect(
+			grantTopUpCredits({
+				userId: "user-1",
+				organizationId: "org-1",
+				meterKey: "ai_tokens",
+				amount: 10_000,
+			}),
+		).rejects.toThrow();
+	});
+
+	it("rejects when neither userId nor organizationId is set", async () => {
+		await expect(
+			grantTopUpCredits({ meterKey: "ai_tokens", amount: 10_000 }),
+		).rejects.toThrow();
+	});
+
 	it("calls grantTopUpCreditsTx with parsed params and defaults", async () => {
 		vi.mocked(grantTopUpCreditsTx).mockResolvedValue(undefined);
 

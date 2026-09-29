@@ -8,7 +8,24 @@
  * to the wide-event form so structured metadata lands in every drain.
  */
 import { log as evlogLog } from "evlog";
-import type { Logger, LoggerOptions, LogMeta } from "./types";
+import { logsConfig } from "./config";
+import type { Logger, LoggerOptions, LogLevel, LogMeta } from "./types";
+
+const LEVEL_ORDER: Record<LogLevel, number> = {
+	debug: 0,
+	info: 1,
+	warn: 2,
+	error: 3,
+};
+
+/**
+ * LOG_LEVEL gate for the compat facade. `initLogs` also passes the level to
+ * evlog as `minLevel`, but this keeps the filter working when initLogs is
+ * never called (tests, scripts, minimal setups) — evlog defaults to debug.
+ */
+function isLevelEnabled(level: LogLevel): boolean {
+	return LEVEL_ORDER[level] >= LEVEL_ORDER[logsConfig.level];
+}
 
 /**
  * Create a scoped logger that delegates to evlog's global `log` instance.
@@ -26,34 +43,19 @@ export function createLogger(options: LoggerOptions = {}): Logger {
 	const { scope } = options;
 	const tag = scope ?? "app";
 
+	const emit = (level: LogLevel, message: string, meta?: LogMeta): void => {
+		if (!isLevelEnabled(level)) return;
+		if (meta && Object.keys(meta).length > 0) {
+			evlogLog[level]({ tag, message, ...meta });
+		} else {
+			evlogLog[level](tag, message);
+		}
+	};
+
 	return {
-		debug: (message: string, meta?: LogMeta) => {
-			if (meta && Object.keys(meta).length > 0) {
-				evlogLog.debug({ tag, message, ...meta });
-			} else {
-				evlogLog.debug(tag, message);
-			}
-		},
-		info: (message: string, meta?: LogMeta) => {
-			if (meta && Object.keys(meta).length > 0) {
-				evlogLog.info({ tag, message, ...meta });
-			} else {
-				evlogLog.info(tag, message);
-			}
-		},
-		warn: (message: string, meta?: LogMeta) => {
-			if (meta && Object.keys(meta).length > 0) {
-				evlogLog.warn({ tag, message, ...meta });
-			} else {
-				evlogLog.warn(tag, message);
-			}
-		},
-		error: (message: string, meta?: LogMeta) => {
-			if (meta && Object.keys(meta).length > 0) {
-				evlogLog.error({ tag, message, ...meta });
-			} else {
-				evlogLog.error(tag, message);
-			}
-		},
+		debug: (message: string, meta?: LogMeta) => emit("debug", message, meta),
+		info: (message: string, meta?: LogMeta) => emit("info", message, meta),
+		warn: (message: string, meta?: LogMeta) => emit("warn", message, meta),
+		error: (message: string, meta?: LogMeta) => emit("error", message, meta),
 	};
 }

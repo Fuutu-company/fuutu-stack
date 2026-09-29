@@ -24,7 +24,12 @@ export interface SignedUploadInput {
 	 * unbounded upload" hole).
 	 */
 	contentLength?: number;
-	/** Max allowed size in bytes (enforced via presign policy). */
+	/**
+	 * Max allowed size in bytes — a validation cap, not a signed value.
+	 * Presigned PUTs can only pin an exact `Content-Length`, never a
+	 * range, so `contentLength` must be provided when this is set and is
+	 * rejected when it exceeds the cap.
+	 */
 	maxSizeBytes?: number;
 	/** Seconds until the URL expires. Defaults to 600 (10 min). */
 	expiresInSeconds?: number;

@@ -1,6 +1,5 @@
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import type { ModelMessage } from "ai";
 import { generateText, streamText, wrapLanguageModel } from "ai";
@@ -14,14 +13,19 @@ import type {
 export interface GoogleProviderOptions {
 	apiKey?: string;
 	model?: string;
+	/** Whether to apply the AI SDK devtools middleware. Defaults to false. */
+	devtools?: boolean;
 }
 
 /**
  * Google Gemini provider — v1 active.
  *
  * Wraps `@ai-sdk/google` behind the `AIProvider` interface so callers stay
- * provider-agnostic. The devtools middleware is applied only in development
- * to surface stream events in the AI SDK devtools UI.
+ * provider-agnostic. The devtools middleware is applied only when
+ * `devtools: true` is passed (the resolver sets this in development) to
+ * surface stream events in the AI SDK devtools UI. The constructor does
+ * not access `env` directly so it can be instantiated in tests without
+ * full env validation.
  */
 export class GoogleProvider implements AIProvider {
 	readonly id = "google";
@@ -35,13 +39,12 @@ export class GoogleProvider implements AIProvider {
 			options.apiKey ? { apiKey: options.apiKey } : {},
 		);
 		const baseModel = google(options.model ?? "gemini-2.0-flash");
-		this.model =
-			env.NODE_ENV === "development"
-				? wrapLanguageModel({
-						model: baseModel,
-						middleware: devToolsMiddleware(),
-					})
-				: baseModel;
+		this.model = options.devtools
+			? wrapLanguageModel({
+					model: baseModel,
+					middleware: devToolsMiddleware(),
+				})
+			: baseModel;
 	}
 
 	async chat(

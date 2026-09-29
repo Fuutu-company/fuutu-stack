@@ -3,7 +3,7 @@ import { AnthropicProvider } from "../providers/anthropic";
 import { NoopProvider } from "../providers/noop";
 import { OpenAIProvider } from "../providers/openai";
 import { OpenRouterProvider } from "../providers/openrouter";
-import { testAIProviderContract } from "./provider-contract.test";
+import { testAIProviderContract } from "./provider-contract";
 
 testAIProviderContract("openai", () => new OpenAIProvider(), {
 	behavior: "throws",

@@ -1,5 +1,6 @@
 import { getUnreadCount } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
+import { z } from "zod";
 import { permissionProcedure } from "../../../orpc";
 
 export const getUnreadCountProcedure = permissionProcedure(
@@ -13,6 +14,7 @@ export const getUnreadCountProcedure = permissionProcedure(
 		description:
 			"Returns the count of unread notifications for the current user.",
 	})
+	.input(z.object({}).optional())
 	.handler(async ({ context }) => {
 		const count = await getUnreadCount(context.user.id);
 		return { count };

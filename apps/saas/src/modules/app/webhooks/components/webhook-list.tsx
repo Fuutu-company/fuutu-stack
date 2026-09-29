@@ -198,7 +198,7 @@ export function WebhookList({ slug }: { slug: string }) {
 					if (!v) setSecretWebhook(null);
 				}}
 			>
-				<DialogContent className="sm:max-w-md">
+				<DialogContent className="sm:max-w-md" closeLabel={tCommon("close")}>
 					<DialogHeader>
 						<DialogTitle>{t("secretDialog.title")}</DialogTitle>
 						<DialogDescription>

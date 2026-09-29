@@ -310,56 +310,15 @@ export const LIMITS = {
 
 // ─── 4. Credits ────────────────────────────────────────────────────────────────
 
+export type { CreditMeter } from "@fuutu/credits/meters";
 /**
- * Credit meter definition — what is being measured.
- * App-defined: add whatever your app needs to track.
- *
- * Examples:
- *   - { key: "ai_tokens", label: "AI Tokens", unit: "tokens", resetOn: "month" }
- *   - { key: "images", label: "Image Generations", unit: "count", resetOn: "month" }
- *   - { key: "videos", label: "Video Generations", unit: "count", resetOn: "month" }
- *   - { key: "api_calls", label: "API Calls", unit: "count", resetOn: "month" }
- *
- * You can have separate meters per resource type (10 images + 20 videos)
- * OR a shared meter (40 "generations" usable for either).
+ * Credit meter definitions live in `@fuutu/credits/meters` — the
+ * dependency-free leaf module both packages share (payments → credits,
+ * never the reverse). Re-exported here so existing
+ * `@fuutu/payments/config` consumers keep working. The subpath is a
+ * pure-data module, so this file stays client-safe.
  */
-export interface CreditMeter {
-	/** Unique key — e.g. "ai_tokens", "api_calls", "images" */
-	key: string;
-	/** Display name for UI — e.g. "AI Tokens", "Image Generations" */
-	label: string;
-	/** Unit of measurement */
-	unit: "count" | "tokens" | "mb" | "seconds";
-	/**
-	 * When does the recurring balance reset?
-	 * "month" = on subscription renewal or 1st of month
-	 * "year"  = annually
-	 * "never" = never expires (only relevant for top-up packages)
-	 */
-	resetOn: "month" | "year" | "never";
-	/**
-	 * Allow consumption beyond the granted amount?
-	 * If true, overage is tracked but not blocked.
-	 * Useful for AI tokens with pay-as-you-go billing.
-	 */
-	allowOverage?: boolean;
-}
-
-/**
- * Credit meters — define what your app tracks.
- * Add/remove meters as needed. Each meter gets its own balance.
- */
-export const CREDIT_METERS: CreditMeter[] = [
-	{
-		key: "ai_tokens",
-		label: "AI Tokens",
-		unit: "tokens",
-		resetOn: "month",
-		allowOverage: true,
-	},
-	{ key: "api_calls", label: "API Calls", unit: "count", resetOn: "month" },
-	{ key: "documents", label: "Documents", unit: "count", resetOn: "month" },
-];
+export { CREDIT_METERS, getMeter } from "@fuutu/credits/meters";
 
 /**
  * Per-plan credit grants (recurring, reset each period).
@@ -398,11 +357,6 @@ export function getMeterKeysForPlan(planId: PlanId): string[] {
 	const planCredits = CREDITS[planId];
 	if (!planCredits) return [];
 	return Object.keys(planCredits).filter((key) => planCredits[key] !== 0);
-}
-
-/** Get a meter definition by key. */
-export function getMeter(meterKey: string): CreditMeter | undefined {
-	return CREDIT_METERS.find((m) => m.key === meterKey);
 }
 
 // ─── 5. Features ────────────────────────────────────────────────────────────────

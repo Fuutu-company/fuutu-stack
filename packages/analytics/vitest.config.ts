@@ -5,7 +5,6 @@ export default defineConfig({
 		globals: true,
 		environment: "node",
 		include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-		passWithNoTests: true,
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "json-summary"],

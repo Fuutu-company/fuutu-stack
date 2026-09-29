@@ -1,5 +1,7 @@
 {
 	"name": "@fuutu/ai",
+	"version": "0.0.0",
+	"private": true,
 	"type": "module",
 	"exports": {
 		".": {
@@ -10,6 +12,7 @@
 		}
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"dependencies": {

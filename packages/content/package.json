@@ -8,6 +8,13 @@
 			"default": "./src/index.tsx"
 		}
 	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"zod": "catalog:"
+	},
 	"peerDependencies": {
 		"react": "catalog:"
 	},

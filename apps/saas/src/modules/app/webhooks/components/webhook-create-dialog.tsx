@@ -16,11 +16,11 @@ import {
 	FieldLabel,
 	Input,
 } from "@fuutu/ui";
+import { WEBHOOK_EVENTS } from "@fuutu/webhooks/events";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { orpc } from "@/utils/orpc";
-import { WEBHOOK_EVENTS } from "../constants";
 
 const log = createLogger({ scope: "webhook-create-dialog" });
 
@@ -41,6 +41,7 @@ export function WebhookCreateDialog({
 	onCreated: (webhook: CreatedWebhook) => void;
 }) {
 	const t = useTranslations("webhooks");
+	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState("");
 	const [events, setEvents] = useState<string[]>([]);
@@ -83,7 +84,7 @@ export function WebhookCreateDialog({
 					{t("create")}
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" closeLabel={tCommon("close")}>
 				<form onSubmit={submit} className="space-y-4">
 					<DialogHeader>
 						<DialogTitle>{t("createDialog.title")}</DialogTitle>

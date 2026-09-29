@@ -45,10 +45,18 @@ export const openApiHandler = new OpenAPIHandler(router, {
 	],
 });
 
+/**
+ * @deprecated Use the `rpcHandler` export directly — this is a
+ * pass-through returning the shared configured instance.
+ */
 export function createRPCHandler() {
 	return rpcHandler;
 }
 
+/**
+ * @deprecated Use the `openApiHandler` export directly — this is a
+ * pass-through returning the shared configured instance.
+ */
 export function createOpenAPIHandler() {
 	return openApiHandler;
 }

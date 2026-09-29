@@ -1,9 +1,13 @@
 import { auth } from "@fuutu/auth";
 import { countOrganizationMembers } from "@fuutu/db";
+import { createLogger } from "@fuutu/logs";
 import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
+import { dispatchEvent } from "@fuutu/webhooks";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { authProcedure, createRateLimitMiddleware } from "../../../../orpc";
+
+const log = createLogger({ scope: "api:organizations" });
 
 const inviteMemberSchema = z.object({
 	organizationId: z.string().min(1),
@@ -44,5 +48,19 @@ export const inviteMember = authProcedure({
 			},
 			headers: context.headers,
 		});
+		try {
+			await dispatchEvent({
+				event: "member.invited",
+				organizationId: input.organizationId,
+				userId: context.user.id,
+				payload: {
+					organizationId: input.organizationId,
+					email: input.email,
+					role: input.role,
+				},
+			});
+		} catch (err) {
+			log.warn("webhook dispatch failed", { err });
+		}
 		return invitation;
 	});

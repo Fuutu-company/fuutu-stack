@@ -1,15 +1,5 @@
-import { auditLogCleanupJob } from "../jobs/audit-log-cleanup";
-import { subscriptionReminderJob } from "../jobs/subscription-reminder";
-import { telemetryPingJob } from "../jobs/telemetry-ping";
-import { webhookRetryJob } from "../jobs/webhook-retry";
+import { allJobs } from "../jobs";
 import type { CronJob, CronJobResult, JobRunner } from "../types";
-
-const jobs: CronJob[] = [
-	webhookRetryJob,
-	auditLogCleanupJob,
-	subscriptionReminderJob,
-	telemetryPingJob,
-];
 
 /**
  * Trigger.dev job runner — skeleton (inactive in v1).
@@ -39,6 +29,6 @@ export class TriggerDevJobRunner implements JobRunner {
 	}
 
 	list(): CronJob[] {
-		return jobs;
+		return allJobs;
 	}
 }

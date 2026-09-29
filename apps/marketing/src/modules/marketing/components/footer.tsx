@@ -1,8 +1,7 @@
 import { BrandLogo } from "@fuutu/ui";
 import { useTranslations } from "next-intl";
+import { urls } from "@/lib/urls";
 import { Link } from "@/navigation";
-
-const DOCS_URL = "https://stack.fuutu.com/docs";
 
 const COLUMNS = [
 	{
@@ -16,7 +15,7 @@ const COLUMNS = [
 	{
 		titleKey: "resources",
 		links: [
-			{ href: DOCS_URL, labelKey: "docs", external: true },
+			{ href: urls.docs, labelKey: "docs", external: true },
 			{ href: "/blog", labelKey: "blog" },
 		],
 	},

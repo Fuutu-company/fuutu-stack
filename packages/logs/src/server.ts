@@ -12,6 +12,7 @@
  * ```
  */
 import { initLogger as evlogInitLogger } from "evlog";
+import { logsConfig } from "./config";
 import { combineDrains, resolveDrains } from "./drains";
 
 let initialized = false;
@@ -32,7 +33,7 @@ export async function initLogs(options?: {
 	if (initialized) return;
 	initialized = true;
 
-	const drains = resolveDrains();
+	const drains = await resolveDrains();
 	const drain = combineDrains(drains);
 
 	evlogInitLogger({
@@ -40,6 +41,7 @@ export async function initLogs(options?: {
 		env: {
 			service: options?.service ?? process.env.SERVICE_NAME ?? "fuutu",
 		},
+		minLevel: logsConfig.level,
 		...(drain ? { drain } : {}),
 	});
 }

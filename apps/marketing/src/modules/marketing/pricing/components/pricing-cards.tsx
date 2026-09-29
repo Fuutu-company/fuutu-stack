@@ -1,6 +1,5 @@
 "use client";
 
-import { env } from "@fuutu/env/marketing";
 import {
 	FEATURE_GROUPS,
 	formatLimit,
@@ -19,10 +18,9 @@ import {
 	type PricingTier,
 } from "@fuutu/ui";
 import { Building2, Rocket, Sparkles } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { urls } from "@/lib/urls";
 import { Link } from "@/navigation";
-
-const SAAS_URL = env.NEXT_PUBLIC_SAAS_URL ?? "https://stackapp.fuutu.com";
 
 const PLAN_ICONS: Partial<Record<PlanId, PricingTier["icon"]>> = {
 	free: Sparkles,
@@ -32,23 +30,11 @@ const PLAN_ICONS: Partial<Record<PlanId, PricingTier["icon"]>> = {
 
 function hrefFor(id: PlanId): string | undefined {
 	if (id === "enterprise") return "mailto:license@fuutu.com";
-	return `${SAAS_URL}/auth/sign-up?plan=${id}`;
-}
-
-type LocalizedVideo = string | { default: string; [locale: string]: string };
-
-const FEATURE_VIDEOS: Partial<Record<string, LocalizedVideo>> = {
-	auth_passkeys: "https://www.w3schools.com/html/mov_bbb.mp4",
-};
-
-function resolveVideo(entry: LocalizedVideo, locale: string): string {
-	if (typeof entry === "string") return entry;
-	return entry[locale] ?? entry.default;
+	return `${urls.auth.signUp}?plan=${id}`;
 }
 
 function usePricingData() {
 	const t = useTranslations();
-	const locale = useLocale();
 
 	const resolve = (id: PlanId): PlanTranslations => ({
 		name: t(`payments.plans.${id}.name`),
@@ -96,9 +82,6 @@ function usePricingData() {
 		label: getFeatureLabel(feature.id),
 		group: feature.group,
 		tooltip: featureTooltips[feature.id],
-		videoSrc: FEATURE_VIDEOS[feature.id]
-			? resolveVideo(FEATURE_VIDEOS[feature.id] as LocalizedVideo, locale)
-			: undefined,
 		values: Object.fromEntries(
 			tiers.map((tier) => {
 				const hasFeature = tier.featureIds?.includes(feature.id) ?? false;
@@ -188,7 +171,6 @@ export function PricingCardsPage() {
 					featureMatrix={featureMatrix}
 					featureGroupLabels={featureGroupLabels}
 					popularLabel={t("payments.choosePlan.popular")}
-					watchLabel={t("pricing.watchDemo")}
 					LinkComponent={Link}
 					monthlyLabel={t("payments.choosePlan.monthly")}
 					yearlyLabel={t("payments.choosePlan.yearly")}

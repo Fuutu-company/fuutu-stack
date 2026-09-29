@@ -120,6 +120,9 @@ export function ChoosePlan({
 				monthlyLabel={t("choosePlan.monthly")}
 				yearlyLabel={t("choosePlan.yearly")}
 				yearlyBadge={t("choosePlan.yearlyBadge")}
+				seatLabel={(n) =>
+					`${n} ${n === 1 ? t("seatSelector.seat") : t("seatSelector.seats")}`
+				}
 			/>
 		</div>
 	);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { analyticsConfig } from "../config";
 import { umamiAnalyticsProvider } from "../providers/umami";
-import { testAnalyticsProviderContract } from "./provider-contract.test";
+import { testAnalyticsProviderContract } from "./provider-contract";
 
 const trackMock = vi.fn();
 

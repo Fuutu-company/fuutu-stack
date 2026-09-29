@@ -27,6 +27,10 @@ export function getSafeRedirect(
 	// whitespace — all can be normalized away by browsers and turn a
 	// seemingly-relative path into a protocol-relative URL.
 	if (trimmed.startsWith("/")) {
+		// Percent-encoded bypasses like `/%5cevil.com` are intentionally NOT
+		// decoded here: browsers do not decode `%5c` to `\` in a Location
+		// path, so the raw string stays a harmless relative path. Decoding
+		// would introduce a second normalization layer — and new bypasses.
 		const next = trimmed.charCodeAt(1);
 		// `\` (0x5C), control chars (0x00–0x1F), space (0x20), tab/newline.
 		if (next === 0x5c || next <= 0x20) return fallback;

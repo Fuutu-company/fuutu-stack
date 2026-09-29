@@ -3,8 +3,6 @@
 	"compilerOptions": {
 		"paths": {
 			"@/*": ["./src/*"],
-			"@docs/*": ["./src/modules/docs/*"],
-			"@shared/*": ["./src/modules/shared/*"],
 			"fumadocs-mdx:collections/*": ["./.source/*"]
 		},
 		"plugins": [

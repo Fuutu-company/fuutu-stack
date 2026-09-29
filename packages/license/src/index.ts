@@ -1,8 +1,4 @@
-export {
-	__resetLicenseCache,
-	checkLicense,
-	getLicenseMode,
-} from "./check";
+export { checkLicense, getLicenseMode } from "./check";
 export { hashLicenseKey } from "./hash";
 export type {
 	CheckLicenseOptions,

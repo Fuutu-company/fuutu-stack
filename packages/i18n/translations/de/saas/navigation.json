@@ -33,6 +33,10 @@
 		"webhooks": "Webhooks",
 		"auditLog": "Audit-Log",
 		"invoices": "Rechnungen",
+		"sidebar": {
+			"title": "Seitenleiste",
+			"description": "Zeigt die mobile Seitenleiste an."
+		},
 		"aria": {
 			"toggleNavigation": "Navigation umschalten",
 			"toggleTheme": "Design umschalten",

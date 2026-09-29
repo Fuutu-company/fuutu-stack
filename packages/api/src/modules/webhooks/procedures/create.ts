@@ -1,5 +1,7 @@
 import { countWebhooks, createWebhook } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
+import { validateWebhookUrl } from "@fuutu/webhooks";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { authProcedure, createRateLimitMiddleware } from "../../../orpc";
 
@@ -28,6 +30,10 @@ export const createWebhookProcedure = authProcedure({
 	})
 	.input(createWebhookSchema)
 	.handler(async ({ input }) => {
+		const validation = await validateWebhookUrl(input.url);
+		if (!validation.valid) {
+			throw new ORPCError("BAD_REQUEST", { message: "Invalid webhook URL" });
+		}
 		const result = await createWebhook(
 			input.organizationId,
 			input.url,

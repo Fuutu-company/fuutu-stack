@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchMock = vi.fn();
+const lookupMock = vi.fn();
 
 vi.stubGlobal("fetch", fetchMock);
+
+vi.mock("node:dns/promises", () => ({
+	lookup: (...args: unknown[]) => lookupMock(...args),
+}));
 
 vi.mock("@fuutu/env/saas", () => ({
 	env: { NODE_ENV: "test" },
@@ -38,6 +43,8 @@ const event: WebhookEvent = {
 describe("deliverWebhook", () => {
 	beforeEach(() => {
 		fetchMock.mockReset();
+		lookupMock.mockReset();
+		lookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
 	});
@@ -61,6 +68,7 @@ describe("deliverWebhook", () => {
 		const init = call?.[1] as RequestInit & { headers: Record<string, string> };
 		expect(url).toBe("https://example.com/webhook");
 		expect(init.method).toBe("POST");
+		expect(init.redirect).toBe("error");
 		expect(init.headers["Content-Type"]).toBe("application/json");
 		expect(init.headers["X-Fuutu-Event"]).toBe("order.created");
 
@@ -108,6 +116,65 @@ describe("deliverWebhook", () => {
 			responseBody: null,
 			error: "network error",
 		});
+	});
+
+	it("never follows redirects (SSRF via 302 → internal URL)", async () => {
+		fetchMock.mockRejectedValue(
+			new TypeError("fetch failed", { cause: "redirect" }),
+		);
+
+		const result = await deliverWebhook(webhook, event);
+
+		const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+		expect(init.redirect).toBe("error");
+		expect(result.success).toBe(false);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("blocks hostnames that resolve to a private IP (nip.io-style DNS bypass)", async () => {
+		lookupMock.mockResolvedValue([{ address: "169.254.169.254", family: 4 }]);
+
+		const nipWebhook: WebhookEndpoint = {
+			...webhook,
+			url: "https://169.254.169.254.nip.io/webhook",
+		};
+
+		const result = await deliverWebhook(nipWebhook, event);
+
+		expect(result.success).toBe(false);
+		expect(result.error).toContain("private/reserved IP range blocked");
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("fails when the request exceeds the timeout", async () => {
+		fetchMock.mockImplementation(
+			(_url: string, init: RequestInit) =>
+				new Promise((_resolve, reject) => {
+					init.signal?.addEventListener("abort", () =>
+						reject(new Error("The operation timed out")),
+					);
+				}),
+		);
+
+		const pending = deliverWebhook(webhook, event);
+		await vi.advanceTimersByTimeAsync(10_001);
+		const result = await pending;
+
+		expect(result.success).toBe(false);
+		expect(result.error).toBe("The operation timed out");
+	});
+
+	it("caps the persisted response body at maxResponseBodyBytes", async () => {
+		fetchMock.mockResolvedValue({
+			ok: true,
+			status: 200,
+			text: () => Promise.resolve("x".repeat(200 * 1024)),
+		});
+
+		const result = await deliverWebhook(webhook, event);
+
+		expect(result.success).toBe(true);
+		expect(result.responseBody?.length).toBe(64 * 1024);
 	});
 
 	it("blocks CGNAT range 100.64.0.0/10 (RFC 6598) to prevent SSRF", async () => {

@@ -3,7 +3,7 @@ import {
 	getCreditBalancesForOrganization,
 	getCreditBalancesForUser,
 } from "@fuutu/db";
-import { CREDIT_METERS } from "@fuutu/payments/config";
+import { CREDIT_METERS } from "./meters";
 
 export interface CreditBalanceSummary {
 	meterKey: string;

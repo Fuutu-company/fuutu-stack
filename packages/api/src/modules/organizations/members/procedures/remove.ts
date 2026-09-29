@@ -1,9 +1,13 @@
 import { auth } from "@fuutu/auth";
+import { createLogger } from "@fuutu/logs";
 import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
+import { dispatchEvent } from "@fuutu/webhooks";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { authProcedure, createRateLimitMiddleware } from "../../../../orpc";
 import type { OrgMember } from "../../../organizations/shared";
+
+const log = createLogger({ scope: "api:organizations" });
 
 const removeMemberSchema = z.object({
 	organizationId: z.string().min(1),
@@ -52,5 +56,18 @@ export const removeMember = authProcedure({
 			},
 			headers: context.headers,
 		});
+		try {
+			await dispatchEvent({
+				event: "member.removed",
+				organizationId: input.organizationId,
+				userId: context.user.id,
+				payload: {
+					organizationId: input.organizationId,
+					memberIdOrEmail: input.memberIdOrEmail,
+				},
+			});
+		} catch (err) {
+			log.warn("webhook dispatch failed", { err });
+		}
 		return { success: true };
 	});

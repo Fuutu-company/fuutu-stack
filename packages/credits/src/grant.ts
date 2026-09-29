@@ -1,26 +1,31 @@
 import { grantRecurringCreditsTx, grantTopUpCreditsTx } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
+import { ownerXorCheck } from "./owner";
 
 const log = createLogger({ scope: "credits:grant" });
 
-export const GrantRecurringCreditsSchema = z.object({
-	userId: z.string().optional(),
-	organizationId: z.string().optional(),
-	meterKey: z.string(),
-	amount: z.number().int().positive(),
-	periodEnd: z.date(),
-});
+export const GrantRecurringCreditsSchema = ownerXorCheck(
+	z.object({
+		userId: z.string().optional(),
+		organizationId: z.string().optional(),
+		meterKey: z.string(),
+		amount: z.number().int().positive(),
+		periodEnd: z.date(),
+	}),
+);
 
-export const GrantTopUpCreditsSchema = z.object({
-	userId: z.string().optional(),
-	organizationId: z.string().optional(),
-	meterKey: z.string(),
-	amount: z.number().int().positive(),
-	expiresAt: z.date().nullable().optional(),
-	purchaseId: z.string().nullable().optional(),
-	priority: z.number().int().optional(),
-});
+export const GrantTopUpCreditsSchema = ownerXorCheck(
+	z.object({
+		userId: z.string().optional(),
+		organizationId: z.string().optional(),
+		meterKey: z.string(),
+		amount: z.number().int().positive(),
+		expiresAt: z.date().nullable().optional(),
+		purchaseId: z.string().nullable().optional(),
+		priority: z.number().int().optional(),
+	}),
+);
 
 /**
  * Grant recurring credits to a user or org (called on subscription activation/renewal).

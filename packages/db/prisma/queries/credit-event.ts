@@ -50,15 +50,22 @@ export const getCreditEventsForMeter = (params: {
 	organizationId?: string;
 	meterKey: string;
 	limit?: number;
-}) =>
-	db.creditEvent.findMany({
+}) => {
+	// Owner filters must be omitted entirely when unset — an OR clause
+	// containing `{ organizationId: undefined }` degenerates to `{}` and
+	// matches every row (cross-owner leak).
+	const ownerFilters: Prisma.CreditEventWhereInput[] = [
+		...(params.userId ? [{ userId: params.userId }] : []),
+		...(params.organizationId
+			? [{ organizationId: params.organizationId }]
+			: []),
+	];
+	if (ownerFilters.length === 0) return Promise.resolve([]);
+	return db.creditEvent.findMany({
 		where: {
-			OR: [
-				{ userId: params.userId },
-				{ organizationId: params.organizationId },
-			],
-			meterKey: params.meterKey,
+			AND: [{ OR: ownerFilters }, { meterKey: params.meterKey }],
 		},
 		orderBy: { createdAt: "desc" },
 		take: params.limit ?? 50,
 	});
+};

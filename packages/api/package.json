@@ -10,6 +10,7 @@
 		}
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"dependencies": {
@@ -28,12 +29,12 @@
 		"@fuutu/storage": "workspace:*",
 		"@fuutu/telemetry": "workspace:*",
 		"@fuutu/utils": "workspace:*",
+		"@fuutu/webhooks": "workspace:*",
 		"@orpc/client": "catalog:",
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/zod": "catalog:",
 		"@prisma/client": "catalog:",
-		"dotenv": "catalog:",
 		"hono": "catalog:",
 		"zod": "catalog:"
 	},
