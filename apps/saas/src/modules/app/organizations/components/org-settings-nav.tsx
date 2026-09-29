@@ -29,7 +29,7 @@ export function OrgSettingsNav({ slug }: { slug: string }) {
 	const { data: session } = authClient.useSession();
 	const { data: activeOrg } = authClient.useActiveOrganization();
 	const role = activeOrg?.members?.find(
-		(m) => m.userId === session?.user.id,
+		(m: { userId: string; role: string }) => m.userId === session?.user.id,
 	)?.role;
 	const canViewAuditLog = role
 		? hasOrgPermission(ac, toOrgRole(role), PERMISSIONS.AUDIT_LOG.VIEW)
