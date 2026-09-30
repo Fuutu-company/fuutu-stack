@@ -14,7 +14,9 @@
 		"notAvailable": "—",
 		"errors": {
 			"somethingWentWrong": "Something went wrong. Please try again.",
-			"retry": "Retry"
+			"retry": "Retry",
+			"planLimitReached": "Plan limit reached. Upgrade to do more.",
+			"planFeatureRequired": "This feature is not available on your plan."
 		}
 	}
 }

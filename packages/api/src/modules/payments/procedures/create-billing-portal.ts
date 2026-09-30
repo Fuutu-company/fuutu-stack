@@ -8,7 +8,7 @@ import { authProcedure } from "../../../orpc/procedures";
 import { sanitizePaymentUrl } from "../shared";
 
 const portalSchema = z.object({
-	organizationId: z.string().uuid().optional(),
+	organizationId: z.string().min(1).optional(),
 	returnUrl: z.string().optional(),
 });
 

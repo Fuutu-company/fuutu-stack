@@ -9,7 +9,7 @@ import { permissionProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const packagesSchema = z.object({
-	organizationId: z.string().uuid().optional(),
+	organizationId: z.string().min(1).optional(),
 });
 
 export const getPackages = permissionProcedure(PERMISSIONS.CREDIT.VIEW)

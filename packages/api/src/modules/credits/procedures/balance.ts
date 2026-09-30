@@ -5,7 +5,7 @@ import { permissionProcedure } from "../../../orpc/procedures";
 import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const balanceSchema = z.object({
-	organizationId: z.string().uuid().optional(),
+	organizationId: z.string().min(1).optional(),
 });
 
 export const getBalance = permissionProcedure(PERMISSIONS.CREDIT.VIEW)

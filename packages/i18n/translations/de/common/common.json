@@ -14,7 +14,9 @@
 		"notAvailable": "—",
 		"errors": {
 			"somethingWentWrong": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
-			"retry": "Erneut versuchen"
+			"retry": "Erneut versuchen",
+			"planLimitReached": "Plan-Limit erreicht. Upgrade für mehr.",
+			"planFeatureRequired": "Diese Funktion ist in deinem Plan nicht verfügbar."
 		}
 	}
 }

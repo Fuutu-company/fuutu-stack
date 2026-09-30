@@ -23,6 +23,7 @@ import {
 import { Mail, UserMinus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "org-members" });
@@ -116,7 +117,7 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 			await load();
 		} catch (e) {
 			log.error("inviteMember failed", { err: e });
-			setInviteError(t("organizations.settings.failed"));
+			setInviteError(planGateMessage(e, t, "organizations.settings.failed"));
 		} finally {
 			setInviting(false);
 		}

@@ -20,7 +20,7 @@ const systemAC = new SystemAccessControl(SYSTEM_POLICY);
 export const publicProcedure = os.$context<Context>();
 
 export const protectedProcedure = publicProcedure.use(
-	async ({ context, next }) => {
+	async ({ context, next }, input) => {
 		if (!context.session?.user) {
 			throw new ORPCError("UNAUTHORIZED");
 		}
@@ -30,13 +30,21 @@ export const protectedProcedure = publicProcedure.use(
 		if (user.banned) {
 			throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
 		}
-		// Org-scoped API keys are pinned to their org — user-level
-		// procedures (no organizationId) are always out of scope.
-		if (context.apiKey?.organizationId) {
-			throw new ORPCError("FORBIDDEN", {
-				message:
-					"Organization-scoped API keys cannot access user-level resources",
-			});
+		// Org-scoped API keys are pinned to their org. They may only reach
+		// procedures whose input names their own organizationId — the handler
+		// then enforces membership + permission via requireOrgPermissionAccess
+		// (assertApiKeyOrgScope). User-level inputs (no organizationId) and
+		// foreign orgs are always out of scope.
+		const pinnedOrg = context.apiKey?.organizationId;
+		if (pinnedOrg) {
+			const inputOrg = (input as { organizationId?: string } | undefined)
+				?.organizationId;
+			if (inputOrg !== pinnedOrg) {
+				throw new ORPCError("FORBIDDEN", {
+					message:
+						"Organization-scoped API keys can only access their own organization",
+				});
+			}
 		}
 
 		return next({

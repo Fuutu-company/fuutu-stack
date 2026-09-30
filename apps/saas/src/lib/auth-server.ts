@@ -61,11 +61,22 @@ export async function requireAdmin() {
  */
 export async function requireOnboarded() {
 	const session = await requireAuth();
-	const user = session.user as UserWithRole & { onboardingComplete?: boolean };
+	let user = session.user as UserWithRole & { onboardingComplete?: boolean };
 	if (user.onboardingComplete === false) {
-		const pathname = (await headers()).get("x-pathname") ?? "";
-		if (!pathname.startsWith("/onboarding")) {
-			redirect("/onboarding");
+		// The session payload may come from Better Auth's cookie cache (5min TTL)
+		// and still carry onboardingComplete=false after the wizard flipped the
+		// DB flag. Re-check against a fresh session before redirecting — this
+		// avoids trapping users in /onboarding until the cache expires.
+		const fresh = await auth.api.getSession({
+			headers: await headers(),
+			query: { disableCookieCache: true },
+		});
+		user = (fresh?.user ?? user) as typeof user;
+		if (user.onboardingComplete === false) {
+			const pathname = (await headers()).get("x-pathname") ?? "";
+			if (!pathname.startsWith("/onboarding")) {
+				redirect("/onboarding");
+			}
 		}
 	}
 	return session;

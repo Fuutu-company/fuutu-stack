@@ -20,6 +20,7 @@ import { WEBHOOK_EVENTS, type WebhookEventType } from "@fuutu/webhooks/events";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "webhook-create-dialog" });
@@ -41,6 +42,7 @@ export function WebhookCreateDialog({
 	onCreated: (webhook: CreatedWebhook) => void;
 }) {
 	const t = useTranslations("webhooks");
+	const tRoot = useTranslations();
 	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState("");
@@ -70,7 +72,7 @@ export function WebhookCreateDialog({
 			onCreated(result as CreatedWebhook);
 		} catch (err) {
 			log.error("create failed", { err });
-			setError(t("failed"));
+			setError(planGateMessage(err, tRoot, "webhooks.failed"));
 		} finally {
 			setCreating(false);
 		}

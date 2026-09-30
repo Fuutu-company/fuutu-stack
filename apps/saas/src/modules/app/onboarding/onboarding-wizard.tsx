@@ -81,6 +81,12 @@ export function OnboardingWizard({
 		setIsLoading(true);
 		try {
 			await completeOnboardingAction();
+			// Refresh the cached session cookie so the server-side onboarding
+			// guard sees onboardingComplete=true immediately (cookie cache TTL
+			// would otherwise keep redirecting to /onboarding for minutes).
+			await authClient.getSession({
+				query: { disableCookieCache: true },
+			});
 		} finally {
 			setIsLoading(false);
 		}

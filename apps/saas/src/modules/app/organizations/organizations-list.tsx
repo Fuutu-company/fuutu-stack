@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "organizations-list" });
@@ -72,7 +73,7 @@ export function OrganizationsList() {
 			router.push(`/organizations/${slug}`);
 		} catch (e) {
 			log.error("organization create failed", { err: e });
-			setError(t("organizations.list.failed"));
+			setError(planGateMessage(e, t, "organizations.list.failed"));
 		} finally {
 			setIsLoading(false);
 		}

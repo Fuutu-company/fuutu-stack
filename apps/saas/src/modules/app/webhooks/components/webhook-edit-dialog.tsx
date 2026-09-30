@@ -22,6 +22,7 @@ import { Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 type Webhook = {
@@ -43,6 +44,7 @@ export function WebhookEditDialog({
 	onUpdated: () => void;
 }) {
 	const t = useTranslations("webhooks");
+	const tRoot = useTranslations();
 	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState(webhook.url);
@@ -77,7 +79,7 @@ export function WebhookEditDialog({
 			onUpdated();
 		} catch (e) {
 			log.error("webhook update failed", { err: e });
-			toast.error(t("updateError"));
+			toast.error(planGateMessage(e, tRoot, "webhooks.updateError"));
 		} finally {
 			setSaving(false);
 		}

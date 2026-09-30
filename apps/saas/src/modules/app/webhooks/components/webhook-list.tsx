@@ -27,6 +27,7 @@ import { Check, Copy, Trash2, Webhook } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 import { WebhookCreateDialog } from "./webhook-create-dialog";
 import { WebhookDeliveries } from "./webhook-deliveries";
@@ -51,6 +52,7 @@ const log = createLogger({ scope: "webhooks" });
 
 export function WebhookList({ slug }: { slug: string }) {
 	const t = useTranslations("webhooks");
+	const tRoot = useTranslations();
 	const tCommon = useTranslations("common");
 	const [org, setOrg] = useState<FullOrg | null>(null);
 	const [secretWebhook, setSecretWebhook] = useState<CreatedWebhook | null>(
@@ -93,7 +95,7 @@ export function WebhookList({ slug }: { slug: string }) {
 			void query.refetch();
 		} catch (e) {
 			log.error("webhook deletion failed", { err: e });
-			toast.error(t("deleteError"));
+			toast.error(planGateMessage(e, tRoot, "webhooks.deleteError"));
 		} finally {
 			setDeleting(false);
 		}

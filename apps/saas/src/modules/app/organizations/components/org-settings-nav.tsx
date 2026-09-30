@@ -1,6 +1,5 @@
 "use client";
 
-import { authClient } from "@fuutu/auth/client";
 import { paymentsConfig } from "@fuutu/payments/config";
 import {
 	hasOrgPermission,
@@ -13,6 +12,7 @@ import { cn } from "@fuutu/ui";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useOrgRole } from "../use-org-role";
 
 interface NavItem {
 	key: string;
@@ -26,11 +26,7 @@ export function OrgSettingsNav({ slug }: { slug: string }) {
 	const pathname = usePathname();
 	const base = `/organizations/${slug}/settings`;
 
-	const { data: session } = authClient.useSession();
-	const { data: activeOrg } = authClient.useActiveOrganization();
-	const role = activeOrg?.members?.find(
-		(m: { userId: string; role: string }) => m.userId === session?.user.id,
-	)?.role;
+	const role = useOrgRole(slug);
 	const canViewAuditLog = role
 		? hasOrgPermission(ac, toOrgRole(role), PERMISSIONS.AUDIT_LOG.VIEW)
 		: false;

@@ -7,7 +7,7 @@ import { sanitizePaymentUrl } from "../shared";
 
 const checkoutSchema = z.object({
 	priceId: z.string().min(1).max(200),
-	organizationId: z.string().uuid().optional(),
+	organizationId: z.string().min(1).optional(),
 	successUrl: z.string().optional(),
 	cancelUrl: z.string().optional(),
 	seats: z.number().int().min(1).optional(),

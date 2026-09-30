@@ -8,7 +8,9 @@ import { requireOrgPermissionAccess } from "../../organizations/shared";
 const searchSchema = z.object({
 	text: z.string().min(1).max(200),
 	collection: z.enum(["notifications", "audit-logs"]).optional(),
-	organizationId: z.string().uuid().optional(),
+	// Org ids are provider-generated (Better Auth ids are not UUIDs), so
+	// accept any non-empty string — the org access check enforces validity.
+	organizationId: z.string().min(1).optional(),
 	limit: z.number().int().min(1).max(50).optional(),
 	offset: z.number().int().min(0).optional(),
 });

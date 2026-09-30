@@ -17,6 +17,7 @@ import {
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 type ApiKeyResult = {
@@ -35,6 +36,7 @@ export function ApiKeyCreateDialog({
 	onCreated: (key: ApiKeyResult) => void;
 }) {
 	const t = useTranslations("apiKeys");
+	const tRoot = useTranslations();
 	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
@@ -58,7 +60,7 @@ export function ApiKeyCreateDialog({
 			onCreated(result);
 		} catch (e) {
 			log.error("api key creation failed", { err: e });
-			setError(t("failed"));
+			setError(planGateMessage(e, tRoot, "apiKeys.failed"));
 		} finally {
 			setCreating(false);
 		}
