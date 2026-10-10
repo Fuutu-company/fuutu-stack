@@ -45,7 +45,7 @@
 		"assets:sync": "node tooling/scripts/assets-sync.mjs"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.7",
+		"@biomejs/biome": "2.5.15",
 		"@fuutu/config": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"@types/node": "catalog:",
