@@ -27,7 +27,9 @@ build
 
 # AI agent tooling (served via MCP, never in repo)
 .claude
-.fuutu
+.fuutu/*
+# Exception: visual regression baselines ARE committed (linux CI snapshots)
+!.fuutu/visual-baselines/
 
 # Logs
 /logs
@@ -58,6 +60,11 @@ playwright/.cache
 .playwright-mcp-artifacts/*
 !.playwright-mcp-artifacts/.gitkeep
 *-snapshots/
+# Visual baselines (.fuutu/visual-baselines/) are committed — Linux only.
+# Local dev on macOS/Windows generates platform-suffixed files that must
+# never land in the repo; CI regenerates + commits -linux variants on merge.
+.fuutu/visual-baselines/**/*-darwin.png
+.fuutu/visual-baselines/**/*-win32.png
 
 # Misc
 *.tgz
