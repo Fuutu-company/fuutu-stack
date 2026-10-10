@@ -109,6 +109,8 @@
 					"api_keys": "Unlimited API keys",
 					"api_webhooks": "Outbound webhooks",
 					"infrastructure_storage": "Unlimited storage",
+					"support_community": "Community support",
+					"support_email": "Priority email support",
 					"support_dedicated": "Dedicated support channel",
 					"support_sla": "Custom SLA"
 				}

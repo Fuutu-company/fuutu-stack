@@ -1,8 +1,9 @@
 import { SidebarInset, SidebarProvider } from "@fuutu/ui";
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { AppHeader } from "../components/app-header";
+import { ErrorToast } from "../components/error-toast";
 import { MobileHeader } from "../components/mobile-header";
 import { AppSidebar } from "../components/sidebar";
 
@@ -26,6 +27,9 @@ export async function DashboardLayout({ children }: DashboardLayoutProps) {
 			}}
 		>
 			<AppSidebar />
+			<Suspense>
+				<ErrorToast />
+			</Suspense>
 			<SidebarInset>
 				<MobileHeader />
 				<AppHeader />
