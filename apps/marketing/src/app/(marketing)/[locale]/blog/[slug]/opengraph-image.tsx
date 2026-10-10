@@ -10,10 +10,13 @@ interface OgImageProps {
 }
 
 export async function generateImageMetadata({ params }: OgImageProps) {
-	const { locale } = await params;
+	const { locale, slug } = await params;
+	// Build-time collection calls this once with empty params; the real
+	// per-post call happens at request time.
+	if (!slug) return [];
 	const tApp = await getTranslations({ locale, namespace: "app" });
 	const t = await getTranslations({ locale, namespace: "blog" });
-	return [{ alt: `${tApp("brand")} — ${t("title")}` }];
+	return [{ id: slug, alt: `${tApp("brand")} — ${t("title")}` }];
 }
 
 export default async function BlogOgImage({ params }: OgImageProps) {

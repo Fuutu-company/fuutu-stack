@@ -4,18 +4,31 @@ import { cookies } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 
 export async function getUserLocale(): Promise<Locale> {
-	const cookieStore = await cookies();
-	return (
-		(cookieStore.get(i18nConfig.localeCookieName)?.value as Locale) ||
-		i18nConfig.defaultLocale
-	);
+	// cookies() throws outside request scope (build-time page-data collection,
+	// metadata-image routes) — fall back to the default locale there.
+	try {
+		const cookieStore = await cookies();
+		return (
+			(cookieStore.get(i18nConfig.localeCookieName)?.value as Locale) ||
+			i18nConfig.defaultLocale
+		);
+	} catch {
+		return i18nConfig.defaultLocale;
+	}
 }
 
 export default getRequestConfig(async ({ requestLocale }) => {
 	// SaaS routes have no [locale] segment — locale comes from the cookie
 	// (set by the language switcher), with requestLocale as a fallback.
 	let locale = await getUserLocale();
-	const requested = (await requestLocale) as Locale | undefined;
+	// Outside request scope (build-time, metadata-image routes) resolving
+	// requestLocale reads headers() and throws — treat as "no locale".
+	let requested: Locale | undefined;
+	try {
+		requested = (await requestLocale) as Locale | undefined;
+	} catch {
+		requested = undefined;
+	}
 	if (requested) {
 		locale = requested;
 	}
