@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+  # Also triggered by the e2e jobs after a baseline commit on a PR branch —
+  # GITHUB_TOKEN pushes fire no events, so the dispatched run is what gives
+  # required checks a conclusion on the baseline commit (png-only diff →
+  # code=false → jobs skip → skipped counts as passed).
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -275,15 +280,19 @@ jobs:
   # they travel with the code, so every PR compares against the exact
   # baselines of its merge ref. No cache, no self-baselining.
   #
-  # PR workflow:
+  # PR workflow (runs on the branch tip, not the merge ref):
   #   1. Run non-visual tests → must pass (pipeline fails if they don't)
-  #   2. Run visual tests → warn only, diffs land in the report artifact
-  #   3. Post PR comment: "⚠️ Visual changes detected — review screenshots"
+  #   2. Run visual tests with --update-snapshots → pixel diffs become a
+  #      git diff; real failures still fail the step
+  #   3. Changed baselines are committed back onto the PR branch — pushes to
+  #      a feature branch need no protection bypass, works on any repo
   #
   # Merge workflow (push to main or develop):
   #   1. Run all tests → must pass
   #   2. Run --update-snapshots → baselines rewritten under .fuutu/
-  #   3. Auto-commit the new baselines back onto the branch ([skip ci])
+  #   3. Auto-commit the new baselines back onto the branch ([skip ci]);
+  #      on protected branches the push is rejected — baselines then arrive
+  #      via PR-branch commits instead (warning, not failure)
   # ─────────────────────────────────────────────────────────
   e2e-saas:
     needs: changes
@@ -292,8 +301,10 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write # baseline auto-commit pushes to the branch
+      actions: write  # dispatch follow-up run for required checks on bot commits
     outputs:
-      visual_failed: ${{ steps.saas-visual.outcome == 'failure' }}
+      visual_changed: ${{ steps.saas-visual.outputs.changed == '1' }}
+      visual_error: ${{ steps.saas-visual.outcome == 'failure' }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -321,6 +332,9 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
+          # PRs check out the branch tip, not the merge ref — baseline commits
+          # must be pushable back onto the PR branch.
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0 # full history: baseline commits rebase onto remote tip
 
       - uses: pnpm/action-setup@v6
@@ -373,13 +387,46 @@ jobs:
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
-      - name: Run visual tests (PR — chromium only, warn only)
+      # --update-snapshots "passes" on pixel diffs — the diff signal is the git
+      # diff afterwards. A real failure (page crash, timeout) aborts the step
+      # before the status check → visual_error → "tests incomplete" comment.
+      - name: Run visual tests + refresh baselines (PR)
         id: saas-visual
         if: github.event_name == 'pull_request'
-        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --project=chromium
         continue-on-error: true
+        run: |
+          pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/saas)" ]; then
+            echo "changed=1" >> $GITHUB_OUTPUT
+          fi
         env:
           PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Commit updated baselines to PR branch
+        if: github.event_name == 'pull_request' && steps.saas-visual.outputs.changed == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .fuutu/visual-baselines/saas
+          git commit -m "chore(visual): update saas baselines"
+          PUSHED=0
+          # e2e-marketing may push its own baseline commit first — rebase + retry
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.head_ref }}"
+            if git rebase "origin/${{ github.head_ref }}" && git push origin "HEAD:${{ github.head_ref }}"; then
+              PUSHED=1
+              break
+            fi
+          done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Could not push baselines to ${{ github.head_ref }} (fork PR?). Regenerate locally: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots"
+            exit 0
+          fi
+          # GITHUB_TOKEN pushes fire no events → dispatch a run so required
+          # checks get a conclusion on the new commit (png-only → all skip).
+          gh workflow run ci.yml --ref "${{ github.head_ref }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
@@ -394,9 +441,10 @@ jobs:
           PLAYWRIGHT_USE_PROD: "1"
 
       # Baselines live in the repo → after --update-snapshots the diff is a
-      # normal working-tree change. Commit it back so the next PR compares
-      # against fresh baselines. [skip ci] + png-only diff both prevent loops.
-      - name: Commit updated baselines
+      # normal working-tree change. [skip ci] prevents loops on unprotected
+      # branches; on protected ones the push is rejected — then baselines
+      # arrive via PR-branch commits instead (warning, not failure).
+      - name: Commit updated baselines (push to develop/main)
         if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
@@ -407,12 +455,17 @@ jobs:
             exit 0
           fi
           git commit -m "chore(visual): update saas baselines [skip ci]"
-          # e2e-marketing may land its own baseline commit first — rebase + retry
+          PUSHED=0
           for attempt in 1 2 3; do
             git fetch origin "${{ github.ref_name }}"
-            git rebase "origin/${{ github.ref_name }}" && \
-              git push origin "HEAD:${{ github.ref_name }}" && break
+            if git rebase "origin/${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}"; then
+              PUSHED=1
+              break
+            fi
           done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Baseline push rejected (branch protection?) — baselines arrive via PR-branch commits instead."
+          fi
 
       - uses: actions/upload-artifact@v7
         if: always()
@@ -435,8 +488,10 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write # baseline auto-commit pushes to the branch
+      actions: write  # dispatch follow-up run for required checks on bot commits
     outputs:
-      visual_failed: ${{ steps.marketing-visual.outcome == 'failure' }}
+      visual_changed: ${{ steps.marketing-visual.outputs.changed == '1' }}
+      visual_error: ${{ steps.marketing-visual.outcome == 'failure' }}
       coverage_pct: ${{ steps.coverage.outputs.pct }}
       coverage_available: ${{ steps.coverage.outputs.available }}
       coverage_scripts: ${{ steps.coverage.outputs.scripts }}
@@ -446,6 +501,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          # PRs check out the branch tip, not the merge ref — baseline commits
+          # must be pushable back onto the PR branch.
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0 # full history: baseline commits rebase onto remote tip
 
       - uses: pnpm/action-setup@v6
@@ -519,13 +577,43 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Run visual tests (PR — chromium only, warn only)
+      # Same pattern as e2e-saas — see there for the full rationale.
+      - name: Run visual tests + refresh baselines (PR)
         id: marketing-visual
         if: github.event_name == 'pull_request'
-        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --project=chromium
         continue-on-error: true
+        run: |
+          pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/marketing)" ]; then
+            echo "changed=1" >> $GITHUB_OUTPUT
+          fi
         env:
           PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Commit updated baselines to PR branch
+        if: github.event_name == 'pull_request' && steps.marketing-visual.outputs.changed == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .fuutu/visual-baselines/marketing
+          git commit -m "chore(visual): update marketing baselines"
+          PUSHED=0
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.head_ref }}"
+            if git rebase "origin/${{ github.head_ref }}" && git push origin "HEAD:${{ github.head_ref }}"; then
+              PUSHED=1
+              break
+            fi
+          done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Could not push baselines to ${{ github.head_ref }} (fork PR?). Regenerate locally: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots"
+            exit 0
+          fi
+          # GITHUB_TOKEN pushes fire no events → dispatch a run so required
+          # checks get a conclusion on the new commit (png-only → all skip).
+          gh workflow run ci.yml --ref "${{ github.head_ref }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
@@ -539,8 +627,7 @@ jobs:
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
-      # Same baseline auto-commit as e2e-saas — see there for rationale.
-      - name: Commit updated baselines
+      - name: Commit updated baselines (push to develop/main)
         if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
@@ -551,11 +638,17 @@ jobs:
             exit 0
           fi
           git commit -m "chore(visual): update marketing baselines [skip ci]"
+          PUSHED=0
           for attempt in 1 2 3; do
             git fetch origin "${{ github.ref_name }}"
-            git rebase "origin/${{ github.ref_name }}" && \
-              git push origin "HEAD:${{ github.ref_name }}" && break
+            if git rebase "origin/${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}"; then
+              PUSHED=1
+              break
+            fi
           done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Baseline push rejected (branch protection?) — baselines arrive via PR-branch commits instead."
+          fi
 
       - uses: actions/upload-artifact@v7
         if: always()
@@ -587,11 +680,18 @@ jobs:
         run: |
           SAAS_RESULT="${{ needs.e2e-saas.result }}"
           MKT_RESULT="${{ needs.e2e-marketing.result }}"
-          SAAS_VISUAL="${{ needs.e2e-saas.outputs.visual_failed }}"
-          MKT_VISUAL="${{ needs.e2e-marketing.outputs.visual_failed }}"
+          SAAS_CHANGED="${{ needs.e2e-saas.outputs.visual_changed }}"
+          MKT_CHANGED="${{ needs.e2e-marketing.outputs.visual_changed }}"
+          SAAS_ERR="${{ needs.e2e-saas.outputs.visual_error }}"
+          MKT_ERR="${{ needs.e2e-marketing.outputs.visual_error }}"
 
-          # Distinguish: visual diffs found vs tests ran clean vs tests didn't complete
-          if [ "$SAAS_VISUAL" = "true" ] || [ "$MKT_VISUAL" = "true" ]; then
+          # Distinguish: visual step crashed → incomplete; baselines changed →
+          # visual changes; both green → no changes.
+          if [ "$SAAS_ERR" = "true" ] || [ "$MKT_ERR" = "true" ]; then
+            echo "status=tests_incomplete" >> $GITHUB_OUTPUT
+            echo "saas_result=$SAAS_RESULT" >> $GITHUB_OUTPUT
+            echo "mkt_result=$MKT_RESULT" >> $GITHUB_OUTPUT
+          elif [ "$SAAS_CHANGED" = "true" ] || [ "$MKT_CHANGED" = "true" ]; then
             echo "status=visual_changes" >> $GITHUB_OUTPUT
           elif [ "$SAAS_RESULT" = "success" ] && [ "$MKT_RESULT" = "success" ]; then
             echo "status=no_changes" >> $GITHUB_OUTPUT
@@ -607,7 +707,6 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const branch = '${{ github.base_ref }}';
             const repo = `${context.repo.owner}/${context.repo.repo}`;
             const runId = '${{ github.run_id }}';
             const artifactUrl = `https://github.com/${repo}/actions/runs/${runId}`;
@@ -618,19 +717,18 @@ jobs:
               body: [
                 '## ⚠️ Visual Changes Detected',
                 '',
-                'UI changes were found during visual regression testing.',
+                'UI changes were found during visual regression testing. The refreshed baseline screenshots were **committed to this branch automatically** — review the PNG diffs in "Files changed" under `.fuutu/visual-baselines/`.',
                 '',
                 '**Links:**',
                 `- 📦 [Download Report Artifact](${artifactUrl}) — download & unzip, then open \`playwright-report/index.html\` in your browser`,
                 `- 🔗 [View PR](${prUrl})`,
                 '',
                 'In the report you\'ll see expected vs actual vs diff for every changed page.',
-                'Baselines are committed PNGs under `.fuutu/visual-baselines/<app>/` — you can also open them directly in the repo.',
                 '',
                 '**What to do:**',
-                '1. Download the artifact, open the HTML report, review the visual diffs',
-                '2. If the changes are **intentional** → merge this PR',
-                `3. Merging will automatically regenerate + commit the baselines onto \`${branch}\``,
+                '1. Review the baseline PNG diffs in this PR (or the HTML report for expected/actual/diff)',
+                '2. If the changes are **intentional** → merge this PR — the new baselines travel with it',
+                '3. If the changes are **unintentional** → fix the code and push — the baselines will be regenerated again',
                 '',
                 '> The pipeline did **not** fail — this is a warning only. Non-visual tests must still pass.',
               ].join('\n')

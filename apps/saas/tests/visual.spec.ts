@@ -3,7 +3,8 @@ import { expect, test } from "./fixtures";
 /**
  * Visual regression tests for the SaaS app.
  * Baselines are committed PNGs in .fuutu/visual-baselines/saas/ —
- * CI regenerates + auto-commits them on merge to develop/main.
+ * CI regenerates them on PRs and commits the diff back onto the
+ * PR branch (plus on push to develop/main where allowed).
  */
 
 test.describe("visual regression — auth pages", () => {

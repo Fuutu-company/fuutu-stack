@@ -5,7 +5,8 @@ import { expect, scrollThroughPage, test } from "./fixtures";
  * Covers all pages in EN + DE at desktop, tablet, and mobile viewports.
  *
  * Baselines are committed PNGs in .fuutu/visual-baselines/marketing/.
- * CI regenerates + auto-commits them on merge to develop/main —
+ * CI regenerates them on PRs and commits the diff back onto the
+ * PR branch (plus on push to develop/main where allowed) —
  * see ../../.github/workflows/ci.yml. Locally, run --update-snapshots
  * to create your platform's baselines (gitignored outside linux).
  */
