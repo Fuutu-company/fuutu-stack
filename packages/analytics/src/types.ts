@@ -19,6 +19,12 @@ export interface AnalyticsEventProps {
 	[key: string]: string | number | boolean | null | undefined;
 }
 
+export interface AnalyticsScriptProps {
+	src: string;
+	strategy: "afterInteractive" | "lazyOnload" | "beforeInteractive";
+	attributes?: Record<string, string>;
+}
+
 export interface AnalyticsProvider {
 	readonly id: AnalyticsProviderId;
 	/**
@@ -31,4 +37,8 @@ export interface AnalyticsProvider {
 	 * auto-track via the script — this is for SPA-style manual sends.
 	 */
 	trackPageview(url?: string): void;
+	/**
+	 * Returns script tag props for client-side injection, or null if no script needed (server-side-only analytics).
+	 */
+	getScriptProps?(): AnalyticsScriptProps | null;
 }

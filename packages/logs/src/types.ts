@@ -2,15 +2,6 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export type LogMeta = Record<string, unknown>;
 
-export interface LogContext {
-	scope?: string;
-	meta?: LogMeta;
-}
-
-export interface LogProvider {
-	log(level: LogLevel, message: string, context: LogContext): void;
-}
-
 export interface Logger {
 	debug(message: string, meta?: LogMeta): void;
 	info(message: string, meta?: LogMeta): void;
@@ -24,9 +15,9 @@ export interface LoggerOptions {
 
 // ──────────────────────────────────────────────────────────────────────────
 // Audit logs — persistent, append-only, forensic. Lives alongside the
-// ephemeral LogProvider so every `log.audit(…)` call:
-//   1. writes the canonical row via the active AuditSink (DB/S3/…)
-//   2. mirrors an `info` entry through the active LogProvider for devs.
+// ephemeral evlog log stream so every `audit.record(…)` call:
+//   1. writes the canonical row via the active AuditSink (source of truth)
+//   2. mirrors an `info` entry through evlog for devs
 // ──────────────────────────────────────────────────────────────────────────
 
 export interface AuditEvent {

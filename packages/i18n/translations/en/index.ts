@@ -7,5 +7,7 @@ export default {
 	...common,
 	...marketing,
 	...saas,
-	...docs,
+	// Docs namespaces (`nav`, `home`, …) collide with marketing's — keep
+	// them nested under `docs` instead of shallow-spreading.
+	docs,
 } as const;

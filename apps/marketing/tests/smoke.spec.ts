@@ -1,3 +1,4 @@
+import deHome from "../../../packages/i18n/translations/de/marketing/home.json";
 import { expect, test } from "./fixtures";
 
 /**
@@ -82,7 +83,7 @@ test.describe("key content visible", () => {
 	test("/en/contact renders contact info", async ({ page }) => {
 		await page.goto("/en/contact");
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-		await expect(page.locator("a[href^='mailto:']")).toBeVisible();
+		await expect(page.locator("a[href^='mailto:']").first()).toBeVisible();
 	});
 });
 
@@ -238,6 +239,24 @@ test.describe("page metadata", () => {
 			expect(html).toMatch(/<meta\s+name="description"/i);
 		});
 	}
+});
+
+// ── Audit regressions ───────────────────────────────────────────────────
+
+test.describe("audit regressions", () => {
+	test("pricing pages render no dead video demo buttons", async ({ page }) => {
+		for (const path of ["/pricing", "/de/pricing"]) {
+			await page.goto(path);
+			await expect(page.locator("svg.lucide-play")).toHaveCount(0);
+		}
+	});
+
+	test("de home logo-rail tooltips render German copy", async ({ page }) => {
+		const expected = deHome.home.hero.stack.nextjs.description;
+		await page.goto("/de");
+		await page.locator("img[alt='Next.js']").first().hover();
+		await expect(page.getByText(expected)).toBeVisible();
+	});
 });
 
 // ── Security headers + kit fingerprint ──────────────────────────────────

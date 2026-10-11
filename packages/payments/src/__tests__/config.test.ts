@@ -1,5 +1,6 @@
 import { config } from "@fuutu/config";
 import { describe, expect, it } from "vitest";
+
 import {
 	FEATURE_CATALOG,
 	type FeatureEntry,
@@ -16,6 +17,7 @@ const LIMIT_KEYS: (keyof PlanLimits)[] = [
 	"organizations",
 	"membersPerOrg",
 	"apiKeys",
+	"webhooks",
 	"storageMb",
 	"auditLogDays",
 ];

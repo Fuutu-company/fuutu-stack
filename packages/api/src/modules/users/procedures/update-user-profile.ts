@@ -1,6 +1,11 @@
 import { updateUserProfile as updateUserProfileDb } from "@fuutu/db";
+import { createLogger } from "@fuutu/logs";
+import { dispatchEvent } from "@fuutu/webhooks";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { protectedProcedure } from "../../../orpc/procedures";
+
+const log = createLogger({ scope: "api:users" });
 
 const updateProfileSchema = z.object({
 	name: z.string().min(1).max(100).optional(),
@@ -19,6 +24,16 @@ export const updateUserProfile = protectedProcedure
 	.input(updateProfileSchema)
 	.handler(async ({ context, input }) => {
 		const updatedUser = await updateUserProfileDb(context.user.id, input);
+
+		try {
+			await dispatchEvent({
+				event: "user.updated",
+				userId: context.user.id,
+				payload: { userId: context.user.id },
+			});
+		} catch (err) {
+			log.warn("webhook dispatch failed", { err });
+		}
 
 		return {
 			id: updatedUser.id,

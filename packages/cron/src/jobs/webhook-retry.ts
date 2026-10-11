@@ -5,7 +5,9 @@ import type { CronJob, CronJobResult } from "../types";
 export const webhookRetryJob: CronJob = {
 	name: "webhook-retry",
 	schedule: "*/5 * * * *",
-	enabled: cronConfig.jobs.webhookRetry,
+	get enabled() {
+		return cronConfig.jobs.webhookRetry;
+	},
 	async run(): Promise<CronJobResult> {
 		const errors: string[] = [];
 		try {

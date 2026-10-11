@@ -1,6 +1,6 @@
 import { countAuditLogs, listAuditLogs } from "@fuutu/db";
 import { z } from "zod";
-import { adminProcedure } from "../../../orpc";
+import { adminProcedure } from "../../../orpc/procedures";
 
 /**
  * Current filter is admin-global. Before adding org-scoped audit events,

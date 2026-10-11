@@ -19,6 +19,9 @@ type FrameChromeProps = Pick<
 	| "contentClassName"
 	| "width"
 	| "className"
+	| "playLabel"
+	| "pauseLabel"
+	| "videoTitle"
 	| "children"
 > & { autoFilename: string };
 
@@ -39,6 +42,9 @@ export function FrameChrome({
 	width,
 	className,
 	autoFilename,
+	playLabel,
+	pauseLabel,
+	videoTitle,
 	children,
 }: FrameChromeProps) {
 	return (
@@ -54,7 +60,7 @@ export function FrameChrome({
 		>
 			{/* macOS titlebar — scales with container via cqi */}
 			<div
-				className="flex items-center overflow-hidden border-border border-b bg-muted"
+				className="flex items-center overflow-hidden border-[#d2d2d7] border-b bg-[#ececee] dark:border-[#38383a] dark:bg-[#3a3a3c]"
 				style={{
 					borderRadius: "clamp(5px, 3cqi, 18px) clamp(5px, 3cqi, 18px) 0 0",
 					gap: "clamp(3px, 1.5cqi, 10px)",
@@ -124,6 +130,9 @@ export function FrameChrome({
 				filename={autoFilename}
 				rounded="rounded-none"
 				roundedStyle="0"
+				playLabel={playLabel}
+				pauseLabel={pauseLabel}
+				videoTitle={videoTitle}
 			>
 				{children}
 			</FrameContent>

@@ -98,6 +98,19 @@ export const verifyApiKey = async (plaintextKey: string) => {
 	return record;
 };
 
+/**
+ * Verify a plaintext API key AND resolve its owning user in one call.
+ * Used by the oRPC context to authenticate `x-api-key` requests —
+ * the key acts with the owner's permissions (optionally org-scoped).
+ */
+export const verifyApiKeyWithOwner = async (plaintextKey: string) => {
+	const apiKey = await verifyApiKey(plaintextKey);
+	if (!apiKey) return null;
+	const user = await db.user.findUnique({ where: { id: apiKey.userId } });
+	if (!user) return null;
+	return { apiKey, user };
+};
+
 export type ApiKeyOwner = { userId: string } | { organizationId: string };
 
 export const getApiKey = (id: string) =>

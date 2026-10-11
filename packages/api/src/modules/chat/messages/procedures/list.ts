@@ -1,7 +1,8 @@
 import { countMessages, getConversation, listMessages } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../../../orpc";
+import { permissionProcedure } from "../../../../orpc/procedures";
 import { conversationIdSchema } from "../../shared";
 
 const listMessagesSchema = conversationIdSchema.extend({
@@ -9,7 +10,7 @@ const listMessagesSchema = conversationIdSchema.extend({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listMessagesProcedure = protectedProcedure
+export const listMessagesProcedure = permissionProcedure(PERMISSIONS.CHAT.VIEW)
 	.route({
 		method: "GET",
 		path: "/chat/conversations/{conversationId}/messages",

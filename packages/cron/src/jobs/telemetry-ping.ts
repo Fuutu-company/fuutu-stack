@@ -5,7 +5,9 @@ import type { CronJob, CronJobResult } from "../types";
 export const telemetryPingJob: CronJob = {
 	name: "telemetry-ping",
 	schedule: "0 * * * *",
-	enabled: cronConfig.jobs.telemetryPing,
+	get enabled() {
+		return cronConfig.jobs.telemetryPing;
+	},
 	async run(): Promise<CronJobResult> {
 		const errors: string[] = [];
 		try {

@@ -1,15 +1,21 @@
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import { db, prismaAuditSink } from "@fuutu/db";
+import {
+	getUserByEmail,
+	listOrganizationsForUser,
+	prismaAuditSink,
+} from "@fuutu/db";
+import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
-import { createLogger, setAuditSink } from "@fuutu/logs";
-import { paymentsConfig } from "@fuutu/payments/config";
-import { checkout, polar, portal } from "@polar-sh/better-auth";
+import { createLogger, logsConfig, setAuditSink } from "@fuutu/logs";
+import { createCustomerForUser } from "@fuutu/payments";
 import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { createAuthMiddleware } from "better-auth/api";
 import {
 	admin,
+	lastLoginMethod,
 	magicLink,
 	multiSession,
 	openAPI,
@@ -20,19 +26,50 @@ import {
 import { authConfig } from "./config";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
 import { assertInvitationForSignup } from "./hooks/invitation-only";
+import { assertPasswordPolicy } from "./hooks/password-policy";
 import {
 	cancelActiveSubscriptionsForOrganization,
 	cancelActiveSubscriptionsForUser,
 	syncSeatsForOrganization,
 } from "./hooks/payments-sync";
+import { assertSignupPolicy } from "./hooks/signup-policy";
 import { sendEmail } from "./lib/email";
-import { polarClient } from "./lib/payments";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
-// Postgres `AuditLog` table. Safe to call multiple times — last writer wins.
-setAuditSink(prismaAuditSink);
+// Postgres `AuditLog` table — but only when LOG_AUDIT_SINK=db (the default is
+// "console"). The logs package can't auto-resolve the db sink because
+// @fuutu/db depends on `pg` (Node-only) and would leak into client bundles.
+if (logsConfig.auditSink === "db") {
+	setAuditSink(prismaAuditSink);
+}
 
 const log = createLogger({ scope: "auth" });
+
+/**
+ * Emit `user.created` when a user gains their first organization
+ * membership. Webhooks are org-scoped, so dispatching at account
+ * creation (before any membership exists) would enqueue zero
+ * deliveries — the event is emitted here instead, scoped to the org
+ * the user first joins. Best-effort: a dispatch failure must never
+ * abort the membership flow.
+ */
+async function emitUserCreatedOnFirstMembership(
+	userId: string,
+	organizationId: string,
+): Promise<void> {
+	try {
+		const orgs = await listOrganizationsForUser(userId);
+		if (orgs.length !== 1 || orgs[0]?.id !== organizationId) return;
+		const { dispatchEvent } = await import("@fuutu/webhooks");
+		await dispatchEvent({
+			event: "user.created",
+			organizationId,
+			payload: { userId, organizationId },
+		});
+	} catch (err) {
+		log.warn("user.created webhook dispatch failed", { err: String(err) });
+	}
+}
 
 const authOptions = {
 	database: prismaAdapter(db, {
@@ -119,8 +156,18 @@ const authOptions = {
 		},
 	},
 
+	// Server-side enforcement of authConfig.passwordPolicy complexity rules
+	// (Better-Auth itself only checks min/max length). Runs for every
+	// endpoint that carries a plaintext password.
+	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			assertPasswordPolicy(ctx.path, ctx.body);
+		}),
+	},
+
 	emailAndPassword: {
 		enabled: authConfig.features.emailPassword,
+		disableSignUp: !authConfig.signup.enabled,
 		autoSignIn: !authConfig.signup.requireEmailVerification,
 		requireEmailVerification: authConfig.signup.requireEmailVerification,
 		minPasswordLength: authConfig.passwordPolicy.minLength,
@@ -215,12 +262,25 @@ const authOptions = {
 	databaseHooks: {
 		user: {
 			create: {
-				before: async (user) => {
-					// Invitation-only sign-up gate.
-					await assertInvitationForSignup({ email: user.email });
+				before: async (user, ctx) => {
+					// authConfig.signup gate (enabled / allowedDomains) on
+					// self-service paths, then the invitation-only gate.
+					assertSignupPolicy({ email: user.email }, ctx);
+					await assertInvitationForSignup({ email: user.email }, ctx);
 				},
 				after: async (user) => {
 					await logSignUp({ id: user.id });
+					// Create a customer record at the active payment provider.
+					// Best-effort: a provider failure must never abort sign-up.
+					try {
+						await createCustomerForUser({
+							id: user.id,
+							email: user.email,
+							name: user.name,
+						});
+					} catch (err) {
+						log.warn("create customer on signup failed", { err: String(err) });
+					}
 					// Welcome email (uses the `new-user` template).
 					// Best-effort: a delivery failure must never abort sign-up.
 					try {
@@ -272,7 +332,8 @@ const authOptions = {
 		username(),
 
 		// OpenAPI doc endpoint at `/api/auth/reference` (+ `/api/auth/open-api/generate-schema`).
-		openAPI(),
+		// Dev/staging only — not exposed in production.
+		...(env.NODE_ENV !== "production" ? [openAPI()] : []),
 
 		// Passkeys (WebAuthn). Since better-auth 1.5 this lives in
 		// its own dedicated package (`@better-auth/passkey`).
@@ -289,21 +350,38 @@ const authOptions = {
 		...(config.features.organizationsMode !== "off"
 			? [
 					organization({
-						async sendInvitationEmail({ email, id, organization }) {
+						async sendInvitationEmail({ email, id, organization, inviter }) {
 							const inviteUrl = `${env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000"}/auth/accept-invitation?id=${id}`;
-							await sendEmail({
-								to: email,
-								template: "organization-invitation",
-								data: {
-									organizationName: organization.name,
-									inviteUrl,
-								},
-							});
+							try {
+								await sendEmail({
+									to: email,
+									template: "organization-invitation",
+									data: {
+										organizationName: organization.name,
+										inviteUrl,
+										inviterName: inviter.user.name,
+										locale: (inviter.user as { locale?: "en" | "de" }).locale,
+									},
+								});
+							} catch (err) {
+								log.warn("invitation email failed", { err: String(err) });
+							}
 						},
 						// Sync seats with the payment provider on membership changes.
 						organizationHooks: {
-							afterAcceptInvitation: async ({ invitation }) => {
+							afterAddMember: async ({ member }) => {
+								await syncSeatsForOrganization(member.organizationId);
+								await emitUserCreatedOnFirstMembership(
+									member.userId,
+									member.organizationId,
+								);
+							},
+							afterAcceptInvitation: async ({ invitation, member }) => {
 								await syncSeatsForOrganization(invitation.organizationId);
+								await emitUserCreatedOnFirstMembership(
+									member.userId,
+									invitation.organizationId,
+								);
 							},
 							afterRemoveMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);
@@ -324,45 +402,31 @@ const authOptions = {
 
 		multiSession(),
 
+		// Track the last authentication method (email, google, github, passkey,
+		// magic-link) in a cookie so the sign-in page can highlight the method
+		// the user used last time — prevents accidental duplicate accounts.
+		lastLoginMethod(),
+
 		...(authConfig.features.magicLink
 			? [
 					magicLink({
+						disableSignUp: !authConfig.signup.enabled,
 						sendMagicLink: async ({ email, url }) => {
-							await sendEmail({
-								to: email,
-								subject: "Sign in to your account",
-								template: "magic-link",
-								data: {
-									magicLinkUrl: url,
-								},
-							});
+							try {
+								const recipient = await getUserByEmail(email);
+								await sendEmail({
+									to: email,
+									template: "magic-link",
+									data: {
+										magicLinkUrl: url,
+										locale: (recipient as { locale?: "en" | "de" } | null)
+											?.locale,
+									},
+								});
+							} catch (err) {
+								log.warn("magic link email failed", { err: String(err) });
+							}
 						},
-					}),
-				]
-			: []),
-
-		// Polar plugin (v1 active payments provider).
-		// Only mounted when:
-		//   - paymentsConfig selects "polar" AND
-		//   - an access token + product id are configured.
-		// This keeps the dev experience tolerant: missing env vars do not
-		// crash the Better-Auth bootstrap, they just disable payments.
-		...(paymentsConfig.provider === "polar" &&
-		env.POLAR_ACCESS_TOKEN &&
-		env.POLAR_PRODUCT_ID
-			? [
-					polar({
-						client: polarClient,
-						createCustomerOnSignUp: true,
-						enableCustomerPortal: true,
-						use: [
-							checkout({
-								products: [{ productId: env.POLAR_PRODUCT_ID, slug: "pro" }],
-								successUrl: env.POLAR_SUCCESS_URL,
-								authenticatedUsersOnly: true,
-							}),
-							portal(),
-						],
 					}),
 				]
 			: []),

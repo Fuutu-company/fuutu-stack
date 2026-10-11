@@ -23,7 +23,7 @@ afterEach(() => {
 
 // Import AFTER the mock is registered so the provider picks up the stub.
 const { plunkProvider } = await import("../providers/plunk");
-const { testEmailProviderContract } = await import("./provider-contract.test");
+const { testEmailProviderContract } = await import("./provider-contract");
 
 testEmailProviderContract("plunk", () => plunkProvider, {
 	sendBehavior: "resolves",

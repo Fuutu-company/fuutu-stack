@@ -1,9 +1,20 @@
+import { Skeleton } from "@fuutu/ui";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 import { AuthResetPassword } from "@/modules/auth/components/auth-reset-password";
+
+export async function generateMetadata(): Promise<Metadata> {
+	const t = await getTranslations("auth");
+	return {
+		title: t("resetPassword.title"),
+	};
+}
 
 export default function ResetPasswordPage() {
 	return (
-		<main className="container flex min-h-screen flex-col items-center justify-center p-4 md:p-6">
+		<Suspense fallback={<Skeleton className="h-80 w-full max-w-md" />}>
 			<AuthResetPassword />
-		</main>
+		</Suspense>
 	);
 }

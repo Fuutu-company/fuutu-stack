@@ -1,7 +1,11 @@
 import { getUnreadCount } from "@fuutu/db";
-import { protectedProcedure } from "../../../orpc";
+import { PERMISSIONS } from "@fuutu/rbac";
+import { z } from "zod";
+import { permissionProcedure } from "../../../orpc/procedures";
 
-export const getUnreadCountProcedure = protectedProcedure
+export const getUnreadCountProcedure = permissionProcedure(
+	PERMISSIONS.NOTIFICATION.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/notifications/unread-count",
@@ -10,6 +14,7 @@ export const getUnreadCountProcedure = protectedProcedure
 		description:
 			"Returns the count of unread notifications for the current user.",
 	})
+	.input(z.object({}).optional())
 	.handler(async ({ context }) => {
 		const count = await getUnreadCount(context.user.id);
 		return { count };

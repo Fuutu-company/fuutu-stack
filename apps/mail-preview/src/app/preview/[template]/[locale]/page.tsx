@@ -1,5 +1,6 @@
 import type { Locale } from "@fuutu/i18n";
 import type { TemplateName } from "@fuutu/mail/templates";
+import { notFound } from "next/navigation";
 import { LOCALES, renderFixture, TEMPLATES } from "../../../../fixtures";
 
 interface Params {
@@ -15,10 +16,10 @@ export default async function PreviewPage({
 	const { template, locale } = await params;
 
 	if (!(TEMPLATES as string[]).includes(template)) {
-		return <NotFound message={`Unknown template: ${template}`} />;
+		notFound();
 	}
 	if (!(LOCALES as readonly string[]).includes(locale)) {
-		return <NotFound message={`Unknown locale: ${locale}`} />;
+		notFound();
 	}
 
 	const name = template as TemplateName;
@@ -92,20 +93,6 @@ export default async function PreviewPage({
 					{rendered.text}
 				</pre>
 			</details>
-		</main>
-	);
-}
-
-function NotFound({ message }: { message: string }) {
-	return (
-		<main style={{ padding: 24 }}>
-			<h1>404</h1>
-			<p>{message}</p>
-			<p>
-				<a href="/" style={{ color: "#2563eb" }}>
-					Back to index
-				</a>
-			</p>
 		</main>
 	);
 }

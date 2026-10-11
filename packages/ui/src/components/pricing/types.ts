@@ -20,6 +20,8 @@ export interface PricingTier {
 	disabled?: boolean;
 	/** Optional Lucide-style icon rendered as plan identity mark. */
 	icon?: React.ComponentType<{ className?: string }>;
+	/** Seat count for seat-based plans (e.g. "5 seats"). */
+	seatCount?: number;
 }
 
 /**
@@ -48,19 +50,21 @@ export interface PricingCompactProps {
 	tiers: PricingTier[];
 	className?: string;
 	popularLabel?: string;
-	/** Localized "…and N more features" suffix for the compact list. */
+	/** Localized "…and N more features" suffix for the compact list. Required for the "see all" link to render. */
 	moreLabel?: string;
 	/** href to the full pricing page (used in "see all" link inside compact cards). */
 	pricingHref?: string;
-	/** Localized "See all" link label. */
+	/** Localized "See all" link label. Required for the "see all" link to render. */
 	seeAllLabel?: string;
 	/** Localized labels for Enterprise highlights (shown in the full-width banner). */
 	enterpriseHighlights?: { label: string; description: string }[];
+	/** Formats a seat count into a localized label (e.g. "(n) => `${n} seats`"). Seat count is hidden when absent. */
+	seatLabel?: (seatCount: number) => string;
 	LinkComponent?: LinkComponent;
 	/** Localized label for the monthly billing toggle option. */
-	monthlyLabel?: string;
+	monthlyLabel: string;
 	/** Localized label for the yearly billing toggle option. */
-	yearlyLabel?: string;
+	yearlyLabel: string;
 	/** Optional badge text shown on the yearly toggle (e.g. "Save 20%"). */
 	yearlyBadge?: string;
 }
@@ -71,15 +75,21 @@ export interface PricingFullProps {
 	featureGroupLabels?: Record<string, string>;
 	className?: string;
 	popularLabel?: string;
-	/** Localized "Watch demo" label shown on features that have videoSrc. */
+	/** Localized "Watch demo" label shown on features that have videoSrc. The video button is hidden when absent. */
 	watchLabel?: string;
-	/** Replaces "—" display prices (e.g. enterprise custom pricing). Defaults to "Custom". */
+	/** Replaces "—" display prices (e.g. enterprise custom pricing). Falls back to the raw placeholder. */
 	customPriceLabel?: string;
+	/** Accessible label for the play button inside feature-demo videos. */
+	playLabel?: string;
+	/** Accessible label for the pause button inside feature-demo videos. */
+	pauseLabel?: string;
+	/** Accessible title for feature-demo video embeds. */
+	videoTitle?: string;
 	LinkComponent?: LinkComponent;
 	/** Localized label for the monthly billing toggle option. */
-	monthlyLabel?: string;
+	monthlyLabel: string;
 	/** Localized label for the yearly billing toggle option. */
-	yearlyLabel?: string;
+	yearlyLabel: string;
 	/** Optional badge text shown on the yearly toggle (e.g. "Save 20%"). */
 	yearlyBadge?: string;
 }

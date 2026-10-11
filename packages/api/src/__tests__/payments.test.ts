@@ -59,7 +59,7 @@ const mockProvider = {
 };
 
 const orgFixture = {
-	id: "org-1",
+	id: "12345678-1234-1234-8123-123456789abc",
 	name: "Acme",
 	slug: "acme",
 	createdAt: new Date("2024-01-01"),
@@ -134,7 +134,7 @@ describe("payments.checkout.create", () => {
 			paymentsRouter.checkout.create,
 			{
 				priceId: "price-123",
-				organizationId: "org-1",
+				organizationId: "12345678-1234-1234-8123-123456789abc",
 				successUrl: "/success",
 				cancelUrl: "/cancel",
 			},
@@ -144,7 +144,7 @@ describe("payments.checkout.create", () => {
 		expect(mockProvider.createCheckoutLink).toHaveBeenCalledWith({
 			priceId: "price-123",
 			userId: "user-1",
-			organizationId: "org-1",
+			organizationId: "12345678-1234-1234-8123-123456789abc",
 			successUrl: "http://localhost:3000/success",
 			cancelUrl: "http://localhost:3000/cancel",
 		});
@@ -204,7 +204,7 @@ describe("payments.portal.open", () => {
 	it("creates a portal link for an organization with a customer ID", async () => {
 		mockOrgMembership();
 		vi.mocked(getOrganizationById).mockResolvedValue({
-			id: "org-1",
+			id: "12345678-1234-1234-8123-123456789abc",
 			paymentsCustomerId: "cust-123",
 		} as never);
 		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
@@ -214,11 +214,13 @@ describe("payments.portal.open", () => {
 
 		const result = await call(
 			paymentsRouter.portal.open,
-			{ organizationId: "org-1" },
+			{ organizationId: "12345678-1234-1234-8123-123456789abc" },
 			{ context: authenticatedContext },
 		);
 
-		expect(getOrganizationById).toHaveBeenCalledWith("org-1");
+		expect(getOrganizationById).toHaveBeenCalledWith(
+			"12345678-1234-1234-8123-123456789abc",
+		);
 		expect(mockProvider.createCustomerPortalLink).toHaveBeenCalledWith({
 			customerId: "cust-123",
 			returnUrl: undefined,
@@ -233,7 +235,7 @@ describe("payments.portal.open", () => {
 		await expect(
 			call(
 				paymentsRouter.portal.open,
-				{ organizationId: "org-1" },
+				{ organizationId: "12345678-1234-1234-8123-123456789abc" },
 				{
 					context: authenticatedContext,
 				},
@@ -244,14 +246,14 @@ describe("payments.portal.open", () => {
 	it("throws BAD_REQUEST when org has no customer ID", async () => {
 		mockOrgMembership();
 		vi.mocked(getOrganizationById).mockResolvedValue({
-			id: "org-1",
+			id: "12345678-1234-1234-8123-123456789abc",
 			paymentsCustomerId: null,
 		} as never);
 
 		await expect(
 			call(
 				paymentsRouter.portal.open,
-				{ organizationId: "org-1" },
+				{ organizationId: "12345678-1234-1234-8123-123456789abc" },
 				{
 					context: authenticatedContext,
 				},
@@ -350,11 +352,13 @@ describe("payments.subscription.status", () => {
 
 		await call(
 			paymentsRouter.subscription.status,
-			{ organizationId: "org-1" },
+			{ organizationId: "12345678-1234-1234-8123-123456789abc" },
 			{ context: authenticatedContext },
 		);
 
-		expect(getActiveSubscriptionForOrganization).toHaveBeenCalledWith("org-1");
+		expect(getActiveSubscriptionForOrganization).toHaveBeenCalledWith(
+			"12345678-1234-1234-8123-123456789abc",
+		);
 	});
 });
 
@@ -388,7 +392,7 @@ describe("payments.subscription.cancel", () => {
 		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
 			id: "purchase-2",
 			userId: null,
-			organizationId: "org-1",
+			organizationId: "12345678-1234-1234-8123-123456789abc",
 		} as never);
 		mockProvider.cancelSubscription.mockResolvedValue(undefined);
 
@@ -419,7 +423,7 @@ describe("payments.subscription.cancel", () => {
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
 	});
 
-	it("throws FORBIDDEN when subscription not found", async () => {
+	it("throws NOT_FOUND when subscription not found", async () => {
 		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
 		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue(
 			null as never,
@@ -431,7 +435,7 @@ describe("payments.subscription.cancel", () => {
 				{ subscriptionId: "sub-missing" },
 				{ context: authenticatedContext },
 			),
-		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
 	});
 
 	it("rejects empty subscriptionId", async () => {
@@ -461,15 +465,24 @@ describe("payments.invoices.list", () => {
 
 		const result = await call(
 			paymentsRouter.invoices.list,
-			{ organizationId: "org-1", page: 1, limit: 10 },
+			{
+				organizationId: "12345678-1234-1234-8123-123456789abc",
+				page: 1,
+				limit: 10,
+			},
 			{ context: authenticatedContext },
 		);
 
-		expect(listInvoicesByOrg).toHaveBeenCalledWith("org-1", {
-			take: 10,
-			skip: 0,
-		});
-		expect(countInvoicesByOrg).toHaveBeenCalledWith("org-1");
+		expect(listInvoicesByOrg).toHaveBeenCalledWith(
+			"12345678-1234-1234-8123-123456789abc",
+			{
+				take: 10,
+				skip: 0,
+			},
+		);
+		expect(countInvoicesByOrg).toHaveBeenCalledWith(
+			"12345678-1234-1234-8123-123456789abc",
+		);
 		expect(result).toEqual({
 			items: [{ id: "inv-1", amount: 1900, status: "paid" }],
 			page: 1,
@@ -508,14 +521,21 @@ describe("payments.invoices.list", () => {
 
 		const result = await call(
 			paymentsRouter.invoices.list,
-			{ organizationId: "org-1", page: 2, limit: 10 },
+			{
+				organizationId: "12345678-1234-1234-8123-123456789abc",
+				page: 2,
+				limit: 10,
+			},
 			{ context: authenticatedContext },
 		);
 
-		expect(listInvoicesByOrg).toHaveBeenCalledWith("org-1", {
-			take: 10,
-			skip: 10,
-		});
+		expect(listInvoicesByOrg).toHaveBeenCalledWith(
+			"12345678-1234-1234-8123-123456789abc",
+			{
+				take: 10,
+				skip: 10,
+			},
+		);
 		expect(result.totalPages).toBe(3);
 	});
 

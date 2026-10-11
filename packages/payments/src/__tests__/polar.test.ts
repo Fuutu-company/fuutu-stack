@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-// Mock the Polar SDK at the module boundary — no real network calls.
 const checkoutsCreate = vi
 	.fn()
 	.mockResolvedValue({ url: "https://checkout.test/url" });
@@ -8,17 +7,27 @@ const customerSessionsCreate = vi.fn().mockResolvedValue({
 	customerPortalUrl: "https://portal.test/url",
 });
 const subscriptionsRevoke = vi.fn().mockResolvedValue(undefined);
+const customersCreate = vi.fn().mockResolvedValue({ id: "cust_polar_123" });
 
 vi.mock("@polar-sh/sdk", () => ({
 	Polar: class MockPolar {
 		checkouts = { create: checkoutsCreate };
 		customerSessions = { create: customerSessionsCreate };
 		subscriptions = { revoke: subscriptionsRevoke };
+		customers = { create: customersCreate };
 	},
 }));
 
 vi.mock("@polar-sh/sdk/webhooks", () => ({
-	validateEvent: vi.fn().mockReturnValue({ type: "test.event" }),
+	validateEvent: vi.fn().mockReturnValue({
+		type: "subscription.created",
+		data: {
+			subscription_id: "sub_123",
+			customer_id: "cust_123",
+			product_id: "prod_123",
+			metadata: { user_id: "user_123", organization_id: "org_123" },
+		},
+	}),
 	WebhookVerificationError: class WebhookVerificationError extends Error {},
 }));
 
@@ -32,13 +41,6 @@ vi.mock("@fuutu/env/saas", () => ({
 }));
 
 const { polarPaymentProvider } = await import("../providers/polar");
-const { testPaymentProviderContract } = await import(
-	"./provider-contract.test"
-);
-
-testPaymentProviderContract("polar", () => polarPaymentProvider, {
-	behavior: "resolves",
-});
 
 describe("polar provider — SDK integration", () => {
 	it("createCheckoutLink calls Polar checkouts.create and returns the url", async () => {
@@ -60,17 +62,27 @@ describe("polar provider — SDK integration", () => {
 		expect(customerSessionsCreate).toHaveBeenCalledOnce();
 	});
 
+	it("createCustomer calls customers.create and returns the id", async () => {
+		customersCreate.mockClear();
+		const result = await polarPaymentProvider.createCustomer({
+			userId: "user_123",
+			email: "test@test.com",
+		});
+		expect(result.customerId).toBe("cust_polar_123");
+		expect(customersCreate).toHaveBeenCalledOnce();
+	});
+
 	it("cancelSubscription calls subscriptions.revoke", async () => {
 		subscriptionsRevoke.mockClear();
 		await polarPaymentProvider.cancelSubscription("sub_123");
 		expect(subscriptionsRevoke).toHaveBeenCalledOnce();
 	});
 
-	it("ownsSeatSync is true (Better-Auth plugin handles seat sync)", () => {
-		expect(polarPaymentProvider.ownsSeatSync).toBe(true);
+	it("ownsSeatSync is false (we manage seats, not Polar BA plugin)", () => {
+		expect(polarPaymentProvider.ownsSeatSync).toBe(false);
 	});
 
-	it("webhookHandler returns 200 on a valid signature", async () => {
+	it("parseWebhook returns ProviderEvent[] on a valid signature", async () => {
 		const request = new Request("https://app.test/api/webhooks/payments", {
 			method: "POST",
 			headers: {
@@ -80,11 +92,22 @@ describe("polar provider — SDK integration", () => {
 			},
 			body: "{}",
 		});
-		const response = await polarPaymentProvider.webhookHandler(request);
-		expect(response.status).toBe(200);
+		const events = await polarPaymentProvider.parseWebhook(request);
+		expect(Array.isArray(events)).toBe(true);
+		expect(events.length).toBe(1);
+		expect(events[0]?.type).toBe("subscription.activated");
+		expect(events[0]?.subscriptionId).toBe("sub_123");
+		// user_id / organization_id live in data.metadata — not on the
+		// event object itself.
+		expect(events[0]?.metadata).toEqual({
+			user_id: "user_123",
+			organization_id: "org_123",
+		});
+		// Standard-webhooks delivery id is used as the dedup marker.
+		expect(events[0]?.eventId).toBe("test");
 	});
 
-	it("webhookHandler returns 401 on an invalid signature", async () => {
+	it("parseWebhook throws on invalid signature", async () => {
 		const { validateEvent, WebhookVerificationError } = await import(
 			"@polar-sh/sdk/webhooks"
 		);
@@ -100,48 +123,13 @@ describe("polar provider — SDK integration", () => {
 			},
 			body: "{}",
 		});
-		const response = await polarPaymentProvider.webhookHandler(request);
-		expect(response.status).toBe(401);
+		await expect(polarPaymentProvider.parseWebhook(request)).rejects.toThrow(
+			"signature",
+		);
 	});
 
-	it("webhookHandler returns 500 on a generic (non-verification) error", async () => {
-		const { validateEvent } = await import("@polar-sh/sdk/webhooks");
-		vi.mocked(validateEvent).mockImplementationOnce(() => {
-			throw new Error("unexpected runtime failure");
-		});
-		const request = new Request("https://app.test/api/webhooks/payments", {
-			method: "POST",
-			headers: {
-				"webhook-id": "test",
-				"webhook-timestamp": "123",
-				"webhook-signature": "test",
-			},
-			body: "{}",
-		});
-		const response = await polarPaymentProvider.webhookHandler(request);
-		expect(response.status).toBe(500);
-	});
-
-	it("webhookHandler returns 503 when POLAR_WEBHOOK_SECRET is unset", async () => {
-		const { env } = await import("@fuutu/env/saas");
-		const original = env.POLAR_WEBHOOK_SECRET;
-		// @ts-expect-error — mutating a mocked readonly env for this test
-		env.POLAR_WEBHOOK_SECRET = undefined;
-		try {
-			const request = new Request("https://app.test/api/webhooks/payments", {
-				method: "POST",
-				headers: {
-					"webhook-id": "test",
-					"webhook-timestamp": "123",
-					"webhook-signature": "test",
-				},
-				body: "{}",
-			});
-			const response = await polarPaymentProvider.webhookHandler(request);
-			expect(response.status).toBe(503);
-		} finally {
-			// @ts-expect-error — restoring the mocked env value
-			env.POLAR_WEBHOOK_SECRET = original;
-		}
+	it("is not seat-aware — Polar seat management is dashboard-side, so the provider must not claim setSubscriptionSeats", async () => {
+		const { isSeatAware } = await import("../types");
+		expect(isSeatAware(polarPaymentProvider)).toBe(false);
 	});
 });

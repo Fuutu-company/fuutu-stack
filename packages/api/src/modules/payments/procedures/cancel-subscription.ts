@@ -1,12 +1,14 @@
 import { getPurchaseByProviderSubscriptionId } from "@fuutu/db";
 import { resolvePaymentProvider } from "@fuutu/payments";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { protectedProcedure } from "../../../orpc/procedures";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const cancelSubscriptionSchema = z.object({
-	subscriptionId: z.string().min(1),
+	subscriptionId: z.string().min(1).max(200),
 });
 
 export const cancelSubscription = protectedProcedure
@@ -26,14 +28,14 @@ export const cancelSubscription = protectedProcedure
 			input.subscriptionId,
 		);
 		if (!purchase) {
-			throw new ORPCError("FORBIDDEN", { message: "Subscription not found" });
+			throw new ORPCError("NOT_FOUND", { message: "Subscription not found" });
 		}
 		if (purchase.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				purchase.organizationId,
 				context.user.id,
-				"member",
-				context.headers,
+				PERMISSIONS.PAYMENT.UPDATE,
+				context,
 			);
 		} else if (purchase.userId !== context.user.id) {
 			throw new ORPCError("FORBIDDEN", { message: "Not the owner" });

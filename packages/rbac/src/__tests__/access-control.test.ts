@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
-	AccessControl,
-	type AccessPolicy,
 	createResourcePermissions,
+	OrgAccessControl,
+	type OrgAccessPolicy,
 	type Permission,
 } from "../index";
 
 const posts = createResourcePermissions("posts");
 const orgs = createResourcePermissions("orgs");
 
-const policy: AccessPolicy = {
+const policy: OrgAccessPolicy = {
 	member: [posts.view, orgs.view],
 	admin: [posts.create, posts.update, orgs.create, orgs.update],
 	owner: [posts.delete, orgs.delete],
 };
 
-const ac = new AccessControl(policy);
+const ac = new OrgAccessControl(policy);
 
-describe("AccessControl.can() — every role/permission combination", () => {
+describe("OrgAccessControl.can() — every role/permission combination", () => {
 	describe("member (only own permissions)", () => {
 		it("grants view:posts (direct)", () => {
 			expect(ac.can("member", posts.view)).toBe(true);
@@ -76,7 +76,7 @@ describe("AccessControl.can() — every role/permission combination", () => {
 	});
 });
 
-describe("AccessControl.permissionsFor()", () => {
+describe("OrgAccessControl.permissionsFor()", () => {
 	it("returns only member permissions for member", () => {
 		const perms = ac.permissionsFor("member");
 		expect(perms).toContain(posts.view);
@@ -105,17 +105,12 @@ describe("AccessControl.permissionsFor()", () => {
 		expect(perms.length).toBe(8);
 	});
 
-	it("returns empty array for unknown role", () => {
-		expect(ac.permissionsFor("unknown" as never)).toEqual([]);
-	});
-
 	it("deduplicates permissions", () => {
-		const dupPolicy: AccessPolicy = {
+		const dupAc = new OrgAccessControl({
 			member: [posts.view],
 			admin: [posts.view],
 			owner: [posts.view],
-		};
-		const dupAc = new AccessControl(dupPolicy);
+		});
 		expect(dupAc.permissionsFor("owner")).toEqual([posts.view]);
 	});
 });

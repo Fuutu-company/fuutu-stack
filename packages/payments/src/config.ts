@@ -5,6 +5,7 @@
  *  1. `paymentsConfig`  → which provider, how billing is attached
  *  2. `PLANS`           → your pricing plans (price, billing type, visibility)
  *  3. `LIMITS`          → per-plan resource caps (used for runtime gates + pricing display)
+ *  4. `CREDITS`         → per-plan credit grants (recurring, reset each period)
  *
  * Provider-side IDs (Polar product IDs, Stripe price IDs etc.) live in env vars
  * because sandbox and production have different values — see @fuutu/env/saas.
@@ -12,6 +13,7 @@
  */
 
 import { config } from "@fuutu/config";
+import type { PaymentProvider } from "./types";
 
 // ─── 1. Provider ──────────────────────────────────────────────────────────────
 
@@ -21,6 +23,7 @@ export type PaymentProviderId =
 	| "lemonsqueezy"
 	| "creem"
 	| "dodopayments"
+	| "custom"
 	| "noop";
 
 export type BillingAttachedTo = "user" | "organization";
@@ -35,14 +38,142 @@ export interface PaymentsConfig {
 	billingAttachedTo: BillingAttachedTo;
 	/** Gate every protected route behind an active paid plan. */
 	requireActiveSubscription: boolean;
+	/**
+	 * Whether the credits system (usage metering + top-up packages) is enabled.
+	 * When false: credit pages, tabs, and routes are hidden from the UI.
+	 * The @fuutu/credits package and webhook sync logic remain in the
+	 * codebase but are not surfaced to the user.
+	 * Derived from config.features.credits.
+	 */
+	creditsEnabled: boolean;
+	/**
+	 * Custom provider implementation — only used when `provider === "custom"`.
+	 * Kit users implement the `PaymentProvider` interface and pass their
+	 * instance here. This is the extension seam for providers not shipped
+	 * with the kit (e.g. LemonSqueezy, DodoPayments, or a proprietary system).
+	 */
+	customProvider?: PaymentProvider;
 }
 
 export const paymentsConfig: PaymentsConfig = {
-	provider: "polar",
+	// Active payment provider — edit this to switch between "polar", "stripe",
+	// "creem", "custom", or "noop".
+	// This is the primary configuration point for kit users.
+	//
+	// `config.ts` must stay client-safe (no `@fuutu/env/saas` import at module
+	// level) because client components import `paymentsConfig` for display logic.
+	// The SaaS app's `instrumentation.ts` can optionally override this at server
+	// startup via `setPaymentProvider(env.PAYMENTS_PROVIDER)` when the env var
+	// is set — useful for deploys where the provider differs per environment.
+	provider: "creem",
 	billingAttachedTo:
 		config.features.organizationsMode !== "off" ? "organization" : "user",
 	requireActiveSubscription: false,
+	creditsEnabled: config.features.credits ?? true,
 };
+
+/**
+ * Override the active payment provider at server-app startup.
+ * Called from the SaaS app's `instrumentation.ts` only when `PAYMENTS_PROVIDER`
+ * env var is set — otherwise the `paymentsConfig.provider` default above wins.
+ * Client components must never call this.
+ */
+export function setPaymentProvider(provider: PaymentProviderId): void {
+	paymentsConfig.provider = provider;
+}
+
+// ─── 1b. Price-ID mapping ───────────────────────────────────────────────────
+// Maps plan IDs to provider-side price IDs. This is populated by the app
+// (server-side) and passed to client components as props — env vars are
+// server-only and must not be accessed in client components.
+// The app sets these at startup via `setPriceIds()`.
+
+export const PRICE_IDS: Partial<Record<PlanId, string>> = {};
+export const YEARLY_PRICE_IDS: Partial<Record<PlanId, string>> = {};
+
+export function setPriceIds(
+	priceIds: Partial<Record<PlanId, string>>,
+	yearlyPriceIds?: Partial<Record<PlanId, string>>,
+): void {
+	Object.assign(PRICE_IDS, priceIds);
+	if (yearlyPriceIds) {
+		Object.assign(YEARLY_PRICE_IDS, yearlyPriceIds);
+	}
+}
+
+export function getPriceIdForPlan(planId: PlanId): string | undefined {
+	return PRICE_IDS[planId];
+}
+
+export function getYearlyPriceIdForPlan(planId: PlanId): string | undefined {
+	return YEARLY_PRICE_IDS[planId];
+}
+
+/**
+ * Reverse lookup: given a provider-side product/price ID, find the plan ID.
+ * Used by webhook sync to map active subscriptions back to plans.
+ *
+ * Checks the runtime-populated PRICE_IDS map only. For env-var fallback
+ * (server-only), use `getPlanIdForProductId` from `@fuutu/payments/config.server`.
+ */
+export function getPlanIdForProductId(productId: string): PlanId | undefined {
+	return (Object.keys(PRICE_IDS) as PlanId[]).find(
+		(key) => PRICE_IDS[key] === productId,
+	);
+}
+
+// ─── 1c. Credit Top-Up Packages ─────────────────────────────────────────────────
+
+export interface CreditTopupPackage {
+	id: string;
+	meterKey: string;
+	amount: number;
+	displayPrice: string;
+	priceIdEnvVar: string;
+	label: string;
+	description?: string;
+	popular?: boolean;
+}
+
+export const CREDIT_TOPUPS: CreditTopupPackage[] = [
+	{
+		id: "ai_tokens_100k",
+		meterKey: "ai_tokens",
+		amount: 100_000,
+		displayPrice: "$10",
+		priceIdEnvVar: "CREDITS_AI_TOKENS_100K_PRICE_ID",
+		label: "100K AI Tokens",
+		description: "Top up your AI token balance",
+		popular: true,
+	},
+	{
+		id: "ai_tokens_500k",
+		meterKey: "ai_tokens",
+		amount: 500_000,
+		displayPrice: "$40",
+		priceIdEnvVar: "CREDITS_AI_TOKENS_500K_PRICE_ID",
+		label: "500K AI Tokens",
+		description: "Best value for AI tokens",
+	},
+	{
+		id: "api_calls_50k",
+		meterKey: "api_calls",
+		amount: 50_000,
+		displayPrice: "$5",
+		priceIdEnvVar: "CREDITS_API_CALLS_50K_PRICE_ID",
+		label: "50K API Calls",
+		description: "Top up your API call balance",
+	},
+];
+
+export function getCreditTopupsForMeter(
+	meterKey: string,
+): CreditTopupPackage[] {
+	return CREDIT_TOPUPS.filter((t) => t.meterKey === meterKey);
+}
+
+// getCreditTopupPriceId lives in ./config.server (needs env access).
+// All callers are server-only (oRPC procedures, webhook sync).
 
 // ─── 2. Plans ─────────────────────────────────────────────────────────────────
 
@@ -100,6 +231,7 @@ export const PLANS = {
 		showInSaas: true,
 		showInMarketing: true,
 		saasCtaDisabled: true,
+		seatBased: undefined,
 	},
 	pro: {
 		amount: 1900,
@@ -107,6 +239,7 @@ export const PLANS = {
 		billingType: "subscription",
 		interval: "month",
 		trialDays: 14,
+		seatBased: true,
 		displayPrice: "$19",
 		yearlyDisplayPrice: "$190",
 		showPriceSuffix: true,
@@ -122,6 +255,7 @@ export const PLANS = {
 		displayPrice: "—",
 		showInSaas: true,
 		showInMarketing: true,
+		seatBased: undefined,
 		marketingCtaHref: "mailto:license@fuutu.com",
 	},
 } as const satisfies Record<PlanId, Plan>;
@@ -142,6 +276,7 @@ export interface PlanLimits {
 	organizations: LimitValue;
 	membersPerOrg: LimitValue;
 	apiKeys: LimitValue;
+	webhooks: LimitValue;
 	storageMb: LimitValue;
 	auditLogDays: LimitValue;
 }
@@ -151,6 +286,7 @@ export const LIMITS = {
 		organizations: 1,
 		membersPerOrg: 5,
 		apiKeys: 2,
+		webhooks: false,
 		storageMb: 500,
 		auditLogDays: false,
 	},
@@ -158,6 +294,7 @@ export const LIMITS = {
 		organizations: 10,
 		membersPerOrg: 50,
 		apiKeys: "unlimited",
+		webhooks: 10,
 		storageMb: 50_000,
 		auditLogDays: 30,
 	},
@@ -165,12 +302,64 @@ export const LIMITS = {
 		organizations: "unlimited",
 		membersPerOrg: "unlimited",
 		apiKeys: "unlimited",
+		webhooks: "unlimited",
 		storageMb: "unlimited",
 		auditLogDays: "unlimited",
 	},
 } as const satisfies Record<PlanId, PlanLimits>;
 
-// ─── 4. Features ────────────────────────────────────────────────────────────────
+// ─── 4. Credits ────────────────────────────────────────────────────────────────
+
+export type { CreditMeter } from "@fuutu/credits/meters";
+/**
+ * Credit meter definitions live in `@fuutu/credits/meters` — the
+ * dependency-free leaf module both packages share (payments → credits,
+ * never the reverse). Re-exported here so existing
+ * `@fuutu/payments/config` consumers keep working. The subpath is a
+ * pure-data module, so this file stays client-safe.
+ */
+export { CREDIT_METERS, getMeter } from "@fuutu/credits/meters";
+
+/**
+ * Per-plan credit grants (recurring, reset each period).
+ * - number = exact amount per period
+ * - "unlimited" = no limit
+ * - 0 or missing = no credits for this meter on this plan
+ */
+export const CREDITS: Record<PlanId, Record<string, LimitValue>> = {
+	free: {
+		ai_tokens: 10_000,
+		api_calls: 1_000,
+		documents: 50,
+	},
+	pro: {
+		ai_tokens: 500_000,
+		api_calls: 50_000,
+		documents: "unlimited",
+	},
+	enterprise: {
+		ai_tokens: "unlimited",
+		api_calls: "unlimited",
+		documents: "unlimited",
+	},
+};
+
+/** Get the credit grant for a plan + meter. Returns undefined if not configured. */
+export function getCreditGrant(
+	planId: PlanId,
+	meterKey: string,
+): LimitValue | undefined {
+	return CREDITS[planId]?.[meterKey];
+}
+
+/** Get all meter keys configured for a plan. */
+export function getMeterKeysForPlan(planId: PlanId): string[] {
+	const planCredits = CREDITS[planId];
+	if (!planCredits) return [];
+	return Object.keys(planCredits).filter((key) => planCredits[key] !== 0);
+}
+
+// ─── 5. Features ────────────────────────────────────────────────────────────────
 
 export type PlanTier = "free" | "pro" | "enterprise";
 
@@ -205,7 +394,7 @@ export const FEATURE_CATALOG = {
 	},
 	api: {
 		keys: { tier: "free", limitKey: "apiKeys" },
-		webhooks: { tier: "pro" },
+		webhooks: { tier: "pro", limitKey: "webhooks" },
 	},
 	infrastructure: {
 		storage: { tier: "free", limitKey: "storageMb" },

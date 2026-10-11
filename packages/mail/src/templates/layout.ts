@@ -25,7 +25,7 @@ export function renderLayout(body: string, opts: LayoutOptions = {}): string {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Fuutu</title>
+    <title>Fuutu</title><!-- intentional: kit's own demo branding -->
   </head>
   <body style="margin:0;padding:24px;background:#f6f6f7;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;color:#111;">
     ${preview}

@@ -1,8 +1,9 @@
 // shadcn/ui Components - Feedback
 export * from "./components/alert";
 export * from "./components/alert-dialog";
-export * from "./components/avatar";
 // shadcn/ui Components - Data Display
+export * from "./components/auth-card";
+export * from "./components/avatar";
 export * from "./components/badge";
 export * from "./components/brand-logo";
 export * from "./components/breadcrumb";
@@ -40,6 +41,7 @@ export * from "./components/textarea";
 export * from "./components/tooltip";
 
 // Hooks
+export * from "./hooks/use-locale-theme-image";
 export * from "./hooks/use-mobile";
 
 // Utilities

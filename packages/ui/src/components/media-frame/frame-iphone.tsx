@@ -18,6 +18,9 @@ type FrameIphoneProps = Pick<
 	| "contentClassName"
 	| "width"
 	| "className"
+	| "playLabel"
+	| "pauseLabel"
+	| "videoTitle"
 	| "children"
 > & { autoFilename: string };
 
@@ -37,6 +40,9 @@ export function FrameIphone({
 	width,
 	className,
 	autoFilename,
+	playLabel,
+	pauseLabel,
+	videoTitle,
 	children,
 }: FrameIphoneProps) {
 	return (
@@ -96,6 +102,9 @@ export function FrameIphone({
 						filename={autoFilename}
 						rounded="rounded-none"
 						iphoneFill
+						playLabel={playLabel}
+						pauseLabel={pauseLabel}
+						videoTitle={videoTitle}
 					>
 						{children}
 					</FrameContent>

@@ -1,5 +1,7 @@
+import { Skeleton } from "@fuutu/ui";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 import { AuthSignUp } from "@/modules/auth/components/auth-sign-up";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -11,8 +13,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function SignUpPage() {
 	return (
-		<main className="container flex min-h-screen flex-col items-center justify-center p-4 md:p-6">
+		<Suspense fallback={<Skeleton className="h-80 w-full max-w-md" />}>
 			<AuthSignUp />
-		</main>
+		</Suspense>
 	);
 }

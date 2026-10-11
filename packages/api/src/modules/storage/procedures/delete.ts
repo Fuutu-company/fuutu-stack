@@ -1,7 +1,9 @@
+import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveStorageProvider } from "@fuutu/storage";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
+import { resolveBucketOrThrow } from "../shared";
 
 const fileDeleteSchema = z.object({
 	bucket: z.string().min(1),
@@ -14,7 +16,10 @@ const fileDeleteSchema = z.object({
 	organizationId: z.string().optional(),
 });
 
-export const deleteObject = protectedProcedure
+export const deleteObject = authProcedure({
+	systemPermission: PERMISSIONS.STORAGE.DELETE,
+	org: { permission: PERMISSIONS.STORAGE.DELETE, optional: true },
+})
 	.use(createRateLimitMiddleware({ endpoint: "storageMutation" }))
 	.route({
 		method: "DELETE",
@@ -25,20 +30,10 @@ export const deleteObject = protectedProcedure
 	})
 	.input(fileDeleteSchema)
 	.handler(async ({ input, context }) => {
-		let prefix: string;
-		if (input.organizationId) {
-			await requireOrgRole(
-				input.organizationId,
-				context.user.id,
-				"member",
-				context.headers,
-			);
-			prefix = input.organizationId;
-		} else {
-			prefix = context.user.id;
-		}
+		const bucket = resolveBucketOrThrow(input.bucket);
+		const prefix = context.org?.id ?? context.user.id;
 		const scopedKey = `${prefix}/${input.key}`;
 		const provider = resolveStorageProvider();
-		await provider.deleteObject(input.bucket, scopedKey);
+		await provider.deleteObject(bucket, scopedKey);
 		return { success: true };
 	});

@@ -36,6 +36,9 @@ model User {
   invoices         Invoice[]
   notifications    Notification[]
   chatConversations ChatConversation[]
+  creditBalances   CreditBalance[]
+  creditPackages   CreditPackage[]
+  creditEvents     CreditEvent[]
 
   @@unique([email])
   @@map("user")
@@ -113,6 +116,9 @@ model Organization {
   webhooks    Webhook[]
   chatConversations ChatConversation[]
   contacts    Contact[]
+  creditBalances   CreditBalance[]
+  creditPackages   CreditPackage[]
+  creditEvents     CreditEvent[]
 
   @@unique([slug])
   @@map("organization")

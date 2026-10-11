@@ -12,7 +12,9 @@ import type { CronJob, CronJobResult } from "../types";
 export const auditLogCleanupJob: CronJob = {
 	name: "audit-log-cleanup",
 	schedule: "0 3 * * *",
-	enabled: cronConfig.jobs.auditLogCleanup,
+	get enabled() {
+		return cronConfig.jobs.auditLogCleanup;
+	},
 	async run(): Promise<CronJobResult> {
 		const errors: string[] = [];
 		const retentionDays = getMaxAuditLogRetentionDays();

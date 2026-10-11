@@ -67,4 +67,28 @@ test.describe("CRM contacts", () => {
 			timeout: 10_000,
 		});
 	});
+
+	test("blocks submit and shows a field error for invalid email", async ({
+		page,
+	}) => {
+		await page.goto("/organizations/acme/crm");
+
+		const newContactButton = page.getByRole("button", {
+			name: /new contact/i,
+		});
+		await expect(newContactButton).toBeVisible({ timeout: 10_000 });
+		await newContactButton.click();
+
+		const dialog = page.getByRole("dialog", { name: /new contact/i });
+		await expect(dialog).toBeVisible({ timeout: 10_000 });
+
+		await page.getByLabel(/full name/i).fill("QA Invalid Email");
+		await page.getByLabel(/email/i).fill("not-an-email");
+		await page.getByRole("button", { name: /^save$/i }).click();
+
+		// Client-side Zod validation keeps the dialog open and renders
+		// a translated FieldError (role="alert") instead of submitting.
+		await expect(dialog).toBeVisible();
+		await expect(dialog.locator('[role="alert"]')).toBeVisible();
+	});
 });

@@ -1,15 +1,18 @@
 import { deleteContact } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 
 const deleteContactSchema = z.object({
 	id: z.string().min(1),
 	organizationId: z.string().min(1),
 });
 
-export const deleteContactProcedure = protectedProcedure
+export const deleteContactProcedure = authProcedure({
+	org: { permission: PERMISSIONS.CRM.DELETE },
+})
 	.use(createRateLimitMiddleware({ endpoint: "crmContact" }))
 	.route({
 		method: "DELETE",
@@ -19,13 +22,7 @@ export const deleteContactProcedure = protectedProcedure
 		description: "Permanently deletes a contact from an organization.",
 	})
 	.input(deleteContactSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgRole(
-			input.organizationId,
-			context.user.id,
-			"member",
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const result = await deleteContact(input.id, input.organizationId);
 		if (!result) {
 			throw new ORPCError("NOT_FOUND", { message: "Contact not found" });

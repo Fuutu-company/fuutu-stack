@@ -45,6 +45,15 @@ const PUBLIC_PREFIXES = [
 	// signature scheme + smoke test — security: public proxy bypass requires
 	// webhook signature validation.
 	"/api/webhooks",
+	// reason: OpenAPI docs are public by design — developers need to explore
+	// the API without authentication. The oRPC handler itself gates procedures
+	// via protectedProcedure where needed.
+	"/api/docs",
+	"/api/spec.json",
+	// reason: cron trigger endpoint — schedulers authenticate via
+	// `Authorization: Bearer ${CRON_SECRET}` (shared secret), not a session
+	// cookie. The Hono route returns 501 when the secret is unset.
+	"/api/cron",
 	"/auth",
 	"/image-proxy",
 ] as const;
@@ -69,8 +78,13 @@ export async function proxy(req: NextRequest) {
 
 	const sessionToken = req.cookies.get("better-auth.session_token")?.value;
 
+	// API-key requests carry no session cookie — they authenticate in the oRPC
+	// context via `x-api-key` (verifyApiKey → owner session, org pinning
+	// fail-closed). The optimistic cookie check must not bounce them.
+	const hasApiKey = req.headers.get("x-api-key") !== null;
+
 	// OPTIMISTIC check only — real auth happens in layout via requireAuth().
-	if (!sessionToken) {
+	if (!sessionToken && !hasApiKey) {
 		const loginUrl = new URL(`${AUTH_PREFIX}/sign-in`, req.url);
 		loginUrl.searchParams.set("redirect", pathname);
 		return stamp(NextResponse.redirect(loginUrl));
@@ -88,5 +102,6 @@ export default proxy;
 export const config = {
 	matcher: [
 		"/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+		"/api/:path*",
 	],
 };

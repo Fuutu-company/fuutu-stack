@@ -23,6 +23,9 @@ export function FrameContent({
 	roundedStyle,
 	filename,
 	iphoneFill = false,
+	playLabel,
+	pauseLabel,
+	videoTitle,
 }: InternalContentProps) {
 	const embedUrl = videoSrc ? toYouTubeEmbed(videoSrc) : null;
 	const isVideo = Boolean(videoSrc);
@@ -107,7 +110,7 @@ export function FrameContent({
 				>
 					<iframe
 						src={embedUrl}
-						title={filename ?? "Video"}
+						title={filename ?? videoTitle}
 						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
 						allowFullScreen
 						className="absolute inset-0 size-full border-0"
@@ -121,6 +124,8 @@ export function FrameContent({
 				autoPlay={autoPlay}
 				hoverPlay={hoverPlay}
 				rounded={rounded}
+				playLabel={playLabel}
+				pauseLabel={pauseLabel}
 				className={cn(
 					iphoneFill
 						? "absolute inset-0 size-full"

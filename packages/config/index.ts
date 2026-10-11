@@ -6,8 +6,8 @@
  *   - auth       → @fuutu/auth/config
  *   - api        → @fuutu/api/config
  *   - email      → @fuutu/mail/config
- *   - payments   → @fuutu/payments/config (planned)
- *   - rbac       → @fuutu/rbac/config    (planned)
+ *   - payments   → @fuutu/payments/config
+ *   - rbac       → @fuutu/rbac
  *
  * Only values that multiple unrelated domains consume belong here.
  */
@@ -63,6 +63,18 @@ export const config = {
 			github: "github.com/Fuutu-company/fuutu-stack",
 			githubUrl: "https://github.com/Fuutu-company/fuutu-stack",
 		},
+		/**
+		 * Provider-swappable domains shipped by the kit (see AGENTS.md §2).
+		 * Consumers needing the count use `config.app.swappableDomains.length`.
+		 */
+		swappableDomains: [
+			"mail",
+			"payments",
+			"storage",
+			"analytics",
+			"logs",
+			"db",
+		],
 	},
 	/**
 	 * High-level product feature flags.
@@ -78,6 +90,13 @@ export const config = {
 		 */
 		organizationsMode: "on" as "off" | "on" | "forced",
 		payments: true,
+		/**
+		 * Credits system (usage-based metering + top-up packages).
+		 * When false: credit pages, tabs, and routes are hidden.
+		 * The @fuutu/credits package and webhook sync logic remain
+		 * in the codebase but are not surfaced to the user.
+		 */
+		credits: true,
 		aiChat: true,
 		crm: true,
 	},

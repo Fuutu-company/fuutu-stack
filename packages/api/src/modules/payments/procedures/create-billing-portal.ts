@@ -1,17 +1,20 @@
 import { getActiveSubscriptionForUser, getOrganizationById } from "@fuutu/db";
 import { resolvePaymentProvider } from "@fuutu/payments";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 import { sanitizePaymentUrl } from "../shared";
 
 const portalSchema = z.object({
-	organizationId: z.string().optional(),
+	organizationId: z.string().min(1).optional(),
 	returnUrl: z.string().optional(),
 });
 
-export const createBillingPortal = protectedProcedure
+export const createBillingPortal = authProcedure({
+	org: { permission: PERMISSIONS.PAYMENT.UPDATE, optional: true },
+})
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",
@@ -24,12 +27,6 @@ export const createBillingPortal = protectedProcedure
 	.handler(async ({ input, context }) => {
 		let customerId: string | undefined;
 		if (input.organizationId) {
-			await requireOrgRole(
-				input.organizationId,
-				context.user.id,
-				"member",
-				context.headers,
-			);
 			const org = await getOrganizationById(input.organizationId);
 			if (!org) {
 				throw new ORPCError("NOT_FOUND", {

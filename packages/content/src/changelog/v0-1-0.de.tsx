@@ -9,7 +9,7 @@ export default function ChangelogV010De() {
 				Auth: E-Mail/Passwort, Magic-Link, OAuth, 2FA, Passkeys, Organizations.
 			</li>
 			<li>
-				Provider-Interfaces für Payments (Polar), Mail (Plunk), Storage (S3),
+				Provider-Interfaces für Payments (Creem), Mail (Plunk), Storage (S3),
 				Analytics (Umami).
 			</li>
 			<li>RBAC, Audit-Logging, Rate-Limiting, sichere Cookies, CSRF.</li>

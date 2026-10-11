@@ -14,6 +14,7 @@ import type {
 	SignedUploadResult,
 	StorageObject,
 	StorageProvider,
+	StorageStreamResult,
 } from "../types";
 
 /**
@@ -72,18 +73,32 @@ export const s3StorageProvider: StorageProvider = {
 	): Promise<SignedUploadResult> {
 		const client = getClient();
 		const expiresIn = input.expiresInSeconds ?? 600;
-		if (input.maxSizeBytes !== undefined && input.maxSizeBytes <= 0) {
-			throw new Error(
-				"[storage:s3] maxSizeBytes must be positive when provided.",
-			);
+		if (input.maxSizeBytes !== undefined) {
+			if (input.maxSizeBytes <= 0) {
+				throw new Error(
+					"[storage:s3] maxSizeBytes must be positive when provided.",
+				);
+			}
+			// A presigned PUT can only pin an exact Content-Length, never a
+			// range — so `maxSizeBytes` is a validation cap, not something we
+			// can sign into the URL. Enforcing it therefore requires the
+			// declared `contentLength`.
+			if (input.contentLength === undefined) {
+				throw new Error(
+					"[storage:s3] contentLength is required when maxSizeBytes is set.",
+				);
+			}
+			if (input.contentLength > input.maxSizeBytes) {
+				throw new Error(
+					`[storage:s3] contentLength (${input.contentLength}) exceeds maxSizeBytes (${input.maxSizeBytes}).`,
+				);
+			}
 		}
-		// Bake the exact Content-Length into the signature. The client
-		// must then send that same length or S3 rejects the upload with
+		// Bake the declared Content-Length into the signature. The client
+		// must send that same length or S3 rejects the upload with
 		// SignatureDoesNotMatch — closing the "signed URL, unbounded
-		// upload" hole. If the caller did not pre-compute a size, we
-		// fall back to per-request cap (`maxSizeBytes`) so tuned bucket
-		// policies still enforce the ceiling.
-		const signedContentLength = input.contentLength ?? input.maxSizeBytes;
+		// upload" hole.
+		const signedContentLength = input.contentLength;
 		const command = new PutObjectCommand({
 			Bucket: input.bucket,
 			Key: input.key,
@@ -146,49 +161,36 @@ export const s3StorageProvider: StorageProvider = {
 				lastModified: o.LastModified,
 			}));
 	},
-};
 
-/**
- * Stream an object directly from S3 — used by the image-proxy route in
- * `apps/saas` for private buckets (avoids exposing signed URLs on the
- * public web surface).
- */
-export async function fetchObjectStream(
-	bucket: string,
-	key: string,
-): Promise<{
-	body: ReadableStream<Uint8Array>;
-	contentType: string | undefined;
-	contentLength: number | undefined;
-} | null> {
-	const client = getClient();
-	try {
-		const res = await client.send(
-			new GetObjectCommand({ Bucket: bucket, Key: key }),
-		);
-		const body = res.Body as ReadableStream<Uint8Array> | undefined;
-		if (!body) return null;
-		return {
-			body,
-			contentType: res.ContentType,
-			contentLength: res.ContentLength,
-		};
-	} catch (err) {
-		// Distinguish legitimate 404 (object does not exist) from every
-		// other failure (AccessDenied, NoSuchBucket, network) — the
-		// image-proxy must not map a misconfigured IAM policy to a silent
-		// 404 because that obscures real ops problems.
-		const name = (err as { name?: string }).name ?? "";
-		if (name === "NoSuchKey" || name === "NotFound") {
-			log.warn("fetchObjectStream miss", { bucket, key });
-			return null;
+	async getObjectStream(
+		bucket: string,
+		key: string,
+	): Promise<StorageStreamResult | null> {
+		const client = getClient();
+		try {
+			const res = await client.send(
+				new GetObjectCommand({ Bucket: bucket, Key: key }),
+			);
+			const body = res.Body as ReadableStream<Uint8Array> | undefined;
+			if (!body) return null;
+			return {
+				body,
+				contentType: res.ContentType ?? null,
+				contentLength: res.ContentLength ?? null,
+			};
+		} catch (err) {
+			const name = (err as { name?: string }).name ?? "";
+			if (name === "NoSuchKey" || name === "NotFound") {
+				log.warn("getObjectStream miss", { bucket, key });
+				return null;
+			}
+			log.error("getObjectStream failed", {
+				bucket,
+				key,
+				name,
+				err: String(err),
+			});
+			throw err;
 		}
-		log.error("fetchObjectStream failed", {
-			bucket,
-			key,
-			name,
-			err: String(err),
-		});
-		throw err;
-	}
-}
+	},
+};

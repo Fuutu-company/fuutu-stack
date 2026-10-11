@@ -4,6 +4,7 @@ import {
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { resolvePaymentProvider } from "./resolve";
+import { isSeatAware } from "./types";
 
 const log = createLogger({ scope: "payments:seats" });
 
@@ -13,24 +14,19 @@ const log = createLogger({ scope: "payments:seats" });
  *
  * Strategy:
  *   - Look up the org's current active subscription (`Purchase` row).
- *   - Count members (seats) — taken from the members list in DB.
  *   - Call `provider.setSubscriptionSeats({ subscriptionId, seats })`.
  *
- * No-op when the org has no active subscription (yet); the next upgrade
- * will start the subscription with the correct seat count.
- *
- * Seat counting is intentionally kept outside this helper: callers pass
- * the final count so tests and the auth hooks stay in control of the
- * source-of-truth query.
+ * No-op when:
+ *   - The provider owns seat sync (e.g. a provider plugin that auto-syncs)
+ *   - The provider doesn't support seat management (not SeatAware)
+ *   - The org has no active subscription
  */
 export async function updateSeatsInOrganizationSubscription(
 	organizationId: string,
 	seats: number,
 ): Promise<void> {
 	const provider = resolvePaymentProvider();
-	// Skip when the active provider's upstream plugin already owns seat
-	// sync (e.g. Better-Auth Polar plugin). Calling again here would race
-	// or double-count.
+
 	if (provider.ownsSeatSync) {
 		log.debug("skip seats sync — provider owns it", {
 			provider: provider.id,
@@ -39,6 +35,15 @@ export async function updateSeatsInOrganizationSubscription(
 		});
 		return;
 	}
+
+	if (!isSeatAware(provider)) {
+		log.debug("skip seats sync — provider is not seat-aware", {
+			provider: provider.id,
+			organizationId,
+		});
+		return;
+	}
+
 	const subscription =
 		await getActiveSubscriptionForOrganization(organizationId);
 	if (!subscription?.subscriptionId) {
@@ -48,6 +53,7 @@ export async function updateSeatsInOrganizationSubscription(
 		});
 		return;
 	}
+
 	await provider.setSubscriptionSeats({
 		subscriptionId: subscription.subscriptionId,
 		seats,

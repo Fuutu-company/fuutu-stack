@@ -1,17 +1,12 @@
 import type { PaymentProvider } from "../types";
 
 /**
- * Skeleton providers — inactive in v1.
+ * Skeleton providers — inactive, fail loud on first use.
  *
- * Keep the surface identical to the real Polar provider so swapping a
- * provider is a single `paymentsConfig.provider = "stripe"` edit plus
- * implementing the five methods below. Every unimplemented method throws
- * loudly at first use so a misconfigured deploy fails fast instead of
- * silently dropping checkouts.
- *
- * Each method is declared as an `async` rejection rather than via a
- * cast-to-never thunk: same fail-loud behaviour, but the resulting
- * object satisfies `PaymentProvider` without `as` coercions.
+ * Keep the surface identical to real providers so swapping a provider
+ * is a single `paymentsConfig.provider = "stripe"` edit plus implementing
+ * the methods. Every unimplemented method throws at first use so a
+ * misconfigured deploy fails fast instead of silently dropping checkouts.
  */
 function makeSkeleton(id: string): PaymentProvider {
 	const reject = (fn: string): Promise<never> =>
@@ -22,20 +17,13 @@ function makeSkeleton(id: string): PaymentProvider {
 		);
 	return {
 		id,
+		ownsSeatSync: false,
 		createCheckoutLink: () => reject("createCheckoutLink"),
 		createCustomerPortalLink: () => reject("createCustomerPortalLink"),
-		webhookHandler: async () =>
-			new Response(JSON.stringify({ error: `${id}_not_implemented` }), {
-				status: 501,
-				headers: { "content-type": "application/json" },
-			}),
+		createCustomer: () => reject("createCustomer"),
 		cancelSubscription: () => reject("cancelSubscription"),
-		setSubscriptionSeats: () => reject("setSubscriptionSeats"),
+		parseWebhook: () => reject("parseWebhook"),
 	};
 }
 
-export const stripePaymentProvider = makeSkeleton("stripe");
-export const lemonsqueezyPaymentProvider = makeSkeleton("lemonsqueezy");
-export const creemPaymentProvider = makeSkeleton("creem");
-export const dodopaymentsPaymentProvider = makeSkeleton("dodopayments");
 export const noopPaymentProvider = makeSkeleton("noop");

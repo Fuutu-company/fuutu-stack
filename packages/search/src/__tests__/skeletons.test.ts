@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { meilisearchProvider } from "../providers/meilisearch";
 import { noopProvider } from "../providers/noop";
 import { typesenseProvider } from "../providers/typesense";
-import { testSearchProviderContract } from "./provider-contract.test";
+import { testSearchProviderContract } from "./provider-contract";
 
 testSearchProviderContract("meilisearch", () => meilisearchProvider, {
 	searchBehavior: "throws",

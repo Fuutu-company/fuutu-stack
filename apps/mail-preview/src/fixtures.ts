@@ -7,8 +7,8 @@ import {
 
 /**
  * Sample payloads for every template — keep realistic but obviously fake
- * (no personal names, no live URLs) so that previews cannot be mistaken
- * for real mail.
+ * (generic placeholder names, no live URLs) so that previews cannot be
+ * mistaken for real mail.
  */
 export const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
 	"password-reset": {
@@ -26,7 +26,7 @@ export const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
 	"organization-invitation": {
 		organizationName: "Acme Inc.",
 		inviteUrl: "https://example.test/auth/accept-invitation?id=preview",
-		inviterName: "Grace Hopper",
+		inviterName: "Acme Admin",
 	},
 	"new-user": {
 		name: "Ada",

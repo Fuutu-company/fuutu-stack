@@ -23,6 +23,15 @@ export async function expectRejects(
 	if (messageContains) {
 		await expect(fn()).rejects.toThrow(messageContains);
 	} else {
-		await expect(fn()).rejects.toBeDefined();
+		// Any rejection counts — including reject(undefined) where
+		// `rejects.toBeDefined()` would false-negative.
+		let didReject = false;
+		await fn().then(
+			() => {},
+			() => {
+				didReject = true;
+			},
+		);
+		expect(didReject).toBe(true);
 	}
 }

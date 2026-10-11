@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+  # Also triggered by the e2e jobs after a baseline commit on a PR branch —
+  # GITHUB_TOKEN pushes fire no events, so the dispatched run is what gives
+  # required checks a conclusion on the baseline commit (png-only diff →
+  # code=false → jobs skip → skipped counts as passed).
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,11 +41,18 @@ jobs:
             git fetch origin "$BASE" --depth=1
             DIFF=$(git diff --name-only "origin/$BASE" HEAD)
           else
-            DIFF=$(git diff --name-only HEAD~1 HEAD)
+            # Multi-commit pushes: diff the whole push, not just HEAD~1.
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE="HEAD~1"
+            fi
+            DIFF=$(git diff --name-only "$BEFORE" HEAD)
           fi
 
-          # Check if any code files changed
-          if echo "$DIFF" | grep -qE '^(apps/.*\.(ts|tsx)|packages/.*\.(ts|tsx)|turbo\.json|package\.json|pnpm-workspace\.yaml|\.github/workflows/ci\.yml)$'; then
+          # Code = anything that isn't pure docs/static assets. An allowlist
+          # misses real changes (nested package.json, .prisma, .mjs, .css,
+          # lockfile, i18n json, tooling/) and silently skips all gates.
+          if echo "$DIFF" | grep -qvE '\.(md|png|jpe?g|svg|webp|gif|ico|mp4|woff2?|ttf)$|(^|/)(README|CHANGELOG|LICENSE)(\.md)?$'; then
             echo "code=true" >> $GITHUB_OUTPUT
           else
             echo "code=false" >> $GITHUB_OUTPUT
@@ -71,12 +83,14 @@ jobs:
 
       - run: pnpm db:generate
 
-      - run: pnpm check
+      # check:ci (biome check, non-mutating) — `pnpm check` would --write
+      # autofix violations and exit green, so the gate never fails.
+      - run: pnpm check:ci
 
       - run: pnpm check-types
 
   # ─────────────────────────────────────────────────────────
-  # Translation Checks — non-blocking, posts PR comment on issues
+  # Translation Checks — blocking; also posts a PR comment on issues
   # ─────────────────────────────────────────────────────────
   translations:
     needs: changes
@@ -102,7 +116,6 @@ jobs:
 
       - name: Run translation checks
         id: check-translations
-        continue-on-error: true
         run: |
           echo "## Translation Checks" > /tmp/translation-report.md
           echo "" >> /tmp/translation-report.md
@@ -115,6 +128,7 @@ jobs:
             cat /tmp/check-translations.log >> /tmp/translation-report.md
             echo '```' >> /tmp/translation-report.md
             echo "TRANSLATION_ISSUES=1" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
       - name: Post PR comment if issues found
@@ -129,7 +143,7 @@ jobs:
               '',
               report,
               '',
-              '> The pipeline did **not** fail — this is a warning only. Fix the issues above before merging.',
+              '> The translations job **fails** on these issues — fix them before merging.',
             ].join('\n');
             github.rest.issues.createComment({
               ...context.repo,
@@ -142,7 +156,7 @@ jobs:
   # ─────────────────────────────────────────────────────────
   dependency-audit:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && github.repository == 'Fuutu-company/fuutu-stack'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -162,12 +176,15 @@ jobs:
 
       - run: pnpm install
 
-      - name: Check for outdated packages
+      # The report script classifies by installability — "ready now" means a
+      # version that satisfies minimumReleaseAge actually exists, not just
+      # that `pnpm outdated` lists something newer. See the script header.
+      - name: Generate dependency report
         id: check-outdated
         continue-on-error: true
         run: |
-          pnpm outdated -r --format list > /tmp/outdated.log 2>&1 || true
-          if [ -s /tmp/outdated.log ] && grep -q "=>" /tmp/outdated.log; then
+          node tooling/scripts/dependency-report.mjs > /tmp/outdated-report.md || true
+          if [ -s /tmp/outdated-report.md ]; then
             echo "OUTDATED_FOUND=1" >> $GITHUB_OUTPUT
           else
             echo "OUTDATED_FOUND=0" >> $GITHUB_OUTPUT
@@ -179,84 +196,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('/tmp/outdated.log', 'utf-8');
-
-            // Parse the outdated list format
-            const lines = output.split('\n');
-            const packages = [];
-            let currentPkg = null;
-
-            for (const line of lines) {
-              if (line.includes('=>')) {
-                const [current, latest] = line.split('=>').map(s => s.trim());
-                if (currentPkg) {
-                  currentPkg.current = current;
-                  currentPkg.latest = latest;
-                  packages.push(currentPkg);
-                }
-              } else if (line.trim() && !line.includes('Dependents')) {
-                currentPkg = { name: line.trim(), current: '', latest: '' };
-              }
-            }
-
-            // Categorize by major bump vs minor/patch
-            // For 0.x packages, a minor version bump IS a major (breaking) change per semver.
-            const autoUpdateable = [];
-            const majorBumps = [];
-
-            for (const pkg of packages) {
-              const currentParts = pkg.current.split('.').map(Number);
-              const latestParts = pkg.latest.split('.').map(Number);
-              const currentMajor0 = currentParts[0];
-              const latestMajor0 = latestParts[0];
-
-              let isMajorBump = false;
-              if (latestMajor0 > currentMajor0) {
-                // Standard major bump (e.g. 5.x → 7.x)
-                isMajorBump = true;
-              } else if (currentMajor0 === 0 && latestMajor0 === 0) {
-                // 0.x packages: minor bump = breaking change per semver
-                // e.g. 0.4.x → 0.5.x is a MAJOR bump
-                const currentMinor = currentParts[1] || 0;
-                const latestMinor = latestParts[1] || 0;
-                if (latestMinor > currentMinor) {
-                  isMajorBump = true;
-                }
-              }
-
-              if (isMajorBump) {
-                majorBumps.push(pkg);
-              } else {
-                autoUpdateable.push(pkg);
-              }
-            }
-
-            // Build markdown table
-            let body = `## ⚠️ Dependency Audit\n\n`;
-            body += `**${packages.length} outdated package(s)** — ${autoUpdateable.length} auto-updateable, ${majorBumps.length} require manual catalog range update\n\n`;
-
-            if (autoUpdateable.length > 0) {
-              body += `### Auto-updateable (minor/patch)\n\n`;
-              body += `| Package | Current | Latest | Type |\n`;
-              body += `|---------|---------|--------|------|\n`;
-              for (const pkg of autoUpdateable) {
-                body += `| \`${pkg.name}\` | ${pkg.current} | ${pkg.latest} | minor/patch |\n`;
-              }
-              body += `\n`;
-            }
-
-            if (majorBumps.length > 0) {
-              body += `### Major bump — manual catalog range update required\n\n`;
-              body += `| Package | Current | Latest | Type |\n`;
-              body += `|---------|---------|--------|------|\n`;
-              for (const pkg of majorBumps) {
-                body += `| \`${pkg.name}\` | ${pkg.current} | ${pkg.latest} | **MAJOR** |\n`;
-              }
-              body += `\n`;
-            }
-
-            body += `> The pipeline did **not** fail — this is a warning only. Major bumps require manual catalog range updates in \`pnpm-workspace.yaml\`.`;
-
+            const body = fs.readFileSync('/tmp/outdated-report.md', 'utf8');
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
@@ -270,12 +210,15 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
-      BETTER_AUTH_SECRET: gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
       FUUTU_TELEMETRY_DISABLED: "1"
     steps:
+      # Throwaway per-run secret — never commit a real auth secret to CI.
+      - name: Generate CI auth secret
+        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 2
@@ -333,25 +276,35 @@ jobs:
   # ─────────────────────────────────────────────────────────
   # E2E + Visual Regression — SaaS
   #
-  # PR workflow:
-  #   1. Restore baselines from base branch (develop or main)
-  #   2. Run non-visual tests → must pass (pipeline fails if they don't)
-  #   3. Run visual tests → warn only, upload diffs as artifacts
-  #   4. Post PR comment: "⚠️ Visual changes detected — review screenshots"
+  # Baselines are committed PNGs in .fuutu/visual-baselines/saas/ —
+  # they travel with the code, so every PR compares against the exact
+  # baselines of its merge ref. No cache, no self-baselining.
+  #
+  # PR workflow (runs on the branch tip, not the merge ref):
+  #   1. Run non-visual tests → must pass (pipeline fails if they don't)
+  #   2. Run visual tests with --update-snapshots → pixel diffs become a
+  #      git diff; real failures still fail the step
+  #   3. Changed baselines are committed back onto the PR branch — pushes to
+  #      a feature branch need no protection bypass, works on any repo
   #
   # Merge workflow (push to main or develop):
-  #   1. Restore baselines from current branch
-  #   2. Run --update-snapshots → baselines updated
-  #   3. Run all tests → must pass
-  #   4. Save updated baselines to cache (keyed by branch)
+  #   1. Run all tests → must pass
+  #   2. Run --update-snapshots → baselines rewritten under .fuutu/
+  #   3. Auto-commit the new baselines back onto the branch ([skip ci]);
+  #      on protected branches the push is rejected — baselines then arrive
+  #      via PR-branch commits instead (warning, not failure)
   # ─────────────────────────────────────────────────────────
   e2e-saas:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write # baseline auto-commit pushes to the branch
+      actions: write  # dispatch follow-up run for required checks on bot commits
     outputs:
-      visual_failed: ${{ steps.saas-visual.outcome == 'failure' }}
+      visual_changed: ${{ steps.saas-visual.outputs.changed == '1' }}
+      visual_error: ${{ steps.saas-visual.outcome == 'failure' }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -368,15 +321,21 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
-      BETTER_AUTH_SECRET: gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
       FUUTU_TELEMETRY_DISABLED: "1"
     steps:
+      # Throwaway per-run secret — never commit a real auth secret to CI.
+      - name: Generate CI auth secret
+        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          # PRs check out the branch tip, not the merge ref — baseline commits
+          # must be pushable back onto the PR branch.
+          ref: ${{ github.head_ref || github.ref }}
+          fetch-depth: 0 # full history: baseline commits rebase onto remote tip
 
       - uses: pnpm/action-setup@v6
         with:
@@ -395,37 +354,20 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
 
-      - name: Determine baseline branch
-        id: branch
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "name=${{ github.base_ref }}" >> $GITHUB_OUTPUT
-          else
-            echo "name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Cache visual regression baselines (SaaS)
-        uses: actions/cache@v5
-        id: saas-visual-cache
-        with:
-          path: apps/saas/tests/visual.spec.ts-snapshots
-          key: visual-saas-${{ runner.os }}-${{ steps.branch.outputs.name }}-v2
-          restore-keys: |
-            visual-saas-${{ runner.os }}-
-
       - run: pnpm -F @fuutu/saas exec playwright install --with-deps
 
       - name: Create .env for dotenv-cli
         run: |
           cat > .env << 'EOF'
           DATABASE_URL=postgresql://postgres:password@localhost:5432/fuutu-stack
-          BETTER_AUTH_SECRET=gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=
           BETTER_AUTH_URL=http://localhost:3000
           EMAIL_PROVIDER=console
           NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
           FUUTU_TELEMETRY_DISABLED=1
           FUUTU_DISABLE_RATE_LIMIT=1
           EOF
+          # Throwaway per-run secret — never commit a real auth secret.
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
 
       - run: pnpm db:generate
 
@@ -440,25 +382,51 @@ jobs:
         env:
           FUUTU_TELEMETRY_DISABLED: "1"
 
-      # ── PR: compare against base branch baselines ──
-      - name: Generate baselines if cache miss (first run for this branch)
-        if: steps.saas-visual-cache.outputs.cache-hit != 'true'
-        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium
-        env:
-          PLAYWRIGHT_USE_PROD: "1"
-
       - name: Run non-visual tests (must pass, chromium only)
         run: pnpm -F @fuutu/saas exec playwright test --grep-invert "visual regression" --project=chromium
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
-      - name: Run visual tests (PR — chromium only, warn only)
+      # --update-snapshots "passes" on pixel diffs — the diff signal is the git
+      # diff afterwards. A real failure (page crash, timeout) aborts the step
+      # before the status check → visual_error → "tests incomplete" comment.
+      - name: Run visual tests + refresh baselines (PR)
         id: saas-visual
         if: github.event_name == 'pull_request'
-        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --project=chromium
         continue-on-error: true
+        run: |
+          pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/saas)" ]; then
+            echo "changed=1" >> $GITHUB_OUTPUT
+          fi
         env:
           PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Commit updated baselines to PR branch
+        if: github.event_name == 'pull_request' && steps.saas-visual.outputs.changed == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .fuutu/visual-baselines/saas
+          git commit -m "chore(visual): update saas baselines"
+          PUSHED=0
+          # e2e-marketing may push its own baseline commit first — rebase + retry
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.head_ref }}"
+            if git rebase "origin/${{ github.head_ref }}" && git push origin "HEAD:${{ github.head_ref }}"; then
+              PUSHED=1
+              break
+            fi
+          done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Could not push baselines to ${{ github.head_ref }} (fork PR?). Regenerate locally: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots"
+            exit 0
+          fi
+          # GITHUB_TOKEN pushes fire no events → dispatch a run so required
+          # checks get a conclusion on the new commit (png-only → all skip).
+          gh workflow run ci.yml --ref "${{ github.head_ref }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
@@ -471,6 +439,33 @@ jobs:
         run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots
         env:
           PLAYWRIGHT_USE_PROD: "1"
+
+      # Baselines live in the repo → after --update-snapshots the diff is a
+      # normal working-tree change. [skip ci] prevents loops on unprotected
+      # branches; on protected ones the push is rejected — then baselines
+      # arrive via PR-branch commits instead (warning, not failure).
+      - name: Commit updated baselines (push to develop/main)
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .fuutu/visual-baselines/saas
+          if git diff --cached --quiet; then
+            echo "Baselines unchanged — nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore(visual): update saas baselines [skip ci]"
+          PUSHED=0
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.ref_name }}"
+            if git rebase "origin/${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}"; then
+              PUSHED=1
+              break
+            fi
+          done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Baseline push rejected (branch protection?) — baselines arrive via PR-branch commits instead."
+          fi
 
       - uses: actions/upload-artifact@v7
         if: always()
@@ -491,8 +486,12 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write # baseline auto-commit pushes to the branch
+      actions: write  # dispatch follow-up run for required checks on bot commits
     outputs:
-      visual_failed: ${{ steps.marketing-visual.outcome == 'failure' }}
+      visual_changed: ${{ steps.marketing-visual.outputs.changed == '1' }}
+      visual_error: ${{ steps.marketing-visual.outcome == 'failure' }}
       coverage_pct: ${{ steps.coverage.outputs.pct }}
       coverage_available: ${{ steps.coverage.outputs.available }}
       coverage_scripts: ${{ steps.coverage.outputs.scripts }}
@@ -502,7 +501,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          # PRs check out the branch tip, not the merge ref — baseline commits
+          # must be pushable back onto the PR branch.
+          ref: ${{ github.head_ref || github.ref }}
+          fetch-depth: 0 # full history: baseline commits rebase onto remote tip
 
       - uses: pnpm/action-setup@v6
         with:
@@ -521,24 +523,6 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
 
-      - name: Determine baseline branch
-        id: branch
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "name=${{ github.base_ref }}" >> $GITHUB_OUTPUT
-          else
-            echo "name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Cache visual regression baselines (Marketing)
-        uses: actions/cache@v5
-        id: marketing-visual-cache
-        with:
-          path: apps/marketing/tests/visual.spec.ts-snapshots
-          key: visual-marketing-${{ runner.os }}-${{ steps.branch.outputs.name }}-v3
-          restore-keys: |
-            visual-marketing-${{ runner.os }}-
-
       - run: pnpm -F @fuutu/marketing exec playwright install --with-deps
 
       - name: Create .env for dotenv-cli
@@ -552,13 +536,6 @@ jobs:
         run: pnpm -F @fuutu/marketing build
         env:
           FUUTU_TELEMETRY_DISABLED: "1"
-
-      # ── PR: compare against base branch baselines ──
-      - name: Generate baselines if cache miss (first run for this branch)
-        if: steps.marketing-visual-cache.outputs.cache-hit != 'true'
-        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium
-        env:
-          PLAYWRIGHT_USE_PROD: "1"
 
       - name: Run non-visual tests (must pass, chromium only)
         run: pnpm -F @fuutu/marketing exec playwright test --grep-invert "visual regression" --project=chromium
@@ -600,13 +577,43 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Run visual tests (PR — chromium only, warn only)
+      # Same pattern as e2e-saas — see there for the full rationale.
+      - name: Run visual tests + refresh baselines (PR)
         id: marketing-visual
         if: github.event_name == 'pull_request'
-        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --project=chromium
         continue-on-error: true
+        run: |
+          pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/marketing)" ]; then
+            echo "changed=1" >> $GITHUB_OUTPUT
+          fi
         env:
           PLAYWRIGHT_USE_PROD: "1"
+
+      - name: Commit updated baselines to PR branch
+        if: github.event_name == 'pull_request' && steps.marketing-visual.outputs.changed == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .fuutu/visual-baselines/marketing
+          git commit -m "chore(visual): update marketing baselines"
+          PUSHED=0
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.head_ref }}"
+            if git rebase "origin/${{ github.head_ref }}" && git push origin "HEAD:${{ github.head_ref }}"; then
+              PUSHED=1
+              break
+            fi
+          done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Could not push baselines to ${{ github.head_ref }} (fork PR?). Regenerate locally: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots"
+            exit 0
+          fi
+          # GITHUB_TOKEN pushes fire no events → dispatch a run so required
+          # checks get a conclusion on the new commit (png-only → all skip).
+          gh workflow run ci.yml --ref "${{ github.head_ref }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
@@ -620,6 +627,29 @@ jobs:
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
+      - name: Commit updated baselines (push to develop/main)
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .fuutu/visual-baselines/marketing
+          if git diff --cached --quiet; then
+            echo "Baselines unchanged — nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore(visual): update marketing baselines [skip ci]"
+          PUSHED=0
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.ref_name }}"
+            if git rebase "origin/${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}"; then
+              PUSHED=1
+              break
+            fi
+          done
+          if [ "$PUSHED" = "0" ]; then
+            echo "::warning::Baseline push rejected (branch protection?) — baselines arrive via PR-branch commits instead."
+          fi
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -631,12 +661,15 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────────────────
-  # Visual Report — deploy HTML report to GitHub Pages + PR comment
-  # Runs after e2e jobs, only on PRs
-  # Requires: Repo Settings → Pages → Source: GitHub Actions
+  # Visual Report — PR comment on visual regression outcome
+  # Baselines are committed PNGs in .fuutu/visual-baselines/<app>/,
+  # so "no changes" means a real comparison, not a self-baseline.
+  # Review diffs via the playwright-*-report artifacts on the e2e runs.
   # ─────────────────────────────────────────────────────────
   visual-report:
-    needs: [e2e-saas, e2e-marketing]
+    # `changes` must be in needs — otherwise `needs.changes.outputs.code`
+    # evaluates empty and this job is silently skipped on every PR.
+    needs: [changes, e2e-saas, e2e-marketing]
     if: always() && github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -647,11 +680,18 @@ jobs:
         run: |
           SAAS_RESULT="${{ needs.e2e-saas.result }}"
           MKT_RESULT="${{ needs.e2e-marketing.result }}"
-          SAAS_VISUAL="${{ needs.e2e-saas.outputs.visual_failed }}"
-          MKT_VISUAL="${{ needs.e2e-marketing.outputs.visual_failed }}"
+          SAAS_CHANGED="${{ needs.e2e-saas.outputs.visual_changed }}"
+          MKT_CHANGED="${{ needs.e2e-marketing.outputs.visual_changed }}"
+          SAAS_ERR="${{ needs.e2e-saas.outputs.visual_error }}"
+          MKT_ERR="${{ needs.e2e-marketing.outputs.visual_error }}"
 
-          # Distinguish: visual diffs found vs tests ran clean vs tests didn't complete
-          if [ "$SAAS_VISUAL" = "true" ] || [ "$MKT_VISUAL" = "true" ]; then
+          # Distinguish: visual step crashed → incomplete; baselines changed →
+          # visual changes; both green → no changes.
+          if [ "$SAAS_ERR" = "true" ] || [ "$MKT_ERR" = "true" ]; then
+            echo "status=tests_incomplete" >> $GITHUB_OUTPUT
+            echo "saas_result=$SAAS_RESULT" >> $GITHUB_OUTPUT
+            echo "mkt_result=$MKT_RESULT" >> $GITHUB_OUTPUT
+          elif [ "$SAAS_CHANGED" = "true" ] || [ "$MKT_CHANGED" = "true" ]; then
             echo "status=visual_changes" >> $GITHUB_OUTPUT
           elif [ "$SAAS_RESULT" = "success" ] && [ "$MKT_RESULT" = "success" ]; then
             echo "status=no_changes" >> $GITHUB_OUTPUT
@@ -662,81 +702,33 @@ jobs:
             echo "mkt_result=$MKT_RESULT" >> $GITHUB_OUTPUT
           fi
 
-      - name: Download SaaS report
-        if: always() && steps.check.outputs.status == 'visual_changes'
-        uses: actions/download-artifact@v7
-        with:
-          name: playwright-saas-report
-          path: report/saas
-
-      - name: Download Marketing report
-        if: always() && steps.check.outputs.status == 'visual_changes'
-        uses: actions/download-artifact@v7
-        with:
-          name: playwright-marketing-report
-          path: report/marketing
-
-      - name: Create report index page
-        if: steps.check.outputs.status == 'visual_changes'
-        run: |
-          mkdir -p report
-          cat > report/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head><meta charset="utf-8"><title>Playwright Visual Report</title></head>
-          <body style="font-family: system-ui; max-width: 600px; margin: 80px auto; padding: 20px;">
-          <h1>Playwright Visual Report</h1>
-          <p>Choose a report:</p>
-          <ul style="font-size: 18px; line-height: 2;">
-          <li><a href="saas/playwright-report/index.html">SaaS Report</a></li>
-          <li><a href="marketing/playwright-report/index.html">Marketing Report</a></li>
-          </ul>
-          </body>
-          </html>
-          EOF
-
-      # ── GitHub Pages deploy (disabled until repo is public) ──
-      # To re-enable: uncomment these steps + add `permissions: pages: write, id-token: write` + `environment: name: github-pages`
-      # - name: Upload Pages artifact
-      #   if: steps.check.outputs.status == 'visual_changes'
-      #   uses: actions/upload-pages-artifact@v5
-      #   with:
-      #     path: report
-      # - name: Deploy to GitHub Pages
-      #   if: steps.check.outputs.status == 'visual_changes'
-      #   id: deploy
-      #   uses: actions/deploy-pages@v5
-
       - name: Post visual changes warning with report link
         if: steps.check.outputs.status == 'visual_changes'
         uses: actions/github-script@v8
         with:
           script: |
-            const branch = '${{ github.base_ref }}';
             const repo = `${context.repo.owner}/${context.repo.repo}`;
             const runId = '${{ github.run_id }}';
             const artifactUrl = `https://github.com/${repo}/actions/runs/${runId}`;
             const prUrl = `https://github.com/${repo}/pull/${context.issue.number}`;
-            const pagesUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/`;
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
               body: [
                 '## ⚠️ Visual Changes Detected',
                 '',
-                'UI changes were found during visual regression testing.',
+                'UI changes were found during visual regression testing. The refreshed baseline screenshots were **committed to this branch automatically** — review the PNG diffs in "Files changed" under `.fuutu/visual-baselines/`.',
                 '',
                 '**Links:**',
                 `- 📦 [Download Report Artifact](${artifactUrl}) — download & unzip, then open \`playwright-report/index.html\` in your browser`,
-                `- 🌐 [View Report on GitHub Pages](${pagesUrl}) — *(available once Pages is enabled)*`,
                 `- 🔗 [View PR](${prUrl})`,
                 '',
                 'In the report you\'ll see expected vs actual vs diff for every changed page.',
                 '',
                 '**What to do:**',
-                '1. Download the artifact, open the HTML report, review the visual diffs',
-                '2. If the changes are **intentional** → merge this PR',
-                `3. Merging will automatically update the baselines for \`${branch}\``,
+                '1. Review the baseline PNG diffs in this PR (or the HTML report for expected/actual/diff)',
+                '2. If the changes are **intentional** → merge this PR — the new baselines travel with it',
+                '3. If the changes are **unintentional** → fix the code and push — the baselines will be regenerated again',
                 '',
                 '> The pipeline did **not** fail — this is a warning only. Non-visual tests must still pass.',
               ].join('\n')

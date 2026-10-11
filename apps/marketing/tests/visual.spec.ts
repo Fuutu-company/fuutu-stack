@@ -4,8 +4,11 @@ import { expect, scrollThroughPage, test } from "./fixtures";
  * Visual regression tests for the marketing site.
  * Covers all pages in EN + DE at desktop, tablet, and mobile viewports.
  *
- * Baselines are auto-generated on first run (--update-snapshots).
- * CI caches baselines per branch — see ../../.github/workflows/ci.yml.
+ * Baselines are committed PNGs in .fuutu/visual-baselines/marketing/.
+ * CI regenerates them on PRs and commits the diff back onto the
+ * PR branch (plus on push to develop/main where allowed) —
+ * see ../../.github/workflows/ci.yml. Locally, run --update-snapshots
+ * to create your platform's baselines (gitignored outside linux).
  */
 
 const PAGES = [

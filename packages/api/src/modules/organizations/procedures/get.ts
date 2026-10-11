@@ -1,11 +1,14 @@
 import { auth } from "@fuutu/auth";
 import { getOrganizationBySlug } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole, slugSchema } from "../shared";
+import { permissionProcedure } from "../../../orpc/procedures";
+import { requireOrgPermissionAccess, slugSchema } from "../shared";
 
-export const getOrganization = protectedProcedure
+export const getOrganization = permissionProcedure(
+	PERMISSIONS.ORGANIZATION.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/organizations/{slug}",
@@ -19,7 +22,12 @@ export const getOrganization = protectedProcedure
 		if (!org) {
 			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 		}
-		await requireOrgRole(org.id, context.user.id, "member", context.headers);
+		await requireOrgPermissionAccess(
+			org.id,
+			context.user.id,
+			PERMISSIONS.ORGANIZATION.VIEW,
+			context,
+		);
 		const fullOrg = await auth.api.getFullOrganization({
 			query: { organizationId: org.id },
 			headers: context.headers,

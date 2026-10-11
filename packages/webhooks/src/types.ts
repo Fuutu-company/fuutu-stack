@@ -28,4 +28,5 @@ export interface WebhookConfig {
 	retryBaseDelayMs: number;
 	timeoutMs: number;
 	staleProcessingTimeoutMs: number;
+	maxResponseBodyBytes: number;
 }

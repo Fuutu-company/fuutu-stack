@@ -24,6 +24,7 @@ type FeatureHeroProps = {
 export function FeatureHero({ item, heading, subheading }: FeatureHeroProps) {
 	const t = useTranslations("home.features.items");
 	const tExpand = useTranslations("home.features");
+	const tCommon = useTranslations("common");
 	const frame = item.frames[0];
 	const Icon = item.icon;
 	const label = t(`${item.id}.label`);
@@ -90,6 +91,9 @@ export function FeatureHero({ item, heading, subheading }: FeatureHeroProps) {
 						imageAlt={frame.imageAlt}
 						videoSrc={frame.videoSrc}
 						iframeSrc={frame.iframeSrc}
+						playLabel={tCommon("play")}
+						pauseLabel={tCommon("pause")}
+						videoTitle={tCommon("video")}
 						size="1280 × 720"
 						sizePosition="bottom-left"
 						width="100%"

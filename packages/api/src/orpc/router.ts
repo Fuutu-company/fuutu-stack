@@ -4,10 +4,12 @@ import { adminRouter } from "../modules/admin/router";
 import { aiRouter } from "../modules/ai/router";
 import { apiKeysRouter } from "../modules/api-keys/router";
 import { chatRouter } from "../modules/chat/router";
+import { creditsRouter } from "../modules/credits/router";
 import { crmRouter } from "../modules/crm/router";
 import { notificationsRouter } from "../modules/notifications/router";
 import { organizationsRouter } from "../modules/organizations/router";
 import { paymentsRouter } from "../modules/payments/router";
+import { searchRouter } from "../modules/search/router";
 import { storageRouter } from "../modules/storage/router";
 import { usersRouter } from "../modules/users/router";
 import { webhooksRouter } from "../modules/webhooks/router";
@@ -15,9 +17,9 @@ import { publicProcedure } from "./procedures";
 
 export const router = publicProcedure.router({
 	users: usersRouter,
-	ai: aiRouter,
 	activity: activityRouter,
 	admin: adminRouter,
+	ai: aiRouter,
 	organizations: organizationsRouter,
 	payments: paymentsRouter,
 	storage: storageRouter,
@@ -26,6 +28,8 @@ export const router = publicProcedure.router({
 	notifications: notificationsRouter,
 	chat: chatRouter,
 	crm: crmRouter,
+	credits: creditsRouter,
+	search: searchRouter,
 });
 
 export const appRouter = router;

@@ -16,11 +16,12 @@ import {
 	FieldLabel,
 	Input,
 } from "@fuutu/ui";
+import { WEBHOOK_EVENTS, type WebhookEventType } from "@fuutu/webhooks/events";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
-import { WEBHOOK_EVENTS } from "../constants";
 
 const log = createLogger({ scope: "webhook-create-dialog" });
 
@@ -41,13 +42,15 @@ export function WebhookCreateDialog({
 	onCreated: (webhook: CreatedWebhook) => void;
 }) {
 	const t = useTranslations("webhooks");
+	const tRoot = useTranslations();
+	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState("");
-	const [events, setEvents] = useState<string[]>([]);
+	const [events, setEvents] = useState<WebhookEventType[]>([]);
 	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	function toggleEvent(event: string) {
+	function toggleEvent(event: WebhookEventType) {
 		setEvents((prev) =>
 			prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
 		);
@@ -69,7 +72,7 @@ export function WebhookCreateDialog({
 			onCreated(result as CreatedWebhook);
 		} catch (err) {
 			log.error("create failed", { err });
-			setError(t("failed"));
+			setError(planGateMessage(err, tRoot, "webhooks.failed"));
 		} finally {
 			setCreating(false);
 		}
@@ -83,7 +86,7 @@ export function WebhookCreateDialog({
 					{t("create")}
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" closeLabel={tCommon("close")}>
 				<form onSubmit={submit} className="space-y-4">
 					<DialogHeader>
 						<DialogTitle>{t("createDialog.title")}</DialogTitle>

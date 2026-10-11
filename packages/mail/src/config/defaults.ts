@@ -6,6 +6,8 @@
  */
 import type { ProviderName } from "../types";
 
+// Named `emailConfig` rather than `mailConfig` — deviates from the
+// `<domain>Config` convention (AGENTS §6) but is public API since v1.0.0.
 export const emailConfig = {
 	/**
 	 * Default email provider when EMAIL_PROVIDER env var is not set.

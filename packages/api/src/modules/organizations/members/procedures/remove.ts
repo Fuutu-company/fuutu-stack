@@ -1,19 +1,23 @@
 import { auth } from "@fuutu/auth";
-import { hasRoleAtLeast, toRbacRole } from "@fuutu/rbac";
+import { createLogger } from "@fuutu/logs";
+import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
+import { dispatchEvent } from "@fuutu/webhooks";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import {
-	createRateLimitMiddleware,
-	protectedProcedure,
-} from "../../../../orpc";
-import { type OrgMember, requireOrgRole } from "../../shared";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../../orpc/procedures";
+import type { OrgMember } from "../../../organizations/shared";
+
+const log = createLogger({ scope: "api:organizations" });
 
 const removeMemberSchema = z.object({
 	organizationId: z.string().min(1),
 	memberIdOrEmail: z.string().min(1),
 });
 
-export const removeMember = protectedProcedure
+export const removeMember = authProcedure({
+	org: { permission: PERMISSIONS.REMOVE_MEMBER },
+})
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
 		method: "DELETE",
@@ -25,23 +29,16 @@ export const removeMember = protectedProcedure
 	})
 	.input(removeMemberSchema)
 	.handler(async ({ input, context }) => {
-		const org = await requireOrgRole(
-			input.organizationId,
-			context.user.id,
-			"admin",
-			context.headers,
-		);
-		const actor = org.members?.find(
-			(m: OrgMember) => m.userId === context.user.id,
-		);
-		const actorRole = toRbacRole(actor?.role);
-		const target = org.members?.find(
+		// context.org and context.orgRole are set by authorize middleware
+		// (org option is not optional, so both are guaranteed defined)
+		const actorRole = context.orgRole ?? "member";
+		const target = context.org?.members?.find(
 			(m: OrgMember) =>
 				m.id === input.memberIdOrEmail ||
 				m.userId === input.memberIdOrEmail ||
 				m.email === input.memberIdOrEmail,
 		);
-		const targetRole = toRbacRole(target?.role);
+		const targetRole = toOrgRole(target?.role);
 		if (targetRole === "owner") {
 			throw new ORPCError("FORBIDDEN", { message: "Cannot remove owner" });
 		}
@@ -60,5 +57,18 @@ export const removeMember = protectedProcedure
 			},
 			headers: context.headers,
 		});
+		try {
+			await dispatchEvent({
+				event: "member.removed",
+				organizationId: input.organizationId,
+				userId: context.user.id,
+				payload: {
+					organizationId: input.organizationId,
+					memberIdOrEmail: input.memberIdOrEmail,
+				},
+			});
+		} catch (err) {
+			log.warn("webhook dispatch failed", { err });
+		}
 		return { success: true };
 	});

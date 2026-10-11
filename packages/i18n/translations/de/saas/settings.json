@@ -17,13 +17,14 @@
 			"security": "Sicherheit",
 			"sessions": "Sitzungen",
 			"danger": "Gefahrenzone",
-			"billing": "Abrechnung"
+			"billing": "Abrechnung",
+			"credits": "Guthaben"
 		},
 		"profile": {
 			"title": "Profil",
 			"description": "Aktualisiere deine persönlichen Daten.",
 			"fullName": "Vollständiger Name",
-			"fullNamePlaceholder": "Max Mustermann",
+			"fullNamePlaceholder": "Ihr vollständiger Name",
 			"emailLabel": "E-Mail",
 			"saved": "Profil aktualisiert.",
 			"failed": "Profil konnte nicht aktualisiert werden."

@@ -79,7 +79,7 @@ export function NavUser() {
 						size="lg"
 						className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 						disabled
-						aria-label="Loading user account"
+						aria-label={t("aria.loadingUserAccount")}
 					>
 						<Skeleton className="h-8 w-8 rounded-lg" />
 						<div className="grid flex-1 gap-1">

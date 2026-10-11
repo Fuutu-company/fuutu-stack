@@ -1,8 +1,9 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { getSafeRedirect } from "@fuutu/auth/redirect";
 import { createLogger } from "@fuutu/logs";
-import { Button, Card, CardContent } from "@fuutu/ui";
+import { AuthCard, Button } from "@fuutu/ui";
 import { Building2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -72,8 +73,10 @@ export function AcceptInvitation() {
 			const loggedIn = await checkSession();
 			if (!loggedIn) {
 				if (invitationId) {
+					const redirectPath = `/auth/accept-invitation?id=${invitationId}`;
+					const safeRedirect = getSafeRedirect(redirectPath);
 					router.replace(
-						`/auth/sign-in?redirect=${encodeURIComponent(`/auth/accept-invitation?id=${invitationId}`)}`,
+						`/auth/sign-in?redirect=${encodeURIComponent(safeRedirect)}`,
 					);
 				} else {
 					router.replace("/auth/sign-in");
@@ -115,77 +118,68 @@ export function AcceptInvitation() {
 
 	if (loading || session === null) {
 		return (
-			<Card className="w-full max-w-md">
-				<CardContent className="p-6">
-					<p className="text-muted-foreground text-sm">{t("loading")}</p>
-				</CardContent>
-			</Card>
+			<AuthCard title={t("loading")}>
+				<p className="text-center text-muted-foreground text-sm">
+					{t("loading")}
+				</p>
+			</AuthCard>
 		);
 	}
 
 	if (!invitationId) {
 		return (
-			<Card className="w-full max-w-md">
-				<CardContent className="p-6">
-					<p className="text-muted-foreground text-sm">{t("missingId")}</p>
-				</CardContent>
-			</Card>
+			<AuthCard title={t("errorTitle")}>
+				<p className="text-center text-muted-foreground text-sm">
+					{t("missingId")}
+				</p>
+			</AuthCard>
 		);
 	}
 
 	if (success) {
 		return (
-			<Card className="w-full max-w-md">
-				<CardContent className="space-y-4 p-6">
-					<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+			<AuthCard title={t("success")}>
+				<div className="flex flex-col gap-4 text-center">
+					<div className="mx-auto flex size-12 items-center justify-center bg-primary/10 text-primary">
 						<Building2 className="size-6" />
 					</div>
-					<h1 className="font-bold text-2xl tracking-tight">{t("success")}</h1>
 					<p className="text-muted-foreground text-sm">
 						{t("successDescription")}
 					</p>
-				</CardContent>
-			</Card>
+				</div>
+			</AuthCard>
 		);
 	}
 
 	if (error && !invitation) {
 		return (
-			<Card className="w-full max-w-md">
-				<CardContent className="space-y-4 p-6">
-					<h1 className="font-bold text-2xl tracking-tight">
-						{t("errorTitle")}
-					</h1>
-					<p className="text-muted-foreground text-sm">{error}</p>
-				</CardContent>
-			</Card>
+			<AuthCard title={t("errorTitle")}>
+				<p className="text-center text-muted-foreground text-sm">{error}</p>
+			</AuthCard>
 		);
 	}
 
 	return (
-		<Card className="w-full max-w-md">
-			<CardContent className="space-y-6 p-6">
-				<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+		<AuthCard
+			title={t("title")}
+			description={t("description", {
+				organization: invitation?.organizationName ?? "",
+				inviter: invitation?.inviterEmail ?? "",
+			})}
+		>
+			<div className="space-y-6">
+				<div className="mx-auto flex size-12 items-center justify-center bg-primary/10 text-primary">
 					<Building2 className="size-6" />
 				</div>
-				<div className="space-y-2">
-					<h1 className="font-bold text-2xl tracking-tight">{t("title")}</h1>
-					<p className="text-muted-foreground text-sm">
-						{t("description", {
-							organization: invitation?.organizationName ?? "",
-							inviter: invitation?.inviterEmail ?? "",
-						})}
-					</p>
-				</div>
 				{error && (
-					<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+					<div className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
 						{error}
 					</div>
 				)}
 				<Button onClick={handleAccept} disabled={accepting} className="w-full">
 					{accepting ? t("accepting") : t("acceptButton")}
 				</Button>
-			</CardContent>
-		</Card>
+			</div>
+		</AuthCard>
 	);
 }

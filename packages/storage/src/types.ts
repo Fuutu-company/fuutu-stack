@@ -24,7 +24,12 @@ export interface SignedUploadInput {
 	 * unbounded upload" hole).
 	 */
 	contentLength?: number;
-	/** Max allowed size in bytes (enforced via presign policy). */
+	/**
+	 * Max allowed size in bytes — a validation cap, not a signed value.
+	 * Presigned PUTs can only pin an exact `Content-Length`, never a
+	 * range, so `contentLength` must be provided when this is set and is
+	 * rejected when it exceeds the cap.
+	 */
 	maxSizeBytes?: number;
 	/** Seconds until the URL expires. Defaults to 600 (10 min). */
 	expiresInSeconds?: number;
@@ -52,10 +57,20 @@ export interface StorageObject {
 	lastModified: Date;
 }
 
+export interface StorageStreamResult {
+	body: ReadableStream<Uint8Array>;
+	contentType: string | null;
+	contentLength: number | null;
+}
+
 export interface StorageProvider {
 	readonly id: string;
 	getSignedUploadUrl(input: SignedUploadInput): Promise<SignedUploadResult>;
 	getSignedDownloadUrl(input: SignedDownloadInput): Promise<string>;
 	deleteObject(bucket: string, key: string): Promise<void>;
 	listObjects(bucket: string, prefix?: string): Promise<StorageObject[]>;
+	getObjectStream?(
+		bucket: string,
+		key: string,
+	): Promise<StorageStreamResult | null>;
 }

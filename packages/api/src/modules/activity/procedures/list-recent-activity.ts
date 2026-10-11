@@ -1,11 +1,15 @@
 import { listAuditLogs } from "@fuutu/db";
-import { protectedProcedure } from "../../../orpc";
+import { PERMISSIONS } from "@fuutu/rbac";
+import { z } from "zod";
+import { permissionProcedure } from "../../../orpc/procedures";
 
 /**
  * Recent activity feed for the dashboard.
  * Returns the last 10 audit-log entries for the current user.
  */
-export const listRecentActivityProcedure = protectedProcedure
+export const listRecentActivityProcedure = permissionProcedure(
+	PERMISSIONS.ACTIVITY.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/activity/recent",
@@ -13,6 +17,7 @@ export const listRecentActivityProcedure = protectedProcedure
 		summary: "Recent activity",
 		description: "Last 10 audit-log entries for the current user.",
 	})
+	.input(z.object({}).optional())
 	.handler(async ({ context }) => {
 		const userId = context.user.id;
 		const items = await listAuditLogs({ userId, take: 10, skip: 0 });

@@ -9,9 +9,6 @@
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": ["dist/**", ".next/**"]
 		},
-		"lint": {
-			"dependsOn": ["^lint"]
-		},
 		"check-types": {
 			"dependsOn": ["^check-types"],
 			"inputs": ["$TURBO_DEFAULT$"],
@@ -52,11 +49,9 @@
 			"cache": false
 		},
 		"test:e2e": {
-			"cache": false,
-			"dependsOn": ["^build"]
+			"cache": false
 		},
 		"test": {
-			"dependsOn": ["^build"],
 			"cache": false
 		}
 	}

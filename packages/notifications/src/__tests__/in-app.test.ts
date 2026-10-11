@@ -6,7 +6,7 @@ vi.mock("@fuutu/db", () => ({
 
 import { createNotification } from "@fuutu/db";
 import { inAppChannel } from "../channels/in-app";
-import { testNotificationProviderContract } from "./provider-contract.test";
+import { testNotificationProviderContract } from "./provider-contract";
 
 testNotificationProviderContract(
 	"in-app",

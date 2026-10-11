@@ -12,6 +12,7 @@
 		"fuutu-telemetry-ping": "./bin/ping.mjs"
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"ping": "node ./bin/ping.mjs",
 		"test": "vitest run"
 	},

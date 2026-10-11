@@ -1,4 +1,3 @@
-import type { Prisma } from "@fuutu/db";
 import { createNotification } from "@fuutu/db";
 import type { NotificationChannelHandler } from "../types";
 
@@ -11,7 +10,7 @@ export const inAppChannel: NotificationChannelHandler = {
 			type,
 			title,
 			body,
-			data: data as Prisma.InputJsonValue | undefined,
+			data,
 		});
 	},
 };

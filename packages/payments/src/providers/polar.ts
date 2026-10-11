@@ -5,31 +5,34 @@ import {
 	validateEvent,
 	WebhookVerificationError,
 } from "@polar-sh/sdk/webhooks";
+import { z } from "zod";
 import type {
-	CheckoutLinkInput,
-	CustomerPortalInput,
+	CheckoutInput,
+	CustomerInput,
 	PaymentProvider,
-	SetSeatsInput,
+	PortalInput,
+	ProviderEvent,
+	ProviderEventType,
 } from "../types";
 
-/**
- * Polar payment provider (v1 active).
- *
- * Division of responsibilities with Better-Auth's Polar plugin
- * (`@polar-sh/better-auth`):
- *   - **Better-Auth** owns `/api/auth/polar/webhooks` and handles
- *     auth-linked events: checkout.completed, subscription.created/
- *     updated/canceled, customer.* — it verifies the signature itself
- *     and updates the DB. We do not touch those.
- *   - **This provider** owns the Fuutu-side entry for events BA does
- *     not process (refunds, analytics, custom metadata fanout). We
- *     verify the signature ourselves because BA never sees these.
- *
- * Seat accounting is a Fuutu concern (BA's plugin does not sync org
- * seats on member add/remove), so we expose a dedicated method and
- * delegate the actual SDK call to the active Polar API surface.
- */
 const log = createLogger({ scope: "payments:polar" });
+
+/**
+ * Subset of the Polar webhook `data` object we actually consume.
+ * `validateEvent` already verified the signature, but its return type is a
+ * broad union — validate the fields we read instead of casting.
+ * user_id / organization_id live in `data.metadata` (set at checkout
+ * creation), not on the event object itself.
+ */
+const PolarEventDataSchema = z
+	.looseObject({
+		id: z.string().optional(),
+		subscription_id: z.string().optional(),
+		customer_id: z.string().optional(),
+		product_id: z.string().optional(),
+		metadata: z.record(z.string(), z.unknown()).optional(),
+	})
+	.optional();
 
 let _client: Polar | null = null;
 
@@ -51,20 +54,53 @@ function getClient(): Polar {
 	return _client;
 }
 
+function mapPolarEventToProviderEvent(
+	polarEventType: string,
+): ProviderEventType | null {
+	switch (polarEventType) {
+		case "checkout.completed":
+			return "checkout.completed";
+		case "subscription.created":
+			return "subscription.activated";
+		case "subscription.updated":
+			return "subscription.updated";
+		case "subscription.canceled":
+			return "subscription.canceled";
+		case "subscription.revoked":
+			return "subscription.expired";
+		default:
+			// Unmapped Polar events (order.paid, customer.created, …) are
+			// ignored — coercing them to subscription.updated would feed
+			// unrelated payloads into the purchase sync.
+			return null;
+	}
+}
+
 export const polarPaymentProvider: PaymentProvider = {
 	id: "polar",
+	ownsSeatSync: false,
 
-	async createCheckoutLink(input: CheckoutLinkInput) {
+	async createCheckoutLink(input: CheckoutInput) {
 		const client = getClient();
+		// Without metadata, Polar webhook payloads carry no owner — the
+		// owner-XOR rule in sync.ts would skip them as ownerless.
+		const metadata: Record<string, string> = {};
+		if (input.userId) metadata.user_id = input.userId;
+		if (input.organizationId) metadata.organization_id = input.organizationId;
+		for (const [key, value] of Object.entries(input.metadata ?? {})) {
+			if (value === undefined || value === null) continue;
+			metadata[key] = String(value);
+		}
 		const checkout = await client.checkouts.create({
 			products: [input.priceId],
 			successUrl: input.successUrl ?? env.POLAR_SUCCESS_URL,
 			externalCustomerId: input.userId ?? input.organizationId,
+			metadata,
 		});
 		return { url: checkout.url };
 	},
 
-	async createCustomerPortalLink(input: CustomerPortalInput) {
+	async createCustomerPortalLink(input: PortalInput) {
 		const client = getClient();
 		const session = await client.customerSessions.create({
 			customerId: input.customerId,
@@ -72,29 +108,22 @@ export const polarPaymentProvider: PaymentProvider = {
 		return { url: session.customerPortalUrl };
 	},
 
-	/**
-	 * Fuutu-owned webhook entry (mounted at `/api/webhooks/payments`).
-	 *
-	 * Complementary to Better-Auth's own Polar webhook (see the comment
-	 * block at the top of this file). Signature is verified via the
-	 * official `@polar-sh/sdk/webhooks` helper using
-	 * `POLAR_WEBHOOK_SECRET` — a separate secret from the one BA uses.
-	 *
-	 * Concrete per-event business handlers are added feature-by-feature;
-	 * for now we validate, log, and ack with 200.
-	 */
-	webhookHandler: async (request: Request) => {
+	async createCustomer(input: CustomerInput) {
+		const client = getClient();
+		const customer = await client.customers.create({
+			externalId: input.userId,
+			email: input.email,
+			name: input.name,
+		});
+		return { customerId: customer.id };
+	},
+
+	async parseWebhook(request: Request): Promise<ProviderEvent[]> {
 		if (!env.POLAR_WEBHOOK_SECRET) {
-			// 503 (not 500) so Polar's retry queue treats this as a
-			// transient "not configured yet" condition instead of a
-			// permanent application bug.
-			log.error("POLAR_WEBHOOK_SECRET missing — rejecting webhook");
-			return new Response("webhook not configured", { status: 503 });
+			throw new Error("POLAR_WEBHOOK_SECRET is not configured");
 		}
 
 		const body = await request.text();
-		// Collect headers into a plain object — `validateEvent` expects
-		// a `Record<string, string>` shape across Node 18+ / Edge runtimes.
 		const headers: Record<string, string> = {};
 		request.headers.forEach((value, key) => {
 			headers[key] = value;
@@ -102,17 +131,44 @@ export const polarPaymentProvider: PaymentProvider = {
 
 		try {
 			const event = validateEvent(body, headers, env.POLAR_WEBHOOK_SECRET);
-			log.info("polar webhook verified", { type: event.type });
-			// Per-event dispatch happens here as concrete features land;
-			// the ack keeps Polar's retry queue clean in the meantime.
-			return new Response(null, { status: 200 });
+			const eventType = mapPolarEventToProviderEvent(event.type);
+			if (!eventType) {
+				log.debug("ignoring unmapped polar event type", {
+					polarEventType: event.type,
+				});
+				return [];
+			}
+
+			const parsed = PolarEventDataSchema.safeParse(event.data);
+			if (!parsed.success) {
+				throw new Error("Malformed webhook payload");
+			}
+			const data = parsed.data;
+			const providerEvent: ProviderEvent = {
+				type: eventType,
+				// Standard-webhooks delivery id — dedup marker for
+				// checkout.completed redeliveries. Falls back to the
+				// payload id (checkout/order id) when the header is absent.
+				eventId: headers["webhook-id"] || data?.id || undefined,
+				metadata: data?.metadata,
+			};
+
+			if (data?.subscription_id) {
+				providerEvent.subscriptionId = data.subscription_id;
+			}
+			if (data?.customer_id) {
+				providerEvent.customerId = data.customer_id;
+			}
+			if (data?.product_id) {
+				providerEvent.productId = data.product_id;
+			}
+
+			return [providerEvent];
 		} catch (err) {
 			if (err instanceof WebhookVerificationError) {
-				log.warn("polar webhook signature invalid", { err: err.message });
-				return new Response("invalid signature", { status: 401 });
+				throw new Error(`signature: ${err.message}`);
 			}
-			log.error("polar webhook handler failed", { err: String(err) });
-			return new Response("internal error", { status: 500 });
+			throw err;
 		}
 	},
 
@@ -120,26 +176,5 @@ export const polarPaymentProvider: PaymentProvider = {
 		const client = getClient();
 		await client.subscriptions.revoke({ id: subscriptionId });
 		log.info("cancelled subscription", { subscriptionId });
-	},
-
-	/**
-	 * Polar: seat-sync is owned by the Better-Auth Polar plugin, which
-	 * reacts to organization membership changes and updates the seat
-	 * count on the underlying subscription product. We intentionally
-	 * do NOT issue a second SDK call here — that would double-count
-	 * or race the plugin. The `ownsSeatSync: true` flag on the module
-	 * export lets callers (auth hooks) skip the `setSubscriptionSeats`
-	 * round-trip entirely when Polar is active.
-	 *
-	 * Kept as a typed no-op so the `PaymentProvider` contract stays
-	 * uniform across providers that DO drive seats from our side
-	 * (Stripe, Lemonsqueezy).
-	 */
-	ownsSeatSync: true,
-	async setSubscriptionSeats({ subscriptionId, seats }: SetSeatsInput) {
-		log.debug("setSubscriptionSeats noop (handled by BA polar plugin)", {
-			subscriptionId,
-			seats,
-		});
 	},
 };

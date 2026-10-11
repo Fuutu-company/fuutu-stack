@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { LIMITS, PLANS, type PlanId } from "../config";
 import {
 	formatLimit,

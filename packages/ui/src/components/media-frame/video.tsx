@@ -9,6 +9,10 @@ type VideoPlayerProps = {
 	hoverPlay?: boolean;
 	rounded?: string;
 	className?: string;
+	/** Accessible label for the play state of the toggle button. */
+	playLabel?: string;
+	/** Accessible label for the pause state of the toggle button. */
+	pauseLabel?: string;
 };
 
 export function VideoPlayer({
@@ -17,6 +21,8 @@ export function VideoPlayer({
 	hoverPlay = false,
 	rounded = "rounded-2xl",
 	className,
+	playLabel,
+	pauseLabel,
 }: VideoPlayerProps) {
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const [playing, setPlaying] = useState(false);
@@ -90,7 +96,7 @@ export function VideoPlayer({
 					<button
 						type="button"
 						onClick={togglePlay}
-						aria-label={playing ? "Pause" : "Play"}
+						aria-label={playing ? pauseLabel : playLabel}
 						className={cn(
 							"flex size-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-opacity duration-200 hover:bg-black/70",
 							showControls && !hovered ? "opacity-0" : "opacity-100",

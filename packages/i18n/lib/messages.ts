@@ -52,7 +52,9 @@ export const importLocale = async (
 		const marketing = await loadNamespace(effectiveLocale, "marketing");
 		const saas = await loadNamespace(effectiveLocale, "saas");
 		const docs = await loadNamespace(effectiveLocale, "docs");
-		return { ...common, ...marketing, ...saas, ...docs } as Messages;
+		// `docs` stays nested — its `nav`/`home` namespaces would shadow
+		// marketing's if shallow-spread (mirrors `translations/*/index.ts`).
+		return { ...common, ...marketing, ...saas, docs } as Messages;
 	}
 	const appMessages = await loadNamespace(effectiveLocale, app);
 	return { ...common, ...appMessages } as Messages;

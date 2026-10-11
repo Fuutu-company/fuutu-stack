@@ -1,13 +1,9 @@
 import { createLogger } from "@fuutu/logs";
 import { paymentsConfig } from "./config";
+import { creemPaymentProvider } from "./providers/creem";
 import { polarPaymentProvider } from "./providers/polar";
-import {
-	creemPaymentProvider,
-	dodopaymentsPaymentProvider,
-	lemonsqueezyPaymentProvider,
-	noopPaymentProvider,
-	stripePaymentProvider,
-} from "./providers/skeletons";
+import { noopPaymentProvider } from "./providers/skeletons";
+import { stripePaymentProvider } from "./providers/stripe";
 import type { PaymentProvider } from "./types";
 
 const log = createLogger({ scope: "payments:resolve" });
@@ -16,7 +12,7 @@ const log = createLogger({ scope: "payments:resolve" });
  * Resolve the active payment provider from `paymentsConfig.provider`.
  *
  * Kept separate from `types.ts` so importing types (zero runtime cost)
- * does not pull the Polar SDK. Consumers that need *only* the contract
+ * does not pull any provider SDK. Consumers that need *only* the contract
  * import from the barrel; consumers that need to invoke a provider call
  * this function.
  */
@@ -26,12 +22,18 @@ export function resolvePaymentProvider(): PaymentProvider {
 			return polarPaymentProvider;
 		case "stripe":
 			return stripePaymentProvider;
-		case "lemonsqueezy":
-			return lemonsqueezyPaymentProvider;
 		case "creem":
 			return creemPaymentProvider;
-		case "dodopayments":
-			return dodopaymentsPaymentProvider;
+		case "custom":
+			if (!paymentsConfig.customProvider) {
+				log.error(
+					'provider is "custom" but no customProvider implementation is set in paymentsConfig.customProvider',
+				);
+				throw new Error(
+					'[payments] provider is "custom" but paymentsConfig.customProvider is not set. Pass your PaymentProvider implementation.',
+				);
+			}
+			return paymentsConfig.customProvider;
 		case "noop":
 			return noopPaymentProvider;
 		default: {

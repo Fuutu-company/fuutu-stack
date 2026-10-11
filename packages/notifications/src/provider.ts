@@ -40,8 +40,13 @@ export function resolveNotificationProvider(): NotificationProvider {
 					handler.send(userId, type, title, body, data, options),
 				),
 			);
+			const failures: { channel: string; reason: unknown }[] = [];
 			for (const [i, result] of results.entries()) {
 				if (result.status === "rejected") {
+					failures.push({
+						channel: active[i]?.channel ?? "unknown",
+						reason: result.reason,
+					});
 					log.error("channel delivery failed", {
 						channel: active[i]?.channel,
 						userId,
@@ -52,6 +57,14 @@ export function resolveNotificationProvider(): NotificationProvider {
 								: String(result.reason),
 					});
 				}
+			}
+			if (failures.length > 0) {
+				throw new AggregateError(
+					failures.map((f) => f.reason),
+					`notification delivery failed on channel(s): ${failures
+						.map((f) => f.channel)
+						.join(", ")}`,
+				);
 			}
 		},
 	};

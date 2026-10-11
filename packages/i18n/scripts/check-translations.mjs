@@ -89,8 +89,11 @@ function extractUsedKeys() {
 	const sourceDirs = [
 		join(repoRoot, "apps/marketing/src"),
 		join(repoRoot, "apps/saas/src"),
+		join(repoRoot, "apps/docs"),
 		join(repoRoot, "packages/ui/src"),
 		join(repoRoot, "packages/analytics/src"),
+		// Cron reads merged messages via `messages.<key>` accessors
+		join(repoRoot, "packages/cron/src"),
 	];
 	const patterns = [
 		// Static: t("key"), t('key'), t(`key`)
@@ -100,6 +103,10 @@ function extractUsedKeys() {
 		/\buseTranslations\(["'`]([^"'`]+)["'`]\)/g,
 		// Template literals: t(`prefix.${var}`) → extract "prefix" as a used namespace
 		/\bt\(`([^`${}]+)\.\$\{[^}]+\}`/g,
+		// Property access: messages.cron.subscriptionReminder.title, messages.nav.docs
+		/\bmessages\.([a-zA-Z0-9_.]+)/g,
+		// labelKey: "key" pattern in footer/navbar
+		/\blabelKey:\s*["'`]([^"'`]+)["'`]/g,
 	];
 	for (const dir of sourceDirs) {
 		const files = scanTsFiles(dir);

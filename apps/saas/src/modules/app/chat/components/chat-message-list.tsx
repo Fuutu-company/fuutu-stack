@@ -28,7 +28,7 @@ export function ChatMessageList({
 
 	useEffect(() => {
 		endRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages.length, stream]);
+	}, []);
 
 	if (messages.length === 0 && !stream) {
 		return (

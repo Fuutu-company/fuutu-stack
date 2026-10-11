@@ -10,6 +10,7 @@
 	},
 	"scripts": {
 		"check-translations": "node scripts/check-translations.mjs",
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"dependencies": {

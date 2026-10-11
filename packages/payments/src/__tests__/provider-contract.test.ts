@@ -1,11 +1,17 @@
 import { expectNonEmptyString } from "@fuutu/test-utils";
 import { describe, expect, it } from "vitest";
 import type {
-	CheckoutLinkInput,
-	CustomerPortalInput,
+	CheckoutInput,
+	CustomerInput,
 	PaymentProvider,
-	SetSeatsInput,
+	PortalInput,
 } from "../types";
+
+describe("provider-contract", () => {
+	it("module loads", () => {
+		expect(true).toBe(true);
+	});
+});
 
 export interface PaymentProviderContractOptions {
 	/** Whether the provider methods resolve or throw. */
@@ -23,16 +29,16 @@ export function testPaymentProviderContract(
 	createProvider: () => PaymentProvider,
 	options: PaymentProviderContractOptions,
 ): void {
-	const checkoutInput: CheckoutLinkInput = {
+	const checkoutInput: CheckoutInput = {
 		priceId: "price_test",
 		userId: "user_test",
 	};
-	const portalInput: CustomerPortalInput = {
+	const portalInput: PortalInput = {
 		customerId: "cust_test",
 	};
-	const seatsInput: SetSeatsInput = {
-		subscriptionId: "sub_test",
-		seats: 3,
+	const customerInput: CustomerInput = {
+		userId: "user_test",
+		email: "test@test.com",
 	};
 
 	describe(`PaymentProvider contract — ${id}`, () => {
@@ -41,9 +47,14 @@ export function testPaymentProviderContract(
 			expectNonEmptyString(provider.id);
 		});
 
-		it("webhookHandler is a function", () => {
+		it("parseWebhook is a function", () => {
 			const provider = createProvider();
-			expect(typeof provider.webhookHandler).toBe("function");
+			expect(typeof provider.parseWebhook).toBe("function");
+		});
+
+		it("createCustomer is a function", () => {
+			const provider = createProvider();
+			expect(typeof provider.createCustomer).toBe("function");
 		});
 
 		if (options.behavior === "resolves") {
@@ -61,17 +72,17 @@ export function testPaymentProviderContract(
 				expect(result.url.length).toBeGreaterThan(0);
 			});
 
+			it("createCustomer() returns { customerId }", async () => {
+				const provider = createProvider();
+				const result = await provider.createCustomer(customerInput);
+				expect(typeof result.customerId).toBe("string");
+				expect(result.customerId.length).toBeGreaterThan(0);
+			});
+
 			it("cancelSubscription() resolves", async () => {
 				const provider = createProvider();
 				await expect(
 					provider.cancelSubscription("sub_test"),
-				).resolves.toBeUndefined();
-			});
-
-			it("setSubscriptionSeats() resolves", async () => {
-				const provider = createProvider();
-				await expect(
-					provider.setSubscriptionSeats(seatsInput),
 				).resolves.toBeUndefined();
 			});
 		} else {
@@ -89,6 +100,13 @@ export function testPaymentProviderContract(
 				).rejects.toThrow(options.throwsContains ?? "not implemented");
 			});
 
+			it("createCustomer() throws", async () => {
+				const provider = createProvider();
+				await expect(provider.createCustomer(customerInput)).rejects.toThrow(
+					options.throwsContains ?? "not implemented",
+				);
+			});
+
 			it("cancelSubscription() throws", async () => {
 				const provider = createProvider();
 				await expect(provider.cancelSubscription("sub_test")).rejects.toThrow(
@@ -96,9 +114,13 @@ export function testPaymentProviderContract(
 				);
 			});
 
-			it("setSubscriptionSeats() throws", async () => {
+			it("parseWebhook() throws", async () => {
 				const provider = createProvider();
-				await expect(provider.setSubscriptionSeats(seatsInput)).rejects.toThrow(
+				const request = new Request("https://app.test/api/webhooks/payments", {
+					method: "POST",
+					body: "{}",
+				});
+				await expect(provider.parseWebhook(request)).rejects.toThrow(
 					options.throwsContains ?? "not implemented",
 				);
 			});

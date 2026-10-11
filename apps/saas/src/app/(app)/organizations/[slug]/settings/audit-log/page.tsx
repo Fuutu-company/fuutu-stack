@@ -4,6 +4,13 @@ import {
 	findAuditLogsByOrg,
 	getOrganizationBySlug,
 } from "@fuutu/db";
+import {
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
+} from "@fuutu/rbac";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -12,6 +19,10 @@ import type { AuditLogActionFilter } from "@/modules/app/audit-log/components/au
 import { OrgAuditLogList } from "@/modules/app/audit-log/components/org-audit-log-list";
 
 const PAGE_SIZE = 20;
+
+// Org audit log is gated by policy permission (admin+ in ORG_POLICY),
+// not bare membership — mirrors the API-side enforcement model.
+const orgAC = new OrgAccessControl(ORG_POLICY);
 
 interface Props {
 	params: Promise<{ slug: string }>;
@@ -40,10 +51,13 @@ export default async function OrgAuditLogPage({ params, searchParams }: Props) {
 		query: { organizationId: org.id },
 		headers: await headers(),
 	});
-	const isMember = fullOrg?.members?.some(
-		(m: { userId: string }) => m.userId === session.user.id,
+	const member = fullOrg?.members?.find(
+		(m: { userId: string; role: string }) => m.userId === session.user.id,
 	);
-	if (!isMember) {
+	if (
+		!member ||
+		!hasOrgPermission(orgAC, toOrgRole(member.role), PERMISSIONS.AUDIT_LOG.VIEW)
+	) {
 		redirect("/organizations");
 	}
 

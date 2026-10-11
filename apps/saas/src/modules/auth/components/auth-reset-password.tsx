@@ -3,10 +3,8 @@
 import { authClient } from "@fuutu/auth/client";
 import { validatePassword } from "@fuutu/auth/validate-password";
 import {
+	AuthCard,
 	Button,
-	Card,
-	CardContent,
-	cn,
 	Field,
 	FieldDescription,
 	FieldGroup,
@@ -24,7 +22,6 @@ export function AuthResetPassword({
 	...props
 }: React.ComponentProps<"div">) {
 	const t = useTranslations("auth");
-	const tApp = useTranslations("app");
 	const translatePolicy = usePasswordPolicyTranslator();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -77,88 +74,74 @@ export function AuthResetPassword({
 	}
 
 	return (
-		<div
-			className={cn("flex w-full max-w-md flex-col gap-6", className)}
+		<AuthCard
+			title={t("resetPassword.title")}
+			description={t("resetPassword.description")}
+			className={className}
 			{...props}
 		>
-			<div className="flex flex-col items-center gap-3 text-center">
-				<Link
-					href="/"
-					className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground"
-					aria-label={tApp("brand")}
-				>
-					<svg viewBox="0 0 24 24" fill="none" className="size-6" aria-hidden>
-						<title>{tApp("brand")}</title>
-						<path
-							d="M12 2l2.5 5.5L20 10l-5.5 2.5L12 18l-2.5-5.5L4 10l5.5-2.5L12 2z"
-							fill="currentColor"
-						/>
-					</svg>
-				</Link>
-				<h1 className="font-semibold text-2xl tracking-tight">
-					{t("resetPassword.title")}
-				</h1>
-				<p className="text-muted-foreground text-sm">
-					{t("resetPassword.description")}
-				</p>
-			</div>
-			<Card className="shadow-xl">
-				<CardContent className="p-6 md:p-8">
-					{success ? (
-						<div className="space-y-3 text-center">
-							<p className="font-medium">{t("resetPassword.success")}</p>
-							<p className="text-muted-foreground text-sm">
-								{t("resetPassword.redirecting")}
-							</p>
-						</div>
-					) : (
-						<form onSubmit={handleSubmit}>
-							<FieldGroup>
-								{error && (
-									<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
-										{error}
-									</div>
-								)}
-								<Field>
-									<FieldLabel htmlFor="password">
-										{t("resetPassword.newPassword")}
-									</FieldLabel>
-									<Input
-										id="password"
-										name="password"
-										type="password"
-										required
-										disabled={isLoading}
-									/>
-								</Field>
-								<Field>
-									<FieldLabel htmlFor="confirm">
-										{t("resetPassword.confirmPassword")}
-									</FieldLabel>
-									<Input
-										id="confirm"
-										name="confirm"
-										type="password"
-										required
-										disabled={isLoading}
-									/>
-								</Field>
-								<Field>
-									<Button type="submit" disabled={isLoading || !token}>
-										{isLoading
-											? t("resetPassword.submitting")
-											: t("resetPassword.submit")}
-									</Button>
-								</Field>
-								<FieldDescription className="text-center">
-									{t("rememberedIt")}{" "}
-									<Link href="/auth/sign-in">{t("signInLink")}</Link>
-								</FieldDescription>
-							</FieldGroup>
-						</form>
-					)}
-				</CardContent>
-			</Card>
-		</div>
+			{success ? (
+				<div className="flex flex-col gap-3 text-center">
+					<p className="font-medium">{t("resetPassword.success")}</p>
+					<p className="text-muted-foreground text-sm">
+						{t("resetPassword.redirecting")}
+					</p>
+				</div>
+			) : (
+				<form onSubmit={handleSubmit}>
+					<FieldGroup>
+						{error && (
+							<div className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
+								{error}
+							</div>
+						)}
+						<Field>
+							<FieldLabel htmlFor="password">
+								{t("resetPassword.newPassword")}
+							</FieldLabel>
+							<Input
+								id="password"
+								name="password"
+								type="password"
+								required
+								disabled={isLoading}
+							/>
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="confirm">
+								{t("resetPassword.confirmPassword")}
+							</FieldLabel>
+							<Input
+								id="confirm"
+								name="confirm"
+								type="password"
+								required
+								disabled={isLoading}
+							/>
+						</Field>
+						<Field>
+							<Button
+								type="submit"
+								disabled={isLoading || !token}
+								className="w-full"
+							>
+								{isLoading
+									? t("resetPassword.submitting")
+									: t("resetPassword.submit")}
+							</Button>
+						</Field>
+						<FieldDescription className="text-center">
+							{t("rememberedIt")}{" "}
+							<Link
+								href="/auth/sign-in"
+								className="underline underline-offset-4"
+							>
+								{t("signInLink")}
+							</Link>
+						</FieldDescription>
+					</FieldGroup>
+				</form>
+			)}
+		</AuthCard>
 	);
 }

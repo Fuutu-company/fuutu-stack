@@ -1,15 +1,18 @@
 import { deleteWebhook } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 
 const deleteWebhookSchema = z.object({
 	id: z.string().min(1),
 	organizationId: z.string().min(1),
 });
 
-export const deleteWebhookProcedure = protectedProcedure
+export const deleteWebhookProcedure = authProcedure({
+	org: { permission: PERMISSIONS.WEBHOOK.DELETE },
+})
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({
 		method: "DELETE",
@@ -19,13 +22,7 @@ export const deleteWebhookProcedure = protectedProcedure
 		description: "Permanently deletes a webhook endpoint.",
 	})
 	.input(deleteWebhookSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgRole(
-			input.organizationId,
-			context.user.id,
-			"admin",
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const result = await deleteWebhook(input.id, input.organizationId);
 		if (!result) {
 			throw new ORPCError("NOT_FOUND", { message: "Webhook not found" });

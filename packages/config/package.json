@@ -9,9 +9,15 @@
 			"style": "./theme.css",
 			"default": "./theme.css"
 		},
-		"./tsconfig.base.json": {
-			"default": "./tsconfig.base.json"
-		},
 		"./assets/*": "./assets/*"
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	}
 }

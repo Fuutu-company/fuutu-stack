@@ -5,9 +5,9 @@ import type { EmailProvider } from "../types";
 /**
  * Resend provider (https://resend.com) — SDK-free implementation.
  *
- * Skeleton (not the v1-active provider — Plunk is active). Kept
- * dependency-less on purpose: pulling the `resend` SDK adds weight for
- * a one-endpoint POST with a bearer token.
+ * Fully implemented, selectable via `EMAIL_PROVIDER=resend` (Plunk is the
+ * default). Kept dependency-less on purpose: pulling the `resend` SDK adds
+ * weight for a one-endpoint POST with a bearer token.
  */
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 

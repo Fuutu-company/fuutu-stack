@@ -2,7 +2,7 @@ import { createMock } from "@fuutu/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { noopProvider } from "../providers/noop";
 import type { EmailMessage } from "../types";
-import { testEmailProviderContract } from "./provider-contract.test";
+import { testEmailProviderContract } from "./provider-contract";
 
 testEmailProviderContract("noop", () => noopProvider, {
 	sendBehavior: "resolves",

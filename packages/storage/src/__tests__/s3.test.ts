@@ -55,9 +55,7 @@ vi.mock("@fuutu/env/saas", () => ({
 }));
 
 const { s3StorageProvider } = await import("../providers/s3");
-const { testStorageProviderContract } = await import(
-	"./provider-contract.test"
-);
+const { testStorageProviderContract } = await import("./provider-contract");
 
 testStorageProviderContract("s3", () => s3StorageProvider, {
 	behavior: "resolves",
@@ -75,6 +73,52 @@ describe("s3 provider — presigned URL generation", () => {
 		expect(result.headers["content-type"]).toBe("image/webp");
 		expect(result.headers["content-length"]).toBe("2048");
 		expect(result.expiresAt).toBeGreaterThan(Date.now());
+	});
+
+	it("rejects when contentLength exceeds maxSizeBytes", async () => {
+		await expect(
+			s3StorageProvider.getSignedUploadUrl({
+				bucket: "avatars",
+				key: "user-1.webp",
+				contentType: "image/webp",
+				contentLength: 10 * 1024 * 1024,
+				maxSizeBytes: 5 * 1024 * 1024,
+			}),
+		).rejects.toThrow("exceeds maxSizeBytes");
+	});
+
+	it("accepts contentLength within maxSizeBytes and still binds exact length", async () => {
+		const result = await s3StorageProvider.getSignedUploadUrl({
+			bucket: "avatars",
+			key: "user-1.webp",
+			contentType: "image/webp",
+			contentLength: 1024,
+			maxSizeBytes: 5 * 1024 * 1024,
+		});
+		expect(result.headers["content-length"]).toBe("1024");
+	});
+
+	it("rejects maxSizeBytes without contentLength — cap is unenforceable", async () => {
+		await expect(
+			s3StorageProvider.getSignedUploadUrl({
+				bucket: "avatars",
+				key: "user-1.webp",
+				contentType: "image/webp",
+				maxSizeBytes: 5 * 1024 * 1024,
+			}),
+		).rejects.toThrow("contentLength");
+	});
+
+	it("rejects a non-positive maxSizeBytes", async () => {
+		await expect(
+			s3StorageProvider.getSignedUploadUrl({
+				bucket: "avatars",
+				key: "user-1.webp",
+				contentType: "image/webp",
+				contentLength: 1024,
+				maxSizeBytes: 0,
+			}),
+		).rejects.toThrow("maxSizeBytes must be positive");
 	});
 
 	it("getSignedDownloadUrl returns a presigned URL string", async () => {

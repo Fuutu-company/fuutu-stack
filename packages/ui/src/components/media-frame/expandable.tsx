@@ -35,7 +35,7 @@ export function ExpandableWrapper({
 			{/* Frame button */}
 			<button
 				type="button"
-				aria-label={ariaLabel ?? "Expand"}
+				aria-label={ariaLabel}
 				aria-expanded={expanded}
 				onClick={toggle}
 				className="block w-full cursor-zoom-in focus-visible:outline-none"

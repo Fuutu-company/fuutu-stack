@@ -3,6 +3,13 @@
 import { config } from "@fuutu/config";
 import { paymentsConfig } from "@fuutu/payments/config";
 import {
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
+} from "@fuutu/rbac";
+import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
@@ -34,6 +41,9 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useOrgRole } from "../organizations/use-org-role";
+
+const orgAC = new OrgAccessControl(ORG_POLICY);
 
 interface NavItem {
 	titleKey: string;
@@ -57,6 +67,7 @@ export function NavMain() {
 	const pathname = usePathname();
 	const t = useTranslations();
 	const orgSlug = useOrgSlug();
+	const orgRole = useOrgRole(orgSlug);
 	const inOrg = orgSlug !== null;
 	const { isMobile, state: sidebarState } = useSidebar();
 	const isCollapsed = !isMobile && sidebarState === "collapsed";
@@ -109,8 +120,18 @@ export function NavMain() {
 	settingsSubItems.push(
 		{ titleKey: "apiKeys", url: `${settingsBase}/api-keys` },
 		{ titleKey: "webhooks", url: `${settingsBase}/webhooks` },
-		{ titleKey: "auditLog", url: `${settingsBase}/audit-log` },
 	);
+	// Audit log requires AUDIT_LOG.VIEW (admin+) — keep in sync with
+	// OrgSettingsNav and the page-level permission gate.
+	if (
+		orgRole &&
+		hasOrgPermission(orgAC, toOrgRole(orgRole), PERMISSIONS.AUDIT_LOG.VIEW)
+	) {
+		settingsSubItems.push({
+			titleKey: "auditLog",
+			url: `${settingsBase}/audit-log`,
+		});
+	}
 	settingsSubItems.push({ titleKey: "danger", url: `${settingsBase}/danger` });
 
 	const showOrgGroup = inOrg && config.features.organizationsMode !== "off";

@@ -1,12 +1,11 @@
 import { resolveAIProvider } from "@fuutu/ai";
 import { addMessage, getConversation } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import {
-	createRateLimitMiddleware,
-	protectedProcedure,
-} from "../../../../orpc";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { permissionProcedure } from "../../../../orpc/procedures";
 
 const log = createLogger({ scope: "chat-stream" });
 
@@ -18,7 +17,7 @@ const streamMessageSchema = z.object({
 	content: z.string().min(1).max(10000),
 });
 
-export const streamMessageProcedure = protectedProcedure
+export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 	.use(createRateLimitMiddleware({ endpoint: "aiChat" }))
 	.route({
 		method: "POST",
@@ -131,9 +130,11 @@ export const streamMessageProcedure = protectedProcedure
 
 		return new Response(transformedStream, {
 			headers: {
-				"content-type": "text/event-stream",
+				// Providers yield raw UTF-8 text chunks — the client
+				// (chat-layout.tsx) rejects anything but text/plain and renders
+				// the bytes directly.
+				"content-type": "text/plain; charset=utf-8",
 				"cache-control": "no-cache",
-				connection: "keep-alive",
 			},
 		});
 	});

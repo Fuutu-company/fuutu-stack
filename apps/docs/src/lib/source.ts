@@ -19,7 +19,13 @@ export const source = loader(
 );
 
 export function getPageImage(page: InferPageType<typeof source>) {
-	const segments = [...page.slugs, "image.png"];
+	// `page.slugs` is locale-free — prefix non-default locales so
+	// translated pages get their own OG image instead of the
+	// default-locale one.
+	const segments =
+		page.locale && page.locale !== i18n.defaultLanguage
+			? [page.locale, ...page.slugs, "image.png"]
+			: [...page.slugs, "image.png"];
 
 	return {
 		segments,

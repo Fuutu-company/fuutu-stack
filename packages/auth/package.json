@@ -12,7 +12,10 @@
 			"default": "./src/*.ts"
 		}
 	},
-	"scripts": {},
+	"scripts": {
+		"test": "vitest run",
+		"check-types": "tsc --noEmit"
+	},
 	"dependencies": {
 		"@fuutu/config": "workspace:*",
 		"@fuutu/db": "workspace:*",
@@ -22,11 +25,9 @@
 		"@fuutu/rbac": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/utils": "workspace:*",
+		"@fuutu/webhooks": "workspace:*",
 		"@better-auth/passkey": "catalog:",
-		"@polar-sh/better-auth": "catalog:",
-		"@polar-sh/sdk": "catalog:",
 		"better-auth": "catalog:",
-		"dotenv": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

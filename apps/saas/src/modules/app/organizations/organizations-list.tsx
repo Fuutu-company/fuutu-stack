@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { createLogger } from "@fuutu/logs";
 import {
 	Button,
 	Card,
@@ -16,6 +17,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
+import { orpc } from "@/utils/orpc";
+
+const log = createLogger({ scope: "organizations-list" });
 
 type Org = {
 	id: string;
@@ -37,8 +42,10 @@ export function OrganizationsList() {
 	const load = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await authClient.organization.list();
-			setOrgs((res.data ?? []) as Org[]);
+			const res = await orpc.organizations.list.call({});
+			setOrgs(res.items);
+		} catch (e) {
+			log.error("failed to load organizations", { err: e });
 		} finally {
 			setLoading(false);
 		}
@@ -59,15 +66,14 @@ export function OrganizationsList() {
 				setError(t("organizations.list.slugTaken"));
 				return;
 			}
-			const res = await authClient.organization.create({ name, slug });
-			if (res.error) {
-				setError(t("organizations.list.failed"));
-				return;
-			}
+			await orpc.organizations.create.call({ name, slug });
 			setName("");
 			setCreating(false);
 			await load();
 			router.push(`/organizations/${slug}`);
+		} catch (e) {
+			log.error("organization create failed", { err: e });
+			setError(planGateMessage(e, t, "organizations.list.failed"));
 		} finally {
 			setIsLoading(false);
 		}

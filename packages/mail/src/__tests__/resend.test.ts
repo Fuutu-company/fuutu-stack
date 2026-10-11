@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 const { resendProvider } = await import("../providers/resend");
-const { testEmailProviderContract } = await import("./provider-contract.test");
+const { testEmailProviderContract } = await import("./provider-contract");
 
 testEmailProviderContract("resend", () => resendProvider, {
 	sendBehavior: "resolves",

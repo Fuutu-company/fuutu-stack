@@ -27,7 +27,9 @@ const buildReminderNotificationId = (
 export const subscriptionReminderJob: CronJob = {
 	name: "subscription-reminder",
 	schedule: "0 9 * * *",
-	enabled: cronConfig.jobs.subscriptionReminder,
+	get enabled() {
+		return cronConfig.jobs.subscriptionReminder;
+	},
 	async run(): Promise<CronJobResult> {
 		const errors: string[] = [];
 

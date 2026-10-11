@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { z } from "zod";
 
 import ChangelogV010, {
 	frontmatter as changelogV010Frontmatter,
@@ -29,7 +30,15 @@ import WelcomePostDe from "./posts/welcome.de";
  * Posts and changelog entries are authored as `.tsx` modules with a typed
  * `frontmatter` export plus a default-exported body component per locale —
  * the same pattern used by `./legal/*.{en,de}.tsx`. This keeps the package
- * zero-dep and Edge-friendly.
+ * Edge-friendly.
+ *
+ * File-naming convention: the canonical English body carries no locale
+ * suffix (`posts/welcome.tsx`), additional locales are suffixed
+ * (`posts/welcome.de.tsx`). Legal documents are fully locale-paired with
+ * no canonical fallback (`legal/privacy.en.tsx`, `legal/privacy.de.tsx`).
+ *
+ * Frontmatter is Zod-validated at collection load — an invalid
+ * `publishedAt`/`updatedAt` fails fast instead of producing NaN sorts.
  */
 
 export interface PostFrontmatter {
@@ -73,6 +82,31 @@ export interface LegalDocument {
 	body: ComponentType;
 }
 
+const isoDate = z.string().refine((v) => !Number.isNaN(new Date(v).getTime()), {
+	message: "must be a parseable ISO date",
+});
+
+export const postFrontmatterSchema = z.object({
+	title: z.string().min(1),
+	description: z.string().optional(),
+	publishedAt: isoDate,
+	draft: z.boolean().optional(),
+	authors: z.array(z.string()).optional(),
+	tags: z.array(z.string()).optional(),
+});
+
+export const changelogFrontmatterSchema = z.object({
+	title: z.string().min(1),
+	publishedAt: isoDate,
+	version: z.string().optional(),
+	description: z.string().optional(),
+});
+
+export const legalDocumentFrontmatterSchema = z.object({
+	title: z.string().min(1),
+	updatedAt: isoDate,
+});
+
 function resolveBody(
 	bodies: Record<string, ComponentType>,
 	locale: string,
@@ -85,7 +119,7 @@ function resolveBody(
 export const posts: PostEntry[] = [
 	{
 		slug: "welcome",
-		frontmatter: welcomeFrontmatter,
+		frontmatter: postFrontmatterSchema.parse(welcomeFrontmatter),
 		bodies: { en: WelcomePost, de: WelcomePostDe },
 	},
 ].sort(
@@ -97,7 +131,7 @@ export const posts: PostEntry[] = [
 export const changelog: ChangelogEntry[] = [
 	{
 		slug: "v0-1-0",
-		frontmatter: changelogV010Frontmatter,
+		frontmatter: changelogFrontmatterSchema.parse(changelogV010Frontmatter),
 		bodies: { en: ChangelogV010, de: ChangelogV010De },
 	},
 ].sort(
@@ -111,13 +145,13 @@ const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 		en: {
 			slug: "privacy",
 			locale: "en",
-			frontmatter: privacyEnFrontmatter,
+			frontmatter: legalDocumentFrontmatterSchema.parse(privacyEnFrontmatter),
 			body: PrivacyEn,
 		},
 		de: {
 			slug: "privacy",
 			locale: "de",
-			frontmatter: privacyDeFrontmatter,
+			frontmatter: legalDocumentFrontmatterSchema.parse(privacyDeFrontmatter),
 			body: PrivacyDe,
 		},
 	},
@@ -125,13 +159,13 @@ const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 		en: {
 			slug: "terms",
 			locale: "en",
-			frontmatter: termsEnFrontmatter,
+			frontmatter: legalDocumentFrontmatterSchema.parse(termsEnFrontmatter),
 			body: TermsEn,
 		},
 		de: {
 			slug: "terms",
 			locale: "de",
-			frontmatter: termsDeFrontmatter,
+			frontmatter: legalDocumentFrontmatterSchema.parse(termsDeFrontmatter),
 			body: TermsDe,
 		},
 	},
@@ -139,13 +173,13 @@ const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 		en: {
 			slug: "imprint",
 			locale: "en",
-			frontmatter: imprintEnFrontmatter,
+			frontmatter: legalDocumentFrontmatterSchema.parse(imprintEnFrontmatter),
 			body: ImprintEn,
 		},
 		de: {
 			slug: "imprint",
 			locale: "de",
-			frontmatter: imprintDeFrontmatter,
+			frontmatter: legalDocumentFrontmatterSchema.parse(imprintDeFrontmatter),
 			body: ImprintDe,
 		},
 	},

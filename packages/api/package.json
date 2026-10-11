@@ -10,28 +10,29 @@
 		}
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"dependencies": {
 		"@fuutu/ai": "workspace:*",
 		"@fuutu/auth": "workspace:*",
 		"@fuutu/config": "workspace:*",
+		"@fuutu/credits": "workspace:*",
+		"@fuutu/cron": "workspace:*",
 		"@fuutu/db": "workspace:*",
 		"@fuutu/env": "workspace:*",
-		"@fuutu/i18n": "workspace:*",
 		"@fuutu/license": "workspace:*",
 		"@fuutu/logs": "workspace:*",
 		"@fuutu/payments": "workspace:*",
 		"@fuutu/rbac": "workspace:*",
+		"@fuutu/search": "workspace:*",
 		"@fuutu/storage": "workspace:*",
 		"@fuutu/telemetry": "workspace:*",
 		"@fuutu/utils": "workspace:*",
-		"@orpc/client": "catalog:",
+		"@fuutu/webhooks": "workspace:*",
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/zod": "catalog:",
-		"@prisma/client": "catalog:",
-		"dotenv": "catalog:",
 		"hono": "catalog:",
 		"zod": "catalog:"
 	},

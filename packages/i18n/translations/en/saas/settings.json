@@ -17,13 +17,14 @@
 			"security": "Security",
 			"sessions": "Sessions",
 			"danger": "Danger zone",
-			"billing": "Billing"
+			"billing": "Billing",
+			"credits": "Credits"
 		},
 		"profile": {
 			"title": "Profile",
 			"description": "Update your personal information.",
 			"fullName": "Full name",
-			"fullNamePlaceholder": "Jane Doe",
+			"fullNamePlaceholder": "Your full name",
 			"emailLabel": "Email",
 			"saved": "Profile updated.",
 			"failed": "Could not update profile."

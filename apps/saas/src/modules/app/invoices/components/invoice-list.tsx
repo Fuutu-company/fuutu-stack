@@ -126,7 +126,7 @@ export function InvoiceList({ slug }: { slug?: string }) {
 				</Card>
 			) : (
 				<Card>
-					<CardContent className="p-0">
+					<CardContent className="p-6">
 						<div className="overflow-hidden rounded-lg border">
 							<table className="w-full text-sm">
 								<thead className="bg-muted/50">

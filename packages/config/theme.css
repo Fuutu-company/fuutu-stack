@@ -26,6 +26,11 @@
  * Without these, arbitrary utilities used inside @fuutu/ui (e.g.
  * `w-[var(--sidebar-width)]`) never get compiled and render at 0px.
  * Paths are relative to this file (packages/config/theme.css).
+ *
+ * Note: scanning UI-domain sources from this cross-cutting file is a
+ * deliberate pragmatic choice — theme.css is the single stylesheet every
+ * app imports, so the scan directives live here instead of being
+ * duplicated (and drifting) per app.
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 @source "../ui/src/**/*.{ts,tsx}";
 @source "../mail/src/**/*.{ts,tsx}";
@@ -262,6 +267,11 @@
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  * MeshGradient — animated CSS mesh gradient utility
+ *
+ * Lives in this cross-cutting file (not @fuutu/ui) because it is a pure
+ * CSS utility keyed on the 4-token theme — keeping it next to the tokens
+ * guarantees every app gets it via the single theme.css import.
+ *
  * Controlled via CSS custom properties:
  *   --mg-1      primary color   (default: var(--primary))
  *   --mg-2      secondary color (default: lighter primary tint)

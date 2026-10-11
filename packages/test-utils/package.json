@@ -8,7 +8,14 @@
 			"default": "./src/index.ts"
 		}
 	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
 	"dependencies": {},
+	"peerDependencies": {
+		"vitest": "catalog:"
+	},
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",
 		"typescript": "catalog:",

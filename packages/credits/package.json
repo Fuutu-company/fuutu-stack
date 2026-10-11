@@ -1,0 +1,28 @@
+{
+	"name": "@fuutu/credits",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./meters": {
+			"default": "./src/meters.ts"
+		}
+	},
+	"scripts": {
+		"test": "vitest run",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@fuutu/db": "workspace:*",
+		"@fuutu/logs": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

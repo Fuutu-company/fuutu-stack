@@ -4,6 +4,7 @@ import { AnalyticsScript } from "@fuutu/analytics/script";
 import { KIT_GENERATOR_META } from "@fuutu/config";
 import type { Locale } from "@fuutu/i18n";
 import { getDirection } from "@fuutu/i18n";
+import { Toaster } from "@fuutu/ui";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { NextIntlClientProvider } from "next-intl";
@@ -50,6 +51,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 						{children}
 						<ConsentBanner />
 						<AnalyticsScript />
+						<Toaster />
 					</Providers>
 				</NextIntlClientProvider>
 			</body>

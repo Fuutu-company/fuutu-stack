@@ -2,6 +2,7 @@ import admin from "./admin.json";
 import apiKeys from "./api-keys.json";
 import auth from "./auth.json";
 import chat from "./chat.json";
+import credits from "./credits.json";
 import crm from "./crm.json";
 import dashboard from "./dashboard.json";
 import invoices from "./invoices.json";
@@ -17,6 +18,7 @@ export default {
 	...apiKeys,
 	...auth,
 	...chat,
+	...credits,
 	...crm,
 	...dashboard,
 	...invoices,

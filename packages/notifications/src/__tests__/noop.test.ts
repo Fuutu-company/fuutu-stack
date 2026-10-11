@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { noopChannel } from "../channels/noop";
-import { testNotificationProviderContract } from "./provider-contract.test";
+import { testNotificationProviderContract } from "./provider-contract";
 
 testNotificationProviderContract(
 	"noop",

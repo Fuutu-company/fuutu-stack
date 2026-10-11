@@ -7,7 +7,13 @@
  * thin helper type and a narrow guard so call sites don't have to cast.
  */
 
-import { hasRoleAtLeast, type Role, toRbacRole } from "@fuutu/rbac";
+import {
+	type KnownPermission,
+	hasSystemPermission as rbacHasSystemPermission,
+	type SystemAccessControl,
+	type SystemRole,
+	toSystemRole,
+} from "@fuutu/rbac";
 
 export type UserRole = "admin" | "user";
 
@@ -30,18 +36,22 @@ export interface UserWithRole {
 }
 
 /**
- * Returns the effective role for a user, defaulting to "member".
+ * Returns the effective SYSTEM role for a user, defaulting to "user".
  * Normalizes Better-Auth comma-separated role strings (e.g. "admin,user")
- * to the canonical RBAC role via `toRbacRole`.
+ * to the canonical RBAC system role via `toSystemRole`.
  */
-export function getUserRole(user: UserWithRole | null | undefined): Role {
-	return toRbacRole(user?.role);
+export function getUserRole(user: UserWithRole | null | undefined): SystemRole {
+	return toSystemRole(user?.role);
 }
 
 /**
- * Type guard: true when the user has admin privileges.
- * Normalizes comma-separated roles first — "admin,user" → admin.
+ * Check if a user has a specific SYSTEM permission via SystemAccessControl.
+ * Normalizes the user's system role first via `toSystemRole`.
  */
-export function isAdmin(user: UserWithRole | null | undefined): boolean {
-	return hasRoleAtLeast(toRbacRole(user?.role), "admin");
+export function userHasPermission(
+	ac: SystemAccessControl,
+	user: UserWithRole | null | undefined,
+	permission: KnownPermission,
+): boolean {
+	return rbacHasSystemPermission(ac, toSystemRole(user?.role), permission);
 }

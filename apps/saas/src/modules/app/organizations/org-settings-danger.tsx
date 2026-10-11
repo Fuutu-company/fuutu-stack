@@ -2,7 +2,13 @@
 
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
-import { hasRoleAtLeast, toRbacRole } from "@fuutu/rbac";
+import {
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
+} from "@fuutu/rbac";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -20,8 +26,11 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "org-danger" });
+
+const ac = new OrgAccessControl(ORG_POLICY);
 
 type Member = {
 	id: string;
@@ -50,7 +59,11 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 		(m) => m.userId === currentUserId,
 	)?.role;
 	const isOwner = currentUserRole
-		? hasRoleAtLeast(toRbacRole(currentUserRole), "owner")
+		? hasOrgPermission(
+				ac,
+				toOrgRole(currentUserRole),
+				PERMISSIONS.ORGANIZATION.DELETE,
+			)
 		: false;
 
 	const load = useCallback(async () => {
@@ -76,7 +89,7 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 		setBusy("__delete__");
 		setDeleteError(null);
 		try {
-			await authClient.organization.delete({ organizationId: org.id });
+			await orpc.organizations.delete.call({ organizationId: org.id });
 			router.push("/organizations");
 			router.refresh();
 		} catch (e) {

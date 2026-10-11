@@ -1,5 +1,7 @@
 {
 	"nav": {
+		"resources": "Resources",
+		"home": "Home",
 		"features": "Features",
 		"pricing": "Pricing",
 		"docs": "Docs",
@@ -12,6 +14,11 @@
 		},
 		"toggleTheme": "Toggle theme",
 		"toggleMenu": "Toggle menu",
-		"switchLanguage": "Switch language"
+		"switchLanguage": "Switch language",
+		"descriptions": {
+			"blog": "Guides, tutorials, and announcements",
+			"changelog": "What shipped in each release",
+			"docs": "Full API reference and guides"
+		}
 	}
 }

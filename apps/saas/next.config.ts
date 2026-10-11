@@ -1,14 +1,14 @@
-import "@fuutu/env/saas";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
+import { env } from "@fuutu/env/saas";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = env.NODE_ENV === "production";
 
 // Security headers applied to every SaaS response.
 // Known CSP compromise: `'unsafe-inline'` stays on `script-src` in every env
@@ -30,10 +30,11 @@ const securityHeaders = [
 		value: [
 			"default-src 'self'",
 			// React Compiler + next-themes inline script on first paint.
-			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline'`,
+			// Scalar CDN for OpenAPI docs at /api/docs.
+			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' https://cdn.jsdelivr.net`,
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https:",
-			"font-src 'self' data:",
+			"font-src 'self' data: https://fonts.scalar.com",
 			"connect-src 'self' https:",
 			"frame-ancestors 'none'",
 			"base-uri 'self'",

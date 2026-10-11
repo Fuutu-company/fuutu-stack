@@ -16,6 +16,7 @@ import { ArrowRight, Check, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { orpc } from "@/utils/orpc";
 import { completeOnboardingAction } from "./actions";
 
 const STEPS = ["profile", "organization", "done"] as const;
@@ -67,11 +68,7 @@ export function OnboardingWizard({
 		setError(null);
 		try {
 			const slug = slugify(orgName);
-			const res = await authClient.organization.create({ name: orgName, slug });
-			if (res.error) {
-				setError(t("failed"));
-				return;
-			}
+			await orpc.organizations.create.call({ name: orgName, slug });
 			setStep("done");
 		} catch {
 			setError(t("failed"));
@@ -84,6 +81,12 @@ export function OnboardingWizard({
 		setIsLoading(true);
 		try {
 			await completeOnboardingAction();
+			// Refresh the cached session cookie so the server-side onboarding
+			// guard sees onboardingComplete=true immediately (cookie cache TTL
+			// would otherwise keep redirecting to /onboarding for minutes).
+			await authClient.getSession({
+				query: { disableCookieCache: true },
+			});
 		} finally {
 			setIsLoading(false);
 		}

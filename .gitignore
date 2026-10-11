@@ -11,6 +11,7 @@ build
 # Environment variables
 .env
 .env*.local
+.env.bak*
 
 # IDEs and editors
 .vscode/*
@@ -26,7 +27,9 @@ build
 
 # AI agent tooling (served via MCP, never in repo)
 .claude
-.fuutu
+.fuutu/*
+# Exception: visual regression baselines ARE committed (linux CI snapshots)
+!.fuutu/visual-baselines/
 
 # Logs
 /logs
@@ -46,6 +49,9 @@ lerna-debug.log*
 coverage
 coverage-v8
 .nyc_output
+
+# Generated artifacts with machine-local state (regenerated on prisma generate)
+.prisma-zod-generator-manifest.json
 # Playwright
 test-results
 playwright-report
@@ -54,12 +60,20 @@ playwright/.cache
 .playwright-mcp-artifacts/*
 !.playwright-mcp-artifacts/.gitkeep
 *-snapshots/
+# Visual baselines (.fuutu/visual-baselines/) are committed — Linux only.
+# Local dev on macOS/Windows generates platform-suffixed files that must
+# never land in the repo; CI regenerates + commits -linux variants on merge.
+.fuutu/visual-baselines/**/*-darwin.png
+.fuutu/visual-baselines/**/*-win32.png
 
 # Misc
 *.tgz
 .cache
 tmp
 temp
+*.bak
+*.bak[0-9]*
+
 
 *.next
 
@@ -70,3 +84,7 @@ fuutu.config.ts
 .shadcn-staging/
 
 .pnpm-store
+
+# Temp working docs — local only, not pushed (root only — do NOT match
+# apps/docs, that is the real Fumadocs app)
+/docs/

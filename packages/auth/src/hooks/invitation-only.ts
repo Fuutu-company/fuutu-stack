@@ -10,11 +10,19 @@
 import { findPendingInvitation } from "@fuutu/db";
 import { APIError } from "better-auth/api";
 import { authConfig } from "../config";
+import { isSelfServiceSignupPath } from "./signup-policy";
 
-export async function assertInvitationForSignup(user: {
-	email?: string | null;
-}): Promise<void> {
-	if (!authConfig.signup.invitationOnly) return;
+export async function assertInvitationForSignup(
+	user: { email?: string | null },
+	context?: { path?: string } | null,
+	invitationOnly: boolean = authConfig.signup.invitationOnly,
+): Promise<void> {
+	if (!invitationOnly) return;
+
+	// Same scoping as the sign-up gate: only self-service paths are gated.
+	// Admin provisioning (`/admin/create-user`) and context-free creations
+	// (seed/CLI scripts) must not require an invitation row.
+	if (!isSelfServiceSignupPath(context?.path)) return;
 
 	const email = user.email?.toLowerCase();
 	if (!email) {

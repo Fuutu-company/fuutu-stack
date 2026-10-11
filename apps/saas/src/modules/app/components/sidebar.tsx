@@ -1,8 +1,9 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
-import { isAdmin, type UserWithRole } from "@fuutu/auth/types";
+import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
+import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
 import {
 	BrandLogo,
 	Sidebar,
@@ -29,12 +30,16 @@ import { NavUser } from "./nav-user";
 import { OrgSwitcher } from "./org-switcher";
 import { ThemeToggle } from "./theme-toggle";
 
+const ac = new SystemAccessControl(SYSTEM_POLICY);
+
 export function AppSidebar() {
 	const pathname = usePathname();
 	const t = useTranslations();
 	const { data: session } = authClient.useSession();
 	const user = session?.user as UserWithRole | undefined;
-	const userIsAdmin = user ? isAdmin(user) : false;
+	const userIsAdmin = user
+		? userHasPermission(ac, user, PERMISSIONS.VIEW_ADMIN)
+		: false;
 	const { isMobile, setOpenMobile } = useSidebar();
 
 	// Auto-close mobile sidebar on route change
@@ -42,7 +47,7 @@ export function AppSidebar() {
 		if (isMobile) {
 			setOpenMobile(false);
 		}
-	}, [pathname, isMobile, setOpenMobile]);
+	}, [isMobile, setOpenMobile]);
 
 	return (
 		<Sidebar collapsible="icon">

@@ -10,22 +10,33 @@
 		"./config": {
 			"default": "./src/config.ts"
 		},
+		"./config.server": {
+			"default": "./src/config.server.ts"
+		},
 		"./features": {
 			"default": "./src/features.ts"
 		},
 		"./plans": {
 			"default": "./src/plans.ts"
+		},
+		"./plan-resolver": {
+			"default": "./src/plan-resolver.ts"
 		}
 	},
 	"scripts": {
-		"test": "vitest run"
+		"test": "vitest run",
+		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@fuutu/config": "workspace:*",
+		"@fuutu/credits": "workspace:*",
 		"@fuutu/db": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
-		"@polar-sh/sdk": "catalog:"
+		"@fuutu/webhooks": "workspace:*",
+		"@polar-sh/sdk": "catalog:",
+		"stripe": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/test-utils": "workspace:*",

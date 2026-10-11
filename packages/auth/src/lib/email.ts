@@ -2,7 +2,8 @@
  * Auth-side email adapter.
  *
  * Delegates to @fuutu/mail, which handles provider selection
- * (console / noop / resend) and template rendering.
+ * (plunk / resend / nodemailer / postmark / mailgun / console / noop)
+ * and template rendering.
  *
  * Kept as a thin wrapper so Better Auth config does not change
  * when providers are swapped.
