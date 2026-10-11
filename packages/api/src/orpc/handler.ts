@@ -44,11 +44,3 @@ export const openApiHandler = new OpenAPIHandler(router, {
 		}),
 	],
 });
-
-export function createRPCHandler() {
-	return rpcHandler;
-}
-
-export function createOpenAPIHandler() {
-	return openApiHandler;
-}

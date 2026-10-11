@@ -2,12 +2,13 @@ import {
 	getActiveSubscriptionForOrganization,
 	getActiveSubscriptionForUser,
 } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { protectedProcedure } from "../../../../orpc";
-import { requireOrgRole } from "../../../organizations/shared";
+import { protectedProcedure } from "../../../../orpc/procedures";
+import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const activeSubscriptionSchema = z.object({
-	organizationId: z.string().uuid().optional(),
+	organizationId: z.string().min(1).optional(),
 });
 
 export const getActiveSubscription = protectedProcedure
@@ -22,11 +23,11 @@ export const getActiveSubscription = protectedProcedure
 	.input(activeSubscriptionSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
-				context.headers,
+				PERMISSIONS.PAYMENT.VIEW,
+				context,
 			);
 		}
 		const subscription = input.organizationId

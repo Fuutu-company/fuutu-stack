@@ -13,6 +13,11 @@ vi.mock("@fuutu/db", () => ({
 	getWebhook: vi.fn(),
 	listDeliveries: vi.fn(),
 	countDeliveries: vi.fn(),
+	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@fuutu/payments/config.server", () => ({
+	getPlanIdForProductId: vi.fn().mockReturnValue("pro"),
 }));
 
 vi.mock("@fuutu/auth", () => ({
@@ -36,6 +41,7 @@ const {
 	getWebhook,
 	listDeliveries,
 	countDeliveries,
+	getActiveSubscriptionForOrganization,
 } = await import("@fuutu/db");
 const { auth } = await import("@fuutu/auth");
 
@@ -60,13 +66,18 @@ describe("webhooks.create", () => {
 		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
 			orgFixture as never,
 		);
+		// Mock a pro subscription so the plan: "pro" check passes
+		vi.mocked(getActiveSubscriptionForOrganization).mockResolvedValue({
+			productId: "price_pro",
+			status: "ACTIVE",
+		} as never);
 	});
 
 	it("creates a webhook and returns the secret once", async () => {
 		vi.mocked(createWebhook).mockResolvedValue({
 			id: "wh-1",
 			url: "https://example.com/webhook",
-			events: ["invoice.created"],
+			events: ["invoice.paid"],
 			secret: "whsec_abc123",
 			organizationId: "org-1",
 			isActive: true,
@@ -77,7 +88,7 @@ describe("webhooks.create", () => {
 			{
 				organizationId: "org-1",
 				url: "https://example.com/webhook",
-				events: ["invoice.created"],
+				events: ["invoice.paid"],
 			},
 			{ context: authenticatedContext },
 		);
@@ -85,7 +96,7 @@ describe("webhooks.create", () => {
 		expect(createWebhook).toHaveBeenCalledWith(
 			"org-1",
 			"https://example.com/webhook",
-			["invoice.created"],
+			["invoice.paid"],
 		);
 		expect(result).toMatchObject({ id: "wh-1", secret: "whsec_abc123" });
 	});
@@ -94,7 +105,11 @@ describe("webhooks.create", () => {
 		await expect(
 			call(
 				webhooksRouter.create,
-				{ organizationId: "org-1", url: "not-a-url", events: ["test"] },
+				{
+					organizationId: "org-1",
+					url: "not-a-url",
+					events: ["member.invited"],
+				},
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
@@ -121,7 +136,7 @@ describe("webhooks.create", () => {
 				{
 					organizationId: "",
 					url: "https://example.com/webhook",
-					events: ["test"],
+					events: ["member.invited"],
 				},
 				{ context: authenticatedContext },
 			),
@@ -135,7 +150,7 @@ describe("webhooks.create", () => {
 				{
 					organizationId: "org-1",
 					url: "https://example.com/webhook",
-					events: ["test"],
+					events: ["member.invited"],
 				},
 				{ context: unauthenticatedContext },
 			),
@@ -215,14 +230,14 @@ describe("webhooks.update", () => {
 				id: "wh-1",
 				organizationId: "org-1",
 				url: "https://example.com/new-webhook",
-				events: ["invoice.created", "invoice.paid"],
+				events: ["member.invited", "invoice.paid"],
 			},
 			{ context: authenticatedContext },
 		);
 
 		expect(updateWebhook).toHaveBeenCalledWith("wh-1", "org-1", {
 			url: "https://example.com/new-webhook",
-			events: ["invoice.created", "invoice.paid"],
+			events: ["member.invited", "invoice.paid"],
 		});
 		expect(result).toEqual({ success: true });
 	});

@@ -47,13 +47,18 @@ vi.mock("../../prisma/client", () => ({
 			count: vi.fn(),
 			updateMany: vi.fn(),
 		},
+		purchase: {
+			findFirst: vi.fn(),
+		},
 		$queryRaw: vi.fn(),
 	},
 }));
 
+import { db } from "../../prisma/client";
 import * as apiKeyQueries from "../../prisma/queries/api-key";
 import * as notificationQueries from "../../prisma/queries/notification";
 import * as organizationQueries from "../../prisma/queries/organization";
+import * as purchaseQueries from "../../prisma/queries/purchase";
 import * as userQueries from "../../prisma/queries/user";
 import * as webhookQueries from "../../prisma/queries/webhook";
 
@@ -181,6 +186,39 @@ describe("DB query functions - smoke tests", () => {
 
 		it("exports markAllRead function", () => {
 			expect(typeof notificationQueries.markAllRead).toBe("function");
+		});
+	});
+
+	describe("purchase queries", () => {
+		it("exports getPurchaseByCheckoutEventId function", () => {
+			expect(typeof purchaseQueries.getPurchaseByCheckoutEventId).toBe(
+				"function",
+			);
+		});
+
+		it("filters via metadata ->> 'checkoutEventId' so the partial unique index is used", async () => {
+			const row = { id: "pur_1", provider: "creem" };
+			vi.mocked(db.$queryRaw).mockResolvedValueOnce([row] as never);
+
+			const found = await purchaseQueries.getPurchaseByCheckoutEventId(
+				"creem",
+				"evt_123",
+			);
+
+			expect(found).toEqual(row);
+			const [strings, ...values] = vi.mocked(db.$queryRaw).mock
+				.calls[0] as unknown as [TemplateStringsArray, ...string[]];
+			const sql = strings.join("");
+			expect(sql).toContain("->> 'checkoutEventId'");
+			expect(sql).not.toContain("#>");
+			expect(values).toEqual(["creem", "evt_123"]);
+		});
+
+		it("returns null when no purchase matches the event id", async () => {
+			vi.mocked(db.$queryRaw).mockResolvedValueOnce([] as never);
+			expect(
+				await purchaseQueries.getPurchaseByCheckoutEventId("creem", "evt_x"),
+			).toBeNull();
 		});
 	});
 

@@ -18,7 +18,7 @@ One-liner       : Production-grade TypeScript SaaS starter kit sold under the Fu
 Current stage   : live (v1.0.0 shipped, post-launch iteration)
 Target users    : Developers / small teams building SaaS products who want a battle-tested monorepo base
 Core value prop : Opinionated, provider-swappable, license-compliant full-stack kit — saves weeks of boilerplate
-Tech decisions  : All kit defaults apply. Polar (payments), Plunk (mail), S3/MinIO (storage), Umami (analytics) active.
+Tech decisions  : All kit defaults apply. Creem (payments), Plunk (mail), S3/MinIO (storage), Umami (analytics) active.
 Open priorities : Clean up codebase to reach a publishable state — fix open TODOs, remove dead code, ensure pnpm check + check-types are green, all smoke tests pass
 Hard constraints: Kit fingerprint + telemetry must stay intact (LICENSE §7). No breaking public package exports without versioning. No new runtime deps without explicit approval.
 ```
@@ -35,7 +35,7 @@ Rules for demo content:
 - **Quick actions demonstrate real features** — invite a team member (orgs), switch locale (i18n), view billing (payments), explore API docs (oRPC).
 - **Copy is developer-facing** — the person looking at this demo is a developer evaluating whether to buy. Talk to them directly.
 
-- **Code state + `AGENTS.md`** drive every task. `ROADMAP.md` is a historical development log — ticket IDs (`T-001`, `T-040`, …) and roadmap references in comments or code are **dead artifacts**, ignore them.
+- **Code state + `AGENTS.md`** drive every task. Ticket IDs (`T-001`, `T-040`, …) and roadmap references in comments or code are **dead artifacts** from development history, ignore them.
 - When you encounter a `T-xxx` reference or a `(Follow-up)` note in code: treat it as noise, not as an instruction. If it blocks cleanup, remove it.
 
 ---
@@ -121,15 +121,15 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 ## 3 · Workspace Structure
 
 ```
-fuutu-stack-nextjs/
+fuutu-stack/
 ├── apps/
 │   ├── marketing/     # @fuutu/marketing — Port 3001 — public site, locale-prefixed URLs
 │   ├── saas/          # @fuutu/saas      — Port 3000 — authed app + API
 │   ├── mail-preview/  # dev tool         — Port 3003 — mail template preview
-│   └── fumadocs/      # docs template    — Port 4000 — write YOUR product docs here
+│   └── docs/          # docs template    — Port 4000 — write YOUR product docs here
 ├── packages/
 │   ├── config/        # cross-cutting config + theme.css (OKLCH)
-│   ├── env/           # env validation — saas.ts + marketing.ts
+│   ├── env/           # env validation — saas.ts + marketing.ts + docs.ts
 │   ├── db/            # DB client + schema + queries (ORM-agnostic export)
 │   ├── auth/          # Better Auth server + client + authConfig + hooks
 │   ├── api/           # Hono app + oRPC router + procedures + middleware
@@ -137,21 +137,24 @@ fuutu-stack-nextjs/
 │   ├── i18n/          # translations (en/de) + i18nConfig + utils
 │   ├── mail/          # MailProvider interface + templates + active provider
 │   ├── payments/      # PaymentProvider interface + PLANS/FEATURE_CATALOG/LIMITS + active provider
+│   ├── credits/       # credit meters + grant/consume/reset over @fuutu/db
 │   ├── storage/       # StorageProvider interface + active provider
 │   ├── analytics/     # AnalyticsProvider interface + ConsentBanner + active provider
 │   ├── rbac/          # ROLE_HIERARCHY + AccessControl + createResourcePermissions
 │   ├── logs/          # createLogger({ scope }) — replaces all console.log
+│   ├── notifications/ # in-app notifications + channel fan-out (email etc.)
+│   ├── cron/          # job registry + runners + schedule honoring
+│   ├── search/        # SearchProvider interface + tenant-scoped queries
 │   ├── utils/         # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl
 │   ├── content/       # MDX collections: posts, changelog, legal
 │   ├── license/       # checkLicense(), getLicenseMode() — soft-fails to "oss"
 │   ├── telemetry/     # bin/ping.mjs (build-time) + pingTelemetry() (runtime)
 │   ├── webhooks/      # Webhook delivery worker (sign, deliver, retry)
-│   └── ai/            # AI provider-swappable package (Google/OpenAI/Anthropic/Noop)
+│   ├── test-utils/    # shared test helpers + architecture guard tests
+│   └── ai/            # AI provider-swappable package (OpenRouter/Google/OpenAI/Anthropic/Noop)
 ├── tooling/
 │   ├── typescript/    # @fuutu/tsconfig — base / nextjs / react-library
-│   └── tailwind/      # @fuutu/tailwind-config — preset + theme re-export
-├── ROADMAP.md         # ticket plan — source of truth
-├── PRODUCTION_CHECKLIST.md  # pre-publish quality gate
+│   └── scripts/       # assets-sync.mjs etc.
 └── pnpm-workspace.yaml      # workspaces + version catalog
 ```
 
@@ -300,7 +303,7 @@ Full details: host rule `license-telemetry`.
 
 **Branches**: `feat/…` or `fix/…` · **Commits**: short imperative English · One logical change per commit · No `--force` on `main` · No secrets.
 
-**Task workflow:** read scope → explore (`search_graph` → `trace_path` → `code_search` → `grep_search` → `read_file`) → impact (`detect_changes` if non-trivial) → implement minimally → `pnpm check && pnpm check-types` → summarize changes.
+**Task workflow:** read scope → explore (`code_search` → `grep_search` → `read_file`) → impact → implement minimally → `pnpm check && pnpm check-types` → summarize changes.
 
 ---
 
@@ -357,23 +360,11 @@ Commit secrets/`.env` · edit generated files (`node_modules/`, `.next/`, `dist/
 
 ## 13 · When in Doubt
 
-`search_graph` → `trace_path` → `code_search` → `grep_search` → `read_file` before writing. Never guess APIs. Ask before rewriting. State open questions explicitly.
+`code_search` → `grep_search` → `read_file` before writing. Never guess APIs. Ask before rewriting. State open questions explicitly.
 
 ---
 
-## 14 · Codebase Graph (codebase-memory-mcp)
-
-The repo is indexed in a knowledge graph (project ID: `fuutu-stack`). Use it **before** grep/file reading when the task involves relationships, impact, or architecture. ~120x token reduction vs file-by-file exploration.
-
-**Use graph tools when:** modifying existing functions/types/exports · entering unfamiliar packages · bug investigation · refactoring · "who calls X?" · "what breaks if I change X?" · dead-code hunts · architecture overview.
-
-**Skip graph tools when:** single-file edit with known path · pure string literal search · reading a config file.
-
-**Full tool reference:** host skill `codebase-graph`.
-
----
-
-## 15 · Fuutu Stack Skills
+## 14 · Fuutu Stack Skills
 
 Skills are the Fuutu Stack quality engine — proven workflows encoded as enforceable rules. If a skill applies (even 1% chance), invoke it before acting. Skill files live in the **host skills directory** (see host adapter). Refer to skills by name only.
 
@@ -396,7 +387,6 @@ Skills are the Fuutu Stack quality engine — proven workflows encoded as enforc
 | Work complete, tests green | `finishing-a-development-branch` |
 | Code review feedback received | `receiving-code-review` |
 | Request review before merge | `requesting-code-review` |
-| Understanding code before editing | `codebase-graph` |
 | Editing or authoring skills | `writing-skills` |
 | UI polish (a11y, color, type, layout, copy) | `better-accessibility` / `better-colors` / `better-typography` / `better-layout` / `better-ui` / `better-writing` |
 

@@ -66,6 +66,9 @@ export interface MailStrings {
 	};
 }
 
+// The "Fuutu" brand in signatures/subjects below is intentional — this is
+// the kit's own demo branding, not a leaked product name. Rebrand by
+// editing these bundles (same commit for every locale).
 const en: MailStrings = {
 	signature: "— The Fuutu team",
 	greeting: (name) => (name ? `Hi ${name},` : "Hi there,"),

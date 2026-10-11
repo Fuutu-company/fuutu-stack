@@ -24,6 +24,10 @@ vi.mock("@fuutu/auth", () => ({
 vi.mock("@fuutu/db", () => ({
 	getOrganizationBySlug: vi.fn(),
 	getInvitationOrganizationId: vi.fn(),
+	countOrganizationsForUser: vi.fn().mockResolvedValue(0),
+	countOrganizationMembers: vi.fn().mockResolvedValue(0),
+	getActiveSubscriptionForUser: vi.fn().mockResolvedValue(null),
+	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@fuutu/ai", () => ({
@@ -239,6 +243,54 @@ describe("organizations.update", () => {
 			headers: authenticatedContext.headers,
 		});
 		expect(result).toMatchObject({ name: "New Name" });
+	});
+
+	it("updates the organization logo as admin", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(auth.api.updateOrganization).mockResolvedValue({
+			...orgFixture,
+			logo: "/image-proxy/organization-logos/org-1/logo.png",
+		} as never);
+
+		await call(
+			organizationsRouter.update,
+			{
+				organizationId: "org-1",
+				logo: "/image-proxy/organization-logos/org-1/logo.png",
+			},
+			{ context: authenticatedContext },
+		);
+
+		expect(auth.api.updateOrganization).toHaveBeenCalledWith({
+			body: {
+				organizationId: "org-1",
+				data: { logo: "/image-proxy/organization-logos/org-1/logo.png" },
+			},
+			headers: authenticatedContext.headers,
+		});
+	});
+
+	it("clears the organization logo with null", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(auth.api.updateOrganization).mockResolvedValue({
+			...orgFixture,
+			logo: null,
+		} as never);
+
+		await call(
+			organizationsRouter.update,
+			{ organizationId: "org-1", logo: null },
+			{ context: authenticatedContext },
+		);
+
+		expect(auth.api.updateOrganization).toHaveBeenCalledWith({
+			body: { organizationId: "org-1", data: { logo: null } },
+			headers: authenticatedContext.headers,
+		});
 	});
 
 	it("throws FORBIDDEN when user is not admin", async () => {

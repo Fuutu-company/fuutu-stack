@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@fuutu/db", () => ({
-	getCreditBalancesForUser: vi.fn(),
-	getCreditBalancesForOrganization: vi.fn(),
 	resetRecurringBalancesTx: vi.fn(),
 }));
 
@@ -14,11 +12,7 @@ vi.mock("@fuutu/logs", () => ({
 	}),
 }));
 
-import {
-	getCreditBalancesForOrganization,
-	getCreditBalancesForUser,
-	resetRecurringBalancesTx,
-} from "@fuutu/db";
+import { resetRecurringBalancesTx } from "@fuutu/db";
 import { resetRecurringCredits } from "../reset";
 
 beforeEach(() => {
@@ -26,51 +20,13 @@ beforeEach(() => {
 });
 
 describe("resetRecurringCredits", () => {
-	it("fetches balances for user when userId is set", async () => {
-		vi.mocked(getCreditBalancesForUser).mockResolvedValue([]);
-		vi.mocked(resetRecurringBalancesTx).mockResolvedValue(undefined);
-		const newPeriodEnd = new Date("2026-12-31");
-
-		await resetRecurringCredits({ userId: "user-1", newPeriodEnd });
-
-		expect(getCreditBalancesForUser).toHaveBeenCalledWith("user-1");
-		expect(getCreditBalancesForOrganization).not.toHaveBeenCalled();
-	});
-
-	it("fetches balances for org when only organizationId is set", async () => {
-		vi.mocked(getCreditBalancesForOrganization).mockResolvedValue([]);
-		vi.mocked(resetRecurringBalancesTx).mockResolvedValue(undefined);
-		const newPeriodEnd = new Date("2026-12-31");
-
-		await resetRecurringCredits({ organizationId: "org-1", newPeriodEnd });
-
-		expect(getCreditBalancesForOrganization).toHaveBeenCalledWith("org-1");
-		expect(getCreditBalancesForUser).not.toHaveBeenCalled();
-	});
-
-	it("passes balances + params to resetRecurringBalancesTx", async () => {
-		const balances = [
-			{
-				id: "b-1",
-				meterKey: "ai_tokens",
-				recurringGranted: 500,
-				recurringConsumed: 500,
-			},
-			{
-				id: "b-2",
-				meterKey: "api_calls",
-				recurringGranted: 1000,
-				recurringConsumed: 200,
-			},
-		];
-		vi.mocked(getCreditBalancesForUser).mockResolvedValue(balances as never);
-		vi.mocked(resetRecurringBalancesTx).mockResolvedValue(undefined);
+	it("delegates to resetRecurringBalancesTx for a user owner", async () => {
+		vi.mocked(resetRecurringBalancesTx).mockResolvedValue([]);
 		const newPeriodEnd = new Date("2026-12-31");
 
 		await resetRecurringCredits({ userId: "user-1", newPeriodEnd });
 
 		expect(resetRecurringBalancesTx).toHaveBeenCalledWith({
-			balances,
 			userId: "user-1",
 			organizationId: undefined,
 			newPeriodEnd,
@@ -78,9 +34,22 @@ describe("resetRecurringCredits", () => {
 		});
 	});
 
+	it("delegates to resetRecurringBalancesTx for an org owner", async () => {
+		vi.mocked(resetRecurringBalancesTx).mockResolvedValue([]);
+		const newPeriodEnd = new Date("2026-12-31");
+
+		await resetRecurringCredits({ organizationId: "org-1", newPeriodEnd });
+
+		expect(resetRecurringBalancesTx).toHaveBeenCalledWith(
+			expect.objectContaining({
+				organizationId: "org-1",
+				userId: undefined,
+			}),
+		);
+	});
+
 	it("passes newGranted map through when plan changed", async () => {
-		vi.mocked(getCreditBalancesForUser).mockResolvedValue([]);
-		vi.mocked(resetRecurringBalancesTx).mockResolvedValue(undefined);
+		vi.mocked(resetRecurringBalancesTx).mockResolvedValue([]);
 		const newPeriodEnd = new Date("2026-12-31");
 		const newGranted = { ai_tokens: 1_000_000, api_calls: 100_000 };
 
@@ -89,6 +58,16 @@ describe("resetRecurringCredits", () => {
 		expect(resetRecurringBalancesTx).toHaveBeenCalledWith(
 			expect.objectContaining({ newGranted }),
 		);
+	});
+
+	it("rejects when both userId and organizationId are set (owner XOR)", async () => {
+		await expect(
+			resetRecurringCredits({
+				userId: "user-1",
+				organizationId: "org-1",
+				newPeriodEnd: new Date(),
+			}),
+		).rejects.toThrow();
 	});
 
 	it("rejects non-positive amounts in newGranted map", async () => {
@@ -121,7 +100,6 @@ describe("resetRecurringCredits", () => {
 	});
 
 	it("propagates tx errors", async () => {
-		vi.mocked(getCreditBalancesForUser).mockResolvedValue([]);
 		vi.mocked(resetRecurringBalancesTx).mockRejectedValue(new Error("db down"));
 
 		await expect(

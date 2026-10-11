@@ -6,6 +6,21 @@ export const getOrganizationBySlug = (slug: string) =>
 export const getOrganizationById = (id: string) =>
 	db.organization.findUnique({ where: { id } });
 
+/**
+ * Org + members (with member email) — used by org-access resolution for
+ * API-key contexts, where Better Auth endpoints can't resolve a session
+ * from `x-api-key` headers.
+ */
+export const getOrganizationWithMembers = (id: string) =>
+	db.organization.findUnique({
+		where: { id },
+		include: {
+			members: {
+				include: { user: { select: { email: true } } },
+			},
+		},
+	});
+
 export const listOrganizationsForUser = (userId: string) =>
 	db.organization.findMany({
 		where: { members: { some: { userId } } },
@@ -35,3 +50,6 @@ export const findPendingInvitation = (email: string) =>
 
 export const countOrganizationMembers = (organizationId: string) =>
 	db.member.count({ where: { organizationId } });
+
+export const countOrganizationsForUser = (userId: string) =>
+	db.organization.count({ where: { members: { some: { userId } } } });

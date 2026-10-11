@@ -9,8 +9,15 @@ export interface AnalyticsConfig {
 	scriptUrl?: string;
 	/** Whether analytics requires explicit consent (DSGVO). v1 = always true. */
 	requireConsent: boolean;
-	/** Cookie name for the consent decision (shared across subdomains). */
+	/** Cookie name for the consent decision. */
 	consentCookieName: string;
+	/**
+	 * Optional parent domain for the consent cookie (e.g. `.example.com`)
+	 * to share the decision across subdomains. Leave unset to scope the
+	 * cookie to the current host — safe on public-suffix domains
+	 * (`.co.uk` & friends) where a derived domain would be rejected.
+	 */
+	consentCookieDomain?: string;
 	/** Cookie max-age in seconds (default: 1 year). */
 	consentCookieMaxAge: number;
 	/** Window event name dispatched when the consent decision changes. */

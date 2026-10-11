@@ -15,6 +15,10 @@ export interface EmailMessage {
 /**
  * Any email provider must implement this contract.
  * Keeps sendEmail() agnostic of the underlying delivery mechanism.
+ *
+ * Naming note: the convention for swappable domains is `MailProvider` /
+ * `mailConfig` (AGENTS §6). The `Email*` / `email*` names shipped in
+ * v1.0.0 and are public API — do not rename without a major version bump.
  */
 export interface EmailProvider {
 	readonly name: string;

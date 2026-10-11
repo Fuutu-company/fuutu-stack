@@ -20,7 +20,7 @@ export async function generateMetadata({
 }: BlogPostPageProps): Promise<Metadata> {
 	const { slug } = await params;
 	const post = getPost(slug);
-	if (!post) return {};
+	if (!post || post.frontmatter.draft) return {};
 	return {
 		title: post.frontmatter.title,
 		description: post.frontmatter.description,
@@ -34,6 +34,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
 	const post = getPost(slug);
 	if (!post || post.frontmatter.draft) notFound();
+
+	const publishedAt = new Intl.DateTimeFormat(locale, {
+		dateStyle: "long",
+	}).format(new Date(post.frontmatter.publishedAt));
 
 	const Body = getPostBody(post, locale);
 
@@ -56,7 +60,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 					</p>
 				) : null}
 				<p className="text-muted-foreground text-sm">
-					{post.frontmatter.publishedAt}
+					{publishedAt}
 					{post.frontmatter.authors && post.frontmatter.authors.length > 0
 						? ` · ${post.frontmatter.authors.join(", ")}`
 						: ""}

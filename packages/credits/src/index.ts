@@ -1,8 +1,10 @@
 export {
 	type CreditBalanceSummary,
+	GetCreditBalanceSummarySchema,
 	getCreditBalanceSummary,
 } from "./balance";
 export {
+	CheckCreditsSchema,
 	type ConsumeCreditsParams,
 	type ConsumeCreditsResult,
 	ConsumeCreditsSchema,
@@ -15,6 +17,11 @@ export {
 	grantRecurringCredits,
 	grantTopUpCredits,
 } from "./grant";
+export {
+	CREDIT_METERS,
+	type CreditMeter,
+	getMeter,
+} from "./meters";
 export {
 	ResetRecurringCreditsSchema,
 	resetRecurringCredits,

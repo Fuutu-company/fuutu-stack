@@ -29,14 +29,6 @@ vi.mock("@fuutu/logs", () => ({
 	}),
 }));
 
-vi.mock("@fuutu/env/saas", () => ({
-	env: {
-		NODE_ENV: "development",
-		AI_API_KEY: "test-key",
-		GOOGLE_GENERATIVE_AI_API_KEY: undefined,
-	},
-}));
-
 const { GoogleProvider } = await import("../providers/google");
 
 const sampleMessages = [
@@ -54,8 +46,20 @@ describe("GoogleProvider", () => {
 		expect(createGoogleGenerativeAI).toHaveBeenCalledWith({
 			apiKey: "test-key",
 		});
+	});
+
+	it("applies the devtools middleware when devtools: true", () => {
+		new GoogleProvider({ apiKey: "test-key", devtools: true });
+
 		expect(devToolsMiddleware).toHaveBeenCalled();
 		expect(wrapLanguageModel).toHaveBeenCalled();
+	});
+
+	it("does not wrap the model when devtools is not set", () => {
+		new GoogleProvider({ apiKey: "test-key" });
+
+		expect(devToolsMiddleware).not.toHaveBeenCalled();
+		expect(wrapLanguageModel).not.toHaveBeenCalled();
 	});
 
 	it("chat() returns the generated text as an assistant response", async () => {
@@ -82,7 +86,7 @@ describe("GoogleProvider", () => {
 			},
 		});
 		vi.mocked(streamText).mockReturnValue({
-			toUIMessageStreamResponse: () =>
+			toTextStreamResponse: () =>
 				({
 					body: fakeBody,
 				}) as never,
@@ -99,7 +103,7 @@ describe("GoogleProvider", () => {
 
 	it("stream() returns an empty stream when the SDK response has no body", async () => {
 		vi.mocked(streamText).mockReturnValue({
-			toUIMessageStreamResponse: () => ({}) as never,
+			toTextStreamResponse: () => ({}) as never,
 		} as never);
 
 		const provider = new GoogleProvider({ apiKey: "test-key" });

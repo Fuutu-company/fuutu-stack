@@ -9,6 +9,7 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@fuutu/config": "workspace:*",
 		"@fuutu/i18n": "workspace:*",
 		"@fuutu/mail": "workspace:*",
 		"next": "catalog:",

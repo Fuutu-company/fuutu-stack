@@ -4,19 +4,22 @@ import {
 	getCreditBalance as getBalance,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
-import { getMeter } from "@fuutu/payments/config";
 import { z } from "zod";
+import { getMeter } from "./meters";
+import { ownerXorCheck } from "./owner";
 
 const log = createLogger({ scope: "credits" });
 
-export const ConsumeCreditsSchema = z.object({
-	userId: z.string().optional(),
-	organizationId: z.string().optional(),
-	meterKey: z.string(),
-	amount: z.number().int().positive(),
-	reason: z.string(),
-	metadata: z.record(z.string(), z.unknown()).optional(),
-});
+export const ConsumeCreditsSchema = ownerXorCheck(
+	z.object({
+		userId: z.string().optional(),
+		organizationId: z.string().optional(),
+		meterKey: z.string(),
+		amount: z.number().int().positive(),
+		reason: z.string(),
+		metadata: z.record(z.string(), z.unknown()).optional(),
+	}),
+);
 
 export interface ConsumeCreditsParams {
 	userId?: string;
@@ -49,12 +52,6 @@ export async function consumeCredits(
 ): Promise<ConsumeCreditsResult> {
 	const { userId, organizationId, meterKey, amount, reason, metadata } =
 		ConsumeCreditsSchema.parse(params);
-
-	if (!userId && !organizationId) {
-		throw new Error(
-			"consumeCredits: either userId or organizationId must be set",
-		);
-	}
 
 	const meter = getMeter(meterKey);
 	if (!meter) {
@@ -90,6 +87,15 @@ export async function consumeCredits(
 	return result;
 }
 
+export const CheckCreditsSchema = ownerXorCheck(
+	z.object({
+		userId: z.string().optional(),
+		organizationId: z.string().optional(),
+		meterKey: z.string(),
+		amount: z.number().int().positive(),
+	}),
+);
+
 /**
  * Check if credits can be consumed without actually consuming them.
  *
@@ -107,7 +113,8 @@ export async function checkCredits(params: {
 	remaining: number;
 	wouldUseTopup: boolean;
 }> {
-	const { userId, organizationId, meterKey, amount } = params;
+	const { userId, organizationId, meterKey, amount } =
+		CheckCreditsSchema.parse(params);
 	const meter = getMeter(meterKey);
 	if (!meter) throw new Error(`checkCredits: unknown meter key "${meterKey}"`);
 

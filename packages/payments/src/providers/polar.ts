@@ -5,17 +5,34 @@ import {
 	validateEvent,
 	WebhookVerificationError,
 } from "@polar-sh/sdk/webhooks";
+import { z } from "zod";
 import type {
 	CheckoutInput,
 	CustomerInput,
+	PaymentProvider,
 	PortalInput,
 	ProviderEvent,
 	ProviderEventType,
-	SeatAwarePaymentProvider,
-	SetSeatsInput,
 } from "../types";
 
 const log = createLogger({ scope: "payments:polar" });
+
+/**
+ * Subset of the Polar webhook `data` object we actually consume.
+ * `validateEvent` already verified the signature, but its return type is a
+ * broad union — validate the fields we read instead of casting.
+ * user_id / organization_id live in `data.metadata` (set at checkout
+ * creation), not on the event object itself.
+ */
+const PolarEventDataSchema = z
+	.looseObject({
+		id: z.string().optional(),
+		subscription_id: z.string().optional(),
+		customer_id: z.string().optional(),
+		product_id: z.string().optional(),
+		metadata: z.record(z.string(), z.unknown()).optional(),
+	})
+	.optional();
 
 let _client: Polar | null = null;
 
@@ -39,7 +56,7 @@ function getClient(): Polar {
 
 function mapPolarEventToProviderEvent(
 	polarEventType: string,
-): ProviderEventType {
+): ProviderEventType | null {
 	switch (polarEventType) {
 		case "checkout.completed":
 			return "checkout.completed";
@@ -52,21 +69,33 @@ function mapPolarEventToProviderEvent(
 		case "subscription.revoked":
 			return "subscription.expired";
 		default:
-			log.warn("unknown polar event type", { polarEventType });
-			return "subscription.updated";
+			// Unmapped Polar events (order.paid, customer.created, …) are
+			// ignored — coercing them to subscription.updated would feed
+			// unrelated payloads into the purchase sync.
+			return null;
 	}
 }
 
-export const polarPaymentProvider: SeatAwarePaymentProvider = {
+export const polarPaymentProvider: PaymentProvider = {
 	id: "polar",
 	ownsSeatSync: false,
 
 	async createCheckoutLink(input: CheckoutInput) {
 		const client = getClient();
+		// Without metadata, Polar webhook payloads carry no owner — the
+		// owner-XOR rule in sync.ts would skip them as ownerless.
+		const metadata: Record<string, string> = {};
+		if (input.userId) metadata.user_id = input.userId;
+		if (input.organizationId) metadata.organization_id = input.organizationId;
+		for (const [key, value] of Object.entries(input.metadata ?? {})) {
+			if (value === undefined || value === null) continue;
+			metadata[key] = String(value);
+		}
 		const checkout = await client.checkouts.create({
 			products: [input.priceId],
 			successUrl: input.successUrl ?? env.POLAR_SUCCESS_URL,
 			externalCustomerId: input.userId ?? input.organizationId,
+			metadata,
 		});
 		return { url: checkout.url };
 	},
@@ -103,20 +132,35 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		try {
 			const event = validateEvent(body, headers, env.POLAR_WEBHOOK_SECRET);
 			const eventType = mapPolarEventToProviderEvent(event.type);
+			if (!eventType) {
+				log.debug("ignoring unmapped polar event type", {
+					polarEventType: event.type,
+				});
+				return [];
+			}
+
+			const parsed = PolarEventDataSchema.safeParse(event.data);
+			if (!parsed.success) {
+				throw new Error("Malformed webhook payload");
+			}
+			const data = parsed.data;
 			const providerEvent: ProviderEvent = {
 				type: eventType,
-				metadata: event.data as Record<string, unknown>,
+				// Standard-webhooks delivery id — dedup marker for
+				// checkout.completed redeliveries. Falls back to the
+				// payload id (checkout/order id) when the header is absent.
+				eventId: headers["webhook-id"] || data?.id || undefined,
+				metadata: data?.metadata,
 			};
 
-			const data = event.data as Record<string, unknown>;
-			if (data.subscription_id) {
-				providerEvent.subscriptionId = data.subscription_id as string;
+			if (data?.subscription_id) {
+				providerEvent.subscriptionId = data.subscription_id;
 			}
-			if (data.customer_id) {
-				providerEvent.customerId = data.customer_id as string;
+			if (data?.customer_id) {
+				providerEvent.customerId = data.customer_id;
 			}
-			if (data.product_id) {
-				providerEvent.productId = data.product_id as string;
+			if (data?.product_id) {
+				providerEvent.productId = data.product_id;
 			}
 
 			return [providerEvent];
@@ -132,12 +176,5 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		const client = getClient();
 		await client.subscriptions.revoke({ id: subscriptionId });
 		log.info("cancelled subscription", { subscriptionId });
-	},
-
-	async setSubscriptionSeats({ subscriptionId, seats }: SetSeatsInput) {
-		log.debug(
-			"setSubscriptionSeats no-op: Polar manages seats via dashboard configuration, not API",
-			{ subscriptionId, seats },
-		);
 	},
 };

@@ -11,24 +11,31 @@
  *   - checkout.completed for one-time purchases creates a Purchase directly
  *   - checkout.completed for subscriptions is handled by subscription.activated
  *   - subscription.canceled respects currentPeriodEnd (scheduled_cancel if future)
+ *   - Event failures propagate so the HTTP handler returns 5xx and the
+ *     provider retries — a swallowed error is a silently dropped event
  */
 
 import {
-	createCreditEvent,
+	grantRecurringCredits,
+	grantTopUpCredits,
+	resetRecurringCredits,
+} from "@fuutu/credits";
+import {
 	createPurchase,
-	getCreditBalancesForOrganization,
-	getCreditBalancesForUser,
+	getCreditBalance,
+	getPurchaseByCheckoutEventId,
 	getPurchaseByProviderSubscriptionId,
 	getPurchasesByOrganizationId,
 	getPurchasesByUserId,
-	grantRecurringCreditsTx,
-	grantTopUpCreditsTx,
-	resetRecurringBalance,
 	setOrganizationPaymentsCustomerId,
 	setPaymentsCustomerId,
 	updatePurchase,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
+import { dispatchEvent, type WebhookEventType } from "@fuutu/webhooks";
+import { z } from "zod";
+import { CREDITS, type PlanId } from "./config";
+import { getPlanIdForProductId } from "./config.server";
 import { resolvePaymentProvider } from "./resolve";
 import type {
 	ProviderEvent,
@@ -67,15 +74,25 @@ const DEFAULT_STATUS_FOR_TYPE: Partial<
 	"one_time.purchased": "ACTIVE",
 };
 
+/** Prisma unique-violation error — a dedup marker already exists. */
+const isUniqueViolation = (err: unknown): boolean =>
+	err instanceof Error && "code" in err && err.code === "P2002";
+
 /**
  * Process an array of normalized provider events and update the Purchase
  * table accordingly. Idempotent — re-processing the same event is safe
- * because we look up by provider+subscriptionId before mutating.
+ * because we look up by provider+subscriptionId (subscriptions) or
+ * provider+checkoutEventId (one-time checkouts) before mutating.
+ *
+ * Throws an AggregateError when any event failed — the webhook handler
+ * turns that into a 5xx so the provider retries the delivery instead of
+ * treating silently-dropped events as acknowledged.
  */
 export async function processWebhookEvents(
 	providerId: string,
 	events: ProviderEvent[],
 ): Promise<void> {
+	const failures: Error[] = [];
 	for (const event of events) {
 		try {
 			await processSingleEvent(providerId, event);
@@ -86,7 +103,14 @@ export async function processWebhookEvents(
 				subscriptionId: event.subscriptionId,
 				err: String(err),
 			});
+			failures.push(err instanceof Error ? err : new Error(String(err)));
 		}
+	}
+	if (failures.length > 0) {
+		throw new AggregateError(
+			failures,
+			`${failures.length} webhook event(s) failed for provider ${providerId}`,
+		);
 	}
 }
 
@@ -95,8 +119,14 @@ async function processSingleEvent(
 	event: ProviderEvent,
 ): Promise<void> {
 	const { type, subscriptionId, productId, metadata } = event;
-	const userId = extractId(metadata, "user_id");
-	const organizationId = extractId(metadata, "organization_id");
+	const metadataUserId = extractId(metadata, "user_id");
+	const metadataOrgId = extractId(metadata, "organization_id");
+	// Owner XOR: exactly one owner column may be set on Purchase/credit
+	// rows (DB CHECK constraint). When both ids arrive in checkout metadata
+	// the organization owns the billing relationship — user_id stays in
+	// metadata for attribution.
+	const organizationId = metadataOrgId ? metadataOrgId : null;
+	const userId = organizationId ? null : metadataUserId;
 
 	log.info("processing webhook event", {
 		provider: providerId,
@@ -138,14 +168,31 @@ async function processSingleEvent(
 	);
 
 	if (existing) {
+		const userIdToSet =
+			!existing.userId && !existing.organizationId && userId ? userId : null;
+		// The stored owner is authoritative — renewal/invoice events often
+		// carry no user_id metadata, so fall back to the purchase row.
 		await updateExistingPurchase(
+			providerId,
 			existing.id,
 			event,
 			existing.status,
-			userId,
-			organizationId,
-			!existing.userId && userId ? userId : null,
+			existing.userId ?? userId,
+			existing.organizationId ?? organizationId,
+			userIdToSet,
 		);
+		// Redelivered activation: re-attempt the recurring credit grant.
+		// The original delivery may have created the purchase but failed
+		// the grant (which propagates as 5xx and triggers a provider retry).
+		// grantCreditsForSubscription skips meters whose balance already
+		// matches, so a successful first delivery is a no-op here.
+		if (isSubscriptionActivationType(type)) {
+			await grantCreditsForSubscription(
+				event,
+				existing.userId ?? userId,
+				existing.organizationId ?? organizationId,
+			);
+		}
 		return;
 	}
 
@@ -172,18 +219,67 @@ async function handleOneTimePurchase(
 		log.warn("one_time.purchased without productId, skipping");
 		return;
 	}
-	const purchase = await createPurchase({
-		type: "ONE_TIME",
-		status: "ACTIVE",
-		provider: providerId,
-		priceId: event.productId,
-		productId: event.productId,
-		customerId: event.customerId ?? null,
-		userId,
-		organizationId,
-		currentPeriodEnd: event.currentPeriodEnd ?? null,
-		metadata: event.metadata,
-	});
+	if (!userId && !organizationId) {
+		// An ownerless purchase is rejected by the DB XOR constraint and
+		// useless downstream — skip instead of retrying a poisoned event.
+		log.error("checkout.completed without owner metadata, skipping", {
+			productId: event.productId,
+		});
+		return;
+	}
+
+	// Idempotency: the provider event id is stored as
+	// metadata.checkoutEventId and backed by a partial unique index on
+	// (provider, metadata->>'checkoutEventId') — a redelivered
+	// checkout.completed must not create a second Purchase.
+	const eventId = event.eventId ?? null;
+	if (eventId) {
+		const existing = await getPurchaseByCheckoutEventId(providerId, eventId);
+		if (existing) {
+			log.info("duplicate checkout.completed, re-checking top-up grant", {
+				eventId,
+				purchaseId: existing.id,
+			});
+			// Still attempt the credit grant — it is idempotent via the
+			// unique index on credit_package.purchaseId, and a previous
+			// delivery may have created the purchase but failed the grant.
+			await grantTopUpCreditsForPurchase(
+				event,
+				userId,
+				organizationId,
+				existing.id,
+			);
+			return;
+		}
+	}
+
+	let purchaseId: string;
+	try {
+		const purchase = await createPurchase({
+			type: "ONE_TIME",
+			status: "ACTIVE",
+			provider: providerId,
+			priceId: event.productId,
+			productId: event.productId,
+			customerId: event.customerId ?? null,
+			userId,
+			organizationId,
+			currentPeriodEnd: event.currentPeriodEnd ?? null,
+			metadata: eventId
+				? { ...(event.metadata ?? {}), checkoutEventId: eventId }
+				: event.metadata,
+		});
+		purchaseId = purchase.id;
+	} catch (err) {
+		if (isUniqueViolation(err)) {
+			// A concurrent redelivery won the race — treat as duplicate.
+			log.info("duplicate checkout.completed (unique constraint)", {
+				eventId,
+			});
+			return;
+		}
+		throw err;
+	}
 	log.info("created one-time purchase", {
 		provider: providerId,
 		productId: event.productId,
@@ -191,20 +287,15 @@ async function handleOneTimePurchase(
 		organizationId,
 	});
 
-	// Grant top-up credits if this product is a credit package
-	try {
-		await grantTopUpCreditsForPurchase(
-			event,
-			userId,
-			organizationId,
-			purchase.id,
-		);
-	} catch (err) {
-		log.error("failed to grant top-up credits for one-time purchase", {
-			purchaseId: purchase.id,
-			err: String(err),
-		});
-	}
+	// Grant top-up credits if this product is a credit package. Failures
+	// propagate — dedup above makes the provider's retry safe.
+	await grantTopUpCreditsForPurchase(event, userId, organizationId, purchaseId);
+
+	await emitWebhookEvent("invoice.paid", userId, organizationId, {
+		purchaseId,
+		productId: event.productId,
+		provider: providerId,
+	});
 }
 
 async function createNewSubscriptionPurchase(
@@ -215,6 +306,12 @@ async function createNewSubscriptionPurchase(
 ): Promise<void> {
 	if (!event.productId) {
 		log.error("subscription activation without productId, skipping", {
+			subscriptionId: event.subscriptionId,
+		});
+		return;
+	}
+	if (!userId && !organizationId) {
+		log.error("subscription activation without owner metadata, skipping", {
 			subscriptionId: event.subscriptionId,
 		});
 		return;
@@ -263,18 +360,21 @@ async function createNewSubscriptionPurchase(
 		organizationId,
 	});
 
-	// Grant recurring credits for the new subscription
-	try {
-		await grantCreditsForSubscription(event, userId, organizationId);
-	} catch (err) {
-		log.error("failed to grant credits for new subscription", {
-			subscriptionId: event.subscriptionId,
-			err: String(err),
-		});
-	}
+	// Grant recurring credits for the new subscription. Failures propagate
+	// so the provider retries — the redelivery path above re-attempts the
+	// grant against the already-created purchase.
+	await grantCreditsForSubscription(event, userId, organizationId);
+
+	await emitWebhookEvent("subscription.created", userId, organizationId, {
+		subscriptionId: event.subscriptionId,
+		productId: event.productId,
+		status,
+		provider: providerId,
+	});
 }
 
 async function updateExistingPurchase(
+	providerId: string,
 	purchaseId: string,
 	event: ProviderEvent,
 	currentStatus: PurchaseStatusLiteral | string | null,
@@ -326,17 +426,25 @@ async function updateExistingPurchase(
 	});
 	log.info("updated purchase", { purchaseId, status: resolvedStatus });
 
-	// Reset recurring credits on renewal
+	// Reset recurring credits on renewal. Failures propagate so the
+	// provider retries — redelivery re-runs this idempotent reset.
 	if (event.type === "subscription.renewed" && event.currentPeriodEnd) {
-		try {
-			await resetCreditsOnRenewal(event, userId, organizationId);
-		} catch (err) {
-			log.error("failed to reset credits on renewal", {
-				purchaseId,
-				err: String(err),
-			});
-		}
+		await resetCreditsOnRenewal(event, userId, organizationId);
 	}
+
+	await emitWebhookEvent(
+		event.type === "subscription.canceled"
+			? "subscription.canceled"
+			: "subscription.updated",
+		userId,
+		organizationId,
+		{
+			purchaseId,
+			subscriptionId: event.subscriptionId,
+			status: resolvedStatus,
+			provider: providerId,
+		},
+	);
 }
 
 async function cancelOldSubscriptionsForOwner(
@@ -437,6 +545,33 @@ function isRenewalOrActivation(type: ProviderEventType): boolean {
 }
 
 /**
+ * Emit a `WEBHOOK_EVENTS` event to subscribed endpoints. Best-effort:
+ * a dispatch failure must not fail the provider-event mutation — the
+ * billing state is authoritative, delivery problems surface in the
+ * delivery worker and retries.
+ */
+async function emitWebhookEvent(
+	event: WebhookEventType,
+	userId: string | null,
+	organizationId: string | null,
+	payload: Record<string, unknown>,
+): Promise<void> {
+	try {
+		await dispatchEvent({
+			event,
+			organizationId: organizationId ?? undefined,
+			userId: organizationId ? undefined : (userId ?? undefined),
+			payload,
+		});
+	} catch (err) {
+		log.error("failed to dispatch webhook event", {
+			event,
+			err: String(err),
+		});
+	}
+}
+
+/**
  * Check if a user or organization has an active (ACTIVE or TRIALING)
  * subscription. Used by feature gates in the app.
  */
@@ -482,6 +617,21 @@ export async function getActivePlanId(
 }
 
 /**
+ * Numeric credit grants for a plan — "unlimited" meters have no numeric
+ * balance and are skipped (they are gated by plan, not by a counter).
+ */
+function numericGrantsForPlan(planId: PlanId): Record<string, number> {
+	const planCredits = CREDITS[planId];
+	const grants: Record<string, number> = {};
+	for (const [meterKey, grant] of Object.entries(planCredits)) {
+		if (typeof grant === "number" && grant > 0) {
+			grants[meterKey] = grant;
+		}
+	}
+	return grants;
+}
+
+/**
  * Grant recurring credits when a subscription is activated.
  * Looks up the plan from the product/price ID, then grants credits
  * for all meters configured for that plan.
@@ -493,11 +643,6 @@ async function grantCreditsForSubscription(
 ): Promise<void> {
 	if (!event.productId || (!userId && !organizationId)) return;
 
-	// Import dynamically to avoid circular dependency (credits imports payments config).
-	// Uses config.server for env-backed getPlanIdForProductId (sync.ts is server-only).
-	const { CREDITS, getMeterKeysForPlan } = await import("./config");
-	const { getPlanIdForProductId } = await import("./config.server");
-
 	// Find the plan ID from the product/price ID (checks runtime map + env vars)
 	const planId = getPlanIdForProductId(event.productId);
 	if (!planId) {
@@ -507,21 +652,35 @@ async function grantCreditsForSubscription(
 		return;
 	}
 
-	const meterKeys = getMeterKeysForPlan(planId);
 	const periodEnd =
 		event.currentPeriodEnd ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-	for (const meterKey of meterKeys) {
-		const grant = CREDITS[planId]?.[meterKey];
-		if (typeof grant === "number" && grant > 0) {
-			await grantRecurringCreditsInternal({
-				userId: userId ?? undefined,
-				organizationId: organizationId ?? undefined,
-				meterKey,
-				amount: grant,
-				periodEnd,
-			});
+	for (const [meterKey, grant] of Object.entries(
+		numericGrantsForPlan(planId),
+	)) {
+		// Idempotency: activation events are redelivered on retry. Skip
+		// meters whose balance already reflects this exact grant — the
+		// set-absolute write would be harmless, but the ledger must not
+		// record a duplicate credit_event per redelivery.
+		const existing = await getCreditBalance({
+			userId: userId ?? undefined,
+			organizationId: organizationId ?? undefined,
+			meterKey,
+		});
+		if (
+			existing &&
+			existing.recurringGranted === grant &&
+			existing.recurringPeriodEnd?.getTime() === periodEnd.getTime()
+		) {
+			continue;
 		}
+		await grantRecurringCredits({
+			userId: userId ?? undefined,
+			organizationId: organizationId ?? undefined,
+			meterKey,
+			amount: grant,
+			periodEnd,
+		});
 	}
 
 	log.info("granted credits for new subscription", {
@@ -533,6 +692,8 @@ async function grantCreditsForSubscription(
 
 /**
  * Reset recurring credit balances on subscription renewal.
+ * Delegates to @fuutu/credits — a single transaction that also applies
+ * the new plan's grants when the product maps to a plan.
  */
 async function resetCreditsOnRenewal(
 	event: ProviderEvent,
@@ -541,14 +702,32 @@ async function resetCreditsOnRenewal(
 ): Promise<void> {
 	if (!event.currentPeriodEnd || (!userId && !organizationId)) return;
 
-	await resetRecurringCreditsInternal({
+	const planId = event.productId
+		? getPlanIdForProductId(event.productId)
+		: undefined;
+	const newGranted = planId ? numericGrantsForPlan(planId) : undefined;
+
+	await resetRecurringCredits({
 		userId: userId ?? undefined,
 		organizationId: organizationId ?? undefined,
 		newPeriodEnd: new Date(event.currentPeriodEnd),
+		newGranted,
 	});
 
 	log.info("reset credits on renewal", { userId, organizationId });
 }
+
+const NestedTopupMetadataSchema = z.object({
+	meterKey: z.string().min(1),
+	amount: z.number().int().positive(),
+	expiryDays: z.number().int().positive().optional(),
+});
+
+const FlatTopupMetadataSchema = z.object({
+	meter_key: z.string().min(1),
+	amount: z.number().int().positive(),
+	expiryDays: z.number().int().positive().optional(),
+});
 
 /**
  * Grant top-up credits for a one-time purchase.
@@ -556,9 +735,7 @@ async function resetCreditsOnRenewal(
  * - Nested format: { credit_topup: { meterKey, amount, expiryDays? } }
  * - Flat format: { topup_id, meter_key, amount, expiryDays? }
  *
- * This is more robust than product ID string matching, as the metadata
- * carries the actual meter key and amount regardless of the provider's
- * product ID format.
+ * Both formats are Zod-validated — malformed metadata is skipped, never cast.
  */
 async function grantTopUpCreditsForPurchase(
 	event: ProviderEvent,
@@ -568,22 +745,22 @@ async function grantTopUpCreditsForPurchase(
 ): Promise<void> {
 	if (!event.productId || (!userId && !organizationId)) return;
 
-	// Check metadata for credit top-up info
-	// Support both formats:
-	// 1. Flat: { topup_id, meter_key, amount }
-	// 2. Nested: { credit_topup: { meterKey, amount, expiryDays? } }
-	const metadata = event.metadata as Record<string, unknown> | undefined;
-	const topupInfo =
-		(metadata?.credit_topup as
-			| { meterKey: string; amount: number; expiryDays?: number }
-			| undefined) ||
-		(metadata?.topup_id && metadata?.meter_key && metadata?.amount
+	const metadata = event.metadata;
+	const nested = NestedTopupMetadataSchema.safeParse(metadata?.credit_topup);
+	const flat =
+		metadata?.topup_id !== undefined
+			? FlatTopupMetadataSchema.safeParse(metadata)
+			: null;
+
+	const topupInfo = nested.success
+		? nested.data
+		: flat?.success
 			? {
-					meterKey: metadata.meter_key as string,
-					amount: metadata.amount as number,
-					expiryDays: metadata.expiryDays as number | undefined,
+					meterKey: flat.data.meter_key,
+					amount: flat.data.amount,
+					expiryDays: flat.data.expiryDays,
 				}
-			: undefined);
+			: undefined;
 
 	if (!topupInfo) {
 		// Not a credit top-up purchase — skip silently
@@ -594,7 +771,7 @@ async function grantTopUpCreditsForPurchase(
 		? new Date(Date.now() + topupInfo.expiryDays * 24 * 60 * 60 * 1000)
 		: null;
 
-	await grantTopUpCreditsInternal({
+	await grantTopUpCredits({
 		userId: userId ?? undefined,
 		organizationId: organizationId ?? undefined,
 		meterKey: topupInfo.meterKey,
@@ -610,73 +787,4 @@ async function grantTopUpCreditsForPurchase(
 		userId,
 		organizationId,
 	});
-}
-
-/**
- * Internal helper: grant recurring credits.
- * Delegates to @fuutu/db query layer (transactional).
- */
-async function grantRecurringCreditsInternal(params: {
-	userId?: string;
-	organizationId?: string;
-	meterKey: string;
-	amount: number;
-	periodEnd: Date;
-}): Promise<void> {
-	await grantRecurringCreditsTx(params);
-	log.info("granted recurring credits", params);
-}
-
-/**
- * Internal helper: reset recurring credits.
- * Uses query functions from @fuutu/db (non-transactional, per-balance).
- */
-async function resetRecurringCreditsInternal(params: {
-	userId?: string;
-	organizationId?: string;
-	newPeriodEnd: Date;
-	newGranted?: Record<string, number>;
-}): Promise<void> {
-	const { userId, organizationId, newPeriodEnd, newGranted } = params;
-
-	const balances = userId
-		? await getCreditBalancesForUser(userId)
-		: organizationId
-			? await getCreditBalancesForOrganization(organizationId)
-			: [];
-
-	for (const balance of balances) {
-		const newAmount = newGranted?.[balance.meterKey];
-		await resetRecurringBalance(balance.id, newPeriodEnd, newAmount);
-		await createCreditEvent({
-			userId: userId ?? null,
-			organizationId: organizationId ?? null,
-			meterKey: balance.meterKey,
-			amount: 0,
-			source: "reset",
-			reason: "period_reset",
-		});
-		log.info("reset recurring balance", {
-			meterKey: balance.meterKey,
-			newPeriodEnd,
-			newAmount,
-		});
-	}
-}
-
-/**
- * Internal helper: grant top-up credits.
- * Delegates to @fuutu/db query layer (transactional).
- */
-async function grantTopUpCreditsInternal(params: {
-	userId?: string;
-	organizationId?: string;
-	meterKey: string;
-	amount: number;
-	expiresAt?: Date | null;
-	purchaseId?: string | null;
-	priority?: number;
-}): Promise<void> {
-	await grantTopUpCreditsTx(params);
-	log.info("granted top-up credits", params);
 }

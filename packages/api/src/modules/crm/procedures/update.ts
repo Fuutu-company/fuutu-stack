@@ -1,8 +1,9 @@
 import { updateContact } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
 
 const updateContactSchema = z.object({
 	id: z.string().min(1),
@@ -15,7 +16,9 @@ const updateContactSchema = z.object({
 	notes: z.string().max(5000).optional(),
 });
 
-export const updateContactProcedure = protectedProcedure
+export const updateContactProcedure = authProcedure({
+	org: { permission: PERMISSIONS.CRM.UPDATE },
+})
 	.use(createRateLimitMiddleware({ endpoint: "crmContact" }))
 	.route({
 		method: "PATCH",
@@ -25,13 +28,7 @@ export const updateContactProcedure = protectedProcedure
 		description: "Updates a contact's fields within an organization.",
 	})
 	.input(updateContactSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgRole(
-			input.organizationId,
-			context.user.id,
-			"member",
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const { id, organizationId, ...data } = input;
 		const result = await updateContact(id, organizationId, data);
 		if (!result) {

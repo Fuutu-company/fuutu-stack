@@ -1,5 +1,7 @@
 {
 	"name": "@fuutu/ai",
+	"version": "0.0.0",
+	"private": true,
 	"type": "module",
 	"exports": {
 		".": {
@@ -10,11 +12,13 @@
 		}
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"dependencies": {
 		"@ai-sdk/devtools": "catalog:",
 		"@ai-sdk/google": "catalog:",
+		"@ai-sdk/openai": "catalog:",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
 		"ai": "catalog:",

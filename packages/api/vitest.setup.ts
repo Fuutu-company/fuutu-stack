@@ -25,3 +25,8 @@ vi.mock("@fuutu/db", () => ({
 	notificationExists: vi.fn(),
 	setOnboardingComplete: vi.fn(),
 }));
+
+vi.mock("@fuutu/webhooks", () => ({
+	dispatchEvent: vi.fn().mockResolvedValue({ enqueued: 0 }),
+	validateWebhookUrl: vi.fn().mockResolvedValue({ valid: true }),
+}));

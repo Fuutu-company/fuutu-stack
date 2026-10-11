@@ -1,5 +1,6 @@
 import { buildPricingTiers } from "@fuutu/payments/plans";
-import { publicProcedure } from "../../../../orpc";
+import { z } from "zod";
+import { publicProcedure } from "../../../../orpc/procedures";
 
 /**
  * `buildPricingTiers` requires a `PlanTranslationResolver`, but the API
@@ -31,6 +32,7 @@ export const listPlans = publicProcedure
 		summary: "List pricing plans",
 		description: "Returns all available pricing tiers for the SaaS audience.",
 	})
+	.input(z.object({}).optional())
 	.handler(async () => {
 		const tiers = buildPricingTiers({
 			audience: "saas",

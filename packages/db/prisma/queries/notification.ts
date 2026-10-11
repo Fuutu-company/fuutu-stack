@@ -58,13 +58,21 @@ export const markAllRead = (userId: string) =>
 		data: { readAt: new Date() },
 	});
 
+/**
+ * Full-text search over a user's notifications.
+ * `scope` is required — notifications are per-user rows and must never be
+ * searched across tenants.
+ */
 export const searchNotifications = (
 	text: string,
-	opts: { take?: number; skip?: number } = {},
+	scope: { userId: string },
+	opts: { type?: string; take?: number; skip?: number } = {},
 ) => {
-	const { take = 50, skip = 0 } = opts;
+	const { type, take = 50, skip = 0 } = opts;
 	return db.notification.findMany({
 		where: {
+			userId: scope.userId,
+			...(type ? { type } : {}),
 			OR: [{ title: { contains: text } }, { body: { contains: text } }],
 		},
 		take,

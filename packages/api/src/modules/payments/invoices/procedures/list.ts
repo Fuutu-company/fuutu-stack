@@ -4,9 +4,10 @@ import {
 	listInvoicesByOrg,
 	listInvoicesByUser,
 } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { protectedProcedure } from "../../../../orpc";
-import { requireOrgRole } from "../../../organizations/shared";
+import { protectedProcedure } from "../../../../orpc/procedures";
+import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const invoicesListSchema = z.object({
 	organizationId: z.string().optional(),
@@ -26,11 +27,11 @@ export const listInvoices = protectedProcedure
 	.handler(async ({ input, context }) => {
 		const skip = (input.page - 1) * input.limit;
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
-				context.headers,
+				PERMISSIONS.PAYMENT.VIEW,
+				context,
 			);
 			const [items, total] = await Promise.all([
 				listInvoicesByOrg(input.organizationId, {

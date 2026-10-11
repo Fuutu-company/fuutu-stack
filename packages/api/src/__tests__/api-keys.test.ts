@@ -13,6 +13,8 @@ vi.mock("@fuutu/db", () => ({
 	revokeApiKey: vi.fn(),
 	deleteApiKey: vi.fn(),
 	getApiKey: vi.fn(),
+	getActiveSubscriptionForUser: vi.fn().mockResolvedValue(null),
+	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@fuutu/auth", () => ({
@@ -108,18 +110,18 @@ describe("apiKeys.create", () => {
 		);
 	});
 
-	it("rejects org-level key creation by a non-admin member", async () => {
+	it("allows org-level key creation by a member (member has full CRUD on api-keys)", async () => {
 		const memberContext = makeSession<Context>(
 			makeUser({ id: "user-2", role: "user" }),
 		);
 
-		await expect(
-			call(
-				apiKeysRouter.create,
-				{ name: "Org Key", organizationId: "org-1" },
-				{ context: memberContext },
-			),
-		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		const result = await call(
+			apiKeysRouter.create,
+			{ name: "Org Key by Member", organizationId: "org-1" },
+			{ context: memberContext },
+		);
+		expect(result).toBeDefined();
+		expect(result.key).toBeDefined();
 	});
 
 	it("rejects empty name", async () => {

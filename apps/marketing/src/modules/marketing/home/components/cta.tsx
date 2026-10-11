@@ -1,9 +1,7 @@
 import { Button } from "@fuutu/ui";
 import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
-
-const SAAS_URL = "https://stackapp.fuutu.com";
-const DOCS_URL = "https://stack.fuutu.com/docs";
+import { urls } from "@/lib/urls";
 
 export function CTA() {
 	const t = useTranslations("home.cta");
@@ -28,13 +26,13 @@ export function CTA() {
 					</p>
 					<div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
 						<Button size="lg" asChild>
-							<a href={`${SAAS_URL}/auth/sign-up`}>
+							<a href={urls.auth.signUp}>
 								{t("getStarted")}
 								<ArrowRight className="ml-2 size-4" />
 							</a>
 						</Button>
 						<Button size="lg" variant="outline" asChild>
-							<a href={DOCS_URL} target="_blank" rel="noopener noreferrer">
+							<a href={urls.docs} target="_blank" rel="noopener noreferrer">
 								{t("viewDocs")}
 							</a>
 						</Button>

@@ -25,6 +25,7 @@ vi.mock("@polar-sh/sdk/webhooks", () => ({
 			subscription_id: "sub_123",
 			customer_id: "cust_123",
 			product_id: "prod_123",
+			metadata: { user_id: "user_123", organization_id: "org_123" },
 		},
 	}),
 	WebhookVerificationError: class WebhookVerificationError extends Error {},
@@ -96,6 +97,14 @@ describe("polar provider — SDK integration", () => {
 		expect(events.length).toBe(1);
 		expect(events[0]?.type).toBe("subscription.activated");
 		expect(events[0]?.subscriptionId).toBe("sub_123");
+		// user_id / organization_id live in data.metadata — not on the
+		// event object itself.
+		expect(events[0]?.metadata).toEqual({
+			user_id: "user_123",
+			organization_id: "org_123",
+		});
+		// Standard-webhooks delivery id is used as the dedup marker.
+		expect(events[0]?.eventId).toBe("test");
 	});
 
 	it("parseWebhook throws on invalid signature", async () => {
@@ -119,12 +128,8 @@ describe("polar provider — SDK integration", () => {
 		);
 	});
 
-	it("setSubscriptionSeats is a no-op (Polar manages seats via dashboard)", async () => {
-		await expect(
-			polarPaymentProvider.setSubscriptionSeats({
-				subscriptionId: "sub_123",
-				seats: 5,
-			}),
-		).resolves.toBeUndefined();
+	it("is not seat-aware — Polar seat management is dashboard-side, so the provider must not claim setSubscriptionSeats", async () => {
+		const { isSeatAware } = await import("../types");
+		expect(isSeatAware(polarPaymentProvider)).toBe(false);
 	});
 });

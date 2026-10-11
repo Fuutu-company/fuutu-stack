@@ -84,13 +84,52 @@ export const findAuditLogsByOrg = async (
 export const deleteAuditLogsBefore = (cutoff: Date) =>
 	db.auditLog.deleteMany({ where: { createdAt: { lt: cutoff } } });
 
-export const searchAuditLogs = (
+export type AuditLogSearchScope =
+	| { userId: string }
+	| { organizationId: string };
+
+/**
+ * Full-text search over audit logs.
+ * `scope` is required — audit logs must never be searched across tenants.
+ * Organization scope is resolved via member user IDs (the table has no
+ * `organizationId` column), same as `findAuditLogsByOrg`.
+ */
+export const searchAuditLogs = async (
 	text: string,
-	opts: { take?: number; skip?: number } = {},
+	scope: AuditLogSearchScope,
+	opts: { action?: string; take?: number; skip?: number } = {},
 ) => {
-	const { take = 50, skip = 0 } = opts;
+	const { action, take = 50, skip = 0 } = opts;
+
+	let userIdFilter: { userId: string } | { userId: { in: string[] } };
+	if ("organizationId" in scope) {
+		const members = await db.member.findMany({
+			where: { organizationId: scope.organizationId },
+			select: { userId: true },
+		});
+		const userIds = members.map((m) => m.userId);
+		if (userIds.length === 0) return [];
+		userIdFilter = { userId: { in: userIds } };
+	} else {
+		userIdFilter = { userId: scope.userId };
+	}
+
+	const actionFilter: Prisma.StringFilter = { contains: text };
+	if (action) {
+		// Same convention as findAuditLogsByOrg: a dotted action is an
+		// exact match, a bare domain matches as a prefix ("user" → "user.*").
+		if (action.includes(".")) {
+			actionFilter.equals = action;
+		} else {
+			actionFilter.startsWith = `${action}.`;
+		}
+	}
+
 	return db.auditLog.findMany({
-		where: { action: { contains: text } },
+		where: {
+			action: actionFilter,
+			...userIdFilter,
+		},
 		take,
 		skip,
 		orderBy: { createdAt: "desc" },

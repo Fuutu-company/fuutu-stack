@@ -11,10 +11,10 @@ export const getActiveCreditPackages = (params: {
 			where: {
 				AND: [
 					{
-						OR: [
-							{ userId: params.userId ?? null },
-							{ organizationId: params.organizationId ?? null },
-						],
+						// AND both owner columns — an OR with `?? null` matches
+						// IS NULL rows and leaks the other owner's packages.
+						userId: params.userId ?? null,
+						organizationId: params.organizationId ?? null,
 					},
 					{ meterKey: params.meterKey },
 					{

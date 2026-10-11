@@ -60,7 +60,7 @@ describe("credit-balance queries - concurrency safety", () => {
 				return callback(mockTx as never);
 			});
 
-			const _result = await creditBalanceQueries.consumeCreditsTx({
+			const result = await creditBalanceQueries.consumeCreditsTx({
 				userId: "user-1",
 				meterKey: "ai_tokens",
 				amount: 50,
@@ -68,6 +68,7 @@ describe("credit-balance queries - concurrency safety", () => {
 				allowOverage: false,
 			});
 
+			expect(result.ok).toBe(true);
 			expect(mockTx.creditBalance.updateMany).toHaveBeenCalledWith({
 				where: {
 					id: "balance-1",
@@ -105,6 +106,7 @@ describe("credit-balance queries - concurrency safety", () => {
 
 			mockTx.creditBalance.findFirst.mockResolvedValue(mockBalance);
 			mockTx.creditBalance.updateMany.mockResolvedValue({ count: 0 }); // No rows updated
+			mockTx.creditPackage.findMany.mockResolvedValue([]);
 
 			const { db } = await import("../../prisma/client");
 			vi.mocked(db.$transaction).mockImplementation(async (callback) => {

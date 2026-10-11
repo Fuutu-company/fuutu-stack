@@ -1,7 +1,10 @@
-import { resolveStorageProvider } from "@fuutu/storage";
+import { PERMISSIONS } from "@fuutu/rbac";
+import { resolveMaxUploadBytes, resolveStorageProvider } from "@fuutu/storage";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { authProcedure } from "../../../orpc/procedures";
+import { resolveBucketOrThrow } from "../shared";
 
 const BLOCKED_EXTENSIONS: readonly string[] = [
 	".exe",
@@ -43,11 +46,17 @@ const uploadCreatePresignedSchema = z.object({
 			},
 		),
 	contentType: z.string().min(1),
-	contentLength: z.number().int().min(0).optional(),
+	// Declared size is required: it is both validated against the
+	// per-bucket cap below and bound into the presigned URL, so the
+	// client cannot upload a different size.
+	contentLength: z.number().int().positive(),
 	organizationId: z.string().optional(),
 });
 
-export const createPresigned = protectedProcedure
+export const createPresigned = authProcedure({
+	systemPermission: PERMISSIONS.STORAGE.CREATE,
+	org: { permission: PERMISSIONS.STORAGE.CREATE, optional: true },
+})
 	.use(createRateLimitMiddleware({ endpoint: "storageMutation" }))
 	.route({
 		method: "POST",
@@ -59,25 +68,24 @@ export const createPresigned = protectedProcedure
 	})
 	.input(uploadCreatePresignedSchema)
 	.handler(async ({ input, context }) => {
-		let prefix: string;
-		if (input.organizationId) {
-			await requireOrgRole(
-				input.organizationId,
-				context.user.id,
-				"member",
-				context.headers,
-			);
-			prefix = input.organizationId;
-		} else {
-			prefix = context.user.id;
+		const bucket = resolveBucketOrThrow(input.bucket);
+		// resolveBucketOrThrow already proved the bucket is configured, so
+		// resolveMaxUploadBytes cannot throw here.
+		const maxBytes = resolveMaxUploadBytes(bucket);
+		if (input.contentLength > maxBytes) {
+			throw new ORPCError("PAYLOAD_TOO_LARGE", {
+				message: "File exceeds the maximum upload size.",
+			});
 		}
+		const prefix = context.org?.id ?? context.user.id;
 		const scopedKey = `${prefix}/${input.key}`;
 		const provider = resolveStorageProvider();
 		const result = await provider.getSignedUploadUrl({
-			bucket: input.bucket,
+			bucket,
 			key: scopedKey,
 			contentType: input.contentType,
 			contentLength: input.contentLength,
+			maxSizeBytes: maxBytes,
 		});
 		return result;
 	});

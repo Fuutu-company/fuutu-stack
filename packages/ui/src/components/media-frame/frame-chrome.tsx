@@ -19,6 +19,9 @@ type FrameChromeProps = Pick<
 	| "contentClassName"
 	| "width"
 	| "className"
+	| "playLabel"
+	| "pauseLabel"
+	| "videoTitle"
 	| "children"
 > & { autoFilename: string };
 
@@ -39,6 +42,9 @@ export function FrameChrome({
 	width,
 	className,
 	autoFilename,
+	playLabel,
+	pauseLabel,
+	videoTitle,
 	children,
 }: FrameChromeProps) {
 	return (
@@ -124,6 +130,9 @@ export function FrameChrome({
 				filename={autoFilename}
 				rounded="rounded-none"
 				roundedStyle="0"
+				playLabel={playLabel}
+				pauseLabel={pauseLabel}
+				videoTitle={videoTitle}
 			>
 				{children}
 			</FrameContent>

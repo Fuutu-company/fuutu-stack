@@ -1,5 +1,6 @@
 import type { UserWithRole } from "@fuutu/auth/types";
-import { protectedProcedure } from "../../../orpc";
+import { z } from "zod";
+import { protectedProcedure } from "../../../orpc/procedures";
 
 export const getCurrentUser = protectedProcedure
 	.route({
@@ -9,6 +10,7 @@ export const getCurrentUser = protectedProcedure
 		summary: "Get current user",
 		description: "Returns the currently authenticated user's profile",
 	})
+	.input(z.object({}).optional())
 	.handler(async ({ context }) => {
 		const user = context.user as UserWithRole;
 		return {

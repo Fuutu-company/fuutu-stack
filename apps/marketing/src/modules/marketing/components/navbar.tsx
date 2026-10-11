@@ -267,7 +267,7 @@ const NavLinks = memo(function NavLinks() {
 		} else {
 			setUnderline((prev) => ({ ...prev, show: false }));
 		}
-	}, [pathname, hash]);
+	}, [pathname, ALL_SLOTS.findIndex]);
 
 	const navLinkClass = (href: string) => {
 		const active = isActive(pathname, href, hash);

@@ -1,14 +1,16 @@
 import { CREDIT_TOPUPS, resolvePaymentProvider } from "@fuutu/payments";
 import { getCreditTopupPriceId } from "@fuutu/payments/config.server";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { createRateLimitMiddleware, protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { protectedProcedure } from "../../../orpc/procedures";
+import { requireOrgPermissionAccess } from "../../organizations/shared";
 import { sanitizePaymentUrl } from "../shared";
 
 const topupSchema = z.object({
 	topupId: z.string().min(1).max(200),
-	organizationId: z.string().uuid().optional(),
+	organizationId: z.string().min(1).optional(),
 	successUrl: z.string().optional(),
 	cancelUrl: z.string().optional(),
 });
@@ -26,11 +28,11 @@ export const createTopupCheckout = protectedProcedure
 	.input(topupSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"admin",
-				context.headers,
+				PERMISSIONS.PAYMENT.CREATE,
+				context,
 			);
 		}
 		const priceId = getCreditTopupPriceId(input.topupId);
@@ -48,6 +50,9 @@ export const createTopupCheckout = protectedProcedure
 			successUrl: sanitizePaymentUrl(input.successUrl),
 			cancelUrl: sanitizePaymentUrl(input.cancelUrl),
 			metadata: {
+				// One-time purchase — providers like Stripe need this to pick
+				// mode "payment" instead of "subscription".
+				mode: "payment",
 				topup_id: input.topupId,
 				meter_key: topup.meterKey,
 				amount: topup.amount,

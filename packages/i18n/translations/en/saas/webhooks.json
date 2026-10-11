@@ -22,8 +22,7 @@
 				"canceled": "Subscription canceled"
 			},
 			"invoice": {
-				"paid": "Invoice paid",
-				"created": "Invoice created"
+				"paid": "Invoice paid"
 			},
 			"user": {
 				"created": "User created",

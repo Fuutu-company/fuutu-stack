@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	type ChangelogFrontmatter,
 	changelog,
+	changelogFrontmatterSchema,
 	getChangelogBody,
 	getChangelogEntry,
 	getLegalDocument,
@@ -9,7 +10,9 @@ import {
 	getPostBody,
 	type LegalDocumentFrontmatter,
 	legal,
+	legalDocumentFrontmatterSchema,
 	type PostFrontmatter,
+	postFrontmatterSchema,
 	posts,
 } from "../index";
 
@@ -206,6 +209,62 @@ describe("Content collections - legal documents", () => {
 			const doc = getLegalDocument(slug, "en");
 			expect(doc).toBeDefined();
 			expect(doc?.slug).toBe(slug);
+		}
+	});
+});
+
+describe("Frontmatter schemas", () => {
+	it("postFrontmatterSchema accepts valid frontmatter", () => {
+		expect(() =>
+			postFrontmatterSchema.parse({
+				title: "Test",
+				publishedAt: "2024-01-01",
+			}),
+		).not.toThrow();
+	});
+
+	it("postFrontmatterSchema rejects an invalid publishedAt (NaN sort guard)", () => {
+		expect(() =>
+			postFrontmatterSchema.parse({
+				title: "Test",
+				publishedAt: "not-a-date",
+			}),
+		).toThrow();
+	});
+
+	it("changelogFrontmatterSchema rejects an invalid publishedAt", () => {
+		expect(() =>
+			changelogFrontmatterSchema.parse({
+				title: "Test",
+				publishedAt: "yesterday-ish",
+			}),
+		).toThrow();
+	});
+
+	it("legalDocumentFrontmatterSchema rejects an invalid updatedAt", () => {
+		expect(() =>
+			legalDocumentFrontmatterSchema.parse({
+				title: "Test",
+				updatedAt: "soon",
+			}),
+		).toThrow();
+	});
+
+	it("all loaded frontmatter dates parse to real dates", () => {
+		for (const post of posts) {
+			expect(
+				Number.isNaN(new Date(post.frontmatter.publishedAt).getTime()),
+			).toBe(false);
+		}
+		for (const entry of changelog) {
+			expect(
+				Number.isNaN(new Date(entry.frontmatter.publishedAt).getTime()),
+			).toBe(false);
+		}
+		for (const doc of legal) {
+			expect(Number.isNaN(new Date(doc.frontmatter.updatedAt).getTime())).toBe(
+				false,
+			);
 		}
 	});
 });

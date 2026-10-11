@@ -16,14 +16,25 @@ export type NotificationType =
 	| "webhook"
 	| (string & {});
 
+/** JSON-safe value — notification payloads are persisted to a JSON column. */
+export type JsonValue =
+	| string
+	| number
+	| boolean
+	| null
+	| JsonValue[]
+	| { [key: string]: JsonValue };
+
+export type NotificationData = Record<string, JsonValue>;
+
 export interface NotificationProvider {
 	readonly id: string;
 	notify(
 		userId: string,
-		type: string,
+		type: NotificationType,
 		title: string,
 		body: string,
-		data?: Record<string, unknown>,
+		data?: NotificationData,
 		options?: NotificationOptions,
 	): Promise<void>;
 }
@@ -32,10 +43,10 @@ export interface NotificationChannelHandler {
 	readonly channel: NotificationChannel;
 	send(
 		userId: string,
-		type: string,
+		type: NotificationType,
 		title: string,
 		body: string,
-		data?: Record<string, unknown>,
+		data?: NotificationData,
 		options?: NotificationOptions,
 	): Promise<void>;
 }

@@ -2,8 +2,11 @@ import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import { emailConfig } from "./config/defaults";
 import { consoleProvider } from "./providers/console";
+import { mailgunProvider } from "./providers/mailgun";
+import { nodemailerProvider } from "./providers/nodemailer";
 import { noopProvider } from "./providers/noop";
 import { plunkProvider } from "./providers/plunk";
+import { postmarkProvider } from "./providers/postmark";
 import { resendProvider } from "./providers/resend";
 import type { EmailProvider, ProviderName } from "./types";
 
@@ -26,8 +29,7 @@ export function resolveProvider(): EmailProvider {
 	// `env.EMAIL_PROVIDER` is already a z.enum in `@fuutu/env/saas`, so
 	// no cast is needed — a typo in the env would fail validation at
 	// boot rather than silently reach this switch.
-	const configured: ProviderName =
-		env.EMAIL_PROVIDER ?? emailConfig.provider ?? "console";
+	const configured: ProviderName = env.EMAIL_PROVIDER ?? emailConfig.provider;
 
 	switch (configured) {
 		case "console":
@@ -51,15 +53,14 @@ export function resolveProvider(): EmailProvider {
 			}
 			return resendProvider;
 		case "postmark":
+			// Skeleton providers: return them so the misconfiguration fails
+			// loudly at send-time — downgrading to console would silently
+			// route password-reset/verification mail to stdout in prod.
+			return postmarkProvider;
 		case "mailgun":
+			return mailgunProvider;
 		case "nodemailer":
-			// Skeleton providers — keep the config enum complete but do not
-			// crash every outgoing mail in prod. Downgrade to console with
-			// a loud warning, mirroring the `resend`/`plunk` missing-key path.
-			log.warn(
-				`EMAIL_PROVIDER=${configured} is a skeleton (not implemented yet) — falling back to console provider.`,
-			);
-			return consoleProvider;
+			return nodemailerProvider;
 		default:
 			log.warn(`unknown provider "${configured}", falling back to console.`);
 			return consoleProvider;

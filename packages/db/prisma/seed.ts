@@ -13,7 +13,7 @@
  * Data
  *   - 1 Organization "Acme" with both users as members
  *   - 5 sample AuditLog entries
- *   - 1 active Purchase (SUBSCRIPTION, provider=polar) for the org
+ *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org
  *   - 3 demo API keys for the admin (org-scoped, user-scoped, expired)
  *   - 4 demo invoices for the acme org (paid + open)
  *   - 2 demo webhooks for the acme org (active + inactive)
@@ -24,6 +24,7 @@
  */
 import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "@better-auth/utils/password";
+import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
 import { db } from "./client";
 
@@ -33,8 +34,7 @@ import { db } from "./client";
 // that do not verify, so the seeded users would fail to log in.
 
 async function main() {
-	// process.env.NODE_ENV is used directly here to avoid circular dependency with @fuutu/env
-	if (process.env.NODE_ENV === "production") {
+	if (env.NODE_ENV === "production") {
 		throw new Error(
 			"Refusing to seed in production. Set NODE_ENV=development.",
 		);
@@ -116,23 +116,49 @@ async function main() {
 		},
 	});
 
+	// Resolve actual DB records (upserts above are keyed by email/slug, so the
+	// generated UUIDs only match on first run). Lookups keep re-runs idempotent —
+	// every FK reference below must use these resolved ids, never the UUIDs
+	// generated at the top of main().
+	const admin = await db.user.findUnique({
+		where: { email: "admin@fuutu.local" },
+		select: { id: true },
+	});
+	const member = await db.user.findUnique({
+		where: { email: "member@fuutu.local" },
+		select: { id: true },
+	});
+	const acme = await db.organization.findUnique({
+		where: { slug: "acme" },
+		select: { id: true },
+	});
+	if (!admin || !member || !acme) {
+		throw new Error(
+			"Seed prerequisites missing: admin/member user or acme org",
+		);
+	}
+
 	// Sample audit logs.
 	const existingLogs = await db.auditLog.count();
 	if (existingLogs === 0) {
 		await db.auditLog.createMany({
 			data: [
-				{ userId: adminId, action: "user.sign_in", ip: "127.0.0.1" },
-				{ userId: memberId, action: "user.sign_in", ip: "127.0.0.1" },
-				{ userId: adminId, action: "organization.create", metadata: { orgId } },
+				{ userId: admin.id, action: "user.sign_in", ip: "127.0.0.1" },
+				{ userId: member.id, action: "user.sign_in", ip: "127.0.0.1" },
 				{
-					userId: adminId,
-					action: "organization.invite",
-					metadata: { orgId, email: "member@fuutu.local" },
+					userId: admin.id,
+					action: "organization.create",
+					metadata: { orgId: acme.id },
 				},
 				{
-					userId: memberId,
+					userId: admin.id,
+					action: "organization.invite",
+					metadata: { orgId: acme.id, email: "member@fuutu.local" },
+				},
+				{
+					userId: member.id,
 					action: "organization.accept_invitation",
-					metadata: { orgId },
+					metadata: { orgId: acme.id },
 				},
 			],
 		});
@@ -142,7 +168,7 @@ async function main() {
 	await db.purchase.upsert({
 		where: {
 			provider_subscriptionId: {
-				provider: "polar",
+				provider: "creem",
 				subscriptionId: "seed_sub_pro_org",
 			},
 		},
@@ -150,29 +176,15 @@ async function main() {
 		create: {
 			type: "SUBSCRIPTION",
 			status: "ACTIVE",
-			provider: "polar",
+			provider: "creem",
 			priceId: "seed_price_pro",
 			productId: "seed_product_pro",
 			subscriptionId: "seed_sub_pro_org",
 			customerId: "seed_customer_acme",
 			quantity: 2,
-			organizationId: orgId,
+			organizationId: acme.id,
 		},
 	});
-
-	// Resolve actual DB records (upserts above are keyed by email/slug, so the
-	// generated UUIDs only match on first run). Lookups keep re-runs idempotent.
-	const admin = await db.user.findUnique({
-		where: { email: "admin@fuutu.local" },
-		select: { id: true },
-	});
-	const acme = await db.organization.findUnique({
-		where: { slug: "acme" },
-		select: { id: true },
-	});
-	if (!admin || !acme) {
-		throw new Error("Seed prerequisites missing: admin user or acme org");
-	}
 
 	// Demo API keys — one org-scoped, one user-scoped, one expired.
 	const existingKeys = await db.apiKey.count({
@@ -218,9 +230,9 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_001",
-					url: "https://polar.sh/invoices/001",
-					pdfUrl: "https://polar.sh/invoices/001.pdf",
+					providerInvoiceId: "seed_inv_001",
+					url: "https://billing.acme.dev/invoices/001",
+					pdfUrl: "https://billing.acme.dev/invoices/001.pdf",
 					amount: 49.0,
 					currency: "USD",
 					status: "paid",
@@ -230,9 +242,9 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_002",
-					url: "https://polar.sh/invoices/002",
-					pdfUrl: "https://polar.sh/invoices/002.pdf",
+					providerInvoiceId: "seed_inv_002",
+					url: "https://billing.acme.dev/invoices/002",
+					pdfUrl: "https://billing.acme.dev/invoices/002.pdf",
 					amount: 49.0,
 					currency: "USD",
 					status: "paid",
@@ -242,8 +254,8 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_003",
-					url: "https://polar.sh/invoices/003",
+					providerInvoiceId: "seed_inv_003",
+					url: "https://billing.acme.dev/invoices/003",
 					amount: 149.0,
 					currency: "USD",
 					status: "open",
@@ -252,7 +264,7 @@ async function main() {
 				{
 					organizationId: acme.id,
 					userId: admin.id,
-					providerInvoiceId: "polar_inv_004",
+					providerInvoiceId: "seed_inv_004",
 					amount: 49.0,
 					currency: "USD",
 					status: "void",
@@ -304,8 +316,8 @@ async function main() {
 					userId: admin.id,
 					type: "billing",
 					title: "Invoice paid",
-					body: "Invoice polar_inv_002 for $49.00 was paid successfully.",
-					data: { invoiceId: "polar_inv_002", amount: 49.0 },
+					body: "Invoice seed_inv_002 for $49.00 was paid successfully.",
+					data: { invoiceId: "seed_inv_002", amount: 49.0 },
 					readAt: mins(120),
 					createdAt: mins(180),
 				},

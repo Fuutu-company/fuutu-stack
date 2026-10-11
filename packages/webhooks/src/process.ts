@@ -38,6 +38,15 @@ export async function processPendingDeliveries(): Promise<{
 				log.warn("skipping delivery — webhook inactive or missing", {
 					webhookId: delivery.webhookId,
 				});
+				failed++;
+				// Terminal state: leaving it in "processing" would let
+				// recoverStaleDeliveries recycle it into an endless retry loop.
+				await updateDeliveryStatus(delivery.id, {
+					status: "failed",
+					responseBody: "webhook inactive or deleted",
+					attempt: delivery.attempt,
+					nextRetryAt: null,
+				});
 				continue;
 			}
 
@@ -45,6 +54,13 @@ export async function processPendingDeliveries(): Promise<{
 			if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
 				log.warn("invalid payload, skipping", {
 					deliveryId: delivery.id,
+				});
+				failed++;
+				await updateDeliveryStatus(delivery.id, {
+					status: "failed",
+					responseBody: "invalid delivery payload",
+					attempt: delivery.attempt,
+					nextRetryAt: null,
 				});
 				continue;
 			}

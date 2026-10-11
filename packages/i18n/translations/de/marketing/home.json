@@ -17,6 +17,48 @@
 			"glassCard": {
 				"ready": "Sofort einsatzbereit"
 			},
+			"stack": {
+				"nextjs": {
+					"name": "Next.js 16",
+					"description": "React-Framework — App Router, RSC, Turbopack.",
+					"detail": "Full-Stack-Fundament: Routing, SSR, API-Routen."
+				},
+				"typescript": {
+					"name": "TypeScript",
+					"description": "TypeScript im Strict-Mode in jedem Package.",
+					"detail": "Kein any. Keine Escape-Hatches. End-to-End-Typsicherheit."
+				},
+				"better-auth": {
+					"name": "Better Auth",
+					"description": "Modernes Auth für Node.js.",
+					"detail": "OAuth, MFA, Passkeys, Sessions, RBAC — vorkonfiguriert."
+				},
+				"prisma": {
+					"name": "Prisma",
+					"description": "Typsicheres ORM für PostgreSQL.",
+					"detail": "DB-Client in @fuutu/db — Schema, Migrationen, Seed."
+				},
+				"postgresql": {
+					"name": "PostgreSQL",
+					"description": "Relationale Datenbank für den Produktivbetrieb.",
+					"detail": "Primär-Store — Benutzer, Sessions, Orgs, Audit-Logs."
+				},
+				"tailwind": {
+					"name": "Tailwind CSS v4",
+					"description": "Utility-First-CSS mit OKLCH-Farbengine.",
+					"detail": "Theme-Tokens in theme.css, Dark Mode inklusive."
+				},
+				"turborepo": {
+					"name": "Turborepo",
+					"description": "High-Performance-Buildsystem für Monorepos.",
+					"detail": "Orchestriert 15+ Packages — inkrementelle Builds."
+				},
+				"hono": {
+					"name": "Hono",
+					"description": "Ultraschnelles Web-Framework für die Edge.",
+					"detail": "API-Server unter /api/[[...rest]] in apps/saas."
+				}
+			},
 			"pillar": {
 				"auth": {
 					"title": "Auth & Sessions",
@@ -24,7 +66,7 @@
 				},
 				"billing": {
 					"title": "Billing & Pläne",
-					"desc": "Polar, Plan-Katalog, Webhooks"
+					"desc": "Creem, Plan-Katalog, Webhooks"
 				},
 				"swappable": {
 					"title": "Provider-austauschbar",
@@ -99,7 +141,7 @@
 					"items": [
 						{
 							"q": "Kann ich Payment-, Mail- oder Storage-Provider tauschen?",
-							"a": "Ja. Jede externe Abhängigkeit läuft hinter einem Provider-Interface — eine Config-Zeile ändern, SDK einsetzen, fertig. Polar, Plunk und S3 sind in v1 aktiv; Stripe, Resend, R2 und weitere als Skeletons."
+							"a": "Ja. Jede externe Abhängigkeit läuft hinter einem Provider-Interface — eine Config-Zeile ändern, SDK einsetzen, fertig. Creem, Plunk und S3 sind in v1 aktiv; Stripe, Resend, R2 und weitere als Skeletons."
 						},
 						{
 							"q": "Ist der Code produktionsreif?",
@@ -159,7 +201,7 @@
 				"payments": {
 					"label": "Payments",
 					"title": "Billing, das ab Tag\n eins funktioniert.",
-					"description": "Polar-powered Abonnements, Einmalkäufe und Webhooks. Wechsle zu Stripe mit einer Config-Zeile.",
+					"description": "Abonnements via Creem, Einmalkäufe und Webhooks. Wechsle zu Stripe mit einer Config-Zeile.",
 					"frameLabel": "Plan wählen"
 				},
 				"i18n": {
@@ -171,7 +213,7 @@
 				"rbac": {
 					"label": "RBAC & Orgs",
 					"title": "Feingranulare Rollen\nfür jedes Team.",
-					"description": "owner → admin → member → viewer. Organisation-Einladungen, Rollenwechsel und Audit-Logs — in jede API-Route integriert.",
+					"description": "owner → admin → member. Organisation-Einladungen, Rollenwechsel und Audit-Logs — in jede API-Route integriert.",
 					"frameLabel": "Team-Einstellungen"
 				},
 				"api": {

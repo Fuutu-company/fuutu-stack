@@ -1,13 +1,16 @@
 import { countNotifications, listNotifications } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
+import { permissionProcedure } from "../../../orpc/procedures";
 
 const listNotificationsSchema = z.object({
 	page: z.number().int().min(1).default(1),
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listNotificationsProcedure = protectedProcedure
+export const listNotificationsProcedure = permissionProcedure(
+	PERMISSIONS.NOTIFICATION.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/notifications",

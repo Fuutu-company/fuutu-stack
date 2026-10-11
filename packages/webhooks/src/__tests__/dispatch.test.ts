@@ -11,10 +11,13 @@ vi.mock("@fuutu/logs", () => ({
 
 const recordDeliveryMock = vi.fn();
 const listActiveWebhooksByOrgMock = vi.fn();
+const listOrganizationsForUserMock = vi.fn();
 
 vi.mock("@fuutu/db", () => ({
 	listActiveWebhooksByOrg: (...args: unknown[]) =>
 		listActiveWebhooksByOrgMock(...args),
+	listOrganizationsForUser: (...args: unknown[]) =>
+		listOrganizationsForUserMock(...args),
 	recordDelivery: (...args: unknown[]) => recordDeliveryMock(...args),
 }));
 
@@ -24,6 +27,7 @@ describe("dispatchEvent", () => {
 	beforeEach(() => {
 		recordDeliveryMock.mockReset();
 		listActiveWebhooksByOrgMock.mockReset();
+		listOrganizationsForUserMock.mockReset();
 	});
 
 	it("enqueues a pending delivery for each matching active webhook", async () => {
@@ -33,16 +37,16 @@ describe("dispatchEvent", () => {
 		]);
 		recordDeliveryMock.mockResolvedValue({});
 
-		const result = await dispatchEvent(
-			"contact.created",
-			{ contactId: "c-1" },
-			"org-1",
-		);
+		const result = await dispatchEvent({
+			event: "organization.updated",
+			organizationId: "org-1",
+			payload: { organizationId: "org-1" },
+		});
 
 		expect(result.enqueued).toBe(2);
 		expect(listActiveWebhooksByOrgMock).toHaveBeenCalledWith(
 			"org-1",
-			"contact.created",
+			"organization.updated",
 		);
 		expect(recordDeliveryMock).toHaveBeenCalledTimes(2);
 
@@ -53,9 +57,9 @@ describe("dispatchEvent", () => {
 			payload: Record<string, unknown>;
 		};
 		expect(firstCall.webhookId).toBe("wh-1");
-		expect(firstCall.eventType).toBe("contact.created");
+		expect(firstCall.eventType).toBe("organization.updated");
 		expect(firstCall.status).toBe("pending");
-		expect(firstCall.payload).toEqual({ contactId: "c-1" });
+		expect(firstCall.payload).toEqual({ organizationId: "org-1" });
 
 		const secondCall = recordDeliveryMock.mock.calls[1]?.[0] as {
 			webhookId: string;
@@ -63,21 +67,74 @@ describe("dispatchEvent", () => {
 		expect(secondCall.webhookId).toBe("wh-2");
 	});
 
-	it("returns enqueued: 0 when no webhooks match the event type", async () => {
-		listActiveWebhooksByOrgMock.mockResolvedValue([]);
+	it("resolves the user's organizations when only userId is given", async () => {
+		listOrganizationsForUserMock.mockResolvedValue([
+			{ id: "org-1" },
+			{ id: "org-2" },
+		]);
+		listActiveWebhooksByOrgMock.mockImplementation((orgId: string) =>
+			Promise.resolve([{ id: `wh-${orgId}` }]),
+		);
+		recordDeliveryMock.mockResolvedValue({});
 
-		const result = await dispatchEvent("contact.created", {}, "org-1");
+		const result = await dispatchEvent({
+			event: "user.updated",
+			userId: "user-1",
+			payload: { userId: "user-1" },
+		});
+
+		expect(listOrganizationsForUserMock).toHaveBeenCalledWith("user-1");
+		expect(listActiveWebhooksByOrgMock).toHaveBeenCalledWith(
+			"org-1",
+			"user.updated",
+		);
+		expect(listActiveWebhooksByOrgMock).toHaveBeenCalledWith(
+			"org-2",
+			"user.updated",
+		);
+		expect(result.enqueued).toBe(2);
+	});
+
+	it("returns enqueued: 0 when the user belongs to no organizations", async () => {
+		listOrganizationsForUserMock.mockResolvedValue([]);
+
+		const result = await dispatchEvent({
+			event: "user.updated",
+			userId: "user-1",
+			payload: {},
+		});
 
 		expect(result.enqueued).toBe(0);
 		expect(recordDeliveryMock).not.toHaveBeenCalled();
 	});
 
-	it("rejects empty eventType", async () => {
-		await expect(dispatchEvent("", {}, "org-1")).rejects.toThrow();
+	it("returns enqueued: 0 when no webhooks match the event type", async () => {
+		listActiveWebhooksByOrgMock.mockResolvedValue([]);
+
+		const result = await dispatchEvent({
+			event: "member.removed",
+			organizationId: "org-1",
+			payload: {},
+		});
+
+		expect(result.enqueued).toBe(0);
+		expect(recordDeliveryMock).not.toHaveBeenCalled();
 	});
 
-	it("rejects empty organizationId", async () => {
-		await expect(dispatchEvent("contact.created", {}, "")).rejects.toThrow();
+	it("rejects when neither organizationId nor userId is provided", async () => {
+		await expect(
+			dispatchEvent({ event: "user.updated", payload: {} }),
+		).rejects.toThrow();
+	});
+
+	it("rejects empty event", async () => {
+		await expect(
+			dispatchEvent({
+				event: "" as "user.updated",
+				organizationId: "org-1",
+				payload: {},
+			}),
+		).rejects.toThrow();
 	});
 
 	it("counts only successful deliveries when some recordDelivery calls reject", async () => {
@@ -90,7 +147,11 @@ describe("dispatchEvent", () => {
 		recordDeliveryMock.mockRejectedValueOnce(new Error("db write failed"));
 		recordDeliveryMock.mockResolvedValueOnce({});
 
-		const result = await dispatchEvent("contact.created", {}, "org-1");
+		const result = await dispatchEvent({
+			event: "member.invited",
+			organizationId: "org-1",
+			payload: {},
+		});
 
 		expect(result.enqueued).toBe(2);
 		expect(recordDeliveryMock).toHaveBeenCalledTimes(3);

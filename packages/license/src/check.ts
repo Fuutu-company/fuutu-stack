@@ -42,7 +42,9 @@ export async function checkLicense(
 		return cached.status;
 	}
 
-	const licenseKey = options.licenseKey ?? env.FUUTU_LICENSE_KEY ?? "";
+	// `||` (not `??`) — an explicitly passed "" must fall back to the
+	// configured env key, not short-circuit to OSS mode.
+	const licenseKey = options.licenseKey || env.FUUTU_LICENSE_KEY || "";
 	const licenseKeyHash = hashLicenseKey(licenseKey);
 
 	// No key configured → OSS mode. This is a legitimate, supported state
@@ -86,7 +88,7 @@ export async function checkLicense(
 			reason?: string;
 		} | null;
 
-		if (!body || body.valid !== true || !body.mode) {
+		if (body?.valid !== true || !body.mode) {
 			return fallback(licenseKeyHash, now, body?.reason ?? "invalid response");
 		}
 

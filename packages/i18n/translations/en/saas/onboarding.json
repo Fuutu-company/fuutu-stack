@@ -6,7 +6,7 @@
 		"profile": {
 			"heading": "Your profile",
 			"fullName": "Full name",
-			"placeholder": "Jane Doe",
+			"placeholder": "Your full name",
 			"continue": "Continue"
 		},
 		"org": {

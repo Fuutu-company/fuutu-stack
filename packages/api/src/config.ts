@@ -17,11 +17,6 @@ export const apiConfig = {
 				maxRequests: 20,
 				windowMs: 60 * 1000,
 			},
-			// Auth endpoints — very strict
-			auth: {
-				maxRequests: 10,
-				windowMs: 60 * 1000,
-			},
 			// User mutations — moderate
 			userUpdate: {
 				maxRequests: 30,
@@ -72,9 +67,9 @@ export const apiConfig = {
 				maxRequests: 30,
 				windowMs: 60 * 1000,
 			},
-			// Public endpoints — generous
-			public: {
-				maxRequests: 100,
+			// Search queries — moderate (DB scan cost per query)
+			search: {
+				maxRequests: 60,
 				windowMs: 60 * 1000,
 			},
 		},

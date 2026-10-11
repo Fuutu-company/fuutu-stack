@@ -6,10 +6,32 @@
 	"exports": {
 		".": {
 			"default": "./src/index.ts"
+		},
+		"./server": {
+			"default": "./src/server.ts"
+		},
+		"./errors": {
+			"default": "./src/errors.ts"
+		},
+		"./wide-events": {
+			"default": "./src/wide-events.ts"
+		},
+		"./orpc": {
+			"default": "./src/orpc.ts"
+		},
+		"./next": {
+			"default": "./src/next.ts"
+		},
+		"./next/instrumentation": {
+			"default": "./src/next-instrumentation.ts"
 		}
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
+	},
+	"dependencies": {
+		"evlog": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/test-utils": "workspace:*",

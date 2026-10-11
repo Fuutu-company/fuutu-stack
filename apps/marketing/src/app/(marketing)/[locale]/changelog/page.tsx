@@ -18,6 +18,7 @@ export default async function ChangelogPage({ params }: ChangelogPageProps) {
 	const { locale } = await params;
 	setRequestLocale(locale);
 	const t = await getTranslations("changelog");
+	const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: "long" });
 
 	return (
 		<div className="container mx-auto max-w-3xl px-4 py-16">
@@ -36,7 +37,8 @@ export default async function ChangelogPage({ params }: ChangelogPageProps) {
 								className="border-l-2 pl-6"
 							>
 								<div className="mb-1 text-muted-foreground text-xs">
-									{entry.frontmatter.publishedAt} · v{entry.frontmatter.version}
+									{dateFormat.format(new Date(entry.frontmatter.publishedAt))} ·
+									v{entry.frontmatter.version}
 								</div>
 								<h2 className="mb-2 font-semibold text-xl">
 									{entry.frontmatter.title}

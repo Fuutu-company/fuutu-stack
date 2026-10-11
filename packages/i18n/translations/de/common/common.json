@@ -4,13 +4,20 @@
 		"error": "Ein Fehler ist aufgetreten",
 		"success": "Erfolg",
 		"cancel": "Abbrechen",
+		"close": "Schließen",
+		"play": "Abspielen",
+		"pause": "Pause",
+		"video": "Video",
 		"save": "Speichern",
 		"saving": "Speichert…",
 		"submit": "Absenden",
 		"notAvailable": "—",
 		"errors": {
 			"somethingWentWrong": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
-			"retry": "Erneut versuchen"
+			"forbidden": "Keine Berechtigung für diese Seite.",
+			"retry": "Erneut versuchen",
+			"planLimitReached": "Plan-Limit erreicht. Upgrade für mehr.",
+			"planFeatureRequired": "Diese Funktion ist in deinem Plan nicht verfügbar."
 		}
 	}
 }

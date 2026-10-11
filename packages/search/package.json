@@ -12,11 +12,12 @@
 		}
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"dependencies": {
 		"@fuutu/db": "workspace:*",
-		"@fuutu/logs": "workspace:*"
+		"@fuutu/env": "workspace:*"
 	},
 	"devDependencies": {
 		"@fuutu/test-utils": "workspace:*",

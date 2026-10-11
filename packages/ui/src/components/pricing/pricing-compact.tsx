@@ -6,6 +6,7 @@ import { cn } from "../../lib/utils";
 import { BillingToggle } from "./billing-toggle";
 import { PricingCTA } from "./pricing-cta";
 import type { PricingCompactProps, PricingTier } from "./types";
+import { resolveTierDisplay } from "./utils";
 
 /**
  * Home-page pricing variant.
@@ -22,13 +23,14 @@ export function PricingCompact({
 	tiers,
 	className,
 	popularLabel,
-	moreLabel = "more features",
+	moreLabel,
 	pricingHref,
-	seeAllLabel = "See all features",
+	seeAllLabel,
 	enterpriseHighlights,
+	seatLabel,
 	LinkComponent,
-	monthlyLabel = "Monthly",
-	yearlyLabel = "Yearly",
+	monthlyLabel,
+	yearlyLabel,
 	yearlyBadge,
 }: PricingCompactProps) {
 	const [isYearly, setIsYearly] = React.useState(false);
@@ -44,7 +46,7 @@ export function PricingCompact({
 				className="pointer-events-none absolute inset-0 -z-10"
 				style={{
 					background:
-						"radial-gradient(ellipse 70% 50% at 50% -5%, oklch(var(--primary)/0.12) 0%, transparent 65%)",
+						"radial-gradient(ellipse 70% 50% at 50% -5%, oklch(from var(--primary) l c h / 0.12) 0%, transparent 65%)",
 				}}
 			/>
 
@@ -77,6 +79,7 @@ export function PricingCompact({
 						moreLabel={moreLabel}
 						pricingHref={pricingHref}
 						seeAllLabel={seeAllLabel}
+						seatLabel={seatLabel}
 						LinkComponent={LinkComponent}
 					/>
 				))}
@@ -104,27 +107,27 @@ function RegularCard({
 	moreLabel,
 	pricingHref,
 	seeAllLabel,
+	seatLabel,
 	LinkComponent,
 }: {
 	tier: PricingTier;
 	isYearly: boolean;
 	popularLabel?: string;
 	totalFeatures: number;
-	moreLabel: string;
+	moreLabel?: string;
 	pricingHref?: string;
-	seeAllLabel: string;
+	seeAllLabel?: string;
+	seatLabel?: (seatCount: number) => string;
 	LinkComponent?: PricingCompactProps["LinkComponent"];
 }) {
 	const hl = tier.highlighted;
 	const Icon = tier.icon;
 	const shown = tier.features.slice(0, 4);
 	const remaining = totalFeatures - shown.length;
-	const displayPrice =
-		isYearly && tier.yearlyPrice ? tier.yearlyPrice : tier.price;
-	const displaySuffix =
-		isYearly && tier.yearlyPriceSuffix
-			? tier.yearlyPriceSuffix
-			: tier.priceSuffix;
+	const { price: displayPrice, suffix: displaySuffix } = resolveTierDisplay(
+		tier,
+		isYearly,
+	);
 
 	return (
 		<div
@@ -140,7 +143,7 @@ function RegularCard({
 				<div
 					aria-hidden
 					className="pointer-events-none absolute inset-x-6 -bottom-4 -z-10 h-16 blur-2xl"
-					style={{ background: "oklch(var(--primary)/0.4)" }}
+					style={{ background: "oklch(from var(--primary) l c h / 0.4)" }}
 				/>
 			)}
 
@@ -199,14 +202,14 @@ function RegularCard({
 						{displaySuffix}
 					</span>
 				)}
-				{tier.seatCount && (
+				{tier.seatCount && seatLabel && (
 					<span
 						className={cn(
 							"ml-2 text-xs",
 							hl ? "text-primary-foreground/70" : "text-muted-foreground",
 						)}
 					>
-						{tier.seatCount} seats
+						{seatLabel(tier.seatCount)}
 					</span>
 				)}
 				{tier.description && (
@@ -242,7 +245,7 @@ function RegularCard({
 				))}
 			</ul>
 
-			{remaining > 0 && pricingHref && (
+			{remaining > 0 && pricingHref && moreLabel && seeAllLabel && (
 				<SeeAllLink
 					remaining={remaining}
 					moreLabel={moreLabel}
@@ -280,7 +283,7 @@ function EnterpriseBanner({
 				className="absolute inset-x-0 top-0 h-1"
 				style={{
 					background:
-						"linear-gradient(90deg, transparent 0%, oklch(var(--primary)/0.5) 30%, oklch(var(--primary)/0.8) 50%, oklch(var(--primary)/0.5) 70%, transparent 100%)",
+						"linear-gradient(90deg, transparent 0%, oklch(from var(--primary) l c h / 0.5) 30%, oklch(from var(--primary) l c h / 0.8) 50%, oklch(from var(--primary) l c h / 0.5) 70%, transparent 100%)",
 				}}
 			/>
 			{/* Premium radial glow */}
@@ -289,14 +292,14 @@ function EnterpriseBanner({
 				className="pointer-events-none absolute inset-0 -z-10"
 				style={{
 					background:
-						"radial-gradient(ellipse 80% 60% at 20% 40%, oklch(var(--primary)/0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 85% 20%, oklch(var(--primary)/0.08) 0%, transparent 55%)",
+						"radial-gradient(ellipse 80% 60% at 20% 40%, oklch(from var(--primary) l c h / 0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 85% 20%, oklch(from var(--primary) l c h / 0.08) 0%, transparent 55%)",
 				}}
 			/>
 			{/* Subtle bottom glow */}
 			<div
 				aria-hidden
 				className="pointer-events-none absolute inset-x-8 -bottom-6 h-20 blur-3xl"
-				style={{ background: "oklch(var(--primary)/0.15)" }}
+				style={{ background: "oklch(from var(--primary) l c h / 0.15)" }}
 			/>
 
 			<div className="flex flex-col gap-8 p-8 md:flex-row md:items-center md:gap-12 md:p-10">
@@ -329,7 +332,7 @@ function EnterpriseBanner({
 						<div
 							aria-hidden
 							className="pointer-events-none absolute inset-0 -z-10 rounded-md blur-lg"
-							style={{ background: "oklch(var(--primary)/0.25)" }}
+							style={{ background: "oklch(from var(--primary) l c h / 0.25)" }}
 						/>
 						<PricingCTA tier={tier} LinkComponent={LinkComponent} />
 					</div>

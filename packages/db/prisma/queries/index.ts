@@ -5,6 +5,7 @@ export * from "./contact";
 export * from "./credit-balance";
 export * from "./credit-event";
 export * from "./credit-package";
+export * from "./cron-job-run";
 export * from "./invoice";
 export * from "./notification";
 export * from "./organization";

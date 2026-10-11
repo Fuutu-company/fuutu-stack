@@ -17,6 +17,48 @@
 			"glassCard": {
 				"ready": "Ship-ready stack"
 			},
+			"stack": {
+				"nextjs": {
+					"name": "Next.js 16",
+					"description": "React framework — App Router, RSC, Turbopack.",
+					"detail": "Full-stack foundation: routing, SSR, API routes."
+				},
+				"typescript": {
+					"name": "TypeScript",
+					"description": "Strict-mode TypeScript across every package.",
+					"detail": "No any. No escape hatches. End-to-end type safety."
+				},
+				"better-auth": {
+					"name": "Better Auth",
+					"description": "Modern auth for Node.js.",
+					"detail": "OAuth, MFA, passkeys, sessions, RBAC — pre-wired."
+				},
+				"prisma": {
+					"name": "Prisma",
+					"description": "Type-safe ORM for PostgreSQL.",
+					"detail": "DB client in @fuutu/db — schema, migrations, seed."
+				},
+				"postgresql": {
+					"name": "PostgreSQL",
+					"description": "Production-grade relational database.",
+					"detail": "Primary store — users, sessions, orgs, audit logs."
+				},
+				"tailwind": {
+					"name": "Tailwind CSS v4",
+					"description": "Utility-first CSS with OKLCH color engine.",
+					"detail": "Theme tokens in theme.css, dark mode included."
+				},
+				"turborepo": {
+					"name": "Turborepo",
+					"description": "High-performance monorepo build system.",
+					"detail": "Orchestrates 15+ packages — incremental builds."
+				},
+				"hono": {
+					"name": "Hono",
+					"description": "Ultra-fast web framework for the edge.",
+					"detail": "API server at /api/[[...rest]] inside apps/saas."
+				}
+			},
 			"pillar": {
 				"auth": {
 					"title": "Auth & sessions",
@@ -24,7 +66,7 @@
 				},
 				"billing": {
 					"title": "Billing & plans",
-					"desc": "Polar-powered, plan catalog, webhooks"
+					"desc": "Creem-powered, plan catalog, webhooks"
 				},
 				"swappable": {
 					"title": "Provider-swappable",
@@ -99,7 +141,7 @@
 					"items": [
 						{
 							"q": "Can I swap the payment / mail / storage provider?",
-							"a": "Yes. Every external dependency lives behind a provider interface — switch by changing one line of config and dropping in the SDK. Polar, Plunk and S3 ship active in v1; Stripe, Resend, R2 and others are skeletons."
+							"a": "Yes. Every external dependency lives behind a provider interface — switch by changing one line of config and dropping in the SDK. Creem, Plunk and S3 ship active in v1; Stripe, Resend, R2 and others are skeletons."
 						},
 						{
 							"q": "Is the code production-ready?",
@@ -159,7 +201,7 @@
 				"payments": {
 					"label": "Payments",
 					"title": "Billing that ships\nout of the box.",
-					"description": "Polar-powered subscriptions, one-time purchases and webhooks. Swap to Stripe by changing one config line.",
+					"description": "Creem-powered subscriptions, one-time purchases and webhooks. Swap to Stripe by changing one config line.",
 					"frameLabel": "Choose plan"
 				},
 				"i18n": {
@@ -171,7 +213,7 @@
 				"rbac": {
 					"label": "RBAC & Orgs",
 					"title": "Fine-grained roles\nfor every team.",
-					"description": "owner → admin → member → viewer. Organisation invites, role changes and audit logs — wired into every API route.",
+					"description": "owner → admin → member. Organisation invites, role changes and audit logs — wired into every API route.",
 					"frameLabel": "Team settings"
 				},
 				"api": {

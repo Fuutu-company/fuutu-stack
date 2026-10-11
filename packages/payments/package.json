@@ -18,18 +18,25 @@
 		},
 		"./plans": {
 			"default": "./src/plans.ts"
+		},
+		"./plan-resolver": {
+			"default": "./src/plan-resolver.ts"
 		}
 	},
 	"scripts": {
-		"test": "vitest run"
+		"test": "vitest run",
+		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@fuutu/config": "workspace:*",
+		"@fuutu/credits": "workspace:*",
 		"@fuutu/db": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
+		"@fuutu/webhooks": "workspace:*",
 		"@polar-sh/sdk": "catalog:",
-		"stripe": "catalog:"
+		"stripe": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/test-utils": "workspace:*",

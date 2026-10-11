@@ -89,8 +89,11 @@ function extractUsedKeys() {
 	const sourceDirs = [
 		join(repoRoot, "apps/marketing/src"),
 		join(repoRoot, "apps/saas/src"),
+		join(repoRoot, "apps/docs"),
 		join(repoRoot, "packages/ui/src"),
 		join(repoRoot, "packages/analytics/src"),
+		// Cron reads merged messages via `messages.<key>` accessors
+		join(repoRoot, "packages/cron/src"),
 	];
 	const patterns = [
 		// Static: t("key"), t('key'), t(`key`)

@@ -1,12 +1,20 @@
 "use client";
 
-import { AuthCard, Button } from "@fuutu/ui";
+import { AuthCard, Button, Skeleton } from "@fuutu/ui";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 export default function VerifyEmailChangePage() {
+	return (
+		<Suspense fallback={<Skeleton className="h-80 w-full max-w-md" />}>
+			<VerifyEmailChangeContent />
+		</Suspense>
+	);
+}
+
+function VerifyEmailChangeContent() {
 	const t = useTranslations("auth");
 	const params = useSearchParams();
 	const error = params.get("error");

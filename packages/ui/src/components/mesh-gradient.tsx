@@ -3,6 +3,7 @@
 import { cn } from "@fuutu/utils/cn";
 import { Mesh, Program, Renderer, Triangle } from "ogl";
 import { useEffect, useRef } from "react";
+import { parseColorToVec3, resolveColorInput, type Vec3 } from "../lib/color";
 
 const VERTEX = /* glsl */ `#version 300 es
 in vec2 position;
@@ -81,33 +82,21 @@ void main() {
   fragColor = vec4(col, 1.0);
 }`;
 
-function hexToVec3(hex: string): [number, number, number] {
-	const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-	if (!r?.[1] || !r[2] || !r[3]) return [0.47, 0.15, 0.87];
-	return [
-		Number.parseInt(r[1], 16) / 255,
-		Number.parseInt(r[2], 16) / 255,
-		Number.parseInt(r[3], 16) / 255,
-	];
-}
-
-function cssVarToHex(varName: string, fallback: string): string {
-	if (typeof window === "undefined") return fallback;
-	const raw = getComputedStyle(document.documentElement)
-		.getPropertyValue(varName)
-		.trim();
-	return raw || fallback;
-}
+const FALLBACK_PRIMARY: Vec3 = [124 / 255, 58 / 255, 237 / 255]; // #7c3aed
+const FALLBACK_SECONDARY: Vec3 = [236 / 255, 72 / 255, 153 / 255]; // #ec4899
+const FALLBACK_BACKGROUND: Vec3 = [79 / 255, 70 / 255, 229 / 255]; // #4f46e5
 
 export interface MeshGradientProps {
 	/**
-	 * Primary color (hex or CSS custom property, e.g. `"var(--primary)"`).
-	 * Defaults to the `--primary` theme token resolved at runtime.
+	 * Primary color — hex, `rgb()/oklch()/color(srgb)` string, or CSS custom
+	 * property (e.g. `"var(--primary)"`). Defaults to the `--primary` theme
+	 * token, resolved at runtime through a probe element so relative-color
+	 * tokens like `oklch(from var(--brand) l c h)` produce real colors.
 	 */
 	color1?: string;
-	/** Secondary color (hex). Defaults to `--secondary` theme token. */
+	/** Secondary color. Defaults to the `--secondary` theme token. */
 	color2?: string;
-	/** Third color (hex). Defaults to `--background` theme token. */
+	/** Third color. Defaults to the `--background` theme token. */
 	color3?: string;
 	/** Animation speed multiplier. @default 0.25 */
 	speed?: number;
@@ -135,6 +124,11 @@ export interface MeshGradientProps {
 
 /**
  * MeshGradient — WebGL2 animated gradient with film grain.
+ *
+ * Colors default to the `--primary` / `--secondary` / `--background` theme
+ * tokens, resolved at mount via a probe element (the tokens hold relative
+ * `oklch(from …)` values that must be computed, not read raw). Falls back to
+ * built-in colors when a token can't be resolved or parsed.
  *
  * ```tsx
  * <section className="relative overflow-hidden">
@@ -213,17 +207,26 @@ export function MeshGradient({
 			uSaturation: { value: saturation },
 			uColor1: {
 				value: new Float32Array(
-					hexToVec3(color1 ?? cssVarToHex("--primary", "#7c3aed")),
+					parseColorToVec3(
+						resolveColorInput(color1 ?? "var(--primary)"),
+						FALLBACK_PRIMARY,
+					),
 				),
 			},
 			uColor2: {
 				value: new Float32Array(
-					hexToVec3(color2 ?? cssVarToHex("--secondary", "#ec4899")),
+					parseColorToVec3(
+						resolveColorInput(color2 ?? "var(--secondary)"),
+						FALLBACK_SECONDARY,
+					),
 				),
 			},
 			uColor3: {
 				value: new Float32Array(
-					hexToVec3(color3 ?? cssVarToHex("--background", "#4f46e5")),
+					parseColorToVec3(
+						resolveColorInput(color3 ?? "var(--background)"),
+						FALLBACK_BACKGROUND,
+					),
 				),
 			},
 		};
@@ -275,9 +278,6 @@ export function MeshGradient({
 			}
 		};
 	}, [
-		color1 ?? null,
-		color2 ?? null,
-		color3 ?? null,
 		speed,
 		warpStrength,
 		warpFrequency,
@@ -287,6 +287,9 @@ export function MeshGradient({
 		grain,
 		contrast,
 		saturation,
+		color3,
+		color2,
+		color1,
 	]);
 
 	return (

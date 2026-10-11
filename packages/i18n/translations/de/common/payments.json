@@ -54,11 +54,11 @@
 			},
 			"tooltips": {
 				"auth_passkeys": "Anmelden mit Face ID, Touch ID oder einem Hardware-Schlüssel – kein Passwort erforderlich.",
-				"auth_saml": "Verbinde deinen bestehenden Identity-Provider (Okta, Azure AD, Google Workspace) über SAML 2.0.",
+				"auth_sso": "Verbinde deinen bestehenden Identity-Provider (Okta, Azure AD, Google Workspace) über SAML 2.0.",
 				"orgs_orgs": "Benutzer in Organisationen mit gemeinsamer Abrechnung, Rollen und Einstellungen gruppieren.",
 				"orgs_members": "Maximale Anzahl an Benutzern, die in eine Organisation eingeladen werden können.",
-				"orgs_audit_log_days": "Wie viele Tage Aktivitätsprotokolle für Compliance und Debugging aufbewahrt werden.",
-				"api_api_keys": "Programmatische API-Schlüssel für deinen Account für Server-zu-Server-Zugriff.",
+				"orgs_audit": "Wie viele Tage Aktivitätsprotokolle für Compliance und Debugging aufbewahrt werden.",
+				"api_keys": "Programmatische API-Schlüssel für deinen Account für Server-zu-Server-Zugriff.",
 				"api_webhooks": "Erhalte Echtzeit-HTTP-Callbacks, wenn Ereignisse in deinem Account auftreten."
 			}
 		},
@@ -109,6 +109,8 @@
 					"api_keys": "Unbegrenzte API-Schlüssel",
 					"api_webhooks": "Ausgehende Webhooks",
 					"infrastructure_storage": "Unbegrenzter Speicher",
+					"support_community": "Community-Support",
+					"support_email": "Priority-E-Mail-Support",
 					"support_dedicated": "Dedizierter Support-Kanal",
 					"support_sla": "Individuelle SLA"
 				}

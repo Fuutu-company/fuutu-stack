@@ -7,6 +7,10 @@ const USE_PROD = process.env.PLAYWRIGHT_USE_PROD === "1";
 
 export default defineConfig({
 	testDir: "./tests",
+	// Baselines are committed to the repo (.fuutu/visual-baselines/<app>) —
+	// CI regenerates + auto-commits them on merge to develop/main.
+	snapshotDir: "../../.fuutu/visual-baselines/saas",
+	snapshotPathTemplate: "{snapshotDir}/{arg}-{projectName}-{platform}{ext}",
 	timeout: 45_000,
 	expect: {
 		timeout: IS_CI ? 15_000 : 5_000,

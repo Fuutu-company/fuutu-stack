@@ -19,6 +19,7 @@ async function handler(request: NextRequest) {
 
 export {
 	handler as GET,
+	handler as HEAD,
 	handler as POST,
 	handler as PUT,
 	handler as PATCH,

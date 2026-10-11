@@ -21,10 +21,10 @@ const unauthenticatedContext = makeSession<Context>(null);
 
 const fakeStreamResponse = {
 	status: 200,
-	headers: new Headers({ "content-type": "text/event-stream" }),
+	headers: new Headers({ "content-type": "text/plain; charset=utf-8" }),
 	body: new ReadableStream({
 		start(controller) {
-			controller.enqueue(new TextEncoder().encode("data: Hello\n\n"));
+			controller.enqueue(new TextEncoder().encode("Hello"));
 			controller.close();
 		},
 	}),
@@ -60,6 +60,11 @@ describe("ai.chat", () => {
 
 		expect(resolveAIProvider).toHaveBeenCalled();
 		expect(result).toBeInstanceOf(Response);
+		// Provider streams carry raw UTF-8 text — the client renders the
+		// bytes directly and rejects anything but text/plain.
+		expect((result as Response).headers.get("content-type")).toBe(
+			"text/plain; charset=utf-8",
+		);
 	});
 
 	it("passes multiple messages to the streaming provider", async () => {

@@ -6,7 +6,7 @@ import {
 	pirschAnalyticsProvider,
 	plausibleAnalyticsProvider,
 } from "../providers/skeletons";
-import { testAnalyticsProviderContract } from "./provider-contract.test";
+import { testAnalyticsProviderContract } from "./provider-contract";
 
 testAnalyticsProviderContract(() => plausibleAnalyticsProvider, {
 	id: "plausible",
@@ -44,5 +44,20 @@ describe("analytics skeletons — silent no-ops with no side effects", () => {
 		noopAnalyticsProvider.trackPageview();
 		expect(consoleSpy).not.toHaveBeenCalled();
 		consoleSpy.mockRestore();
+	});
+
+	describe("getScriptProps — skeletons never inject scripts", () => {
+		// Skeletons must render nothing: previously they returned real
+		// third-party script URLs with placeholder IDs, so selecting a
+		// skeleton would inject e.g. plausible.io after consent.
+		it.each([
+			plausibleAnalyticsProvider,
+			pirschAnalyticsProvider,
+			mixpanelAnalyticsProvider,
+			ga4AnalyticsProvider,
+			noopAnalyticsProvider,
+		])("$id exposes no getScriptProps", (provider) => {
+			expect(provider.getScriptProps).toBeUndefined();
+		});
 	});
 });

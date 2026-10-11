@@ -7,9 +7,14 @@
 		},
 		"./internal/client": {
 			"default": "./prisma/client.ts"
+		},
+		"./zod": {
+			"default": "./prisma/zod/index.ts"
 		}
 	},
 	"scripts": {
+		"test": "vitest run",
+		"check-types": "tsc --noEmit",
 		"db:push": "dotenv -c -e ../../.env -- prisma db push",
 		"db:generate": "dotenv -c -e ../../.env -- prisma generate",
 		"db:migrate": "dotenv -c -e ../../.env -- prisma migrate dev",

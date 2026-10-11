@@ -26,10 +26,13 @@ const webhooksConstructEventAsync = vi.fn().mockResolvedValue({
 		},
 	},
 });
+const listLineItems = vi.fn().mockResolvedValue({
+	data: [{ price: { id: "price_topup" } }],
+});
 
 vi.mock("stripe", () => ({
 	default: class MockStripe {
-		checkout = { sessions: { create: checkoutCreate } };
+		checkout = { sessions: { create: checkoutCreate, listLineItems } };
 		billingPortal = { sessions: { create: portalCreate } };
 		customers = { create: customersCreate };
 		subscriptions = {
@@ -131,6 +134,35 @@ describe("stripe provider — SDK integration", () => {
 		await expect(stripePaymentProvider.parseWebhook(request)).rejects.toThrow(
 			"signature",
 		);
+	});
+
+	it("resolves productId from line items for one-time checkout.completed", async () => {
+		webhooksConstructEventAsync.mockResolvedValueOnce({
+			type: "checkout.session.completed",
+			data: {
+				object: {
+					id: "cs_test_123",
+					subscription: null,
+					customer: "cust_123",
+					metadata: { user_id: "user_123" },
+				},
+			},
+			id: "evt_1",
+		} as never);
+		listLineItems.mockClear();
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "stripe-signature": "test" },
+			body: "{}",
+		});
+		const events = await stripePaymentProvider.parseWebhook(request);
+		expect(listLineItems).toHaveBeenCalledWith("cs_test_123", { limit: 1 });
+		expect(events[0]).toMatchObject({
+			type: "checkout.completed",
+			eventId: "evt_1",
+			productId: "price_topup",
+			metadata: { user_id: "user_123" },
+		});
 	});
 
 	it("setSubscriptionSeats calls subscriptions.retrieve then update", async () => {

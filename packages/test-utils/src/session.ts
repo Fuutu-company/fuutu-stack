@@ -37,7 +37,24 @@ export function makeSession<T>(user: SessionUser | null): T {
 	// Importing the real session type from @fuutu/api would create a circular
 	// dependency (@fuutu/api → @fuutu/test-utils for testing helpers). Test code
 	// is not production code — the structural shape is guaranteed by SessionUser.
+	// Mirrors Better Auth's getSession() result: { user, session } — the
+	// inner `session` carries token/expiry that procedures may read
+	// (`context.session.session.token`). Omitting it would mask real
+	// session-field accesses behind the cast.
 	return user
-		? ({ session: { user }, headers: new Headers() } as unknown as T)
+		? ({
+				session: {
+					user,
+					session: {
+						id: "session-1",
+						token: "test-token",
+						userId: user.id,
+						expiresAt: new Date(Date.now() + 3_600_000),
+						createdAt: new Date("2024-01-01"),
+						updatedAt: new Date("2024-01-01"),
+					},
+				},
+				headers: new Headers(),
+			} as unknown as T)
 		: ({ session: null, headers: new Headers() } as unknown as T);
 }

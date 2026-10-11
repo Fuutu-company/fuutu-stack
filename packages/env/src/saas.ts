@@ -1,14 +1,28 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+// Must stay in sync with VALID_DRAINS in packages/logs/src/config.ts —
+// @fuutu/logs reads process.env.LOG_DRAIN directly (documented exception),
+// this schema is the app-facing validation for the same CSV format.
+const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
+
 export const env = createEnv({
 	server: {
 		DATABASE_URL: z.string().min(1),
 		BETTER_AUTH_SECRET: z.string().min(32),
 		BETTER_AUTH_URL: z.string().url(),
-		CORS_ORIGIN: z.string().optional().default("http://localhost:3000"),
+		// CORS origin for the Hono API — must be a concrete URL, never "*"
+		// (the API sends credentials; "*" + credentials is an invalid and
+		// dangerous combination that browsers reject anyway).
+		CORS_ORIGIN: z
+			.string()
+			.url()
+			.refine((v) => v !== "*", {
+				message: 'CORS_ORIGIN must be a concrete origin, not "*"',
+			})
+			.optional()
+			.default("http://localhost:3000"),
 		POLAR_ACCESS_TOKEN: z.string().optional(),
-		POLAR_PRODUCT_ID: z.string().optional(),
 		POLAR_SUCCESS_URL: z.string().optional(),
 		GOOGLE_CLIENT_ID: z.string().optional(),
 		GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -16,9 +30,18 @@ export const env = createEnv({
 		GITHUB_CLIENT_SECRET: z.string().optional(),
 		GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
 		// AI
-		AI_PROVIDER: z.enum(["google", "openai", "anthropic", "noop"]).optional(),
+		AI_PROVIDER: z
+			.enum(["openrouter", "google", "openai", "anthropic", "noop"])
+			.optional(),
 		AI_API_KEY: z.string().optional(),
+		AI_BASE_URL: z.string().optional(),
 		AI_MODEL: z.string().optional(),
+		// Cron
+		CRON_PROVIDER: z.enum(["inline", "trigger-dev"]).optional(),
+		// Bearer secret for the /api/cron trigger endpoint (Vercel Cron,
+		// cron-job.org, etc. send `Authorization: Bearer <CRON_SECRET>`).
+		// When unset the endpoint returns 501 — cron stays disabled.
+		CRON_SECRET: z.string().optional(),
 		// Email
 		EMAIL_PROVIDER: z
 			.enum([
@@ -57,6 +80,11 @@ export const env = createEnv({
 		// Payments — Provider selection
 		PAYMENTS_PROVIDER: z.enum(["polar", "stripe", "creem"]).optional(),
 		// Storage (S3 / MinIO)
+		STORAGE_PROVIDER: z.enum(["s3", "supabase", "noop"]).optional(),
+		// Search (@fuutu/search)
+		SEARCH_PROVIDER: z
+			.enum(["postgres", "meilisearch", "typesense", "noop"])
+			.optional(),
 		S3_ENDPOINT: z.string().optional(),
 		S3_REGION: z.string().optional(),
 		S3_ACCESS_KEY_ID: z.string().optional(),
@@ -69,9 +97,27 @@ export const env = createEnv({
 			.transform((v) => v === "true"),
 		MINIO_ROOT_USER: z.string().optional(),
 		MINIO_ROOT_PASSWORD: z.string().optional(),
-		// Observability
+		// Observability — consumed by the evlog drains selected via LOG_DRAIN
+		SENTRY_DSN: z.string().optional(),
 		AXIOM_TOKEN: z.string().optional(),
 		AXIOM_DATASET: z.string().optional(),
+		// Logging
+		// Comma-separated drain list, e.g. "sentry,fs" — each entry must be a
+		// known drain id (console is always on but allowed in the list).
+		LOG_DRAIN: z
+			.string()
+			.refine(
+				(v) =>
+					v
+						.split(",")
+						.every((s) => LOG_DRAIN_VALUES.includes(s.trim().toLowerCase())),
+				{
+					message: `LOG_DRAIN must be a comma-separated list of: ${LOG_DRAIN_VALUES.join(", ")}`,
+				},
+			)
+			.optional(),
+		LOG_AUDIT_SINK: z.enum(["console", "db"]).default("console"),
+		LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 		// Fuutu Business License & Telemetry
 		FUUTU_LICENSE_KEY: z.string().optional(),
 		FUUTU_LICENSE_ENDPOINT: z.string().url().optional(),
@@ -81,6 +127,13 @@ export const env = createEnv({
 			.optional()
 			.transform((v) => v === "1" || v === "true"),
 		FUUTU_DISABLE_RATE_LIMIT: z
+			.enum(["0", "1", "true", "false"])
+			.optional()
+			.transform((v) => v === "1" || v === "true"),
+		// Explicit opt-in for outbound-webhook SSRF relaxation (http: +
+		// private/loopback targets). Needed for local receivers in dev —
+		// must NEVER be set in production.
+		WEBHOOK_ALLOW_PRIVATE_URLS: z
 			.enum(["0", "1", "true", "false"])
 			.optional()
 			.transform((v) => v === "1" || v === "true"),
@@ -110,7 +163,6 @@ export const env = createEnv({
 		BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
 		CORS_ORIGIN: process.env.CORS_ORIGIN,
 		POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN,
-		POLAR_PRODUCT_ID: process.env.POLAR_PRODUCT_ID,
 		POLAR_SUCCESS_URL: process.env.POLAR_SUCCESS_URL,
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
@@ -119,7 +171,10 @@ export const env = createEnv({
 		GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 		AI_PROVIDER: process.env.AI_PROVIDER,
 		AI_API_KEY: process.env.AI_API_KEY,
+		AI_BASE_URL: process.env.AI_BASE_URL,
 		AI_MODEL: process.env.AI_MODEL,
+		CRON_PROVIDER: process.env.CRON_PROVIDER,
+		CRON_SECRET: process.env.CRON_SECRET,
 		NODE_ENV: process.env.NODE_ENV,
 		EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
 		EMAIL_FROM: process.env.EMAIL_FROM,
@@ -139,6 +194,8 @@ export const env = createEnv({
 			process.env.CREDITS_AI_TOKENS_500K_PRICE_ID,
 		CREDITS_API_CALLS_50K_PRICE_ID: process.env.CREDITS_API_CALLS_50K_PRICE_ID,
 		PAYMENTS_PROVIDER: process.env.PAYMENTS_PROVIDER,
+		STORAGE_PROVIDER: process.env.STORAGE_PROVIDER,
+		SEARCH_PROVIDER: process.env.SEARCH_PROVIDER,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
 		S3_REGION: process.env.S3_REGION,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
@@ -148,13 +205,21 @@ export const env = createEnv({
 		S3_FORCE_PATH_STYLE: process.env.S3_FORCE_PATH_STYLE,
 		MINIO_ROOT_USER: process.env.MINIO_ROOT_USER,
 		MINIO_ROOT_PASSWORD: process.env.MINIO_ROOT_PASSWORD,
+		SENTRY_DSN: process.env.SENTRY_DSN,
 		AXIOM_TOKEN: process.env.AXIOM_TOKEN,
 		AXIOM_DATASET: process.env.AXIOM_DATASET,
+		LOG_DRAIN: process.env.LOG_DRAIN,
+		LOG_AUDIT_SINK: process.env.LOG_AUDIT_SINK,
+		LOG_LEVEL: process.env.LOG_LEVEL,
 		FUUTU_LICENSE_KEY: process.env.FUUTU_LICENSE_KEY,
 		FUUTU_LICENSE_ENDPOINT: process.env.FUUTU_LICENSE_ENDPOINT,
 		FUUTU_TELEMETRY_ENDPOINT: process.env.FUUTU_TELEMETRY_ENDPOINT,
 		FUUTU_TELEMETRY_DISABLED: process.env.FUUTU_TELEMETRY_DISABLED,
 		FUUTU_DISABLE_RATE_LIMIT: process.env.FUUTU_DISABLE_RATE_LIMIT,
+		WEBHOOK_ALLOW_PRIVATE_URLS: process.env.WEBHOOK_ALLOW_PRIVATE_URLS,
 	},
 	emptyStringAsUndefined: true,
+	// Escape hatch for builds/CI that intentionally run without a full env
+	// (e.g. bare `next build`). Set SKIP_ENV_VALIDATION=1 to skip.
+	skipValidation: !!process.env.SKIP_ENV_VALIDATION,
 });

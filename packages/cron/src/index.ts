@@ -5,5 +5,12 @@ export {
 	telemetryPingJob,
 	webhookRetryJob,
 } from "./jobs";
-export { listJobs, runAllJobs, runJob } from "./runner";
-export type { CronJob, CronJobResult } from "./types";
+export { listJobs, resolveJobRunner, runAllJobs, runJob } from "./runner";
+export { InlineJobRunner } from "./runners/inline";
+export { TriggerDevJobRunner } from "./runners/trigger-dev";
+export type {
+	CronJob,
+	CronJobResult,
+	JobRunner,
+	JobRunnerId,
+} from "./types";

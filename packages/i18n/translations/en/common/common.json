@@ -4,13 +4,20 @@
 		"error": "An error occurred",
 		"success": "Success",
 		"cancel": "Cancel",
+		"close": "Close",
+		"play": "Play",
+		"pause": "Pause",
+		"video": "Video",
 		"save": "Save",
 		"saving": "Saving…",
 		"submit": "Submit",
 		"notAvailable": "—",
 		"errors": {
 			"somethingWentWrong": "Something went wrong. Please try again.",
-			"retry": "Retry"
+			"forbidden": "You don't have permission to access that page.",
+			"retry": "Retry",
+			"planLimitReached": "Plan limit reached. Upgrade to do more.",
+			"planFeatureRequired": "This feature is not available on your plan."
 		}
 	}
 }

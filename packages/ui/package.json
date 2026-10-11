@@ -4,12 +4,13 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./*": "./src/*.tsx"
+		".": "./src/index.ts"
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"lint": "biome check .",
 		"format": "biome format --write .",
+		"test": "vitest run",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -32,9 +33,9 @@
 		"class-variance-authority": "catalog:",
 		"input-otp": "catalog:",
 		"lucide-react": "catalog:",
-		"next-themes": "catalog:",
 		"ogl": "catalog:",
-		"sonner": "catalog:"
+		"sonner": "catalog:",
+		"tw-animate-css": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/config": "workspace:*",
@@ -44,7 +45,8 @@
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"tailwindcss": "catalog:",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	},
 	"peerDependencies": {
 		"react": "catalog:",

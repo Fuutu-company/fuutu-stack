@@ -23,6 +23,7 @@ export function ApiKeyCreatedDialog({
 	onClose: () => void;
 }) {
 	const t = useTranslations("apiKeys");
+	const tCommon = useTranslations("common");
 	const [copied, setCopied] = useState(false);
 
 	async function copyKey() {
@@ -39,7 +40,7 @@ export function ApiKeyCreatedDialog({
 				if (!v) onClose();
 			}}
 		>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" closeLabel={tCommon("close")}>
 				<DialogHeader>
 					<DialogTitle>{t("createdDialog.title")}</DialogTitle>
 					<DialogDescription>

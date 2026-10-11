@@ -16,6 +16,13 @@ export interface SearchQuery {
 	collection?: string;
 	limit?: number;
 	offset?: number;
+	/**
+	 * Tenant scope — at least one is required by tenant-scoped providers
+	 * (postgres). `userId` scopes user-owned rows (notifications, audit
+	 * logs); `organizationId` scopes audit logs to org members.
+	 */
+	userId?: string;
+	organizationId?: string;
 	filters?: Record<string, unknown>;
 }
 

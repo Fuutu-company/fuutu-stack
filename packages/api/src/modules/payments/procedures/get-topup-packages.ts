@@ -1,6 +1,7 @@
 import { CREDIT_TOPUPS } from "@fuutu/payments";
 import { getCreditTopupPriceId } from "@fuutu/payments/config.server";
-import { protectedProcedure } from "../../../orpc";
+import { z } from "zod";
+import { protectedProcedure } from "../../../orpc/procedures";
 
 export const getTopupPackages = protectedProcedure
 	.route({
@@ -11,6 +12,7 @@ export const getTopupPackages = protectedProcedure
 		description:
 			"Returns a list of available credit top-up packages with their price IDs.",
 	})
+	.input(z.object({}).optional())
 	.handler(async () => {
 		const packages = CREDIT_TOPUPS.map((topup) => ({
 			...topup,

@@ -17,12 +17,13 @@ import {
 	Input,
 	Switch,
 } from "@fuutu/ui";
+import { WEBHOOK_EVENTS, type WebhookEventType } from "@fuutu/webhooks/events";
 import { Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
-import { WEBHOOK_EVENTS } from "../constants";
 
 type Webhook = {
 	id: string;
@@ -43,13 +44,21 @@ export function WebhookEditDialog({
 	onUpdated: () => void;
 }) {
 	const t = useTranslations("webhooks");
+	const tRoot = useTranslations();
+	const tCommon = useTranslations("common");
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState(webhook.url);
-	const [events, setEvents] = useState<string[]>(webhook.events);
+	// Stored rows may carry event names removed from the catalog — the API
+	// only accepts WEBHOOK_EVENTS values, so anything stale is dropped here.
+	const [events, setEvents] = useState<WebhookEventType[]>(
+		webhook.events.filter((e): e is WebhookEventType =>
+			(WEBHOOK_EVENTS as readonly string[]).includes(e),
+		),
+	);
 	const [isActive, setIsActive] = useState(webhook.isActive);
 	const [saving, setSaving] = useState(false);
 
-	function toggleEvent(event: string) {
+	function toggleEvent(event: WebhookEventType) {
 		setEvents((prev) =>
 			prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
 		);
@@ -70,7 +79,7 @@ export function WebhookEditDialog({
 			onUpdated();
 		} catch (e) {
 			log.error("webhook update failed", { err: e });
-			toast.error(t("updateError"));
+			toast.error(planGateMessage(e, tRoot, "webhooks.updateError"));
 		} finally {
 			setSaving(false);
 		}
@@ -83,7 +92,7 @@ export function WebhookEditDialog({
 					<Pencil className="size-4" />
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" closeLabel={tCommon("close")}>
 				<form onSubmit={submit} className="space-y-4">
 					<DialogHeader>
 						<DialogTitle>{t("editDialog.title")}</DialogTitle>

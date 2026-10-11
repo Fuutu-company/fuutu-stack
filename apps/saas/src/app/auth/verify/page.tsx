@@ -1,13 +1,21 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
-import { AuthCard, Button } from "@fuutu/ui";
+import { AuthCard, Button, Skeleton } from "@fuutu/ui";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 export default function VerifyPage() {
+	return (
+		<Suspense fallback={<Skeleton className="h-80 w-full max-w-md" />}>
+			<VerifyContent />
+		</Suspense>
+	);
+}
+
+function VerifyContent() {
 	const t = useTranslations("auth");
 	const params = useSearchParams();
 	const token = params.get("token");

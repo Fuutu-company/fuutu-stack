@@ -6,10 +6,21 @@ import { storageRouter } from "../modules/storage/router";
 
 vi.mock("@fuutu/storage", () => ({
 	resolveStorageProvider: vi.fn(),
+	resolveBucket: vi.fn((bucket: string) => bucket),
+	resolveMaxUploadBytes: vi.fn(() => 5 * 1024 * 1024),
+	StorageBucketError: class StorageBucketError extends Error {},
 }));
 
 vi.mock("@fuutu/ai", () => ({
 	resolveAIProvider: vi.fn(),
+}));
+
+vi.mock("@fuutu/auth", () => ({
+	auth: {
+		api: {
+			getFullOrganization: vi.fn(),
+		},
+	},
 }));
 
 vi.mock("@fuutu/db", () => ({
@@ -60,7 +71,12 @@ describe("storage.upload.createPresigned", () => {
 
 		const result = await call(
 			storageRouter.upload.createPresigned,
-			{ bucket: "avatars", key: "avatar.png", contentType: "image/png" },
+			{
+				bucket: "avatars",
+				key: "avatar.png",
+				contentType: "image/png",
+				contentLength: 2048,
+			},
 			{ context: authenticatedContext },
 		);
 
@@ -68,7 +84,8 @@ describe("storage.upload.createPresigned", () => {
 			bucket: "avatars",
 			key: "user-1/avatar.png",
 			contentType: "image/png",
-			contentLength: undefined,
+			contentLength: 2048,
+			maxSizeBytes: 5 * 1024 * 1024,
 		});
 		expect(result).toMatchObject({ url: "https://s3.example.com/upload" });
 	});
@@ -88,6 +105,7 @@ describe("storage.upload.createPresigned", () => {
 				bucket: "avatars",
 				key: "logo.png",
 				contentType: "image/png",
+				contentLength: 2048,
 				organizationId: "org-1",
 			},
 			{ context: authenticatedContext },
@@ -97,7 +115,8 @@ describe("storage.upload.createPresigned", () => {
 			bucket: "avatars",
 			key: "org-1/logo.png",
 			contentType: "image/png",
-			contentLength: undefined,
+			contentLength: 2048,
+			maxSizeBytes: 5 * 1024 * 1024,
 		});
 	});
 
@@ -125,24 +144,89 @@ describe("storage.upload.createPresigned", () => {
 			key: "user-1/avatar.png",
 			contentType: "image/png",
 			contentLength: 1024,
+			maxSizeBytes: 5 * 1024 * 1024,
 		});
+	});
+
+	it("rejects when contentLength is missing", async () => {
+		await expect(
+			call(
+				storageRouter.upload.createPresigned,
+				{
+					bucket: "avatars",
+					key: "avatar.png",
+					contentType: "image/png",
+				} as never,
+				{ context: authenticatedContext },
+			),
+		).rejects.toBeDefined();
+	});
+
+	it("rejects contentLength above the bucket cap", async () => {
+		vi.mocked(resolveStorageProvider).mockReturnValue(mockProvider as never);
+
+		await expect(
+			call(
+				storageRouter.upload.createPresigned,
+				{
+					bucket: "avatars",
+					key: "huge.png",
+					contentType: "image/png",
+					contentLength: 6 * 1024 * 1024,
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
 	});
 
 	it("rejects empty bucket", async () => {
 		await expect(
 			call(
 				storageRouter.upload.createPresigned,
-				{ bucket: "", key: "test.png", contentType: "image/png" },
+				{
+					bucket: "",
+					key: "test.png",
+					contentType: "image/png",
+					contentLength: 1024,
+				},
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
+	});
+
+	it("rejects unconfigured bucket name", async () => {
+		const { resolveBucket } = await import("@fuutu/storage");
+		vi.mocked(resolveBucket).mockImplementation(() => {
+			throw new Error("Bucket not configured");
+		});
+		vi.mocked(resolveStorageProvider).mockReturnValue(mockProvider as never);
+
+		await expect(
+			call(
+				storageRouter.upload.createPresigned,
+				{
+					bucket: "secret-backups",
+					key: "test.png",
+					contentType: "image/png",
+					contentLength: 1024,
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toBeDefined();
+
+		vi.mocked(resolveBucket).mockImplementation((b: string) => b);
 	});
 
 	it("rejects empty key", async () => {
 		await expect(
 			call(
 				storageRouter.upload.createPresigned,
-				{ bucket: "avatars", key: "", contentType: "image/png" },
+				{
+					bucket: "avatars",
+					key: "",
+					contentType: "image/png",
+					contentLength: 1024,
+				},
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
@@ -152,7 +236,12 @@ describe("storage.upload.createPresigned", () => {
 		await expect(
 			call(
 				storageRouter.upload.createPresigned,
-				{ bucket: "avatars", key: "test.png", contentType: "image/png" },
+				{
+					bucket: "avatars",
+					key: "test.png",
+					contentType: "image/png",
+					contentLength: 1024,
+				},
 				{ context: unauthenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });

@@ -33,10 +33,15 @@
 		"webhooks": "Webhooks",
 		"auditLog": "Audit log",
 		"invoices": "Invoices",
+		"sidebar": {
+			"title": "Sidebar",
+			"description": "Displays the mobile sidebar."
+		},
 		"aria": {
 			"toggleNavigation": "Toggle navigation",
 			"toggleTheme": "Toggle theme",
-			"switchLanguage": "Switch language"
+			"switchLanguage": "Switch language",
+			"loadingUserAccount": "Loading user account"
 		},
 		"breadcrumb": {
 			"dashboard": "Dashboard",

@@ -6,4 +6,10 @@
  */
 
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "@fuutu/config/theme.css";
+
+/* Exclude build artifacts from class scanning — binary Turbopack SST
+ * caches under .next/ inject corrupted candidates that break prod builds. */
+@source not "../../.next";
+@source not "../../.turbo";

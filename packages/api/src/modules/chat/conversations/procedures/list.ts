@@ -1,7 +1,8 @@
 import { countConversations, listConversations } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
-import { protectedProcedure } from "../../../../orpc";
-import { requireOrgRole } from "../../../organizations/shared";
+import { permissionProcedure } from "../../../../orpc/procedures";
+import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const listConversationsSchema = z.object({
 	organizationId: z.string().optional(),
@@ -9,7 +10,9 @@ const listConversationsSchema = z.object({
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
-export const listConversationsProcedure = protectedProcedure
+export const listConversationsProcedure = permissionProcedure(
+	PERMISSIONS.CHAT.VIEW,
+)
 	.route({
 		method: "GET",
 		path: "/chat/conversations",
@@ -21,11 +24,11 @@ export const listConversationsProcedure = protectedProcedure
 	.input(listConversationsSchema)
 	.handler(async ({ input, context }) => {
 		if (input.organizationId) {
-			await requireOrgRole(
+			await requireOrgPermissionAccess(
 				input.organizationId,
 				context.user.id,
-				"member",
-				context.headers,
+				PERMISSIONS.CHAT.VIEW,
+				context,
 			);
 		}
 		const skip = (input.page - 1) * input.limit;

@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
+import { z } from "zod";
 import type {
 	CheckoutInput,
 	CustomerInput,
@@ -79,6 +80,25 @@ function mapCreemEvent(eventType: string): ProviderEventType | null {
 	}
 }
 
+const creemWebhookSchema = z.object({
+	id: z.string().optional(),
+	eventType: z.string(),
+	object: z.object({
+		id: z.string().optional(),
+		customer: z
+			.union([
+				z.string(),
+				z.object({ id: z.string(), email: z.string().optional() }),
+			])
+			.optional(),
+		product: z.object({ id: z.string() }).optional(),
+		status: z.string().optional(),
+		current_period_end_date: z.string().optional(),
+		metadata: z.record(z.string(), z.unknown()).optional(),
+		subscription: z.object({ id: z.string() }).optional(),
+	}),
+});
+
 function getCustomerId(
 	customer: string | { id: string; email?: string } | undefined,
 ): string | undefined {
@@ -88,11 +108,44 @@ function getCustomerId(
 	return customer?.id;
 }
 
+const CreemCheckoutResponseSchema = z.object({ checkout_url: z.string() });
+const CreemPortalResponseSchema = z.object({
+	customer_portal_link: z.string(),
+});
+const CreemCustomerResponseSchema = z.object({ id: z.string() });
+const CreemSubscriptionResponseSchema = z.object({
+	items: z.array(z.object({ id: z.string() })).optional(),
+});
+
+const ErrorBodySchema = z.record(z.string(), z.unknown());
+
+/** Best-effort parse of an error body for logging — never throws. */
+async function readErrorBody(response: Response) {
+	const parsed = ErrorBodySchema.safeParse(await response.json());
+	return parsed.success ? parsed.data : { raw: "unparseable" };
+}
+
+/** Parse a Creem API response — fail closed on an unexpected shape. */
+async function parseCreemResponse<T extends z.ZodType>(
+	response: Response,
+	schema: T,
+	failure: string,
+): Promise<z.infer<T>> {
+	const parsed = schema.safeParse(await response.json());
+	if (!parsed.success) {
+		throw new Error(failure);
+	}
+	return parsed.data;
+}
+
 export const creemPaymentProvider: SeatAwarePaymentProvider = {
 	id: "creem",
 	ownsSeatSync: false,
 
 	async createCheckoutLink(input: CheckoutInput) {
+		// Note: Creem's checkout API does not accept a cancel_url parameter —
+		// `input.cancelUrl` is intentionally ignored; buyers use the hosted
+		// checkout page's back navigation.
 		const response = await creemFetch("/checkouts", {
 			method: "POST",
 			body: JSON.stringify({
@@ -111,14 +164,16 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		});
 
 		if (!response.ok) {
-			const error = (await response.json()) as Record<string, unknown>;
+			const error = await readErrorBody(response);
 			log.error("Failed to create checkout link", error);
 			throw new Error("Failed to create checkout link");
 		}
 
-		const { checkout_url } = (await response.json()) as {
-			checkout_url: string;
-		};
+		const { checkout_url } = await parseCreemResponse(
+			response,
+			CreemCheckoutResponseSchema,
+			"Failed to create checkout link",
+		);
 		return { url: checkout_url };
 	},
 
@@ -131,14 +186,16 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		});
 
 		if (!response.ok) {
-			const error = (await response.json()) as Record<string, unknown>;
+			const error = await readErrorBody(response);
 			log.error("Failed to create customer portal link", error);
 			throw new Error("Failed to create customer portal link");
 		}
 
-		const { customer_portal_link } = (await response.json()) as {
-			customer_portal_link: string;
-		};
+		const { customer_portal_link } = await parseCreemResponse(
+			response,
+			CreemPortalResponseSchema,
+			"Failed to create customer portal link",
+		);
 		return { url: customer_portal_link };
 	},
 
@@ -156,12 +213,16 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		});
 
 		if (!response.ok) {
-			const error = (await response.json()) as Record<string, unknown>;
+			const error = await readErrorBody(response);
 			log.error("Failed to create customer", error);
 			throw new Error("Failed to create customer");
 		}
 
-		const { id } = (await response.json()) as { id: string };
+		const { id } = await parseCreemResponse(
+			response,
+			CreemCustomerResponseSchema,
+			"Failed to create customer",
+		);
 		return { customerId: id };
 	},
 
@@ -174,7 +235,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		);
 
 		if (!response.ok) {
-			const error = (await response.json()) as Record<string, unknown>;
+			const error = await readErrorBody(response);
 			log.error("Failed to cancel subscription", error);
 			throw new Error("Failed to cancel subscription");
 		}
@@ -206,23 +267,19 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			throw new Error("Invalid signature");
 		}
 
-		const payload = JSON.parse(bodyText);
-		const eventType = payload.eventType as string;
+		const parsed = creemWebhookSchema.safeParse(JSON.parse(bodyText));
+		if (!parsed.success) {
+			throw new Error("Malformed webhook payload");
+		}
+		const payload = parsed.data;
+		const eventType = payload.eventType;
 		const mappedType = mapCreemEvent(eventType);
 
 		if (!mappedType) {
 			return [];
 		}
 
-		const object = payload.object as {
-			id?: string;
-			customer?: string | { id: string; email?: string };
-			product?: { id: string };
-			status?: string;
-			current_period_end_date?: string;
-			metadata?: Record<string, unknown>;
-			subscription?: { id: string };
-		};
+		const object = payload.object;
 
 		// Skip checkout.completed if it created a subscription (subscription events handle it)
 		if (eventType === "checkout.completed" && object.subscription?.id) {
@@ -247,6 +304,9 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 
 		const event: ProviderEvent = {
 			type: mappedType,
+			// Event id for webhook dedup — falls back to the object id
+			// (checkout session id) when Creem omits the envelope id.
+			eventId: payload.id ?? object.id,
 			subscriptionId,
 			customerId,
 			productId,
@@ -269,12 +329,16 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		);
 
 		if (!getResponse.ok) {
-			const error = (await getResponse.json()) as Record<string, unknown>;
+			const error = await readErrorBody(getResponse);
 			log.error("Failed to get subscription", error);
 			throw new Error("Failed to get subscription");
 		}
 
-		const { items } = (await getResponse.json()) as { items: { id: string }[] };
+		const { items } = await parseCreemResponse(
+			getResponse,
+			CreemSubscriptionResponseSchema,
+			"Failed to get subscription",
+		);
 
 		if (!items || items.length === 0) {
 			throw new Error("No subscription items found");
@@ -301,7 +365,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		);
 
 		if (!updateResponse.ok) {
-			const error = (await updateResponse.json()) as Record<string, unknown>;
+			const error = await readErrorBody(updateResponse);
 			log.error("Failed to update subscription seats", error);
 			throw new Error("Failed to update subscription seats");
 		}

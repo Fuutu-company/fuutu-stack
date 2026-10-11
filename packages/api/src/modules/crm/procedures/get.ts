@@ -1,15 +1,17 @@
 import { getContact } from "@fuutu/db";
+import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../../orpc";
-import { requireOrgRole } from "../../organizations/shared";
+import { authProcedure } from "../../../orpc/procedures";
 
 const getContactSchema = z.object({
 	id: z.string().min(1),
 	organizationId: z.string().min(1),
 });
 
-export const getContactProcedure = protectedProcedure
+export const getContactProcedure = authProcedure({
+	org: { permission: PERMISSIONS.CRM.VIEW },
+})
 	.route({
 		method: "GET",
 		path: "/crm/contacts/{id}",
@@ -18,13 +20,7 @@ export const getContactProcedure = protectedProcedure
 		description: "Returns a single contact by ID within an organization.",
 	})
 	.input(getContactSchema)
-	.handler(async ({ input, context }) => {
-		await requireOrgRole(
-			input.organizationId,
-			context.user.id,
-			"member",
-			context.headers,
-		);
+	.handler(async ({ input }) => {
 		const contact = await getContact(input.id, input.organizationId);
 		if (!contact) {
 			throw new ORPCError("NOT_FOUND", { message: "Contact not found" });
