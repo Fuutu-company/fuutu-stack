@@ -171,12 +171,15 @@ jobs:
 
       - run: pnpm install
 
-      - name: Check for outdated packages
+      # The report script classifies by installability — "ready now" means a
+      # version that satisfies minimumReleaseAge actually exists, not just
+      # that `pnpm outdated` lists something newer. See the script header.
+      - name: Generate dependency report
         id: check-outdated
         continue-on-error: true
         run: |
-          pnpm outdated -r --format list > /tmp/outdated.log 2>&1 || true
-          if [ -s /tmp/outdated.log ] && grep -q "=>" /tmp/outdated.log; then
+          node tooling/scripts/dependency-report.mjs > /tmp/outdated-report.md || true
+          if [ -s /tmp/outdated-report.md ]; then
             echo "OUTDATED_FOUND=1" >> $GITHUB_OUTPUT
           else
             echo "OUTDATED_FOUND=0" >> $GITHUB_OUTPUT
@@ -188,84 +191,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('/tmp/outdated.log', 'utf-8');
-
-            // Parse the outdated list format
-            const lines = output.split('\n');
-            const packages = [];
-            let currentPkg = null;
-
-            for (const line of lines) {
-              if (line.includes('=>')) {
-                const [current, latest] = line.split('=>').map(s => s.trim());
-                if (currentPkg) {
-                  currentPkg.current = current;
-                  currentPkg.latest = latest;
-                  packages.push(currentPkg);
-                }
-              } else if (line.trim() && !line.includes('Dependents')) {
-                currentPkg = { name: line.trim(), current: '', latest: '' };
-              }
-            }
-
-            // Categorize by major bump vs minor/patch
-            // For 0.x packages, a minor version bump IS a major (breaking) change per semver.
-            const autoUpdateable = [];
-            const majorBumps = [];
-
-            for (const pkg of packages) {
-              const currentParts = pkg.current.split('.').map(Number);
-              const latestParts = pkg.latest.split('.').map(Number);
-              const currentMajor0 = currentParts[0];
-              const latestMajor0 = latestParts[0];
-
-              let isMajorBump = false;
-              if (latestMajor0 > currentMajor0) {
-                // Standard major bump (e.g. 5.x → 7.x)
-                isMajorBump = true;
-              } else if (currentMajor0 === 0 && latestMajor0 === 0) {
-                // 0.x packages: minor bump = breaking change per semver
-                // e.g. 0.4.x → 0.5.x is a MAJOR bump
-                const currentMinor = currentParts[1] || 0;
-                const latestMinor = latestParts[1] || 0;
-                if (latestMinor > currentMinor) {
-                  isMajorBump = true;
-                }
-              }
-
-              if (isMajorBump) {
-                majorBumps.push(pkg);
-              } else {
-                autoUpdateable.push(pkg);
-              }
-            }
-
-            // Build markdown table
-            let body = `## ⚠️ Dependency Audit\n\n`;
-            body += `**${packages.length} outdated package(s)** — ${autoUpdateable.length} auto-updateable, ${majorBumps.length} require manual catalog range update\n\n`;
-
-            if (autoUpdateable.length > 0) {
-              body += `### Auto-updateable (minor/patch)\n\n`;
-              body += `| Package | Current | Latest | Type |\n`;
-              body += `|---------|---------|--------|------|\n`;
-              for (const pkg of autoUpdateable) {
-                body += `| \`${pkg.name}\` | ${pkg.current} | ${pkg.latest} | minor/patch |\n`;
-              }
-              body += `\n`;
-            }
-
-            if (majorBumps.length > 0) {
-              body += `### Major bump — manual catalog range update required\n\n`;
-              body += `| Package | Current | Latest | Type |\n`;
-              body += `|---------|---------|--------|------|\n`;
-              for (const pkg of majorBumps) {
-                body += `| \`${pkg.name}\` | ${pkg.current} | ${pkg.latest} | **MAJOR** |\n`;
-              }
-              body += `\n`;
-            }
-
-            body += `> The pipeline did **not** fail — this is a warning only. Major bumps require manual catalog range updates in \`pnpm-workspace.yaml\`.`;
-
+            const body = fs.readFileSync('/tmp/outdated-report.md', 'utf8');
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
