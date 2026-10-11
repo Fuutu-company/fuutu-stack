@@ -9,7 +9,7 @@ const COVERAGE = process.env.COVERAGE === "1";
 export default defineConfig({
 	testDir: "./tests",
 	// Baselines are committed to the repo (.fuutu/visual-baselines/<app>) —
-	// CI regenerates + auto-commits them on merge to develop/main.
+	// CI refreshes them per PR and commits the diff onto the branch.
 	snapshotDir: "../../.fuutu/visual-baselines/marketing",
 	snapshotPathTemplate: "{snapshotDir}/{arg}-{projectName}-{platform}{ext}",
 	timeout: 30_000,
