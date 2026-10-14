@@ -31,7 +31,7 @@ pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 
 A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.js 16, Hono, oRPC, Better Auth, Prisma, TailwindCSS v4. Every domain (mail, payments, storage, analytics, AI) is behind a provider interface with one active implementation and skeletons for the rest. Swap Plunk for Resend, Polar for Stripe, S3 for Cloudflare R2 — without touching business logic.
 
-**AI-native**: built-in MCP (Model Context Protocol) integration so LLM agents can discover and operate your project. AI provider-swappable (Google / OpenAI / Anthropic / Noop).
+**AI-native**: built-in MCP (Model Context Protocol) integration so LLM agents can discover and operate your project. AI provider-swappable (OpenRouter / Google / OpenAI / Anthropic / Noop).
 
 ---
 
@@ -80,12 +80,12 @@ Every domain behind an interface — swap providers without touching business lo
 | **Payments** | `PaymentProvider` | Polar | Stripe, Paddle, LemonSqueezy… |
 | **Storage** | `StorageProvider` | S3 + MinIO | Cloudflare R2, Azure Blob… |
 | **Analytics** | `AnalyticsProvider` | Umami | Plausible, PostHog, GA… |
-| **AI** | `AIProvider` | Google | OpenAI, Anthropic, Noop… |
+| **AI** | `AIProvider` | OpenRouter | Google, OpenAI, Anthropic, Noop… |
 | **Search** | `SearchProvider` | — | MeiliSearch, Typesense, Algolia… |
 | **Content** | `ContentProvider` | — | MDX, CMS, headless… |
 
 ### AI-Native
-- **AI provider-swappable** — Google / OpenAI / Anthropic / Noop
+- **AI provider-swappable** — OpenRouter / Google / OpenAI / Anthropic / Noop
 - **Chat module** — conversations, messages, streaming
 - **MCP-ready** — Model Context Protocol integration for LLM agents
 - **AI agent harness** via Fuutu MCP (see Developer Experience below)
@@ -122,7 +122,7 @@ fuutu-stack/
 │   ├── docs/             # documentation (port 4000)
 │   └── mail-preview/     # mail template preview (dev only)
 ├── packages/
-│   ├── ai/               # AI provider-swappable (Google/OpenAI/Anthropic/Noop)
+│   ├── ai/               # AI provider-swappable (OpenRouter/Google/OpenAI/Anthropic/Noop)
 │   ├── analytics/        # AnalyticsProvider interface + Umami
 │   ├── api/              # oRPC routers + Hono server
 │   ├── auth/             # Better Auth (server + client)

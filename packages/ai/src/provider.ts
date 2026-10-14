@@ -31,10 +31,9 @@ function resolveApiKey(provider: AIProviderId): string | undefined {
 /**
  * Resolve the active AI provider from `aiConfig.provider`.
  *
- * If a real provider is selected but its API key is missing, we downgrade to
- * the noop provider and log a warning — mirroring the mail package's
- * missing-key fallback (see `packages/mail/src/config.ts`). This keeps dev
- * installs working out-of-the-box instead of crashing at call time.
+ * Selecting a real provider without configuring its API key logs an error
+ * and throws at resolve time — a missing key is a misconfiguration, not a
+ * silent downgrade to empty responses. Set `AI_PROVIDER=noop` to disable AI.
  *
  * Provider instances are cached as singletons (module-level) — consistent
  * with mail/storage/payments. The underlying SDK client is lazy, so the
@@ -50,10 +49,12 @@ let openrouterProvider: OpenRouterProvider | undefined;
 function getGoogleProvider(): AIProvider {
 	const apiKey = resolveApiKey("google");
 	if (!apiKey) {
-		log.warn(
-			"AI_PROVIDER=google but AI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY) is not set — falling back to noop provider.",
+		log.error("AI provider configured without API key", {
+			provider: "google",
+		});
+		throw new Error(
+			"AI_PROVIDER=google requires AI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY) to be set. Set a key or use AI_PROVIDER=noop to disable AI.",
 		);
-		return noopProvider;
 	}
 	if (!googleProvider) {
 		googleProvider = new GoogleProvider({
@@ -68,10 +69,12 @@ function getGoogleProvider(): AIProvider {
 function getOpenRouterProvider(): AIProvider {
 	const apiKey = resolveApiKey("openrouter");
 	if (!apiKey) {
-		log.warn(
-			"AI_PROVIDER=openrouter but AI_API_KEY is not set — falling back to noop provider.",
+		log.error("AI provider configured without API key", {
+			provider: "openrouter",
+		});
+		throw new Error(
+			"AI_PROVIDER=openrouter requires AI_API_KEY to be set. Set a key or use AI_PROVIDER=noop to disable AI.",
 		);
-		return noopProvider;
 	}
 	if (!openrouterProvider) {
 		openrouterProvider = new OpenRouterProvider({
