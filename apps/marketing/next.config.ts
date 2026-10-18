@@ -1,3 +1,4 @@
+import { analyticsCspOrigins } from "@fuutu/analytics";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
@@ -11,18 +12,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const isProd = env.NODE_ENV === "production";
 
 // Security headers for the public marketing surface.
-// Slightly looser than SaaS: allows the Umami analytics script domain and
-// external fonts/images for blog/MDX content. Still blocks framing and
-// interest-cohort tracking.
-const umamiScript =
-	env.NEXT_PUBLIC_UMAMI_SCRIPT_URL ?? "https://cloud.umami.is";
-const umamiOrigin = (() => {
-	try {
-		return new URL(umamiScript).origin;
-	} catch {
-		return "https://cloud.umami.is";
-	}
-})();
+// Slightly looser than SaaS: allows the active analytics provider's
+// origins and external fonts/images for blog/MDX content. Still blocks
+// framing and interest-cohort tracking.
+const analyticsCsp = analyticsCspOrigins();
 
 const securityHeaders = [
 	{ key: "X-Frame-Options", value: "DENY" },
@@ -37,11 +30,11 @@ const securityHeaders = [
 		key: "Content-Security-Policy",
 		value: [
 			"default-src 'self'",
-			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' ${umamiOrigin}`,
+			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' ${analyticsCsp.scriptSrc.join(" ")}`,
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https:",
 			"font-src 'self' data: https:",
-			`connect-src 'self' https: ${umamiOrigin}`,
+			`connect-src 'self' https: ${analyticsCsp.connectSrc.join(" ")}`,
 			"frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.openstreetmap.org",
 			"frame-ancestors 'none'",
 			"base-uri 'self'",

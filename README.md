@@ -79,7 +79,7 @@ Every domain behind an interface — swap providers without touching business lo
 | **Mail** | `MailProvider` | Plunk | Resend, SendGrid, Mailgun… |
 | **Payments** | `PaymentProvider` | Polar | Stripe, Paddle, LemonSqueezy… |
 | **Storage** | `StorageProvider` | S3 + MinIO | Cloudflare R2, Azure Blob… |
-| **Analytics** | `AnalyticsProvider` | Umami | Plausible, PostHog, GA… |
+| **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
 | **AI** | `AIProvider` | OpenRouter | Google, OpenAI, Anthropic, Noop… |
 | **Search** | `SearchProvider` | — | MeiliSearch, Typesense, Algolia… |
 | **Content** | `ContentProvider` | — | MDX, CMS, headless… |

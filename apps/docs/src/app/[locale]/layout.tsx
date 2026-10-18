@@ -1,3 +1,5 @@
+import { ConsentBanner, ConsentProvider } from "@fuutu/analytics/consent";
+import { AnalyticsScript } from "@fuutu/analytics/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
@@ -22,7 +24,14 @@ export default async function LocaleLayout({
 
 	return (
 		<NextIntlClientProvider locale={locale} messages={messages}>
-			{children}
+			{/* ConsentProvider must wrap ConsentBanner + AnalyticsScript —
+			    they share the consent decision via useConsent() / the
+			    consent cookie. Same contract as saas + marketing. */}
+			<ConsentProvider>
+				{children}
+				<ConsentBanner />
+				<AnalyticsScript />
+			</ConsentProvider>
 		</NextIntlClientProvider>
 	);
 }

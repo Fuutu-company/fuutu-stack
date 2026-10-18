@@ -1,3 +1,4 @@
+import { analyticsCspOrigins } from "@fuutu/analytics";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
@@ -9,6 +10,10 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProd = env.NODE_ENV === "production";
+
+// Analytics CSP origins come from the active provider — switching
+// providers via NEXT_PUBLIC_ANALYTICS_PROVIDER needs no edits here.
+const analyticsCsp = analyticsCspOrigins();
 
 // Security headers applied to every SaaS response.
 // Known CSP compromise: `'unsafe-inline'` stays on `script-src` in every env
@@ -31,11 +36,11 @@ const securityHeaders = [
 			"default-src 'self'",
 			// React Compiler + next-themes inline script on first paint.
 			// Scalar CDN for OpenAPI docs at /api/docs.
-			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' https://cdn.jsdelivr.net`,
+			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' https://cdn.jsdelivr.net ${analyticsCsp.scriptSrc.join(" ")}`,
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https:",
 			"font-src 'self' data: https://fonts.scalar.com",
-			"connect-src 'self' https:",
+			`connect-src 'self' https: ${analyticsCsp.connectSrc.join(" ")}`,
 			"frame-ancestors 'none'",
 			"base-uri 'self'",
 			"form-action 'self'",

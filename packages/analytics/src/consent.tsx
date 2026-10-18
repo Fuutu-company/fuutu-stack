@@ -11,7 +11,10 @@ import {
 	useState,
 } from "react";
 import { analyticsConfig } from "./config";
-import { buildConsentCookie } from "./consent-cookie";
+import { readConsentCookie, writeConsentCookie } from "./consent-cookie";
+import { consentBannerVisible } from "./index";
+
+export { readConsentCookie } from "./consent-cookie";
 
 type ConsentStatus = "unknown" | "granted" | "denied";
 
@@ -35,32 +38,12 @@ function dispatchChange() {
 	}
 }
 
-export function readConsentCookie(): string | null {
-	if (typeof document === "undefined") return null;
-	const name = `${analyticsConfig.consentCookieName}=`;
-	const decoded = decodeURIComponent(document.cookie);
-	const found = decoded
-		.split(";")
-		.map((c) => c.trim())
-		.find((c) => c.startsWith(name));
-	return found ? found.substring(name.length) : null;
-}
-
-function writeConsentCookie(value: "granted" | "denied") {
-	if (typeof document === "undefined") return;
-	// Consent must be readable from JS (useConsent + <AnalyticsScript />),
-	// so httpOnly is not an option — SameSite=Lax still applies.
-	// biome-ignore lint/suspicious/noDocumentCookie: JS-readable consent cookie by design
-	document.cookie = buildConsentCookie(value, {
-		secure: window.location.protocol === "https:",
-	});
-}
-
 /**
- * Holds the user's analytics-consent decision. Reads/writes a host-scoped
- * cookie so the choice survives reloads (cross-subdomain sharing is opt-in
- * via `analyticsConfig.consentCookieDomain`). Emits a
- * `fuutu:consent` window event so <AnalyticsScript /> can react.
+ * Holds the user's analytics-consent decision. Reads/writes a cookie
+ * (host-scoped by default, cross-subdomain opt-in via
+ * `analyticsConfig.consentCookieDomain`) so the choice survives reloads
+ * and — with a shared domain — sibling apps. Emits a `fuutu:consent`
+ * window event so <AnalyticsScript /> can react.
  */
 export function ConsentProvider({ children }: { children: ReactNode }) {
 	const [status, setStatus] = useState<ConsentStatus>("unknown");
@@ -98,15 +81,16 @@ export function useConsent(): ConsentContextValue {
 }
 
 /**
- * Minimal, unstyled DSGVO banner. Apps can replace this with their
+ * Minimal, unstyled GDPR banner. Apps can replace this with their
  * own UI by reading `useConsent()` directly. Hidden once the user
- * has made a decision, or when consent is not required.
+ * has made a decision, or when the active provider requires no
+ * consent and doesn't opt into the transparency banner.
  */
 export function ConsentBanner() {
 	const t = useTranslations("consent");
 	const { status, hydrated, grant, deny } = useConsent();
 
-	if (!analyticsConfig.requireConsent) return null;
+	if (!consentBannerVisible()) return null;
 	// Defer the first paint until we've checked the consent cookie client-side —
 	// otherwise the banner flashes on reload for users who already decided.
 	if (!hydrated) return null;

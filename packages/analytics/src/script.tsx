@@ -3,14 +3,14 @@
 import Script from "next/script";
 import { useEffect, useState } from "react";
 import { analyticsConfig } from "./config";
-import { readConsentCookie } from "./consent";
-import { resolveAnalyticsProvider } from "./index";
+import { hasTrackingConsent, resolveAnalyticsProvider } from "./index";
 
 /**
- * Loads the active analytics provider's script tag — only after the
- * user has granted consent (DSGVO). Reads consent from a shared cookie,
- * subscribes to the `fuutu:consent` event so it activates immediately
- * after the consent banner is dismissed.
+ * Loads the active analytics provider's script tag once tracking is
+ * allowed — immediately for consent-free providers, otherwise only
+ * after the user grants consent (GDPR). Subscribes to the
+ * `fuutu:consent` event so it activates the moment the consent banner
+ * is dismissed.
  *
  * Script injection is provider-driven via `getScriptProps()`.
  */
@@ -19,7 +19,7 @@ export function AnalyticsScript() {
 
 	useEffect(() => {
 		const read = () => {
-			setGranted(readConsentCookie() === "granted");
+			setGranted(hasTrackingConsent());
 		};
 		read();
 		const handler = () => read();
@@ -28,9 +28,10 @@ export function AnalyticsScript() {
 			window.removeEventListener(analyticsConfig.consentEventName, handler);
 	}, []);
 
-	if (analyticsConfig.requireConsent && !granted) return null;
+	if (!granted) return null;
 
-	const scriptProps = resolveAnalyticsProvider().getScriptProps?.();
+	const provider = resolveAnalyticsProvider();
+	const scriptProps = provider.getScriptProps?.();
 	if (!scriptProps) return null;
 
 	return (
