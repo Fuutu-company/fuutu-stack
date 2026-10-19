@@ -3,7 +3,8 @@
  *
  * Statically scans ALL API procedure files for a critical pattern:
  *   1. Procedure accepts `organizationId` from client input (Zod schema)
- *   2. Procedure does NOT call `requireOrgRole(...)` before using it
+ *   2. Procedure does NOT call `requireOrgPermissionAccess(...)` (or use
+ *      `authProcedure({ org: ... })`) before using it
  *
  * This is a static source-code scan — no DB, no runtime, no mocks.
  * It catches the class of bug where a client-supplied organizationId
@@ -11,9 +12,10 @@
  *
  * The test FAILS if any procedure file:
  *   - Has `organizationId` in a Zod input schema AND
- *   - Does NOT contain a `requireOrgRole(` call
+ *   - Does NOT contain a `requireOrgPermissionAccess(` call or an
+ *     `authProcedure({ org: ... })` guard
  *
- * Exceptions (legitimate cases that don't need requireOrgRole):
+ * Exceptions (legitimate cases that don't need requireOrgPermissionAccess):
  *   - Files that only use `context.user.id` (no orgId from input)
  *   - Files that fetch the org from DB first, then check (indirect IDOR protection)
  *   - Router files (no handler logic)
@@ -59,12 +61,12 @@ function isProcedureFile(content: string): boolean {
  * We look for `organizationId` in a Zod schema definition.
  */
 function acceptsOrganizationIdFromInput(content: string): boolean {
-	// Match: organizationId: z.string() (with optional modifiers)
-	return /organizationId\s*:\s*z\.string\(/.test(content);
+	// Match: organizationId: z.<anything> — string, uuid, coerce, etc.
+	return /organizationId\s*:\s*z\./.test(content);
 }
 
 /**
- * Check if a file calls `requireOrgRole` or `requireOrgPermissionAccess` to verify membership,
+ * Check if a file calls `requireOrgPermissionAccess` to verify membership,
  * OR uses `authProcedure({ org: ... })` which resolves org membership via the authorize middleware.
  *
  * `authProcedure({ org: { ..., optional: true } })` is also a valid guard:
@@ -73,9 +75,8 @@ function acceptsOrganizationIdFromInput(content: string): boolean {
  * the handler must not use `input.organizationId` in that case (the IDOR scanner's
  * `handlerOnlyUsesContextUserId` check catches handlers that use orgId without a guard).
  */
-function callsRequireOrgRole(content: string): boolean {
+function callsRequireOrgPermissionAccess(content: string): boolean {
 	return (
-		content.includes("requireOrgRole(") ||
 		content.includes("requireOrgPermissionAccess(") ||
 		// authProcedure with org option (required or optional) — the authorize
 		// middleware handles membership verification when orgId is present in input
@@ -96,16 +97,12 @@ function usesAdminProcedure(content: string): boolean {
  * only uses context.user.id — meaning the orgId is ignored.
  */
 function handlerOnlyUsesContextUserId(content: string): boolean {
-	// Extract the handler function body
-	const handlerMatch = content.match(
-		/\.handler\(\s*async\s*\(\s*\{[^}]*\}\s*\)\s*=>\s*\{([\s\S]*?)(?:\}\s*\);?\s*$|\}\s*\)\s*;?\s*$)/,
-	);
-	if (!handlerMatch?.[1]) return false;
-	const handlerBody = handlerMatch[1];
-
-	// Check if organizationId is used in the handler body (not just in a conditional check)
-	// If the handler references input.organizationId anywhere, it's using it
-	return !handlerBody.includes("input.organizationId");
+	// Everything after `.handler(` is the handler body — a substring scan
+	// catches `input.organizationId` even inside nested destructures that a
+	// `[^}]*` regex would miss.
+	const idx = content.indexOf(".handler(");
+	if (idx === -1) return false;
+	return !content.slice(idx).includes("input.organizationId");
 }
 
 describe("IDOR Scanner — all API procedures", () => {
@@ -126,7 +123,7 @@ describe("IDOR Scanner — all API procedures", () => {
 		const relPath = relative(API_MODULES_DIR, filePath);
 		const content = readFileSync(filePath, "utf-8");
 		const hasOrgIdInput = acceptsOrganizationIdFromInput(content);
-		const hasRequireOrgRole = callsRequireOrgRole(content);
+		const hasOrgAccessGuard = callsRequireOrgPermissionAccess(content);
 		const isAdminProcedure = usesAdminProcedure(content);
 		const handlerIgnoresOrgId = handlerOnlyUsesContextUserId(content);
 
@@ -134,12 +131,15 @@ describe("IDOR Scanner — all API procedures", () => {
 		if (!hasOrgIdInput) continue;
 
 		const isProtected =
-			hasRequireOrgRole || isAdminProcedure || handlerIgnoresOrgId;
+			hasOrgAccessGuard || isAdminProcedure || handlerIgnoresOrgId;
 
-		it(`${relPath}: organizationId from input must be guarded by requireOrgRole`, () => {
+		it(`${relPath}: organizationId from input must be guarded by requireOrgPermissionAccess or authProcedure({ org })`, () => {
 			if (!isProtected) {
 				const reasons: string[] = [];
-				if (!hasRequireOrgRole) reasons.push("no requireOrgRole() call found");
+				if (!hasOrgAccessGuard)
+					reasons.push(
+						"no requireOrgPermissionAccess() call or authProcedure({ org }) guard found",
+					);
 				if (!isAdminProcedure) reasons.push("not using adminProcedure");
 				if (!handlerIgnoresOrgId)
 					reasons.push("handler uses input.organizationId without guard");
@@ -147,7 +147,7 @@ describe("IDOR Scanner — all API procedures", () => {
 				throw new Error(
 					`IDOR VULNERABILITY: ${relPath} accepts organizationId from client input but has no authorization guard.\n` +
 						`  Issues: ${reasons.join(", ")}\n` +
-						`  Fix: Call requireOrgRole(input.organizationId, context.user.id, "member", context.headers) before using input.organizationId in a DB query.\n` +
+						"  Fix: Call requireOrgPermissionAccess(input.organizationId, context.user.id, PERMISSIONS.X.Y, context) or declare authProcedure({ org: ... }) before using input.organizationId in a DB query.\n" +
 						"  See: packages/api/src/modules/api-keys/procedures/list.ts for the correct pattern.",
 				);
 			}

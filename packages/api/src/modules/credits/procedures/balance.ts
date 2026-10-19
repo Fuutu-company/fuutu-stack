@@ -1,8 +1,8 @@
 import { getCreditBalanceSummary } from "@fuutu/credits";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
+import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const balanceSchema = z.object({
 	organizationId: z.string().min(1).optional(),

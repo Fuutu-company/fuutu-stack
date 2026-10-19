@@ -1,4 +1,5 @@
-import { countWebhooks, createWebhook } from "@fuutu/db";
+import { countWebhooks, createWebhookWithinLimit } from "@fuutu/db";
+import { getPlanLimit } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { validateWebhookUrl } from "@fuutu/webhooks";
 import { WEBHOOK_EVENTS } from "@fuutu/webhooks/events";
@@ -31,15 +32,24 @@ export const createWebhookProcedure = authProcedure({
 			"Creates a new webhook endpoint. The signing secret is returned only once. Requires a Pro plan.",
 	})
 	.input(createWebhookSchema)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
 		const validation = await validateWebhookUrl(input.url);
 		if (!validation.valid) {
 			throw new ORPCError("BAD_REQUEST", { message: "Invalid webhook URL" });
 		}
-		const result = await createWebhook(
-			input.organizationId,
-			input.url,
-			input.events,
-		);
+		// Race-safe re-check: the `limit` option above is a friendly
+		// pre-flight — count+insert run in a Serializable transaction.
+		const limitValue = getPlanLimit(context.planId ?? "free", "webhooks");
+		const max =
+			limitValue === false ? 0 : limitValue === "unlimited" ? null : limitValue;
+		const result = await createWebhookWithinLimit({
+			organizationId: input.organizationId,
+			url: input.url,
+			events: input.events,
+			max,
+		});
+		if (!result) {
+			throw new ORPCError("FORBIDDEN", { message: "Limit exceeded" });
+		}
 		return result;
 	});

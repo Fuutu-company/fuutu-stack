@@ -5,7 +5,7 @@ import type { Context } from "../context";
 import { apiKeysRouter } from "../modules/api-keys/router";
 
 vi.mock("@fuutu/db", () => ({
-	createApiKey: vi.fn(),
+	createApiKeyWithinLimit: vi.fn(),
 	listApiKeys: vi.fn(),
 	listOrgApiKeys: vi.fn(),
 	countApiKeys: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("@fuutu/ai", () => ({
 }));
 
 const {
-	createApiKey,
+	createApiKeyWithinLimit,
 	listApiKeys,
 	listOrgApiKeys,
 	countApiKeys,
@@ -65,22 +65,29 @@ describe("apiKeys.create", () => {
 		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
 			orgFixture as never,
 		);
-	});
-
-	it("creates an API key and returns the plaintext key once", async () => {
-		vi.mocked(createApiKey).mockResolvedValue({
+		vi.mocked(createApiKeyWithinLimit).mockResolvedValue({
 			id: KEY_ID,
 			key: "futu_sk_abc123",
 			prefix: "futu_sk_abc...",
 		});
+		vi.mocked(countApiKeys).mockResolvedValue(0);
+		vi.mocked(countOrgApiKeys).mockResolvedValue(0);
+	});
 
+	it("creates an API key and returns the plaintext key once", async () => {
 		const result = await call(
 			apiKeysRouter.create,
 			{ name: "My Key" },
 			{ context: authenticatedContext },
 		);
 
-		expect(createApiKey).toHaveBeenCalledWith("user-1", "My Key", null, null);
+		expect(createApiKeyWithinLimit).toHaveBeenCalledWith({
+			userId: "user-1",
+			name: "My Key",
+			organizationId: null,
+			expiresAt: null,
+			max: 2, // free plan apiKeys limit
+		});
 		expect(result).toEqual({
 			id: KEY_ID,
 			key: "futu_sk_abc123",
@@ -89,12 +96,6 @@ describe("apiKeys.create", () => {
 	});
 
 	it("passes organizationId and expiresAt when provided", async () => {
-		vi.mocked(createApiKey).mockResolvedValue({
-			id: "00000000-0000-4000-8000-000000000002",
-			key: "futu_sk_xyz",
-			prefix: "futu_sk_xyz...",
-		});
-
 		const expiry = new Date("2025-12-31");
 		await call(
 			apiKeysRouter.create,
@@ -102,12 +103,13 @@ describe("apiKeys.create", () => {
 			{ context: authenticatedContext },
 		);
 
-		expect(createApiKey).toHaveBeenCalledWith(
-			"user-1",
-			"Org Key",
-			"org-1",
-			expiry,
-		);
+		expect(createApiKeyWithinLimit).toHaveBeenCalledWith({
+			userId: "user-1",
+			name: "Org Key",
+			organizationId: "org-1",
+			expiresAt: expiry,
+			max: 2,
+		});
 	});
 
 	it("allows org-level key creation by a member (member has full CRUD on api-keys)", async () => {

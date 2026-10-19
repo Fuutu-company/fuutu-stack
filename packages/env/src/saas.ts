@@ -9,6 +9,9 @@ const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
 export const env = createEnv({
 	server: {
 		DATABASE_URL: z.string().min(1),
+		// Selects the Redis rate-limit store when set — driver is a stub
+		// until implemented, see @fuutu/utils/rate-limit.
+		REDIS_URL: z.string().url().optional(),
 		BETTER_AUTH_SECRET: z.string().min(32),
 		BETTER_AUTH_URL: z.string().url(),
 		// CORS origin for the Hono API — must be a concrete URL, never "*"
@@ -178,6 +181,7 @@ export const env = createEnv({
 		NEXT_PUBLIC_UMAMI_WEBSITE_ID: process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID,
 		NEXT_PUBLIC_UMAMI_SCRIPT_URL: process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL,
 		DATABASE_URL: process.env.DATABASE_URL,
+		REDIS_URL: process.env.REDIS_URL,
 		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
 		BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
 		CORS_ORIGIN: process.env.CORS_ORIGIN,

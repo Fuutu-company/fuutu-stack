@@ -2,8 +2,8 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { resolveSearchProvider } from "@fuutu/search";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { protectedProcedure } from "../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const searchSchema = z.object({
 	text: z.string().min(1).max(200),

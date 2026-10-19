@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { db } from "../client";
 import type { Prisma, WebhookDelivery } from "../generated/client";
+import { withSerializationRetry } from "./transaction";
 
 function generateSecret(): string {
 	return randomBytes(32).toString("base64url");
@@ -18,6 +19,37 @@ export const createWebhook = async (
 		data: { organizationId, url, events, secret },
 	});
 	return { ...webhook, secret };
+};
+
+/**
+ * Create a webhook while enforcing a plan limit atomically — the count
+ * check and the insert run inside one Serializable transaction so two
+ * concurrent requests cannot both pass the check (TOCTOU).
+ * Returns `null` when the limit is already reached.
+ */
+export const createWebhookWithinLimit = (params: {
+	organizationId: string;
+	url: string;
+	events: string[];
+	max: number | null;
+}): Promise<CreatedWebhook | null> => {
+	const { organizationId, url, events, max } = params;
+	return withSerializationRetry(() =>
+		db.$transaction(
+			async (tx) => {
+				const count = await tx.webhook.count({
+					where: { organizationId },
+				});
+				if (max !== null && count >= max) return null;
+				const secret = generateSecret();
+				const webhook = await tx.webhook.create({
+					data: { organizationId, url, events, secret },
+				});
+				return { ...webhook, secret };
+			},
+			{ isolationLevel: "Serializable" },
+		),
+	);
 };
 
 export const listWebhooks = (

@@ -132,6 +132,8 @@ export async function resolveOrgForAccess(
 			...member,
 			email: user.email,
 		}));
+		// getOrganizationWithMembers returns DB member rows; we flatten them
+		// into the getFullOrganization shape, so the cast is structural, not a lie.
 		return { ...org, members } as unknown as FullOrganization;
 	}
 	return getOrgOrNull(organizationId, headers);
@@ -186,7 +188,15 @@ export type AuthorizeOptions = {
 	plan?: PlanTier;
 	/** Require an active paid subscription (not just free tier). */
 	requireActiveSubscription?: boolean;
-	/** Enforce a plan limit — counts current resources, checks against LIMITS. */
+	/**
+	 * Enforce a plan limit — counts current resources, checks against LIMITS.
+	 * Pre-flight guard only: the count and the subsequent create race under
+	 * concurrency. Race-safe enforcement additionally needs the create inside
+	 * a Serializable transaction — db helpers exist for api-keys
+	 * (`createApiKeyWithinLimit`) and webhooks (`createWebhookWithinLimit`).
+	 * Better-Auth-mediated creates (organizations, member invites) are
+	 * inherently best-effort — they cannot be made atomic from our side.
+	 */
 	limit?: {
 		key: LimitKey;
 		/** Async function that returns the current count. Receives the resolved context. */

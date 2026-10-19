@@ -3,8 +3,8 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const apiKeyIdSchema = z.object({
 	id: z.string().uuid(),

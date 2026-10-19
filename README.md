@@ -29,7 +29,7 @@ pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 
 ## What is Fuutu Stack?
 
-A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.js 16, Hono, oRPC, Better Auth, Prisma, TailwindCSS v4. Every domain (mail, payments, storage, analytics, AI) is behind a provider interface with one active implementation and skeletons for the rest. Swap Plunk for Resend, Polar for Stripe, S3 for Cloudflare R2 — without touching business logic.
+A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.js 16, Hono, oRPC, Better Auth, Prisma, TailwindCSS v4. Every domain (mail, payments, storage, analytics, AI) is behind a provider interface with one active implementation and skeletons for the rest. Swap Plunk for Resend, Creem for Stripe, S3 for Cloudflare R2 — without touching business logic.
 
 **AI-native**: built-in MCP (Model Context Protocol) integration so LLM agents can discover and operate your project. AI provider-swappable (OpenRouter / Google / OpenAI / Anthropic / Noop).
 
@@ -52,7 +52,7 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 
 ### API & Backend
 - **Hono 4** server (mounted at `/api/[[...rest]]`)
-- **oRPC 1.12** — end-to-end type-safe API with auto-OpenAPI spec
+- **oRPC 1.15** — end-to-end type-safe API with auto-OpenAPI spec
 - **Zod** validation on every input
 - **API keys** — generate, revoke, scoped access
 - **Webhooks** — signed delivery, retry with backoff, idempotent
@@ -77,12 +77,12 @@ Every domain behind an interface — swap providers without touching business lo
 | Domain | Interface | Active | Skeletons |
 |---|---|---|---|
 | **Mail** | `MailProvider` | Plunk | Resend, SendGrid, Mailgun… |
-| **Payments** | `PaymentProvider` | Polar | Stripe, Paddle, LemonSqueezy… |
+| **Payments** | `PaymentProvider` | Creem | Stripe, Polar, Paddle, LemonSqueezy… |
 | **Storage** | `StorageProvider` | S3 + MinIO | Cloudflare R2, Azure Blob… |
 | **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
 | **AI** | `AIProvider` | OpenRouter | Google, OpenAI, Anthropic, Noop… |
-| **Search** | `SearchProvider` | — | MeiliSearch, Typesense, Algolia… |
-| **Content** | `ContentProvider` | — | MDX, CMS, headless… |
+| **Search** | `SearchProvider` | Postgres | MeiliSearch, Typesense, Algolia… |
+| **Content** | — | TSX collections | CMS, headless… |
 
 ### AI-Native
 - **AI provider-swappable** — OpenRouter / Google / OpenAI / Anthropic / Noop
@@ -136,7 +136,7 @@ fuutu-stack/
 │   ├── logs/             # createLogger({ scope }) + provider interface
 │   ├── mail/             # MailProvider interface + templates
 │   ├── notifications/    # in-app + multi-channel notifications
-│   ├── payments/         # PaymentProvider interface + Polar
+│   ├── payments/         # PaymentProvider interface + Creem
 │   ├── rbac/             # role-based access control
 │   ├── search/           # SearchProvider interface
 │   ├── storage/          # StorageProvider interface + S3/MinIO
@@ -194,7 +194,7 @@ The AI agent harness — 28 skills, 5 subagents, 21 rules — is delivered via t
 Beyond the agent harness, the MCP server also provides:
 
 - **Project Scaffolding** — "add a new package", "create a route with auth guard", "scaffold a new module" — generates code that follows Fuutu conventions by default
-- **Provider Swaps** — "swap Plunk for Resend", "switch Polar to Stripe" — generates the active implementation from the provider interface
+- **Provider Swaps** — "swap Plunk for Resend", "switch Creem to Stripe" — generates the active implementation from the provider interface
 - **Versioning API** — Kit updates, breaking-change alerts, auto-migration suggestions when a new Fuutu Stack version drops
 - **Compliance Check** — verifies all 5 fingerprint emission points, license validity, telemetry setup
 - **Smart Debugging** — send errors to the MCP, it knows the Fuutu codebase structure and can pinpoint root causes

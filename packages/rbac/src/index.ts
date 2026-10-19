@@ -10,7 +10,7 @@
  *
  * 2. ORG roles (Better-Auth `organization` plugin → `member.role`)
  *    Values: "owner" | "admin" | "member"
- *    Used by: requireOrgRole() / requireOrgPermission() / requireOrgPermissionAccess()
+ *    Used by: requireOrgPermission() / requireOrgPermissionAccess()
  *
  * Both systems use the same PERMISSIONS but have separate hierarchies,
  * separate policies, and separate AccessControl instances.

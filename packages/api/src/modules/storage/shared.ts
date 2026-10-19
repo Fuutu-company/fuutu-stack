@@ -1,5 +1,8 @@
+import { createLogger } from "@fuutu/logs";
 import { resolveBucket, StorageBucketError } from "@fuutu/storage";
 import { ORPCError } from "@orpc/server";
+
+const log = createLogger({ scope: "storage" });
 
 /**
  * Resolve a client-supplied bucket name to a configured physical bucket.
@@ -11,7 +14,8 @@ export function resolveBucketOrThrow(bucket: string): string {
 		return resolveBucket(bucket);
 	} catch (e) {
 		if (e instanceof StorageBucketError) {
-			throw new ORPCError("BAD_REQUEST", { message: e.message });
+			log.warn("bucket resolution failed", { err: e });
+			throw new ORPCError("BAD_REQUEST", { message: "Invalid bucket" });
 		}
 		throw e;
 	}

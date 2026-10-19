@@ -14,6 +14,7 @@ import { handlePaymentsWebhook } from "@fuutu/payments";
 import { pingTelemetry } from "@fuutu/telemetry";
 import { Hono, type Context as HonoContext } from "hono";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import { createContext } from "./context";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
 
@@ -174,6 +175,24 @@ export const app = new Hono()
 		}
 
 		await next();
+	})
+	// Thrown exceptions (createContext, auth.handler, webhook/cron handlers)
+	// bypass the `.use("*")` fingerprint middleware — the header is set on the
+	// error response here too so emission point 1 covers every /api/* response.
+	.onError((err, c) => {
+		log.error("unhandled error", {
+			err,
+			method: c.req.method,
+			path: c.req.path,
+		});
+		// Preserve Hono's HTTPException semantics (intended status codes)
+		// instead of flattening everything to a generic 500.
+		const res =
+			err instanceof HTTPException
+				? err.getResponse()
+				: c.json({ error: "internal_error" }, 500);
+		res.headers.set(KIT_FINGERPRINT_HEADER_NAME, KIT_FINGERPRINT_HEADER_VALUE);
+		return res;
 	});
 
 export type App = typeof app;

@@ -94,7 +94,7 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 | Language | TypeScript 5 strict, ESM only (`"type": "module"`) |
 | Framework | Next.js 16 (App Router, React 19.2, Turbopack) |
 | Backend | Hono 4 at `/api/[[...rest]]` |
-| API | oRPC 1.12 — type-safe RPC + auto OpenAPI |
+| API | oRPC 1.15 — type-safe RPC + auto OpenAPI |
 | Database | PostgreSQL 16 + ORM of your choice (`packages/db/`) |
 | Auth | Better Auth 1.6 (`packages/auth/`) |
 | Styling | Tailwind CSS v4 (OKLCH, `packages/config/theme.css`) |

@@ -1,4 +1,4 @@
-import { config } from "@fuutu/config";
+import { config, KIT_VERSION } from "@fuutu/config";
 import { createLogger } from "@fuutu/logs";
 import type { OpenAPI } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
@@ -28,7 +28,7 @@ export const openApiHandler = new OpenAPIHandler(router, {
 				return {
 					info: {
 						title: `${config.app.name} API`,
-						version: "1.0.0",
+						version: KIT_VERSION,
 						description: "Type-safe API built with oRPC",
 					},
 					servers: [{ url: "/api" }],

@@ -7,7 +7,7 @@ import { crud, PERMISSIONS } from "./permissions";
  * Source: Better-Auth `organization` plugin → `member.role`
  * Roles:  "member" | "admin" | "owner"
  *
- * Checked by: `requireOrgPermission()` / `requireOrgPermissionAccess()` / `requireOrgRole()`
+ * Checked by: `requireOrgPermission()` / `requireOrgPermissionAccess()`
  *
  * Design principle: The org `member` base tier mirrors the system `user` base tier
  * for resources that exist in both scopes. The admin/owner tiers add management, not
