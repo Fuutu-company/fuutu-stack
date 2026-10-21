@@ -64,7 +64,8 @@ export const config = {
 			githubUrl: "https://github.com/Fuutu-company/fuutu-stack",
 		},
 		/**
-		 * Provider-swappable domains shipped by the kit (see AGENTS.md §2).
+		 * Domains that ship with a swappable provider interface — one
+		 * active provider each, selected via its own `<domain>Config`.
 		 * Consumers needing the count use `config.app.swappableDomains.length`.
 		 */
 		swappableDomains: [

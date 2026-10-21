@@ -4,7 +4,9 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./index.ts",
+		".": {
+			"default": "./index.ts"
+		},
 		"./theme.css": {
 			"style": "./theme.css",
 			"default": "./theme.css"
