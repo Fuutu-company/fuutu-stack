@@ -96,7 +96,7 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 | Backend | Hono 4 at `/api/[[...rest]]` |
 | API | oRPC 1.15 — type-safe RPC + auto OpenAPI |
 | Database | PostgreSQL 16 + ORM of your choice (`packages/db/`) |
-| Auth | Better Auth 1.6 (`packages/auth/`) |
+| Auth | Better Auth 1.7 (`packages/auth/`) |
 | Styling | Tailwind CSS v4 (OKLCH, `packages/config/theme.css`) |
 | UI | `@fuutu/ui` — shadcn/Radix, **framework-agnostic** (zero `next/*` imports) |
 | i18n | next-intl 4 + `@fuutu/i18n` (en, de) |

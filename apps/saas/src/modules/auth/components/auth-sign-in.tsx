@@ -28,7 +28,13 @@ export function AuthSignIn({
 	const t = useTranslations("auth");
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const redirectTo = getSafeRedirect(searchParams.get("redirect"));
+	const redirectParam = searchParams.get("redirect");
+	const redirectTo = getSafeRedirect(redirectParam);
+	// Forward the redirect target to sign-up so invite links survive the
+	// sign-in → sign-up hop (the invitation id is embedded in it).
+	const signUpHref = redirectParam
+		? `/auth/sign-up?redirect=${encodeURIComponent(redirectParam)}`
+		: "/auth/sign-up";
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [isMagicLinkMode, setIsMagicLinkMode] = useState(false);
@@ -370,10 +376,7 @@ export function AuthSignIn({
 
 						<FieldDescription className="text-center">
 							{t("noAccount")}{" "}
-							<Link
-								href="/auth/sign-up"
-								className="underline underline-offset-4"
-							>
+							<Link href={signUpHref} className="underline underline-offset-4">
 								{t("signInForm.signUpLink")}
 							</Link>
 						</FieldDescription>

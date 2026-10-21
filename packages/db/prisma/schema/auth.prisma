@@ -23,6 +23,9 @@ model User {
   username                 String?   @unique
   paymentsCustomerId       String?
   lastActiveOrganizationId String?
+  // Atomic claim flag for the org-scoped `user.created` webhook —
+  // flipped by claimUserCreatedEvent() on first membership.
+  userCreatedEventSent     Boolean   @default(false)
 
   sessions      Session[]
   accounts      Account[]
@@ -175,6 +178,18 @@ model Passkey {
 
   @@index([userId])
   @@map("passkey")
+  @@schema("auth")
+}
+
+// Better-Auth database rate limiting (rateLimit.storage = "database")
+model RateLimit {
+  id          String @id
+  key         String
+  count       Int
+  lastRequest BigInt
+
+  @@unique([key])
+  @@map("rate_limit")
   @@schema("auth")
 }
 

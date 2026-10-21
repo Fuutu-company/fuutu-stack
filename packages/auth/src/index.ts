@@ -1,10 +1,6 @@
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import {
-	getUserByEmail,
-	listOrganizationsForUser,
-	prismaAuditSink,
-} from "@fuutu/db";
+import { getUserByEmail, prismaAuditSink } from "@fuutu/db";
 import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
 import { createLogger, logsConfig, setAuditSink } from "@fuutu/logs";
@@ -33,6 +29,7 @@ import {
 	syncSeatsForOrganization,
 } from "./hooks/payments-sync";
 import { assertSignupPolicy } from "./hooks/signup-policy";
+import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
 import { sendEmail } from "./lib/email";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
@@ -45,30 +42,20 @@ if (logsConfig.auditSink === "db") {
 
 const log = createLogger({ scope: "auth" });
 
-/**
- * Emit `user.created` when a user gains their first organization
- * membership. Webhooks are org-scoped, so dispatching at account
- * creation (before any membership exists) would enqueue zero
- * deliveries — the event is emitted here instead, scoped to the org
- * the user first joins. Best-effort: a dispatch failure must never
- * abort the membership flow.
- */
-async function emitUserCreatedOnFirstMembership(
-	userId: string,
-	organizationId: string,
-): Promise<void> {
-	try {
-		const orgs = await listOrganizationsForUser(userId);
-		if (orgs.length !== 1 || orgs[0]?.id !== organizationId) return;
-		const { dispatchEvent } = await import("@fuutu/webhooks");
-		await dispatchEvent({
-			event: "user.created",
-			organizationId,
-			payload: { userId, organizationId },
-		});
-	} catch (err) {
-		log.warn("user.created webhook dispatch failed", { err: String(err) });
-	}
+if (env.FUUTU_DISABLE_RATE_LIMIT) {
+	log.warn(
+		"FUUTU_DISABLE_RATE_LIMIT is set — auth rate limiting is DISABLED. Intended for CI/E2E only; never set this in production.",
+	);
+}
+
+// Base URL of the public SaaS app — used for links in auth emails and
+// the passkey relying-party ID.
+const saasBaseUrl = env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000";
+
+if (!env.NEXT_PUBLIC_SAAS_URL && env.NODE_ENV === "production") {
+	log.warn(
+		"NEXT_PUBLIC_SAAS_URL is unset — auth emails and passkeys will point at http://localhost:3000.",
+	);
 }
 
 const authOptions = {
@@ -80,14 +67,14 @@ const authOptions = {
 	trustedOrigins: [env.CORS_ORIGIN],
 
 	// Rate limiting: Prevent brute-force attacks and email spam.
-	// Disabled in development and when FUUTU_DISABLE_RATE_LIMIT is set (CI E2E).
+	// Disabled when FUUTU_DISABLE_RATE_LIMIT is set (CI E2E).
+	// Stored in Postgres (`rate_limit` table) so limits hold across
+	// serverless instances and multiple replicas.
 	rateLimit: {
-		enabled:
-			authConfig.rateLimiting.enabled &&
-			env.NODE_ENV === "production" &&
-			!env.FUUTU_DISABLE_RATE_LIMIT,
+		enabled: authConfig.rateLimiting.enabled && !env.FUUTU_DISABLE_RATE_LIMIT,
 		window: authConfig.rateLimiting.window,
 		max: authConfig.rateLimiting.max,
+		storage: "database",
 	},
 
 	session: {
@@ -111,10 +98,6 @@ const authOptions = {
 				required: false,
 				defaultValue: false,
 				input: false,
-			},
-			username: {
-				type: "string",
-				required: false,
 			},
 			paymentsCustomerId: {
 				type: "string",
@@ -150,7 +133,7 @@ const authOptions = {
 						},
 					});
 				} catch (err) {
-					log.warn("change email confirmation failed", { err: String(err) });
+					log.error("change email confirmation failed", { err: String(err) });
 				}
 			},
 		},
@@ -190,12 +173,15 @@ const authOptions = {
 					},
 				});
 			} catch (err) {
-				log.warn("reset password email failed", { err: String(err) });
+				log.error("reset password email failed", { err: String(err) });
 			}
 		},
 	},
 
 	emailVerification: {
+		// Without this, enabling `requireEmailVerification` locks users out:
+		// no verification mail would ever fire on sign-up.
+		sendOnSignUp: authConfig.signup.requireEmailVerification,
 		sendVerificationEmail: async ({ user, url }) => {
 			try {
 				await sendEmail({
@@ -208,7 +194,7 @@ const authOptions = {
 					},
 				});
 			} catch (err) {
-				log.warn("verification email failed", { err: String(err) });
+				log.error("verification email failed", { err: String(err) });
 			}
 		},
 	},
@@ -217,7 +203,8 @@ const authOptions = {
 	// Better-Auth otherwise logs a WARN on every boot in dev environments
 	// where we intentionally skip OAuth wiring.
 	socialProviders: {
-		...(authConfig.socialProviders.google.enabled &&
+		...(authConfig.features.socialLogin &&
+		authConfig.socialProviders.google.enabled &&
 		env.GOOGLE_CLIENT_ID &&
 		env.GOOGLE_CLIENT_SECRET
 			? {
@@ -228,7 +215,8 @@ const authOptions = {
 					},
 				}
 			: {}),
-		...(authConfig.socialProviders.github.enabled &&
+		...(authConfig.features.socialLogin &&
+		authConfig.socialProviders.github.enabled &&
 		env.GITHUB_CLIENT_ID &&
 		env.GITHUB_CLIENT_SECRET
 			? {
@@ -289,12 +277,12 @@ const authOptions = {
 							template: "new-user",
 							data: {
 								name: user.name,
-								appUrl: env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000",
+								appUrl: saasBaseUrl,
 								locale: (user as { locale?: "en" | "de" }).locale,
 							},
 						});
 					} catch (err) {
-						log.warn("welcome email failed", { err: String(err) });
+						log.error("welcome email failed", { err: String(err) });
 					}
 				},
 			},
@@ -308,11 +296,16 @@ const authOptions = {
 		session: {
 			create: {
 				after: async (session) => {
-					await logSessionCreated({
-						userId: session.userId,
-						ipAddress: session.ipAddress,
-						userAgent: session.userAgent,
-					});
+					// Audit must never break sign-in.
+					try {
+						await logSessionCreated({
+							userId: session.userId,
+							ipAddress: session.ipAddress,
+							userAgent: session.userAgent,
+						});
+					} catch (err) {
+						log.warn("session audit log failed", { err: String(err) });
+					}
 				},
 			},
 		},
@@ -341,8 +334,7 @@ const authOptions = {
 			? [
 					passkey({
 						rpName: config.app.name,
-						rpID: new URL(env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000")
-							.hostname,
+						rpID: new URL(saasBaseUrl).hostname,
 					}),
 				]
 			: []),
@@ -351,7 +343,7 @@ const authOptions = {
 			? [
 					organization({
 						async sendInvitationEmail({ email, id, organization, inviter }) {
-							const inviteUrl = `${env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000"}/auth/accept-invitation?id=${id}`;
+							const inviteUrl = `${saasBaseUrl}/auth/accept-invitation?id=${id}`;
 							try {
 								await sendEmail({
 									to: email,
@@ -364,7 +356,7 @@ const authOptions = {
 									},
 								});
 							} catch (err) {
-								log.warn("invitation email failed", { err: String(err) });
+								log.error("invitation email failed", { err: String(err) });
 							}
 						},
 						// Sync seats with the payment provider on membership changes.
@@ -395,9 +387,8 @@ const authOptions = {
 			: []),
 
 		admin({
-			defaultBanReason: "Violation of terms of service",
-			bannedUserMessage:
-				"Your account has been suspended. Please contact support if you believe this is an error.",
+			defaultBanReason: authConfig.admin.defaultBanReason,
+			bannedUserMessage: authConfig.admin.bannedUserMessage,
 		}),
 
 		multiSession(),
@@ -424,7 +415,7 @@ const authOptions = {
 									},
 								});
 							} catch (err) {
-								log.warn("magic link email failed", { err: String(err) });
+								log.error("magic link email failed", { err: String(err) });
 							}
 						},
 					}),

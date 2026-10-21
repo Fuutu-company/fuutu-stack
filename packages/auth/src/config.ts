@@ -20,7 +20,11 @@ export const authConfig = {
 	rateLimiting: {
 		enabled: true,
 		window: 60, // seconds
-		max: 10, // max requests per window
+		// Global per-path budget. Credential endpoints (/sign-in/*, /sign-up/*,
+		// /change-password, /change-email, reset/verify paths) are covered by
+		// Better-Auth's built-in special rules (max 3/10s) — this limit only
+		// governs the rest, including read-heavy paths like /get-session.
+		max: 100,
 	},
 	passwordPolicy: {
 		minLength: 8,
@@ -39,6 +43,12 @@ export const authConfig = {
 		enabled: true,
 		trustedProviders: ["google", "github"] as const,
 	},
+	// Admin-plugin messages — customization point for kit buyers.
+	admin: {
+		defaultBanReason: "Violation of terms of service",
+		bannedUserMessage:
+			"Your account has been suspended. Please contact support if you believe this is an error.",
+	},
 	features: {
 		emailPassword: true,
 		magicLink: true,
@@ -50,7 +60,7 @@ export const authConfig = {
 	socialProviders: {
 		google: {
 			enabled: true,
-			scopes: ["email", "profile"],
+			scopes: ["openid", "email", "profile"],
 		},
 		github: {
 			enabled: true,

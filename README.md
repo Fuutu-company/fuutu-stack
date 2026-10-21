@@ -147,7 +147,7 @@ fuutu-stack/
 │   └── webhooks/         # signed delivery, retry, idempotent
 ├── tooling/
 │   ├── typescript/       # shared tsconfigs (base / nextjs / react-library)
-│   └── tailwind/         # shared Tailwind preset + theme.css
+│   └── scripts/          # repo tooling (assets-sync.mjs, dependency-report.mjs)
 ```
 
 Detailed architecture: **[stack.fuutu.com/docs/architecture](https://stack.fuutu.com/docs/architecture)**
@@ -182,12 +182,12 @@ This repository contains the **integration point** for that server. No MCP runti
 
 ### Fuutu MCP
 
-The AI agent harness — 28 skills, 5 subagents, 21 rules — is delivered via the **Fuutu MCP server**, not bundled in this repo. Point your MCP-aware editor (Cursor, Devin, Windsurf, VS Code) at the Fuutu MCP server and the full harness activates. The MCP exposes **tool calls** — deterministic functions the LLM can invoke (scaffold, swap provider, check compliance) instead of guessing code from context.
+The AI agent harness — skills, subagents, and coding rules — is delivered via the **Fuutu MCP server**, not bundled in this repo. Point your MCP-aware editor (Cursor, Devin, Windsurf, VS Code) at the Fuutu MCP server and the full harness activates. The MCP exposes **tool calls** — deterministic functions the LLM can invoke (scaffold, swap provider, check compliance) instead of guessing code from context.
 
 | Layer | Count | What it does |
 |---|---|---|
-| **Skills** | 27 | TDD, brainstorming, systematic-debugging, browser-verification, self-learning, commit-proposal, review… — auto-invoked based on task context |
-| **Subagents** | 5 | `harvest` (scan/grep/read) · `implementer` (code/TDD) · `verifier` (run/parse) · `synthesizer` (cross-ref) · `designer` (architecture) — cost-tiered, parallel dispatch |
+| **Skills** | 30 | TDD, brainstorming, systematic-debugging, browser-verification, self-learning, commit-proposal, review… — auto-invoked based on task context |
+| **Subagents** | 5 | Scan/read, code/TDD, run/verify, cross-reference, architecture — cost-tiered, parallel dispatch |
 | **Rules** | 21 | global, auth, backend, frontend, ui, testing, security, i18n, rbac, logging, license, review… — enforced, not suggestions |
 | **Multi-host** | 4 editors | Cursor · Devin · Windsurf · VS Code |
 
@@ -199,7 +199,7 @@ Beyond the agent harness, the MCP server also provides:
 - **Compliance Check** — verifies all 5 fingerprint emission points, license validity, telemetry setup
 - **Smart Debugging** — send errors to the MCP, it knows the Fuutu codebase structure and can pinpoint root causes
 
-**Default workflow:** `brainstorm → plan → implement (TDD) → verify → browser-check → commit`. The orchestrator dispatches subagents in parallel, each with the cheapest capable cost tier.
+**Default workflow:** `brainstorm → plan → implement (TDD) → verify → browser-check → commit`. Subagents are dispatched in parallel, each at the cheapest capable cost tier.
 
 ---
 

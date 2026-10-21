@@ -140,7 +140,7 @@ export type CreditEventScalarFieldEnum = z.infer<typeof CreditEventScalarFieldEn
 
 // File: UserScalarFieldEnum.schema.ts
 
-export const UserScalarFieldEnumSchema = z.enum(['id', 'name', 'email', 'emailVerified', 'image', 'createdAt', 'updatedAt', 'role', 'banned', 'banReason', 'banExpires', 'locale', 'twoFactorEnabled', 'onboardingComplete', 'username', 'paymentsCustomerId', 'lastActiveOrganizationId'])
+export const UserScalarFieldEnumSchema = z.enum(['id', 'name', 'email', 'emailVerified', 'image', 'createdAt', 'updatedAt', 'role', 'banned', 'banReason', 'banExpires', 'locale', 'twoFactorEnabled', 'onboardingComplete', 'username', 'paymentsCustomerId', 'lastActiveOrganizationId', 'userCreatedEventSent'])
 
 export type UserScalarFieldEnum = z.infer<typeof UserScalarFieldEnumSchema>;
 
@@ -185,6 +185,12 @@ export type InvitationScalarFieldEnum = z.infer<typeof InvitationScalarFieldEnum
 export const PasskeyScalarFieldEnumSchema = z.enum(['id', 'name', 'publicKey', 'userId', 'credentialID', 'counter', 'deviceType', 'backedUp', 'transports', 'createdAt', 'aaguid'])
 
 export type PasskeyScalarFieldEnum = z.infer<typeof PasskeyScalarFieldEnumSchema>;
+
+// File: RateLimitScalarFieldEnum.schema.ts
+
+export const RateLimitScalarFieldEnumSchema = z.enum(['id', 'key', 'count', 'lastRequest'])
+
+export type RateLimitScalarFieldEnum = z.infer<typeof RateLimitScalarFieldEnumSchema>;
 
 // File: TwoFactorScalarFieldEnum.schema.ts
 
@@ -1511,6 +1517,7 @@ const userwhereinputSchema = z.object({
   username: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   paymentsCustomerId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  userCreatedEventSent: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   sessions: z.lazy(() => SessionListRelationFilterObjectSchema).optional(),
   accounts: z.lazy(() => AccountListRelationFilterObjectSchema).optional(),
   members: z.lazy(() => MemberListRelationFilterObjectSchema).optional(),
@@ -1550,6 +1557,7 @@ const __makeSchema_UserOrderByWithRelationInput_schema = () => z.object({
   username: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paymentsCustomerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   lastActiveOrganizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  userCreatedEventSent: SortOrderSchema.optional(),
   sessions: z.lazy(() => SessionOrderByRelationAggregateInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountOrderByRelationAggregateInputObjectSchema).optional(),
   members: z.lazy(() => MemberOrderByRelationAggregateInputObjectSchema).optional(),
@@ -1599,6 +1607,7 @@ const __makeSchema_UserOrderByWithAggregationInput_schema = () => z.object({
   username: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paymentsCustomerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   lastActiveOrganizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  userCreatedEventSent: SortOrderSchema.optional(),
   _count: z.lazy(() => UserCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => UserMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => UserMinOrderByAggregateInputObjectSchema).optional()
@@ -1629,7 +1638,8 @@ const userscalarwherewithaggregatesinputSchema = z.object({
   onboardingComplete: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   username: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   paymentsCustomerId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  lastActiveOrganizationId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  lastActiveOrganizationId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  userCreatedEventSent: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const UserScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.UserScalarWhereWithAggregatesInput> = userscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.UserScalarWhereWithAggregatesInput>;
 export const UserScalarWhereWithAggregatesInputObjectZodSchema = userscalarwherewithaggregatesinputSchema;
@@ -2242,6 +2252,72 @@ const passkeyscalarwherewithaggregatesinputSchema = z.object({
 }).strict();
 export const PasskeyScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.PasskeyScalarWhereWithAggregatesInput> = passkeyscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.PasskeyScalarWhereWithAggregatesInput>;
 export const PasskeyScalarWhereWithAggregatesInputObjectZodSchema = passkeyscalarwherewithaggregatesinputSchema;
+
+
+// File: RateLimitWhereInput.schema.ts
+
+const ratelimitwhereinputSchema = z.object({
+  AND: z.union([z.lazy(() => RateLimitWhereInputObjectSchema), z.lazy(() => RateLimitWhereInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => RateLimitWhereInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => RateLimitWhereInputObjectSchema), z.lazy(() => RateLimitWhereInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  key: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  count: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
+  lastRequest: z.union([z.lazy(() => BigIntFilterObjectSchema), z.bigint()]).optional()
+}).strict();
+export const RateLimitWhereInputObjectSchema: z.ZodType<Prisma.RateLimitWhereInput> = ratelimitwhereinputSchema as unknown as z.ZodType<Prisma.RateLimitWhereInput>;
+export const RateLimitWhereInputObjectZodSchema = ratelimitwhereinputSchema;
+
+
+// File: RateLimitOrderByWithRelationInput.schema.ts
+const __makeSchema_RateLimitOrderByWithRelationInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  key: SortOrderSchema.optional(),
+  count: SortOrderSchema.optional(),
+  lastRequest: SortOrderSchema.optional()
+}).strict();
+export const RateLimitOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.RateLimitOrderByWithRelationInput> = __makeSchema_RateLimitOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.RateLimitOrderByWithRelationInput>;
+export const RateLimitOrderByWithRelationInputObjectZodSchema = __makeSchema_RateLimitOrderByWithRelationInput_schema();
+
+
+// File: RateLimitWhereUniqueInput.schema.ts
+const __makeSchema_RateLimitWhereUniqueInput_schema = () => z.object({
+  id: z.string().optional(),
+  key: z.string().optional()
+}).strict();
+export const RateLimitWhereUniqueInputObjectSchema: z.ZodType<Prisma.RateLimitWhereUniqueInput> = __makeSchema_RateLimitWhereUniqueInput_schema() as unknown as z.ZodType<Prisma.RateLimitWhereUniqueInput>;
+export const RateLimitWhereUniqueInputObjectZodSchema = __makeSchema_RateLimitWhereUniqueInput_schema();
+
+
+// File: RateLimitOrderByWithAggregationInput.schema.ts
+const __makeSchema_RateLimitOrderByWithAggregationInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  key: SortOrderSchema.optional(),
+  count: SortOrderSchema.optional(),
+  lastRequest: SortOrderSchema.optional(),
+  _count: z.lazy(() => RateLimitCountOrderByAggregateInputObjectSchema).optional(),
+  _avg: z.lazy(() => RateLimitAvgOrderByAggregateInputObjectSchema).optional(),
+  _max: z.lazy(() => RateLimitMaxOrderByAggregateInputObjectSchema).optional(),
+  _min: z.lazy(() => RateLimitMinOrderByAggregateInputObjectSchema).optional(),
+  _sum: z.lazy(() => RateLimitSumOrderByAggregateInputObjectSchema).optional()
+}).strict();
+export const RateLimitOrderByWithAggregationInputObjectSchema: z.ZodType<Prisma.RateLimitOrderByWithAggregationInput> = __makeSchema_RateLimitOrderByWithAggregationInput_schema() as unknown as z.ZodType<Prisma.RateLimitOrderByWithAggregationInput>;
+export const RateLimitOrderByWithAggregationInputObjectZodSchema = __makeSchema_RateLimitOrderByWithAggregationInput_schema();
+
+
+// File: RateLimitScalarWhereWithAggregatesInput.schema.ts
+
+const ratelimitscalarwherewithaggregatesinputSchema = z.object({
+  AND: z.union([z.lazy(() => RateLimitScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => RateLimitScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => RateLimitScalarWhereWithAggregatesInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => RateLimitScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => RateLimitScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  key: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  count: z.union([z.lazy(() => IntWithAggregatesFilterObjectSchema), z.number().int()]).optional(),
+  lastRequest: z.union([z.lazy(() => BigIntWithAggregatesFilterObjectSchema), z.bigint()]).optional()
+}).strict();
+export const RateLimitScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.RateLimitScalarWhereWithAggregatesInput> = ratelimitscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.RateLimitScalarWhereWithAggregatesInput>;
+export const RateLimitScalarWhereWithAggregatesInputObjectZodSchema = ratelimitscalarwherewithaggregatesinputSchema;
 
 
 // File: TwoFactorWhereInput.schema.ts
@@ -3952,6 +4028,7 @@ const __makeSchema_UserCreateInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -3990,6 +4067,7 @@ const __makeSchema_UserUncheckedCreateInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -4029,6 +4107,7 @@ const __makeSchema_UserUpdateInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -4068,6 +4147,7 @@ const __makeSchema_UserUncheckedUpdateInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -4106,7 +4186,8 @@ const __makeSchema_UserCreateManyInput_schema = () => z.object({
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
-  lastActiveOrganizationId: z.string().optional().nullable()
+  lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional()
 }).strict();
 export const UserCreateManyInputObjectSchema: z.ZodType<Prisma.UserCreateManyInput> = __makeSchema_UserCreateManyInput_schema() as unknown as z.ZodType<Prisma.UserCreateManyInput>;
 export const UserCreateManyInputObjectZodSchema = __makeSchema_UserCreateManyInput_schema();
@@ -4130,7 +4211,8 @@ const __makeSchema_UserUpdateManyMutationInput_schema = () => z.object({
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const UserUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.UserUpdateManyMutationInput> = __makeSchema_UserUpdateManyMutationInput_schema() as unknown as z.ZodType<Prisma.UserUpdateManyMutationInput>;
 export const UserUpdateManyMutationInputObjectZodSchema = __makeSchema_UserUpdateManyMutationInput_schema();
@@ -4154,7 +4236,8 @@ const __makeSchema_UserUncheckedUpdateManyInput_schema = () => z.object({
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const UserUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.UserUncheckedUpdateManyInput> = __makeSchema_UserUncheckedUpdateManyInput_schema() as unknown as z.ZodType<Prisma.UserUncheckedUpdateManyInput>;
 export const UserUncheckedUpdateManyInputObjectZodSchema = __makeSchema_UserUncheckedUpdateManyInput_schema();
@@ -4952,6 +5035,83 @@ const __makeSchema_PasskeyUncheckedUpdateManyInput_schema = () => z.object({
 }).strict();
 export const PasskeyUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.PasskeyUncheckedUpdateManyInput> = __makeSchema_PasskeyUncheckedUpdateManyInput_schema() as unknown as z.ZodType<Prisma.PasskeyUncheckedUpdateManyInput>;
 export const PasskeyUncheckedUpdateManyInputObjectZodSchema = __makeSchema_PasskeyUncheckedUpdateManyInput_schema();
+
+
+// File: RateLimitCreateInput.schema.ts
+const __makeSchema_RateLimitCreateInput_schema = () => z.object({
+  id: z.string(),
+  key: z.string(),
+  count: z.number().int(),
+  lastRequest: z.bigint()
+}).strict();
+export const RateLimitCreateInputObjectSchema: z.ZodType<Prisma.RateLimitCreateInput> = __makeSchema_RateLimitCreateInput_schema() as unknown as z.ZodType<Prisma.RateLimitCreateInput>;
+export const RateLimitCreateInputObjectZodSchema = __makeSchema_RateLimitCreateInput_schema();
+
+
+// File: RateLimitUncheckedCreateInput.schema.ts
+const __makeSchema_RateLimitUncheckedCreateInput_schema = () => z.object({
+  id: z.string(),
+  key: z.string(),
+  count: z.number().int(),
+  lastRequest: z.bigint()
+}).strict();
+export const RateLimitUncheckedCreateInputObjectSchema: z.ZodType<Prisma.RateLimitUncheckedCreateInput> = __makeSchema_RateLimitUncheckedCreateInput_schema() as unknown as z.ZodType<Prisma.RateLimitUncheckedCreateInput>;
+export const RateLimitUncheckedCreateInputObjectZodSchema = __makeSchema_RateLimitUncheckedCreateInput_schema();
+
+
+// File: RateLimitUpdateInput.schema.ts
+const __makeSchema_RateLimitUpdateInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  count: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRequest: z.union([z.bigint(), z.lazy(() => BigIntFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const RateLimitUpdateInputObjectSchema: z.ZodType<Prisma.RateLimitUpdateInput> = __makeSchema_RateLimitUpdateInput_schema() as unknown as z.ZodType<Prisma.RateLimitUpdateInput>;
+export const RateLimitUpdateInputObjectZodSchema = __makeSchema_RateLimitUpdateInput_schema();
+
+
+// File: RateLimitUncheckedUpdateInput.schema.ts
+const __makeSchema_RateLimitUncheckedUpdateInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  count: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRequest: z.union([z.bigint(), z.lazy(() => BigIntFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const RateLimitUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.RateLimitUncheckedUpdateInput> = __makeSchema_RateLimitUncheckedUpdateInput_schema() as unknown as z.ZodType<Prisma.RateLimitUncheckedUpdateInput>;
+export const RateLimitUncheckedUpdateInputObjectZodSchema = __makeSchema_RateLimitUncheckedUpdateInput_schema();
+
+
+// File: RateLimitCreateManyInput.schema.ts
+const __makeSchema_RateLimitCreateManyInput_schema = () => z.object({
+  id: z.string(),
+  key: z.string(),
+  count: z.number().int(),
+  lastRequest: z.bigint()
+}).strict();
+export const RateLimitCreateManyInputObjectSchema: z.ZodType<Prisma.RateLimitCreateManyInput> = __makeSchema_RateLimitCreateManyInput_schema() as unknown as z.ZodType<Prisma.RateLimitCreateManyInput>;
+export const RateLimitCreateManyInputObjectZodSchema = __makeSchema_RateLimitCreateManyInput_schema();
+
+
+// File: RateLimitUpdateManyMutationInput.schema.ts
+const __makeSchema_RateLimitUpdateManyMutationInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  count: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRequest: z.union([z.bigint(), z.lazy(() => BigIntFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const RateLimitUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.RateLimitUpdateManyMutationInput> = __makeSchema_RateLimitUpdateManyMutationInput_schema() as unknown as z.ZodType<Prisma.RateLimitUpdateManyMutationInput>;
+export const RateLimitUpdateManyMutationInputObjectZodSchema = __makeSchema_RateLimitUpdateManyMutationInput_schema();
+
+
+// File: RateLimitUncheckedUpdateManyInput.schema.ts
+const __makeSchema_RateLimitUncheckedUpdateManyInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  count: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  lastRequest: z.union([z.bigint(), z.lazy(() => BigIntFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const RateLimitUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.RateLimitUncheckedUpdateManyInput> = __makeSchema_RateLimitUncheckedUpdateManyInput_schema() as unknown as z.ZodType<Prisma.RateLimitUncheckedUpdateManyInput>;
+export const RateLimitUncheckedUpdateManyInputObjectZodSchema = __makeSchema_RateLimitUncheckedUpdateManyInput_schema();
 
 
 // File: TwoFactorCreateInput.schema.ts
@@ -6778,7 +6938,8 @@ const __makeSchema_UserCountOrderByAggregateInput_schema = () => z.object({
   onboardingComplete: SortOrderSchema.optional(),
   username: SortOrderSchema.optional(),
   paymentsCustomerId: SortOrderSchema.optional(),
-  lastActiveOrganizationId: SortOrderSchema.optional()
+  lastActiveOrganizationId: SortOrderSchema.optional(),
+  userCreatedEventSent: SortOrderSchema.optional()
 }).strict();
 export const UserCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.UserCountOrderByAggregateInput> = __makeSchema_UserCountOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.UserCountOrderByAggregateInput>;
 export const UserCountOrderByAggregateInputObjectZodSchema = __makeSchema_UserCountOrderByAggregateInput_schema();
@@ -6802,7 +6963,8 @@ const __makeSchema_UserMaxOrderByAggregateInput_schema = () => z.object({
   onboardingComplete: SortOrderSchema.optional(),
   username: SortOrderSchema.optional(),
   paymentsCustomerId: SortOrderSchema.optional(),
-  lastActiveOrganizationId: SortOrderSchema.optional()
+  lastActiveOrganizationId: SortOrderSchema.optional(),
+  userCreatedEventSent: SortOrderSchema.optional()
 }).strict();
 export const UserMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.UserMaxOrderByAggregateInput> = __makeSchema_UserMaxOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.UserMaxOrderByAggregateInput>;
 export const UserMaxOrderByAggregateInputObjectZodSchema = __makeSchema_UserMaxOrderByAggregateInput_schema();
@@ -6826,7 +6988,8 @@ const __makeSchema_UserMinOrderByAggregateInput_schema = () => z.object({
   onboardingComplete: SortOrderSchema.optional(),
   username: SortOrderSchema.optional(),
   paymentsCustomerId: SortOrderSchema.optional(),
-  lastActiveOrganizationId: SortOrderSchema.optional()
+  lastActiveOrganizationId: SortOrderSchema.optional(),
+  userCreatedEventSent: SortOrderSchema.optional()
 }).strict();
 export const UserMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.UserMinOrderByAggregateInput> = __makeSchema_UserMinOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.UserMinOrderByAggregateInput>;
 export const UserMinOrderByAggregateInputObjectZodSchema = __makeSchema_UserMinOrderByAggregateInput_schema();
@@ -7221,6 +7384,92 @@ const __makeSchema_PasskeySumOrderByAggregateInput_schema = () => z.object({
 }).strict();
 export const PasskeySumOrderByAggregateInputObjectSchema: z.ZodType<Prisma.PasskeySumOrderByAggregateInput> = __makeSchema_PasskeySumOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.PasskeySumOrderByAggregateInput>;
 export const PasskeySumOrderByAggregateInputObjectZodSchema = __makeSchema_PasskeySumOrderByAggregateInput_schema();
+
+
+// File: BigIntFilter.schema.ts
+const __makeSchema_BigIntFilter_schema = () => z.object({
+  equals: z.bigint().optional(),
+  in: z.bigint().array().optional(),
+  notIn: z.bigint().array().optional(),
+  lt: z.bigint().optional(),
+  lte: z.bigint().optional(),
+  gt: z.bigint().optional(),
+  gte: z.bigint().optional(),
+  not: z.union([z.bigint(), z.lazy(() => NestedBigIntFilterObjectSchema)]).optional()
+}).strict();
+export const BigIntFilterObjectSchema: z.ZodType<Prisma.BigIntFilter> = __makeSchema_BigIntFilter_schema() as unknown as z.ZodType<Prisma.BigIntFilter>;
+export const BigIntFilterObjectZodSchema = __makeSchema_BigIntFilter_schema();
+
+
+// File: RateLimitCountOrderByAggregateInput.schema.ts
+const __makeSchema_RateLimitCountOrderByAggregateInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  key: SortOrderSchema.optional(),
+  count: SortOrderSchema.optional(),
+  lastRequest: SortOrderSchema.optional()
+}).strict();
+export const RateLimitCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitCountOrderByAggregateInput> = __makeSchema_RateLimitCountOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitCountOrderByAggregateInput>;
+export const RateLimitCountOrderByAggregateInputObjectZodSchema = __makeSchema_RateLimitCountOrderByAggregateInput_schema();
+
+
+// File: RateLimitAvgOrderByAggregateInput.schema.ts
+const __makeSchema_RateLimitAvgOrderByAggregateInput_schema = () => z.object({
+  count: SortOrderSchema.optional(),
+  lastRequest: SortOrderSchema.optional()
+}).strict();
+export const RateLimitAvgOrderByAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitAvgOrderByAggregateInput> = __makeSchema_RateLimitAvgOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitAvgOrderByAggregateInput>;
+export const RateLimitAvgOrderByAggregateInputObjectZodSchema = __makeSchema_RateLimitAvgOrderByAggregateInput_schema();
+
+
+// File: RateLimitMaxOrderByAggregateInput.schema.ts
+const __makeSchema_RateLimitMaxOrderByAggregateInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  key: SortOrderSchema.optional(),
+  count: SortOrderSchema.optional(),
+  lastRequest: SortOrderSchema.optional()
+}).strict();
+export const RateLimitMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitMaxOrderByAggregateInput> = __makeSchema_RateLimitMaxOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitMaxOrderByAggregateInput>;
+export const RateLimitMaxOrderByAggregateInputObjectZodSchema = __makeSchema_RateLimitMaxOrderByAggregateInput_schema();
+
+
+// File: RateLimitMinOrderByAggregateInput.schema.ts
+const __makeSchema_RateLimitMinOrderByAggregateInput_schema = () => z.object({
+  id: SortOrderSchema.optional(),
+  key: SortOrderSchema.optional(),
+  count: SortOrderSchema.optional(),
+  lastRequest: SortOrderSchema.optional()
+}).strict();
+export const RateLimitMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitMinOrderByAggregateInput> = __makeSchema_RateLimitMinOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitMinOrderByAggregateInput>;
+export const RateLimitMinOrderByAggregateInputObjectZodSchema = __makeSchema_RateLimitMinOrderByAggregateInput_schema();
+
+
+// File: RateLimitSumOrderByAggregateInput.schema.ts
+const __makeSchema_RateLimitSumOrderByAggregateInput_schema = () => z.object({
+  count: SortOrderSchema.optional(),
+  lastRequest: SortOrderSchema.optional()
+}).strict();
+export const RateLimitSumOrderByAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitSumOrderByAggregateInput> = __makeSchema_RateLimitSumOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitSumOrderByAggregateInput>;
+export const RateLimitSumOrderByAggregateInputObjectZodSchema = __makeSchema_RateLimitSumOrderByAggregateInput_schema();
+
+
+// File: BigIntWithAggregatesFilter.schema.ts
+const __makeSchema_BigIntWithAggregatesFilter_schema = () => z.object({
+  equals: z.bigint().optional(),
+  in: z.bigint().array().optional(),
+  notIn: z.bigint().array().optional(),
+  lt: z.bigint().optional(),
+  lte: z.bigint().optional(),
+  gt: z.bigint().optional(),
+  gte: z.bigint().optional(),
+  not: z.union([z.bigint(), z.lazy(() => NestedBigIntWithAggregatesFilterObjectSchema)]).optional(),
+  _count: z.lazy(() => NestedIntFilterObjectSchema).optional(),
+  _avg: z.lazy(() => NestedFloatFilterObjectSchema).optional(),
+  _sum: z.lazy(() => NestedBigIntFilterObjectSchema).optional(),
+  _min: z.lazy(() => NestedBigIntFilterObjectSchema).optional(),
+  _max: z.lazy(() => NestedBigIntFilterObjectSchema).optional()
+}).strict();
+export const BigIntWithAggregatesFilterObjectSchema: z.ZodType<Prisma.BigIntWithAggregatesFilter> = __makeSchema_BigIntWithAggregatesFilter_schema() as unknown as z.ZodType<Prisma.BigIntWithAggregatesFilter>;
+export const BigIntWithAggregatesFilterObjectZodSchema = __makeSchema_BigIntWithAggregatesFilter_schema();
 
 
 // File: TwoFactorCountOrderByAggregateInput.schema.ts
@@ -9659,6 +9908,18 @@ export const UserUpdateOneRequiredWithoutPasskeysNestedInputObjectSchema: z.ZodT
 export const UserUpdateOneRequiredWithoutPasskeysNestedInputObjectZodSchema = __makeSchema_UserUpdateOneRequiredWithoutPasskeysNestedInput_schema();
 
 
+// File: BigIntFieldUpdateOperationsInput.schema.ts
+const __makeSchema_BigIntFieldUpdateOperationsInput_schema = () => z.object({
+  set: z.bigint().optional(),
+  increment: z.bigint().optional(),
+  decrement: z.bigint().optional(),
+  multiply: z.bigint().optional(),
+  divide: z.bigint().optional()
+}).strict();
+export const BigIntFieldUpdateOperationsInputObjectSchema: z.ZodType<Prisma.BigIntFieldUpdateOperationsInput> = __makeSchema_BigIntFieldUpdateOperationsInput_schema() as unknown as z.ZodType<Prisma.BigIntFieldUpdateOperationsInput>;
+export const BigIntFieldUpdateOperationsInputObjectZodSchema = __makeSchema_BigIntFieldUpdateOperationsInput_schema();
+
+
 // File: UserCreateNestedOneWithoutTwoFactorsInput.schema.ts
 const __makeSchema_UserCreateNestedOneWithoutTwoFactorsInput_schema = () => z.object({
   create: z.union([z.lazy(() => UserCreateWithoutTwoFactorsInputObjectSchema), z.lazy(() => UserUncheckedCreateWithoutTwoFactorsInputObjectSchema)]).optional(),
@@ -10259,6 +10520,44 @@ export const NestedBoolNullableWithAggregatesFilterObjectSchema: z.ZodType<Prism
 export const NestedBoolNullableWithAggregatesFilterObjectZodSchema = nestedboolnullablewithaggregatesfilterSchema;
 
 
+// File: NestedBigIntFilter.schema.ts
+
+
+const nestedbigintfilterSchema = z.object({
+  equals: z.bigint().optional(),
+  in: z.bigint().array().optional(),
+  notIn: z.bigint().array().optional(),
+  lt: z.bigint().optional(),
+  lte: z.bigint().optional(),
+  gt: z.bigint().optional(),
+  gte: z.bigint().optional(),
+  not: z.union([z.bigint(), z.lazy(() => NestedBigIntFilterObjectSchema)]).optional()
+}).strict();
+export const NestedBigIntFilterObjectSchema: z.ZodType<Prisma.NestedBigIntFilter> = nestedbigintfilterSchema as unknown as z.ZodType<Prisma.NestedBigIntFilter>;
+export const NestedBigIntFilterObjectZodSchema = nestedbigintfilterSchema;
+
+
+// File: NestedBigIntWithAggregatesFilter.schema.ts
+
+const nestedbigintwithaggregatesfilterSchema = z.object({
+  equals: z.bigint().optional(),
+  in: z.bigint().array().optional(),
+  notIn: z.bigint().array().optional(),
+  lt: z.bigint().optional(),
+  lte: z.bigint().optional(),
+  gt: z.bigint().optional(),
+  gte: z.bigint().optional(),
+  not: z.union([z.bigint(), z.lazy(() => NestedBigIntWithAggregatesFilterObjectSchema)]).optional(),
+  _count: z.lazy(() => NestedIntFilterObjectSchema).optional(),
+  _avg: z.lazy(() => NestedFloatFilterObjectSchema).optional(),
+  _sum: z.lazy(() => NestedBigIntFilterObjectSchema).optional(),
+  _min: z.lazy(() => NestedBigIntFilterObjectSchema).optional(),
+  _max: z.lazy(() => NestedBigIntFilterObjectSchema).optional()
+}).strict();
+export const NestedBigIntWithAggregatesFilterObjectSchema: z.ZodType<Prisma.NestedBigIntWithAggregatesFilter> = nestedbigintwithaggregatesfilterSchema as unknown as z.ZodType<Prisma.NestedBigIntWithAggregatesFilter>;
+export const NestedBigIntWithAggregatesFilterObjectZodSchema = nestedbigintwithaggregatesfilterSchema;
+
+
 // File: UserCreateWithoutPurchasesInput.schema.ts
 const __makeSchema_UserCreateWithoutPurchasesInput_schema = () => z.object({
   id: z.string(),
@@ -10278,6 +10577,7 @@ const __makeSchema_UserCreateWithoutPurchasesInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -10316,6 +10616,7 @@ const __makeSchema_UserUncheckedCreateWithoutPurchasesInput_schema = () => z.obj
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -10439,6 +10740,7 @@ const __makeSchema_UserUpdateWithoutPurchasesInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -10477,6 +10779,7 @@ const __makeSchema_UserUncheckedUpdateWithoutPurchasesInput_schema = () => z.obj
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -10582,6 +10885,7 @@ const __makeSchema_UserCreateWithoutAuditLogsInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -10620,6 +10924,7 @@ const __makeSchema_UserUncheckedCreateWithoutAuditLogsInput_schema = () => z.obj
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -10686,6 +10991,7 @@ const __makeSchema_UserUpdateWithoutAuditLogsInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -10724,6 +11030,7 @@ const __makeSchema_UserUncheckedUpdateWithoutAuditLogsInput_schema = () => z.obj
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -10762,6 +11069,7 @@ const __makeSchema_UserCreateWithoutApiKeysInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -10800,6 +11108,7 @@ const __makeSchema_UserUncheckedCreateWithoutApiKeysInput_schema = () => z.objec
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -10923,6 +11232,7 @@ const __makeSchema_UserUpdateWithoutApiKeysInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -10961,6 +11271,7 @@ const __makeSchema_UserUncheckedUpdateWithoutApiKeysInput_schema = () => z.objec
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -11123,6 +11434,7 @@ const __makeSchema_UserCreateWithoutInvoicesInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -11161,6 +11473,7 @@ const __makeSchema_UserUncheckedCreateWithoutInvoicesInput_schema = () => z.obje
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -11294,6 +11607,7 @@ const __makeSchema_UserUpdateWithoutInvoicesInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -11332,6 +11646,7 @@ const __makeSchema_UserUncheckedUpdateWithoutInvoicesInput_schema = () => z.obje
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -11684,6 +11999,7 @@ const __makeSchema_UserCreateWithoutNotificationsInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -11722,6 +12038,7 @@ const __makeSchema_UserUncheckedCreateWithoutNotificationsInput_schema = () => z
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -11788,6 +12105,7 @@ const __makeSchema_UserUpdateWithoutNotificationsInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -11826,6 +12144,7 @@ const __makeSchema_UserUncheckedUpdateWithoutNotificationsInput_schema = () => z
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -11864,6 +12183,7 @@ const __makeSchema_UserCreateWithoutChatConversationsInput_schema = () => z.obje
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -11902,6 +12222,7 @@ const __makeSchema_UserUncheckedCreateWithoutChatConversationsInput_schema = () 
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -12065,6 +12386,7 @@ const __makeSchema_UserUpdateWithoutChatConversationsInput_schema = () => z.obje
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -12103,6 +12425,7 @@ const __makeSchema_UserUncheckedUpdateWithoutChatConversationsInput_schema = () 
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -12456,6 +12779,7 @@ const __makeSchema_UserCreateWithoutCreditBalancesInput_schema = () => z.object(
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -12494,6 +12818,7 @@ const __makeSchema_UserUncheckedCreateWithoutCreditBalancesInput_schema = () => 
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -12617,6 +12942,7 @@ const __makeSchema_UserUpdateWithoutCreditBalancesInput_schema = () => z.object(
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -12655,6 +12981,7 @@ const __makeSchema_UserUncheckedUpdateWithoutCreditBalancesInput_schema = () => 
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -12760,6 +13087,7 @@ const __makeSchema_UserCreateWithoutCreditPackagesInput_schema = () => z.object(
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -12798,6 +13126,7 @@ const __makeSchema_UserUncheckedCreateWithoutCreditPackagesInput_schema = () => 
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -12921,6 +13250,7 @@ const __makeSchema_UserUpdateWithoutCreditPackagesInput_schema = () => z.object(
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -12959,6 +13289,7 @@ const __makeSchema_UserUncheckedUpdateWithoutCreditPackagesInput_schema = () => 
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -13064,6 +13395,7 @@ const __makeSchema_UserCreateWithoutCreditEventsInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -13102,6 +13434,7 @@ const __makeSchema_UserUncheckedCreateWithoutCreditEventsInput_schema = () => z.
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -13225,6 +13558,7 @@ const __makeSchema_UserUpdateWithoutCreditEventsInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -13263,6 +13597,7 @@ const __makeSchema_UserUncheckedUpdateWithoutCreditEventsInput_schema = () => z.
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -14849,6 +15184,7 @@ const __makeSchema_UserCreateWithoutSessionsInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -14887,6 +15223,7 @@ const __makeSchema_UserUncheckedCreateWithoutSessionsInput_schema = () => z.obje
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -14953,6 +15290,7 @@ const __makeSchema_UserUpdateWithoutSessionsInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -14991,6 +15329,7 @@ const __makeSchema_UserUncheckedUpdateWithoutSessionsInput_schema = () => z.obje
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -15029,6 +15368,7 @@ const __makeSchema_UserCreateWithoutAccountsInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -15067,6 +15407,7 @@ const __makeSchema_UserUncheckedCreateWithoutAccountsInput_schema = () => z.obje
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -15133,6 +15474,7 @@ const __makeSchema_UserUpdateWithoutAccountsInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -15171,6 +15513,7 @@ const __makeSchema_UserUncheckedUpdateWithoutAccountsInput_schema = () => z.obje
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -16172,6 +16515,7 @@ const __makeSchema_UserCreateWithoutMembersInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -16210,6 +16554,7 @@ const __makeSchema_UserUncheckedCreateWithoutMembersInput_schema = () => z.objec
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -16343,6 +16688,7 @@ const __makeSchema_UserUpdateWithoutMembersInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -16381,6 +16727,7 @@ const __makeSchema_UserUncheckedUpdateWithoutMembersInput_schema = () => z.objec
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   invitations: z.lazy(() => InvitationUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -16476,6 +16823,7 @@ const __makeSchema_UserCreateWithoutInvitationsInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -16514,6 +16862,7 @@ const __makeSchema_UserUncheckedCreateWithoutInvitationsInput_schema = () => z.o
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -16647,6 +16996,7 @@ const __makeSchema_UserUpdateWithoutInvitationsInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -16685,6 +17035,7 @@ const __makeSchema_UserUncheckedUpdateWithoutInvitationsInput_schema = () => z.o
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -16723,6 +17074,7 @@ const __makeSchema_UserCreateWithoutPasskeysInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -16761,6 +17113,7 @@ const __makeSchema_UserUncheckedCreateWithoutPasskeysInput_schema = () => z.obje
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -16827,6 +17180,7 @@ const __makeSchema_UserUpdateWithoutPasskeysInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -16865,6 +17219,7 @@ const __makeSchema_UserUncheckedUpdateWithoutPasskeysInput_schema = () => z.obje
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -16903,6 +17258,7 @@ const __makeSchema_UserCreateWithoutTwoFactorsInput_schema = () => z.object({
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -16941,6 +17297,7 @@ const __makeSchema_UserUncheckedCreateWithoutTwoFactorsInput_schema = () => z.ob
   username: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.lazy(() => SessionUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
@@ -17007,6 +17364,7 @@ const __makeSchema_UserUpdateWithoutTwoFactorsInput_schema = () => z.object({
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -17045,6 +17403,7 @@ const __makeSchema_UserUncheckedUpdateWithoutTwoFactorsInput_schema = () => z.ob
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   members: z.lazy(() => MemberUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
@@ -19649,6 +20008,7 @@ const __makeSchema_UserCountAggregateInput_schema = () => z.object({
   username: z.literal(true).optional(),
   paymentsCustomerId: z.literal(true).optional(),
   lastActiveOrganizationId: z.literal(true).optional(),
+  userCreatedEventSent: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const UserCountAggregateInputObjectSchema: z.ZodType<Prisma.UserCountAggregateInputType> = __makeSchema_UserCountAggregateInput_schema() as unknown as z.ZodType<Prisma.UserCountAggregateInputType>;
@@ -19673,7 +20033,8 @@ const __makeSchema_UserMinAggregateInput_schema = () => z.object({
   onboardingComplete: z.literal(true).optional(),
   username: z.literal(true).optional(),
   paymentsCustomerId: z.literal(true).optional(),
-  lastActiveOrganizationId: z.literal(true).optional()
+  lastActiveOrganizationId: z.literal(true).optional(),
+  userCreatedEventSent: z.literal(true).optional()
 }).strict();
 export const UserMinAggregateInputObjectSchema: z.ZodType<Prisma.UserMinAggregateInputType> = __makeSchema_UserMinAggregateInput_schema() as unknown as z.ZodType<Prisma.UserMinAggregateInputType>;
 export const UserMinAggregateInputObjectZodSchema = __makeSchema_UserMinAggregateInput_schema();
@@ -19697,7 +20058,8 @@ const __makeSchema_UserMaxAggregateInput_schema = () => z.object({
   onboardingComplete: z.literal(true).optional(),
   username: z.literal(true).optional(),
   paymentsCustomerId: z.literal(true).optional(),
-  lastActiveOrganizationId: z.literal(true).optional()
+  lastActiveOrganizationId: z.literal(true).optional(),
+  userCreatedEventSent: z.literal(true).optional()
 }).strict();
 export const UserMaxAggregateInputObjectSchema: z.ZodType<Prisma.UserMaxAggregateInputType> = __makeSchema_UserMaxAggregateInput_schema() as unknown as z.ZodType<Prisma.UserMaxAggregateInputType>;
 export const UserMaxAggregateInputObjectZodSchema = __makeSchema_UserMaxAggregateInput_schema();
@@ -20051,6 +20413,58 @@ const __makeSchema_PasskeyMaxAggregateInput_schema = () => z.object({
 }).strict();
 export const PasskeyMaxAggregateInputObjectSchema: z.ZodType<Prisma.PasskeyMaxAggregateInputType> = __makeSchema_PasskeyMaxAggregateInput_schema() as unknown as z.ZodType<Prisma.PasskeyMaxAggregateInputType>;
 export const PasskeyMaxAggregateInputObjectZodSchema = __makeSchema_PasskeyMaxAggregateInput_schema();
+
+
+// File: RateLimitCountAggregateInput.schema.ts
+const __makeSchema_RateLimitCountAggregateInput_schema = () => z.object({
+  id: z.literal(true).optional(),
+  key: z.literal(true).optional(),
+  count: z.literal(true).optional(),
+  lastRequest: z.literal(true).optional(),
+  _all: z.literal(true).optional()
+}).strict();
+export const RateLimitCountAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitCountAggregateInputType> = __makeSchema_RateLimitCountAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitCountAggregateInputType>;
+export const RateLimitCountAggregateInputObjectZodSchema = __makeSchema_RateLimitCountAggregateInput_schema();
+
+
+// File: RateLimitAvgAggregateInput.schema.ts
+const __makeSchema_RateLimitAvgAggregateInput_schema = () => z.object({
+  count: z.literal(true).optional(),
+  lastRequest: z.literal(true).optional()
+}).strict();
+export const RateLimitAvgAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitAvgAggregateInputType> = __makeSchema_RateLimitAvgAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitAvgAggregateInputType>;
+export const RateLimitAvgAggregateInputObjectZodSchema = __makeSchema_RateLimitAvgAggregateInput_schema();
+
+
+// File: RateLimitSumAggregateInput.schema.ts
+const __makeSchema_RateLimitSumAggregateInput_schema = () => z.object({
+  count: z.literal(true).optional(),
+  lastRequest: z.literal(true).optional()
+}).strict();
+export const RateLimitSumAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitSumAggregateInputType> = __makeSchema_RateLimitSumAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitSumAggregateInputType>;
+export const RateLimitSumAggregateInputObjectZodSchema = __makeSchema_RateLimitSumAggregateInput_schema();
+
+
+// File: RateLimitMinAggregateInput.schema.ts
+const __makeSchema_RateLimitMinAggregateInput_schema = () => z.object({
+  id: z.literal(true).optional(),
+  key: z.literal(true).optional(),
+  count: z.literal(true).optional(),
+  lastRequest: z.literal(true).optional()
+}).strict();
+export const RateLimitMinAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitMinAggregateInputType> = __makeSchema_RateLimitMinAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitMinAggregateInputType>;
+export const RateLimitMinAggregateInputObjectZodSchema = __makeSchema_RateLimitMinAggregateInput_schema();
+
+
+// File: RateLimitMaxAggregateInput.schema.ts
+const __makeSchema_RateLimitMaxAggregateInput_schema = () => z.object({
+  id: z.literal(true).optional(),
+  key: z.literal(true).optional(),
+  count: z.literal(true).optional(),
+  lastRequest: z.literal(true).optional()
+}).strict();
+export const RateLimitMaxAggregateInputObjectSchema: z.ZodType<Prisma.RateLimitMaxAggregateInputType> = __makeSchema_RateLimitMaxAggregateInput_schema() as unknown as z.ZodType<Prisma.RateLimitMaxAggregateInputType>;
+export const RateLimitMaxAggregateInputObjectZodSchema = __makeSchema_RateLimitMaxAggregateInput_schema();
 
 
 // File: TwoFactorCountAggregateInput.schema.ts
@@ -20671,6 +21085,7 @@ const __makeSchema_UserSelect_schema = () => z.object({
   username: z.boolean().optional(),
   paymentsCustomerId: z.boolean().optional(),
   lastActiveOrganizationId: z.boolean().optional(),
+  userCreatedEventSent: z.boolean().optional(),
   sessions: z.union([z.boolean(), z.lazy(() => SessionFindManySchema)]).optional(),
   accounts: z.union([z.boolean(), z.lazy(() => AccountFindManySchema)]).optional(),
   members: z.union([z.boolean(), z.lazy(() => MemberFindManySchema)]).optional(),
@@ -20818,6 +21233,17 @@ const __makeSchema_PasskeySelect_schema = () => z.object({
 }).strict();
 export const PasskeySelectObjectSchema: z.ZodType<Prisma.PasskeySelect> = __makeSchema_PasskeySelect_schema() as unknown as z.ZodType<Prisma.PasskeySelect>;
 export const PasskeySelectObjectZodSchema = __makeSchema_PasskeySelect_schema();
+
+
+// File: RateLimitSelect.schema.ts
+const __makeSchema_RateLimitSelect_schema = () => z.object({
+  id: z.boolean().optional(),
+  key: z.boolean().optional(),
+  count: z.boolean().optional(),
+  lastRequest: z.boolean().optional()
+}).strict();
+export const RateLimitSelectObjectSchema: z.ZodType<Prisma.RateLimitSelect> = __makeSchema_RateLimitSelect_schema() as unknown as z.ZodType<Prisma.RateLimitSelect>;
+export const RateLimitSelectObjectZodSchema = __makeSchema_RateLimitSelect_schema();
 
 
 // File: TwoFactorSelect.schema.ts
@@ -21027,6 +21453,14 @@ const __makeSchema_PasskeyArgs_schema = () => z.object({
 }).strict();
 export const PasskeyArgsObjectSchema = __makeSchema_PasskeyArgs_schema();
 export const PasskeyArgsObjectZodSchema = __makeSchema_PasskeyArgs_schema();
+
+
+// File: RateLimitArgs.schema.ts
+const __makeSchema_RateLimitArgs_schema = () => z.object({
+  select: z.lazy(() => RateLimitSelectObjectSchema).optional()
+}).strict();
+export const RateLimitArgsObjectSchema = __makeSchema_RateLimitArgs_schema();
+export const RateLimitArgsObjectZodSchema = __makeSchema_RateLimitArgs_schema();
 
 
 // File: TwoFactorArgs.schema.ts
@@ -23998,6 +24432,7 @@ export const UserFindFirstSelectSchema__findFirstUser_schema: z.ZodType<Prisma.U
     username: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
+    userCreatedEventSent: z.boolean().optional(),
     sessions: z.union([z.boolean(), z.lazy(() => SessionFindManySchema)]).optional(),
     accounts: z.union([z.boolean(), z.lazy(() => AccountFindManySchema)]).optional(),
     members: z.union([z.boolean(), z.lazy(() => MemberFindManySchema)]).optional(),
@@ -24034,6 +24469,7 @@ export const UserFindFirstSelectZodSchema__findFirstUser_schema = z.object({
     username: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
+    userCreatedEventSent: z.boolean().optional(),
     sessions: z.union([z.boolean(), z.lazy(() => SessionFindManySchema)]).optional(),
     accounts: z.union([z.boolean(), z.lazy(() => AccountFindManySchema)]).optional(),
     members: z.union([z.boolean(), z.lazy(() => MemberFindManySchema)]).optional(),
@@ -24079,6 +24515,7 @@ export const UserFindFirstOrThrowSelectSchema__findFirstOrThrowUser_schema: z.Zo
     username: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
+    userCreatedEventSent: z.boolean().optional(),
     sessions: z.union([z.boolean(), z.lazy(() => SessionFindManySchema)]).optional(),
     accounts: z.union([z.boolean(), z.lazy(() => AccountFindManySchema)]).optional(),
     members: z.union([z.boolean(), z.lazy(() => MemberFindManySchema)]).optional(),
@@ -24115,6 +24552,7 @@ export const UserFindFirstOrThrowSelectZodSchema__findFirstOrThrowUser_schema = 
     username: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
+    userCreatedEventSent: z.boolean().optional(),
     sessions: z.union([z.boolean(), z.lazy(() => SessionFindManySchema)]).optional(),
     accounts: z.union([z.boolean(), z.lazy(() => AccountFindManySchema)]).optional(),
     members: z.union([z.boolean(), z.lazy(() => MemberFindManySchema)]).optional(),
@@ -24160,6 +24598,7 @@ export const UserFindManySelectSchema__findManyUser_schema: z.ZodType<Prisma.Use
     username: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
+    userCreatedEventSent: z.boolean().optional(),
     sessions: z.union([z.boolean(), z.lazy(() => SessionFindManySchema)]).optional(),
     accounts: z.union([z.boolean(), z.lazy(() => AccountFindManySchema)]).optional(),
     members: z.union([z.boolean(), z.lazy(() => MemberFindManySchema)]).optional(),
@@ -24196,6 +24635,7 @@ export const UserFindManySelectZodSchema__findManyUser_schema = z.object({
     username: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
+    userCreatedEventSent: z.boolean().optional(),
     sessions: z.union([z.boolean(), z.lazy(() => SessionFindManySchema)]).optional(),
     accounts: z.union([z.boolean(), z.lazy(() => AccountFindManySchema)]).optional(),
     members: z.union([z.boolean(), z.lazy(() => MemberFindManySchema)]).optional(),
@@ -25667,6 +26107,159 @@ export const PasskeyGroupBySchema: z.ZodType<Prisma.PasskeyGroupByArgs> = z.obje
 
 export const PasskeyGroupByZodSchema = z.object({ where: PasskeyWhereInputObjectSchema.optional(), orderBy: z.union([PasskeyOrderByWithAggregationInputObjectSchema, PasskeyOrderByWithAggregationInputObjectSchema.array()]).optional(), having: PasskeyScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(PasskeyScalarFieldEnumSchema), _count: z.union([ z.literal(true), PasskeyCountAggregateInputObjectSchema ]).optional(), _min: PasskeyMinAggregateInputObjectSchema.optional(), _max: PasskeyMaxAggregateInputObjectSchema.optional(), _avg: PasskeyAvgAggregateInputObjectSchema.optional(), _sum: PasskeySumAggregateInputObjectSchema.optional() }).strict();
 
+// File: findUniqueRateLimit.schema.ts
+
+export const RateLimitFindUniqueSchema: z.ZodType<Prisma.RateLimitFindUniqueArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.RateLimitFindUniqueArgs>;
+
+export const RateLimitFindUniqueZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema }).strict();
+
+// File: findUniqueOrThrowRateLimit.schema.ts
+
+export const RateLimitFindUniqueOrThrowSchema: z.ZodType<Prisma.RateLimitFindUniqueOrThrowArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.RateLimitFindUniqueOrThrowArgs>;
+
+export const RateLimitFindUniqueOrThrowZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema }).strict();
+
+// File: findFirstRateLimit.schema.ts
+
+// Select schema needs to be in file to prevent circular imports
+//------------------------------------------------------
+
+export const RateLimitFindFirstSelectSchema__findFirstRateLimit_schema: z.ZodType<Prisma.RateLimitSelect> = z.object({
+    id: z.boolean().optional(),
+    key: z.boolean().optional(),
+    count: z.boolean().optional(),
+    lastRequest: z.boolean().optional()
+  }).strict() as unknown as z.ZodType<Prisma.RateLimitSelect>;
+
+export const RateLimitFindFirstSelectZodSchema__findFirstRateLimit_schema = z.object({
+    id: z.boolean().optional(),
+    key: z.boolean().optional(),
+    count: z.boolean().optional(),
+    lastRequest: z.boolean().optional()
+  }).strict();
+
+export const RateLimitFindFirstSchema: z.ZodType<Prisma.RateLimitFindFirstArgs> = z.object({ select: RateLimitFindFirstSelectSchema__findFirstRateLimit_schema.optional(),  orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([RateLimitScalarFieldEnumSchema, RateLimitScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitFindFirstArgs>;
+
+export const RateLimitFindFirstZodSchema = z.object({ select: RateLimitFindFirstSelectSchema__findFirstRateLimit_schema.optional(),  orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([RateLimitScalarFieldEnumSchema, RateLimitScalarFieldEnumSchema.array()]).optional() }).strict();
+
+// File: findFirstOrThrowRateLimit.schema.ts
+
+// Select schema needs to be in file to prevent circular imports
+//------------------------------------------------------
+
+export const RateLimitFindFirstOrThrowSelectSchema__findFirstOrThrowRateLimit_schema: z.ZodType<Prisma.RateLimitSelect> = z.object({
+    id: z.boolean().optional(),
+    key: z.boolean().optional(),
+    count: z.boolean().optional(),
+    lastRequest: z.boolean().optional()
+  }).strict() as unknown as z.ZodType<Prisma.RateLimitSelect>;
+
+export const RateLimitFindFirstOrThrowSelectZodSchema__findFirstOrThrowRateLimit_schema = z.object({
+    id: z.boolean().optional(),
+    key: z.boolean().optional(),
+    count: z.boolean().optional(),
+    lastRequest: z.boolean().optional()
+  }).strict();
+
+export const RateLimitFindFirstOrThrowSchema: z.ZodType<Prisma.RateLimitFindFirstOrThrowArgs> = z.object({ select: RateLimitFindFirstOrThrowSelectSchema__findFirstOrThrowRateLimit_schema.optional(),  orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([RateLimitScalarFieldEnumSchema, RateLimitScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitFindFirstOrThrowArgs>;
+
+export const RateLimitFindFirstOrThrowZodSchema = z.object({ select: RateLimitFindFirstOrThrowSelectSchema__findFirstOrThrowRateLimit_schema.optional(),  orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([RateLimitScalarFieldEnumSchema, RateLimitScalarFieldEnumSchema.array()]).optional() }).strict();
+
+// File: findManyRateLimit.schema.ts
+
+// Select schema needs to be in file to prevent circular imports
+//------------------------------------------------------
+
+export const RateLimitFindManySelectSchema__findManyRateLimit_schema: z.ZodType<Prisma.RateLimitSelect> = z.object({
+    id: z.boolean().optional(),
+    key: z.boolean().optional(),
+    count: z.boolean().optional(),
+    lastRequest: z.boolean().optional()
+  }).strict() as unknown as z.ZodType<Prisma.RateLimitSelect>;
+
+export const RateLimitFindManySelectZodSchema__findManyRateLimit_schema = z.object({
+    id: z.boolean().optional(),
+    key: z.boolean().optional(),
+    count: z.boolean().optional(),
+    lastRequest: z.boolean().optional()
+  }).strict();
+
+export const RateLimitFindManySchema: z.ZodType<Prisma.RateLimitFindManyArgs> = z.object({ select: RateLimitFindManySelectSchema__findManyRateLimit_schema.optional(),  orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([RateLimitScalarFieldEnumSchema, RateLimitScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitFindManyArgs>;
+
+export const RateLimitFindManyZodSchema = z.object({ select: RateLimitFindManySelectSchema__findManyRateLimit_schema.optional(),  orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([RateLimitScalarFieldEnumSchema, RateLimitScalarFieldEnumSchema.array()]).optional() }).strict();
+
+// File: countRateLimit.schema.ts
+
+export const RateLimitCountSchema: z.ZodType<Prisma.RateLimitCountArgs> = z.object({ orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), RateLimitCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitCountArgs>;
+
+export const RateLimitCountZodSchema = z.object({ orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), RateLimitCountAggregateInputObjectSchema ]).optional() }).strict();
+
+// File: createOneRateLimit.schema.ts
+
+export const RateLimitCreateOneSchema: z.ZodType<Prisma.RateLimitCreateArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(),  data: z.union([RateLimitCreateInputObjectSchema, RateLimitUncheckedCreateInputObjectSchema]) }).strict() as unknown as z.ZodType<Prisma.RateLimitCreateArgs>;
+
+export const RateLimitCreateOneZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(),  data: z.union([RateLimitCreateInputObjectSchema, RateLimitUncheckedCreateInputObjectSchema]) }).strict();
+
+// File: createManyRateLimit.schema.ts
+
+export const RateLimitCreateManySchema: z.ZodType<Prisma.RateLimitCreateManyArgs> = z.object({ data: z.union([ RateLimitCreateManyInputObjectSchema, z.array(RateLimitCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitCreateManyArgs>;
+
+export const RateLimitCreateManyZodSchema = z.object({ data: z.union([ RateLimitCreateManyInputObjectSchema, z.array(RateLimitCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict();
+
+// File: createManyAndReturnRateLimit.schema.ts
+
+export const RateLimitCreateManyAndReturnSchema: z.ZodType<Prisma.RateLimitCreateManyAndReturnArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(), data: z.union([ RateLimitCreateManyInputObjectSchema, z.array(RateLimitCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitCreateManyAndReturnArgs>;
+
+export const RateLimitCreateManyAndReturnZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(), data: z.union([ RateLimitCreateManyInputObjectSchema, z.array(RateLimitCreateManyInputObjectSchema) ]), skipDuplicates: z.boolean().optional() }).strict();
+
+// File: deleteOneRateLimit.schema.ts
+
+export const RateLimitDeleteOneSchema: z.ZodType<Prisma.RateLimitDeleteArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.RateLimitDeleteArgs>;
+
+export const RateLimitDeleteOneZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema }).strict();
+
+// File: deleteManyRateLimit.schema.ts
+
+export const RateLimitDeleteManySchema: z.ZodType<Prisma.RateLimitDeleteManyArgs> = z.object({ where: RateLimitWhereInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitDeleteManyArgs>;
+
+export const RateLimitDeleteManyZodSchema = z.object({ where: RateLimitWhereInputObjectSchema.optional() }).strict();
+
+// File: updateOneRateLimit.schema.ts
+
+export const RateLimitUpdateOneSchema: z.ZodType<Prisma.RateLimitUpdateArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(),  data: z.union([RateLimitUpdateInputObjectSchema, RateLimitUncheckedUpdateInputObjectSchema]), where: RateLimitWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.RateLimitUpdateArgs>;
+
+export const RateLimitUpdateOneZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(),  data: z.union([RateLimitUpdateInputObjectSchema, RateLimitUncheckedUpdateInputObjectSchema]), where: RateLimitWhereUniqueInputObjectSchema }).strict();
+
+// File: updateManyRateLimit.schema.ts
+
+export const RateLimitUpdateManySchema: z.ZodType<Prisma.RateLimitUpdateManyArgs> = z.object({ data: RateLimitUpdateManyMutationInputObjectSchema, where: RateLimitWhereInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitUpdateManyArgs>;
+
+export const RateLimitUpdateManyZodSchema = z.object({ data: RateLimitUpdateManyMutationInputObjectSchema, where: RateLimitWhereInputObjectSchema.optional() }).strict();
+
+// File: updateManyAndReturnRateLimit.schema.ts
+
+export const RateLimitUpdateManyAndReturnSchema: z.ZodType<Prisma.RateLimitUpdateManyAndReturnArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(), data: RateLimitUpdateManyMutationInputObjectSchema, where: RateLimitWhereInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitUpdateManyAndReturnArgs>;
+
+export const RateLimitUpdateManyAndReturnZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(), data: RateLimitUpdateManyMutationInputObjectSchema, where: RateLimitWhereInputObjectSchema.optional() }).strict();
+
+// File: upsertOneRateLimit.schema.ts
+
+export const RateLimitUpsertOneSchema: z.ZodType<Prisma.RateLimitUpsertArgs> = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema, create: z.union([ RateLimitCreateInputObjectSchema, RateLimitUncheckedCreateInputObjectSchema ]), update: z.union([ RateLimitUpdateInputObjectSchema, RateLimitUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.RateLimitUpsertArgs>;
+
+export const RateLimitUpsertOneZodSchema = z.object({ select: RateLimitSelectObjectSchema.optional(),  where: RateLimitWhereUniqueInputObjectSchema, create: z.union([ RateLimitCreateInputObjectSchema, RateLimitUncheckedCreateInputObjectSchema ]), update: z.union([ RateLimitUpdateInputObjectSchema, RateLimitUncheckedUpdateInputObjectSchema ]) }).strict();
+
+// File: aggregateRateLimit.schema.ts
+
+export const RateLimitAggregateSchema: z.ZodType<Prisma.RateLimitAggregateArgs> = z.object({ orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), RateLimitCountAggregateInputObjectSchema ]).optional(), _min: RateLimitMinAggregateInputObjectSchema.optional(), _max: RateLimitMaxAggregateInputObjectSchema.optional(), _avg: RateLimitAvgAggregateInputObjectSchema.optional(), _sum: RateLimitSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitAggregateArgs>;
+
+export const RateLimitAggregateZodSchema = z.object({ orderBy: z.union([RateLimitOrderByWithRelationInputObjectSchema, RateLimitOrderByWithRelationInputObjectSchema.array()]).optional(), where: RateLimitWhereInputObjectSchema.optional(), cursor: RateLimitWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), RateLimitCountAggregateInputObjectSchema ]).optional(), _min: RateLimitMinAggregateInputObjectSchema.optional(), _max: RateLimitMaxAggregateInputObjectSchema.optional(), _avg: RateLimitAvgAggregateInputObjectSchema.optional(), _sum: RateLimitSumAggregateInputObjectSchema.optional() }).strict();
+
+// File: groupByRateLimit.schema.ts
+
+export const RateLimitGroupBySchema: z.ZodType<Prisma.RateLimitGroupByArgs> = z.object({ where: RateLimitWhereInputObjectSchema.optional(), orderBy: z.union([RateLimitOrderByWithAggregationInputObjectSchema, RateLimitOrderByWithAggregationInputObjectSchema.array()]).optional(), having: RateLimitScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(RateLimitScalarFieldEnumSchema), _count: z.union([ z.literal(true), RateLimitCountAggregateInputObjectSchema ]).optional(), _min: RateLimitMinAggregateInputObjectSchema.optional(), _max: RateLimitMaxAggregateInputObjectSchema.optional(), _avg: RateLimitAvgAggregateInputObjectSchema.optional(), _sum: RateLimitSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.RateLimitGroupByArgs>;
+
+export const RateLimitGroupByZodSchema = z.object({ where: RateLimitWhereInputObjectSchema.optional(), orderBy: z.union([RateLimitOrderByWithAggregationInputObjectSchema, RateLimitOrderByWithAggregationInputObjectSchema.array()]).optional(), having: RateLimitScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(RateLimitScalarFieldEnumSchema), _count: z.union([ z.literal(true), RateLimitCountAggregateInputObjectSchema ]).optional(), _min: RateLimitMinAggregateInputObjectSchema.optional(), _max: RateLimitMaxAggregateInputObjectSchema.optional(), _avg: RateLimitAvgAggregateInputObjectSchema.optional(), _sum: RateLimitSumAggregateInputObjectSchema.optional() }).strict();
+
 // File: findUniqueTwoFactor.schema.ts
 
 export const TwoFactorFindUniqueSchema: z.ZodType<Prisma.TwoFactorFindUniqueArgs> = z.object({ select: TwoFactorSelectObjectSchema.optional(), include: TwoFactorIncludeObjectSchema.optional(), where: TwoFactorWhereUniqueInputObjectSchema }).strict() as unknown as z.ZodType<Prisma.TwoFactorFindUniqueArgs>;
@@ -26096,6 +26689,7 @@ export const UserSchema = z.object({
   username: z.string().nullish(),
   paymentsCustomerId: z.string().nullish(),
   lastActiveOrganizationId: z.string().nullish(),
+  userCreatedEventSent: z.boolean(),
 });
 
 export type UserType = z.infer<typeof UserSchema>;
@@ -26215,6 +26809,18 @@ export const PasskeySchema = z.object({
 });
 
 export type PasskeyType = z.infer<typeof PasskeySchema>;
+
+
+// File: RateLimit.schema.ts
+
+export const RateLimitSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  count: z.number().int(),
+  lastRequest: z.bigint(),
+});
+
+export type RateLimitType = z.infer<typeof RateLimitSchema>;
 
 
 // File: TwoFactor.schema.ts

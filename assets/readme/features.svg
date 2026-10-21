@@ -50,7 +50,7 @@
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400" fill="#F7F8F8">
     <text x="56" y="507">· Hono 4 server</text>
-    <text x="56" y="531">· oRPC 1.12 (type-safe, OpenAPI)</text>
+    <text x="56" y="531">· oRPC 1.15 (type-safe, OpenAPI)</text>
     <text x="56" y="555">· Zod validation on every input</text>
     <text x="56" y="579">· API keys (generate, revoke)</text>
     <text x="56" y="603">· Webhooks (signed, retry, idempotent)</text>
@@ -102,7 +102,7 @@
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400">
     <text x="466" y="164" fill="#F7F8F8">· Mail <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Plunk</tspan> <tspan fill="#6B6F76">(Resend, SendGrid…)</tspan></text>
-    <text x="466" y="188" fill="#F7F8F8">· Payments <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Polar</tspan> <tspan fill="#6B6F76">(Stripe, Paddle…)</tspan></text>
+    <text x="466" y="188" fill="#F7F8F8">· Payments <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Creem</tspan> <tspan fill="#6B6F76">(Stripe, Polar…)</tspan></text>
     <text x="466" y="212" fill="#F7F8F8">· Storage <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">S3 + MinIO</tspan> <tspan fill="#6B6F76">(R2…)</tspan></text>
     <text x="466" y="236" fill="#F7F8F8">· Analytics <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Umami</tspan> <tspan fill="#6B6F76">(Plausible…)</tspan></text>
     <text x="466" y="260" fill="#F7F8F8">· AI <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Google</tspan> <tspan fill="#6B6F76">(OpenAI, Anthropic…)</tspan></text>
@@ -175,7 +175,7 @@
     Orchestrator dispatches 10+ specialized subagents in parallel —
   </text>
   <text x="60" y="1174" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="400" fill="#8A8F98">
-    harvest, implementer, verifier, designer, synthesizer. TDD by default, browser-verified.
+    scan/read, code, run/verify, cross-reference, architecture — TDD by default, browser-verified.
   </text>
   <text x="60" y="1194" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#3B82F6">
     → brainstorm → plan → implement → verify → commit
@@ -214,8 +214,8 @@
     AI agent harness · tool calls · multi-host
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400" fill="#F7F8F8">
-    <text x="466" y="1330">· 28 Skills — TDD, debugging, browser-verify…</text>
-    <text x="466" y="1354">· 5 Subagents — harvest, implementer, verify…</text>
+    <text x="466" y="1330">· 30 Skills — TDD, debugging, browser-verify…</text>
+    <text x="466" y="1354">· 5 Subagents — scan, build, verify, design…</text>
     <text x="466" y="1378">· 21 Rules — auth, backend, frontend, ui…</text>
     <text x="466" y="1402">· Scaffolding — packages, routes, swaps…</text>
     <text x="466" y="1426">· Versioning — updates, migrations…</text>
@@ -236,10 +236,10 @@
     <text x="187" y="1525" text-anchor="middle" fill="#F7F8F8">Hono 4</text>
 
     <rect x="235" y="1505" width="95" height="30" rx="6" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="282" y="1525" text-anchor="middle" fill="#F7F8F8">oRPC 1.12</text>
+    <text x="282" y="1525" text-anchor="middle" fill="#F7F8F8">oRPC 1.15</text>
 
     <rect x="340" y="1505" width="125" height="30" rx="6" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="402" y="1525" text-anchor="middle" fill="#F7F8F8">Better Auth 1.6</text>
+    <text x="402" y="1525" text-anchor="middle" fill="#F7F8F8">Better Auth 1.7</text>
 
     <rect x="475" y="1505" width="85" height="30" rx="6" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
     <text x="517" y="1525" text-anchor="middle" fill="#F7F8F8">Prisma 7</text>
