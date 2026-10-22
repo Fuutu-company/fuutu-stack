@@ -13,7 +13,7 @@ const isProd = env.NODE_ENV === "production";
 
 // Security headers for the public marketing surface.
 // Slightly looser than SaaS: allows the active analytics provider's
-// origins and external fonts/images for blog/MDX content. Still blocks
+// origins and external fonts/images for blog content. Still blocks
 // framing and interest-cohort tracking.
 const analyticsCsp = analyticsCspOrigins();
 

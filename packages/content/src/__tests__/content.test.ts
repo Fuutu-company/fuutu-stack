@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-	type ChangelogFrontmatter,
 	changelog,
 	changelogFrontmatterSchema,
 	getChangelogBody,
@@ -8,10 +7,8 @@ import {
 	getLegalDocument,
 	getPost,
 	getPostBody,
-	type LegalDocumentFrontmatter,
 	legal,
 	legalDocumentFrontmatterSchema,
-	type PostFrontmatter,
 	postFrontmatterSchema,
 	posts,
 } from "../index";
@@ -38,7 +35,7 @@ describe("Content collections - posts", () => {
 
 	it("post frontmatter has required fields", () => {
 		for (const post of posts) {
-			const fm = post.frontmatter as PostFrontmatter;
+			const fm = post.frontmatter;
 			expect(fm).toHaveProperty("title");
 			expect(fm).toHaveProperty("publishedAt");
 			expect(typeof fm.title).toBe("string");
@@ -66,18 +63,39 @@ describe("Content collections - posts", () => {
 		expect(post).toBeUndefined();
 	});
 
-	it("getPostBody returns a component for valid locale", () => {
+	it("getPostBody returns the matching locale component", () => {
 		const post = posts[0];
-		if (!post) return;
-		const body = getPostBody(post, "en");
-		expect(typeof body).toBe("function");
+		if (!post) throw new Error("expected posts[0] to exist");
+		expect(getPostBody(post, "de")).toBe(post.bodies.de);
 	});
 
 	it("getPostBody falls back to en for unknown locale", () => {
 		const post = posts[0];
-		if (!post) return;
-		const body = getPostBody(post, "fr");
-		expect(typeof body).toBe("function");
+		if (!post) throw new Error("expected posts[0] to exist");
+		expect(getPostBody(post, "fr")).toBe(post.bodies.en);
+	});
+
+	it("getPostBody ignores prototype keys like __proto__ and constructor", () => {
+		const post = posts[0];
+		if (!post) throw new Error("expected posts[0] to exist");
+		expect(getPostBody(post, "__proto__")).toBe(post.bodies.en);
+		expect(getPostBody(post, "constructor")).toBe(post.bodies.en);
+	});
+
+	it("getPostBody falls back to the first body when en is missing", () => {
+		const post = posts[0];
+		if (!post) throw new Error("expected posts[0] to exist");
+		const deBody = post.bodies.de;
+		if (!deBody) throw new Error("expected posts[0].bodies.de to exist");
+		const entry = { ...post, bodies: { de: deBody } };
+		expect(getPostBody(entry, "fr")).toBe(deBody);
+	});
+
+	it("getPostBody throws for an entry without bodies", () => {
+		const post = posts[0];
+		if (!post) throw new Error("expected posts[0] to exist");
+		const entry = { ...post, bodies: {} };
+		expect(() => getPostBody(entry, "en")).toThrow();
 	});
 });
 
@@ -103,7 +121,7 @@ describe("Content collections - changelog", () => {
 
 	it("changelog frontmatter has required fields", () => {
 		for (const entry of changelog) {
-			const fm = entry.frontmatter as ChangelogFrontmatter;
+			const fm = entry.frontmatter;
 			expect(fm).toHaveProperty("title");
 			expect(fm).toHaveProperty("publishedAt");
 			expect(typeof fm.title).toBe("string");
@@ -131,18 +149,22 @@ describe("Content collections - changelog", () => {
 		expect(entry).toBeUndefined();
 	});
 
-	it("getChangelogBody returns a component for valid locale", () => {
+	it("getChangelogBody returns the matching locale component", () => {
 		const entry = changelog[0];
-		if (!entry) return;
-		const body = getChangelogBody(entry, "en");
-		expect(typeof body).toBe("function");
+		if (!entry) throw new Error("expected changelog[0] to exist");
+		expect(getChangelogBody(entry, "de")).toBe(entry.bodies.de);
 	});
 
 	it("getChangelogBody falls back to en for unknown locale", () => {
 		const entry = changelog[0];
-		if (!entry) return;
-		const body = getChangelogBody(entry, "fr");
-		expect(typeof body).toBe("function");
+		if (!entry) throw new Error("expected changelog[0] to exist");
+		expect(getChangelogBody(entry, "fr")).toBe(entry.bodies.en);
+	});
+
+	it("getChangelogBody ignores prototype keys", () => {
+		const entry = changelog[0];
+		if (!entry) throw new Error("expected changelog[0] to exist");
+		expect(getChangelogBody(entry, "__proto__")).toBe(entry.bodies.en);
 	});
 });
 
@@ -170,7 +192,7 @@ describe("Content collections - legal documents", () => {
 
 	it("legal frontmatter has required fields", () => {
 		for (const doc of legal) {
-			const fm = doc.frontmatter as LegalDocumentFrontmatter;
+			const fm = doc.frontmatter;
 			expect(fm).toHaveProperty("title");
 			expect(fm).toHaveProperty("updatedAt");
 			expect(typeof fm.title).toBe("string");
@@ -198,9 +220,22 @@ describe("Content collections - legal documents", () => {
 		expect(doc?.locale).toBe("en");
 	});
 
-	it("getLegalDocument returns null for unknown slug", () => {
+	it("getLegalDocument defaults to the en locale", () => {
+		const doc = getLegalDocument("privacy");
+		expect(doc).toBeDefined();
+		expect(doc?.locale).toBe("en");
+	});
+
+	it("getLegalDocument returns undefined for unknown slug", () => {
 		const doc = getLegalDocument("nonexistent", "en");
-		expect(doc).toBeNull();
+		expect(doc).toBeUndefined();
+	});
+
+	it("getLegalDocument ignores prototype keys", () => {
+		const doc = getLegalDocument("privacy", "__proto__");
+		expect(doc).toBeDefined();
+		expect(doc?.locale).toBe("en");
+		expect(getLegalDocument("__proto__")).toBeUndefined();
 	});
 
 	it("getLegalDocument returns all expected slugs", () => {
@@ -209,6 +244,7 @@ describe("Content collections - legal documents", () => {
 			const doc = getLegalDocument(slug, "en");
 			expect(doc).toBeDefined();
 			expect(doc?.slug).toBe(slug);
+			expect(getLegalDocument(slug, "de")?.locale).toBe("de");
 		}
 	});
 });
@@ -266,31 +302,5 @@ describe("Frontmatter schemas", () => {
 				false,
 			);
 		}
-	});
-});
-
-describe("Type exports", () => {
-	it("exports PostFrontmatter type", () => {
-		const fm: PostFrontmatter = {
-			title: "Test",
-			publishedAt: "2024-01-01",
-		};
-		expect(fm.title).toBe("Test");
-	});
-
-	it("exports ChangelogFrontmatter type", () => {
-		const fm: ChangelogFrontmatter = {
-			title: "Test",
-			publishedAt: "2024-01-01",
-		};
-		expect(fm.title).toBe("Test");
-	});
-
-	it("exports LegalDocumentFrontmatter type", () => {
-		const fm: LegalDocumentFrontmatter = {
-			title: "Test",
-			updatedAt: "2024-01-01",
-		};
-		expect(fm.title).toBe("Test");
 	});
 });

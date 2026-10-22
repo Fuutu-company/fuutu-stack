@@ -146,7 +146,7 @@ fuutu-stack/
 │   ├── cron/          # job registry + runners + schedule honoring
 │   ├── search/        # SearchProvider interface + tenant-scoped queries
 │   ├── utils/         # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl
-│   ├── content/       # MDX collections: posts, changelog, legal
+│   ├── content/       # TSX collections: posts, changelog, legal
 │   ├── license/       # checkLicense(), getLicenseMode() — soft-fails to "oss"
 │   ├── telemetry/     # bin/ping.mjs (build-time) + pingTelemetry() (runtime)
 │   ├── webhooks/      # Webhook delivery worker (sign, deliver, retry)

@@ -82,7 +82,6 @@ Every domain behind an interface — swap providers without touching business lo
 | **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
 | **AI** | `AIProvider` | OpenRouter | Google, OpenAI, Anthropic, Noop… |
 | **Search** | `SearchProvider` | Postgres | MeiliSearch, Typesense, Algolia… |
-| **Content** | — | TSX collections | CMS, headless… |
 
 ### AI-Native
 - **AI provider-swappable** — OpenRouter / Google / OpenAI / Anthropic / Noop
@@ -127,7 +126,7 @@ fuutu-stack/
 │   ├── api/              # oRPC routers + Hono server
 │   ├── auth/             # Better Auth (server + client)
 │   ├── config/           # cross-cutting config + theme.css
-│   ├── content/          # ContentProvider interface + active provider
+│   ├── content/          # TSX content collections: posts, changelog, legal
 │   ├── cron/             # scheduled jobs (audit cleanup, reminders, telemetry)
 │   ├── db/               # Prisma client + queries (ORM-agnostic export)
 │   ├── env/              # environment validation (@t3-oss/env-nextjs)

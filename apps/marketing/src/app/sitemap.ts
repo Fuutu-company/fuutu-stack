@@ -1,18 +1,14 @@
-import { posts } from "@fuutu/content";
+import { legal, posts } from "@fuutu/content";
 import { env } from "@fuutu/env/marketing";
 import { i18nConfig } from "@fuutu/i18n/config";
 import type { MetadataRoute } from "next";
 import { defaultLocale, locales } from "@/i18n/config";
 
-const STATIC_ROUTES = [
-	"",
-	"/pricing",
-	"/blog",
-	"/changelog",
-	"/contact",
-	"/legal/privacy",
-	"/legal/terms",
-	"/legal/imprint",
+const STATIC_ROUTES = ["", "/pricing", "/blog", "/changelog", "/contact"];
+
+const ROUTES = [
+	...STATIC_ROUTES,
+	...[...new Set(legal.map((doc) => doc.slug))].map((slug) => `/legal/${slug}`),
 ];
 
 /**
@@ -41,7 +37,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
 	// Static routes — one entry per (locale, path) pair, plus hreflang alternates.
 	if (!i18nConfig.enabled) {
-		for (const path of STATIC_ROUTES) {
+		for (const path of ROUTES) {
 			entries.push({
 				url: `${base}${path}`,
 				lastModified: now,
@@ -50,7 +46,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 			});
 		}
 	} else {
-		for (const path of STATIC_ROUTES) {
+		for (const path of ROUTES) {
 			for (const locale of locales) {
 				entries.push({
 					url: localeUrl(base, locale, path),

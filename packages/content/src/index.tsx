@@ -111,33 +111,40 @@ function resolveBody(
 	bodies: Record<string, ComponentType>,
 	locale: string,
 ): ComponentType {
-	return (
-		bodies[locale] ?? bodies.en ?? (Object.values(bodies)[0] as ComponentType)
-	);
+	const resolved =
+		(Object.hasOwn(bodies, locale) ? bodies[locale] : undefined) ??
+		bodies.en ??
+		Object.values(bodies)[0];
+	if (!resolved) throw new Error("Content entry has no body components");
+	return resolved;
 }
 
-export const posts: PostEntry[] = [
-	{
-		slug: "welcome",
-		frontmatter: postFrontmatterSchema.parse(welcomeFrontmatter),
-		bodies: { en: WelcomePost, de: WelcomePostDe },
-	},
-].sort(
-	(a, b) =>
-		new Date(b.frontmatter.publishedAt).getTime() -
-		new Date(a.frontmatter.publishedAt).getTime(),
+export const posts: readonly PostEntry[] = Object.freeze(
+	[
+		{
+			slug: "welcome",
+			frontmatter: postFrontmatterSchema.parse(welcomeFrontmatter),
+			bodies: { en: WelcomePost, de: WelcomePostDe },
+		},
+	].sort(
+		(a, b) =>
+			new Date(b.frontmatter.publishedAt).getTime() -
+			new Date(a.frontmatter.publishedAt).getTime(),
+	),
 );
 
-export const changelog: ChangelogEntry[] = [
-	{
-		slug: "v0-1-0",
-		frontmatter: changelogFrontmatterSchema.parse(changelogV010Frontmatter),
-		bodies: { en: ChangelogV010, de: ChangelogV010De },
-	},
-].sort(
-	(a, b) =>
-		new Date(b.frontmatter.publishedAt).getTime() -
-		new Date(a.frontmatter.publishedAt).getTime(),
+export const changelog: readonly ChangelogEntry[] = Object.freeze(
+	[
+		{
+			slug: "v0-1-0",
+			frontmatter: changelogFrontmatterSchema.parse(changelogV010Frontmatter),
+			bodies: { en: ChangelogV010, de: ChangelogV010De },
+		},
+	].sort(
+		(a, b) =>
+			new Date(b.frontmatter.publishedAt).getTime() -
+			new Date(a.frontmatter.publishedAt).getTime(),
+	),
 );
 
 const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
@@ -185,17 +192,21 @@ const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 	},
 };
 
-export const legal: LegalDocument[] = Object.values(LEGAL_REGISTRY).flatMap(
-	(byLocale) => Object.values(byLocale),
+export const legal: readonly LegalDocument[] = Object.freeze(
+	Object.values(LEGAL_REGISTRY).flatMap((byLocale) => Object.values(byLocale)),
 );
 
 export function getLegalDocument(
 	slug: string,
 	locale = "en",
-): LegalDocument | null {
-	const bySlug = LEGAL_REGISTRY[slug];
-	if (!bySlug) return null;
-	return bySlug[locale] ?? bySlug.en ?? null;
+): LegalDocument | undefined {
+	const bySlug = Object.hasOwn(LEGAL_REGISTRY, slug)
+		? LEGAL_REGISTRY[slug]
+		: undefined;
+	if (!bySlug) return undefined;
+	return (
+		(Object.hasOwn(bySlug, locale) ? bySlug[locale] : undefined) ?? bySlug.en
+	);
 }
 
 export function getPost(slug: string): PostEntry | undefined {
