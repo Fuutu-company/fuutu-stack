@@ -125,6 +125,50 @@ describe("@fuutu/env/saas", () => {
 		await expect(import("../saas")).rejects.toThrow();
 	});
 
+	it("enforces the 32-char BETTER_AUTH_SECRET boundary", async () => {
+		process.env.DATABASE_URL = "postgresql://localhost:5432/test";
+		process.env.BETTER_AUTH_SECRET = "a".repeat(31);
+		process.env.BETTER_AUTH_URL = "http://localhost:3000";
+
+		await expect(import("../saas")).rejects.toThrow();
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+
+		const { env } = await import("../saas");
+		expect(env.BETTER_AUTH_SECRET).toBe("a".repeat(32));
+	});
+
+	it("rejects a CRON_SECRET shorter than 16 chars", async () => {
+		setRequiredSaasEnv();
+		process.env.CRON_SECRET = "too-short";
+
+		await expect(import("../saas")).rejects.toThrow();
+	});
+
+	it("accepts a CRON_SECRET of 16+ chars", async () => {
+		setRequiredSaasEnv();
+		process.env.CRON_SECRET = "s".repeat(16);
+
+		const { env } = await import("../saas");
+		expect(env.CRON_SECRET).toBe("s".repeat(16));
+	});
+
+	it("transforms WEBHOOK_ALLOW_PRIVATE_URLS string to boolean", async () => {
+		setRequiredSaasEnv();
+		process.env.WEBHOOK_ALLOW_PRIVATE_URLS = "1";
+
+		let mod = await import("../saas");
+		expect(mod.env.WEBHOOK_ALLOW_PRIVATE_URLS).toBe(true);
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+		delete process.env.WEBHOOK_ALLOW_PRIVATE_URLS;
+
+		mod = await import("../saas");
+		expect(mod.env.WEBHOOK_ALLOW_PRIVATE_URLS).toBeUndefined();
+	});
+
 	it("transforms FUUTU_TELEMETRY_DISABLED string to boolean", async () => {
 		setRequiredSaasEnv();
 		process.env.FUUTU_TELEMETRY_DISABLED = "1";
@@ -138,6 +182,14 @@ describe("@fuutu/env/saas", () => {
 
 		mod = await import("../saas");
 		expect(mod.env.FUUTU_TELEMETRY_DISABLED).toBe(false);
+	});
+
+	it("accepts case-insensitive FUUTU_TELEMETRY_DISABLED values", async () => {
+		setRequiredSaasEnv();
+		process.env.FUUTU_TELEMETRY_DISABLED = "TRUE";
+
+		const { env } = await import("../saas");
+		expect(env.FUUTU_TELEMETRY_DISABLED).toBe(true);
 	});
 
 	it("transforms S3_FORCE_PATH_STYLE string to boolean", async () => {
@@ -221,5 +273,27 @@ describe("@fuutu/env/marketing", () => {
 
 		const { env } = await import("../marketing");
 		expect(env.NEXT_PUBLIC_ANALYTICS_PROVIDER).toBeUndefined();
+	});
+});
+
+describe("@fuutu/env/docs", () => {
+	const originalEnv = process.env;
+
+	beforeEach(() => {
+		vi.resetModules();
+		process.env = { ...originalEnv };
+	});
+
+	it("validates with no required server env vars", async () => {
+		const { env } = await import("../docs");
+		expect(env).toBeDefined();
+		expect("DATABASE_URL" in env).toBe(false);
+	});
+
+	it("roundtrips NEXT_PUBLIC_DOCS_URL", async () => {
+		process.env.NEXT_PUBLIC_DOCS_URL = "https://docs.example.com";
+
+		const { env } = await import("../docs");
+		expect(env.NEXT_PUBLIC_DOCS_URL).toBe("https://docs.example.com");
 	});
 });

@@ -10,7 +10,7 @@ import { authProcedure } from "../../../orpc/procedures";
 const updateWebhookSchema = z.object({
 	id: z.string().min(1),
 	organizationId: z.string().min(1),
-	url: z.string().url().optional(),
+	url: z.url().optional(),
 	events: z.array(z.enum(WEBHOOK_EVENTS)).min(1).optional(),
 	isActive: z.boolean().optional(),
 });

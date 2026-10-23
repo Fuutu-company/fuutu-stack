@@ -8,25 +8,19 @@ const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
 
 export const env = createEnv({
 	server: {
-		DATABASE_URL: z.string().min(1),
+		DATABASE_URL: z.url(),
 		// Selects the Redis rate-limit store when set — driver is a stub
 		// until implemented, see @fuutu/utils/rate-limit.
-		REDIS_URL: z.string().url().optional(),
+		REDIS_URL: z.url().optional(),
 		BETTER_AUTH_SECRET: z.string().min(32),
-		BETTER_AUTH_URL: z.string().url(),
+		BETTER_AUTH_URL: z.url(),
 		// CORS origin for the Hono API — must be a concrete URL, never "*"
 		// (the API sends credentials; "*" + credentials is an invalid and
-		// dangerous combination that browsers reject anyway).
-		CORS_ORIGIN: z
-			.string()
-			.url()
-			.refine((v) => v !== "*", {
-				message: 'CORS_ORIGIN must be a concrete origin, not "*"',
-			})
-			.optional()
-			.default("http://localhost:3000"),
+		// dangerous combination that browsers reject anyway). URL
+		// validation already rejects "*".
+		CORS_ORIGIN: z.url().optional().default("http://localhost:3000"),
 		POLAR_ACCESS_TOKEN: z.string().optional(),
-		POLAR_SUCCESS_URL: z.string().optional(),
+		POLAR_SUCCESS_URL: z.url().optional(),
 		GOOGLE_CLIENT_ID: z.string().optional(),
 		GOOGLE_CLIENT_SECRET: z.string().optional(),
 		GITHUB_CLIENT_ID: z.string().optional(),
@@ -37,14 +31,15 @@ export const env = createEnv({
 			.enum(["openrouter", "google", "openai", "anthropic", "noop"])
 			.optional(),
 		AI_API_KEY: z.string().optional(),
-		AI_BASE_URL: z.string().optional(),
+		AI_BASE_URL: z.url().optional(),
 		AI_MODEL: z.string().optional(),
 		// Cron
 		CRON_PROVIDER: z.enum(["inline", "trigger-dev"]).optional(),
 		// Bearer secret for the /api/cron trigger endpoint (Vercel Cron,
 		// cron-job.org, etc. send `Authorization: Bearer <CRON_SECRET>`).
 		// When unset the endpoint returns 501 — cron stays disabled.
-		CRON_SECRET: z.string().optional(),
+		// min(16): the secret is compared verbatim as a Bearer token.
+		CRON_SECRET: z.string().min(16).optional(),
 		// Email
 		EMAIL_PROVIDER: z
 			.enum([
@@ -68,10 +63,7 @@ export const env = createEnv({
 		// Payments — Creem
 		CREEM_API_KEY: z.string().optional(),
 		CREEM_WEBHOOK_SECRET: z.string().optional(),
-		CREEM_TEST_MODE: z
-			.enum(["true", "false"])
-			.optional()
-			.transform((v) => v === "true"),
+		CREEM_TEST_MODE: z.stringbool().optional(),
 		// Payments — Plan price/product IDs (provider-agnostic)
 		// Set to your active provider's ID: Stripe price_id, Creem product_id, Polar product_id, etc.
 		PAYMENTS_PRO_PRICE_ID: z.string().optional(),
@@ -88,20 +80,17 @@ export const env = createEnv({
 		SEARCH_PROVIDER: z
 			.enum(["postgres", "meilisearch", "typesense", "noop"])
 			.optional(),
-		S3_ENDPOINT: z.string().optional(),
+		S3_ENDPOINT: z.url().optional(),
 		S3_REGION: z.string().optional(),
 		S3_ACCESS_KEY_ID: z.string().optional(),
 		S3_SECRET_ACCESS_KEY: z.string().optional(),
 		S3_BUCKET_AVATARS: z.string().optional(),
 		S3_BUCKET_ORGANIZATION_LOGOS: z.string().optional(),
-		S3_FORCE_PATH_STYLE: z
-			.enum(["true", "false"])
-			.optional()
-			.transform((v) => v === "true"),
+		S3_FORCE_PATH_STYLE: z.stringbool().optional(),
 		MINIO_ROOT_USER: z.string().optional(),
 		MINIO_ROOT_PASSWORD: z.string().optional(),
 		// Observability — consumed by the evlog drains selected via LOG_DRAIN
-		SENTRY_DSN: z.string().optional(),
+		SENTRY_DSN: z.url().optional(),
 		AXIOM_TOKEN: z.string().optional(),
 		AXIOM_DATASET: z.string().optional(),
 		// Logging
@@ -123,23 +112,14 @@ export const env = createEnv({
 		LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 		// Fuutu Business License & Telemetry
 		FUUTU_LICENSE_KEY: z.string().optional(),
-		FUUTU_LICENSE_ENDPOINT: z.string().url().optional(),
-		FUUTU_TELEMETRY_ENDPOINT: z.string().url().optional(),
-		FUUTU_TELEMETRY_DISABLED: z
-			.enum(["0", "1", "true", "false"])
-			.optional()
-			.transform((v) => v === "1" || v === "true"),
-		FUUTU_DISABLE_RATE_LIMIT: z
-			.enum(["0", "1", "true", "false"])
-			.optional()
-			.transform((v) => v === "1" || v === "true"),
+		FUUTU_LICENSE_ENDPOINT: z.url().optional(),
+		FUUTU_TELEMETRY_ENDPOINT: z.url().optional(),
+		FUUTU_TELEMETRY_DISABLED: z.stringbool().optional(),
+		FUUTU_DISABLE_RATE_LIMIT: z.stringbool().optional(),
 		// Explicit opt-in for outbound-webhook SSRF relaxation (http: +
 		// private/loopback targets). Needed for local receivers in dev —
 		// must NEVER be set in production.
-		WEBHOOK_ALLOW_PRIVATE_URLS: z
-			.enum(["0", "1", "true", "false"])
-			.optional()
-			.transform((v) => v === "1" || v === "true"),
+		WEBHOOK_ALLOW_PRIVATE_URLS: z.stringbool().optional(),
 	},
 	shared: {
 		NODE_ENV: z
@@ -147,26 +127,16 @@ export const env = createEnv({
 			.default("development"),
 	},
 	client: {
-		NEXT_PUBLIC_MARKETING_URL: z.string().url().optional(),
-		NEXT_PUBLIC_SAAS_URL: z.string().url().optional(),
+		NEXT_PUBLIC_MARKETING_URL: z.url().optional(),
+		NEXT_PUBLIC_SAAS_URL: z.url().optional(),
 		NEXT_PUBLIC_ANALYTICS_PROVIDER: z
 			.enum(["umami", "plausible", "pirsch", "mixpanel", "ga4", "noop"])
 			.optional(),
-		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z
-			.enum(["0", "1", "true", "false"])
-			.optional()
-			.transform((v) =>
-				v === undefined ? undefined : v === "1" || v === "true",
-			),
-		NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z
-			.enum(["0", "1", "true", "false"])
-			.optional()
-			.transform((v) =>
-				v === undefined ? undefined : v === "1" || v === "true",
-			),
+		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
+		NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
 		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: z.string().optional(),
 		NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
-		NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.string().url().optional(),
+		NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
 	},
 	runtimeEnv: {
 		NEXT_PUBLIC_MARKETING_URL: process.env.NEXT_PUBLIC_MARKETING_URL,
