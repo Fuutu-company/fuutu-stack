@@ -3,12 +3,17 @@
  * job registry (standard 5-field syntax: `minute hour day-of-month month
  * day-of-week`). Supports wildcards, step values, ranges, `range/step`
  * and comma-separated lists. Times are evaluated in the server's local
- * timezone, matching how
- * classic cron daemons interpret schedules.
+ * timezone, matching how classic cron daemons interpret schedules —
+ * including DST: fields follow wall-clock time, so a `0 9` job still
+ * targets ~9:00 local across DST transitions.
  *
  * This is deliberately not a full cron implementation — no named months or
  * weekdays, no `?`/`L`/`W`/`#` extensions.
  */
+
+import { createLogger } from "@fuutu/logs";
+
+const log = createLogger({ scope: "cron" });
 
 export interface ParsedCron {
 	minute: ReadonlySet<number>;
@@ -28,6 +33,16 @@ interface FieldRange {
 	normalizeMaxTo?: number;
 }
 
+/**
+ * Strict integer parse — unlike `Number.parseInt`, rejects trailing
+ * garbage ("5abc"), signs ("-2") and empty tokens instead of silently
+ * coercing them.
+ */
+const toInt = (token: string | undefined): number =>
+	token !== undefined && /^\d+$/.test(token)
+		? Number.parseInt(token, 10)
+		: Number.NaN;
+
 function parseField(
 	expr: string,
 	{ min, max, normalizeMaxTo }: FieldRange,
@@ -39,9 +54,12 @@ function parseField(
 		if (part === "") {
 			throw new Error(`Empty item in cron field "${expr}"`);
 		}
-		const [rangePart, stepPart] = part.split("/");
-		const step =
-			stepPart === undefined ? 1 : Number.parseInt(stepPart ?? "", 10);
+		const segments = part.split("/");
+		if (segments.length > 2) {
+			throw new Error(`Invalid step in cron field "${expr}"`);
+		}
+		const [rangePart, stepPart] = segments;
+		const step = stepPart === undefined ? 1 : toInt(stepPart);
 		if (!Number.isInteger(step) || step < 1) {
 			throw new Error(`Invalid step in cron field "${expr}"`);
 		}
@@ -51,11 +69,12 @@ function parseField(
 		if (rangePart === "*") {
 			any = step === 1;
 		} else if (rangePart?.includes("-")) {
-			const [a, b] = rangePart.split("-");
-			lo = Number.parseInt(a ?? "", 10);
-			hi = Number.parseInt(b ?? "", 10);
+			const bounds = rangePart.split("-");
+			// "1-2-3" must not silently drop the third segment.
+			lo = bounds.length === 2 ? toInt(bounds[0]) : Number.NaN;
+			hi = bounds.length === 2 ? toInt(bounds[1]) : Number.NaN;
 		} else {
-			lo = Number.parseInt(rangePart ?? "", 10);
+			lo = toInt(rangePart);
 			hi = stepPart === undefined ? lo : max;
 		}
 
@@ -153,7 +172,17 @@ export function previousScheduledRun(
  * Whether a job with `schedule` is due at `now` given its `lastRunAt`.
  * Never-run jobs are due. Unparseable schedules fail open (job runs every
  * trigger) so a typo degrades to the pre-scheduling behaviour instead of
- * silently disabling a job.
+ * silently disabling a job — registered schedules are validated loudly at
+ * runner construction so typos still surface at startup. A parseable but
+ * impossible schedule (e.g. `0 0 31 2 *` — February 31 never exists)
+ * fails closed instead: `previousScheduledRun` exhausting the full
+ * lookback with no match proves the expression can never be due, so the
+ * job is skipped and a `warn` is logged rather than running on every
+ * trigger forever.
+ *
+ * Semantics are at-most-once-per-trigger, no catch-up: however many
+ * scheduled slots elapsed since `lastRunAt`, the job runs once on the
+ * next trigger and `lastRunAt` then advances to that run.
  */
 export function isJobDue(
 	schedule: string,
@@ -163,7 +192,13 @@ export function isJobDue(
 	if (!lastRunAt) return true;
 	try {
 		const previous = previousScheduledRun(schedule, now);
-		if (!previous) return true;
+		if (!previous) {
+			log.warn(
+				"schedule matches no slot in the lookback window — job will never run",
+				{ schedule },
+			);
+			return false;
+		}
 		return previous.getTime() > lastRunAt.getTime();
 	} catch {
 		return true;

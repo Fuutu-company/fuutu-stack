@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	cronMatches,
 	isJobDue,
 	parseCronExpression,
 	previousScheduledRun,
@@ -39,6 +40,81 @@ describe("parseCronExpression", () => {
 		expect(() => parseCronExpression("* * * *")).toThrow();
 		expect(() => parseCronExpression("61 * * * *")).toThrow();
 		expect(() => parseCronExpression("")).toThrow();
+	});
+
+	it("rejects silently-truncated and partially-numeric fields", () => {
+		// Extra step segment must not be dropped.
+		expect(() => parseCronExpression("*/2/3 * * * *")).toThrow();
+		// parseInt("5abc") === 5 — a strict parser must reject this.
+		expect(() => parseCronExpression("5abc * * * *")).toThrow();
+		expect(() => parseCronExpression("1-2x * * * *")).toThrow();
+		// Extra range segment must not be dropped.
+		expect(() => parseCronExpression("1-2-3 * * * *")).toThrow();
+	});
+
+	it("normalizes day-of-week 7 to Sunday (0)", () => {
+		const parsed = parseCronExpression("0 9 * * 7");
+		expect(parsed.dayOfWeek.has(0)).toBe(true);
+		expect(parsed.dayOfWeek.has(7)).toBe(false);
+	});
+
+	it("anchors a bare N/step at N through the field max", () => {
+		const parsed = parseCronExpression("5/15 * * * *");
+		expect([...parsed.minute].sort((a, b) => a - b)).toEqual([5, 20, 35, 50]);
+	});
+
+	it("steps within an explicit range", () => {
+		const parsed = parseCronExpression("1-5/2 * * * *");
+		expect([...parsed.minute].sort((a, b) => a - b)).toEqual([1, 3, 5]);
+	});
+
+	it("treats */n in dom/dow as restricted for the OR rule", () => {
+		const parsed = parseCronExpression("0 9 */2 * */3");
+		expect(parsed.dayOfMonthAny).toBe(false);
+		expect(parsed.dayOfWeekAny).toBe(false);
+	});
+
+	it("rejects empty list items, reversed ranges, and named fields", () => {
+		expect(() => parseCronExpression("1,,2 * * * *")).toThrow();
+		expect(() => parseCronExpression("5-1 * * * *")).toThrow();
+		expect(() => parseCronExpression("0 9 * * MON")).toThrow();
+		expect(() => parseCronExpression("0 9 * JAN *")).toThrow();
+	});
+});
+
+describe("cronMatches", () => {
+	// 2025-06-01 was a Sunday; 2025-06-04 a Wednesday; 2025-05-01 a Thursday.
+	it("applies the dom/dow OR rule when both fields are restricted", () => {
+		const parsed = parseCronExpression("0 9 1 * 3");
+		// Wednesday but not the 1st — matches via day-of-week.
+		expect(cronMatches(parsed, new Date(2025, 5, 4, 9, 0))).toBe(true);
+		// The 1st but not a Wednesday — matches via day-of-month.
+		expect(cronMatches(parsed, new Date(2025, 4, 1, 9, 0))).toBe(true);
+		// Neither the 1st nor a Wednesday — no match.
+		expect(cronMatches(parsed, new Date(2025, 5, 2, 9, 0))).toBe(false);
+	});
+
+	it("requires both fields when only one is restricted", () => {
+		const parsed = parseCronExpression("0 9 1 * *");
+		expect(cronMatches(parsed, new Date(2025, 5, 1, 9, 0))).toBe(true);
+		expect(cronMatches(parsed, new Date(2025, 5, 4, 9, 0))).toBe(false);
+	});
+
+	it("treats day-of-week 7 the same as 0 (Sunday)", () => {
+		const sunday = new Date(2025, 5, 1, 9, 0);
+		expect(cronMatches(parseCronExpression("0 9 * * 7"), sunday)).toBe(true);
+		expect(cronMatches(parseCronExpression("0 9 * * 0"), sunday)).toBe(true);
+	});
+
+	it("applies the dom/dow OR rule for stepped fields", () => {
+		// "*/2" dom = odd days; "*/3" dow = {0,3,6}.
+		const parsed = parseCronExpression("0 9 */2 * */3");
+		// Wednesday (dow 3) on an even dom — matches via day-of-week.
+		expect(cronMatches(parsed, new Date(2025, 5, 4, 9, 0))).toBe(true);
+		// Thursday (dow 4) on an odd dom — matches via day-of-month.
+		expect(cronMatches(parsed, new Date(2025, 5, 5, 9, 0))).toBe(true);
+		// Friday (dow 5) on an even dom — no match.
+		expect(cronMatches(parsed, new Date(2025, 5, 6, 9, 0))).toBe(false);
 	});
 });
 
@@ -97,5 +173,11 @@ describe("isJobDue", () => {
 
 	it("fails open on unparseable schedules", () => {
 		expect(isJobDue("bogus", new Date(), now)).toBe(true);
+	});
+
+	it("fails closed on a parseable but impossible schedule", () => {
+		// "31 February" parses but matches no real instant — an empty
+		// lookback proves the schedule can never fire.
+		expect(isJobDue("0 0 31 2 *", new Date(2025, 0, 1), now)).toBe(false);
 	});
 });

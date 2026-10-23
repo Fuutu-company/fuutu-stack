@@ -1,9 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@fuutu/db", () => ({
+	getCronJobRun: vi.fn().mockResolvedValue(null),
+	claimCronJobRun: vi.fn().mockResolvedValue(true),
+	recordCronJobRun: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { cronConfig } from "../config";
 import { resolveJobRunner } from "../runner";
 import { InlineJobRunner } from "../runners/inline";
 import { TriggerDevJobRunner } from "../runners/trigger-dev";
-import type { JobRunner } from "../types";
+import type { CronJob, JobRunner } from "../types";
 
 describe("resolveJobRunner", () => {
 	it("returns InlineJobRunner by default", () => {
@@ -12,9 +19,26 @@ describe("resolveJobRunner", () => {
 		expect(runner.id).toBe("inline");
 	});
 
-	it("returns the runner matching cronConfig.runner", () => {
-		const runner = resolveJobRunner();
-		expect(runner.id).toBe(cronConfig.runner);
+	it("returns TriggerDevJobRunner when cronConfig.runner is trigger-dev", () => {
+		const spy = vi
+			.spyOn(cronConfig, "runner", "get")
+			.mockReturnValue("trigger-dev");
+		try {
+			expect(resolveJobRunner()).toBeInstanceOf(TriggerDevJobRunner);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	it("throws on an out-of-union runner id", () => {
+		const spy = vi
+			.spyOn(cronConfig, "runner", "get")
+			.mockReturnValue("bogus" as never);
+		try {
+			expect(() => resolveJobRunner()).toThrow("Unknown cron runner");
+		} finally {
+			spy.mockRestore();
+		}
 	});
 });
 
@@ -39,6 +63,27 @@ describe("InlineJobRunner", () => {
 				"telemetry-ping",
 			]),
 		);
+	});
+
+	it("fails a hung job after the per-job timeout instead of blocking forever", async () => {
+		vi.useFakeTimers();
+		try {
+			const hung: CronJob = {
+				name: "hung",
+				schedule: "* * * * *",
+				enabled: true,
+				run: () => new Promise(() => {}),
+			};
+			const runner = new InlineJobRunner([hung]);
+			const pending = runner.run("hung");
+			// Well past any sane per-job timeout.
+			await vi.advanceTimersByTimeAsync(10 * 60_000);
+			const result = await pending;
+			expect(result.success).toBe(false);
+			expect(result.errors[0]).toContain("timed out");
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 

@@ -11,6 +11,12 @@ export interface CronJobResult {
 	success: boolean;
 	processed: number;
 	errors: string[];
+	/**
+	 * True when the job legitimately had nothing to do (e.g. telemetry
+	 * opted out) — distinct from both real work and failure. The inline
+	 * runner persists it as `lastStatus: "skipped"`.
+	 */
+	skipped?: boolean;
 }
 
 export interface CronJob {

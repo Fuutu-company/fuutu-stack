@@ -63,10 +63,39 @@ export const getPurchaseByCheckoutEventId = async (
 	return rows[0] ?? null;
 };
 
-export const getTrialingSubscriptions = () =>
+/**
+ * Trialing subscriptions ending within a reminder window, for the
+ * subscription-reminder cron job. `currentPeriodEnd` must fall inside
+ * [now, windowEnd] — trials already past their period end no longer
+ * qualify for an "ending soon" reminder, and later-ending trials are
+ * picked up by a subsequent daily run.
+ *
+ * Purchases are polymorphically owned (userId XOR organizationId). Org
+ * members are returned unfiltered: `member.role` is a comma-separated
+ * Better-Auth role string that SQL cannot exact-match (a `contains`
+ * filter would also match custom roles like "co-owner"), so callers
+ * filter for the org "owner" role themselves.
+ */
+export const getTrialingSubscriptions = (now: Date, windowEnd: Date) =>
 	db.purchase.findMany({
-		where: { type: "SUBSCRIPTION", status: "TRIALING" },
-		include: { user: { select: { locale: true } } },
+		where: {
+			type: "SUBSCRIPTION",
+			status: "TRIALING",
+			currentPeriodEnd: { gte: now, lte: windowEnd },
+		},
+		include: {
+			user: { select: { locale: true } },
+			organization: {
+				select: {
+					members: {
+						select: {
+							role: true,
+							user: { select: { id: true, locale: true } },
+						},
+					},
+				},
+			},
+		},
 	});
 
 export type CreatePurchaseInput = {

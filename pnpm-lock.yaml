@@ -1039,9 +1039,6 @@ importers:
         specifier: workspace:*
         version: link:../webhooks
     devDependencies:
-      '@fuutu/test-utils':
-        specifier: workspace:*
-        version: link:../test-utils
       '@fuutu/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript

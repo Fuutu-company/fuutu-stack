@@ -10,11 +10,18 @@ import type { JobRunnerId } from "./types";
  */
 export interface CronConfig {
 	runner: JobRunnerId;
+	/**
+	 * Per-job enable flags. The four keys cover the built-in jobs; the
+	 * index signature lets jobs added via `registerJob` opt into the same
+	 * mechanism (`get enabled() { return cronConfig.jobs["my-job"] ?? true; }`).
+	 * Unset keys mean "enabled" — a job's own `enabled` field is the default.
+	 */
 	jobs: {
 		webhookRetry: boolean;
 		auditLogCleanup: boolean;
 		subscriptionReminder: boolean;
 		telemetryPing: boolean;
+		[customJob: string]: boolean | undefined;
 	};
 }
 
