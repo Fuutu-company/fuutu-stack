@@ -20,6 +20,7 @@ vi.mock("@fuutu/db", () => ({
 	getTrialingSubscriptions: vi.fn(),
 	notificationExists: vi.fn(),
 	getCronJobRun: vi.fn().mockResolvedValue(null),
+	claimCronJobRun: vi.fn().mockResolvedValue(true),
 	recordCronJobRun: vi.fn().mockResolvedValue(undefined),
 }));
 

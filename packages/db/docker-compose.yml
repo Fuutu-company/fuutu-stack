@@ -1,15 +1,16 @@
 name: fuutu-stack
 
+# Local development only — not for production deployment.
 services:
   postgres:
-    image: postgres
+    image: postgres:16-alpine
     container_name: fuutu-stack-postgres
     environment:
       POSTGRES_DB: fuutu-stack
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - fuutu-stack_postgres_data:/var/lib/postgresql
     healthcheck:
@@ -25,15 +26,15 @@ services:
   # Oct 2025) — we use the Bitnami legacy build, which also creates the
   # shipped buckets via MINIO_DEFAULT_BUCKETS (no `mc` bootstrap needed).
   minio:
-    image: bitnamilegacy/minio:latest
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
     container_name: fuutu-stack-minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_DEFAULT_BUCKETS: avatars,organization-logos
     ports:
-      - "9000:9000" # S3 API
-      - "9001:9001" # Web console (http://localhost:9001)
+      - "127.0.0.1:9000:9000" # S3 API
+      - "127.0.0.1:9001:9001" # Web console (http://localhost:9001)
     volumes:
       - fuutu-stack_minio_data:/bitnami/minio/data
     healthcheck:

@@ -17,6 +17,7 @@ export const consoleAuditSink: AuditSink = {
 	async record(event) {
 		console.info("[audit]", event.action, {
 			userId: event.userId ?? null,
+			organizationId: event.organizationId ?? null,
 			ip: event.ip ?? null,
 			userAgent: event.userAgent ?? null,
 			metadata: event.metadata ?? {},
@@ -60,6 +61,7 @@ export function createAuditLogger(options: LoggerOptions = {}): AuditLogger {
 			}
 			console.info(`[${tag}] audit: ${event.action}`, {
 				userId: event.userId ?? null,
+				organizationId: event.organizationId ?? null,
 				ip: event.ip ?? null,
 				userAgent: event.userAgent ?? null,
 				...(event.metadata ?? {}),

@@ -25,6 +25,8 @@ export interface AuditEvent {
 	action: string;
 	/** Subject the event relates to. Nullable for anonymous flows. */
 	userId?: string | null;
+	/** Organization scope of the event. NULL for user-scoped/auth events. */
+	organizationId?: string | null;
 	/** Request IP address if available. */
 	ip?: string | null;
 	/** Request User-Agent if available. */

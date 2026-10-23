@@ -13,7 +13,7 @@ catalog:
   "@t3-oss/env-core": ^0.13.11
   "@t3-oss/env-nextjs": ^0.13.11
   # Next.js / React
-  next: ^16.3.8
+  next: ^16.4.2
   react: ^19.3.0
   react-dom: ^19.3.0
   "@types/react": ^19.3.0

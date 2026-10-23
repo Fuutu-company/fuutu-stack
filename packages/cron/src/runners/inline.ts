@@ -107,7 +107,8 @@ export class InlineJobRunner implements JobRunner {
 				results[job.name] = { success: true, processed: 0, errors: [] };
 				continue;
 			}
-			if (!(await this.claim(job.name, lastRunAt))) {
+			const claimedAt = await this.claim(job.name, lastRunAt);
+			if (claimedAt === null) {
 				// A concurrent trigger/instance claimed the slot first,
 				// or the claim write itself failed (fail-closed).
 				results[job.name] = {
@@ -118,7 +119,7 @@ export class InlineJobRunner implements JobRunner {
 				};
 				continue;
 			}
-			results[job.name] = await this.execute(job);
+			results[job.name] = await this.execute(job, claimedAt);
 		}
 		return results;
 	}
@@ -153,25 +154,36 @@ export class InlineJobRunner implements JobRunner {
 	 * a failed write means a degraded DB, and running every job
 	 * unclaimed on every instance would multiply the harm.
 	 */
+	/**
+	 * Returns the claim timestamp (`lastRunAt` value the claim wrote)
+	 * when the slot was won, `undefined` when the run proceeds unclaimed
+	 * (unreadable run state — nothing to claim against), or `null` when
+	 * the claim was lost or failed and the job must be skipped.
+	 */
 	private async claim(
 		jobKey: string,
 		expectedLastRunAt: Date | null | undefined,
-	): Promise<boolean> {
+	): Promise<Date | null | undefined> {
 		if (expectedLastRunAt === undefined) {
-			return true;
+			return undefined;
 		}
 		try {
-			return await claimCronJobRun(jobKey, expectedLastRunAt, new Date());
+			const claimedAt = new Date();
+			const won = await claimCronJobRun(jobKey, expectedLastRunAt, claimedAt);
+			return won ? claimedAt : null;
 		} catch (error) {
 			log.warn("could not claim run slot — skipping", {
 				job: jobKey,
 				err: error,
 			});
-			return false;
+			return null;
 		}
 	}
 
-	private async execute(job: CronJob): Promise<CronJobResult> {
+	private async execute(
+		job: CronJob,
+		claimedAt?: Date,
+	): Promise<CronJobResult> {
 		this.inFlight.add(job.name);
 		let result: CronJobResult;
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -206,11 +218,16 @@ export class InlineJobRunner implements JobRunner {
 			clearTimeout(timer);
 		}
 		try {
+			// `claimedAt` ties the record write to this run's claim — a
+			// stale finisher whose slot was re-claimed cannot overwrite the
+			// newer run's state. Force-runs pass no claim and take the
+			// unconditional upsert path inside recordCronJobRun.
 			await recordCronJobRun(
 				job.name,
 				result.skipped ? "skipped" : result.success ? "success" : "error",
 				new Date(),
 				result.errors[0],
+				claimedAt,
 			);
 		} catch (error) {
 			// Recording is best-effort — a missed write only means the job may

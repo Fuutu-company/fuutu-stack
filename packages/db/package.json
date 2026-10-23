@@ -14,6 +14,7 @@
 	},
 	"scripts": {
 		"test": "vitest run",
+		"test:integration": "cross-env RUN_DB_TESTS=1 dotenv -c -e ../../.env -- vitest run --config vitest.integration.config.ts",
 		"check-types": "tsc --noEmit",
 		"db:push": "dotenv -c -e ../../.env -- prisma db push",
 		"db:generate": "dotenv -c -e ../../.env -- prisma generate",
@@ -33,14 +34,13 @@
 		"@prisma/adapter-pg": "catalog:",
 		"@prisma/client": "catalog:",
 		"decimal.js": "catalog:",
-		"dotenv": "catalog:",
 		"pg": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@fuutu/config": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"@types/pg": "catalog:",
+		"dotenv": "catalog:",
 		"prisma": "catalog:",
 		"prisma-zod-generator": "catalog:",
 		"tsx": "catalog:",

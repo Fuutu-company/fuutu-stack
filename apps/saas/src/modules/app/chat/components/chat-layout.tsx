@@ -162,8 +162,10 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 				headers: { "content-type": "application/json" },
 				credentials: "include",
 				body: JSON.stringify({
-					conversationId: activeConversationId,
-					content,
+					json: {
+						conversationId: activeConversationId,
+						content,
+					},
 				}),
 			});
 			if (!response.ok) {

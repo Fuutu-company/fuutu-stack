@@ -1,8 +1,5 @@
 import { db } from "../client";
-
-/** Prisma unique-violation error code (same pattern as credit-balance.ts). */
-const isUniqueViolation = (err: unknown): boolean =>
-	err instanceof Error && "code" in err && err.code === "P2002";
+import { isUniqueViolation } from "./transaction";
 
 export const getCronJobRun = (jobKey: string) =>
 	db.cronJobRun.findUnique({ where: { jobKey } });
@@ -48,23 +45,40 @@ export const claimCronJobRun = async (
 	return count === 1;
 };
 
-export const recordCronJobRun = (
+/**
+ * Record a finished run.
+ *
+ * When `claimedAt` is provided (the timestamp `claimCronJobRun` stamped
+ * into `lastRunAt`), the write is a conditional `updateMany` guarded by
+ * that value — a finisher whose claim was superseded by a newer claim
+ * updates 0 rows and is silently dropped instead of clobbering the
+ * newer run's bookkeeping. Without `claimedAt` (force-run path, no
+ * claim) it falls back to an unconditional upsert.
+ */
+export const recordCronJobRun = async (
 	jobKey: string,
 	status: "success" | "error" | "skipped",
 	runAt: Date,
 	error?: string,
-) =>
-	db.cronJobRun.upsert({
+	claimedAt?: Date,
+) => {
+	const data = {
+		lastRunAt: runAt,
+		lastStatus: status,
+		lastError: error ?? null,
+	};
+	if (claimedAt) {
+		await db.cronJobRun.updateMany({
+			where: { jobKey, lastRunAt: claimedAt },
+			data,
+		});
+		return;
+	}
+	// Fail-open: an unclaimed (force-run) write may overwrite another
+	// instance's in-flight record — documented policy for this path.
+	await db.cronJobRun.upsert({
 		where: { jobKey },
-		create: {
-			jobKey,
-			lastRunAt: runAt,
-			lastStatus: status,
-			lastError: error ?? null,
-		},
-		update: {
-			lastRunAt: runAt,
-			lastStatus: status,
-			lastError: error ?? null,
-		},
+		create: { jobKey, ...data },
+		update: data,
 	});
+};

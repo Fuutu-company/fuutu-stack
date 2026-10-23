@@ -62,7 +62,7 @@ export type PurchaseScalarFieldEnum = z.infer<typeof PurchaseScalarFieldEnumSche
 
 // File: AuditLogScalarFieldEnum.schema.ts
 
-export const AuditLogScalarFieldEnumSchema = z.enum(['id', 'userId', 'action', 'ip', 'userAgent', 'metadata', 'createdAt'])
+export const AuditLogScalarFieldEnumSchema = z.enum(['id', 'userId', 'organizationId', 'action', 'ip', 'userAgent', 'metadata', 'createdAt'])
 
 export type AuditLogScalarFieldEnum = z.infer<typeof AuditLogScalarFieldEnumSchema>;
 
@@ -268,7 +268,8 @@ const purchasewhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
-  organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional()
+  organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional(),
+  creditPackages: z.lazy(() => CreditPackageListRelationFilterObjectSchema).optional()
 }).strict();
 export const PurchaseWhereInputObjectSchema: z.ZodType<Prisma.PurchaseWhereInput> = purchasewhereinputSchema as unknown as z.ZodType<Prisma.PurchaseWhereInput>;
 export const PurchaseWhereInputObjectZodSchema = purchasewhereinputSchema;
@@ -292,7 +293,8 @@ const __makeSchema_PurchaseOrderByWithRelationInput_schema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const PurchaseOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.PurchaseOrderByWithRelationInput> = __makeSchema_PurchaseOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.PurchaseOrderByWithRelationInput>;
 export const PurchaseOrderByWithRelationInputObjectZodSchema = __makeSchema_PurchaseOrderByWithRelationInput_schema();
@@ -368,12 +370,14 @@ const auditlogwhereinputSchema = z.object({
   NOT: z.union([z.lazy(() => AuditLogWhereInputObjectSchema), z.lazy(() => AuditLogWhereInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   action: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   ip: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   userAgent: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   metadata: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional()
+  user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
+  organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional()
 }).strict();
 export const AuditLogWhereInputObjectSchema: z.ZodType<Prisma.AuditLogWhereInput> = auditlogwhereinputSchema as unknown as z.ZodType<Prisma.AuditLogWhereInput>;
 export const AuditLogWhereInputObjectZodSchema = auditlogwhereinputSchema;
@@ -383,12 +387,14 @@ export const AuditLogWhereInputObjectZodSchema = auditlogwhereinputSchema;
 const __makeSchema_AuditLogOrderByWithRelationInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
   userId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  organizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   action: SortOrderSchema.optional(),
   ip: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   userAgent: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
-  user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional()
+  user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const AuditLogOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.AuditLogOrderByWithRelationInput> = __makeSchema_AuditLogOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.AuditLogOrderByWithRelationInput>;
 export const AuditLogOrderByWithRelationInputObjectZodSchema = __makeSchema_AuditLogOrderByWithRelationInput_schema();
@@ -406,6 +412,7 @@ export const AuditLogWhereUniqueInputObjectZodSchema = __makeSchema_AuditLogWher
 const __makeSchema_AuditLogOrderByWithAggregationInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
   userId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  organizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   action: SortOrderSchema.optional(),
   ip: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   userAgent: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
@@ -427,6 +434,7 @@ const auditlogscalarwherewithaggregatesinputSchema = z.object({
   NOT: z.union([z.lazy(() => AuditLogScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => AuditLogScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  organizationId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   action: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   ip: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   userAgent: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
@@ -1325,7 +1333,9 @@ const creditpackagewhereinputSchema = z.object({
   priority: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
-  organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional()
+  organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional(),
+  purchase: z.union([z.lazy(() => PurchaseNullableScalarRelationFilterObjectSchema), z.lazy(() => PurchaseWhereInputObjectSchema)]).optional(),
+  events: z.lazy(() => CreditEventListRelationFilterObjectSchema).optional()
 }).strict();
 export const CreditPackageWhereInputObjectSchema: z.ZodType<Prisma.CreditPackageWhereInput> = creditpackagewhereinputSchema as unknown as z.ZodType<Prisma.CreditPackageWhereInput>;
 export const CreditPackageWhereInputObjectZodSchema = creditpackagewhereinputSchema;
@@ -1344,7 +1354,9 @@ const __makeSchema_CreditPackageOrderByWithRelationInput_schema = () => z.object
   priority: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseOrderByWithRelationInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const CreditPackageOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.CreditPackageOrderByWithRelationInput> = __makeSchema_CreditPackageOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.CreditPackageOrderByWithRelationInput>;
 export const CreditPackageOrderByWithRelationInputObjectZodSchema = __makeSchema_CreditPackageOrderByWithRelationInput_schema();
@@ -1419,7 +1431,8 @@ const crediteventwhereinputSchema = z.object({
   idempotencyKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
-  organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional()
+  organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional(),
+  package: z.union([z.lazy(() => CreditPackageNullableScalarRelationFilterObjectSchema), z.lazy(() => CreditPackageWhereInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventWhereInputObjectSchema: z.ZodType<Prisma.CreditEventWhereInput> = crediteventwhereinputSchema as unknown as z.ZodType<Prisma.CreditEventWhereInput>;
 export const CreditEventWhereInputObjectZodSchema = crediteventwhereinputSchema;
@@ -1439,7 +1452,8 @@ const __makeSchema_CreditEventOrderByWithRelationInput_schema = () => z.object({
   idempotencyKey: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional(),
+  package: z.lazy(() => CreditPackageOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const CreditEventOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.CreditEventOrderByWithRelationInput> = __makeSchema_CreditEventOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.CreditEventOrderByWithRelationInput>;
 export const CreditEventOrderByWithRelationInputObjectZodSchema = __makeSchema_CreditEventOrderByWithRelationInput_schema();
@@ -1934,7 +1948,8 @@ const organizationwhereinputSchema = z.object({
   contacts: z.lazy(() => ContactListRelationFilterObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceListRelationFilterObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageListRelationFilterObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventListRelationFilterObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventListRelationFilterObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogListRelationFilterObjectSchema).optional()
 }).strict();
 export const OrganizationWhereInputObjectSchema: z.ZodType<Prisma.OrganizationWhereInput> = organizationwhereinputSchema as unknown as z.ZodType<Prisma.OrganizationWhereInput>;
 export const OrganizationWhereInputObjectZodSchema = organizationwhereinputSchema;
@@ -1959,7 +1974,8 @@ const __makeSchema_OrganizationOrderByWithRelationInput_schema = () => z.object(
   contacts: z.lazy(() => ContactOrderByRelationAggregateInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceOrderByRelationAggregateInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageOrderByRelationAggregateInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventOrderByRelationAggregateInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventOrderByRelationAggregateInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const OrganizationOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.OrganizationOrderByWithRelationInput> = __makeSchema_OrganizationOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.OrganizationOrderByWithRelationInput>;
 export const OrganizationOrderByWithRelationInputObjectZodSchema = __makeSchema_OrganizationOrderByWithRelationInput_schema();
@@ -2408,7 +2424,8 @@ const __makeSchema_PurchaseCreateInput_schema = () => z.object({
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
 }).strict();
 export const PurchaseCreateInputObjectSchema: z.ZodType<Prisma.PurchaseCreateInput> = __makeSchema_PurchaseCreateInput_schema() as unknown as z.ZodType<Prisma.PurchaseCreateInput>;
 export const PurchaseCreateInputObjectZodSchema = __makeSchema_PurchaseCreateInput_schema();
@@ -2429,7 +2446,8 @@ const __makeSchema_PurchaseUncheckedCreateInput_schema = () => z.object({
   userId: z.string().optional().nullable(),
   organizationId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
 }).strict();
 export const PurchaseUncheckedCreateInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedCreateInput> = __makeSchema_PurchaseUncheckedCreateInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedCreateInput>;
 export const PurchaseUncheckedCreateInputObjectZodSchema = __makeSchema_PurchaseUncheckedCreateInput_schema();
@@ -2451,7 +2469,8 @@ const __makeSchema_PurchaseUpdateInput_schema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationUpdateOneWithoutPurchasesNestedInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
 }).strict();
 export const PurchaseUpdateInputObjectSchema: z.ZodType<Prisma.PurchaseUpdateInput> = __makeSchema_PurchaseUpdateInput_schema() as unknown as z.ZodType<Prisma.PurchaseUpdateInput>;
 export const PurchaseUpdateInputObjectZodSchema = __makeSchema_PurchaseUpdateInput_schema();
@@ -2473,7 +2492,8 @@ const __makeSchema_PurchaseUncheckedUpdateInput_schema = () => z.object({
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
 }).strict();
 export const PurchaseUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedUpdateInput> = __makeSchema_PurchaseUncheckedUpdateInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedUpdateInput>;
 export const PurchaseUncheckedUpdateInputObjectZodSchema = __makeSchema_PurchaseUncheckedUpdateInput_schema();
@@ -2551,7 +2571,8 @@ const __makeSchema_AuditLogCreateInput_schema = () => z.object({
   userAgent: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),
-  user: z.lazy(() => UserCreateNestedOneWithoutAuditLogsInputObjectSchema).optional()
+  user: z.lazy(() => UserCreateNestedOneWithoutAuditLogsInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutAuditLogsInputObjectSchema).optional()
 }).strict();
 export const AuditLogCreateInputObjectSchema: z.ZodType<Prisma.AuditLogCreateInput> = __makeSchema_AuditLogCreateInput_schema() as unknown as z.ZodType<Prisma.AuditLogCreateInput>;
 export const AuditLogCreateInputObjectZodSchema = __makeSchema_AuditLogCreateInput_schema();
@@ -2561,6 +2582,7 @@ export const AuditLogCreateInputObjectZodSchema = __makeSchema_AuditLogCreateInp
 const __makeSchema_AuditLogUncheckedCreateInput_schema = () => z.object({
   id: z.string().optional(),
   userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
   action: z.string(),
   ip: z.string().optional().nullable(),
   userAgent: z.string().optional().nullable(),
@@ -2579,7 +2601,8 @@ const __makeSchema_AuditLogUpdateInput_schema = () => z.object({
   userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  user: z.lazy(() => UserUpdateOneWithoutAuditLogsNestedInputObjectSchema).optional()
+  user: z.lazy(() => UserUpdateOneWithoutAuditLogsNestedInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationUpdateOneWithoutAuditLogsNestedInputObjectSchema).optional()
 }).strict();
 export const AuditLogUpdateInputObjectSchema: z.ZodType<Prisma.AuditLogUpdateInput> = __makeSchema_AuditLogUpdateInput_schema() as unknown as z.ZodType<Prisma.AuditLogUpdateInput>;
 export const AuditLogUpdateInputObjectZodSchema = __makeSchema_AuditLogUpdateInput_schema();
@@ -2589,6 +2612,7 @@ export const AuditLogUpdateInputObjectZodSchema = __makeSchema_AuditLogUpdateInp
 const __makeSchema_AuditLogUncheckedUpdateInput_schema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   action: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -2603,6 +2627,7 @@ export const AuditLogUncheckedUpdateInputObjectZodSchema = __makeSchema_AuditLog
 const __makeSchema_AuditLogCreateManyInput_schema = () => z.object({
   id: z.string().optional(),
   userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
   action: z.string(),
   ip: z.string().optional().nullable(),
   userAgent: z.string().optional().nullable(),
@@ -2630,6 +2655,7 @@ export const AuditLogUpdateManyMutationInputObjectZodSchema = __makeSchema_Audit
 const __makeSchema_AuditLogUncheckedUpdateManyInput_schema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   action: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -3787,11 +3813,12 @@ const __makeSchema_CreditPackageCreateInput_schema = () => z.object({
   amount: z.number().int(),
   consumed: z.number().int().optional(),
   expiresAt: z.coerce.date().optional().nullable(),
-  purchaseId: z.string().optional().nullable(),
   priority: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventCreateNestedManyWithoutPackageInputObjectSchema).optional()
 }).strict();
 export const CreditPackageCreateInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateInput> = __makeSchema_CreditPackageCreateInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateInput>;
 export const CreditPackageCreateInputObjectZodSchema = __makeSchema_CreditPackageCreateInput_schema();
@@ -3808,7 +3835,8 @@ const __makeSchema_CreditPackageUncheckedCreateInput_schema = () => z.object({
   expiresAt: z.coerce.date().optional().nullable(),
   purchaseId: z.string().optional().nullable(),
   priority: z.number().int().optional(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  events: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutPackageInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUncheckedCreateInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedCreateInput> = __makeSchema_CreditPackageUncheckedCreateInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedCreateInput>;
 export const CreditPackageUncheckedCreateInputObjectZodSchema = __makeSchema_CreditPackageUncheckedCreateInput_schema();
@@ -3821,11 +3849,12 @@ const __makeSchema_CreditPackageUpdateInput_schema = () => z.object({
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventUpdateManyWithoutPackageNestedInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUpdateInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateInput> = __makeSchema_CreditPackageUpdateInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateInput>;
 export const CreditPackageUpdateInputObjectZodSchema = __makeSchema_CreditPackageUpdateInput_schema();
@@ -3842,7 +3871,8 @@ const __makeSchema_CreditPackageUncheckedUpdateInput_schema = () => z.object({
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
-  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  events: z.lazy(() => CreditEventUncheckedUpdateManyWithoutPackageNestedInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedUpdateInput> = __makeSchema_CreditPackageUncheckedUpdateInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedUpdateInput>;
 export const CreditPackageUncheckedUpdateInputObjectZodSchema = __makeSchema_CreditPackageUncheckedUpdateInput_schema();
@@ -3872,7 +3902,6 @@ const __makeSchema_CreditPackageUpdateManyMutationInput_schema = () => z.object(
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
@@ -3903,13 +3932,13 @@ const __makeSchema_CreditEventCreateInput_schema = () => z.object({
   meterKey: z.string(),
   amount: z.number().int(),
   source: z.string(),
-  packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutCreditEventsInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema).optional(),
+  package: z.lazy(() => CreditPackageCreateNestedOneWithoutEventsInputObjectSchema).optional()
 }).strict();
 export const CreditEventCreateInputObjectSchema: z.ZodType<Prisma.CreditEventCreateInput> = __makeSchema_CreditEventCreateInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateInput>;
 export const CreditEventCreateInputObjectZodSchema = __makeSchema_CreditEventCreateInput_schema();
@@ -3939,13 +3968,13 @@ const __makeSchema_CreditEventUpdateInput_schema = () => z.object({
   meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   source: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional(),
-  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional(),
+  package: z.lazy(() => CreditPackageUpdateOneWithoutEventsNestedInputObjectSchema).optional()
 }).strict();
 export const CreditEventUpdateInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateInput> = __makeSchema_CreditEventUpdateInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateInput>;
 export const CreditEventUpdateInputObjectZodSchema = __makeSchema_CreditEventUpdateInput_schema();
@@ -3993,7 +4022,6 @@ const __makeSchema_CreditEventUpdateManyMutationInput_schema = () => z.object({
   meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   source: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -4615,7 +4643,8 @@ const __makeSchema_OrganizationCreateInput_schema = () => z.object({
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateInputObjectSchema: z.ZodType<Prisma.OrganizationCreateInput> = __makeSchema_OrganizationCreateInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateInput>;
 export const OrganizationCreateInputObjectZodSchema = __makeSchema_OrganizationCreateInput_schema();
@@ -4640,7 +4669,8 @@ const __makeSchema_OrganizationUncheckedCreateInput_schema = () => z.object({
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateInput> = __makeSchema_OrganizationUncheckedCreateInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateInput>;
 export const OrganizationUncheckedCreateInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateInput_schema();
@@ -4665,7 +4695,8 @@ const __makeSchema_OrganizationUpdateInput_schema = () => z.object({
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateInput> = __makeSchema_OrganizationUpdateInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateInput>;
 export const OrganizationUpdateInputObjectZodSchema = __makeSchema_OrganizationUpdateInput_schema();
@@ -4690,7 +4721,8 @@ const __makeSchema_OrganizationUncheckedUpdateInput_schema = () => z.object({
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateInput> = __makeSchema_OrganizationUncheckedUpdateInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateInput>;
 export const OrganizationUncheckedUpdateInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateInput_schema();
@@ -5352,6 +5384,16 @@ export const OrganizationNullableScalarRelationFilterObjectSchema: z.ZodType<Pri
 export const OrganizationNullableScalarRelationFilterObjectZodSchema = __makeSchema_OrganizationNullableScalarRelationFilter_schema();
 
 
+// File: CreditPackageListRelationFilter.schema.ts
+const __makeSchema_CreditPackageListRelationFilter_schema = () => z.object({
+  every: z.lazy(() => CreditPackageWhereInputObjectSchema).optional(),
+  some: z.lazy(() => CreditPackageWhereInputObjectSchema).optional(),
+  none: z.lazy(() => CreditPackageWhereInputObjectSchema).optional()
+}).strict();
+export const CreditPackageListRelationFilterObjectSchema: z.ZodType<Prisma.CreditPackageListRelationFilter> = __makeSchema_CreditPackageListRelationFilter_schema() as unknown as z.ZodType<Prisma.CreditPackageListRelationFilter>;
+export const CreditPackageListRelationFilterObjectZodSchema = __makeSchema_CreditPackageListRelationFilter_schema();
+
+
 // File: SortOrderInput.schema.ts
 const __makeSchema_SortOrderInput_schema = () => z.object({
   sort: SortOrderSchema,
@@ -5359,6 +5401,14 @@ const __makeSchema_SortOrderInput_schema = () => z.object({
 }).strict();
 export const SortOrderInputObjectSchema: z.ZodType<Prisma.SortOrderInput> = __makeSchema_SortOrderInput_schema() as unknown as z.ZodType<Prisma.SortOrderInput>;
 export const SortOrderInputObjectZodSchema = __makeSchema_SortOrderInput_schema();
+
+
+// File: CreditPackageOrderByRelationAggregateInput.schema.ts
+const __makeSchema_CreditPackageOrderByRelationAggregateInput_schema = () => z.object({
+  _count: SortOrderSchema.optional()
+}).strict();
+export const CreditPackageOrderByRelationAggregateInputObjectSchema: z.ZodType<Prisma.CreditPackageOrderByRelationAggregateInput> = __makeSchema_CreditPackageOrderByRelationAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditPackageOrderByRelationAggregateInput>;
+export const CreditPackageOrderByRelationAggregateInputObjectZodSchema = __makeSchema_CreditPackageOrderByRelationAggregateInput_schema();
 
 
 // File: PurchaseProviderSubscriptionIdCompoundUniqueInput.schema.ts
@@ -5606,6 +5656,7 @@ export const DateTimeWithAggregatesFilterObjectZodSchema = __makeSchema_DateTime
 const __makeSchema_AuditLogCountOrderByAggregateInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
+  organizationId: SortOrderSchema.optional(),
   action: SortOrderSchema.optional(),
   ip: SortOrderSchema.optional(),
   userAgent: SortOrderSchema.optional(),
@@ -5620,6 +5671,7 @@ export const AuditLogCountOrderByAggregateInputObjectZodSchema = __makeSchema_Au
 const __makeSchema_AuditLogMaxOrderByAggregateInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
+  organizationId: SortOrderSchema.optional(),
   action: SortOrderSchema.optional(),
   ip: SortOrderSchema.optional(),
   userAgent: SortOrderSchema.optional(),
@@ -5633,6 +5685,7 @@ export const AuditLogMaxOrderByAggregateInputObjectZodSchema = __makeSchema_Audi
 const __makeSchema_AuditLogMinOrderByAggregateInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
+  organizationId: SortOrderSchema.optional(),
   action: SortOrderSchema.optional(),
   ip: SortOrderSchema.optional(),
   userAgent: SortOrderSchema.optional(),
@@ -6516,6 +6569,33 @@ export const CreditBalanceSumOrderByAggregateInputObjectSchema: z.ZodType<Prisma
 export const CreditBalanceSumOrderByAggregateInputObjectZodSchema = __makeSchema_CreditBalanceSumOrderByAggregateInput_schema();
 
 
+// File: PurchaseNullableScalarRelationFilter.schema.ts
+const __makeSchema_PurchaseNullableScalarRelationFilter_schema = () => z.object({
+  is: z.lazy(() => PurchaseWhereInputObjectSchema).optional().nullable(),
+  isNot: z.lazy(() => PurchaseWhereInputObjectSchema).optional().nullable()
+}).strict();
+export const PurchaseNullableScalarRelationFilterObjectSchema: z.ZodType<Prisma.PurchaseNullableScalarRelationFilter> = __makeSchema_PurchaseNullableScalarRelationFilter_schema() as unknown as z.ZodType<Prisma.PurchaseNullableScalarRelationFilter>;
+export const PurchaseNullableScalarRelationFilterObjectZodSchema = __makeSchema_PurchaseNullableScalarRelationFilter_schema();
+
+
+// File: CreditEventListRelationFilter.schema.ts
+const __makeSchema_CreditEventListRelationFilter_schema = () => z.object({
+  every: z.lazy(() => CreditEventWhereInputObjectSchema).optional(),
+  some: z.lazy(() => CreditEventWhereInputObjectSchema).optional(),
+  none: z.lazy(() => CreditEventWhereInputObjectSchema).optional()
+}).strict();
+export const CreditEventListRelationFilterObjectSchema: z.ZodType<Prisma.CreditEventListRelationFilter> = __makeSchema_CreditEventListRelationFilter_schema() as unknown as z.ZodType<Prisma.CreditEventListRelationFilter>;
+export const CreditEventListRelationFilterObjectZodSchema = __makeSchema_CreditEventListRelationFilter_schema();
+
+
+// File: CreditEventOrderByRelationAggregateInput.schema.ts
+const __makeSchema_CreditEventOrderByRelationAggregateInput_schema = () => z.object({
+  _count: SortOrderSchema.optional()
+}).strict();
+export const CreditEventOrderByRelationAggregateInputObjectSchema: z.ZodType<Prisma.CreditEventOrderByRelationAggregateInput> = __makeSchema_CreditEventOrderByRelationAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditEventOrderByRelationAggregateInput>;
+export const CreditEventOrderByRelationAggregateInputObjectZodSchema = __makeSchema_CreditEventOrderByRelationAggregateInput_schema();
+
+
 // File: CreditPackageCountOrderByAggregateInput.schema.ts
 const __makeSchema_CreditPackageCountOrderByAggregateInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -6585,6 +6665,15 @@ const __makeSchema_CreditPackageSumOrderByAggregateInput_schema = () => z.object
 }).strict();
 export const CreditPackageSumOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CreditPackageSumOrderByAggregateInput> = __makeSchema_CreditPackageSumOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditPackageSumOrderByAggregateInput>;
 export const CreditPackageSumOrderByAggregateInputObjectZodSchema = __makeSchema_CreditPackageSumOrderByAggregateInput_schema();
+
+
+// File: CreditPackageNullableScalarRelationFilter.schema.ts
+const __makeSchema_CreditPackageNullableScalarRelationFilter_schema = () => z.object({
+  is: z.lazy(() => CreditPackageWhereInputObjectSchema).optional().nullable(),
+  isNot: z.lazy(() => CreditPackageWhereInputObjectSchema).optional().nullable()
+}).strict();
+export const CreditPackageNullableScalarRelationFilterObjectSchema: z.ZodType<Prisma.CreditPackageNullableScalarRelationFilter> = __makeSchema_CreditPackageNullableScalarRelationFilter_schema() as unknown as z.ZodType<Prisma.CreditPackageNullableScalarRelationFilter>;
+export const CreditPackageNullableScalarRelationFilterObjectZodSchema = __makeSchema_CreditPackageNullableScalarRelationFilter_schema();
 
 
 // File: CreditEventCountOrderByAggregateInput.schema.ts
@@ -6794,26 +6883,6 @@ export const CreditBalanceListRelationFilterObjectSchema: z.ZodType<Prisma.Credi
 export const CreditBalanceListRelationFilterObjectZodSchema = __makeSchema_CreditBalanceListRelationFilter_schema();
 
 
-// File: CreditPackageListRelationFilter.schema.ts
-const __makeSchema_CreditPackageListRelationFilter_schema = () => z.object({
-  every: z.lazy(() => CreditPackageWhereInputObjectSchema).optional(),
-  some: z.lazy(() => CreditPackageWhereInputObjectSchema).optional(),
-  none: z.lazy(() => CreditPackageWhereInputObjectSchema).optional()
-}).strict();
-export const CreditPackageListRelationFilterObjectSchema: z.ZodType<Prisma.CreditPackageListRelationFilter> = __makeSchema_CreditPackageListRelationFilter_schema() as unknown as z.ZodType<Prisma.CreditPackageListRelationFilter>;
-export const CreditPackageListRelationFilterObjectZodSchema = __makeSchema_CreditPackageListRelationFilter_schema();
-
-
-// File: CreditEventListRelationFilter.schema.ts
-const __makeSchema_CreditEventListRelationFilter_schema = () => z.object({
-  every: z.lazy(() => CreditEventWhereInputObjectSchema).optional(),
-  some: z.lazy(() => CreditEventWhereInputObjectSchema).optional(),
-  none: z.lazy(() => CreditEventWhereInputObjectSchema).optional()
-}).strict();
-export const CreditEventListRelationFilterObjectSchema: z.ZodType<Prisma.CreditEventListRelationFilter> = __makeSchema_CreditEventListRelationFilter_schema() as unknown as z.ZodType<Prisma.CreditEventListRelationFilter>;
-export const CreditEventListRelationFilterObjectZodSchema = __makeSchema_CreditEventListRelationFilter_schema();
-
-
 // File: SessionOrderByRelationAggregateInput.schema.ts
 const __makeSchema_SessionOrderByRelationAggregateInput_schema = () => z.object({
   _count: SortOrderSchema.optional()
@@ -6916,22 +6985,6 @@ const __makeSchema_CreditBalanceOrderByRelationAggregateInput_schema = () => z.o
 }).strict();
 export const CreditBalanceOrderByRelationAggregateInputObjectSchema: z.ZodType<Prisma.CreditBalanceOrderByRelationAggregateInput> = __makeSchema_CreditBalanceOrderByRelationAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditBalanceOrderByRelationAggregateInput>;
 export const CreditBalanceOrderByRelationAggregateInputObjectZodSchema = __makeSchema_CreditBalanceOrderByRelationAggregateInput_schema();
-
-
-// File: CreditPackageOrderByRelationAggregateInput.schema.ts
-const __makeSchema_CreditPackageOrderByRelationAggregateInput_schema = () => z.object({
-  _count: SortOrderSchema.optional()
-}).strict();
-export const CreditPackageOrderByRelationAggregateInputObjectSchema: z.ZodType<Prisma.CreditPackageOrderByRelationAggregateInput> = __makeSchema_CreditPackageOrderByRelationAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditPackageOrderByRelationAggregateInput>;
-export const CreditPackageOrderByRelationAggregateInputObjectZodSchema = __makeSchema_CreditPackageOrderByRelationAggregateInput_schema();
-
-
-// File: CreditEventOrderByRelationAggregateInput.schema.ts
-const __makeSchema_CreditEventOrderByRelationAggregateInput_schema = () => z.object({
-  _count: SortOrderSchema.optional()
-}).strict();
-export const CreditEventOrderByRelationAggregateInputObjectSchema: z.ZodType<Prisma.CreditEventOrderByRelationAggregateInput> = __makeSchema_CreditEventOrderByRelationAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditEventOrderByRelationAggregateInput>;
-export const CreditEventOrderByRelationAggregateInputObjectZodSchema = __makeSchema_CreditEventOrderByRelationAggregateInput_schema();
 
 
 // File: UserCountOrderByAggregateInput.schema.ts
@@ -7542,6 +7595,28 @@ export const OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema: z.Zod
 export const OrganizationCreateNestedOneWithoutPurchasesInputObjectZodSchema = __makeSchema_OrganizationCreateNestedOneWithoutPurchasesInput_schema();
 
 
+// File: CreditPackageCreateNestedManyWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageCreateNestedManyWithoutPurchaseInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema).array(), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditPackageCreateManyPurchaseInputEnvelopeObjectSchema).optional(),
+  connect: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditPackageCreateNestedManyWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateNestedManyWithoutPurchaseInput> = __makeSchema_CreditPackageCreateNestedManyWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateNestedManyWithoutPurchaseInput>;
+export const CreditPackageCreateNestedManyWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageCreateNestedManyWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageUncheckedCreateNestedManyWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUncheckedCreateNestedManyWithoutPurchaseInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema).array(), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditPackageCreateManyPurchaseInputEnvelopeObjectSchema).optional(),
+  connect: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedCreateNestedManyWithoutPurchaseInput> = __makeSchema_CreditPackageUncheckedCreateNestedManyWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedCreateNestedManyWithoutPurchaseInput>;
+export const CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUncheckedCreateNestedManyWithoutPurchaseInput_schema();
+
+
 // File: StringFieldUpdateOperationsInput.schema.ts
 const __makeSchema_StringFieldUpdateOperationsInput_schema = () => z.object({
   set: z.string().optional()
@@ -7630,6 +7705,42 @@ export const OrganizationUpdateOneWithoutPurchasesNestedInputObjectSchema: z.Zod
 export const OrganizationUpdateOneWithoutPurchasesNestedInputObjectZodSchema = __makeSchema_OrganizationUpdateOneWithoutPurchasesNestedInput_schema();
 
 
+// File: CreditPackageUpdateManyWithoutPurchaseNestedInput.schema.ts
+const __makeSchema_CreditPackageUpdateManyWithoutPurchaseNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema).array(), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema).array()]).optional(),
+  upsert: z.union([z.lazy(() => CreditPackageUpsertWithWhereUniqueWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUpsertWithWhereUniqueWithoutPurchaseInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditPackageCreateManyPurchaseInputEnvelopeObjectSchema).optional(),
+  set: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  disconnect: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  delete: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  connect: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  update: z.union([z.lazy(() => CreditPackageUpdateWithWhereUniqueWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUpdateWithWhereUniqueWithoutPurchaseInputObjectSchema).array()]).optional(),
+  updateMany: z.union([z.lazy(() => CreditPackageUpdateManyWithWhereWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUpdateManyWithWhereWithoutPurchaseInputObjectSchema).array()]).optional(),
+  deleteMany: z.union([z.lazy(() => CreditPackageScalarWhereInputObjectSchema), z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditPackageUpdateManyWithoutPurchaseNestedInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateManyWithoutPurchaseNestedInput> = __makeSchema_CreditPackageUpdateManyWithoutPurchaseNestedInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateManyWithoutPurchaseNestedInput>;
+export const CreditPackageUpdateManyWithoutPurchaseNestedInputObjectZodSchema = __makeSchema_CreditPackageUpdateManyWithoutPurchaseNestedInput_schema();
+
+
+// File: CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInput.schema.ts
+const __makeSchema_CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema).array(), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema).array()]).optional(),
+  upsert: z.union([z.lazy(() => CreditPackageUpsertWithWhereUniqueWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUpsertWithWhereUniqueWithoutPurchaseInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditPackageCreateManyPurchaseInputEnvelopeObjectSchema).optional(),
+  set: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  disconnect: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  delete: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  connect: z.union([z.lazy(() => CreditPackageWhereUniqueInputObjectSchema), z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).array()]).optional(),
+  update: z.union([z.lazy(() => CreditPackageUpdateWithWhereUniqueWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUpdateWithWhereUniqueWithoutPurchaseInputObjectSchema).array()]).optional(),
+  updateMany: z.union([z.lazy(() => CreditPackageUpdateManyWithWhereWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUpdateManyWithWhereWithoutPurchaseInputObjectSchema).array()]).optional(),
+  deleteMany: z.union([z.lazy(() => CreditPackageScalarWhereInputObjectSchema), z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInput> = __makeSchema_CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInput>;
+export const CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectZodSchema = __makeSchema_CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInput_schema();
+
+
 // File: UserCreateNestedOneWithoutAuditLogsInput.schema.ts
 const __makeSchema_UserCreateNestedOneWithoutAuditLogsInput_schema = () => z.object({
   create: z.union([z.lazy(() => UserCreateWithoutAuditLogsInputObjectSchema), z.lazy(() => UserUncheckedCreateWithoutAuditLogsInputObjectSchema)]).optional(),
@@ -7638,6 +7749,16 @@ const __makeSchema_UserCreateNestedOneWithoutAuditLogsInput_schema = () => z.obj
 }).strict();
 export const UserCreateNestedOneWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.UserCreateNestedOneWithoutAuditLogsInput> = __makeSchema_UserCreateNestedOneWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.UserCreateNestedOneWithoutAuditLogsInput>;
 export const UserCreateNestedOneWithoutAuditLogsInputObjectZodSchema = __makeSchema_UserCreateNestedOneWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationCreateNestedOneWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationCreateNestedOneWithoutAuditLogsInput_schema = () => z.object({
+  create: z.union([z.lazy(() => OrganizationCreateWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUncheckedCreateWithoutAuditLogsInputObjectSchema)]).optional(),
+  connectOrCreate: z.lazy(() => OrganizationCreateOrConnectWithoutAuditLogsInputObjectSchema).optional(),
+  connect: z.lazy(() => OrganizationWhereUniqueInputObjectSchema).optional()
+}).strict();
+export const OrganizationCreateNestedOneWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateNestedOneWithoutAuditLogsInput> = __makeSchema_OrganizationCreateNestedOneWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateNestedOneWithoutAuditLogsInput>;
+export const OrganizationCreateNestedOneWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationCreateNestedOneWithoutAuditLogsInput_schema();
 
 
 // File: UserUpdateOneWithoutAuditLogsNestedInput.schema.ts
@@ -7652,6 +7773,20 @@ const __makeSchema_UserUpdateOneWithoutAuditLogsNestedInput_schema = () => z.obj
 }).strict();
 export const UserUpdateOneWithoutAuditLogsNestedInputObjectSchema: z.ZodType<Prisma.UserUpdateOneWithoutAuditLogsNestedInput> = __makeSchema_UserUpdateOneWithoutAuditLogsNestedInput_schema() as unknown as z.ZodType<Prisma.UserUpdateOneWithoutAuditLogsNestedInput>;
 export const UserUpdateOneWithoutAuditLogsNestedInputObjectZodSchema = __makeSchema_UserUpdateOneWithoutAuditLogsNestedInput_schema();
+
+
+// File: OrganizationUpdateOneWithoutAuditLogsNestedInput.schema.ts
+const __makeSchema_OrganizationUpdateOneWithoutAuditLogsNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => OrganizationCreateWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUncheckedCreateWithoutAuditLogsInputObjectSchema)]).optional(),
+  connectOrCreate: z.lazy(() => OrganizationCreateOrConnectWithoutAuditLogsInputObjectSchema).optional(),
+  upsert: z.lazy(() => OrganizationUpsertWithoutAuditLogsInputObjectSchema).optional(),
+  disconnect: z.union([z.boolean(), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional(),
+  delete: z.union([z.boolean(), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional(),
+  connect: z.lazy(() => OrganizationWhereUniqueInputObjectSchema).optional(),
+  update: z.union([z.lazy(() => OrganizationUpdateToOneWithWhereWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUpdateWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUncheckedUpdateWithoutAuditLogsInputObjectSchema)]).optional()
+}).strict();
+export const OrganizationUpdateOneWithoutAuditLogsNestedInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateOneWithoutAuditLogsNestedInput> = __makeSchema_OrganizationUpdateOneWithoutAuditLogsNestedInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateOneWithoutAuditLogsNestedInput>;
+export const OrganizationUpdateOneWithoutAuditLogsNestedInputObjectZodSchema = __makeSchema_OrganizationUpdateOneWithoutAuditLogsNestedInput_schema();
 
 
 // File: UserCreateNestedOneWithoutApiKeysInput.schema.ts
@@ -8176,6 +8311,38 @@ export const OrganizationCreateNestedOneWithoutCreditPackagesInputObjectSchema: 
 export const OrganizationCreateNestedOneWithoutCreditPackagesInputObjectZodSchema = __makeSchema_OrganizationCreateNestedOneWithoutCreditPackagesInput_schema();
 
 
+// File: PurchaseCreateNestedOneWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseCreateNestedOneWithoutCreditPackagesInput_schema = () => z.object({
+  create: z.union([z.lazy(() => PurchaseCreateWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUncheckedCreateWithoutCreditPackagesInputObjectSchema)]).optional(),
+  connectOrCreate: z.lazy(() => PurchaseCreateOrConnectWithoutCreditPackagesInputObjectSchema).optional(),
+  connect: z.lazy(() => PurchaseWhereUniqueInputObjectSchema).optional()
+}).strict();
+export const PurchaseCreateNestedOneWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseCreateNestedOneWithoutCreditPackagesInput> = __makeSchema_PurchaseCreateNestedOneWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseCreateNestedOneWithoutCreditPackagesInput>;
+export const PurchaseCreateNestedOneWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseCreateNestedOneWithoutCreditPackagesInput_schema();
+
+
+// File: CreditEventCreateNestedManyWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventCreateNestedManyWithoutPackageInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema).array(), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditEventCreateManyPackageInputEnvelopeObjectSchema).optional(),
+  connect: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditEventCreateNestedManyWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventCreateNestedManyWithoutPackageInput> = __makeSchema_CreditEventCreateNestedManyWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateNestedManyWithoutPackageInput>;
+export const CreditEventCreateNestedManyWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventCreateNestedManyWithoutPackageInput_schema();
+
+
+// File: CreditEventUncheckedCreateNestedManyWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUncheckedCreateNestedManyWithoutPackageInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema).array(), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditEventCreateManyPackageInputEnvelopeObjectSchema).optional(),
+  connect: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditEventUncheckedCreateNestedManyWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedCreateNestedManyWithoutPackageInput> = __makeSchema_CreditEventUncheckedCreateNestedManyWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedCreateNestedManyWithoutPackageInput>;
+export const CreditEventUncheckedCreateNestedManyWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUncheckedCreateNestedManyWithoutPackageInput_schema();
+
+
 // File: UserUpdateOneWithoutCreditPackagesNestedInput.schema.ts
 const __makeSchema_UserUpdateOneWithoutCreditPackagesNestedInput_schema = () => z.object({
   create: z.union([z.lazy(() => UserCreateWithoutCreditPackagesInputObjectSchema), z.lazy(() => UserUncheckedCreateWithoutCreditPackagesInputObjectSchema)]).optional(),
@@ -8204,6 +8371,56 @@ export const OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectSchema: 
 export const OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectZodSchema = __makeSchema_OrganizationUpdateOneWithoutCreditPackagesNestedInput_schema();
 
 
+// File: PurchaseUpdateOneWithoutCreditPackagesNestedInput.schema.ts
+const __makeSchema_PurchaseUpdateOneWithoutCreditPackagesNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => PurchaseCreateWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUncheckedCreateWithoutCreditPackagesInputObjectSchema)]).optional(),
+  connectOrCreate: z.lazy(() => PurchaseCreateOrConnectWithoutCreditPackagesInputObjectSchema).optional(),
+  upsert: z.lazy(() => PurchaseUpsertWithoutCreditPackagesInputObjectSchema).optional(),
+  disconnect: z.union([z.boolean(), z.lazy(() => PurchaseWhereInputObjectSchema)]).optional(),
+  delete: z.union([z.boolean(), z.lazy(() => PurchaseWhereInputObjectSchema)]).optional(),
+  connect: z.lazy(() => PurchaseWhereUniqueInputObjectSchema).optional(),
+  update: z.union([z.lazy(() => PurchaseUpdateToOneWithWhereWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUpdateWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUncheckedUpdateWithoutCreditPackagesInputObjectSchema)]).optional()
+}).strict();
+export const PurchaseUpdateOneWithoutCreditPackagesNestedInputObjectSchema: z.ZodType<Prisma.PurchaseUpdateOneWithoutCreditPackagesNestedInput> = __makeSchema_PurchaseUpdateOneWithoutCreditPackagesNestedInput_schema() as unknown as z.ZodType<Prisma.PurchaseUpdateOneWithoutCreditPackagesNestedInput>;
+export const PurchaseUpdateOneWithoutCreditPackagesNestedInputObjectZodSchema = __makeSchema_PurchaseUpdateOneWithoutCreditPackagesNestedInput_schema();
+
+
+// File: CreditEventUpdateManyWithoutPackageNestedInput.schema.ts
+const __makeSchema_CreditEventUpdateManyWithoutPackageNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema).array(), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema).array()]).optional(),
+  upsert: z.union([z.lazy(() => CreditEventUpsertWithWhereUniqueWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUpsertWithWhereUniqueWithoutPackageInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditEventCreateManyPackageInputEnvelopeObjectSchema).optional(),
+  set: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  disconnect: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  delete: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  connect: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  update: z.union([z.lazy(() => CreditEventUpdateWithWhereUniqueWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUpdateWithWhereUniqueWithoutPackageInputObjectSchema).array()]).optional(),
+  updateMany: z.union([z.lazy(() => CreditEventUpdateManyWithWhereWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUpdateManyWithWhereWithoutPackageInputObjectSchema).array()]).optional(),
+  deleteMany: z.union([z.lazy(() => CreditEventScalarWhereInputObjectSchema), z.lazy(() => CreditEventScalarWhereInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditEventUpdateManyWithoutPackageNestedInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateManyWithoutPackageNestedInput> = __makeSchema_CreditEventUpdateManyWithoutPackageNestedInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateManyWithoutPackageNestedInput>;
+export const CreditEventUpdateManyWithoutPackageNestedInputObjectZodSchema = __makeSchema_CreditEventUpdateManyWithoutPackageNestedInput_schema();
+
+
+// File: CreditEventUncheckedUpdateManyWithoutPackageNestedInput.schema.ts
+const __makeSchema_CreditEventUncheckedUpdateManyWithoutPackageNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema).array(), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema), z.lazy(() => CreditEventCreateOrConnectWithoutPackageInputObjectSchema).array()]).optional(),
+  upsert: z.union([z.lazy(() => CreditEventUpsertWithWhereUniqueWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUpsertWithWhereUniqueWithoutPackageInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => CreditEventCreateManyPackageInputEnvelopeObjectSchema).optional(),
+  set: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  disconnect: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  delete: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  connect: z.union([z.lazy(() => CreditEventWhereUniqueInputObjectSchema), z.lazy(() => CreditEventWhereUniqueInputObjectSchema).array()]).optional(),
+  update: z.union([z.lazy(() => CreditEventUpdateWithWhereUniqueWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUpdateWithWhereUniqueWithoutPackageInputObjectSchema).array()]).optional(),
+  updateMany: z.union([z.lazy(() => CreditEventUpdateManyWithWhereWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUpdateManyWithWhereWithoutPackageInputObjectSchema).array()]).optional(),
+  deleteMany: z.union([z.lazy(() => CreditEventScalarWhereInputObjectSchema), z.lazy(() => CreditEventScalarWhereInputObjectSchema).array()]).optional()
+}).strict();
+export const CreditEventUncheckedUpdateManyWithoutPackageNestedInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutPackageNestedInput> = __makeSchema_CreditEventUncheckedUpdateManyWithoutPackageNestedInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutPackageNestedInput>;
+export const CreditEventUncheckedUpdateManyWithoutPackageNestedInputObjectZodSchema = __makeSchema_CreditEventUncheckedUpdateManyWithoutPackageNestedInput_schema();
+
+
 // File: UserCreateNestedOneWithoutCreditEventsInput.schema.ts
 const __makeSchema_UserCreateNestedOneWithoutCreditEventsInput_schema = () => z.object({
   create: z.union([z.lazy(() => UserCreateWithoutCreditEventsInputObjectSchema), z.lazy(() => UserUncheckedCreateWithoutCreditEventsInputObjectSchema)]).optional(),
@@ -8222,6 +8439,16 @@ const __makeSchema_OrganizationCreateNestedOneWithoutCreditEventsInput_schema = 
 }).strict();
 export const OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateNestedOneWithoutCreditEventsInput> = __makeSchema_OrganizationCreateNestedOneWithoutCreditEventsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateNestedOneWithoutCreditEventsInput>;
 export const OrganizationCreateNestedOneWithoutCreditEventsInputObjectZodSchema = __makeSchema_OrganizationCreateNestedOneWithoutCreditEventsInput_schema();
+
+
+// File: CreditPackageCreateNestedOneWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageCreateNestedOneWithoutEventsInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutEventsInputObjectSchema)]).optional(),
+  connectOrCreate: z.lazy(() => CreditPackageCreateOrConnectWithoutEventsInputObjectSchema).optional(),
+  connect: z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).optional()
+}).strict();
+export const CreditPackageCreateNestedOneWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateNestedOneWithoutEventsInput> = __makeSchema_CreditPackageCreateNestedOneWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateNestedOneWithoutEventsInput>;
+export const CreditPackageCreateNestedOneWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageCreateNestedOneWithoutEventsInput_schema();
 
 
 // File: UserUpdateOneWithoutCreditEventsNestedInput.schema.ts
@@ -8250,6 +8477,20 @@ const __makeSchema_OrganizationUpdateOneWithoutCreditEventsNestedInput_schema = 
 }).strict();
 export const OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateOneWithoutCreditEventsNestedInput> = __makeSchema_OrganizationUpdateOneWithoutCreditEventsNestedInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateOneWithoutCreditEventsNestedInput>;
 export const OrganizationUpdateOneWithoutCreditEventsNestedInputObjectZodSchema = __makeSchema_OrganizationUpdateOneWithoutCreditEventsNestedInput_schema();
+
+
+// File: CreditPackageUpdateOneWithoutEventsNestedInput.schema.ts
+const __makeSchema_CreditPackageUpdateOneWithoutEventsNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutEventsInputObjectSchema)]).optional(),
+  connectOrCreate: z.lazy(() => CreditPackageCreateOrConnectWithoutEventsInputObjectSchema).optional(),
+  upsert: z.lazy(() => CreditPackageUpsertWithoutEventsInputObjectSchema).optional(),
+  disconnect: z.union([z.boolean(), z.lazy(() => CreditPackageWhereInputObjectSchema)]).optional(),
+  delete: z.union([z.boolean(), z.lazy(() => CreditPackageWhereInputObjectSchema)]).optional(),
+  connect: z.lazy(() => CreditPackageWhereUniqueInputObjectSchema).optional(),
+  update: z.union([z.lazy(() => CreditPackageUpdateToOneWithWhereWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUpdateWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUncheckedUpdateWithoutEventsInputObjectSchema)]).optional()
+}).strict();
+export const CreditPackageUpdateOneWithoutEventsNestedInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateOneWithoutEventsNestedInput> = __makeSchema_CreditPackageUpdateOneWithoutEventsNestedInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateOneWithoutEventsNestedInput>;
+export const CreditPackageUpdateOneWithoutEventsNestedInputObjectZodSchema = __makeSchema_CreditPackageUpdateOneWithoutEventsNestedInput_schema();
 
 
 // File: SessionCreateNestedManyWithoutUserInput.schema.ts
@@ -9295,6 +9536,17 @@ export const CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema: z.
 export const CreditEventCreateNestedManyWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditEventCreateNestedManyWithoutOrganizationInput_schema();
 
 
+// File: AuditLogCreateNestedManyWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogCreateNestedManyWithoutOrganizationInput_schema = () => z.object({
+  create: z.union([z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema).array(), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => AuditLogCreateManyOrganizationInputEnvelopeObjectSchema).optional(),
+  connect: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional()
+}).strict();
+export const AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogCreateNestedManyWithoutOrganizationInput> = __makeSchema_AuditLogCreateNestedManyWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogCreateNestedManyWithoutOrganizationInput>;
+export const AuditLogCreateNestedManyWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogCreateNestedManyWithoutOrganizationInput_schema();
+
+
 // File: MemberUncheckedCreateNestedManyWithoutOrganizationInput.schema.ts
 const __makeSchema_MemberUncheckedCreateNestedManyWithoutOrganizationInput_schema = () => z.object({
   create: z.union([z.lazy(() => MemberCreateWithoutOrganizationInputObjectSchema), z.lazy(() => MemberCreateWithoutOrganizationInputObjectSchema).array(), z.lazy(() => MemberUncheckedCreateWithoutOrganizationInputObjectSchema), z.lazy(() => MemberUncheckedCreateWithoutOrganizationInputObjectSchema).array()]).optional(),
@@ -9414,6 +9666,17 @@ const __makeSchema_CreditEventUncheckedCreateNestedManyWithoutOrganizationInput_
 }).strict();
 export const CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedCreateNestedManyWithoutOrganizationInput> = __makeSchema_CreditEventUncheckedCreateNestedManyWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedCreateNestedManyWithoutOrganizationInput>;
 export const CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditEventUncheckedCreateNestedManyWithoutOrganizationInput_schema();
+
+
+// File: AuditLogUncheckedCreateNestedManyWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUncheckedCreateNestedManyWithoutOrganizationInput_schema = () => z.object({
+  create: z.union([z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema).array(), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => AuditLogCreateManyOrganizationInputEnvelopeObjectSchema).optional(),
+  connect: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional()
+}).strict();
+export const AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUncheckedCreateNestedManyWithoutOrganizationInput> = __makeSchema_AuditLogUncheckedCreateNestedManyWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUncheckedCreateNestedManyWithoutOrganizationInput>;
+export const AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUncheckedCreateNestedManyWithoutOrganizationInput_schema();
 
 
 // File: MemberUpdateManyWithoutOrganizationNestedInput.schema.ts
@@ -9614,6 +9877,24 @@ export const CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema: z.
 export const CreditEventUpdateManyWithoutOrganizationNestedInputObjectZodSchema = __makeSchema_CreditEventUpdateManyWithoutOrganizationNestedInput_schema();
 
 
+// File: AuditLogUpdateManyWithoutOrganizationNestedInput.schema.ts
+const __makeSchema_AuditLogUpdateManyWithoutOrganizationNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema).array(), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema).array()]).optional(),
+  upsert: z.union([z.lazy(() => AuditLogUpsertWithWhereUniqueWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUpsertWithWhereUniqueWithoutOrganizationInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => AuditLogCreateManyOrganizationInputEnvelopeObjectSchema).optional(),
+  set: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  disconnect: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  delete: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  connect: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  update: z.union([z.lazy(() => AuditLogUpdateWithWhereUniqueWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUpdateWithWhereUniqueWithoutOrganizationInputObjectSchema).array()]).optional(),
+  updateMany: z.union([z.lazy(() => AuditLogUpdateManyWithWhereWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUpdateManyWithWhereWithoutOrganizationInputObjectSchema).array()]).optional(),
+  deleteMany: z.union([z.lazy(() => AuditLogScalarWhereInputObjectSchema), z.lazy(() => AuditLogScalarWhereInputObjectSchema).array()]).optional()
+}).strict();
+export const AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema: z.ZodType<Prisma.AuditLogUpdateManyWithoutOrganizationNestedInput> = __makeSchema_AuditLogUpdateManyWithoutOrganizationNestedInput_schema() as unknown as z.ZodType<Prisma.AuditLogUpdateManyWithoutOrganizationNestedInput>;
+export const AuditLogUpdateManyWithoutOrganizationNestedInputObjectZodSchema = __makeSchema_AuditLogUpdateManyWithoutOrganizationNestedInput_schema();
+
+
 // File: MemberUncheckedUpdateManyWithoutOrganizationNestedInput.schema.ts
 const __makeSchema_MemberUncheckedUpdateManyWithoutOrganizationNestedInput_schema = () => z.object({
   create: z.union([z.lazy(() => MemberCreateWithoutOrganizationInputObjectSchema), z.lazy(() => MemberCreateWithoutOrganizationInputObjectSchema).array(), z.lazy(() => MemberUncheckedCreateWithoutOrganizationInputObjectSchema), z.lazy(() => MemberUncheckedCreateWithoutOrganizationInputObjectSchema).array()]).optional(),
@@ -9810,6 +10091,24 @@ const __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationNestedInput_
 }).strict();
 export const CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutOrganizationNestedInput> = __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationNestedInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutOrganizationNestedInput>;
 export const CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectZodSchema = __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationNestedInput_schema();
+
+
+// File: AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput.schema.ts
+const __makeSchema_AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput_schema = () => z.object({
+  create: z.union([z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema).array(), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema).array()]).optional(),
+  connectOrCreate: z.union([z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema).array()]).optional(),
+  upsert: z.union([z.lazy(() => AuditLogUpsertWithWhereUniqueWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUpsertWithWhereUniqueWithoutOrganizationInputObjectSchema).array()]).optional(),
+  createMany: z.lazy(() => AuditLogCreateManyOrganizationInputEnvelopeObjectSchema).optional(),
+  set: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  disconnect: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  delete: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  connect: z.union([z.lazy(() => AuditLogWhereUniqueInputObjectSchema), z.lazy(() => AuditLogWhereUniqueInputObjectSchema).array()]).optional(),
+  update: z.union([z.lazy(() => AuditLogUpdateWithWhereUniqueWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUpdateWithWhereUniqueWithoutOrganizationInputObjectSchema).array()]).optional(),
+  updateMany: z.union([z.lazy(() => AuditLogUpdateManyWithWhereWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUpdateManyWithWhereWithoutOrganizationInputObjectSchema).array()]).optional(),
+  deleteMany: z.union([z.lazy(() => AuditLogScalarWhereInputObjectSchema), z.lazy(() => AuditLogScalarWhereInputObjectSchema).array()]).optional()
+}).strict();
+export const AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema: z.ZodType<Prisma.AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput> = __makeSchema_AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput_schema() as unknown as z.ZodType<Prisma.AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput>;
+export const AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectZodSchema = __makeSchema_AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput_schema();
 
 
 // File: OrganizationCreateNestedOneWithoutMembersInput.schema.ts
@@ -10677,7 +10976,8 @@ const __makeSchema_OrganizationCreateWithoutPurchasesInput_schema = () => z.obje
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutPurchasesInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutPurchasesInput> = __makeSchema_OrganizationCreateWithoutPurchasesInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutPurchasesInput>;
 export const OrganizationCreateWithoutPurchasesInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutPurchasesInput_schema();
@@ -10701,7 +11001,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutPurchasesInput_schema = () 
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutPurchasesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutPurchasesInput> = __makeSchema_OrganizationUncheckedCreateWithoutPurchasesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutPurchasesInput>;
 export const OrganizationUncheckedCreateWithoutPurchasesInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutPurchasesInput_schema();
@@ -10714,6 +11015,58 @@ const __makeSchema_OrganizationCreateOrConnectWithoutPurchasesInput_schema = () 
 }).strict();
 export const OrganizationCreateOrConnectWithoutPurchasesInputObjectSchema: z.ZodType<Prisma.OrganizationCreateOrConnectWithoutPurchasesInput> = __makeSchema_OrganizationCreateOrConnectWithoutPurchasesInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateOrConnectWithoutPurchasesInput>;
 export const OrganizationCreateOrConnectWithoutPurchasesInputObjectZodSchema = __makeSchema_OrganizationCreateOrConnectWithoutPurchasesInput_schema();
+
+
+// File: CreditPackageCreateWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageCreateWithoutPurchaseInput_schema = () => z.object({
+  id: z.string().optional(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  consumed: z.number().int().optional(),
+  expiresAt: z.coerce.date().optional().nullable(),
+  priority: z.number().int().optional(),
+  createdAt: z.coerce.date().optional(),
+  user: z.lazy(() => UserCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventCreateNestedManyWithoutPackageInputObjectSchema).optional()
+}).strict();
+export const CreditPackageCreateWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateWithoutPurchaseInput> = __makeSchema_CreditPackageCreateWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateWithoutPurchaseInput>;
+export const CreditPackageCreateWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageCreateWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageUncheckedCreateWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUncheckedCreateWithoutPurchaseInput_schema = () => z.object({
+  id: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  consumed: z.number().int().optional(),
+  expiresAt: z.coerce.date().optional().nullable(),
+  priority: z.number().int().optional(),
+  createdAt: z.coerce.date().optional(),
+  events: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutPackageInputObjectSchema).optional()
+}).strict();
+export const CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutPurchaseInput> = __makeSchema_CreditPackageUncheckedCreateWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutPurchaseInput>;
+export const CreditPackageUncheckedCreateWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUncheckedCreateWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageCreateOrConnectWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageCreateOrConnectWithoutPurchaseInput_schema = () => z.object({
+  where: z.lazy(() => CreditPackageWhereUniqueInputObjectSchema),
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema)])
+}).strict();
+export const CreditPackageCreateOrConnectWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateOrConnectWithoutPurchaseInput> = __makeSchema_CreditPackageCreateOrConnectWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateOrConnectWithoutPurchaseInput>;
+export const CreditPackageCreateOrConnectWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageCreateOrConnectWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageCreateManyPurchaseInputEnvelope.schema.ts
+const __makeSchema_CreditPackageCreateManyPurchaseInputEnvelope_schema = () => z.object({
+  data: z.union([z.lazy(() => CreditPackageCreateManyPurchaseInputObjectSchema), z.lazy(() => CreditPackageCreateManyPurchaseInputObjectSchema).array()]),
+  skipDuplicates: z.boolean().optional()
+}).strict();
+export const CreditPackageCreateManyPurchaseInputEnvelopeObjectSchema: z.ZodType<Prisma.CreditPackageCreateManyPurchaseInputEnvelope> = __makeSchema_CreditPackageCreateManyPurchaseInputEnvelope_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateManyPurchaseInputEnvelope>;
+export const CreditPackageCreateManyPurchaseInputEnvelopeObjectZodSchema = __makeSchema_CreditPackageCreateManyPurchaseInputEnvelope_schema();
 
 
 // File: UserUpsertWithoutPurchasesInput.schema.ts
@@ -10850,7 +11203,8 @@ const __makeSchema_OrganizationUpdateWithoutPurchasesInput_schema = () => z.obje
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutPurchasesInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutPurchasesInput> = __makeSchema_OrganizationUpdateWithoutPurchasesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutPurchasesInput>;
 export const OrganizationUpdateWithoutPurchasesInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutPurchasesInput_schema();
@@ -10874,10 +11228,60 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutPurchasesInput_schema = () 
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutPurchasesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutPurchasesInput> = __makeSchema_OrganizationUncheckedUpdateWithoutPurchasesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutPurchasesInput>;
 export const OrganizationUncheckedUpdateWithoutPurchasesInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutPurchasesInput_schema();
+
+
+// File: CreditPackageUpsertWithWhereUniqueWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUpsertWithWhereUniqueWithoutPurchaseInput_schema = () => z.object({
+  where: z.lazy(() => CreditPackageWhereUniqueInputObjectSchema),
+  update: z.union([z.lazy(() => CreditPackageUpdateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedUpdateWithoutPurchaseInputObjectSchema)]),
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutPurchaseInputObjectSchema)])
+}).strict();
+export const CreditPackageUpsertWithWhereUniqueWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUpsertWithWhereUniqueWithoutPurchaseInput> = __makeSchema_CreditPackageUpsertWithWhereUniqueWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpsertWithWhereUniqueWithoutPurchaseInput>;
+export const CreditPackageUpsertWithWhereUniqueWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUpsertWithWhereUniqueWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageUpdateWithWhereUniqueWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUpdateWithWhereUniqueWithoutPurchaseInput_schema = () => z.object({
+  where: z.lazy(() => CreditPackageWhereUniqueInputObjectSchema),
+  data: z.union([z.lazy(() => CreditPackageUpdateWithoutPurchaseInputObjectSchema), z.lazy(() => CreditPackageUncheckedUpdateWithoutPurchaseInputObjectSchema)])
+}).strict();
+export const CreditPackageUpdateWithWhereUniqueWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateWithWhereUniqueWithoutPurchaseInput> = __makeSchema_CreditPackageUpdateWithWhereUniqueWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateWithWhereUniqueWithoutPurchaseInput>;
+export const CreditPackageUpdateWithWhereUniqueWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUpdateWithWhereUniqueWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageUpdateManyWithWhereWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUpdateManyWithWhereWithoutPurchaseInput_schema = () => z.object({
+  where: z.lazy(() => CreditPackageScalarWhereInputObjectSchema),
+  data: z.union([z.lazy(() => CreditPackageUpdateManyMutationInputObjectSchema), z.lazy(() => CreditPackageUncheckedUpdateManyWithoutPurchaseInputObjectSchema)])
+}).strict();
+export const CreditPackageUpdateManyWithWhereWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateManyWithWhereWithoutPurchaseInput> = __makeSchema_CreditPackageUpdateManyWithWhereWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateManyWithWhereWithoutPurchaseInput>;
+export const CreditPackageUpdateManyWithWhereWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUpdateManyWithWhereWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageScalarWhereInput.schema.ts
+
+const creditpackagescalarwhereinputSchema = z.object({
+  AND: z.union([z.lazy(() => CreditPackageScalarWhereInputObjectSchema), z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => CreditPackageScalarWhereInputObjectSchema), z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  meterKey: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  amount: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
+  consumed: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
+  expiresAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  purchaseId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  priority: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
+  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+}).strict();
+export const CreditPackageScalarWhereInputObjectSchema: z.ZodType<Prisma.CreditPackageScalarWhereInput> = creditpackagescalarwhereinputSchema as unknown as z.ZodType<Prisma.CreditPackageScalarWhereInput>;
+export const CreditPackageScalarWhereInputObjectZodSchema = creditpackagescalarwhereinputSchema;
 
 
 // File: UserCreateWithoutAuditLogsInput.schema.ts
@@ -10965,6 +11369,65 @@ const __makeSchema_UserCreateOrConnectWithoutAuditLogsInput_schema = () => z.obj
 }).strict();
 export const UserCreateOrConnectWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutAuditLogsInput> = __makeSchema_UserCreateOrConnectWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.UserCreateOrConnectWithoutAuditLogsInput>;
 export const UserCreateOrConnectWithoutAuditLogsInputObjectZodSchema = __makeSchema_UserCreateOrConnectWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationCreateWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationCreateWithoutAuditLogsInput_schema = () => z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  logo: z.string().optional().nullable(),
+  createdAt: z.coerce.date(),
+  metadata: z.string().optional().nullable(),
+  paymentsCustomerId: z.string().optional().nullable(),
+  members: z.lazy(() => MemberCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  invitations: z.lazy(() => InvitationCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  purchases: z.lazy(() => PurchaseCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  apiKeys: z.lazy(() => ApiKeyCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  invoices: z.lazy(() => InvoiceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  webhooks: z.lazy(() => WebhookCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  chatConversations: z.lazy(() => ChatConversationCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+}).strict();
+export const OrganizationCreateWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutAuditLogsInput> = __makeSchema_OrganizationCreateWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutAuditLogsInput>;
+export const OrganizationCreateWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationUncheckedCreateWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationUncheckedCreateWithoutAuditLogsInput_schema = () => z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  logo: z.string().optional().nullable(),
+  createdAt: z.coerce.date(),
+  metadata: z.string().optional().nullable(),
+  paymentsCustomerId: z.string().optional().nullable(),
+  members: z.lazy(() => MemberUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  invitations: z.lazy(() => InvitationUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  purchases: z.lazy(() => PurchaseUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  apiKeys: z.lazy(() => ApiKeyUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  invoices: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  webhooks: z.lazy(() => WebhookUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  chatConversations: z.lazy(() => ChatConversationUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+}).strict();
+export const OrganizationUncheckedCreateWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutAuditLogsInput> = __makeSchema_OrganizationUncheckedCreateWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutAuditLogsInput>;
+export const OrganizationUncheckedCreateWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationCreateOrConnectWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationCreateOrConnectWithoutAuditLogsInput_schema = () => z.object({
+  where: z.lazy(() => OrganizationWhereUniqueInputObjectSchema),
+  create: z.union([z.lazy(() => OrganizationCreateWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUncheckedCreateWithoutAuditLogsInputObjectSchema)])
+}).strict();
+export const OrganizationCreateOrConnectWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateOrConnectWithoutAuditLogsInput> = __makeSchema_OrganizationCreateOrConnectWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateOrConnectWithoutAuditLogsInput>;
+export const OrganizationCreateOrConnectWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationCreateOrConnectWithoutAuditLogsInput_schema();
 
 
 // File: UserUpsertWithoutAuditLogsInput.schema.ts
@@ -11062,6 +11525,75 @@ const __makeSchema_UserUncheckedUpdateWithoutAuditLogsInput_schema = () => z.obj
 }).strict();
 export const UserUncheckedUpdateWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutAuditLogsInput> = __makeSchema_UserUncheckedUpdateWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.UserUncheckedUpdateWithoutAuditLogsInput>;
 export const UserUncheckedUpdateWithoutAuditLogsInputObjectZodSchema = __makeSchema_UserUncheckedUpdateWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationUpsertWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationUpsertWithoutAuditLogsInput_schema = () => z.object({
+  update: z.union([z.lazy(() => OrganizationUpdateWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUncheckedUpdateWithoutAuditLogsInputObjectSchema)]),
+  create: z.union([z.lazy(() => OrganizationCreateWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUncheckedCreateWithoutAuditLogsInputObjectSchema)]),
+  where: z.lazy(() => OrganizationWhereInputObjectSchema).optional()
+}).strict();
+export const OrganizationUpsertWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationUpsertWithoutAuditLogsInput> = __makeSchema_OrganizationUpsertWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpsertWithoutAuditLogsInput>;
+export const OrganizationUpsertWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationUpsertWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationUpdateToOneWithWhereWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationUpdateToOneWithWhereWithoutAuditLogsInput_schema = () => z.object({
+  where: z.lazy(() => OrganizationWhereInputObjectSchema).optional(),
+  data: z.union([z.lazy(() => OrganizationUpdateWithoutAuditLogsInputObjectSchema), z.lazy(() => OrganizationUncheckedUpdateWithoutAuditLogsInputObjectSchema)])
+}).strict();
+export const OrganizationUpdateToOneWithWhereWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateToOneWithWhereWithoutAuditLogsInput> = __makeSchema_OrganizationUpdateToOneWithWhereWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateToOneWithWhereWithoutAuditLogsInput>;
+export const OrganizationUpdateToOneWithWhereWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationUpdateToOneWithWhereWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationUpdateWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationUpdateWithoutAuditLogsInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  slug: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  logo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  metadata: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  members: z.lazy(() => MemberUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  invitations: z.lazy(() => InvitationUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  purchases: z.lazy(() => PurchaseUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  apiKeys: z.lazy(() => ApiKeyUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  invoices: z.lazy(() => InvoiceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  webhooks: z.lazy(() => WebhookUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  chatConversations: z.lazy(() => ChatConversationUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+}).strict();
+export const OrganizationUpdateWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutAuditLogsInput> = __makeSchema_OrganizationUpdateWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutAuditLogsInput>;
+export const OrganizationUpdateWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutAuditLogsInput_schema();
+
+
+// File: OrganizationUncheckedUpdateWithoutAuditLogsInput.schema.ts
+const __makeSchema_OrganizationUncheckedUpdateWithoutAuditLogsInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  slug: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  logo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  metadata: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  members: z.lazy(() => MemberUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  invitations: z.lazy(() => InvitationUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  purchases: z.lazy(() => PurchaseUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  apiKeys: z.lazy(() => ApiKeyUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  invoices: z.lazy(() => InvoiceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  webhooks: z.lazy(() => WebhookUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  chatConversations: z.lazy(() => ChatConversationUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+}).strict();
+export const OrganizationUncheckedUpdateWithoutAuditLogsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutAuditLogsInput> = __makeSchema_OrganizationUncheckedUpdateWithoutAuditLogsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutAuditLogsInput>;
+export const OrganizationUncheckedUpdateWithoutAuditLogsInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutAuditLogsInput_schema();
 
 
 // File: UserCreateWithoutApiKeysInput.schema.ts
@@ -11169,7 +11701,8 @@ const __makeSchema_OrganizationCreateWithoutApiKeysInput_schema = () => z.object
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutApiKeysInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutApiKeysInput> = __makeSchema_OrganizationCreateWithoutApiKeysInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutApiKeysInput>;
 export const OrganizationCreateWithoutApiKeysInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutApiKeysInput_schema();
@@ -11193,7 +11726,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutApiKeysInput_schema = () =>
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutApiKeysInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutApiKeysInput> = __makeSchema_OrganizationUncheckedCreateWithoutApiKeysInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutApiKeysInput>;
 export const OrganizationUncheckedCreateWithoutApiKeysInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutApiKeysInput_schema();
@@ -11342,7 +11876,8 @@ const __makeSchema_OrganizationUpdateWithoutApiKeysInput_schema = () => z.object
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutApiKeysInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutApiKeysInput> = __makeSchema_OrganizationUpdateWithoutApiKeysInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutApiKeysInput>;
 export const OrganizationUpdateWithoutApiKeysInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutApiKeysInput_schema();
@@ -11366,7 +11901,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutApiKeysInput_schema = () =>
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutApiKeysInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutApiKeysInput> = __makeSchema_OrganizationUncheckedUpdateWithoutApiKeysInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutApiKeysInput>;
 export const OrganizationUncheckedUpdateWithoutApiKeysInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutApiKeysInput_schema();
@@ -11390,7 +11926,8 @@ const __makeSchema_OrganizationCreateWithoutInvoicesInput_schema = () => z.objec
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutInvoicesInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutInvoicesInput> = __makeSchema_OrganizationCreateWithoutInvoicesInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutInvoicesInput>;
 export const OrganizationCreateWithoutInvoicesInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutInvoicesInput_schema();
@@ -11414,7 +11951,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutInvoicesInput_schema = () =
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutInvoicesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutInvoicesInput> = __makeSchema_OrganizationUncheckedCreateWithoutInvoicesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutInvoicesInput>;
 export const OrganizationUncheckedCreateWithoutInvoicesInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutInvoicesInput_schema();
@@ -11553,7 +12091,8 @@ const __makeSchema_OrganizationUpdateWithoutInvoicesInput_schema = () => z.objec
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutInvoicesInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutInvoicesInput> = __makeSchema_OrganizationUpdateWithoutInvoicesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutInvoicesInput>;
 export const OrganizationUpdateWithoutInvoicesInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutInvoicesInput_schema();
@@ -11577,7 +12116,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutInvoicesInput_schema = () =
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutInvoicesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutInvoicesInput> = __makeSchema_OrganizationUncheckedUpdateWithoutInvoicesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutInvoicesInput>;
 export const OrganizationUncheckedUpdateWithoutInvoicesInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutInvoicesInput_schema();
@@ -11698,7 +12238,8 @@ const __makeSchema_OrganizationCreateWithoutWebhooksInput_schema = () => z.objec
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutWebhooksInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutWebhooksInput> = __makeSchema_OrganizationCreateWithoutWebhooksInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutWebhooksInput>;
 export const OrganizationCreateWithoutWebhooksInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutWebhooksInput_schema();
@@ -11722,7 +12263,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutWebhooksInput_schema = () =
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutWebhooksInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutWebhooksInput> = __makeSchema_OrganizationUncheckedCreateWithoutWebhooksInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutWebhooksInput>;
 export const OrganizationUncheckedCreateWithoutWebhooksInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutWebhooksInput_schema();
@@ -11826,7 +12368,8 @@ const __makeSchema_OrganizationUpdateWithoutWebhooksInput_schema = () => z.objec
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutWebhooksInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutWebhooksInput> = __makeSchema_OrganizationUpdateWithoutWebhooksInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutWebhooksInput>;
 export const OrganizationUpdateWithoutWebhooksInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutWebhooksInput_schema();
@@ -11850,7 +12393,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutWebhooksInput_schema = () =
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutWebhooksInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutWebhooksInput> = __makeSchema_OrganizationUncheckedUpdateWithoutWebhooksInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutWebhooksInput>;
 export const OrganizationUncheckedUpdateWithoutWebhooksInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutWebhooksInput_schema();
@@ -12283,7 +12827,8 @@ const __makeSchema_OrganizationCreateWithoutChatConversationsInput_schema = () =
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutChatConversationsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutChatConversationsInput> = __makeSchema_OrganizationCreateWithoutChatConversationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutChatConversationsInput>;
 export const OrganizationCreateWithoutChatConversationsInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutChatConversationsInput_schema();
@@ -12307,7 +12852,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutChatConversationsInput_sche
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutChatConversationsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutChatConversationsInput> = __makeSchema_OrganizationUncheckedCreateWithoutChatConversationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutChatConversationsInput>;
 export const OrganizationUncheckedCreateWithoutChatConversationsInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutChatConversationsInput_schema();
@@ -12496,7 +13042,8 @@ const __makeSchema_OrganizationUpdateWithoutChatConversationsInput_schema = () =
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutChatConversationsInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutChatConversationsInput> = __makeSchema_OrganizationUpdateWithoutChatConversationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutChatConversationsInput>;
 export const OrganizationUpdateWithoutChatConversationsInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutChatConversationsInput_schema();
@@ -12520,7 +13067,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutChatConversationsInput_sche
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutChatConversationsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutChatConversationsInput> = __makeSchema_OrganizationUncheckedUpdateWithoutChatConversationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutChatConversationsInput>;
 export const OrganizationUncheckedUpdateWithoutChatConversationsInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutChatConversationsInput_schema();
@@ -12668,7 +13216,8 @@ const __makeSchema_OrganizationCreateWithoutContactsInput_schema = () => z.objec
   chatConversations: z.lazy(() => ChatConversationCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutContactsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutContactsInput> = __makeSchema_OrganizationCreateWithoutContactsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutContactsInput>;
 export const OrganizationCreateWithoutContactsInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutContactsInput_schema();
@@ -12692,7 +13241,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutContactsInput_schema = () =
   chatConversations: z.lazy(() => ChatConversationUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutContactsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutContactsInput> = __makeSchema_OrganizationUncheckedCreateWithoutContactsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutContactsInput>;
 export const OrganizationUncheckedCreateWithoutContactsInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutContactsInput_schema();
@@ -12744,7 +13294,8 @@ const __makeSchema_OrganizationUpdateWithoutContactsInput_schema = () => z.objec
   chatConversations: z.lazy(() => ChatConversationUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutContactsInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutContactsInput> = __makeSchema_OrganizationUpdateWithoutContactsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutContactsInput>;
 export const OrganizationUpdateWithoutContactsInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutContactsInput_schema();
@@ -12768,7 +13319,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutContactsInput_schema = () =
   chatConversations: z.lazy(() => ChatConversationUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutContactsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutContactsInput> = __makeSchema_OrganizationUncheckedUpdateWithoutContactsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutContactsInput>;
 export const OrganizationUncheckedUpdateWithoutContactsInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutContactsInput_schema();
@@ -12879,7 +13431,8 @@ const __makeSchema_OrganizationCreateWithoutCreditBalancesInput_schema = () => z
   chatConversations: z.lazy(() => ChatConversationCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutCreditBalancesInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutCreditBalancesInput> = __makeSchema_OrganizationCreateWithoutCreditBalancesInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutCreditBalancesInput>;
 export const OrganizationCreateWithoutCreditBalancesInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutCreditBalancesInput_schema();
@@ -12903,7 +13456,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutCreditBalancesInput_schema 
   chatConversations: z.lazy(() => ChatConversationUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutCreditBalancesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutCreditBalancesInput> = __makeSchema_OrganizationUncheckedCreateWithoutCreditBalancesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutCreditBalancesInput>;
 export const OrganizationUncheckedCreateWithoutCreditBalancesInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutCreditBalancesInput_schema();
@@ -13052,7 +13606,8 @@ const __makeSchema_OrganizationUpdateWithoutCreditBalancesInput_schema = () => z
   chatConversations: z.lazy(() => ChatConversationUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutCreditBalancesInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutCreditBalancesInput> = __makeSchema_OrganizationUpdateWithoutCreditBalancesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutCreditBalancesInput>;
 export const OrganizationUpdateWithoutCreditBalancesInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutCreditBalancesInput_schema();
@@ -13076,7 +13631,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutCreditBalancesInput_schema 
   chatConversations: z.lazy(() => ChatConversationUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutCreditBalancesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutCreditBalancesInput> = __makeSchema_OrganizationUncheckedUpdateWithoutCreditBalancesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutCreditBalancesInput>;
 export const OrganizationUncheckedUpdateWithoutCreditBalancesInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutCreditBalancesInput_schema();
@@ -13187,7 +13743,8 @@ const __makeSchema_OrganizationCreateWithoutCreditPackagesInput_schema = () => z
   chatConversations: z.lazy(() => ChatConversationCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutCreditPackagesInput> = __makeSchema_OrganizationCreateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutCreditPackagesInput>;
 export const OrganizationCreateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutCreditPackagesInput_schema();
@@ -13211,7 +13768,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutCreditPackagesInput_schema 
   chatConversations: z.lazy(() => ChatConversationUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutCreditPackagesInput> = __makeSchema_OrganizationUncheckedCreateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutCreditPackagesInput>;
 export const OrganizationUncheckedCreateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutCreditPackagesInput_schema();
@@ -13224,6 +13782,111 @@ const __makeSchema_OrganizationCreateOrConnectWithoutCreditPackagesInput_schema 
 }).strict();
 export const OrganizationCreateOrConnectWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.OrganizationCreateOrConnectWithoutCreditPackagesInput> = __makeSchema_OrganizationCreateOrConnectWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateOrConnectWithoutCreditPackagesInput>;
 export const OrganizationCreateOrConnectWithoutCreditPackagesInputObjectZodSchema = __makeSchema_OrganizationCreateOrConnectWithoutCreditPackagesInput_schema();
+
+
+// File: PurchaseCreateWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseCreateWithoutCreditPackagesInput_schema = () => z.object({
+  id: z.string().optional(),
+  type: PurchaseTypeSchema,
+  status: PurchaseStatusSchema,
+  provider: z.string(),
+  priceId: z.string(),
+  productId: z.string().optional().nullable(),
+  subscriptionId: z.string().optional().nullable(),
+  customerId: z.string().optional().nullable(),
+  quantity: z.number().int().optional(),
+  currentPeriodEnd: z.coerce.date().optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  user: z.lazy(() => UserCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema).optional()
+}).strict();
+export const PurchaseCreateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseCreateWithoutCreditPackagesInput> = __makeSchema_PurchaseCreateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseCreateWithoutCreditPackagesInput>;
+export const PurchaseCreateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseCreateWithoutCreditPackagesInput_schema();
+
+
+// File: PurchaseUncheckedCreateWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseUncheckedCreateWithoutCreditPackagesInput_schema = () => z.object({
+  id: z.string().optional(),
+  type: PurchaseTypeSchema,
+  status: PurchaseStatusSchema,
+  provider: z.string(),
+  priceId: z.string(),
+  productId: z.string().optional().nullable(),
+  subscriptionId: z.string().optional().nullable(),
+  customerId: z.string().optional().nullable(),
+  quantity: z.number().int().optional(),
+  currentPeriodEnd: z.coerce.date().optional().nullable(),
+  userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional()
+}).strict();
+export const PurchaseUncheckedCreateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedCreateWithoutCreditPackagesInput> = __makeSchema_PurchaseUncheckedCreateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedCreateWithoutCreditPackagesInput>;
+export const PurchaseUncheckedCreateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseUncheckedCreateWithoutCreditPackagesInput_schema();
+
+
+// File: PurchaseCreateOrConnectWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseCreateOrConnectWithoutCreditPackagesInput_schema = () => z.object({
+  where: z.lazy(() => PurchaseWhereUniqueInputObjectSchema),
+  create: z.union([z.lazy(() => PurchaseCreateWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUncheckedCreateWithoutCreditPackagesInputObjectSchema)])
+}).strict();
+export const PurchaseCreateOrConnectWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseCreateOrConnectWithoutCreditPackagesInput> = __makeSchema_PurchaseCreateOrConnectWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseCreateOrConnectWithoutCreditPackagesInput>;
+export const PurchaseCreateOrConnectWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseCreateOrConnectWithoutCreditPackagesInput_schema();
+
+
+// File: CreditEventCreateWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventCreateWithoutPackageInput_schema = () => z.object({
+  id: z.string().optional(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  source: z.string(),
+  reason: z.string(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  user: z.lazy(() => UserCreateNestedOneWithoutCreditEventsInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema).optional()
+}).strict();
+export const CreditEventCreateWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventCreateWithoutPackageInput> = __makeSchema_CreditEventCreateWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateWithoutPackageInput>;
+export const CreditEventCreateWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventCreateWithoutPackageInput_schema();
+
+
+// File: CreditEventUncheckedCreateWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUncheckedCreateWithoutPackageInput_schema = () => z.object({
+  id: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  source: z.string(),
+  reason: z.string(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const CreditEventUncheckedCreateWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedCreateWithoutPackageInput> = __makeSchema_CreditEventUncheckedCreateWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedCreateWithoutPackageInput>;
+export const CreditEventUncheckedCreateWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUncheckedCreateWithoutPackageInput_schema();
+
+
+// File: CreditEventCreateOrConnectWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventCreateOrConnectWithoutPackageInput_schema = () => z.object({
+  where: z.lazy(() => CreditEventWhereUniqueInputObjectSchema),
+  create: z.union([z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema)])
+}).strict();
+export const CreditEventCreateOrConnectWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventCreateOrConnectWithoutPackageInput> = __makeSchema_CreditEventCreateOrConnectWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateOrConnectWithoutPackageInput>;
+export const CreditEventCreateOrConnectWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventCreateOrConnectWithoutPackageInput_schema();
+
+
+// File: CreditEventCreateManyPackageInputEnvelope.schema.ts
+const __makeSchema_CreditEventCreateManyPackageInputEnvelope_schema = () => z.object({
+  data: z.union([z.lazy(() => CreditEventCreateManyPackageInputObjectSchema), z.lazy(() => CreditEventCreateManyPackageInputObjectSchema).array()]),
+  skipDuplicates: z.boolean().optional()
+}).strict();
+export const CreditEventCreateManyPackageInputEnvelopeObjectSchema: z.ZodType<Prisma.CreditEventCreateManyPackageInputEnvelope> = __makeSchema_CreditEventCreateManyPackageInputEnvelope_schema() as unknown as z.ZodType<Prisma.CreditEventCreateManyPackageInputEnvelope>;
+export const CreditEventCreateManyPackageInputEnvelopeObjectZodSchema = __makeSchema_CreditEventCreateManyPackageInputEnvelope_schema();
 
 
 // File: UserUpsertWithoutCreditPackagesInput.schema.ts
@@ -13360,7 +14023,8 @@ const __makeSchema_OrganizationUpdateWithoutCreditPackagesInput_schema = () => z
   chatConversations: z.lazy(() => ChatConversationUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutCreditPackagesInput> = __makeSchema_OrganizationUpdateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutCreditPackagesInput>;
 export const OrganizationUpdateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutCreditPackagesInput_schema();
@@ -13384,10 +14048,124 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutCreditPackagesInput_schema 
   chatConversations: z.lazy(() => ChatConversationUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutCreditPackagesInput> = __makeSchema_OrganizationUncheckedUpdateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutCreditPackagesInput>;
 export const OrganizationUncheckedUpdateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutCreditPackagesInput_schema();
+
+
+// File: PurchaseUpsertWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseUpsertWithoutCreditPackagesInput_schema = () => z.object({
+  update: z.union([z.lazy(() => PurchaseUpdateWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUncheckedUpdateWithoutCreditPackagesInputObjectSchema)]),
+  create: z.union([z.lazy(() => PurchaseCreateWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUncheckedCreateWithoutCreditPackagesInputObjectSchema)]),
+  where: z.lazy(() => PurchaseWhereInputObjectSchema).optional()
+}).strict();
+export const PurchaseUpsertWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseUpsertWithoutCreditPackagesInput> = __makeSchema_PurchaseUpsertWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseUpsertWithoutCreditPackagesInput>;
+export const PurchaseUpsertWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseUpsertWithoutCreditPackagesInput_schema();
+
+
+// File: PurchaseUpdateToOneWithWhereWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseUpdateToOneWithWhereWithoutCreditPackagesInput_schema = () => z.object({
+  where: z.lazy(() => PurchaseWhereInputObjectSchema).optional(),
+  data: z.union([z.lazy(() => PurchaseUpdateWithoutCreditPackagesInputObjectSchema), z.lazy(() => PurchaseUncheckedUpdateWithoutCreditPackagesInputObjectSchema)])
+}).strict();
+export const PurchaseUpdateToOneWithWhereWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseUpdateToOneWithWhereWithoutCreditPackagesInput> = __makeSchema_PurchaseUpdateToOneWithWhereWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseUpdateToOneWithWhereWithoutCreditPackagesInput>;
+export const PurchaseUpdateToOneWithWhereWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseUpdateToOneWithWhereWithoutCreditPackagesInput_schema();
+
+
+// File: PurchaseUpdateWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseUpdateWithoutCreditPackagesInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  type: z.union([PurchaseTypeSchema, z.lazy(() => EnumPurchaseTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  status: z.union([PurchaseStatusSchema, z.lazy(() => EnumPurchaseStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  provider: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  priceId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  productId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  subscriptionId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  customerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationUpdateOneWithoutPurchasesNestedInputObjectSchema).optional()
+}).strict();
+export const PurchaseUpdateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseUpdateWithoutCreditPackagesInput> = __makeSchema_PurchaseUpdateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseUpdateWithoutCreditPackagesInput>;
+export const PurchaseUpdateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseUpdateWithoutCreditPackagesInput_schema();
+
+
+// File: PurchaseUncheckedUpdateWithoutCreditPackagesInput.schema.ts
+const __makeSchema_PurchaseUncheckedUpdateWithoutCreditPackagesInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  type: z.union([PurchaseTypeSchema, z.lazy(() => EnumPurchaseTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  status: z.union([PurchaseStatusSchema, z.lazy(() => EnumPurchaseStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  provider: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  priceId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  productId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  subscriptionId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  customerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const PurchaseUncheckedUpdateWithoutCreditPackagesInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedUpdateWithoutCreditPackagesInput> = __makeSchema_PurchaseUncheckedUpdateWithoutCreditPackagesInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedUpdateWithoutCreditPackagesInput>;
+export const PurchaseUncheckedUpdateWithoutCreditPackagesInputObjectZodSchema = __makeSchema_PurchaseUncheckedUpdateWithoutCreditPackagesInput_schema();
+
+
+// File: CreditEventUpsertWithWhereUniqueWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUpsertWithWhereUniqueWithoutPackageInput_schema = () => z.object({
+  where: z.lazy(() => CreditEventWhereUniqueInputObjectSchema),
+  update: z.union([z.lazy(() => CreditEventUpdateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedUpdateWithoutPackageInputObjectSchema)]),
+  create: z.union([z.lazy(() => CreditEventCreateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedCreateWithoutPackageInputObjectSchema)])
+}).strict();
+export const CreditEventUpsertWithWhereUniqueWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUpsertWithWhereUniqueWithoutPackageInput> = __makeSchema_CreditEventUpsertWithWhereUniqueWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpsertWithWhereUniqueWithoutPackageInput>;
+export const CreditEventUpsertWithWhereUniqueWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUpsertWithWhereUniqueWithoutPackageInput_schema();
+
+
+// File: CreditEventUpdateWithWhereUniqueWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUpdateWithWhereUniqueWithoutPackageInput_schema = () => z.object({
+  where: z.lazy(() => CreditEventWhereUniqueInputObjectSchema),
+  data: z.union([z.lazy(() => CreditEventUpdateWithoutPackageInputObjectSchema), z.lazy(() => CreditEventUncheckedUpdateWithoutPackageInputObjectSchema)])
+}).strict();
+export const CreditEventUpdateWithWhereUniqueWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateWithWhereUniqueWithoutPackageInput> = __makeSchema_CreditEventUpdateWithWhereUniqueWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateWithWhereUniqueWithoutPackageInput>;
+export const CreditEventUpdateWithWhereUniqueWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUpdateWithWhereUniqueWithoutPackageInput_schema();
+
+
+// File: CreditEventUpdateManyWithWhereWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUpdateManyWithWhereWithoutPackageInput_schema = () => z.object({
+  where: z.lazy(() => CreditEventScalarWhereInputObjectSchema),
+  data: z.union([z.lazy(() => CreditEventUpdateManyMutationInputObjectSchema), z.lazy(() => CreditEventUncheckedUpdateManyWithoutPackageInputObjectSchema)])
+}).strict();
+export const CreditEventUpdateManyWithWhereWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateManyWithWhereWithoutPackageInput> = __makeSchema_CreditEventUpdateManyWithWhereWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateManyWithWhereWithoutPackageInput>;
+export const CreditEventUpdateManyWithWhereWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUpdateManyWithWhereWithoutPackageInput_schema();
+
+
+// File: CreditEventScalarWhereInput.schema.ts
+
+const crediteventscalarwhereinputSchema = z.object({
+  AND: z.union([z.lazy(() => CreditEventScalarWhereInputObjectSchema), z.lazy(() => CreditEventScalarWhereInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => CreditEventScalarWhereInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => CreditEventScalarWhereInputObjectSchema), z.lazy(() => CreditEventScalarWhereInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  meterKey: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  amount: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
+  source: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  packageId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  reason: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  metadata: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
+  idempotencyKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+}).strict();
+export const CreditEventScalarWhereInputObjectSchema: z.ZodType<Prisma.CreditEventScalarWhereInput> = crediteventscalarwhereinputSchema as unknown as z.ZodType<Prisma.CreditEventScalarWhereInput>;
+export const CreditEventScalarWhereInputObjectZodSchema = crediteventscalarwhereinputSchema;
 
 
 // File: UserCreateWithoutCreditEventsInput.schema.ts
@@ -13495,7 +14273,8 @@ const __makeSchema_OrganizationCreateWithoutCreditEventsInput_schema = () => z.o
   chatConversations: z.lazy(() => ChatConversationCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutCreditEventsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutCreditEventsInput> = __makeSchema_OrganizationCreateWithoutCreditEventsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutCreditEventsInput>;
 export const OrganizationCreateWithoutCreditEventsInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutCreditEventsInput_schema();
@@ -13519,7 +14298,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutCreditEventsInput_schema = 
   chatConversations: z.lazy(() => ChatConversationUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutCreditEventsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutCreditEventsInput> = __makeSchema_OrganizationUncheckedCreateWithoutCreditEventsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutCreditEventsInput>;
 export const OrganizationUncheckedCreateWithoutCreditEventsInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutCreditEventsInput_schema();
@@ -13532,6 +14312,49 @@ const __makeSchema_OrganizationCreateOrConnectWithoutCreditEventsInput_schema = 
 }).strict();
 export const OrganizationCreateOrConnectWithoutCreditEventsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateOrConnectWithoutCreditEventsInput> = __makeSchema_OrganizationCreateOrConnectWithoutCreditEventsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateOrConnectWithoutCreditEventsInput>;
 export const OrganizationCreateOrConnectWithoutCreditEventsInputObjectZodSchema = __makeSchema_OrganizationCreateOrConnectWithoutCreditEventsInput_schema();
+
+
+// File: CreditPackageCreateWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageCreateWithoutEventsInput_schema = () => z.object({
+  id: z.string().optional(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  consumed: z.number().int().optional(),
+  expiresAt: z.coerce.date().optional().nullable(),
+  priority: z.number().int().optional(),
+  createdAt: z.coerce.date().optional(),
+  user: z.lazy(() => UserCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional()
+}).strict();
+export const CreditPackageCreateWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateWithoutEventsInput> = __makeSchema_CreditPackageCreateWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateWithoutEventsInput>;
+export const CreditPackageCreateWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageCreateWithoutEventsInput_schema();
+
+
+// File: CreditPackageUncheckedCreateWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageUncheckedCreateWithoutEventsInput_schema = () => z.object({
+  id: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  consumed: z.number().int().optional(),
+  expiresAt: z.coerce.date().optional().nullable(),
+  purchaseId: z.string().optional().nullable(),
+  priority: z.number().int().optional(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const CreditPackageUncheckedCreateWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutEventsInput> = __makeSchema_CreditPackageUncheckedCreateWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutEventsInput>;
+export const CreditPackageUncheckedCreateWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageUncheckedCreateWithoutEventsInput_schema();
+
+
+// File: CreditPackageCreateOrConnectWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageCreateOrConnectWithoutEventsInput_schema = () => z.object({
+  where: z.lazy(() => CreditPackageWhereUniqueInputObjectSchema),
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutEventsInputObjectSchema)])
+}).strict();
+export const CreditPackageCreateOrConnectWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateOrConnectWithoutEventsInput> = __makeSchema_CreditPackageCreateOrConnectWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateOrConnectWithoutEventsInput>;
+export const CreditPackageCreateOrConnectWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageCreateOrConnectWithoutEventsInput_schema();
 
 
 // File: UserUpsertWithoutCreditEventsInput.schema.ts
@@ -13668,7 +14491,8 @@ const __makeSchema_OrganizationUpdateWithoutCreditEventsInput_schema = () => z.o
   chatConversations: z.lazy(() => ChatConversationUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutCreditEventsInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutCreditEventsInput> = __makeSchema_OrganizationUpdateWithoutCreditEventsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutCreditEventsInput>;
 export const OrganizationUpdateWithoutCreditEventsInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutCreditEventsInput_schema();
@@ -13692,10 +14516,64 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutCreditEventsInput_schema = 
   chatConversations: z.lazy(() => ChatConversationUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutCreditEventsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutCreditEventsInput> = __makeSchema_OrganizationUncheckedUpdateWithoutCreditEventsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutCreditEventsInput>;
 export const OrganizationUncheckedUpdateWithoutCreditEventsInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutCreditEventsInput_schema();
+
+
+// File: CreditPackageUpsertWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageUpsertWithoutEventsInput_schema = () => z.object({
+  update: z.union([z.lazy(() => CreditPackageUpdateWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUncheckedUpdateWithoutEventsInputObjectSchema)]),
+  create: z.union([z.lazy(() => CreditPackageCreateWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUncheckedCreateWithoutEventsInputObjectSchema)]),
+  where: z.lazy(() => CreditPackageWhereInputObjectSchema).optional()
+}).strict();
+export const CreditPackageUpsertWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageUpsertWithoutEventsInput> = __makeSchema_CreditPackageUpsertWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpsertWithoutEventsInput>;
+export const CreditPackageUpsertWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageUpsertWithoutEventsInput_schema();
+
+
+// File: CreditPackageUpdateToOneWithWhereWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageUpdateToOneWithWhereWithoutEventsInput_schema = () => z.object({
+  where: z.lazy(() => CreditPackageWhereInputObjectSchema).optional(),
+  data: z.union([z.lazy(() => CreditPackageUpdateWithoutEventsInputObjectSchema), z.lazy(() => CreditPackageUncheckedUpdateWithoutEventsInputObjectSchema)])
+}).strict();
+export const CreditPackageUpdateToOneWithWhereWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateToOneWithWhereWithoutEventsInput> = __makeSchema_CreditPackageUpdateToOneWithWhereWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateToOneWithWhereWithoutEventsInput>;
+export const CreditPackageUpdateToOneWithWhereWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageUpdateToOneWithWhereWithoutEventsInput_schema();
+
+
+// File: CreditPackageUpdateWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageUpdateWithoutEventsInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional()
+}).strict();
+export const CreditPackageUpdateWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateWithoutEventsInput> = __makeSchema_CreditPackageUpdateWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateWithoutEventsInput>;
+export const CreditPackageUpdateWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageUpdateWithoutEventsInput_schema();
+
+
+// File: CreditPackageUncheckedUpdateWithoutEventsInput.schema.ts
+const __makeSchema_CreditPackageUncheckedUpdateWithoutEventsInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CreditPackageUncheckedUpdateWithoutEventsInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutEventsInput> = __makeSchema_CreditPackageUncheckedUpdateWithoutEventsInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutEventsInput>;
+export const CreditPackageUncheckedUpdateWithoutEventsInputObjectZodSchema = __makeSchema_CreditPackageUncheckedUpdateWithoutEventsInput_schema();
 
 
 // File: SessionCreateWithoutUserInput.schema.ts
@@ -13997,7 +14875,8 @@ const __makeSchema_PurchaseCreateWithoutUserInput_schema = () => z.object({
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  organization: z.lazy(() => OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
 }).strict();
 export const PurchaseCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.PurchaseCreateWithoutUserInput> = __makeSchema_PurchaseCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.PurchaseCreateWithoutUserInput>;
 export const PurchaseCreateWithoutUserInputObjectZodSchema = __makeSchema_PurchaseCreateWithoutUserInput_schema();
@@ -14018,7 +14897,8 @@ const __makeSchema_PurchaseUncheckedCreateWithoutUserInput_schema = () => z.obje
   organizationId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
 }).strict();
 export const PurchaseUncheckedCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedCreateWithoutUserInput> = __makeSchema_PurchaseUncheckedCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedCreateWithoutUserInput>;
 export const PurchaseUncheckedCreateWithoutUserInputObjectZodSchema = __makeSchema_PurchaseUncheckedCreateWithoutUserInput_schema();
@@ -14049,7 +14929,8 @@ const __makeSchema_AuditLogCreateWithoutUserInput_schema = () => z.object({
   ip: z.string().optional().nullable(),
   userAgent: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutAuditLogsInputObjectSchema).optional()
 }).strict();
 export const AuditLogCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.AuditLogCreateWithoutUserInput> = __makeSchema_AuditLogCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.AuditLogCreateWithoutUserInput>;
 export const AuditLogCreateWithoutUserInputObjectZodSchema = __makeSchema_AuditLogCreateWithoutUserInput_schema();
@@ -14058,6 +14939,7 @@ export const AuditLogCreateWithoutUserInputObjectZodSchema = __makeSchema_AuditL
 // File: AuditLogUncheckedCreateWithoutUserInput.schema.ts
 const __makeSchema_AuditLogUncheckedCreateWithoutUserInput_schema = () => z.object({
   id: z.string().optional(),
+  organizationId: z.string().optional().nullable(),
   action: z.string(),
   ip: z.string().optional().nullable(),
   userAgent: z.string().optional().nullable(),
@@ -14353,10 +15235,11 @@ const __makeSchema_CreditPackageCreateWithoutUserInput_schema = () => z.object({
   amount: z.number().int(),
   consumed: z.number().int().optional(),
   expiresAt: z.coerce.date().optional().nullable(),
-  purchaseId: z.string().optional().nullable(),
   priority: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventCreateNestedManyWithoutPackageInputObjectSchema).optional()
 }).strict();
 export const CreditPackageCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateWithoutUserInput> = __makeSchema_CreditPackageCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateWithoutUserInput>;
 export const CreditPackageCreateWithoutUserInputObjectZodSchema = __makeSchema_CreditPackageCreateWithoutUserInput_schema();
@@ -14372,7 +15255,8 @@ const __makeSchema_CreditPackageUncheckedCreateWithoutUserInput_schema = () => z
   expiresAt: z.coerce.date().optional().nullable(),
   purchaseId: z.string().optional().nullable(),
   priority: z.number().int().optional(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  events: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutPackageInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUncheckedCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutUserInput> = __makeSchema_CreditPackageUncheckedCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutUserInput>;
 export const CreditPackageUncheckedCreateWithoutUserInputObjectZodSchema = __makeSchema_CreditPackageUncheckedCreateWithoutUserInput_schema();
@@ -14402,12 +15286,12 @@ const __makeSchema_CreditEventCreateWithoutUserInput_schema = () => z.object({
   meterKey: z.string(),
   amount: z.number().int(),
   source: z.string(),
-  packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema).optional(),
+  package: z.lazy(() => CreditPackageCreateNestedOneWithoutEventsInputObjectSchema).optional()
 }).strict();
 export const CreditEventCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditEventCreateWithoutUserInput> = __makeSchema_CreditEventCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateWithoutUserInput>;
 export const CreditEventCreateWithoutUserInputObjectZodSchema = __makeSchema_CreditEventCreateWithoutUserInput_schema();
@@ -14824,6 +15708,7 @@ const auditlogscalarwhereinputSchema = z.object({
   NOT: z.union([z.lazy(() => AuditLogScalarWhereInputObjectSchema), z.lazy(() => AuditLogScalarWhereInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   action: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   ip: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   userAgent: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
@@ -15111,27 +15996,6 @@ export const CreditPackageUpdateManyWithWhereWithoutUserInputObjectSchema: z.Zod
 export const CreditPackageUpdateManyWithWhereWithoutUserInputObjectZodSchema = __makeSchema_CreditPackageUpdateManyWithWhereWithoutUserInput_schema();
 
 
-// File: CreditPackageScalarWhereInput.schema.ts
-
-const creditpackagescalarwhereinputSchema = z.object({
-  AND: z.union([z.lazy(() => CreditPackageScalarWhereInputObjectSchema), z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array()]).optional(),
-  OR: z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array().optional(),
-  NOT: z.union([z.lazy(() => CreditPackageScalarWhereInputObjectSchema), z.lazy(() => CreditPackageScalarWhereInputObjectSchema).array()]).optional(),
-  id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  meterKey: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  amount: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
-  consumed: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
-  expiresAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
-  purchaseId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  priority: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
-  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
-}).strict();
-export const CreditPackageScalarWhereInputObjectSchema: z.ZodType<Prisma.CreditPackageScalarWhereInput> = creditpackagescalarwhereinputSchema as unknown as z.ZodType<Prisma.CreditPackageScalarWhereInput>;
-export const CreditPackageScalarWhereInputObjectZodSchema = creditpackagescalarwhereinputSchema;
-
-
 // File: CreditEventUpsertWithWhereUniqueWithoutUserInput.schema.ts
 const __makeSchema_CreditEventUpsertWithWhereUniqueWithoutUserInput_schema = () => z.object({
   where: z.lazy(() => CreditEventWhereUniqueInputObjectSchema),
@@ -15158,28 +16022,6 @@ const __makeSchema_CreditEventUpdateManyWithWhereWithoutUserInput_schema = () =>
 }).strict();
 export const CreditEventUpdateManyWithWhereWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateManyWithWhereWithoutUserInput> = __makeSchema_CreditEventUpdateManyWithWhereWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateManyWithWhereWithoutUserInput>;
 export const CreditEventUpdateManyWithWhereWithoutUserInputObjectZodSchema = __makeSchema_CreditEventUpdateManyWithWhereWithoutUserInput_schema();
-
-
-// File: CreditEventScalarWhereInput.schema.ts
-
-const crediteventscalarwhereinputSchema = z.object({
-  AND: z.union([z.lazy(() => CreditEventScalarWhereInputObjectSchema), z.lazy(() => CreditEventScalarWhereInputObjectSchema).array()]).optional(),
-  OR: z.lazy(() => CreditEventScalarWhereInputObjectSchema).array().optional(),
-  NOT: z.union([z.lazy(() => CreditEventScalarWhereInputObjectSchema), z.lazy(() => CreditEventScalarWhereInputObjectSchema).array()]).optional(),
-  id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  meterKey: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  amount: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
-  source: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  packageId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  reason: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  metadata: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
-  idempotencyKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
-}).strict();
-export const CreditEventScalarWhereInputObjectSchema: z.ZodType<Prisma.CreditEventScalarWhereInput> = crediteventscalarwhereinputSchema as unknown as z.ZodType<Prisma.CreditEventScalarWhereInput>;
-export const CreditEventScalarWhereInputObjectZodSchema = crediteventscalarwhereinputSchema;
 
 
 // File: UserCreateWithoutSessionsInput.schema.ts
@@ -15651,7 +16493,8 @@ const __makeSchema_PurchaseCreateWithoutOrganizationInput_schema = () => z.objec
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  user: z.lazy(() => UserCreateNestedOneWithoutPurchasesInputObjectSchema).optional()
+  user: z.lazy(() => UserCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
 }).strict();
 export const PurchaseCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.PurchaseCreateWithoutOrganizationInput> = __makeSchema_PurchaseCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.PurchaseCreateWithoutOrganizationInput>;
 export const PurchaseCreateWithoutOrganizationInputObjectZodSchema = __makeSchema_PurchaseCreateWithoutOrganizationInput_schema();
@@ -15672,7 +16515,8 @@ const __makeSchema_PurchaseUncheckedCreateWithoutOrganizationInput_schema = () =
   userId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
 }).strict();
 export const PurchaseUncheckedCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedCreateWithoutOrganizationInput> = __makeSchema_PurchaseUncheckedCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedCreateWithoutOrganizationInput>;
 export const PurchaseUncheckedCreateWithoutOrganizationInputObjectZodSchema = __makeSchema_PurchaseUncheckedCreateWithoutOrganizationInput_schema();
@@ -16015,10 +16859,11 @@ const __makeSchema_CreditPackageCreateWithoutOrganizationInput_schema = () => z.
   amount: z.number().int(),
   consumed: z.number().int().optional(),
   expiresAt: z.coerce.date().optional().nullable(),
-  purchaseId: z.string().optional().nullable(),
   priority: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  user: z.lazy(() => UserCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional()
+  user: z.lazy(() => UserCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseCreateNestedOneWithoutCreditPackagesInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventCreateNestedManyWithoutPackageInputObjectSchema).optional()
 }).strict();
 export const CreditPackageCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateWithoutOrganizationInput> = __makeSchema_CreditPackageCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateWithoutOrganizationInput>;
 export const CreditPackageCreateWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditPackageCreateWithoutOrganizationInput_schema();
@@ -16034,7 +16879,8 @@ const __makeSchema_CreditPackageUncheckedCreateWithoutOrganizationInput_schema =
   expiresAt: z.coerce.date().optional().nullable(),
   purchaseId: z.string().optional().nullable(),
   priority: z.number().int().optional(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  events: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutPackageInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUncheckedCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutOrganizationInput> = __makeSchema_CreditPackageUncheckedCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedCreateWithoutOrganizationInput>;
 export const CreditPackageUncheckedCreateWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditPackageUncheckedCreateWithoutOrganizationInput_schema();
@@ -16064,12 +16910,12 @@ const __makeSchema_CreditEventCreateWithoutOrganizationInput_schema = () => z.ob
   meterKey: z.string(),
   amount: z.number().int(),
   source: z.string(),
-  packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  user: z.lazy(() => UserCreateNestedOneWithoutCreditEventsInputObjectSchema).optional()
+  user: z.lazy(() => UserCreateNestedOneWithoutCreditEventsInputObjectSchema).optional(),
+  package: z.lazy(() => CreditPackageCreateNestedOneWithoutEventsInputObjectSchema).optional()
 }).strict();
 export const CreditEventCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventCreateWithoutOrganizationInput> = __makeSchema_CreditEventCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateWithoutOrganizationInput>;
 export const CreditEventCreateWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditEventCreateWithoutOrganizationInput_schema();
@@ -16108,6 +16954,52 @@ const __makeSchema_CreditEventCreateManyOrganizationInputEnvelope_schema = () =>
 }).strict();
 export const CreditEventCreateManyOrganizationInputEnvelopeObjectSchema: z.ZodType<Prisma.CreditEventCreateManyOrganizationInputEnvelope> = __makeSchema_CreditEventCreateManyOrganizationInputEnvelope_schema() as unknown as z.ZodType<Prisma.CreditEventCreateManyOrganizationInputEnvelope>;
 export const CreditEventCreateManyOrganizationInputEnvelopeObjectZodSchema = __makeSchema_CreditEventCreateManyOrganizationInputEnvelope_schema();
+
+
+// File: AuditLogCreateWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogCreateWithoutOrganizationInput_schema = () => z.object({
+  id: z.string().optional(),
+  action: z.string(),
+  ip: z.string().optional().nullable(),
+  userAgent: z.string().optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.coerce.date().optional(),
+  user: z.lazy(() => UserCreateNestedOneWithoutAuditLogsInputObjectSchema).optional()
+}).strict();
+export const AuditLogCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogCreateWithoutOrganizationInput> = __makeSchema_AuditLogCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogCreateWithoutOrganizationInput>;
+export const AuditLogCreateWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogCreateWithoutOrganizationInput_schema();
+
+
+// File: AuditLogUncheckedCreateWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUncheckedCreateWithoutOrganizationInput_schema = () => z.object({
+  id: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  action: z.string(),
+  ip: z.string().optional().nullable(),
+  userAgent: z.string().optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUncheckedCreateWithoutOrganizationInput> = __makeSchema_AuditLogUncheckedCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUncheckedCreateWithoutOrganizationInput>;
+export const AuditLogUncheckedCreateWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUncheckedCreateWithoutOrganizationInput_schema();
+
+
+// File: AuditLogCreateOrConnectWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogCreateOrConnectWithoutOrganizationInput_schema = () => z.object({
+  where: z.lazy(() => AuditLogWhereUniqueInputObjectSchema),
+  create: z.union([z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema)])
+}).strict();
+export const AuditLogCreateOrConnectWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogCreateOrConnectWithoutOrganizationInput> = __makeSchema_AuditLogCreateOrConnectWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogCreateOrConnectWithoutOrganizationInput>;
+export const AuditLogCreateOrConnectWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogCreateOrConnectWithoutOrganizationInput_schema();
+
+
+// File: AuditLogCreateManyOrganizationInputEnvelope.schema.ts
+const __makeSchema_AuditLogCreateManyOrganizationInputEnvelope_schema = () => z.object({
+  data: z.union([z.lazy(() => AuditLogCreateManyOrganizationInputObjectSchema), z.lazy(() => AuditLogCreateManyOrganizationInputObjectSchema).array()]),
+  skipDuplicates: z.boolean().optional()
+}).strict();
+export const AuditLogCreateManyOrganizationInputEnvelopeObjectSchema: z.ZodType<Prisma.AuditLogCreateManyOrganizationInputEnvelope> = __makeSchema_AuditLogCreateManyOrganizationInputEnvelope_schema() as unknown as z.ZodType<Prisma.AuditLogCreateManyOrganizationInputEnvelope>;
+export const AuditLogCreateManyOrganizationInputEnvelopeObjectZodSchema = __makeSchema_AuditLogCreateManyOrganizationInputEnvelope_schema();
 
 
 // File: MemberUpsertWithWhereUniqueWithoutOrganizationInput.schema.ts
@@ -16458,6 +17350,34 @@ export const CreditEventUpdateManyWithWhereWithoutOrganizationInputObjectSchema:
 export const CreditEventUpdateManyWithWhereWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditEventUpdateManyWithWhereWithoutOrganizationInput_schema();
 
 
+// File: AuditLogUpsertWithWhereUniqueWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUpsertWithWhereUniqueWithoutOrganizationInput_schema = () => z.object({
+  where: z.lazy(() => AuditLogWhereUniqueInputObjectSchema),
+  update: z.union([z.lazy(() => AuditLogUpdateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedUpdateWithoutOrganizationInputObjectSchema)]),
+  create: z.union([z.lazy(() => AuditLogCreateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedCreateWithoutOrganizationInputObjectSchema)])
+}).strict();
+export const AuditLogUpsertWithWhereUniqueWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUpsertWithWhereUniqueWithoutOrganizationInput> = __makeSchema_AuditLogUpsertWithWhereUniqueWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUpsertWithWhereUniqueWithoutOrganizationInput>;
+export const AuditLogUpsertWithWhereUniqueWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUpsertWithWhereUniqueWithoutOrganizationInput_schema();
+
+
+// File: AuditLogUpdateWithWhereUniqueWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUpdateWithWhereUniqueWithoutOrganizationInput_schema = () => z.object({
+  where: z.lazy(() => AuditLogWhereUniqueInputObjectSchema),
+  data: z.union([z.lazy(() => AuditLogUpdateWithoutOrganizationInputObjectSchema), z.lazy(() => AuditLogUncheckedUpdateWithoutOrganizationInputObjectSchema)])
+}).strict();
+export const AuditLogUpdateWithWhereUniqueWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUpdateWithWhereUniqueWithoutOrganizationInput> = __makeSchema_AuditLogUpdateWithWhereUniqueWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUpdateWithWhereUniqueWithoutOrganizationInput>;
+export const AuditLogUpdateWithWhereUniqueWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUpdateWithWhereUniqueWithoutOrganizationInput_schema();
+
+
+// File: AuditLogUpdateManyWithWhereWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUpdateManyWithWhereWithoutOrganizationInput_schema = () => z.object({
+  where: z.lazy(() => AuditLogScalarWhereInputObjectSchema),
+  data: z.union([z.lazy(() => AuditLogUpdateManyMutationInputObjectSchema), z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationInputObjectSchema)])
+}).strict();
+export const AuditLogUpdateManyWithWhereWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUpdateManyWithWhereWithoutOrganizationInput> = __makeSchema_AuditLogUpdateManyWithWhereWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUpdateManyWithWhereWithoutOrganizationInput>;
+export const AuditLogUpdateManyWithWhereWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUpdateManyWithWhereWithoutOrganizationInput_schema();
+
+
 // File: OrganizationCreateWithoutMembersInput.schema.ts
 const __makeSchema_OrganizationCreateWithoutMembersInput_schema = () => z.object({
   id: z.string(),
@@ -16476,7 +17396,8 @@ const __makeSchema_OrganizationCreateWithoutMembersInput_schema = () => z.object
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutMembersInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutMembersInput> = __makeSchema_OrganizationCreateWithoutMembersInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutMembersInput>;
 export const OrganizationCreateWithoutMembersInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutMembersInput_schema();
@@ -16500,7 +17421,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutMembersInput_schema = () =>
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutMembersInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutMembersInput> = __makeSchema_OrganizationUncheckedCreateWithoutMembersInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutMembersInput>;
 export const OrganizationUncheckedCreateWithoutMembersInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutMembersInput_schema();
@@ -16639,7 +17561,8 @@ const __makeSchema_OrganizationUpdateWithoutMembersInput_schema = () => z.object
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutMembersInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutMembersInput> = __makeSchema_OrganizationUpdateWithoutMembersInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutMembersInput>;
 export const OrganizationUpdateWithoutMembersInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutMembersInput_schema();
@@ -16663,7 +17586,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutMembersInput_schema = () =>
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutMembersInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutMembersInput> = __makeSchema_OrganizationUncheckedUpdateWithoutMembersInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutMembersInput>;
 export const OrganizationUncheckedUpdateWithoutMembersInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutMembersInput_schema();
@@ -16784,7 +17708,8 @@ const __makeSchema_OrganizationCreateWithoutInvitationsInput_schema = () => z.ob
   contacts: z.lazy(() => ContactCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationCreateWithoutInvitationsInputObjectSchema: z.ZodType<Prisma.OrganizationCreateWithoutInvitationsInput> = __makeSchema_OrganizationCreateWithoutInvitationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateWithoutInvitationsInput>;
 export const OrganizationCreateWithoutInvitationsInputObjectZodSchema = __makeSchema_OrganizationCreateWithoutInvitationsInput_schema();
@@ -16808,7 +17733,8 @@ const __makeSchema_OrganizationUncheckedCreateWithoutInvitationsInput_schema = (
   contacts: z.lazy(() => ContactUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedCreateNestedManyWithoutOrganizationInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedCreateWithoutInvitationsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedCreateWithoutInvitationsInput> = __makeSchema_OrganizationUncheckedCreateWithoutInvitationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedCreateWithoutInvitationsInput>;
 export const OrganizationUncheckedCreateWithoutInvitationsInputObjectZodSchema = __makeSchema_OrganizationUncheckedCreateWithoutInvitationsInput_schema();
@@ -16947,7 +17873,8 @@ const __makeSchema_OrganizationUpdateWithoutInvitationsInput_schema = () => z.ob
   contacts: z.lazy(() => ContactUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUpdateWithoutInvitationsInputObjectSchema: z.ZodType<Prisma.OrganizationUpdateWithoutInvitationsInput> = __makeSchema_OrganizationUpdateWithoutInvitationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUpdateWithoutInvitationsInput>;
 export const OrganizationUpdateWithoutInvitationsInputObjectZodSchema = __makeSchema_OrganizationUpdateWithoutInvitationsInput_schema();
@@ -16971,7 +17898,8 @@ const __makeSchema_OrganizationUncheckedUpdateWithoutInvitationsInput_schema = (
   contacts: z.lazy(() => ContactUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditBalances: z.lazy(() => CreditBalanceUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
-  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
+  creditEvents: z.lazy(() => CreditEventUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional(),
+  auditLogs: z.lazy(() => AuditLogUncheckedUpdateManyWithoutOrganizationNestedInputObjectSchema).optional()
 }).strict();
 export const OrganizationUncheckedUpdateWithoutInvitationsInputObjectSchema: z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutInvitationsInput> = __makeSchema_OrganizationUncheckedUpdateWithoutInvitationsInput_schema() as unknown as z.ZodType<Prisma.OrganizationUncheckedUpdateWithoutInvitationsInput>;
 export const OrganizationUncheckedUpdateWithoutInvitationsInputObjectZodSchema = __makeSchema_OrganizationUncheckedUpdateWithoutInvitationsInput_schema();
@@ -17442,6 +18370,72 @@ export const UserUncheckedUpdateWithoutTwoFactorsInputObjectSchema: z.ZodType<Pr
 export const UserUncheckedUpdateWithoutTwoFactorsInputObjectZodSchema = __makeSchema_UserUncheckedUpdateWithoutTwoFactorsInput_schema();
 
 
+// File: CreditPackageCreateManyPurchaseInput.schema.ts
+const __makeSchema_CreditPackageCreateManyPurchaseInput_schema = () => z.object({
+  id: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  consumed: z.number().int().optional(),
+  expiresAt: z.coerce.date().optional().nullable(),
+  priority: z.number().int().optional(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const CreditPackageCreateManyPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageCreateManyPurchaseInput> = __makeSchema_CreditPackageCreateManyPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageCreateManyPurchaseInput>;
+export const CreditPackageCreateManyPurchaseInputObjectZodSchema = __makeSchema_CreditPackageCreateManyPurchaseInput_schema();
+
+
+// File: CreditPackageUpdateWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUpdateWithoutPurchaseInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventUpdateManyWithoutPackageNestedInputObjectSchema).optional()
+}).strict();
+export const CreditPackageUpdateWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateWithoutPurchaseInput> = __makeSchema_CreditPackageUpdateWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateWithoutPurchaseInput>;
+export const CreditPackageUpdateWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUpdateWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageUncheckedUpdateWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUncheckedUpdateWithoutPurchaseInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  events: z.lazy(() => CreditEventUncheckedUpdateManyWithoutPackageNestedInputObjectSchema).optional()
+}).strict();
+export const CreditPackageUncheckedUpdateWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutPurchaseInput> = __makeSchema_CreditPackageUncheckedUpdateWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutPurchaseInput>;
+export const CreditPackageUncheckedUpdateWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUncheckedUpdateWithoutPurchaseInput_schema();
+
+
+// File: CreditPackageUncheckedUpdateManyWithoutPurchaseInput.schema.ts
+const __makeSchema_CreditPackageUncheckedUpdateManyWithoutPurchaseInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CreditPackageUncheckedUpdateManyWithoutPurchaseInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedUpdateManyWithoutPurchaseInput> = __makeSchema_CreditPackageUncheckedUpdateManyWithoutPurchaseInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedUpdateManyWithoutPurchaseInput>;
+export const CreditPackageUncheckedUpdateManyWithoutPurchaseInputObjectZodSchema = __makeSchema_CreditPackageUncheckedUpdateManyWithoutPurchaseInput_schema();
+
+
 // File: WebhookDeliveryCreateManyWebhookInput.schema.ts
 const __makeSchema_WebhookDeliveryCreateManyWebhookInput_schema = () => z.object({
   id: z.string().optional(),
@@ -17552,6 +18546,74 @@ const __makeSchema_ChatMessageUncheckedUpdateManyWithoutConversationInput_schema
 }).strict();
 export const ChatMessageUncheckedUpdateManyWithoutConversationInputObjectSchema: z.ZodType<Prisma.ChatMessageUncheckedUpdateManyWithoutConversationInput> = __makeSchema_ChatMessageUncheckedUpdateManyWithoutConversationInput_schema() as unknown as z.ZodType<Prisma.ChatMessageUncheckedUpdateManyWithoutConversationInput>;
 export const ChatMessageUncheckedUpdateManyWithoutConversationInputObjectZodSchema = __makeSchema_ChatMessageUncheckedUpdateManyWithoutConversationInput_schema();
+
+
+// File: CreditEventCreateManyPackageInput.schema.ts
+const __makeSchema_CreditEventCreateManyPackageInput_schema = () => z.object({
+  id: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  organizationId: z.string().optional().nullable(),
+  meterKey: z.string(),
+  amount: z.number().int(),
+  source: z.string(),
+  reason: z.string(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const CreditEventCreateManyPackageInputObjectSchema: z.ZodType<Prisma.CreditEventCreateManyPackageInput> = __makeSchema_CreditEventCreateManyPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateManyPackageInput>;
+export const CreditEventCreateManyPackageInputObjectZodSchema = __makeSchema_CreditEventCreateManyPackageInput_schema();
+
+
+// File: CreditEventUpdateWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUpdateWithoutPackageInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  source: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional(),
+  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional()
+}).strict();
+export const CreditEventUpdateWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateWithoutPackageInput> = __makeSchema_CreditEventUpdateWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateWithoutPackageInput>;
+export const CreditEventUpdateWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUpdateWithoutPackageInput_schema();
+
+
+// File: CreditEventUncheckedUpdateWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUncheckedUpdateWithoutPackageInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  source: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CreditEventUncheckedUpdateWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateWithoutPackageInput> = __makeSchema_CreditEventUncheckedUpdateWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateWithoutPackageInput>;
+export const CreditEventUncheckedUpdateWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUncheckedUpdateWithoutPackageInput_schema();
+
+
+// File: CreditEventUncheckedUpdateManyWithoutPackageInput.schema.ts
+const __makeSchema_CreditEventUncheckedUpdateManyWithoutPackageInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  source: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const CreditEventUncheckedUpdateManyWithoutPackageInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutPackageInput> = __makeSchema_CreditEventUncheckedUpdateManyWithoutPackageInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutPackageInput>;
+export const CreditEventUncheckedUpdateManyWithoutPackageInputObjectZodSchema = __makeSchema_CreditEventUncheckedUpdateManyWithoutPackageInput_schema();
 
 
 // File: SessionCreateManyUserInput.schema.ts
@@ -17666,6 +18728,7 @@ export const PurchaseCreateManyUserInputObjectZodSchema = __makeSchema_PurchaseC
 // File: AuditLogCreateManyUserInput.schema.ts
 const __makeSchema_AuditLogCreateManyUserInput_schema = () => z.object({
   id: z.string().optional(),
+  organizationId: z.string().optional().nullable(),
   action: z.string(),
   ip: z.string().optional().nullable(),
   userAgent: z.string().optional().nullable(),
@@ -18072,7 +19135,8 @@ const __makeSchema_PurchaseUpdateWithoutUserInput_schema = () => z.object({
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  organization: z.lazy(() => OrganizationUpdateOneWithoutPurchasesNestedInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
 }).strict();
 export const PurchaseUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.PurchaseUpdateWithoutUserInput> = __makeSchema_PurchaseUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.PurchaseUpdateWithoutUserInput>;
 export const PurchaseUpdateWithoutUserInputObjectZodSchema = __makeSchema_PurchaseUpdateWithoutUserInput_schema();
@@ -18093,7 +19157,8 @@ const __makeSchema_PurchaseUncheckedUpdateWithoutUserInput_schema = () => z.obje
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
 }).strict();
 export const PurchaseUncheckedUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedUpdateWithoutUserInput> = __makeSchema_PurchaseUncheckedUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedUpdateWithoutUserInput>;
 export const PurchaseUncheckedUpdateWithoutUserInputObjectZodSchema = __makeSchema_PurchaseUncheckedUpdateWithoutUserInput_schema();
@@ -18127,7 +19192,8 @@ const __makeSchema_AuditLogUpdateWithoutUserInput_schema = () => z.object({
   ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  organization: z.lazy(() => OrganizationUpdateOneWithoutAuditLogsNestedInputObjectSchema).optional()
 }).strict();
 export const AuditLogUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.AuditLogUpdateWithoutUserInput> = __makeSchema_AuditLogUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.AuditLogUpdateWithoutUserInput>;
 export const AuditLogUpdateWithoutUserInputObjectZodSchema = __makeSchema_AuditLogUpdateWithoutUserInput_schema();
@@ -18136,6 +19202,7 @@ export const AuditLogUpdateWithoutUserInputObjectZodSchema = __makeSchema_AuditL
 // File: AuditLogUncheckedUpdateWithoutUserInput.schema.ts
 const __makeSchema_AuditLogUncheckedUpdateWithoutUserInput_schema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   action: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -18149,6 +19216,7 @@ export const AuditLogUncheckedUpdateWithoutUserInputObjectZodSchema = __makeSche
 // File: AuditLogUncheckedUpdateManyWithoutUserInput.schema.ts
 const __makeSchema_AuditLogUncheckedUpdateManyWithoutUserInput_schema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   action: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -18420,10 +19488,11 @@ const __makeSchema_CreditPackageUpdateWithoutUserInput_schema = () => z.object({
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventUpdateManyWithoutPackageNestedInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateWithoutUserInput> = __makeSchema_CreditPackageUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateWithoutUserInput>;
 export const CreditPackageUpdateWithoutUserInputObjectZodSchema = __makeSchema_CreditPackageUpdateWithoutUserInput_schema();
@@ -18439,7 +19508,8 @@ const __makeSchema_CreditPackageUncheckedUpdateWithoutUserInput_schema = () => z
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
-  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  events: z.lazy(() => CreditEventUncheckedUpdateManyWithoutPackageNestedInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUncheckedUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutUserInput> = __makeSchema_CreditPackageUncheckedUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutUserInput>;
 export const CreditPackageUncheckedUpdateWithoutUserInputObjectZodSchema = __makeSchema_CreditPackageUncheckedUpdateWithoutUserInput_schema();
@@ -18467,12 +19537,12 @@ const __makeSchema_CreditEventUpdateWithoutUserInput_schema = () => z.object({
   meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   source: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional()
+  organization: z.lazy(() => OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional(),
+  package: z.lazy(() => CreditPackageUpdateOneWithoutEventsNestedInputObjectSchema).optional()
 }).strict();
 export const CreditEventUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateWithoutUserInput> = __makeSchema_CreditEventUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateWithoutUserInput>;
 export const CreditEventUpdateWithoutUserInputObjectZodSchema = __makeSchema_CreditEventUpdateWithoutUserInput_schema();
@@ -18691,6 +19761,20 @@ export const CreditEventCreateManyOrganizationInputObjectSchema: z.ZodType<Prism
 export const CreditEventCreateManyOrganizationInputObjectZodSchema = __makeSchema_CreditEventCreateManyOrganizationInput_schema();
 
 
+// File: AuditLogCreateManyOrganizationInput.schema.ts
+const __makeSchema_AuditLogCreateManyOrganizationInput_schema = () => z.object({
+  id: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  action: z.string(),
+  ip: z.string().optional().nullable(),
+  userAgent: z.string().optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const AuditLogCreateManyOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogCreateManyOrganizationInput> = __makeSchema_AuditLogCreateManyOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogCreateManyOrganizationInput>;
+export const AuditLogCreateManyOrganizationInputObjectZodSchema = __makeSchema_AuditLogCreateManyOrganizationInput_schema();
+
+
 // File: MemberUpdateWithoutOrganizationInput.schema.ts
 const __makeSchema_MemberUpdateWithoutOrganizationInput_schema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18781,7 +19865,8 @@ const __makeSchema_PurchaseUpdateWithoutOrganizationInput_schema = () => z.objec
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  user: z.lazy(() => UserUpdateOneWithoutPurchasesNestedInputObjectSchema).optional()
+  user: z.lazy(() => UserUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
+  creditPackages: z.lazy(() => CreditPackageUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
 }).strict();
 export const PurchaseUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.PurchaseUpdateWithoutOrganizationInput> = __makeSchema_PurchaseUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.PurchaseUpdateWithoutOrganizationInput>;
 export const PurchaseUpdateWithoutOrganizationInputObjectZodSchema = __makeSchema_PurchaseUpdateWithoutOrganizationInput_schema();
@@ -18802,7 +19887,8 @@ const __makeSchema_PurchaseUncheckedUpdateWithoutOrganizationInput_schema = () =
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
 }).strict();
 export const PurchaseUncheckedUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.PurchaseUncheckedUpdateWithoutOrganizationInput> = __makeSchema_PurchaseUncheckedUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.PurchaseUncheckedUpdateWithoutOrganizationInput>;
 export const PurchaseUncheckedUpdateWithoutOrganizationInputObjectZodSchema = __makeSchema_PurchaseUncheckedUpdateWithoutOrganizationInput_schema();
@@ -19140,10 +20226,11 @@ const __makeSchema_CreditPackageUpdateWithoutOrganizationInput_schema = () => z.
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   consumed: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  user: z.lazy(() => UserUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional()
+  user: z.lazy(() => UserUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  purchase: z.lazy(() => PurchaseUpdateOneWithoutCreditPackagesNestedInputObjectSchema).optional(),
+  events: z.lazy(() => CreditEventUpdateManyWithoutPackageNestedInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditPackageUpdateWithoutOrganizationInput> = __makeSchema_CreditPackageUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUpdateWithoutOrganizationInput>;
 export const CreditPackageUpdateWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditPackageUpdateWithoutOrganizationInput_schema();
@@ -19159,7 +20246,8 @@ const __makeSchema_CreditPackageUncheckedUpdateWithoutOrganizationInput_schema =
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   purchaseId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
-  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  events: z.lazy(() => CreditEventUncheckedUpdateManyWithoutPackageNestedInputObjectSchema).optional()
 }).strict();
 export const CreditPackageUncheckedUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutOrganizationInput> = __makeSchema_CreditPackageUncheckedUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditPackageUncheckedUpdateWithoutOrganizationInput>;
 export const CreditPackageUncheckedUpdateWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditPackageUncheckedUpdateWithoutOrganizationInput_schema();
@@ -19187,12 +20275,12 @@ const __makeSchema_CreditEventUpdateWithoutOrganizationInput_schema = () => z.ob
   meterKey: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   amount: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   source: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  user: z.lazy(() => UserUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional()
+  user: z.lazy(() => UserUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional(),
+  package: z.lazy(() => CreditPackageUpdateOneWithoutEventsNestedInputObjectSchema).optional()
 }).strict();
 export const CreditEventUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateWithoutOrganizationInput> = __makeSchema_CreditEventUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateWithoutOrganizationInput>;
 export const CreditEventUpdateWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditEventUpdateWithoutOrganizationInput_schema();
@@ -19230,6 +20318,48 @@ const __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationInput_schema
 }).strict();
 export const CreditEventUncheckedUpdateManyWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutOrganizationInput> = __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutOrganizationInput>;
 export const CreditEventUncheckedUpdateManyWithoutOrganizationInputObjectZodSchema = __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationInput_schema();
+
+
+// File: AuditLogUpdateWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUpdateWithoutOrganizationInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  action: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutAuditLogsNestedInputObjectSchema).optional()
+}).strict();
+export const AuditLogUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUpdateWithoutOrganizationInput> = __makeSchema_AuditLogUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUpdateWithoutOrganizationInput>;
+export const AuditLogUpdateWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUpdateWithoutOrganizationInput_schema();
+
+
+// File: AuditLogUncheckedUpdateWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUncheckedUpdateWithoutOrganizationInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  action: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const AuditLogUncheckedUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUncheckedUpdateWithoutOrganizationInput> = __makeSchema_AuditLogUncheckedUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUncheckedUpdateWithoutOrganizationInput>;
+export const AuditLogUncheckedUpdateWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUncheckedUpdateWithoutOrganizationInput_schema();
+
+
+// File: AuditLogUncheckedUpdateManyWithoutOrganizationInput.schema.ts
+const __makeSchema_AuditLogUncheckedUpdateManyWithoutOrganizationInput_schema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  action: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  ip: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  userAgent: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+}).strict();
+export const AuditLogUncheckedUpdateManyWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.AuditLogUncheckedUpdateManyWithoutOrganizationInput> = __makeSchema_AuditLogUncheckedUpdateManyWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.AuditLogUncheckedUpdateManyWithoutOrganizationInput>;
+export const AuditLogUncheckedUpdateManyWithoutOrganizationInputObjectZodSchema = __makeSchema_AuditLogUncheckedUpdateManyWithoutOrganizationInput_schema();
 
 
 // File: PurchaseCountAggregateInput.schema.ts
@@ -19317,6 +20447,7 @@ export const PurchaseMaxAggregateInputObjectZodSchema = __makeSchema_PurchaseMax
 const __makeSchema_AuditLogCountAggregateInput_schema = () => z.object({
   id: z.literal(true).optional(),
   userId: z.literal(true).optional(),
+  organizationId: z.literal(true).optional(),
   action: z.literal(true).optional(),
   ip: z.literal(true).optional(),
   userAgent: z.literal(true).optional(),
@@ -19332,6 +20463,7 @@ export const AuditLogCountAggregateInputObjectZodSchema = __makeSchema_AuditLogC
 const __makeSchema_AuditLogMinAggregateInput_schema = () => z.object({
   id: z.literal(true).optional(),
   userId: z.literal(true).optional(),
+  organizationId: z.literal(true).optional(),
   action: z.literal(true).optional(),
   ip: z.literal(true).optional(),
   userAgent: z.literal(true).optional(),
@@ -19345,6 +20477,7 @@ export const AuditLogMinAggregateInputObjectZodSchema = __makeSchema_AuditLogMin
 const __makeSchema_AuditLogMaxAggregateInput_schema = () => z.object({
   id: z.literal(true).optional(),
   userId: z.literal(true).optional(),
+  organizationId: z.literal(true).optional(),
   action: z.literal(true).optional(),
   ip: z.literal(true).optional(),
   userAgent: z.literal(true).optional(),
@@ -20534,6 +21667,14 @@ export const TwoFactorMaxAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorM
 export const TwoFactorMaxAggregateInputObjectZodSchema = __makeSchema_TwoFactorMaxAggregateInput_schema();
 
 
+// File: PurchaseCountOutputTypeSelect.schema.ts
+const __makeSchema_PurchaseCountOutputTypeSelect_schema = () => z.object({
+  creditPackages: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeCountCreditPackagesArgsObjectSchema)]).optional()
+}).strict();
+export const PurchaseCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.PurchaseCountOutputTypeSelect> = __makeSchema_PurchaseCountOutputTypeSelect_schema() as unknown as z.ZodType<Prisma.PurchaseCountOutputTypeSelect>;
+export const PurchaseCountOutputTypeSelectObjectZodSchema = __makeSchema_PurchaseCountOutputTypeSelect_schema();
+
+
 // File: WebhookCountOutputTypeSelect.schema.ts
 const __makeSchema_WebhookCountOutputTypeSelect_schema = () => z.object({
   deliveries: z.union([z.boolean(), z.lazy(() => WebhookCountOutputTypeCountDeliveriesArgsObjectSchema)]).optional()
@@ -20548,6 +21689,14 @@ const __makeSchema_ChatConversationCountOutputTypeSelect_schema = () => z.object
 }).strict();
 export const ChatConversationCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.ChatConversationCountOutputTypeSelect> = __makeSchema_ChatConversationCountOutputTypeSelect_schema() as unknown as z.ZodType<Prisma.ChatConversationCountOutputTypeSelect>;
 export const ChatConversationCountOutputTypeSelectObjectZodSchema = __makeSchema_ChatConversationCountOutputTypeSelect_schema();
+
+
+// File: CreditPackageCountOutputTypeSelect.schema.ts
+const __makeSchema_CreditPackageCountOutputTypeSelect_schema = () => z.object({
+  events: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeCountEventsArgsObjectSchema)]).optional()
+}).strict();
+export const CreditPackageCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.CreditPackageCountOutputTypeSelect> = __makeSchema_CreditPackageCountOutputTypeSelect_schema() as unknown as z.ZodType<Prisma.CreditPackageCountOutputTypeSelect>;
+export const CreditPackageCountOutputTypeSelectObjectZodSchema = __makeSchema_CreditPackageCountOutputTypeSelect_schema();
 
 
 // File: UserCountOutputTypeSelect.schema.ts
@@ -20584,10 +21733,27 @@ const __makeSchema_OrganizationCountOutputTypeSelect_schema = () => z.object({
   contacts: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeCountContactsArgsObjectSchema)]).optional(),
   creditBalances: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeCountCreditBalancesArgsObjectSchema)]).optional(),
   creditPackages: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeCountCreditPackagesArgsObjectSchema)]).optional(),
-  creditEvents: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeCountCreditEventsArgsObjectSchema)]).optional()
+  creditEvents: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeCountCreditEventsArgsObjectSchema)]).optional(),
+  auditLogs: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeCountAuditLogsArgsObjectSchema)]).optional()
 }).strict();
 export const OrganizationCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.OrganizationCountOutputTypeSelect> = __makeSchema_OrganizationCountOutputTypeSelect_schema() as unknown as z.ZodType<Prisma.OrganizationCountOutputTypeSelect>;
 export const OrganizationCountOutputTypeSelectObjectZodSchema = __makeSchema_OrganizationCountOutputTypeSelect_schema();
+
+
+// File: PurchaseCountOutputTypeArgs.schema.ts
+const __makeSchema_PurchaseCountOutputTypeArgs_schema = () => z.object({
+  select: z.lazy(() => PurchaseCountOutputTypeSelectObjectSchema).optional()
+}).strict();
+export const PurchaseCountOutputTypeArgsObjectSchema = __makeSchema_PurchaseCountOutputTypeArgs_schema();
+export const PurchaseCountOutputTypeArgsObjectZodSchema = __makeSchema_PurchaseCountOutputTypeArgs_schema();
+
+
+// File: PurchaseCountOutputTypeCountCreditPackagesArgs.schema.ts
+const __makeSchema_PurchaseCountOutputTypeCountCreditPackagesArgs_schema = () => z.object({
+  where: z.lazy(() => CreditPackageWhereInputObjectSchema).optional()
+}).strict();
+export const PurchaseCountOutputTypeCountCreditPackagesArgsObjectSchema = __makeSchema_PurchaseCountOutputTypeCountCreditPackagesArgs_schema();
+export const PurchaseCountOutputTypeCountCreditPackagesArgsObjectZodSchema = __makeSchema_PurchaseCountOutputTypeCountCreditPackagesArgs_schema();
 
 
 // File: WebhookCountOutputTypeArgs.schema.ts
@@ -20620,6 +21786,22 @@ const __makeSchema_ChatConversationCountOutputTypeCountMessagesArgs_schema = () 
 }).strict();
 export const ChatConversationCountOutputTypeCountMessagesArgsObjectSchema = __makeSchema_ChatConversationCountOutputTypeCountMessagesArgs_schema();
 export const ChatConversationCountOutputTypeCountMessagesArgsObjectZodSchema = __makeSchema_ChatConversationCountOutputTypeCountMessagesArgs_schema();
+
+
+// File: CreditPackageCountOutputTypeArgs.schema.ts
+const __makeSchema_CreditPackageCountOutputTypeArgs_schema = () => z.object({
+  select: z.lazy(() => CreditPackageCountOutputTypeSelectObjectSchema).optional()
+}).strict();
+export const CreditPackageCountOutputTypeArgsObjectSchema = __makeSchema_CreditPackageCountOutputTypeArgs_schema();
+export const CreditPackageCountOutputTypeArgsObjectZodSchema = __makeSchema_CreditPackageCountOutputTypeArgs_schema();
+
+
+// File: CreditPackageCountOutputTypeCountEventsArgs.schema.ts
+const __makeSchema_CreditPackageCountOutputTypeCountEventsArgs_schema = () => z.object({
+  where: z.lazy(() => CreditEventWhereInputObjectSchema).optional()
+}).strict();
+export const CreditPackageCountOutputTypeCountEventsArgsObjectSchema = __makeSchema_CreditPackageCountOutputTypeCountEventsArgs_schema();
+export const CreditPackageCountOutputTypeCountEventsArgsObjectZodSchema = __makeSchema_CreditPackageCountOutputTypeCountEventsArgs_schema();
 
 
 // File: UserCountOutputTypeArgs.schema.ts
@@ -20846,6 +22028,14 @@ export const OrganizationCountOutputTypeCountCreditEventsArgsObjectSchema = __ma
 export const OrganizationCountOutputTypeCountCreditEventsArgsObjectZodSchema = __makeSchema_OrganizationCountOutputTypeCountCreditEventsArgs_schema();
 
 
+// File: OrganizationCountOutputTypeCountAuditLogsArgs.schema.ts
+const __makeSchema_OrganizationCountOutputTypeCountAuditLogsArgs_schema = () => z.object({
+  where: z.lazy(() => AuditLogWhereInputObjectSchema).optional()
+}).strict();
+export const OrganizationCountOutputTypeCountAuditLogsArgsObjectSchema = __makeSchema_OrganizationCountOutputTypeCountAuditLogsArgs_schema();
+export const OrganizationCountOutputTypeCountAuditLogsArgsObjectZodSchema = __makeSchema_OrganizationCountOutputTypeCountAuditLogsArgs_schema();
+
+
 // File: PurchaseSelect.schema.ts
 const __makeSchema_PurchaseSelect_schema = () => z.object({
   id: z.boolean().optional(),
@@ -20864,7 +22054,9 @@ const __makeSchema_PurchaseSelect_schema = () => z.object({
   organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
   metadata: z.boolean().optional(),
   createdAt: z.boolean().optional(),
-  updatedAt: z.boolean().optional()
+  updatedAt: z.boolean().optional(),
+  creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+  _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const PurchaseSelectObjectSchema: z.ZodType<Prisma.PurchaseSelect> = __makeSchema_PurchaseSelect_schema() as unknown as z.ZodType<Prisma.PurchaseSelect>;
 export const PurchaseSelectObjectZodSchema = __makeSchema_PurchaseSelect_schema();
@@ -20875,6 +22067,8 @@ const __makeSchema_AuditLogSelect_schema = () => z.object({
   id: z.boolean().optional(),
   userId: z.boolean().optional(),
   user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+  organizationId: z.boolean().optional(),
+  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
   action: z.boolean().optional(),
   ip: z.boolean().optional(),
   userAgent: z.boolean().optional(),
@@ -21070,8 +22264,11 @@ const __makeSchema_CreditPackageSelect_schema = () => z.object({
   consumed: z.boolean().optional(),
   expiresAt: z.boolean().optional(),
   purchaseId: z.boolean().optional(),
+  purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
   priority: z.boolean().optional(),
-  createdAt: z.boolean().optional()
+  events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+  createdAt: z.boolean().optional(),
+  _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const CreditPackageSelectObjectSchema: z.ZodType<Prisma.CreditPackageSelect> = __makeSchema_CreditPackageSelect_schema() as unknown as z.ZodType<Prisma.CreditPackageSelect>;
 export const CreditPackageSelectObjectZodSchema = __makeSchema_CreditPackageSelect_schema();
@@ -21088,6 +22285,7 @@ const __makeSchema_CreditEventSelect_schema = () => z.object({
   amount: z.boolean().optional(),
   source: z.boolean().optional(),
   packageId: z.boolean().optional(),
+  package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional(),
   reason: z.boolean().optional(),
   metadata: z.boolean().optional(),
   idempotencyKey: z.boolean().optional(),
@@ -21210,6 +22408,7 @@ const __makeSchema_OrganizationSelect_schema = () => z.object({
   creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
   creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
   creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+  auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const OrganizationSelectObjectSchema: z.ZodType<Prisma.OrganizationSelect> = __makeSchema_OrganizationSelect_schema() as unknown as z.ZodType<Prisma.OrganizationSelect>;
@@ -21506,7 +22705,9 @@ export const TwoFactorArgsObjectZodSchema = __makeSchema_TwoFactorArgs_schema();
 // File: PurchaseInclude.schema.ts
 const __makeSchema_PurchaseInclude_schema = () => z.object({
   user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional()
+  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+  creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+  _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const PurchaseIncludeObjectSchema: z.ZodType<Prisma.PurchaseInclude> = __makeSchema_PurchaseInclude_schema() as unknown as z.ZodType<Prisma.PurchaseInclude>;
 export const PurchaseIncludeObjectZodSchema = __makeSchema_PurchaseInclude_schema();
@@ -21514,7 +22715,8 @@ export const PurchaseIncludeObjectZodSchema = __makeSchema_PurchaseInclude_schem
 
 // File: AuditLogInclude.schema.ts
 const __makeSchema_AuditLogInclude_schema = () => z.object({
-  user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional()
+  user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional()
 }).strict();
 export const AuditLogIncludeObjectSchema: z.ZodType<Prisma.AuditLogInclude> = __makeSchema_AuditLogInclude_schema() as unknown as z.ZodType<Prisma.AuditLogInclude>;
 export const AuditLogIncludeObjectZodSchema = __makeSchema_AuditLogInclude_schema();
@@ -21603,7 +22805,10 @@ export const CreditBalanceIncludeObjectZodSchema = __makeSchema_CreditBalanceInc
 // File: CreditPackageInclude.schema.ts
 const __makeSchema_CreditPackageInclude_schema = () => z.object({
   user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional()
+  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+  purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
+  events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+  _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const CreditPackageIncludeObjectSchema: z.ZodType<Prisma.CreditPackageInclude> = __makeSchema_CreditPackageInclude_schema() as unknown as z.ZodType<Prisma.CreditPackageInclude>;
 export const CreditPackageIncludeObjectZodSchema = __makeSchema_CreditPackageInclude_schema();
@@ -21612,7 +22817,8 @@ export const CreditPackageIncludeObjectZodSchema = __makeSchema_CreditPackageInc
 // File: CreditEventInclude.schema.ts
 const __makeSchema_CreditEventInclude_schema = () => z.object({
   user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional()
+  organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+  package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional()
 }).strict();
 export const CreditEventIncludeObjectSchema: z.ZodType<Prisma.CreditEventInclude> = __makeSchema_CreditEventInclude_schema() as unknown as z.ZodType<Prisma.CreditEventInclude>;
 export const CreditEventIncludeObjectZodSchema = __makeSchema_CreditEventInclude_schema();
@@ -21670,6 +22876,7 @@ const __makeSchema_OrganizationInclude_schema = () => z.object({
   creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
   creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
   creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+  auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const OrganizationIncludeObjectSchema: z.ZodType<Prisma.OrganizationInclude> = __makeSchema_OrganizationInclude_schema() as unknown as z.ZodType<Prisma.OrganizationInclude>;
@@ -21744,7 +22951,9 @@ export const PurchaseFindFirstSelectSchema__findFirstPurchase_schema: z.ZodType<
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    updatedAt: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+    _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.PurchaseSelect>;
 
 export const PurchaseFindFirstSelectZodSchema__findFirstPurchase_schema = z.object({
@@ -21764,7 +22973,9 @@ export const PurchaseFindFirstSelectZodSchema__findFirstPurchase_schema = z.obje
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    updatedAt: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+    _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
 export const PurchaseFindFirstSchema: z.ZodType<Prisma.PurchaseFindFirstArgs> = z.object({ select: PurchaseFindFirstSelectSchema__findFirstPurchase_schema.optional(), include: z.lazy(() => PurchaseIncludeObjectSchema.optional()), orderBy: z.union([PurchaseOrderByWithRelationInputObjectSchema, PurchaseOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseWhereInputObjectSchema.optional(), cursor: PurchaseWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([PurchaseScalarFieldEnumSchema, PurchaseScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.PurchaseFindFirstArgs>;
@@ -21793,7 +23004,9 @@ export const PurchaseFindFirstOrThrowSelectSchema__findFirstOrThrowPurchase_sche
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    updatedAt: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+    _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.PurchaseSelect>;
 
 export const PurchaseFindFirstOrThrowSelectZodSchema__findFirstOrThrowPurchase_schema = z.object({
@@ -21813,7 +23026,9 @@ export const PurchaseFindFirstOrThrowSelectZodSchema__findFirstOrThrowPurchase_s
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    updatedAt: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+    _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
 export const PurchaseFindFirstOrThrowSchema: z.ZodType<Prisma.PurchaseFindFirstOrThrowArgs> = z.object({ select: PurchaseFindFirstOrThrowSelectSchema__findFirstOrThrowPurchase_schema.optional(), include: z.lazy(() => PurchaseIncludeObjectSchema.optional()), orderBy: z.union([PurchaseOrderByWithRelationInputObjectSchema, PurchaseOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseWhereInputObjectSchema.optional(), cursor: PurchaseWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([PurchaseScalarFieldEnumSchema, PurchaseScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.PurchaseFindFirstOrThrowArgs>;
@@ -21842,7 +23057,9 @@ export const PurchaseFindManySelectSchema__findManyPurchase_schema: z.ZodType<Pr
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    updatedAt: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+    _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.PurchaseSelect>;
 
 export const PurchaseFindManySelectZodSchema__findManyPurchase_schema = z.object({
@@ -21862,7 +23079,9 @@ export const PurchaseFindManySelectZodSchema__findManyPurchase_schema = z.object
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    updatedAt: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
+    _count: z.union([z.boolean(), z.lazy(() => PurchaseCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
 export const PurchaseFindManySchema: z.ZodType<Prisma.PurchaseFindManyArgs> = z.object({ select: PurchaseFindManySelectSchema__findManyPurchase_schema.optional(), include: z.lazy(() => PurchaseIncludeObjectSchema.optional()), orderBy: z.union([PurchaseOrderByWithRelationInputObjectSchema, PurchaseOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseWhereInputObjectSchema.optional(), cursor: PurchaseWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([PurchaseScalarFieldEnumSchema, PurchaseScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.PurchaseFindManyArgs>;
@@ -21962,6 +23181,8 @@ export const AuditLogFindFirstSelectSchema__findFirstAuditLog_schema: z.ZodType<
     id: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+    organizationId: z.boolean().optional(),
+    organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     action: z.boolean().optional(),
     ip: z.boolean().optional(),
     userAgent: z.boolean().optional(),
@@ -21973,6 +23194,8 @@ export const AuditLogFindFirstSelectZodSchema__findFirstAuditLog_schema = z.obje
     id: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+    organizationId: z.boolean().optional(),
+    organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     action: z.boolean().optional(),
     ip: z.boolean().optional(),
     userAgent: z.boolean().optional(),
@@ -21993,6 +23216,8 @@ export const AuditLogFindFirstOrThrowSelectSchema__findFirstOrThrowAuditLog_sche
     id: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+    organizationId: z.boolean().optional(),
+    organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     action: z.boolean().optional(),
     ip: z.boolean().optional(),
     userAgent: z.boolean().optional(),
@@ -22004,6 +23229,8 @@ export const AuditLogFindFirstOrThrowSelectZodSchema__findFirstOrThrowAuditLog_s
     id: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+    organizationId: z.boolean().optional(),
+    organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     action: z.boolean().optional(),
     ip: z.boolean().optional(),
     userAgent: z.boolean().optional(),
@@ -22024,6 +23251,8 @@ export const AuditLogFindManySelectSchema__findManyAuditLog_schema: z.ZodType<Pr
     id: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+    organizationId: z.boolean().optional(),
+    organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     action: z.boolean().optional(),
     ip: z.boolean().optional(),
     userAgent: z.boolean().optional(),
@@ -22035,6 +23264,8 @@ export const AuditLogFindManySelectZodSchema__findManyAuditLog_schema = z.object
     id: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+    organizationId: z.boolean().optional(),
+    organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     action: z.boolean().optional(),
     ip: z.boolean().optional(),
     userAgent: z.boolean().optional(),
@@ -24054,8 +25285,11 @@ export const CreditPackageFindFirstSelectSchema__findFirstCreditPackage_schema: 
     consumed: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     purchaseId: z.boolean().optional(),
+    purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
     priority: z.boolean().optional(),
-    createdAt: z.boolean().optional()
+    events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    createdAt: z.boolean().optional(),
+    _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.CreditPackageSelect>;
 
 export const CreditPackageFindFirstSelectZodSchema__findFirstCreditPackage_schema = z.object({
@@ -24069,8 +25303,11 @@ export const CreditPackageFindFirstSelectZodSchema__findFirstCreditPackage_schem
     consumed: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     purchaseId: z.boolean().optional(),
+    purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
     priority: z.boolean().optional(),
-    createdAt: z.boolean().optional()
+    events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    createdAt: z.boolean().optional(),
+    _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
 export const CreditPackageFindFirstSchema: z.ZodType<Prisma.CreditPackageFindFirstArgs> = z.object({ select: CreditPackageFindFirstSelectSchema__findFirstCreditPackage_schema.optional(), include: z.lazy(() => CreditPackageIncludeObjectSchema.optional()), orderBy: z.union([CreditPackageOrderByWithRelationInputObjectSchema, CreditPackageOrderByWithRelationInputObjectSchema.array()]).optional(), where: CreditPackageWhereInputObjectSchema.optional(), cursor: CreditPackageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CreditPackageScalarFieldEnumSchema, CreditPackageScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.CreditPackageFindFirstArgs>;
@@ -24093,8 +25330,11 @@ export const CreditPackageFindFirstOrThrowSelectSchema__findFirstOrThrowCreditPa
     consumed: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     purchaseId: z.boolean().optional(),
+    purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
     priority: z.boolean().optional(),
-    createdAt: z.boolean().optional()
+    events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    createdAt: z.boolean().optional(),
+    _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.CreditPackageSelect>;
 
 export const CreditPackageFindFirstOrThrowSelectZodSchema__findFirstOrThrowCreditPackage_schema = z.object({
@@ -24108,8 +25348,11 @@ export const CreditPackageFindFirstOrThrowSelectZodSchema__findFirstOrThrowCredi
     consumed: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     purchaseId: z.boolean().optional(),
+    purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
     priority: z.boolean().optional(),
-    createdAt: z.boolean().optional()
+    events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    createdAt: z.boolean().optional(),
+    _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
 export const CreditPackageFindFirstOrThrowSchema: z.ZodType<Prisma.CreditPackageFindFirstOrThrowArgs> = z.object({ select: CreditPackageFindFirstOrThrowSelectSchema__findFirstOrThrowCreditPackage_schema.optional(), include: z.lazy(() => CreditPackageIncludeObjectSchema.optional()), orderBy: z.union([CreditPackageOrderByWithRelationInputObjectSchema, CreditPackageOrderByWithRelationInputObjectSchema.array()]).optional(), where: CreditPackageWhereInputObjectSchema.optional(), cursor: CreditPackageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CreditPackageScalarFieldEnumSchema, CreditPackageScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.CreditPackageFindFirstOrThrowArgs>;
@@ -24132,8 +25375,11 @@ export const CreditPackageFindManySelectSchema__findManyCreditPackage_schema: z.
     consumed: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     purchaseId: z.boolean().optional(),
+    purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
     priority: z.boolean().optional(),
-    createdAt: z.boolean().optional()
+    events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    createdAt: z.boolean().optional(),
+    _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.CreditPackageSelect>;
 
 export const CreditPackageFindManySelectZodSchema__findManyCreditPackage_schema = z.object({
@@ -24147,8 +25393,11 @@ export const CreditPackageFindManySelectZodSchema__findManyCreditPackage_schema 
     consumed: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     purchaseId: z.boolean().optional(),
+    purchase: z.union([z.boolean(), z.lazy(() => PurchaseArgsObjectSchema)]).optional(),
     priority: z.boolean().optional(),
-    createdAt: z.boolean().optional()
+    events: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    createdAt: z.boolean().optional(),
+    _count: z.union([z.boolean(), z.lazy(() => CreditPackageCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
 export const CreditPackageFindManySchema: z.ZodType<Prisma.CreditPackageFindManyArgs> = z.object({ select: CreditPackageFindManySelectSchema__findManyCreditPackage_schema.optional(), include: z.lazy(() => CreditPackageIncludeObjectSchema.optional()), orderBy: z.union([CreditPackageOrderByWithRelationInputObjectSchema, CreditPackageOrderByWithRelationInputObjectSchema.array()]).optional(), where: CreditPackageWhereInputObjectSchema.optional(), cursor: CreditPackageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([CreditPackageScalarFieldEnumSchema, CreditPackageScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.CreditPackageFindManyArgs>;
@@ -24254,6 +25503,7 @@ export const CreditEventFindFirstSelectSchema__findFirstCreditEvent_schema: z.Zo
     amount: z.boolean().optional(),
     source: z.boolean().optional(),
     packageId: z.boolean().optional(),
+    package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
     idempotencyKey: z.boolean().optional(),
@@ -24270,6 +25520,7 @@ export const CreditEventFindFirstSelectZodSchema__findFirstCreditEvent_schema = 
     amount: z.boolean().optional(),
     source: z.boolean().optional(),
     packageId: z.boolean().optional(),
+    package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
     idempotencyKey: z.boolean().optional(),
@@ -24295,6 +25546,7 @@ export const CreditEventFindFirstOrThrowSelectSchema__findFirstOrThrowCreditEven
     amount: z.boolean().optional(),
     source: z.boolean().optional(),
     packageId: z.boolean().optional(),
+    package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
     idempotencyKey: z.boolean().optional(),
@@ -24311,6 +25563,7 @@ export const CreditEventFindFirstOrThrowSelectZodSchema__findFirstOrThrowCreditE
     amount: z.boolean().optional(),
     source: z.boolean().optional(),
     packageId: z.boolean().optional(),
+    package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
     idempotencyKey: z.boolean().optional(),
@@ -24336,6 +25589,7 @@ export const CreditEventFindManySelectSchema__findManyCreditEvent_schema: z.ZodT
     amount: z.boolean().optional(),
     source: z.boolean().optional(),
     packageId: z.boolean().optional(),
+    package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
     idempotencyKey: z.boolean().optional(),
@@ -24352,6 +25606,7 @@ export const CreditEventFindManySelectZodSchema__findManyCreditEvent_schema = z.
     amount: z.boolean().optional(),
     source: z.boolean().optional(),
     packageId: z.boolean().optional(),
+    package: z.union([z.boolean(), z.lazy(() => CreditPackageArgsObjectSchema)]).optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
     idempotencyKey: z.boolean().optional(),
@@ -25376,6 +26631,7 @@ export const OrganizationFindFirstSelectSchema__findFirstOrganization_schema: z.
     creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
     creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
     _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.OrganizationSelect>;
 
@@ -25398,6 +26654,7 @@ export const OrganizationFindFirstSelectZodSchema__findFirstOrganization_schema 
     creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
     creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
     _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
@@ -25429,6 +26686,7 @@ export const OrganizationFindFirstOrThrowSelectSchema__findFirstOrThrowOrganizat
     creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
     creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
     _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.OrganizationSelect>;
 
@@ -25451,6 +26709,7 @@ export const OrganizationFindFirstOrThrowSelectZodSchema__findFirstOrThrowOrgani
     creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
     creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
     _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
@@ -25482,6 +26741,7 @@ export const OrganizationFindManySelectSchema__findManyOrganization_schema: z.Zo
     creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
     creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
     _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
   }).strict() as unknown as z.ZodType<Prisma.OrganizationSelect>;
 
@@ -25504,6 +26764,7 @@ export const OrganizationFindManySelectZodSchema__findManyOrganization_schema = 
     creditBalances: z.union([z.boolean(), z.lazy(() => CreditBalanceFindManySchema)]).optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
     creditEvents: z.union([z.boolean(), z.lazy(() => CreditEventFindManySchema)]).optional(),
+    auditLogs: z.union([z.boolean(), z.lazy(() => AuditLogFindManySchema)]).optional(),
     _count: z.union([z.boolean(), z.lazy(() => OrganizationCountOutputTypeArgsObjectSchema)]).optional()
   }).strict();
 
@@ -26492,6 +27753,7 @@ export type PurchaseModel = z.infer<typeof PurchaseSchema>;
 export const AuditLogSchema = z.object({
   id: z.string(),
   userId: z.string().nullish(),
+  organizationId: z.string().nullish(),
   action: z.string(),
   ip: z.string().nullish(),
   userAgent: z.string().nullish(),

@@ -15,12 +15,13 @@
  *   - 5 sample AuditLog entries
  *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org
  *   - 3 demo API keys for the admin (org-scoped, user-scoped, expired)
- *   - 4 demo invoices for the acme org (paid + open)
+ *   - 4 demo invoices for the acme org (2 paid, 1 open, 1 void)
  *   - 2 demo webhooks for the acme org (active + inactive)
  *   - 4 demo notifications for the admin (read/unread, mixed types)
  *
- * Safety: the script only runs when `NODE_ENV !== "production"`. Production
- * seeding is an explicit, ticketed operation — not an auto-run.
+ * Safety: the script refuses `NODE_ENV === "production"` and any non-local
+ * `DATABASE_URL` host. Production seeding is an explicit, ticketed operation —
+ * not an auto-run.
  */
 import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "@better-auth/utils/password";
@@ -38,6 +39,17 @@ async function main() {
 		throw new Error(
 			"Refusing to seed in production. Set NODE_ENV=development.",
 		);
+	}
+
+	let seedHost: string;
+	try {
+		seedHost = new URL(env.DATABASE_URL).hostname;
+	} catch {
+		throw new Error("Refusing to seed: DATABASE_URL is not a valid URL");
+	}
+	// WHATWG URL wraps IPv6 literals in brackets — hostname reports "[::1]".
+	if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(seedHost)) {
+		throw new Error(`Refusing to seed non-local database (${seedHost})`);
 	}
 
 	console.log("Seeding development data…");
@@ -143,22 +155,33 @@ async function main() {
 	if (existingLogs === 0) {
 		await db.auditLog.createMany({
 			data: [
-				{ userId: admin.id, action: "user.sign_in", ip: "127.0.0.1" },
-				{ userId: member.id, action: "user.sign_in", ip: "127.0.0.1" },
 				{
 					userId: admin.id,
-					action: "organization.create",
-					metadata: { orgId: acme.id },
-				},
-				{
-					userId: admin.id,
-					action: "organization.invite",
-					metadata: { orgId: acme.id, email: "member@fuutu.local" },
+					organizationId: acme.id,
+					action: "auth.session_created",
+					ip: "127.0.0.1",
 				},
 				{
 					userId: member.id,
-					action: "organization.accept_invitation",
-					metadata: { orgId: acme.id },
+					organizationId: acme.id,
+					action: "auth.session_created",
+					ip: "127.0.0.1",
+				},
+				{
+					userId: admin.id,
+					organizationId: acme.id,
+					action: "org.create",
+				},
+				{
+					userId: admin.id,
+					organizationId: acme.id,
+					action: "org.invite",
+					metadata: { email: "member@fuutu.local" },
+				},
+				{
+					userId: member.id,
+					organizationId: acme.id,
+					action: "org.invite.accept",
 				},
 			],
 		});

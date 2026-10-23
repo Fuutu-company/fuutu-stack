@@ -300,6 +300,10 @@ const authOptions = {
 					try {
 						await logSessionCreated({
 							userId: session.userId,
+							activeOrganizationId:
+								typeof session.activeOrganizationId === "string"
+									? session.activeOrganizationId
+									: null,
 							ipAddress: session.ipAddress,
 							userAgent: session.userAgent,
 						});

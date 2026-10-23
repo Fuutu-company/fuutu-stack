@@ -10,6 +10,5 @@ export * from "./invoice";
 export * from "./notification";
 export * from "./organization";
 export * from "./purchase";
-export * from "./transaction";
 export * from "./user";
 export * from "./webhook";

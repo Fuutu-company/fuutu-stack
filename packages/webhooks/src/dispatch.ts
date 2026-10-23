@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
+	type JsonValue,
 	listActiveWebhooksByOrg,
 	listOrganizationsForUser,
-	type Prisma,
 	recordDelivery,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
@@ -72,7 +72,7 @@ export async function dispatchEvent(
 					webhookId: webhook.id,
 					eventId,
 					eventType: input.event,
-					payload: input.payload as Prisma.InputJsonValue,
+					payload: input.payload as JsonValue,
 					status: "pending",
 				}),
 			),

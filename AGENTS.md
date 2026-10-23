@@ -116,6 +116,8 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 | Logs | `packages/logs/` |
 | ORM/DB | `packages/db/` |
 
+Exception: `packages/db/` has no `<Domain>Provider`/config flag — callers use typed query functions, so an ORM swap is a code change inside one package, not a config flip.
+
 ---
 
 ## 3 · Workspace Structure
@@ -130,7 +132,7 @@ fuutu-stack/
 ├── packages/
 │   ├── config/        # cross-cutting config + theme.css (OKLCH)
 │   ├── env/           # env validation — saas.ts + marketing.ts + docs.ts
-│   ├── db/            # DB client + schema + queries (ORM-agnostic export)
+│   ├── db/            # DB client + schema + queries (ORM-swappable — swap = reimplement query fns; Prisma types are part of the contract)
 │   ├── auth/          # Better Auth server + client + authConfig + hooks
 │   ├── api/           # Hono app + oRPC router + procedures + middleware
 │   ├── ui/            # shadcn components (framework-agnostic, no next/* imports)
@@ -168,7 +170,7 @@ pnpm dev:saas / dev:marketing
 pnpm check                  # Biome format+lint --write  ← run before every commit
 pnpm check-types            # tsc --noEmit all workspaces ← run before every commit
 pnpm build
-pnpm db:start / db:push / db:migrate / db:generate / db:seed / db:studio / db:stop
+pnpm db:start / db:watch / db:stop / db:down / db:migrate / db:push / db:generate / db:seed / db:studio
 pnpm test:e2e / test:e2e:saas / test:e2e:marketing
 ```
 
@@ -184,16 +186,17 @@ pnpm test:e2e / test:e2e:saas / test:e2e:marketing
 // ✅
 import { z } from "zod";
 import type { User } from "@/types";
-import { db } from "@fuutu/db";
+import { getUserById } from "@fuutu/db";
 const input = z.object({ id: z.string().uuid() });
-export async function getUserById(raw: unknown): Promise<User | null> {
+export async function findUser(raw: unknown): Promise<User | null> {
   const { id } = input.parse(raw);
-  return db.user.findById(id); // use whatever your DB client exposes
+  return getUserById(id); // only exported query fns — the raw client is internal
 }
-// ❌ any, no validation, console.log in prod
+// ❌ raw client (arch-guard banned), any, no validation, console.log in prod
+import { db } from "@fuutu/db/internal/client";
 export async function get(x: any) {
   console.log("fetch", x);
-  return db.user.findById(x);
+  return db.user.findUnique({ where: { id: x } });
 }
 ```
 

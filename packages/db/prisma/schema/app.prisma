@@ -43,6 +43,8 @@ model Purchase {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  creditPackages CreditPackage[]
+
   @@unique([provider, subscriptionId])
   @@index([userId])
   @@index([organizationId])
@@ -52,16 +54,19 @@ model Purchase {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action    String
-  ip        String?
-  userAgent String?
-  metadata  Json?
-  createdAt DateTime @default(now())
+  id             String        @id @default(cuid())
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  action         String
+  ip             String?
+  userAgent      String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
 
   @@index([userId])
+  @@index([organizationId])
   @@index([action])
   @@index([createdAt])
   @@map("audit_log")
@@ -116,7 +121,7 @@ model Webhook {
   url            String
   organizationId String
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  secret         String // HMAC signing secret
+  secret         String // HMAC signing secret — stored cleartext by design: the raw value is required to sign each delivery payload
   events         String[] // array of event types
   isActive       Boolean          @default(true)
   createdAt      DateTime         @default(now())
@@ -273,7 +278,13 @@ model CreditPackage {
 
   expiresAt       DateTime?  // null = never expires
   purchaseId      String?    // FK to Purchase (type=ONE_TIME)
+  // The DB enforces 1:1 via the partial unique index
+  // `credit_package_purchaseId_key` (raw-SQL migration) — Prisma cannot
+  // express partial uniques, so the schema models this as 1:N.
+  purchase        Purchase?  @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
   priority        Int      @default(10)  // lower = consumed first; recurring has implicit priority 0
+
+  events          CreditEvent[]
 
   createdAt       DateTime @default(now())
 
@@ -295,6 +306,7 @@ model CreditEvent {
   amount          Int      // positive = consumption, negative = credit/refund
   source          String   // "recurring" | "topup" | "overage" | "refund" | "admin_grant" | "reset"
   packageId       String?  // if consumed from a top-up package
+  package         CreditPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   reason          String   // "ai_chat_message", "api_call", "document_upload", "monthly_reset", etc.
   metadata        Json?
   idempotencyKey  String?  // dedup key set on the first event of a consume — two partial unique indexes in raw SQL migration
@@ -303,6 +315,7 @@ model CreditEvent {
   @@index([userId])
   @@index([organizationId])
   @@index([meterKey])
+  @@index([packageId])
   @@index([createdAt])
   @@map("credit_event")
   @@schema("app")

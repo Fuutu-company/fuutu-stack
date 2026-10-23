@@ -117,6 +117,7 @@ describe("runJob", () => {
 			"success",
 			expect.any(Date),
 			undefined,
+			undefined,
 		);
 	});
 
@@ -173,6 +174,7 @@ describe("runAllJobs", () => {
 				"success",
 				expect.any(Date),
 				undefined,
+				expect.any(Date),
 			);
 			expect(
 				vi
@@ -288,6 +290,7 @@ describe("runAllJobs", () => {
 			"skip-me",
 			"skipped",
 			expect.any(Date),
+			undefined,
 			undefined,
 		);
 	});

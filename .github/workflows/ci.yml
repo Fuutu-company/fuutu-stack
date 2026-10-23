@@ -248,9 +248,25 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    # Postgres for the @fuutu/db integration test tier (same service as e2e-saas).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fuutu-stack
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
+      RUN_DB_TESTS: "1"
     steps:
       - uses: actions/checkout@v5
         with:
@@ -265,13 +281,32 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      # .env for dotenv-cli (db scripts + test:integration) and @fuutu/env
+      # validation — prisma.config.ts and the test script read ../../.env.
+      - name: Create .env for dotenv-cli
+        run: |
+          cat > .env << 'EOF'
+          DATABASE_URL=postgresql://postgres:password@localhost:5432/fuutu-stack
+          BETTER_AUTH_URL=http://localhost:3000
+          EOF
+          # Throwaway per-run secret — never commit a real auth secret to CI.
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+
       - run: pnpm install
 
       - run: pnpm db:generate
 
+      # `migrate deploy`, not `db:push` — the integration tests exercise the
+      # raw-SQL migrations (partial unique indexes, owner XOR CHECKs) that
+      # `prisma db push` does not apply.
+      - name: Apply DB migrations
+        run: pnpm -F @fuutu/db exec prisma migrate deploy
+
       - run: pnpm test
         env:
           FUUTU_TELEMETRY_DISABLED: "1"
+
+      - run: pnpm -F @fuutu/db test:integration
 
   # ─────────────────────────────────────────────────────────
   # E2E + Visual Regression — SaaS

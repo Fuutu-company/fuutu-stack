@@ -1,14 +1,7 @@
 import { z } from "zod";
 import { db } from "../client";
 import type { CreditBalance, CreditEvent, Prisma } from "../generated/client";
-
-/**
- * Prisma unique-violation error code. Used to recover from
- * find-then-create races now that partial unique indexes enforce
- * one credit_balance row per owner+meter.
- */
-const isUniqueViolation = (err: unknown): boolean =>
-	err instanceof Error && "code" in err && err.code === "P2002";
+import { isUniqueViolation } from "./transaction";
 
 /**
  * Re-run a transaction when a unique index rejects a concurrent
@@ -107,6 +100,26 @@ const isIdempotencyViolation = (err: unknown): boolean => {
  * already-committed winner instead of retrying a guaranteed conflict.
  */
 class CreditEventDedupSignal extends Error {}
+
+/**
+ * P2002 raised by the raw-SQL partial unique index
+ * credit_package_purchaseId_key. The index is not in the Prisma schema,
+ * so the error surfaces with the constraint or column name in
+ * meta.target/message — same shape as isIdempotencyViolation. Only a
+ * violation targeting purchaseId is a duplicate top-up; any other P2002
+ * is a real conflict and must propagate.
+ */
+const isPurchaseIdViolation = (err: unknown): boolean => {
+	if (!isUniqueViolation(err)) return false;
+	const target = (err as { meta?: { target?: unknown } }).meta?.target;
+	const haystack = `${String(target)} ${
+		err instanceof Error ? err.message : ""
+	}`;
+	return (
+		haystack.includes("purchaseId") ||
+		haystack.includes("credit_package_purchase")
+	);
+};
 
 /**
  * Reserved metadata key on the keyed credit event: stores the result of
@@ -367,6 +380,11 @@ export const consumeCreditsTx = async (params: {
 					throw new Error("Insufficient credits (concurrent consume)");
 				}
 
+				// `remaining`/`source` are best-effort snapshot values
+				// computed from the pre-debit reads — a concurrent consume
+				// committed after our snapshot can make them stale. They
+				// describe the state this transaction observed, not a
+				// guaranteed current balance.
 				const remaining =
 					Math.max(0, recurringRemaining - recurringDebit - overageDebit) +
 					(topupRemaining - topupDebit);
@@ -535,8 +553,9 @@ export const grantTopUpCreditsTx = async (params: {
 		});
 	} catch (err) {
 		// A partial unique index on credit_package(purchaseId) makes a
-		// duplicate top-up grant (e.g. webhook redelivery) a no-op.
-		if (isUniqueViolation(err)) return;
+		// duplicate top-up grant (e.g. webhook redelivery) a no-op. Any
+		// other unique violation is a real conflict — re-throw it.
+		if (isPurchaseIdViolation(err)) return;
 		throw err;
 	}
 };

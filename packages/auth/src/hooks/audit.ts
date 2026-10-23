@@ -19,6 +19,7 @@ export type AuditableUser = {
 
 export type AuditableSession = {
 	userId: string;
+	activeOrganizationId?: string | null;
 	ipAddress?: string | null;
 	userAgent?: string | null;
 };
@@ -47,6 +48,7 @@ export async function logSessionCreated(
 ): Promise<void> {
 	await audit.record({
 		userId: session.userId,
+		organizationId: session.activeOrganizationId ?? null,
 		action: "auth.session_created",
 		ip: session.ipAddress ?? null,
 		userAgent: session.userAgent ?? null,

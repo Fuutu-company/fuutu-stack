@@ -12,7 +12,7 @@ cd fuutu-stack
 pnpm install
 cp .env.example .env
 pnpm db:start        # Postgres + MinIO via docker-compose
-pnpm db:push         # push schema
+pnpm db:migrate      # apply migrations (db:push skips raw-SQL constraints)
 pnpm db:seed         # optional: seed admin@fuutu.local / DevPassword!2345
 pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 ```

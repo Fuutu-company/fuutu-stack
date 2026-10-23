@@ -18,6 +18,12 @@ function makeP2034(): Error {
 	});
 }
 
+function makeWriteConflict(): Error {
+	return Object.assign(new Error("DriverAdapterError"), {
+		cause: { kind: "TransactionWriteConflict", originalCode: "40001" },
+	});
+}
+
 function apiKeyTx(count: number) {
 	return {
 		apiKey: {
@@ -123,6 +129,29 @@ describe("createApiKeyWithinLimit", () => {
 	it("retries the transaction on P2034 serialization conflicts", async () => {
 		const txFail = apiKeyTx(0);
 		txFail.apiKey.create.mockRejectedValueOnce(makeP2034());
+		const txOk = apiKeyTx(1);
+
+		vi.mocked(db.$transaction)
+			.mockImplementationOnce(
+				async (callback) => (await callback(txFail as never)) as never,
+			)
+			.mockImplementationOnce(
+				async (callback) => (await callback(txOk as never)) as never,
+			);
+
+		const result = await createApiKeyWithinLimit({
+			userId: "user-1",
+			name: "Key",
+			max: 2,
+		});
+
+		expect(result).not.toBeNull();
+		expect(db.$transaction).toHaveBeenCalledTimes(2);
+	});
+
+	it("retries on driver-adapter TransactionWriteConflict errors", async () => {
+		const txFail = apiKeyTx(0);
+		txFail.apiKey.create.mockRejectedValueOnce(makeWriteConflict());
 		const txOk = apiKeyTx(1);
 
 		vi.mocked(db.$transaction)

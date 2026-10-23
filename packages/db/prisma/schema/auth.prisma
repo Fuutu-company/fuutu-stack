@@ -122,6 +122,7 @@ model Organization {
   creditBalances   CreditBalance[]
   creditPackages   CreditPackage[]
   creditEvents     CreditEvent[]
+  auditLogs        AuditLog[]
 
   @@unique([slug])
   @@map("organization")

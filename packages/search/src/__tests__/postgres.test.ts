@@ -33,6 +33,7 @@ const auditLogRow = {
 	id: "a1",
 	action: "user.login",
 	userId: "u1",
+	organizationId: null,
 	ip: null,
 	userAgent: null,
 	metadata: null,

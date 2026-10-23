@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { db } from "../client";
-import type { Prisma, WebhookDelivery } from "../generated/client";
+import { db, type JsonValue } from "../client";
+import type { WebhookDelivery } from "../generated/client";
 import { withSerializationRetry } from "./transaction";
 
 function generateSecret(): string {
@@ -116,7 +116,7 @@ export type WebhookDeliveryInput = {
 	webhookId: string;
 	eventId: string;
 	eventType: string;
-	payload: Prisma.InputJsonValue;
+	payload: JsonValue;
 	status: string;
 	responseCode?: number | null;
 	responseBody?: string | null;

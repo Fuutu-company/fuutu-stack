@@ -1,5 +1,4 @@
 import { db } from "../client";
-import type { Prisma } from "../generated/client";
 
 export type InvoiceInput = {
 	organizationId?: string | null;
@@ -64,7 +63,7 @@ export const getInvoiceById = (
 
 /**
  * internal — webhook callbacks only.
- * Updates an invoice by provider ID without an ownership scope because
+ * Updates an invoice by internal `id` without an ownership scope because
  * webhook callbacks authenticate via HMAC signature, not a user session.
  */
 export const updateInvoiceStatus = (
@@ -82,5 +81,3 @@ export const countInvoicesByOrg = (organizationId: string) =>
 
 export const countInvoicesByUser = (userId: string) =>
 	db.invoice.count({ where: { userId } });
-
-export type InvoiceWhereInput = Prisma.InvoiceWhereInput;

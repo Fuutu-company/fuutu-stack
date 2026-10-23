@@ -19,8 +19,8 @@ git clone https://github.com/Fuutu-company/fuutu-stack my-saas
 cd my-saas
 pnpm install
 cp .env.example .env
-pnpm db:start        # Postgres + MinIO via docker-compose
-pnpm db:push         # push schema
+pnpm db:start        # Postgres 16 + MinIO via docker-compose (local dev only)
+pnpm db:migrate      # apply migrations — includes raw-SQL constraints (db:push skips those)
 pnpm db:seed         # optional: seed admin@fuutu.local / DevPassword!2345
 pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 ```
@@ -62,7 +62,7 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 - **Prisma 7** on PostgreSQL 16
 - Split `auth` + `app` schemas
 - Generated Zod schemas from Prisma types
-- ORM-agnostic export — queries isolated in `@fuutu/db`
+- ORM-swappable queries — all callers go through typed `@fuutu/db` functions; swapping ORMs touches one package
 
 ### Frontend & UI
 - **Next.js 16** (App Router, React 19, Turbopack)
@@ -129,7 +129,7 @@ fuutu-stack/
 │   ├── content/          # TSX content collections: posts, changelog, legal
 │   ├── credits/          # credit meters + grant/consume/reset over @fuutu/db
 │   ├── cron/             # scheduled jobs (audit cleanup, reminders, telemetry)
-│   ├── db/               # Prisma client + queries (ORM-agnostic export)
+│   ├── db/               # Prisma client + queries (ORM-swappable export)
 │   ├── env/              # environment validation (@t3-oss/env-nextjs)
 │   ├── i18n/             # next-intl utilities + i18nConfig
 │   ├── license/          # checkLicense(), getLicenseMode() — compliance
