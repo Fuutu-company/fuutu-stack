@@ -134,7 +134,7 @@ export type CreditPackageScalarFieldEnum = z.infer<typeof CreditPackageScalarFie
 
 // File: CreditEventScalarFieldEnum.schema.ts
 
-export const CreditEventScalarFieldEnumSchema = z.enum(['id', 'userId', 'organizationId', 'meterKey', 'amount', 'source', 'packageId', 'reason', 'metadata', 'createdAt'])
+export const CreditEventScalarFieldEnumSchema = z.enum(['id', 'userId', 'organizationId', 'meterKey', 'amount', 'source', 'packageId', 'reason', 'metadata', 'idempotencyKey', 'createdAt'])
 
 export type CreditEventScalarFieldEnum = z.infer<typeof CreditEventScalarFieldEnumSchema>;
 
@@ -1416,6 +1416,7 @@ const crediteventwhereinputSchema = z.object({
   packageId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   reason: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   metadata: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
+  idempotencyKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
   organization: z.union([z.lazy(() => OrganizationNullableScalarRelationFilterObjectSchema), z.lazy(() => OrganizationWhereInputObjectSchema)]).optional()
@@ -1435,6 +1436,7 @@ const __makeSchema_CreditEventOrderByWithRelationInput_schema = () => z.object({
   packageId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   reason: SortOrderSchema.optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  idempotencyKey: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   organization: z.lazy(() => OrganizationOrderByWithRelationInputObjectSchema).optional()
@@ -1462,6 +1464,7 @@ const __makeSchema_CreditEventOrderByWithAggregationInput_schema = () => z.objec
   packageId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   reason: SortOrderSchema.optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  idempotencyKey: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   _count: z.lazy(() => CreditEventCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => CreditEventAvgOrderByAggregateInputObjectSchema).optional(),
@@ -1488,6 +1491,7 @@ const crediteventscalarwherewithaggregatesinputSchema = z.object({
   packageId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   reason: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   metadata: z.lazy(() => JsonNullableWithAggregatesFilterObjectSchema).optional(),
+  idempotencyKey: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
 export const CreditEventScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.CreditEventScalarWhereWithAggregatesInput> = crediteventscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.CreditEventScalarWhereWithAggregatesInput>;
@@ -3902,6 +3906,7 @@ const __makeSchema_CreditEventCreateInput_schema = () => z.object({
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutCreditEventsInputObjectSchema).optional(),
   organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema).optional()
@@ -3921,6 +3926,7 @@ const __makeSchema_CreditEventUncheckedCreateInput_schema = () => z.object({
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional()
 }).strict();
 export const CreditEventUncheckedCreateInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedCreateInput> = __makeSchema_CreditEventUncheckedCreateInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedCreateInput>;
@@ -3936,6 +3942,7 @@ const __makeSchema_CreditEventUpdateInput_schema = () => z.object({
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional(),
   organization: z.lazy(() => OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional()
@@ -3955,6 +3962,7 @@ const __makeSchema_CreditEventUncheckedUpdateInput_schema = () => z.object({
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateInput> = __makeSchema_CreditEventUncheckedUpdateInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateInput>;
@@ -3972,6 +3980,7 @@ const __makeSchema_CreditEventCreateManyInput_schema = () => z.object({
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional()
 }).strict();
 export const CreditEventCreateManyInputObjectSchema: z.ZodType<Prisma.CreditEventCreateManyInput> = __makeSchema_CreditEventCreateManyInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateManyInput>;
@@ -3987,6 +3996,7 @@ const __makeSchema_CreditEventUpdateManyMutationInput_schema = () => z.object({
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.CreditEventUpdateManyMutationInput> = __makeSchema_CreditEventUpdateManyMutationInput_schema() as unknown as z.ZodType<Prisma.CreditEventUpdateManyMutationInput>;
@@ -4004,6 +4014,7 @@ const __makeSchema_CreditEventUncheckedUpdateManyInput_schema = () => z.object({
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateManyInput> = __makeSchema_CreditEventUncheckedUpdateManyInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateManyInput>;
@@ -6587,6 +6598,7 @@ const __makeSchema_CreditEventCountOrderByAggregateInput_schema = () => z.object
   packageId: SortOrderSchema.optional(),
   reason: SortOrderSchema.optional(),
   metadata: SortOrderSchema.optional(),
+  idempotencyKey: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional()
 }).strict();
 export const CreditEventCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CreditEventCountOrderByAggregateInput> = __makeSchema_CreditEventCountOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditEventCountOrderByAggregateInput>;
@@ -6611,6 +6623,7 @@ const __makeSchema_CreditEventMaxOrderByAggregateInput_schema = () => z.object({
   source: SortOrderSchema.optional(),
   packageId: SortOrderSchema.optional(),
   reason: SortOrderSchema.optional(),
+  idempotencyKey: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional()
 }).strict();
 export const CreditEventMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CreditEventMaxOrderByAggregateInput> = __makeSchema_CreditEventMaxOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditEventMaxOrderByAggregateInput>;
@@ -6627,6 +6640,7 @@ const __makeSchema_CreditEventMinOrderByAggregateInput_schema = () => z.object({
   source: SortOrderSchema.optional(),
   packageId: SortOrderSchema.optional(),
   reason: SortOrderSchema.optional(),
+  idempotencyKey: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional()
 }).strict();
 export const CreditEventMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CreditEventMinOrderByAggregateInput> = __makeSchema_CreditEventMinOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditEventMinOrderByAggregateInput>;
@@ -14391,6 +14405,7 @@ const __makeSchema_CreditEventCreateWithoutUserInput_schema = () => z.object({
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   organization: z.lazy(() => OrganizationCreateNestedOneWithoutCreditEventsInputObjectSchema).optional()
 }).strict();
@@ -14408,6 +14423,7 @@ const __makeSchema_CreditEventUncheckedCreateWithoutUserInput_schema = () => z.o
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional()
 }).strict();
 export const CreditEventUncheckedCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedCreateWithoutUserInput> = __makeSchema_CreditEventUncheckedCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedCreateWithoutUserInput>;
@@ -15159,6 +15175,7 @@ const crediteventscalarwhereinputSchema = z.object({
   packageId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   reason: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   metadata: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
+  idempotencyKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
 export const CreditEventScalarWhereInputObjectSchema: z.ZodType<Prisma.CreditEventScalarWhereInput> = crediteventscalarwhereinputSchema as unknown as z.ZodType<Prisma.CreditEventScalarWhereInput>;
@@ -16050,6 +16067,7 @@ const __makeSchema_CreditEventCreateWithoutOrganizationInput_schema = () => z.ob
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutCreditEventsInputObjectSchema).optional()
 }).strict();
@@ -16067,6 +16085,7 @@ const __makeSchema_CreditEventUncheckedCreateWithoutOrganizationInput_schema = (
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional()
 }).strict();
 export const CreditEventUncheckedCreateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedCreateWithoutOrganizationInput> = __makeSchema_CreditEventUncheckedCreateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedCreateWithoutOrganizationInput>;
@@ -17767,6 +17786,7 @@ const __makeSchema_CreditEventCreateManyUserInput_schema = () => z.object({
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional()
 }).strict();
 export const CreditEventCreateManyUserInputObjectSchema: z.ZodType<Prisma.CreditEventCreateManyUserInput> = __makeSchema_CreditEventCreateManyUserInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateManyUserInput>;
@@ -18450,6 +18470,7 @@ const __makeSchema_CreditEventUpdateWithoutUserInput_schema = () => z.object({
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   organization: z.lazy(() => OrganizationUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional()
 }).strict();
@@ -18467,6 +18488,7 @@ const __makeSchema_CreditEventUncheckedUpdateWithoutUserInput_schema = () => z.o
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventUncheckedUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateWithoutUserInput> = __makeSchema_CreditEventUncheckedUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateWithoutUserInput>;
@@ -18483,6 +18505,7 @@ const __makeSchema_CreditEventUncheckedUpdateManyWithoutUserInput_schema = () =>
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventUncheckedUpdateManyWithoutUserInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutUserInput> = __makeSchema_CreditEventUncheckedUpdateManyWithoutUserInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutUserInput>;
@@ -18661,6 +18684,7 @@ const __makeSchema_CreditEventCreateManyOrganizationInput_schema = () => z.objec
   packageId: z.string().optional().nullable(),
   reason: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional()
 }).strict();
 export const CreditEventCreateManyOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventCreateManyOrganizationInput> = __makeSchema_CreditEventCreateManyOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventCreateManyOrganizationInput>;
@@ -19166,6 +19190,7 @@ const __makeSchema_CreditEventUpdateWithoutOrganizationInput_schema = () => z.ob
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutCreditEventsNestedInputObjectSchema).optional()
 }).strict();
@@ -19183,6 +19208,7 @@ const __makeSchema_CreditEventUncheckedUpdateWithoutOrganizationInput_schema = (
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventUncheckedUpdateWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateWithoutOrganizationInput> = __makeSchema_CreditEventUncheckedUpdateWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateWithoutOrganizationInput>;
@@ -19199,6 +19225,7 @@ const __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationInput_schema
   packageId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reason: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  idempotencyKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const CreditEventUncheckedUpdateManyWithoutOrganizationInputObjectSchema: z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutOrganizationInput> = __makeSchema_CreditEventUncheckedUpdateManyWithoutOrganizationInput_schema() as unknown as z.ZodType<Prisma.CreditEventUncheckedUpdateManyWithoutOrganizationInput>;
@@ -19934,6 +19961,7 @@ const __makeSchema_CreditEventCountAggregateInput_schema = () => z.object({
   packageId: z.literal(true).optional(),
   reason: z.literal(true).optional(),
   metadata: z.literal(true).optional(),
+  idempotencyKey: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
@@ -19967,6 +19995,7 @@ const __makeSchema_CreditEventMinAggregateInput_schema = () => z.object({
   source: z.literal(true).optional(),
   packageId: z.literal(true).optional(),
   reason: z.literal(true).optional(),
+  idempotencyKey: z.literal(true).optional(),
   createdAt: z.literal(true).optional()
 }).strict();
 export const CreditEventMinAggregateInputObjectSchema: z.ZodType<Prisma.CreditEventMinAggregateInputType> = __makeSchema_CreditEventMinAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditEventMinAggregateInputType>;
@@ -19983,6 +20012,7 @@ const __makeSchema_CreditEventMaxAggregateInput_schema = () => z.object({
   source: z.literal(true).optional(),
   packageId: z.literal(true).optional(),
   reason: z.literal(true).optional(),
+  idempotencyKey: z.literal(true).optional(),
   createdAt: z.literal(true).optional()
 }).strict();
 export const CreditEventMaxAggregateInputObjectSchema: z.ZodType<Prisma.CreditEventMaxAggregateInputType> = __makeSchema_CreditEventMaxAggregateInput_schema() as unknown as z.ZodType<Prisma.CreditEventMaxAggregateInputType>;
@@ -21060,6 +21090,7 @@ const __makeSchema_CreditEventSelect_schema = () => z.object({
   packageId: z.boolean().optional(),
   reason: z.boolean().optional(),
   metadata: z.boolean().optional(),
+  idempotencyKey: z.boolean().optional(),
   createdAt: z.boolean().optional()
 }).strict();
 export const CreditEventSelectObjectSchema: z.ZodType<Prisma.CreditEventSelect> = __makeSchema_CreditEventSelect_schema() as unknown as z.ZodType<Prisma.CreditEventSelect>;
@@ -24225,6 +24256,7 @@ export const CreditEventFindFirstSelectSchema__findFirstCreditEvent_schema: z.Zo
     packageId: z.boolean().optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
+    idempotencyKey: z.boolean().optional(),
     createdAt: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.CreditEventSelect>;
 
@@ -24240,6 +24272,7 @@ export const CreditEventFindFirstSelectZodSchema__findFirstCreditEvent_schema = 
     packageId: z.boolean().optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
+    idempotencyKey: z.boolean().optional(),
     createdAt: z.boolean().optional()
   }).strict();
 
@@ -24264,6 +24297,7 @@ export const CreditEventFindFirstOrThrowSelectSchema__findFirstOrThrowCreditEven
     packageId: z.boolean().optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
+    idempotencyKey: z.boolean().optional(),
     createdAt: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.CreditEventSelect>;
 
@@ -24279,6 +24313,7 @@ export const CreditEventFindFirstOrThrowSelectZodSchema__findFirstOrThrowCreditE
     packageId: z.boolean().optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
+    idempotencyKey: z.boolean().optional(),
     createdAt: z.boolean().optional()
   }).strict();
 
@@ -24303,6 +24338,7 @@ export const CreditEventFindManySelectSchema__findManyCreditEvent_schema: z.ZodT
     packageId: z.boolean().optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
+    idempotencyKey: z.boolean().optional(),
     createdAt: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.CreditEventSelect>;
 
@@ -24318,6 +24354,7 @@ export const CreditEventFindManySelectZodSchema__findManyCreditEvent_schema = z.
     packageId: z.boolean().optional(),
     reason: z.boolean().optional(),
     metadata: z.boolean().optional(),
+    idempotencyKey: z.boolean().optional(),
     createdAt: z.boolean().optional()
   }).strict();
 
@@ -26663,6 +26700,7 @@ export const CreditEventSchema = z.object({
   packageId: z.string().nullish(),
   reason: z.string(),
   metadata: z.unknown().refine((val) => { const getDepth = (obj: unknown, depth: number = 0): number => { if (depth > 10) return depth; if (obj === null || typeof obj !== 'object') return depth; const values = Object.values(obj as Record<string, unknown>); if (values.length === 0) return depth; return Math.max(...values.map(v => getDepth(v, depth + 1))); }; return getDepth(val) <= 10; }, "JSON nesting depth exceeds maximum of 10").nullish(),
+  idempotencyKey: z.string().nullish(),
   createdAt: z.date(),
 });
 

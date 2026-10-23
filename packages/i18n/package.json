@@ -17,6 +17,8 @@
 		"deepmerge": "catalog:"
 	},
 	"devDependencies": {
+		"@fuutu/credits": "workspace:*",
+		"@fuutu/payments": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"typescript": "catalog:",
 		"vitest": "catalog:"

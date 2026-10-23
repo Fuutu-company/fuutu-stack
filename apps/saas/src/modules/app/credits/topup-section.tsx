@@ -14,29 +14,22 @@ interface TopUpSectionProps {
 	organizationId?: string;
 }
 
-type TopupPackage = {
-	id: string;
-	meterKey: string;
-	amount: number;
-	displayPrice: string;
-	priceId: string;
-	label: string;
-	description?: string;
-	popular?: boolean;
-};
+type TopupResult = Awaited<
+	ReturnType<typeof orpc.payments.topupPackages.list.call>
+>;
 
 export function TopUpSection({ organizationId }: TopUpSectionProps) {
 	const t = useTranslations("credits.topup");
 	const [redirecting, setRedirecting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [topups, setTopups] = useState<TopupPackage[]>([]);
+	const [topups, setTopups] = useState<TopupResult["packages"]>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		const loadPackages = async () => {
 			try {
 				const result = await orpc.payments.topupPackages.list.call();
-				setTopups((result as { packages: TopupPackage[] }).packages ?? []);
+				setTopups(result.packages ?? []);
 			} catch (err) {
 				log.warn("failed to load topup packages", { err });
 			} finally {
@@ -54,9 +47,7 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 				topupId,
 				organizationId,
 			});
-			if (result && typeof result === "object" && "url" in result) {
-				window.location.href = result.url as string;
-			}
+			window.location.href = result.url;
 		} catch (err) {
 			log.warn("topup checkout failed", { err });
 			setError(t("unavailable"));
@@ -103,9 +94,15 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 							<div className="flex items-center gap-2">
 								<Zap className="size-5 text-muted-foreground" />
 								<div>
-									<p className="font-medium">{topup.label}</p>
+									<p className="font-medium">
+										{t.has(`packages.${topup.id}.label`)
+											? t(`packages.${topup.id}.label`)
+											: topup.label}
+									</p>
 									<p className="text-muted-foreground text-xs">
-										{topup.description}
+										{t.has(`packages.${topup.id}.description`)
+											? t(`packages.${topup.id}.description`)
+											: topup.description}
 									</p>
 								</div>
 							</div>

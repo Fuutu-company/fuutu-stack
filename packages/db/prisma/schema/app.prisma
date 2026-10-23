@@ -297,6 +297,7 @@ model CreditEvent {
   packageId       String?  // if consumed from a top-up package
   reason          String   // "ai_chat_message", "api_call", "document_upload", "monthly_reset", etc.
   metadata        Json?
+  idempotencyKey  String?  // dedup key set on the first event of a consume — two partial unique indexes in raw SQL migration
   createdAt       DateTime @default(now())
 
   @@index([userId])

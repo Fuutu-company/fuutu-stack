@@ -98,7 +98,7 @@ Every domain behind an interface — swap providers without touching business lo
 - **Onboarding** — guided setup flow
 - **Settings** — profile, API keys, billing
 - **Admin** — audit logs, user management
-- **Billing** — plans, subscriptions, invoices
+- **Billing** — plans, subscriptions, invoices, credit metering + top-up packages
 
 ### Infrastructure
 - **Turborepo** + pnpm workspaces (version-catalog)
@@ -127,6 +127,7 @@ fuutu-stack/
 │   ├── auth/             # Better Auth (server + client)
 │   ├── config/           # cross-cutting config + theme.css
 │   ├── content/          # TSX content collections: posts, changelog, legal
+│   ├── credits/          # credit meters + grant/consume/reset over @fuutu/db
 │   ├── cron/             # scheduled jobs (audit cleanup, reminders, telemetry)
 │   ├── db/               # Prisma client + queries (ORM-agnostic export)
 │   ├── env/              # environment validation (@t3-oss/env-nextjs)

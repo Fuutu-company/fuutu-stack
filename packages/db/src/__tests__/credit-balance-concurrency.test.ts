@@ -165,7 +165,13 @@ describe("credit-balance queries - concurrency safety", () => {
 			});
 
 			expect(mockTx.creditBalance.updateMany).toHaveBeenCalledWith({
-				where: { id: "balance-1" },
+				where: {
+					id: "balance-1",
+					OR: [
+						{ recurringGranted: { not: 200 } },
+						{ recurringPeriodEnd: { not: new Date("2025-01-01") } },
+					],
+				},
 				data: {
 					recurringGranted: 200,
 					recurringConsumed: 0,

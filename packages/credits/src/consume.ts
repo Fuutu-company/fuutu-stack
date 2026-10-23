@@ -14,10 +14,11 @@ export const ConsumeCreditsSchema = ownerXorCheck(
 	z.object({
 		userId: z.string().optional(),
 		organizationId: z.string().optional(),
-		meterKey: z.string(),
-		amount: z.number().int().positive(),
+		meterKey: z.string().min(1),
+		amount: z.number().int().positive().max(2_147_483_647),
 		reason: z.string(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
+		idempotencyKey: z.string().min(1).max(255).optional(),
 	}),
 );
 
@@ -28,6 +29,7 @@ export interface ConsumeCreditsParams {
 	amount: number;
 	reason: string;
 	metadata?: Record<string, unknown>;
+	idempotencyKey?: string;
 }
 
 export interface ConsumeCreditsResult {
@@ -36,6 +38,7 @@ export interface ConsumeCreditsResult {
 	remaining: number;
 	source: "recurring" | "topup" | "overage";
 	error?: "credits_exceeded";
+	deduplicated?: boolean;
 }
 
 /**
@@ -50,8 +53,15 @@ export interface ConsumeCreditsResult {
 export async function consumeCredits(
 	params: ConsumeCreditsParams,
 ): Promise<ConsumeCreditsResult> {
-	const { userId, organizationId, meterKey, amount, reason, metadata } =
-		ConsumeCreditsSchema.parse(params);
+	const {
+		userId,
+		organizationId,
+		meterKey,
+		amount,
+		reason,
+		metadata,
+		idempotencyKey,
+	} = ConsumeCreditsSchema.parse(params);
 
 	const meter = getMeter(meterKey);
 	if (!meter) {
@@ -65,6 +75,7 @@ export async function consumeCredits(
 		amount,
 		reason,
 		metadata,
+		idempotencyKey,
 		allowOverage: meter.allowOverage ?? false,
 	});
 
@@ -91,8 +102,8 @@ export const CheckCreditsSchema = ownerXorCheck(
 	z.object({
 		userId: z.string().optional(),
 		organizationId: z.string().optional(),
-		meterKey: z.string(),
-		amount: z.number().int().positive(),
+		meterKey: z.string().min(1),
+		amount: z.number().int().positive().max(2_147_483_647),
 	}),
 );
 
@@ -103,12 +114,9 @@ export const CheckCreditsSchema = ownerXorCheck(
  * function performs its own transactional validation, so a stale read here is not
  * a security issue — it may only show outdated information to the user.
  */
-export async function checkCredits(params: {
-	userId?: string;
-	organizationId?: string;
-	meterKey: string;
-	amount: number;
-}): Promise<{
+export async function checkCredits(
+	params: z.infer<typeof CheckCreditsSchema>,
+): Promise<{
 	allowed: boolean;
 	remaining: number;
 	wouldUseTopup: boolean;

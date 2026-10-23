@@ -22,10 +22,15 @@
 		"source": {
 			"recurring": "Monatlich",
 			"topup": "Aufladung",
-			"overage": "Überbuchung",
+			"overage": "Mehrverbrauch",
 			"refund": "Rückerstattung",
 			"admin_grant": "Gewährt",
 			"reset": "Zurückgesetzt"
+		},
+		"meters": {
+			"ai_tokens": "KI-Tokens",
+			"api_calls": "API-Aufrufe",
+			"documents": "Dokumente"
 		},
 		"topup": {
 			"title": "Weitere Credits kaufen",
@@ -34,7 +39,21 @@
 			"popular": "Beliebt",
 			"perPackage": "pro Paket",
 			"redirecting": "Weiterleitung zum Checkout...",
-			"unavailable": "Top-Ups sind derzeit nicht verfügbar."
+			"unavailable": "Top-Ups sind derzeit nicht verfügbar.",
+			"packages": {
+				"ai_tokens_100k": {
+					"label": "100K KI-Tokens",
+					"description": "Laden Sie Ihr KI-Token-Guthaben auf"
+				},
+				"ai_tokens_500k": {
+					"label": "500K KI-Tokens",
+					"description": "Bestes Angebot für KI-Tokens"
+				},
+				"api_calls_50k": {
+					"label": "50K API-Aufrufe",
+					"description": "Laden Sie Ihr API-Aufruf-Guthaben auf"
+				}
+			}
 		}
 	}
 }

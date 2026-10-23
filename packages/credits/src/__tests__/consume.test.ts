@@ -134,6 +134,71 @@ describe("consumeCredits", () => {
 		expect(result).toEqual(exceededResult);
 	});
 
+	it("passes deduplicated through from the tx result", async () => {
+		vi.mocked(consumeCreditsTx).mockResolvedValue({
+			ok: true,
+			consumed: 10,
+			remaining: 90,
+			source: "recurring",
+			deduplicated: true,
+		});
+
+		const result = await consumeCredits({
+			userId: "user-1",
+			meterKey: "ai_tokens",
+			amount: 10,
+			reason: "test",
+			idempotencyKey: "idem-1",
+		});
+
+		expect(result.deduplicated).toBe(true);
+	});
+
+	it("propagates tx errors", async () => {
+		vi.mocked(consumeCreditsTx).mockRejectedValue(new Error("db down"));
+
+		await expect(
+			consumeCredits({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 10,
+				reason: "test",
+			}),
+		).rejects.toThrow("db down");
+	});
+
+	it("passes idempotencyKey through to tx", async () => {
+		vi.mocked(consumeCreditsTx).mockResolvedValue({
+			ok: true,
+			consumed: 10,
+			remaining: 90,
+			source: "recurring",
+		});
+
+		await consumeCredits({
+			userId: "user-1",
+			meterKey: "ai_tokens",
+			amount: 10,
+			reason: "test",
+			idempotencyKey: "idem-1",
+		});
+
+		expect(consumeCreditsTx).toHaveBeenCalledWith(
+			expect.objectContaining({ idempotencyKey: "idem-1" }),
+		);
+	});
+
+	it("rejects amount above int4 max", async () => {
+		await expect(
+			consumeCredits({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 2_147_483_648,
+				reason: "test",
+			}),
+		).rejects.toThrow();
+	});
+
 	it("rejects non-positive amount via schema", async () => {
 		await expect(
 			consumeCredits({
@@ -217,12 +282,6 @@ describe("checkCredits", () => {
 	});
 
 	it("rejects a non-positive amount via schema", async () => {
-		vi.mocked(getCreditBalance).mockResolvedValue({
-			recurringGranted: 100,
-			recurringConsumed: 0,
-		} as never);
-		vi.mocked(getActiveCreditPackages).mockResolvedValue([]);
-
 		await expect(
 			checkCredits({ userId: "user-1", meterKey: "ai_tokens", amount: 0 }),
 		).rejects.toThrow();
@@ -232,12 +291,6 @@ describe("checkCredits", () => {
 	});
 
 	it("rejects a non-integer amount via schema", async () => {
-		vi.mocked(getCreditBalance).mockResolvedValue({
-			recurringGranted: 100,
-			recurringConsumed: 0,
-		} as never);
-		vi.mocked(getActiveCreditPackages).mockResolvedValue([]);
-
 		await expect(
 			checkCredits({ userId: "user-1", meterKey: "ai_tokens", amount: 1.5 }),
 		).rejects.toThrow();
