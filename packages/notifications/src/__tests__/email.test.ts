@@ -88,6 +88,26 @@ describe("EmailChannel", () => {
 		);
 	});
 
+	it("drops an invalid data.locale when the user record has no usable locale", async () => {
+		vi.mocked(getUserById).mockResolvedValue({
+			id: "user-1",
+			email: "user@example.com",
+			name: "Bob",
+			locale: null,
+		} as never);
+
+		await emailChannel.send("user-1", "system", "Hello", "Body", {
+			locale: "fr",
+		});
+
+		expect(sendEmail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				to: "user@example.com",
+				data: expect.objectContaining({ locale: undefined }),
+			}),
+		);
+	});
+
 	it("skips send when no recipient can be resolved", async () => {
 		vi.mocked(getUserById).mockResolvedValue(null);
 
