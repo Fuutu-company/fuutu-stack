@@ -17,7 +17,7 @@ export interface LoggerOptions {
 // Audit logs — persistent, append-only, forensic. Lives alongside the
 // ephemeral evlog log stream so every `audit.record(…)` call:
 //   1. writes the canonical row via the active AuditSink (source of truth)
-//   2. mirrors an `info` entry through evlog for devs
+//   2. mirrors an `info` line through console for devs (browser-safe — see audit.ts)
 // ──────────────────────────────────────────────────────────────────────────
 
 export interface AuditEvent {
@@ -40,5 +40,5 @@ export interface AuditSink {
 }
 
 export interface AuditLogger {
-	record(event: Omit<AuditEvent, "action"> & { action: string }): Promise<void>;
+	record(event: AuditEvent): Promise<void>;
 }

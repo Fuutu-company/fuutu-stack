@@ -1,9 +1,10 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-// Must stay in sync with VALID_DRAINS in packages/logs/src/config.ts —
-// @fuutu/logs reads process.env.LOG_DRAIN directly (documented exception),
-// this schema is the app-facing validation for the same CSV format.
+// Must stay in sync with packages/logs/src/config.ts — @fuutu/logs reads
+// process.env.LOG_DRAIN/LOG_AUDIT_SINK/LOG_LEVEL/SERVICE_NAME directly
+// (documented exception), this schema is the app-facing validation for
+// the same vars.
 const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
 
 export const env = createEnv({
@@ -110,6 +111,9 @@ export const env = createEnv({
 			.optional(),
 		LOG_AUDIT_SINK: z.enum(["console", "db"]).default("console"),
 		LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+		// Service label for log output — read directly by @fuutu/logs
+		// (documented exception, see top of file); optional, default "fuutu".
+		SERVICE_NAME: z.string().optional(),
 		// Fuutu Business License & Telemetry
 		FUUTU_LICENSE_KEY: z.string().optional(),
 		FUUTU_LICENSE_ENDPOINT: z.url().optional(),
@@ -204,6 +208,7 @@ export const env = createEnv({
 		LOG_DRAIN: process.env.LOG_DRAIN,
 		LOG_AUDIT_SINK: process.env.LOG_AUDIT_SINK,
 		LOG_LEVEL: process.env.LOG_LEVEL,
+		SERVICE_NAME: process.env.SERVICE_NAME,
 		FUUTU_LICENSE_KEY: process.env.FUUTU_LICENSE_KEY,
 		FUUTU_LICENSE_ENDPOINT: process.env.FUUTU_LICENSE_ENDPOINT,
 		FUUTU_TELEMETRY_ENDPOINT: process.env.FUUTU_TELEMETRY_ENDPOINT,

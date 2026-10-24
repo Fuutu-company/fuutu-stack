@@ -1,6 +1,12 @@
+import { createEvlog } from "@fuutu/logs/next";
 import { getObjectStream, storageConfig } from "@fuutu/storage";
 import type { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth-server";
+
+// evlog route-handler integration — wraps GET so each image-proxy request
+// emits a single wide event (method/path/status/duration). Events go
+// through the global logger configured by initLogs() in instrumentation.ts.
+const { withEvlog } = createEvlog({ service: "saas" });
 
 /**
  * Image proxy for private buckets.
@@ -26,7 +32,7 @@ const ALIAS_TO_BUCKET: Record<string, string> = {
 	"organization-logos": storageConfig.buckets.organizationLogos,
 };
 
-export async function GET(
+export const GET = withEvlog(async function GET(
 	_req: NextRequest,
 	{ params }: { params: Promise<{ path: string[] }> },
 ) {
@@ -70,4 +76,4 @@ export async function GET(
 			"cache-control": "private, max-age=300",
 		},
 	});
-}
+});

@@ -83,6 +83,18 @@ describe("logsConfig", () => {
 		warn.mockRestore();
 	});
 
+	it("strips line breaks from untrusted values in warnings", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		process.env.LOG_DRAIN = "bogus\ninjected";
+		expect(logsConfig.drains).toEqual([]);
+		expect(String(warn.mock.calls[0]?.[0])).not.toMatch(/[\r\n]/);
+
+		process.env.LOG_LEVEL = "bogus\r\ninjected";
+		expect(logsConfig.level).toBe("info");
+		expect(String(warn.mock.calls[1]?.[0])).not.toMatch(/[\r\n]/);
+		warn.mockRestore();
+	});
+
 	it("warns on invalid LOG_LEVEL", () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 		process.env.LOG_LEVEL = "bogus";

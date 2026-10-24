@@ -39,8 +39,6 @@ async function loadDrain(id: DrainId): Promise<DrainFn | null> {
 			adapter = createMemoryDrain() as AdapterDrainFn;
 			break;
 		}
-		default:
-			return null;
 	}
 	// Adapter accepts DrainContext | DrainContext[]; our DrainFn expects
 	// single DrainContext. Wrap to narrow the type.
@@ -59,7 +57,9 @@ let drainPromise: Promise<DrainFn[]> | null = null;
  * Async — callers must await it, otherwise drains silently never attach.
  * The in-flight promise is shared so concurrent calls trigger one load.
  * If no extra drains are configured, resolves to an empty array — evlog's
- * built-in console output handles it.
+ * built-in console output handles it. If resolution itself throws, the
+ * in-flight promise is cleared so the next call retries (same pattern as
+ * `initLogs` in server.ts).
  */
 export function resolveDrains(): Promise<DrainFn[]> {
 	if (cachedDrains) return Promise.resolve(cachedDrains);
@@ -85,7 +85,10 @@ export function resolveDrains(): Promise<DrainFn[]> {
 			}
 			cachedDrains = drains;
 			return drains;
-		})();
+		})().catch((error: unknown) => {
+			drainPromise = null;
+			throw error;
+		});
 	}
 	return drainPromise;
 }
@@ -104,8 +107,25 @@ export function resetDrains(): void {
  */
 export function combineDrains(drains: DrainFn[]): DrainFn | undefined {
 	if (drains.length === 0) return undefined;
-	if (drains.length === 1) return drains[0];
+	// Always wrap — even a single drain gets failure isolation so a
+	// throwing drain can't propagate back into evlog's emit path.
+	// Self-diagnostics go through console — the failing drains can't
+	// report themselves. Warn once per drain so a broken drain is
+	// visible without spamming every event. Limitation: evlog's own
+	// drain adapters swallow delivery failures internally, so this
+	// warn-once only fires for custom drains or adapter bugs — a dying
+	// Sentry backend will not surface here.
+	const warned = new Set<number>();
 	return (async (ctx: DrainContext) => {
-		await Promise.allSettled(drains.map((d) => d(ctx)));
+		const results = await Promise.allSettled(drains.map((d) => d(ctx)));
+		for (const [index, result] of results.entries()) {
+			if (result.status === "rejected" && !warned.has(index)) {
+				warned.add(index);
+				console.warn(
+					`[logs] drain #${index} failed at runtime — continuing with remaining drains.`,
+					result.reason,
+				);
+			}
+		}
 	}) as DrainFn;
 }

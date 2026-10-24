@@ -34,7 +34,6 @@
 		"evlog": "catalog:"
 	},
 	"devDependencies": {
-		"@fuutu/test-utils": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"typescript": "catalog:",
 		"vitest": "catalog:"

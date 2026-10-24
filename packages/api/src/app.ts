@@ -21,6 +21,9 @@ import { openApiHandler, rpcHandler } from "./orpc/handler";
 const log = createLogger({ scope: "api" });
 
 const docsHandler = async (c: HonoContext) => {
+	// withEvlog-wrapped handler emits the wide event — skip the request-log
+	// middleware's duplicate line (same flag as the dispatch below).
+	c.set("evlogWideEvent", true);
 	const { matched, response } = await openApiHandler.handle(c.req.raw, {
 		prefix: "/api",
 		context: {
@@ -49,11 +52,20 @@ void checkLicense();
 // telemetry endpoint with kit identity and license fingerprint.
 void pingTelemetry();
 
-export const app = new Hono()
+export const app = new Hono<{
+	Variables: { evlogWideEvent: boolean };
+}>()
 	.basePath("/api")
 	.use("*", async (c, next) => {
 		const start = performance.now();
 		await next();
+		// Requests that reach the oRPC dispatch below already emit an evlog
+		// wide event (method/path/status/duration) — don't log them twice.
+		// This stays the request log for terminal routes mounted before the
+		// dispatch (/auth/**, /health, /version, /webhooks, /cron, /docs).
+		if (c.get("evlogWideEvent")) {
+			return;
+		}
 		const { method } = c.req;
 		const path = c.req.path;
 		const status = c.res.status;
@@ -161,6 +173,11 @@ export const app = new Hono()
 	.get("/spec.json", docsHandler)
 	.use("*", async (c, next) => {
 		const context = await createContext({ context: c });
+		// Every request reaching this point goes through a withEvlog-wrapped
+		// handler, which emits one wide event per handle() call (matched,
+		// unmatched, and thrown). Flag it so the request-log middleware
+		// above skips its duplicate line.
+		c.set("evlogWideEvent", true);
 		const isRpc = c.req.path.includes("/rpc/");
 		const handler = isRpc ? rpcHandler : openApiHandler;
 		const prefix = isRpc ? "/api/rpc" : "/api";

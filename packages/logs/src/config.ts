@@ -19,6 +19,10 @@ const VALID_DRAINS = ["console", "sentry", "axiom", "fs", "memory"] as const;
 const VALID_SINKS = ["console", "db"] as const;
 const VALID_LEVELS = ["debug", "info", "warn", "error"] as const;
 
+/** Strip line breaks so untrusted env values can't inject newlines into warnings. */
+const stripLineBreaks = (value: string): string =>
+	value.replace(/[\n\r\u2028\u2029]/g, "");
+
 /**
  * Parse LOG_DRAIN env var into a list of drain ids.
  * Format: comma-separated, e.g. "sentry,fs" or "console" or "".
@@ -38,7 +42,9 @@ function parseDrains(raw: string | undefined): DrainId[] {
 				valid.push(name as DrainId);
 			}
 		} else {
-			console.warn(`[logs] Unknown drain "${name}" — ignoring.`);
+			console.warn(
+				`[logs] Unknown drain "${stripLineBreaks(name)}" — ignoring.`,
+			);
 		}
 	}
 	return valid;
@@ -52,7 +58,7 @@ function readEnv(
 	const value = process.env[key] ?? fallback;
 	if (!allowed.includes(value)) {
 		console.warn(
-			`[logs] Invalid ${key} "${value}" — falling back to "${fallback}".`,
+			`[logs] Invalid ${key} "${stripLineBreaks(value)}" — falling back to "${fallback}".`,
 		);
 		return fallback;
 	}

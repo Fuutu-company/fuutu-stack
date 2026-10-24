@@ -34,8 +34,11 @@ import { sendEmail } from "./lib/email";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
 // Postgres `AuditLog` table — but only when LOG_AUDIT_SINK=db (the default is
-// "console"). The logs package can't auto-resolve the db sink because
-// @fuutu/db depends on `pg` (Node-only) and would leak into client bundles.
+// "console"). Registration lives here because @fuutu/auth owns the @fuutu/db
+// dependency edge; @fuutu/logs stays dependency-free so it can never import
+// the Prisma sink itself (@fuutu/db pulls `pg`, Node-only, and would leak
+// into client bundles). This runs at import time — server contexts that
+// never import @fuutu/auth keep the console sink, which is intentional.
 if (logsConfig.auditSink === "db") {
 	setAuditSink(prismaAuditSink);
 }

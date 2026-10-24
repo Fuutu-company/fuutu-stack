@@ -44,5 +44,6 @@ export type {
 	AuditSink,
 	Logger,
 	LoggerOptions,
+	LogLevel,
 	LogMeta,
 } from "./types";
