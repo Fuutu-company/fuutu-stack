@@ -36,7 +36,7 @@ convenience and does **not** override the binding text.
   https://stack.fuutu.com/pricing.
 - **Free for small teams.** You may use the Kit at no charge if you qualify
   as an *Eligible User* under section 3.
-- **Paid for larger organisations.** Once you exceed the Eligibility
+- **Paid for larger organisations.** Once you exceed **both** Eligibility
   Thresholds you must obtain a **Fuutu Enterprise License** under section 4.
 - **No reselling as a competitor.** You may not redistribute the Kit, or a
   Derivative Work, as a competing starter-kit, boilerplate, template,
@@ -65,15 +65,17 @@ binding text controls.
   or website built using the Kit and made available to the Licensee, the
   Licensee's employees, or the Licensee's end-users.
 - **"Annual Revenue"** — the total worldwide gross revenue, in any
-  currency normalised to EUR using the European Central Bank reference
+  currency normalised to USD using the European Central Bank reference
   rate, recognised by the Licensee and any entity controlling, controlled
   by or under common control with the Licensee, in the most recently
   completed fiscal year.
 - **"Headcount"** — the total number of natural persons employed by, or
   acting as long-term contractor for (≥ 20 hours / week, ≥ 90 days), the
   Licensee and its affiliates, regardless of role.
-- **"Eligibility Thresholds"** — Annual Revenue **≤ 250,000 EUR** *and*
-  Headcount **≤ 10**.
+- **"Eligibility Thresholds"** — Annual Revenue **≤ 250,000 USD** *or*
+  Headcount **≤ 10**. The thresholds are satisfied as long as **at least
+  one** of the two conditions holds; they are exceeded only when **both**
+  are exceeded.
 - **"Fuutu"** — the legal entity publishing the Kit and holding the
   copyright and trademarks referenced in section 8.
 - **"MCP Subscription"** — the recurring paid subscription described in
@@ -101,8 +103,9 @@ worldwide, non-exclusive, non-transferable, royalty-free license to use,
 modify and run the Kit to build and operate Production Applications, **as
 long as you stay within the Eligibility Thresholds** at all times.
 
-You **lose** this free grant on the day you exceed either Eligibility
-Threshold. From that day you must, within 30 calendar days, either:
+You **lose** this free grant on the day you exceed **both** Eligibility
+Thresholds — that is, Annual Revenue **> 250,000 USD** *and* Headcount
+**> 10**. From that day you must, within 30 calendar days, either:
 
 1. obtain a **Fuutu Enterprise License** under section 4, **or**
 2. cease all use of the Kit and remove all copies in your possession or
@@ -132,7 +135,7 @@ reference at the moment of purchase.
 The MCP Subscription is **not** a license to the Kit itself: it does
 not lift the Eligibility Thresholds in section 3, does not grant
 additional rights under section 5, and does not waive any restriction in
-section 6 or 6a. A subscriber who exceeds the Eligibility Thresholds
+section 6 or 6a. A subscriber who exceeds **both** Eligibility Thresholds
 still requires a Fuutu Enterprise License under section 4.
 
 A valid MCP Subscription is identified by an MCP API key issued by Fuutu;
@@ -144,9 +147,9 @@ additional cost.
 
 ## 4. Fuutu Enterprise License
 
-Use of the Kit by a Licensee that does not satisfy the Eligibility
-Thresholds, or use that falls outside the scope of section 3, requires a
-**Fuutu Enterprise License**.
+Use of the Kit by a Licensee that does not satisfy **at least one of**
+the Eligibility Thresholds, or use that falls outside the scope of
+section 3, requires a **Fuutu Enterprise License**.
 
 The Fuutu Enterprise License is sold by Fuutu and entitles the holder to
 the rights of section 3 plus enterprise terms (priority support, indemnity

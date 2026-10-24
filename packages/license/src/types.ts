@@ -22,9 +22,17 @@
 export type LicenseMode = "oss" | "mcp" | "enterprise";
 
 export type LicenseStatus = {
-	/** Resolved mode — `"oss"` if no key is configured. */
+	/**
+	 * Resolved mode — `"oss"` when no key is configured, and also the
+	 * mode reported when a configured key failed to validate
+	 * (`valid: false`; see `reason`).
+	 */
 	mode: LicenseMode;
-	/** True when a configured key has been validated against the endpoint. */
+	/**
+	 * True when the kit is in a supported state — either no key is
+	 * configured (`mode: "oss"`) or a configured key validated against
+	 * the endpoint. False means the check itself failed; see `reason`.
+	 */
 	valid: boolean;
 	/** ISO date the validator last ran (in-memory cache freshness). */
 	checkedAt: string;
@@ -41,7 +49,10 @@ export type LicenseStatus = {
 };
 
 export type CheckLicenseOptions = {
-	/** Override the default endpoint (mostly for tests). */
+	/**
+	 * Override the default endpoint (mostly for tests). Never wire this
+	 * to request/caller input — the raw license key is POSTed there.
+	 */
 	endpoint?: string;
 	/** Override the configured key (mostly for tests). */
 	licenseKey?: string;

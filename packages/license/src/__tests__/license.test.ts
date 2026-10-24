@@ -127,11 +127,17 @@ describe("checkLicense()", () => {
 		globalThis.fetch = mockFetch;
 		const status = await checkLicense({ licenseKey: "", force: true });
 		expect(mockFetch).toHaveBeenCalledTimes(1);
-		const [, opts] = mockFetch.mock.calls[0]!; // guaranteed by toHaveBeenCalledTimes
-		const body = JSON.parse((opts as RequestInit).body as string) as {
+		const opts = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+		expect(opts?.signal).toBeInstanceOf(AbortSignal);
+		expect(opts?.redirect).toBe("error");
+		const body = JSON.parse(String(opts?.body)) as {
 			key: string;
+			kitName: string;
+			kitVersion: string;
 		};
 		expect(body.key).toBe("env-license-key");
+		expect(body.kitName).toBe("Fuutu-Stack");
+		expect(body.kitVersion).toBeTruthy();
 		expect(status.mode).toBe("mcp");
 	});
 
@@ -228,6 +234,7 @@ describe("checkLicense()", () => {
 		});
 		expect(status.mode).toBe("oss");
 		expect(status.valid).toBe(false);
+		expect(status.reason).toBe("expired");
 	});
 
 	it("soft-falls back to oss on timeout (abort)", async () => {
@@ -259,7 +266,7 @@ describe("checkLicense()", () => {
 
 	it("includes licenseKeyHash in the status", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "oss", valid: true }), {
+			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -314,7 +321,144 @@ describe("checkLicense()", () => {
 			force: true,
 		});
 		expect(mockFetch).toHaveBeenCalledTimes(1);
-		const [url] = mockFetch.mock.calls[0]!; // guaranteed by toHaveBeenCalledTimes
+		const url = mockFetch.mock.calls[0]?.[0];
 		expect(String(url)).toBe("https://mocked.test/api/license");
+	});
+
+	it("uses env.FUUTU_LICENSE_ENDPOINT when options.endpoint is absent", async () => {
+		envStub.FUUTU_LICENSE_ENDPOINT = "https://env-endpoint.test/validate";
+		const mockFetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		globalThis.fetch = mockFetch;
+		await checkLicense({ licenseKey: "some-key", force: true });
+		expect(mockFetch).toHaveBeenCalledTimes(1);
+		expect(String(mockFetch.mock.calls[0]?.[0])).toBe(
+			"https://env-endpoint.test/validate",
+		);
+	});
+
+	it("defaults to the contract endpoint when no endpoint is configured", async () => {
+		const mockFetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		globalThis.fetch = mockFetch;
+		await checkLicense({ licenseKey: "some-key", force: true });
+		expect(mockFetch).toHaveBeenCalledTimes(1);
+		expect(String(mockFetch.mock.calls[0]?.[0])).toBe(
+			"https://stackapp.fuutu.com/api/license/validate",
+		);
+	});
+
+	it("soft-falls back to oss when valid is true but mode is missing", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		const status = await checkLicense({
+			licenseKey: "some-key",
+			force: true,
+		});
+		expect(status.mode).toBe("oss");
+		expect(status.valid).toBe(false);
+		expect(status.reason).toBeDefined();
+	});
+
+	it("soft-falls back to oss when mode is outside the contract union", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ mode: "god-mode", valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		const status = await checkLicense({
+			licenseKey: "some-key",
+			force: true,
+		});
+		expect(status.mode).toBe("oss");
+		expect(status.valid).toBe(false);
+		expect(status.reason).toBeDefined();
+	});
+
+	it("soft-falls back to oss when the server returns mode 'oss'", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ valid: true, mode: "oss" }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		const status = await checkLicense({
+			licenseKey: "some-key",
+			force: true,
+		});
+		expect(status.mode).toBe("oss");
+		expect(status.valid).toBe(false);
+		expect(status.reason).toBeDefined();
+	});
+
+	it("re-fetches after the success cache TTL expires", async () => {
+		const mockFetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		globalThis.fetch = mockFetch;
+		let now = 1_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		await checkLicense({ licenseKey: "valid-key", force: true });
+		now += 61 * 60 * 1_000; // past the 1h TTL
+		await checkLicense({ licenseKey: "valid-key" });
+		expect(mockFetch).toHaveBeenCalledTimes(2);
+	});
+
+	it("caches failures for a short TTL, then re-fetches", async () => {
+		const mockFetch = vi.fn().mockRejectedValue(new Error("network error"));
+		globalThis.fetch = mockFetch;
+		let now = 1_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		const first = await checkLicense({ licenseKey: "some-key", force: true });
+		expect(first.valid).toBe(false);
+		now += 2 * 60 * 1_000; // within the failure TTL
+		await checkLicense({ licenseKey: "some-key" });
+		expect(mockFetch).toHaveBeenCalledTimes(1);
+		now += 4 * 60 * 1_000; // past the failure TTL
+		await checkLicense({ licenseKey: "some-key" });
+		expect(mockFetch).toHaveBeenCalledTimes(2);
+	});
+
+	it("treats a whitespace-only licenseKey as no key", async () => {
+		const mockFetch = vi.fn();
+		globalThis.fetch = mockFetch;
+		const status = await checkLicense({ licenseKey: "   ", force: true });
+		expect(status.mode).toBe("oss");
+		expect(status.valid).toBe(true);
+		expect(status.licenseKeyHash).toBe("oss");
+		expect(mockFetch).not.toHaveBeenCalled();
+	});
+
+	it("falls back to the env key when options.licenseKey is whitespace-only", async () => {
+		envStub.FUUTU_LICENSE_KEY = "env-license-key";
+		const mockFetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		globalThis.fetch = mockFetch;
+		const status = await checkLicense({ licenseKey: "   ", force: true });
+		expect(mockFetch).toHaveBeenCalledTimes(1);
+		const opts = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+		const body = JSON.parse(String(opts?.body)) as { key: string };
+		expect(body.key).toBe("env-license-key");
+		expect(status.mode).toBe("mcp");
 	});
 });
