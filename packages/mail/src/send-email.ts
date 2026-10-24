@@ -1,4 +1,4 @@
-import { resolveFromAddress, resolveProvider } from "./config";
+import { resolveFromAddress, resolveProvider } from "./resolve";
 import { renderTemplate } from "./templates";
 import type { TemplateName, TemplatePayloads } from "./types";
 
@@ -29,7 +29,7 @@ export async function sendEmail<T extends TemplateName>(
 	await provider.send({
 		from: options.from ?? resolveFromAddress(),
 		to: options.to,
-		subject: options.subject ?? rendered.subject,
+		subject: (options.subject ?? rendered.subject).replace(/[\r\n]+/g, " "),
 		html: rendered.html,
 		text: rendered.text,
 		replyTo: options.replyTo,

@@ -101,7 +101,7 @@
     7 interfaces — swap without touching business logic
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400">
-    <text x="466" y="164" fill="#F7F8F8">· Mail <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Plunk</tspan> <tspan fill="#6B6F76">(Resend, SendGrid…)</tspan></text>
+    <text x="466" y="164" fill="#F7F8F8">· Mail <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Plunk</tspan> <tspan fill="#6B6F76">(Resend, Postmark…)</tspan></text>
     <text x="466" y="188" fill="#F7F8F8">· Payments <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Creem</tspan> <tspan fill="#6B6F76">(Stripe, Polar…)</tspan></text>
     <text x="466" y="212" fill="#F7F8F8">· Storage <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">S3 + MinIO</tspan> <tspan fill="#6B6F76">(R2…)</tspan></text>
     <text x="466" y="236" fill="#F7F8F8">· Analytics <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Umami</tspan> <tspan fill="#6B6F76">(Plausible…)</tspan></text>

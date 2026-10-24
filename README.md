@@ -76,12 +76,12 @@ Every domain behind an interface — swap providers without touching business lo
 
 | Domain | Interface | Active | Skeletons |
 |---|---|---|---|
-| **Mail** | `MailProvider` | Plunk | Resend, SendGrid, Mailgun… |
-| **Payments** | `PaymentProvider` | Creem | Stripe, Polar, Paddle, LemonSqueezy… |
-| **Storage** | `StorageProvider` | S3 + MinIO | Cloudflare R2, Azure Blob… |
+| **Mail** | `EmailProvider` | Plunk (Resend implemented) | Postmark, Mailgun, Nodemailer… |
+| **Payments** | `PaymentProvider` | Creem (Stripe, Polar implemented) | LemonSqueezy, DodoPayments… |
+| **Storage** | `StorageProvider` | S3 + MinIO | Supabase, Noop… |
 | **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
 | **AI** | `AIProvider` | OpenRouter | Google, OpenAI, Anthropic, Noop… |
-| **Search** | `SearchProvider` | Postgres | MeiliSearch, Typesense, Algolia… |
+| **Search** | `SearchProvider` | Postgres | MeiliSearch, Typesense, Noop… |
 
 ### AI-Native
 - **AI provider-swappable** — OpenRouter / Google / OpenAI / Anthropic / Noop
@@ -134,7 +134,7 @@ fuutu-stack/
 │   ├── i18n/             # next-intl utilities + i18nConfig
 │   ├── license/          # checkLicense(), getLicenseMode() — compliance
 │   ├── logs/             # createLogger({ scope }) + provider interface
-│   ├── mail/             # MailProvider interface + templates
+│   ├── mail/             # EmailProvider interface + templates
 │   ├── notifications/    # in-app + multi-channel notifications
 │   ├── payments/         # PaymentProvider interface + Creem
 │   ├── rbac/             # role-based access control

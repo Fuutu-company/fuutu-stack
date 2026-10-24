@@ -2,7 +2,7 @@
  * Email configuration defaults — owned by @fuutu/mail.
  *
  * Runtime overrides live in environment variables (EMAIL_PROVIDER, EMAIL_FROM)
- * and are resolved in `../config.ts`.
+ * and are resolved in `../resolve.ts`.
  */
 import type { ProviderName } from "../types";
 

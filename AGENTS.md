@@ -86,7 +86,7 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 
 ## 2 · Tech Stack
 
-> Kit defaults — swap any provider without editing this file. Active choices: `pnpm-workspace.yaml` (catalog) + `packages/<domain>/src/config.ts`.
+> Kit defaults — swap any provider without editing this file. Active choices: `pnpm-workspace.yaml` (catalog) + `packages/<domain>/src/config.ts` (mail: `config/defaults.ts` + `resolve.ts`).
 
 | Layer | Default |
 |---|---|
@@ -355,7 +355,7 @@ Commit secrets/`.env` · edit generated files (`node_modules/`, `.next/`, `dist/
 | SaaS proxy | `apps/saas/src/proxy.ts` |
 | Marketing proxy | `apps/marketing/src/proxy.ts` |
 | Auth helpers (app) | `apps/saas/src/lib/auth-server.ts` |
-| Provider configs | `packages/<domain>/src/config.ts` |
+| Provider configs | `packages/<domain>/src/config.ts` (mail: `config/defaults.ts` + `resolve.ts`) |
 | Dep versions | `pnpm-workspace.yaml` |
 | Rules / skills / agents | host harness dirs — see host adapter |
 
