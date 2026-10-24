@@ -1,7 +1,7 @@
 {
 	"credits": {
 		"title": "Guthaben",
-		"description": "Verwalten Sie Ihre Guthaben und Nutzung",
+		"description": "Verwalte deine Guthaben und Nutzung",
 		"recurring": "Monatliches Kontingent",
 		"topups": "Aufladepakete",
 		"total": "Gesamt verbleibend",
@@ -34,7 +34,7 @@
 		},
 		"topup": {
 			"title": "Weitere Credits kaufen",
-			"description": "Füllen Sie Ihr Credit-Guthaben mit einmaligen Käufen auf",
+			"description": "Fülle dein Credit-Guthaben mit einmaligen Käufen auf",
 			"buy": "Kaufen",
 			"popular": "Beliebt",
 			"perPackage": "pro Paket",
@@ -43,7 +43,7 @@
 			"packages": {
 				"ai_tokens_100k": {
 					"label": "100K KI-Tokens",
-					"description": "Laden Sie Ihr KI-Token-Guthaben auf"
+					"description": "Lade dein KI-Token-Guthaben auf"
 				},
 				"ai_tokens_500k": {
 					"label": "500K KI-Tokens",
@@ -51,7 +51,7 @@
 				},
 				"api_calls_50k": {
 					"label": "50K API-Aufrufe",
-					"description": "Laden Sie Ihr API-Aufruf-Guthaben auf"
+					"description": "Lade dein API-Aufruf-Guthaben auf"
 				}
 			}
 		}

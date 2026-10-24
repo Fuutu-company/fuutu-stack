@@ -24,7 +24,7 @@
 			"title": "Profil",
 			"description": "Aktualisiere deine persönlichen Daten.",
 			"fullName": "Vollständiger Name",
-			"fullNamePlaceholder": "Ihr vollständiger Name",
+			"fullNamePlaceholder": "Dein vollständiger Name",
 			"emailLabel": "E-Mail",
 			"saved": "Profil aktualisiert.",
 			"failed": "Profil konnte nicht aktualisiert werden."

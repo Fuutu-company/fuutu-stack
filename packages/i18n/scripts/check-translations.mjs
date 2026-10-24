@@ -2,15 +2,17 @@
 /**
  * Translation completeness checker.
  *
- * 1. Verifies every key in en/ exists in de/ and vice versa.
+ * 1. Verifies every locale dir under translations/ contains every key.
  * 2. Warns about keys in translation files that are never referenced in source code.
  * 3. Cross-checks FEATURE_CATALOG IDs against payments.features translation keys.
+ * 4. Cross-checks CREDIT_METERS keys + CREDIT_TOPUPS ids against credits.* keys
+ *    (and warns about stale credits.meters/credits.topup.packages keys).
  *
  * Run: node packages/i18n/scripts/check-translations.mjs
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -20,6 +22,11 @@ const translationsDir = resolve(__dirname, "../translations");
 let hasErrors = false;
 
 // ─── Collect and flatten translation keys ────────────────────────────────────
+
+/** Normalize path separators so endsWith() checks work on Windows too. */
+function toPosixPath(p) {
+	return p.split(sep).join("/");
+}
 
 function collectJsonFiles(dir) {
 	const results = [];
@@ -65,12 +72,20 @@ function loadLocaleKeys(locale) {
 
 // ─── Scan source files for translation key usage ──────────────────────────────
 
+const SKIP_DIRS = new Set([
+	"node_modules",
+	".next",
+	"dist",
+	".turbo",
+	"coverage",
+	"out",
+]);
+
 function scanTsFiles(dir) {
 	const files = [];
 	try {
 		for (const entry of readdirSync(dir)) {
-			if (entry === "node_modules" || entry === ".next" || entry === "dist")
-				continue;
+			if (SKIP_DIRS.has(entry)) continue;
 			const full = join(dir, entry);
 			if (statSync(full).isDirectory()) {
 				files.push(...scanTsFiles(full));
@@ -84,25 +99,38 @@ function scanTsFiles(dir) {
 	return files;
 }
 
+function collectSourceDirs() {
+	const dirs = [];
+	for (const base of ["apps", "packages"]) {
+		const baseDir = join(repoRoot, base);
+		for (const entry of readdirSync(baseDir)) {
+			// i18n itself defines the keys — its own sources don't count as usage
+			if (base === "packages" && entry === "i18n") continue;
+			const srcDir = join(baseDir, entry, "src");
+			try {
+				if (statSync(srcDir).isDirectory()) dirs.push(srcDir);
+			} catch {
+				// no src dir
+			}
+		}
+	}
+	return dirs;
+}
+
 function extractUsedKeys() {
 	const keys = new Set();
-	const sourceDirs = [
-		join(repoRoot, "apps/marketing/src"),
-		join(repoRoot, "apps/saas/src"),
-		join(repoRoot, "apps/docs"),
-		join(repoRoot, "packages/ui/src"),
-		join(repoRoot, "packages/analytics/src"),
-		// Cron reads merged messages via `messages.<key>` accessors
-		join(repoRoot, "packages/cron/src"),
-	];
+	const sourceDirs = collectSourceDirs();
 	const patterns = [
-		// Static: t("key"), t('key'), t(`key`)
-		/\bt\(["'`]([^"'`]+)["'`]/g,
+		// Static: t("key"), t('key'), t(`key`) — plus t.has()/t.raw()/t.rich()
+		/\bt(?:\.(?:has|raw|rich))?\(["'`]([^"'`]+)["'`]/g,
 		/\bgetTranslations\(["'`]([^"'`]+)["'`]\)/g,
 		/\bgetTranslations\(\{[^}]*namespace:\s*["'`]([^"'`]+)["'`]/g,
 		/\buseTranslations\(["'`]([^"'`]+)["'`]\)/g,
-		// Template literals: t(`prefix.${var}`) → extract "prefix" as a used namespace
-		/\bt\(`([^`${}]+)\.\$\{[^}]+\}`/g,
+		// Template literals: t(`prefix.${var}`) → extract "prefix" as a used
+		// namespace. Fully dynamic keys (e.g. t.has(`source.${e}`) for
+		// credits.source.*) can only be resolved to their prefix — the leaf
+		// is unknowable statically, so unused-key stays warn-only.
+		/\bt(?:\.(?:has|raw|rich))?\(`([^`${}]+)\.\$\{[^}]+\}`/g,
 		// Property access: messages.cron.subscriptionReminder.title, messages.nav.docs
 		/\bmessages\.([a-zA-Z0-9_.]+)/g,
 		// labelKey: "key" pattern in footer/navbar
@@ -126,28 +154,34 @@ function extractUsedKeys() {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-const enKeys = loadLocaleKeys("en");
-const deKeys = loadLocaleKeys("de");
+const locales = readdirSync(translationsDir)
+	.filter(
+		(entry) =>
+			!entry.startsWith(".") &&
+			statSync(join(translationsDir, entry)).isDirectory(),
+	)
+	.sort();
+const localeKeys = new Map(locales.map((l) => [l, loadLocaleKeys(l)]));
 
-// 1. Check de has all en keys
-const missingInDe = [...enKeys.keys()].filter((k) => !deKeys.has(k));
-if (missingInDe.length > 0) {
-	hasErrors = true;
-	console.error(`\n❌ Missing in de/ (${missingInDe.length} keys):`);
-	for (const k of missingInDe.sort()) console.error(`   - ${k}`);
+// Union of all keys across locales — every locale must contain every key.
+const allKnownKeys = new Set();
+for (const keys of localeKeys.values()) {
+	for (const k of keys.keys()) allKnownKeys.add(k);
 }
 
-// 2. Check en has all de keys
-const missingInEn = [...deKeys.keys()].filter((k) => !enKeys.has(k));
-if (missingInEn.length > 0) {
-	hasErrors = true;
-	console.error(`\n❌ Missing in en/ (${missingInEn.length} keys):`);
-	for (const k of missingInEn.sort()) console.error(`   - ${k}`);
+// 1. Check every locale has all keys
+for (const [locale, keys] of localeKeys) {
+	const missing = [...allKnownKeys].filter((k) => !keys.has(k));
+	if (missing.length > 0) {
+		hasErrors = true;
+		console.error(`\n❌ Missing in ${locale}/ (${missing.length} keys):`);
+		for (const k of missing.sort()) console.error(`   - ${k}`);
+	}
 }
 
-// 3. Check for unused keys
+// 2. Check for unused keys
 const usedKeys = extractUsedKeys();
-const allKeys = new Set([...enKeys.keys()]);
+const allKeys = allKnownKeys;
 const unused = [];
 for (const key of allKeys) {
 	const parts = key.split(".");
@@ -167,7 +201,7 @@ if (unused.length > 0) {
 	for (const k of unused.sort()) console.warn(`   - ${k}`);
 }
 
-// ─── 4. Cross-check FEATURE_CATALOG against translations ─────────────────────
+// ─── 3. Cross-check FEATURE_CATALOG against translations ─────────────────────
 
 function extractFeatureCatalog(source) {
 	const catalog = {};
@@ -190,15 +224,23 @@ function extractFeatureCatalog(source) {
 }
 
 const configPath = join(repoRoot, "packages/payments/src/config.ts");
-const configSrc = readFileSync(configPath, "utf-8");
-const catalogMatch = configSrc.match(
-	/export const FEATURE_CATALOG\s*=\s*(\{[\s\S]*?\})\s*as const/,
-);
 const featureErrors = [];
+let configSrc = null;
+try {
+	configSrc = readFileSync(configPath, "utf-8");
+} catch (err) {
+	featureErrors.push(
+		`Could not read ${configPath}: ${err instanceof Error ? err.message : err}`,
+	);
+}
+const catalogMatch =
+	configSrc?.match(
+		/export const FEATURE_CATALOG\s*=\s*(\{[\s\S]*?\})\s*as const/,
+	) ?? null;
 
-if (!catalogMatch) {
+if (configSrc !== null && !catalogMatch) {
 	featureErrors.push("Could not extract FEATURE_CATALOG from config.ts");
-} else {
+} else if (catalogMatch) {
 	const catalog = extractFeatureCatalog(catalogMatch[1]);
 	const groups = Object.keys(catalog);
 	const featureIds = [];
@@ -208,10 +250,10 @@ if (!catalogMatch) {
 		}
 	}
 
-	for (const locale of ["en", "de"]) {
+	for (const locale of locales) {
 		const localeDir = join(translationsDir, locale);
 		const paymentsFile = collectJsonFiles(localeDir).find((f) =>
-			f.endsWith("common/payments.json"),
+			toPosixPath(f).endsWith("common/payments.json"),
 		);
 		if (!paymentsFile) {
 			featureErrors.push(`[${locale}] Missing common/payments.json`);
@@ -225,7 +267,7 @@ if (!catalogMatch) {
 			continue;
 		}
 
-		// 4a. Group labels
+		// 3a. Group labels
 		for (const group of groups) {
 			if (!features.groups?.[group]) {
 				featureErrors.push(
@@ -234,7 +276,7 @@ if (!catalogMatch) {
 			}
 		}
 
-		// 4b. Feature labels
+		// 3b. Feature labels
 		for (const [group, keys] of Object.entries(catalog)) {
 			const section = features[group];
 			if (!section || typeof section !== "object") {
@@ -252,7 +294,7 @@ if (!catalogMatch) {
 			}
 		}
 
-		// 4c. Plan featureLabels reference real feature IDs
+		// 3c. Plan featureLabels reference real feature IDs
 		if (plans) {
 			for (const [planId, plan] of Object.entries(plans)) {
 				const labels = plan.featureLabels;
@@ -267,7 +309,7 @@ if (!catalogMatch) {
 			}
 		}
 
-		// 4d. No unknown sections
+		// 3d. No unknown sections
 		const knownSections = new Set([...groups, "groups", "tooltips"]);
 		for (const section of Object.keys(features)) {
 			if (!knownSections.has(section)) {
@@ -289,23 +331,257 @@ if (featureErrors.length > 0) {
 	console.log("\n✅ Feature translations match FEATURE_CATALOG.");
 }
 
+// ─── 4. Cross-check CREDIT_METERS + CREDIT_TOPUPS against translations ────────
+
+/** Remove `//` line and `/* … *\/` block comments (used for emptiness checks). */
+function stripComments(s) {
+	return s.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+}
+
+/**
+ * Extract the top-level elements of the `[...]` array literal in
+ * `export const NAME: T[] = [...]` as source strings.
+ *
+ * Scans bracket depth while skipping string literals ('…' "…" `…`,
+ * honoring `\` escapes) and comments (//, /* *\/) so brackets and commas
+ * inside them don't corrupt the split. A focused helper, not a TS parser.
+ *
+ * Returns the element list ([] for an empty array), or null if not found.
+ */
+function extractArrayElements(source, exportName) {
+	const match = source.match(
+		new RegExp(`export\\s+const\\s+${exportName}[^=]*=\\s*\\[`),
+	);
+	if (!match) return null;
+
+	const start = match.index + match[0].length - 1; // index of "["
+	const elements = [];
+	let depth = 0;
+	let state = null; // "'" | '"' | "`" | "line-comment" | "block-comment"
+	let elemStart = start + 1;
+	let end = -1;
+
+	for (let i = start; i < source.length; i++) {
+		const ch = source[i];
+		const next = source[i + 1];
+
+		if (state === "line-comment") {
+			if (ch === "\n") state = null;
+			continue;
+		}
+		if (state === "block-comment") {
+			if (ch === "*" && next === "/") {
+				state = null;
+				i++;
+			}
+			continue;
+		}
+		if (state !== null) {
+			// Inside a string literal — '\' escapes the next character.
+			if (ch === "\\") i++;
+			else if (ch === state) state = null;
+			continue;
+		}
+
+		if (ch === "'" || ch === '"' || ch === "`") {
+			state = ch;
+		} else if (ch === "/" && next === "/") {
+			state = "line-comment";
+			i++;
+		} else if (ch === "/" && next === "*") {
+			state = "block-comment";
+			i++;
+		} else if (ch === "[" || ch === "{" || ch === "(") {
+			depth++;
+		} else if (ch === "]" || ch === "}" || ch === ")") {
+			depth--;
+			if (depth === 0) {
+				end = i;
+				break;
+			}
+		} else if (ch === "," && depth === 1) {
+			const elem = source.slice(elemStart, i);
+			if (stripComments(elem).trim() !== "") elements.push(elem);
+			elemStart = i + 1;
+		}
+	}
+	if (end === -1) return null;
+
+	const tail = source.slice(elemStart, end);
+	if (stripComments(tail).trim() !== "") elements.push(tail);
+	return elements;
+}
+
+/**
+ * Extract `field: "…"` values from extracted array elements.
+ * Distinguishes three states: array not found (error), empty array
+ * (legit — nothing to check), and elements lacking the field (error —
+ * format drift the regex can't parse, must not silently pass).
+ */
+function extractFieldValues(elements, field, exportName, filePath) {
+	if (elements === null) {
+		return { error: `Could not extract ${exportName} from ${filePath}` };
+	}
+	if (elements.length === 0) {
+		return { keys: [], empty: true };
+	}
+	const fieldRe = new RegExp(`\\b${field}:\\s*"([^"]+)"`);
+	const keys = [];
+	for (let i = 0; i < elements.length; i++) {
+		const m = elements[i].match(fieldRe);
+		if (!m) {
+			return {
+				error: `${exportName}[${i}] in ${filePath} has no ${field}: "…" property — format drift?`,
+			};
+		}
+		keys.push(m[1]);
+	}
+	return { keys };
+}
+
+const creditErrors = [];
+const creditNotes = [];
+const creditWarnings = [];
+
+const metersPath = join(repoRoot, "packages/credits/src/meters.ts");
+let meterKeys = null;
+try {
+	const result = extractFieldValues(
+		extractArrayElements(readFileSync(metersPath, "utf-8"), "CREDIT_METERS"),
+		"key",
+		"CREDIT_METERS",
+		"packages/credits/src/meters.ts",
+	);
+	if (result.error) {
+		creditErrors.push(result.error);
+	} else {
+		meterKeys = result.keys;
+		if (result.empty) {
+			creditNotes.push("CREDIT_METERS is empty — no meter labels to check");
+		}
+	}
+} catch (err) {
+	creditErrors.push(
+		`Could not read ${metersPath}: ${err instanceof Error ? err.message : err}`,
+	);
+}
+
+let topupIds = null;
+if (configSrc !== null) {
+	const result = extractFieldValues(
+		extractArrayElements(configSrc, "CREDIT_TOPUPS"),
+		"id",
+		"CREDIT_TOPUPS",
+		"packages/payments/src/config.ts",
+	);
+	if (result.error) {
+		creditErrors.push(result.error);
+	} else {
+		topupIds = result.keys;
+		if (result.empty) {
+			creditNotes.push(
+				"CREDIT_TOPUPS is empty — no top-up package labels to check",
+			);
+		}
+	}
+}
+
+if (meterKeys !== null || topupIds !== null) {
+	for (const locale of locales) {
+		const localeDir = join(translationsDir, locale);
+		const creditsFile = collectJsonFiles(localeDir).find((f) =>
+			toPosixPath(f).endsWith("saas/credits.json"),
+		);
+		if (!creditsFile) {
+			creditErrors.push(`[${locale}] Missing saas/credits.json`);
+			continue;
+		}
+		const credits = JSON.parse(readFileSync(creditsFile, "utf-8")).credits;
+		if (!credits || typeof credits !== "object") {
+			creditErrors.push(`[${locale}] Missing credits section`);
+			continue;
+		}
+
+		// 4a. Every configured meter has a label
+		for (const key of meterKeys ?? []) {
+			if (typeof credits.meters?.[key] !== "string") {
+				creditErrors.push(
+					`[${locale}] Missing meter label: credits.meters.${key}`,
+				);
+			}
+		}
+
+		// 4b. Every configured top-up package has label and description
+		for (const id of topupIds ?? []) {
+			for (const field of ["label", "description"]) {
+				if (typeof credits.topup?.packages?.[id]?.[field] !== "string") {
+					creditErrors.push(
+						`[${locale}] Missing top-up ${field}: credits.topup.packages.${id}.${field}`,
+					);
+				}
+			}
+		}
+
+		// 4c. Warn about stale keys: translations for meters/top-ups that
+		// no longer exist in config (leftovers after removing an entry).
+		if (meterKeys !== null) {
+			for (const key of Object.keys(credits.meters ?? {})) {
+				if (!meterKeys.includes(key)) {
+					creditWarnings.push(
+						`[${locale}] Stale meter label: credits.meters.${key} (not in CREDIT_METERS)`,
+					);
+				}
+			}
+		}
+		if (topupIds !== null) {
+			for (const id of Object.keys(credits.topup?.packages ?? {})) {
+				if (!topupIds.includes(id)) {
+					creditWarnings.push(
+						`[${locale}] Stale top-up labels: credits.topup.packages.${id} (not in CREDIT_TOPUPS)`,
+					);
+				}
+			}
+		}
+	}
+}
+
+if (creditErrors.length > 0) {
+	hasErrors = true;
+	console.error(
+		`\n❌ Credits↔Translation cross-check (${creditErrors.length} errors):`,
+	);
+	for (const e of creditErrors) console.error(`   - ${e}`);
+} else {
+	console.log("\n✅ Credit translations match CREDIT_METERS + CREDIT_TOPUPS.");
+}
+
+for (const n of creditNotes) console.log(`ℹ️  ${n}`);
+
+if (creditWarnings.length > 0) {
+	console.warn(
+		`\n⚠️  Stale credit translation keys (${creditWarnings.length}):`,
+	);
+	for (const w of creditWarnings) console.warn(`   - ${w}`);
+}
+
 // Summary
-const totalKeys = enKeys.size;
-const translatedKeys = deKeys.size;
-const coverage =
-	totalKeys > 0 ? Math.round((translatedKeys / totalKeys) * 100) : 100;
+const totalKeys = allKnownKeys.size;
 
 console.log("\n📊 Translation summary:");
-console.log(`   EN keys: ${totalKeys}`);
-console.log(`   DE keys: ${translatedKeys}`);
-console.log(`   Coverage: ${coverage}%`);
+for (const [locale, keys] of localeKeys) {
+	const coverage =
+		totalKeys > 0 ? Math.floor((keys.size / totalKeys) * 100) : 100;
+	console.log(
+		`   ${locale.toUpperCase()} keys: ${keys.size} (${coverage}% coverage)`,
+	);
+}
 console.log(`   Unused keys: ${unused.length}`);
 
 if (hasErrors) {
 	console.error("\n❌ Translation check failed!");
 	process.exit(1);
 } else {
-	console.log("\n✅ All translation keys are present in both locales.");
+	console.log("\n✅ All translation keys are present in all locales.");
 	if (unused.length > 0) {
 		console.log("⚠️  Unused keys detected — consider removing them.");
 	}

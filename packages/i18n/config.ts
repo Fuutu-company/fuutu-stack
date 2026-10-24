@@ -4,7 +4,8 @@
  * To add a locale:
  *   1. Create a folder `translations/<code>/` mirroring `en/` (common/, marketing/, saas/ with index.ts)
  *   2. Add an entry to `locales` below
- *   3. Optionally set `fallbackLocale` for per-locale fallback chains
+ *   3. Add loader entries to `namespaceLoaders` in `lib/messages.ts` (compile-enforced — it is keyed by Locale)
+ *   4. Optionally set `fallbackLocale` for per-locale fallback chains
  */
 export const i18nConfig = {
 	enabled: true,

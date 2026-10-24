@@ -68,7 +68,7 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TailwindCSS v4** with OKLCH theme
 - **shadcn/ui** — framework-agnostic shared components (`@fuutu/ui`)
-- **next-intl 4** — `en` + `de`, 100% translation policy
+- **next-intl 4** — `en` + `de`, 100% translation policy ([guide](https://stack.fuutu.com/docs/guides/i18n))
 - **MediaFrame** — locale-aware images, CSP-safe
 
 ### Provider-Swappable Architecture
