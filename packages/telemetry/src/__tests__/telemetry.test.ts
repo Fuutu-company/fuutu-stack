@@ -188,11 +188,10 @@ describe("pingTelemetry()", () => {
 		globalThis.fetch = mockFetch;
 		await pingTelemetry("https://test.example.com/ping");
 		expect(mockFetch).toHaveBeenCalledTimes(1);
-		const [, opts] = mockFetch.mock.calls[0]!; // guaranteed by toHaveBeenCalledTimes
-		const options = opts as RequestInit;
-		expect(options.method).toBe("POST");
-		expect(options.body).toBeDefined();
-		const body = JSON.parse(options.body as string);
+		const options = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+		expect(options?.method).toBe("POST");
+		expect(options?.body).toBeDefined();
+		const body = JSON.parse(options?.body as string);
 		expect(body.kitName).toBeDefined();
 		expect(body.kitVersion).toBeDefined();
 	});
@@ -203,9 +202,8 @@ describe("pingTelemetry()", () => {
 			.mockResolvedValue(new Response("ok", { status: 200 }));
 		globalThis.fetch = mockFetch;
 		await pingTelemetry("https://test.example.com/ping");
-		const [, opts] = mockFetch.mock.calls[0]!; // guaranteed by toHaveBeenCalled
-		const options = opts as RequestInit;
-		const headers = options.headers as Record<string, string>;
+		const options = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+		const headers = options?.headers as Record<string, string>;
 		expect(headers["X-Framework"]).toBeDefined();
 	});
 
@@ -216,7 +214,7 @@ describe("pingTelemetry()", () => {
 		globalThis.fetch = mockFetch;
 		await pingTelemetry("https://test.example.com/ping");
 		expect(mockFetch).toHaveBeenCalled();
-		const [url] = mockFetch.mock.calls[0]!; // guaranteed by toHaveBeenCalled
+		const url = mockFetch.mock.calls[0]?.[0];
 		expect(String(url)).toBe("https://test.example.com/ping");
 	});
 

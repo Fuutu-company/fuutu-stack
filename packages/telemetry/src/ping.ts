@@ -51,7 +51,7 @@ export function buildTelemetryPayload(): TelemetryPayload {
 }
 
 /**
- * Build-time telemetry ping.
+ * Runtime telemetry ping.
  *
  * Non-blocking, silent on failure, opt-out via `FUUTU_TELEMETRY_DISABLED`.
  *
@@ -59,7 +59,7 @@ export function buildTelemetryPayload(): TelemetryPayload {
  * publicly hosted by Fuutu. The function attempts the POST anyway because
  * the contract — payload shape, timeout, opt-out switch — is what
  * downstream forks integrate against; once the receiving service is live
- * no client change is needed. All errors are swallowed so user builds are
+ * no client change is needed. All errors are swallowed so callers are
  * never blocked or slowed.
  */
 export async function pingTelemetry(

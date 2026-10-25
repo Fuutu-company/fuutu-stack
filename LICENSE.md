@@ -43,8 +43,8 @@ convenience and does **not** override the binding text.
   scaffold, or generator — whether free or paid, whether under MIT or
   any other license (sections 6 and 6a).
 - **Keep the fingerprint.** The `Fuutu-Stack` kit name, the kit version
-  constant, the `X-Framework` HTTP response header and the build-time
-  telemetry ping must remain functionally intact (section 7).
+  constant, the `X-Framework` HTTP response header and the telemetry
+  ping must remain functionally intact (section 7).
 - **No warranty.** The Software is provided "AS IS" (section 12).
 
 If anything in this summary appears to conflict with the binding text, the
@@ -203,7 +203,7 @@ signed by Fuutu:
 4. **Use Fuutu trademarks** to imply endorsement of, or affiliation with,
    any product not produced by Fuutu (see section 8);
 5. **Disable, bypass, falsify or strip** the kit fingerprint, the
-   `X-Framework` response header, the build-time telemetry ping, or the
+   `X-Framework` response header, the telemetry ping, or the
    license-mode reporting (see section 7).
 
 Building and selling a Production Application that *uses* the Kit is
@@ -278,19 +278,23 @@ repository.
 
 ## 7. Kit Fingerprint and Telemetry
 
-The Kit emits two integrity signals that must remain functional:
+The Kit emits two integrity signals that must remain functionally
+intact:
 
 1. **Kit fingerprint** — the constants `KIT_NAME` and `KIT_VERSION`
    exported from `@fuutu/config`, plus the `X-Framework:
    Fuutu-Stack/<version>` HTTP response header set on every API and
    page response.
-2. **Build-time telemetry ping** — a single, non-blocking HTTPS request
-   sent at build time, transmitting:
+2. **Telemetry ping** — non-blocking, fail-soft HTTPS requests sent
+   at build time, at each API process start, and hourly once the
+   built-in cron trigger is configured and enabled, transmitting:
+   - the Kit name and Kit version,
    - a one-way hash of the configured license key (or `"oss"` if none),
-   - the configured public application URL,
-   - the Node.js runtime version,
-   - the Kit version,
-   - a flat list of enabled top-level feature names (no user data, no PII).
+   - the configured public application URL (or `null` if none),
+   - the Node.js runtime version and operating-system platform,
+   - a flat list of enabled top-level feature names (empty in
+     build-time pings), and
+   - the send timestamp (no user data, no PII).
 
 The ping has a 5-second timeout, fails silently on network error, and can
 be disabled by setting `FUUTU_TELEMETRY_DISABLED=1`. Disabling telemetry

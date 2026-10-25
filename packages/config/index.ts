@@ -20,7 +20,7 @@
  * **not** the downstream app version and **not** the @fuutu/api package
  * version. It is surfaced by:
  *   - `GET /api/version`            (ops / telemetry correlation)
- *   - Build-time telemetry ping
+ *   - Telemetry ping (build-time + runtime)
  *   - `X-Framework` response header (`Fuutu-Stack/<version>`)
  */
 export const KIT_VERSION = "1.0.0" as const;
