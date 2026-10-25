@@ -141,7 +141,7 @@ model WebhookDelivery {
   eventId      String
   eventType    String
   payload      Json
-  status       String // "success", "failed", "pending", "retrying"
+  status       String // "pending", "processing", "retrying", "success", "failed"
   responseCode Int?
   responseBody String?
   attempt      Int       @default(1)

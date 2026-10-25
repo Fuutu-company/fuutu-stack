@@ -82,7 +82,12 @@ describe("processPendingDeliveries", () => {
 		await processPendingDeliveries();
 
 		expect(recoverStaleDeliveriesMock).toHaveBeenCalledTimes(1);
-		expect(recoverStaleDeliveriesMock).toHaveBeenCalledWith(5 * 60 * 1000);
+		expect(recoverStaleDeliveriesMock).toHaveBeenCalledWith({
+			timeoutMs: 5 * 60 * 1000,
+			maxRetries: 5,
+			retryBaseDelayMs: 1000,
+			maxRetryDelayMs: 60 * 60 * 1000,
+		});
 		expect(claimPendingDeliveriesMock).toHaveBeenCalledTimes(1);
 	});
 
@@ -169,6 +174,24 @@ describe("processPendingDeliveries", () => {
 		expect(update?.status).toBe("failed");
 		expect(update?.nextRetryAt).toBeNull();
 		expect(deliverWebhookMock).not.toHaveBeenCalled();
+	});
+
+	it("persists the transport error as the failure reason when there is no response body", async () => {
+		const delivery = makeDelivery();
+		claimPendingDeliveriesMock.mockResolvedValue([delivery]);
+		getWebhookForDeliveryMock.mockResolvedValue(activeWebhook);
+		deliverWebhookMock.mockResolvedValue({
+			success: false,
+			responseCode: null,
+			responseBody: null,
+			error: "getaddrinfo ENOTFOUND example.com",
+		});
+
+		const result = await processPendingDeliveries();
+
+		expect(result).toEqual({ processed: 1, succeeded: 0, failed: 1 });
+		const update = lastStatusUpdate();
+		expect(update?.responseBody).toBe("getaddrinfo ENOTFOUND example.com");
 	});
 
 	it("marks deliveries terminal-failed on invalid payload instead of leaving them in processing", async () => {

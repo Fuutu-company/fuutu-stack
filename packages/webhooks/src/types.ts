@@ -26,7 +26,10 @@ export interface WebhookDeliveryResult {
 export interface WebhookConfig {
 	maxRetries: number;
 	retryBaseDelayMs: number;
+	/** Upper bound for the exponential retry backoff (see calculateNextRetry). */
+	maxRetryDelayMs: number;
 	timeoutMs: number;
 	staleProcessingTimeoutMs: number;
 	maxResponseBodyBytes: number;
+	maxPayloadBytes: number;
 }

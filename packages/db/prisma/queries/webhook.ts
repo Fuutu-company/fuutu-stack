@@ -179,6 +179,10 @@ export const countDeliveries = (
  * Uses `FOR UPDATE SKIP LOCKED` so multiple worker instances never claim
  * the same delivery — the second instance skips rows locked by the first.
  *
+ * `attemptedAt` is refreshed at claim time so `recoverStaleDeliveries`
+ * measures staleness from the claim, not from the last status write —
+ * otherwise a still-in-flight row could be recycled by another worker.
+ *
  * The `limit` parameter is internal (not user input), so raw SQL is safe here.
  */
 export const claimPendingDeliveries = async (
@@ -199,11 +203,22 @@ export const claimPendingDeliveries = async (
 			FOR UPDATE SKIP LOCKED
 		)
 		UPDATE "app"."webhook_delivery"
-		SET status = 'processing'
+		SET status = 'processing', "attemptedAt" = NOW()
 		WHERE id IN (SELECT id FROM claimed)
 		RETURNING *
 	`;
 	return rows;
+};
+
+export type StaleRecoveryParams = {
+	/** Rows claimed longer ago than this count as crashed. */
+	timeoutMs: number;
+	/** Retry budget — the caller owns the policy (see webhooksConfig). */
+	maxRetries: number;
+	/** Backoff base — same formula as `calculateNextRetry` in @fuutu/webhooks. */
+	retryBaseDelayMs: number;
+	/** Backoff cap — same formula as `calculateNextRetry` in @fuutu/webhooks. */
+	maxRetryDelayMs: number;
 };
 
 /**
@@ -211,18 +226,51 @@ export const claimPendingDeliveries = async (
  *
  * If a worker crashes mid-delivery, the row stays `"processing"` forever —
  * `claimPendingDeliveries` only selects `"pending"` / `"retrying"`, so it
- * would never be retried. This query resets stale `"processing"` rows whose
- * `attemptedAt` is older than `timeoutMs` back to `"retrying"` so the next
- * claim cycle picks them up.
+ * would never be retried. This query recovers stale `"processing"` rows
+ * whose `attemptedAt` (refreshed at claim time) is older than `timeoutMs`.
+ *
+ * A crashed attempt still consumes retry budget, exactly like a failed
+ * attempt in `processPendingDeliveries`: `attempt` is incremented and the
+ * row goes to `"retrying"` with an exponential-backoff `nextRetryAt`, or to
+ * terminal `"failed"` once `attempt + 1 > maxRetries`. Without this a
+ * deterministically-crashing delivery would loop forever, bypassing
+ * `maxRetries` entirely.
+ *
+ * The backoff expression mirrors `calculateNextRetry` in @fuutu/webhooks
+ * (`2^attempt * base`, capped, equal jitter) — kept in SQL so each row gets
+ * its own jittered timestamp; the caller passes the config values because
+ * @fuutu/db must not depend on @fuutu/webhooks (dependency direction is
+ * webhooks → db).
  */
-export const recoverStaleDeliveries = (timeoutMs: number) =>
-	db.webhookDelivery.updateMany({
-		where: {
-			status: "processing",
-			attemptedAt: { lt: new Date(Date.now() - timeoutMs) },
-		},
-		data: { status: "retrying" },
-	});
+export const recoverStaleDeliveries = async (
+	params: StaleRecoveryParams,
+): Promise<{ count: number }> => {
+	const { timeoutMs, maxRetries, retryBaseDelayMs, maxRetryDelayMs } = params;
+	const count = await db.$executeRaw`
+		UPDATE "app"."webhook_delivery"
+		SET
+			"attempt" = "attempt" + 1,
+			"status" = CASE
+				WHEN "attempt" + 1 > ${maxRetries} THEN 'failed'
+				ELSE 'retrying'
+			END,
+			"nextRetryAt" = CASE
+				WHEN "attempt" + 1 > ${maxRetries} THEN NULL
+				ELSE NOW() + LEAST(
+					POWER(2, "attempt" + 1) * ${retryBaseDelayMs},
+					${maxRetryDelayMs}
+				) * (0.5 + random() * 0.5) * INTERVAL '1 millisecond'
+			END,
+			"responseBody" = CASE
+				WHEN "attempt" + 1 > ${maxRetries}
+					THEN 'stale processing recovery exhausted retry budget'
+				ELSE "responseBody"
+			END
+		WHERE "status" = 'processing'
+			AND "attemptedAt" < NOW() - ${timeoutMs} * INTERVAL '1 millisecond'
+	`;
+	return { count };
+};
 
 /**
  * Find all active webhooks for an organization that subscribe to a given

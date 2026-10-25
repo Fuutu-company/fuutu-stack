@@ -1449,9 +1449,6 @@ importers:
       sonner:
         specifier: 'catalog:'
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      tw-animate-css:
-        specifier: 'catalog:'
-        version: 1.4.0
     devDependencies:
       '@fuutu/config':
         specifier: workspace:*
@@ -1474,6 +1471,9 @@ importers:
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.3
+      tw-animate-css:
+        specifier: 'catalog:'
+        version: 1.4.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1502,6 +1502,9 @@ importers:
 
   packages/webhooks:
     dependencies:
+      '@fuutu/config':
+        specifier: workspace:*
+        version: link:../config
       '@fuutu/db':
         specifier: workspace:*
         version: link:../db

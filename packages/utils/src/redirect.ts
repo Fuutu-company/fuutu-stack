@@ -6,7 +6,9 @@
  * - Same-origin absolute URLs (if `allowedOrigins` contains their origin)
  * - Relative paths starting with `/` (but not `//` which are protocol-relative)
  *
- * Rejects everything else.
+ * Rejects everything else. `allowedOrigins` entries must be exact origins
+ * (`scheme://host[:port]`) — an entry with a trailing slash or path never
+ * matches, failing closed.
  */
 export function getSafeRedirect(
 	target: string | null | undefined,

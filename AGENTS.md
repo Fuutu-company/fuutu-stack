@@ -147,7 +147,7 @@ fuutu-stack/
 │   ├── notifications/ # in-app notifications + channel fan-out (email etc.)
 │   ├── cron/          # job registry + runners + schedule honoring
 │   ├── search/        # SearchProvider interface + tenant-scoped queries
-│   ├── utils/         # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl
+│   ├── utils/         # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl, rate-limit
 │   ├── content/       # TSX collections: posts, changelog, legal
 │   ├── license/       # checkLicense(), getLicenseMode() — soft-fails to "oss"
 │   ├── telemetry/     # bin/ping.mjs (build-time) + pingTelemetry() (runtime)

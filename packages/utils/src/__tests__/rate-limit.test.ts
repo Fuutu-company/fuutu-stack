@@ -64,7 +64,7 @@ describe("createMemoryRateLimitStore", () => {
 		expect(fresh.resetAt).toBe(1_000_000 + 60_001 + 60_000);
 	});
 
-	it("still denies at the exact resetAt boundary (resetAt <= now)", async () => {
+	it("allows a fresh window at the exact resetAt boundary (resetAt <= now)", async () => {
 		const store = createMemoryRateLimitStore();
 		for (let i = 0; i < limit.maxRequests; i++) await store.check("k", limit);
 		vi.setSystemTime(1_000_000 + 60_000);
@@ -96,6 +96,13 @@ describe("createRedisRateLimitStore", () => {
 		await expect(
 			store.check("k", { maxRequests: 1, windowMs: 1000 }),
 		).rejects.toThrow("Redis driver is a v1 stub");
+	});
+
+	it("error tells the operator how to resolve it (implement or unset REDIS_URL)", async () => {
+		const store = createRedisRateLimitStore({ url: "redis://localhost:6379" });
+		await expect(
+			store.check("k", { maxRequests: 1, windowMs: 1000 }),
+		).rejects.toThrow("unset REDIS_URL");
 	});
 });
 

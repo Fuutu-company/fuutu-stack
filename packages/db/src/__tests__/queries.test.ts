@@ -51,6 +51,7 @@ vi.mock("../../prisma/client", () => ({
 			findFirst: vi.fn(),
 		},
 		$queryRaw: vi.fn(),
+		$executeRaw: vi.fn(),
 	},
 }));
 
@@ -271,8 +272,51 @@ describe("DB query functions - smoke tests", () => {
 			expect(typeof webhookQueries.claimPendingDeliveries).toBe("function");
 		});
 
+		it("claimPendingDeliveries stamps attemptedAt at claim time", async () => {
+			vi.mocked(db.$queryRaw).mockResolvedValueOnce([] as never);
+
+			await webhookQueries.claimPendingDeliveries(10);
+
+			const calls = vi.mocked(db.$queryRaw).mock.calls;
+			const [strings, ...values] = calls.at(-1) as unknown as [
+				TemplateStringsArray,
+				...number[],
+			];
+			const sql = strings.join(" ");
+			// Staleness for recoverStaleDeliveries is measured from the claim —
+			// without this stamp a still-in-flight row could be recycled early.
+			expect(sql).toContain('"attemptedAt" = NOW()');
+			expect(sql).toContain("status = 'processing'");
+			expect(values).toEqual([10]);
+		});
+
 		it("exports recoverStaleDeliveries function", () => {
 			expect(typeof webhookQueries.recoverStaleDeliveries).toBe("function");
+		});
+
+		it("recoverStaleDeliveries consumes retry budget: increments attempt, schedules backoff, fails exhausted rows", async () => {
+			vi.mocked(db.$executeRaw).mockResolvedValueOnce(2 as never);
+
+			const result = await webhookQueries.recoverStaleDeliveries({
+				timeoutMs: 60_000,
+				maxRetries: 5,
+				retryBaseDelayMs: 1000,
+				maxRetryDelayMs: 3_600_000,
+			});
+
+			expect(result).toEqual({ count: 2 });
+			const [strings, ...values] = vi.mocked(db.$executeRaw).mock
+				.calls[0] as unknown as [TemplateStringsArray, ...number[]];
+			const sql = strings.join(" ");
+			// A crashed attempt is still an attempt — it must consume budget.
+			expect(sql).toContain('"attempt" = "attempt" + 1');
+			// Rows past maxRetries go terminal instead of looping forever.
+			expect(sql).toContain("'failed'");
+			// Recovered rows get a backoff nextRetryAt (same exponential +
+			// jitter formula as retry.ts), not an immediate re-claim.
+			expect(sql).toContain('POWER(2, "attempt" + 1)');
+			expect(sql).toContain("INTERVAL '1 millisecond'");
+			expect(values).toEqual([5, 5, 1000, 3_600_000, 5, 60_000]);
 		});
 
 		it("exports listActiveWebhooksByOrg function", () => {

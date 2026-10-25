@@ -55,7 +55,7 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 - **oRPC 1.15** — end-to-end type-safe API with auto-OpenAPI spec
 - **Zod** validation on every input
 - **API keys** — generate, revoke, scoped access
-- **Webhooks** — signed delivery, retry with backoff, idempotent
+- **Webhooks** — signed delivery, retry with backoff, at-least-once with `X-Fuutu-Event-Id` dedupe key for receivers
 - **Cron jobs** — audit-log cleanup, subscription reminders, telemetry ping, webhook retry
 
 ### Database & ORM
@@ -143,7 +143,7 @@ fuutu-stack/
 │   ├── telemetry/        # build-time + runtime telemetry helpers
 │   ├── test-utils/       # shared test helpers + architecture guard tests
 │   ├── ui/               # shared UI components (framework-agnostic)
-│   ├── utils/            # cn, getSafeRedirect, slugify, hash, invariant
+│   ├── utils/            # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl, rate-limit
 │   └── webhooks/         # signed delivery, retry, idempotent
 ├── tooling/
 │   ├── typescript/       # shared tsconfigs (base / nextjs / react-library)

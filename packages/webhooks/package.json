@@ -19,6 +19,7 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@fuutu/config": "workspace:*",
 		"@fuutu/db": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
