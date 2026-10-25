@@ -1,3 +1,4 @@
+◇ injected env (51) from ../../.env // tip: ⌘ override existing { override: true }
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "app";
 
@@ -35,6 +36,7 @@ CREATE TABLE "app"."purchase" (
 CREATE TABLE "app"."audit_log" (
     "id" TEXT NOT NULL,
     "userId" TEXT,
+    "organizationId" TEXT,
     "action" TEXT NOT NULL,
     "ip" TEXT,
     "userAgent" TEXT,
@@ -107,6 +109,19 @@ CREATE TABLE "app"."webhook_delivery" (
     "nextRetryAt" TIMESTAMP(3),
 
     CONSTRAINT "webhook_delivery_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "app"."cron_job_run" (
+    "id" TEXT NOT NULL,
+    "jobKey" TEXT NOT NULL,
+    "lastRunAt" TIMESTAMP(3) NOT NULL,
+    "lastStatus" TEXT NOT NULL,
+    "lastError" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "cron_job_run_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -204,6 +219,7 @@ CREATE TABLE "app"."credit_event" (
     "packageId" TEXT,
     "reason" TEXT NOT NULL,
     "metadata" JSONB,
+    "idempotencyKey" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "credit_event_pkey" PRIMARY KEY ("id")
@@ -228,6 +244,7 @@ CREATE TABLE "auth"."user" (
     "username" TEXT,
     "paymentsCustomerId" TEXT,
     "lastActiveOrganizationId" TEXT,
+    "userCreatedEventSent" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "user_pkey" PRIMARY KEY ("id")
 );
@@ -335,6 +352,16 @@ CREATE TABLE "auth"."passkey" (
 );
 
 -- CreateTable
+CREATE TABLE "auth"."rate_limit" (
+    "id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "count" INTEGER NOT NULL,
+    "lastRequest" BIGINT NOT NULL,
+
+    CONSTRAINT "rate_limit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "auth"."two_factor" (
     "id" TEXT NOT NULL,
     "secret" TEXT NOT NULL,
@@ -359,6 +386,9 @@ CREATE UNIQUE INDEX "purchase_provider_subscriptionId_key" ON "app"."purchase"("
 
 -- CreateIndex
 CREATE INDEX "audit_log_userId_idx" ON "app"."audit_log"("userId");
+
+-- CreateIndex
+CREATE INDEX "audit_log_organizationId_idx" ON "app"."audit_log"("organizationId");
 
 -- CreateIndex
 CREATE INDEX "audit_log_action_idx" ON "app"."audit_log"("action");
@@ -395,6 +425,9 @@ CREATE INDEX "webhook_delivery_status_idx" ON "app"."webhook_delivery"("status")
 
 -- CreateIndex
 CREATE INDEX "webhook_delivery_nextRetryAt_idx" ON "app"."webhook_delivery"("nextRetryAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "cron_job_run_jobKey_key" ON "app"."cron_job_run"("jobKey");
 
 -- CreateIndex
 CREATE INDEX "notification_userId_idx" ON "app"."notification"("userId");
@@ -454,6 +487,9 @@ CREATE INDEX "credit_event_organizationId_idx" ON "app"."credit_event"("organiza
 CREATE INDEX "credit_event_meterKey_idx" ON "app"."credit_event"("meterKey");
 
 -- CreateIndex
+CREATE INDEX "credit_event_packageId_idx" ON "app"."credit_event"("packageId");
+
+-- CreateIndex
 CREATE INDEX "credit_event_createdAt_idx" ON "app"."credit_event"("createdAt");
 
 -- CreateIndex
@@ -493,6 +529,9 @@ CREATE INDEX "invitation_email_idx" ON "auth"."invitation"("email");
 CREATE INDEX "passkey_userId_idx" ON "auth"."passkey"("userId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "rate_limit_key_key" ON "auth"."rate_limit"("key");
+
+-- CreateIndex
 CREATE INDEX "two_factor_userId_idx" ON "auth"."two_factor"("userId");
 
 -- AddForeignKey
@@ -503,6 +542,9 @@ ALTER TABLE "app"."purchase" ADD CONSTRAINT "purchase_organizationId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "app"."audit_log" ADD CONSTRAINT "audit_log_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "app"."audit_log" ADD CONSTRAINT "audit_log_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "auth"."organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "app"."api_key" ADD CONSTRAINT "api_key_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -550,10 +592,16 @@ ALTER TABLE "app"."credit_package" ADD CONSTRAINT "credit_package_userId_fkey" F
 ALTER TABLE "app"."credit_package" ADD CONSTRAINT "credit_package_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "auth"."organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "app"."credit_package" ADD CONSTRAINT "credit_package_purchaseId_fkey" FOREIGN KEY ("purchaseId") REFERENCES "app"."purchase"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "app"."credit_event" ADD CONSTRAINT "credit_event_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "app"."credit_event" ADD CONSTRAINT "credit_event_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "auth"."organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "app"."credit_event" ADD CONSTRAINT "credit_event_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "app"."credit_package"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "auth"."session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
