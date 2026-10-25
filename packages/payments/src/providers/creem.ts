@@ -12,8 +12,23 @@ import type {
 	SeatAwarePaymentProvider,
 	SetSeatsInput,
 } from "../types";
+import { WebhookConfigError, WebhookSignatureError } from "../types";
 
 const log = createLogger({ scope: "payments:creem" });
+
+/**
+ * Fail fast on a missing API key instead of sending an empty
+ * `x-api-key` credential — Creem is a thin fetch wrapper with no
+ * client object, so the check lives where the env is consumed.
+ */
+function getApiKey(): string {
+	if (!env.CREEM_API_KEY) {
+		throw new WebhookConfigError(
+			"[payments:creem] CREEM_API_KEY is not set. Configure it in @fuutu/env/saas before using Creem-backed flows.",
+		);
+	}
+	return env.CREEM_API_KEY;
+}
 
 function creemFetch(path: string, init: RequestInit = {}) {
 	const baseUrl = env.CREEM_TEST_MODE
@@ -25,7 +40,7 @@ function creemFetch(path: string, init: RequestInit = {}) {
 	return fetch(url, {
 		...init,
 		headers: {
-			"x-api-key": env.CREEM_API_KEY ?? "",
+			"x-api-key": getApiKey(),
 			"Content-Type": "application/json",
 			...init.headers,
 		},
@@ -153,9 +168,11 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 				units: input.seats ?? 1,
 				success_url: input.successUrl,
 				metadata: {
+					// Owner keys last — caller metadata must not be able to
+					// override the billing owner on the signed webhook.
+					...input.metadata,
 					organization_id: input.organizationId || null,
 					user_id: input.userId || null,
-					...input.metadata,
 				},
 				customer: {
 					email: input.customerEmail,
@@ -206,8 +223,8 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 				email: input.email,
 				name: input.name,
 				metadata: {
-					user_id: input.userId,
 					...input.metadata,
+					user_id: input.userId,
 				},
 			}),
 		});
@@ -245,13 +262,13 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		const signature = request.headers.get("creem-signature");
 
 		if (!signature) {
-			throw new Error("Missing signature");
+			throw new WebhookSignatureError("Missing signature");
 		}
 
 		const bodyText = await request.text();
 		const webhookSecret = env.CREEM_WEBHOOK_SECRET;
 		if (!webhookSecret) {
-			throw new Error("Missing webhook secret");
+			throw new WebhookConfigError("Missing webhook secret");
 		}
 		const computedSignature = createHmac("sha256", webhookSecret)
 			.update(bodyText)
@@ -264,10 +281,19 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			computedBuffer.length !== receivedBuffer.length ||
 			!timingSafeEqual(computedBuffer, receivedBuffer)
 		) {
-			throw new Error("Invalid signature");
+			throw new WebhookSignatureError("Invalid signature");
 		}
 
-		const parsed = creemWebhookSchema.safeParse(JSON.parse(bodyText));
+		// A signed body that isn't JSON is malformed, not inauthentic —
+		// surface the same error as a schema mismatch (→ 400), never a raw
+		// SyntaxError.
+		let bodyJson: unknown;
+		try {
+			bodyJson = JSON.parse(bodyText);
+		} catch {
+			throw new Error("Malformed webhook payload");
+		}
+		const parsed = creemWebhookSchema.safeParse(bodyJson);
 		if (!parsed.success) {
 			throw new Error("Malformed webhook payload");
 		}

@@ -1,5 +1,8 @@
 import type * as React from "react";
 
+/** Billing interval emitted by CTA handlers — mirrors the checkout contract. */
+export type BillingInterval = "month" | "year";
+
 export interface PricingTier {
 	id: string;
 	name: string;
@@ -16,7 +19,8 @@ export interface PricingTier {
 	highlighted?: boolean;
 	ctaLabel: string;
 	ctaHref?: string;
-	onCtaClick?: () => void;
+	/** Receives the billing interval the toggle was set to ("year" only when the tier has a yearlyPrice). */
+	onCtaClick?: (interval?: BillingInterval) => void;
 	disabled?: boolean;
 	/** Optional Lucide-style icon rendered as plan identity mark. */
 	icon?: React.ComponentType<{ className?: string }>;

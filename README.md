@@ -77,7 +77,7 @@ Every domain behind an interface — swap providers without touching business lo
 | Domain | Interface | Active | Skeletons |
 |---|---|---|---|
 | **Mail** | `EmailProvider` | Plunk (Resend implemented) | Postmark, Mailgun, Nodemailer… |
-| **Payments** | `PaymentProvider` | Creem (Stripe, Polar implemented) | LemonSqueezy, DodoPayments… |
+| **Payments** | `PaymentProvider` | Creem (Stripe implemented; Polar alpha) | Anything else via `customProvider`… |
 | **Storage** | `StorageProvider` | S3 + MinIO | Supabase, Noop… |
 | **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
 | **AI** | `AIProvider` | OpenRouter | Google, OpenAI, Anthropic, Noop… |
@@ -136,7 +136,7 @@ fuutu-stack/
 │   ├── logs/             # createLogger({ scope }) + provider interface
 │   ├── mail/             # EmailProvider interface + templates
 │   ├── notifications/    # in-app + multi-channel notifications
-│   ├── payments/         # PaymentProvider interface + Creem
+│   ├── payments/         # PaymentProvider interface + Creem/Stripe/Polar (alpha)
 │   ├── rbac/             # role-based access control
 │   ├── search/           # SearchProvider interface
 │   ├── storage/          # StorageProvider interface + S3/MinIO

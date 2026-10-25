@@ -1,7 +1,12 @@
 "use client";
 
 import { createLogger } from "@fuutu/logs";
-import { PLANS, type PlanId, paymentsConfig } from "@fuutu/payments/config";
+import {
+	type BillingInterval,
+	PLANS,
+	type PlanId,
+	paymentsConfig,
+} from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
 	type PlanTranslations,
@@ -14,11 +19,7 @@ import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "choose-plan" });
 
-export function ChoosePlan({
-	priceIds,
-}: {
-	priceIds: Partial<Record<PlanId, string>>;
-}) {
+export function ChoosePlan() {
 	const t = useTranslations("payments");
 	const locale = useLocale();
 	const [loading, setLoading] = useState<PlanId | null>(null);
@@ -34,19 +35,15 @@ export function ChoosePlan({
 	const showSeatSelector =
 		!isOrgBilling && Object.values(PLANS).some((plan) => plan.seatBased);
 
-	async function checkout(planId: PlanId) {
-		const priceId = priceIds[planId];
-		if (!priceId) {
-			setError(t("choosePlan.unavailable"));
-			return;
-		}
+	async function checkout(planId: PlanId, interval?: BillingInterval) {
 		setLoading(planId);
 		setError(null);
 		try {
 			const plan = PLANS[planId];
 			const seats = plan.seatBased ? seatCount : undefined;
 			const result = await orpc.payments.checkout.create.call({
-				priceId,
+				planId,
+				interval,
 				successUrl: "/dashboard",
 				cancelUrl: "/choose-plan",
 				seats,

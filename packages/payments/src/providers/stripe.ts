@@ -10,6 +10,7 @@ import type {
 	SeatAwarePaymentProvider,
 	SetSeatsInput,
 } from "../types";
+import { WebhookConfigError, WebhookSignatureError } from "../types";
 
 const log = createLogger({ scope: "payments:stripe" });
 
@@ -18,12 +19,35 @@ let _client: Stripe | null = null;
 function getClient(): Stripe {
 	if (_client) return _client;
 	if (!env.STRIPE_SECRET_KEY) {
-		throw new Error(
+		throw new WebhookConfigError(
 			"[payments:stripe] STRIPE_SECRET_KEY is not set. Configure it in @fuutu/env/saas before using Stripe-backed flows.",
 		);
 	}
 	_client = new Stripe(env.STRIPE_SECRET_KEY);
 	return _client;
+}
+
+/**
+ * Stripe requires absolute URLs. Env fallbacks are optional, so a
+ * resolved value can be undefined — and a caller-supplied value can be
+ * relative. Fail fast with a config error instead of letting the Stripe
+ * API reject the request with a less actionable error.
+ */
+function requireAbsoluteUrl(
+	url: string | null | undefined,
+	what: string,
+): string {
+	if (!url) {
+		throw new WebhookConfigError(
+			`[payments:stripe] ${what} is not configured — pass it on the input or set NEXT_PUBLIC_SAAS_URL.`,
+		);
+	}
+	if (!/^https?:\/\//.test(url)) {
+		throw new WebhookConfigError(
+			`[payments:stripe] ${what} must be an absolute http(s) URL, got "${url}".`,
+		);
+	}
+	return url;
 }
 
 function mapStripeStatusToPurchaseStatus(
@@ -209,17 +233,27 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		// Stripe metadata values must be strings; `mode` is a control key
 		// consumed here, not forwarded to Stripe.
 		const metadata: Record<string, string> = {};
-		if (input.userId) metadata.user_id = input.userId;
-		if (input.organizationId) metadata.organization_id = input.organizationId;
 		for (const [key, value] of Object.entries(input.metadata ?? {})) {
 			if (key === "mode" || value === undefined || value === null) continue;
 			metadata[key] = String(value);
 		}
+		// Owner keys after the caller metadata — they must win collisions so
+		// the signed webhook can't be pointed at a different billing owner.
+		if (input.userId) metadata.user_id = input.userId;
+		if (input.organizationId) metadata.organization_id = input.organizationId;
 		const sessionParams: Stripe.Checkout.SessionCreateParams = {
 			mode,
 			line_items: [{ price: input.priceId, quantity: input.seats ?? 1 }],
-			success_url: input.successUrl ?? "/",
-			cancel_url: input.cancelUrl ?? "/",
+			// Stripe requires absolute URLs — fall back to the app URL like
+			// Polar does, never to a relative "/".
+			success_url: requireAbsoluteUrl(
+				input.successUrl ?? env.NEXT_PUBLIC_SAAS_URL,
+				"checkout success URL (input.successUrl or NEXT_PUBLIC_SAAS_URL)",
+			),
+			cancel_url: requireAbsoluteUrl(
+				input.cancelUrl ?? env.NEXT_PUBLIC_SAAS_URL,
+				"checkout cancel URL (input.cancelUrl or NEXT_PUBLIC_SAAS_URL)",
+			),
 			customer_email: input.customerEmail,
 			metadata,
 		};
@@ -239,7 +273,10 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		const client = getClient();
 		const session = await client.billingPortal.sessions.create({
 			customer: input.customerId,
-			return_url: input.returnUrl ?? "/",
+			return_url: requireAbsoluteUrl(
+				input.returnUrl ?? env.NEXT_PUBLIC_SAAS_URL,
+				"portal return URL (input.returnUrl or NEXT_PUBLIC_SAAS_URL)",
+			),
 		});
 		return { url: session.url };
 	},
@@ -250,8 +287,8 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 			email: input.email,
 			name: input.name,
 			metadata: {
-				fuutu_user_id: input.userId,
 				...input.metadata,
+				fuutu_user_id: input.userId,
 			},
 		});
 		return { customerId: customer.id };
@@ -266,13 +303,13 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	async parseWebhook(request: Request): Promise<ProviderEvent[]> {
 		if (!env.STRIPE_WEBHOOK_SECRET) {
 			log.error("STRIPE_WEBHOOK_SECRET missing — rejecting webhook");
-			throw new Error("webhook not configured");
+			throw new WebhookConfigError("webhook not configured");
 		}
 
 		const body = await request.text();
 		const signature = request.headers.get("stripe-signature");
 		if (!signature) {
-			throw new Error("signature");
+			throw new WebhookSignatureError("signature");
 		}
 
 		try {
@@ -285,9 +322,11 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 			log.info("stripe webhook verified", { type: event.type });
 			return await parseStripeEvent(event);
 		} catch (err) {
-			if (err instanceof Error && err.message.includes("signature")) {
+			// Classify by the SDK's typed error, not by message substring —
+			// any error mentioning "signature" would otherwise map to 401.
+			if (err instanceof Stripe.errors.StripeSignatureVerificationError) {
 				log.warn("stripe webhook signature invalid", { err: err.message });
-				throw new Error("signature");
+				throw new WebhookSignatureError(`signature: ${err.message}`);
 			}
 			log.error("stripe webhook handler failed", { err: String(err) });
 			throw err;

@@ -1,16 +1,24 @@
 import { config } from "@fuutu/config";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
 	FEATURE_CATALOG,
 	type FeatureEntry,
+	isPaymentsEnabled,
 	LIMITS,
 	PLAN_IDS,
 	PLANS,
 	type PlanId,
 	type PlanLimits,
 	paymentsConfig,
+	setPaymentProvider,
 } from "../config";
+
+const originalProvider = paymentsConfig.provider;
+
+afterEach(() => {
+	paymentsConfig.provider = originalProvider;
+});
 
 const PLAN_IDS_EXPECTED: PlanId[] = ["free", "pro", "enterprise"];
 const LIMIT_KEYS: (keyof PlanLimits)[] = [
@@ -33,6 +41,23 @@ describe("paymentsConfig", () => {
 		const expected =
 			config.features.organizationsMode !== "off" ? "organization" : "user";
 		expect(paymentsConfig.billingAttachedTo).toBe(expected);
+	});
+
+	it("provider is 'noop' when features.payments is false, else 'creem'", () => {
+		expect(paymentsConfig.provider).toBe(
+			config.features.payments !== true ? "noop" : "creem",
+		);
+	});
+
+	it("isPaymentsEnabled() reflects the configured provider", () => {
+		expect(isPaymentsEnabled()).toBe(paymentsConfig.provider !== "noop");
+		paymentsConfig.provider = "noop";
+		expect(isPaymentsEnabled()).toBe(false);
+	});
+
+	it("setPaymentProvider mutates the provider when payments are enabled", () => {
+		setPaymentProvider("stripe");
+		expect(paymentsConfig.provider).toBe("stripe");
 	});
 });
 

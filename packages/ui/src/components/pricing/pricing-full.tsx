@@ -299,6 +299,7 @@ function PlanHeader({
 					LinkComponent={LinkComponent}
 					inverted={hl}
 					size="sm"
+					isYearly={isYearly}
 				/>
 			</div>
 		</div>
@@ -573,6 +574,7 @@ function MobilePlanCard({
 					LinkComponent={LinkComponent}
 					inverted={hl}
 					size="sm"
+					isYearly={isYearly}
 				/>
 			</div>
 

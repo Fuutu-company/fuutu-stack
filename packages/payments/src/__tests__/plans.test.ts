@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { LIMITS, PLANS, type PlanId } from "../config";
 import {
@@ -127,6 +127,20 @@ describe("buildPricingTiers()", () => {
 		});
 		const proTier = tiers.find((t) => t.id === "pro");
 		expect(typeof proTier?.onCtaClick).toBe("function");
+	});
+
+	it("tier onCtaClick forwards the billing interval to the handler", () => {
+		const handler = vi.fn();
+		const tiers = buildPricingTiers({
+			audience: "saas",
+			t: mockTranslations,
+			onCtaClick: handler,
+		});
+		const proTier = tiers.find((t) => t.id === "pro");
+		proTier?.onCtaClick?.("year");
+		expect(handler).toHaveBeenCalledWith("pro", "year");
+		proTier?.onCtaClick?.();
+		expect(handler).toHaveBeenCalledWith("pro", undefined);
 	});
 
 	it("onCtaClick is undefined when CTA is disabled (free plan in saas)", () => {

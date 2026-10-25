@@ -12,6 +12,7 @@
 
 import {
 	type AudienceId,
+	type BillingInterval,
 	PLAN_IDS,
 	PLANS,
 	type Plan,
@@ -38,8 +39,12 @@ export type PlanTranslationResolver = (id: PlanId) => PlanTranslations;
 export interface BuildPricingTiersOptions {
 	audience: AudienceId;
 	t: PlanTranslationResolver;
-	/** Per-plan CTA click handler (SaaS checkout). Takes precedence over catalog href. */
-	onCtaClick?: (id: PlanId) => void;
+	/**
+	 * Per-plan CTA click handler (SaaS checkout). Takes precedence over catalog href.
+	 * Receives the billing interval the UI toggle was set to — "year" only
+	 * when the clicked tier has a yearly price.
+	 */
+	onCtaClick?: (id: PlanId, interval?: BillingInterval) => void;
 	/** Per-plan href override (e.g. marketing → sign-up with plan param). */
 	hrefFor?: (id: PlanId) => string | undefined;
 	/** Per-plan loading state (disables CTA while a checkout is in flight). */
@@ -71,7 +76,7 @@ export interface BuiltPricingTier {
 	highlighted?: boolean;
 	ctaLabel: string;
 	ctaHref?: string;
-	onCtaClick?: () => void;
+	onCtaClick?: (interval?: BillingInterval) => void;
 	disabled?: boolean;
 	/** Seat count for seat-based plans (e.g. "5 seats"). */
 	seatCount?: number;
@@ -123,7 +128,9 @@ export function buildPricingTiers(
 			ctaLabel: tr.ctaLabel,
 			ctaHref: onCtaClick ? undefined : href,
 			onCtaClick:
-				onCtaClick && !ctaDisabled ? () => onCtaClick(planId) : undefined,
+				onCtaClick && !ctaDisabled
+					? (interval) => onCtaClick(planId, interval)
+					: undefined,
 			disabled: ctaDisabled || isLoading || (allDisabled ?? false),
 			seatCount: seatCountFor?.(planId),
 		};

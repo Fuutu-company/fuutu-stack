@@ -257,7 +257,12 @@ function RegularCard({
 			)}
 
 			<div className="mt-auto pt-5">
-				<PricingCTA tier={tier} LinkComponent={LinkComponent} inverted={hl} />
+				<PricingCTA
+					tier={tier}
+					LinkComponent={LinkComponent}
+					inverted={hl}
+					isYearly={isYearly}
+				/>
 			</div>
 		</div>
 	);

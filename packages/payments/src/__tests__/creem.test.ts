@@ -1,4 +1,6 @@
+import { env } from "@fuutu/env/saas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { WebhookConfigError, WebhookSignatureError } from "../types";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -56,6 +58,58 @@ describe("creem provider — SDK integration", () => {
 		expect(mockFetch).toHaveBeenCalledTimes(1);
 	});
 
+	it("createCheckoutLink keeps owner metadata authoritative over input.metadata", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ checkout_url: "https://checkout.test/url" }),
+		});
+		await creemPaymentProvider.createCheckoutLink({
+			priceId: "prod_abc",
+			userId: "user_123",
+			organizationId: "org_123",
+			metadata: {
+				user_id: "attacker_user",
+				organization_id: "attacker_org",
+				extra: "kept",
+			},
+		});
+		const init = mockFetch.mock.calls[0]?.[1];
+		const body = JSON.parse(init?.body as string);
+		expect(body.metadata).toMatchObject({
+			user_id: "user_123",
+			organization_id: "org_123",
+			extra: "kept",
+		});
+	});
+
+	it("createCustomer keeps user_id authoritative over input.metadata", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ id: "cust_creem_123" }),
+		});
+		await creemPaymentProvider.createCustomer({
+			userId: "user_123",
+			email: "test@test.com",
+			metadata: { user_id: "attacker_user" },
+		});
+		const init = mockFetch.mock.calls[0]?.[1];
+		const body = JSON.parse(init?.body as string);
+		expect(body.metadata.user_id).toBe("user_123");
+	});
+
+	it("throws a misconfiguration error when CREEM_API_KEY is not set", async () => {
+		const original = env.CREEM_API_KEY;
+		Object.assign(env, { CREEM_API_KEY: undefined });
+		try {
+			await expect(
+				creemPaymentProvider.createCheckoutLink({ priceId: "prod_abc" }),
+			).rejects.toThrow("CREEM_API_KEY is not set");
+			expect(mockFetch).not.toHaveBeenCalled();
+		} finally {
+			Object.assign(env, { CREEM_API_KEY: original });
+		}
+	});
+
 	it("cancelSubscription calls Creem API", async () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
@@ -96,6 +150,26 @@ describe("creem provider — SDK integration", () => {
 		expect(events.length).toBe(1);
 		expect(events[0]?.type).toBe("subscription.activated");
 		expect(events[0]?.subscriptionId).toBe("sub_123");
+	});
+
+	it("parseWebhook throws a clear error on a signed but non-JSON body", async () => {
+		const crypto = await import("node:crypto");
+		const body = "this is not json{{{";
+		const signature = crypto
+			.createHmac("sha256", "test-webhook-secret")
+			.update(body)
+			.digest("hex");
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "creem-signature": signature },
+			body,
+		});
+		const err = await creemPaymentProvider
+			.parseWebhook(request)
+			.catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(Error);
+		expect(err).not.toBeInstanceOf(SyntaxError);
+		expect((err as Error).message).toContain("Malformed webhook payload");
 	});
 
 	it("parseWebhook throws on a signed but malformed payload", async () => {
@@ -140,17 +214,19 @@ describe("creem provider — SDK integration", () => {
 		expect(events[0]?.eventId).toBe("evt_123");
 	});
 
-	it("parseWebhook throws on missing signature", async () => {
+	it("parseWebhook throws WebhookSignatureError on missing signature", async () => {
 		const request = new Request("https://app.test/api/webhooks/payments", {
 			method: "POST",
 			body: "{}",
 		});
-		await expect(creemPaymentProvider.parseWebhook(request)).rejects.toThrow(
-			"Missing signature",
-		);
+		const err = await creemPaymentProvider
+			.parseWebhook(request)
+			.catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(WebhookSignatureError);
+		expect((err as Error).message).toContain("signature");
 	});
 
-	it("parseWebhook throws on invalid signature", async () => {
+	it("parseWebhook throws WebhookSignatureError on invalid signature", async () => {
 		const request = new Request("https://app.test/api/webhooks/payments", {
 			method: "POST",
 			headers: {
@@ -158,9 +234,30 @@ describe("creem provider — SDK integration", () => {
 			},
 			body: "{}",
 		});
-		await expect(creemPaymentProvider.parseWebhook(request)).rejects.toThrow(
-			"Invalid signature",
-		);
+		const err = await creemPaymentProvider
+			.parseWebhook(request)
+			.catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(WebhookSignatureError);
+		expect((err as Error).message).toContain("signature");
+	});
+
+	it("parseWebhook throws WebhookConfigError when the webhook secret is not configured", async () => {
+		const original = env.CREEM_WEBHOOK_SECRET;
+		Object.assign(env, { CREEM_WEBHOOK_SECRET: undefined });
+		try {
+			const request = new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "creem-signature": "deadbeef" },
+				body: "{}",
+			});
+			const err = await creemPaymentProvider
+				.parseWebhook(request)
+				.catch((e: unknown) => e);
+			expect(err).toBeInstanceOf(WebhookConfigError);
+			expect((err as Error).message.toLowerCase()).toContain("secret");
+		} finally {
+			Object.assign(env, { CREEM_WEBHOOK_SECRET: original });
+		}
 	});
 
 	it("setSubscriptionSeats calls Creem API to update seats", async () => {

@@ -41,10 +41,11 @@ vi.mock("@fuutu/credits", () => ({
 	resetRecurringCredits: mockResetRecurringCredits,
 }));
 
+const mockLogWarn = vi.hoisted(() => vi.fn());
 vi.mock("@fuutu/logs", () => ({
 	createLogger: () => ({
 		info: vi.fn(),
-		warn: vi.fn(),
+		warn: mockLogWarn,
 		error: vi.fn(),
 		debug: vi.fn(),
 	}),
@@ -383,6 +384,63 @@ describe("processWebhookEvents", () => {
 		);
 	});
 
+	it("grants top-up credits to the stored purchase owner on a deduplicated redelivery", async () => {
+		// A redelivery carrying divergent owner metadata must still grant to
+		// the owner recorded on the purchase — not to event metadata.
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue({
+			id: "purchase_dup",
+			userId: null,
+			organizationId: "org_stored",
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_dup",
+				productId: "prod_topup",
+				metadata: {
+					user_id: "forged_user",
+					topup_id: "ai_tokens_100k",
+				},
+			},
+		]);
+
+		expect(mockCreatePurchase).not.toHaveBeenCalled();
+		expect(mockGrantTopUpCredits).toHaveBeenCalledWith(
+			expect.objectContaining({
+				purchaseId: "purchase_dup",
+				userId: undefined,
+				organizationId: "org_stored",
+			}),
+		);
+	});
+
+	it("grants top-up credits to the stored owner when redelivery metadata has none", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue({
+			id: "purchase_dup",
+			userId: "user_stored",
+			organizationId: null,
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_dup",
+				productId: "prod_topup",
+				metadata: { topup_id: "ai_tokens_100k" },
+			},
+		]);
+
+		expect(mockCreatePurchase).not.toHaveBeenCalled();
+		expect(mockGrantTopUpCredits).toHaveBeenCalledWith(
+			expect.objectContaining({
+				purchaseId: "purchase_dup",
+				userId: "user_stored",
+				organizationId: undefined,
+			}),
+		);
+	});
+
 	it("re-attempts the top-up grant on a deduplicated redelivery", async () => {
 		mockGetPurchaseByCheckoutEventId.mockResolvedValue({ id: "purchase_dup" });
 
@@ -393,7 +451,7 @@ describe("processWebhookEvents", () => {
 				productId: "prod_topup",
 				metadata: {
 					user_id: "user_123",
-					credit_topup: { meterKey: "ai_tokens", amount: 1000 },
+					topup_id: "ai_tokens_100k",
 				},
 			},
 		]);
@@ -403,9 +461,185 @@ describe("processWebhookEvents", () => {
 			expect.objectContaining({
 				purchaseId: "purchase_dup",
 				meterKey: "ai_tokens",
-				amount: 1000,
+				amount: 100_000,
 			}),
 		);
+	});
+
+	it.each(["CANCELED", "EXPIRED"] as const)(
+		"does not reactivate a %s subscription on a late renewal",
+		async (status) => {
+			mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+				id: "purchase_1",
+				status,
+			});
+			mockUpdatePurchase.mockClear();
+
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.renewed",
+					status: "ACTIVE",
+				}),
+			]);
+
+			const call = mockUpdatePurchase.mock.calls[0]?.[0];
+			expect(call).toBeDefined();
+			expect(call.status).toBeUndefined();
+		},
+	);
+
+	it.each(["CANCELED", "EXPIRED"] as const)(
+		"does not reactivate a %s subscription on a late activation",
+		async (status) => {
+			mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+				id: "purchase_1",
+				status,
+			});
+			mockUpdatePurchase.mockClear();
+
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.activated",
+					status: "ACTIVE",
+				}),
+			]);
+
+			const call = mockUpdatePurchase.mock.calls[0]?.[0];
+			expect(call).toBeDefined();
+			expect(call.status).toBeUndefined();
+		},
+	);
+
+	it("routes one_time.purchased to the one-time purchase handler", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_ot" });
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "one_time.purchased",
+				eventId: "evt_ot",
+				customerId: "cust_123",
+				productId: "prod_ot",
+				metadata: { user_id: "user_123" },
+			},
+		]);
+
+		expect(mockCreatePurchase).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "ONE_TIME",
+				status: "ACTIVE",
+				provider: PROVIDER_ID,
+				productId: "prod_ot",
+				userId: "user_123",
+			}),
+		);
+	});
+
+	it("warns via the one-time handler for a productId-less one_time.purchased", async () => {
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "one_time.purchased",
+				eventId: "evt_noprod",
+				metadata: { user_id: "user_123" },
+			},
+		]);
+
+		expect(mockCreatePurchase).not.toHaveBeenCalled();
+		expect(mockGetPurchaseByProviderSubscriptionId).not.toHaveBeenCalled();
+		expect(mockLogWarn).toHaveBeenCalledWith(
+			"one-time purchase event without productId, skipping",
+			expect.objectContaining({ type: "one_time.purchased" }),
+		);
+	});
+
+	it("warns via the one-time handler for checkout.completed without subscriptionId or productId", async () => {
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				metadata: { user_id: "user_123" },
+			},
+		]);
+
+		expect(mockCreatePurchase).not.toHaveBeenCalled();
+		expect(mockGetPurchaseByProviderSubscriptionId).not.toHaveBeenCalled();
+		expect(mockLogWarn).toHaveBeenCalledWith(
+			"one-time purchase event without productId, skipping",
+			expect.objectContaining({ type: "checkout.completed" }),
+		);
+		expect(mockLogWarn).not.toHaveBeenCalledWith(
+			"subscription event without subscriptionId, skipping",
+			expect.anything(),
+		);
+	});
+
+	it("does not treat one_time.purchased as a subscription activation", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_ot" });
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "one_time.purchased",
+				subscriptionId: "sub_should_not_matter",
+				productId: "prod_ot",
+				metadata: { user_id: "user_123" },
+			},
+		]);
+
+		// Even with a subscriptionId on the payload, the event type is
+		// authoritative — the purchase is ONE_TIME, never SUBSCRIPTION.
+		expect(mockCreatePurchase).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "ONE_TIME" }),
+		);
+	});
+
+	it("grants top-up credits from the CREDIT_TOPUPS catalog, not echoed metadata", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_topup" });
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_topup",
+				productId: "prod_topup",
+				metadata: {
+					user_id: "user_123",
+					topup_id: "ai_tokens_500k",
+					// Forged echoes — the catalog values must win.
+					meter_key: "api_calls",
+					amount: 1,
+				},
+			},
+		]);
+
+		expect(mockGrantTopUpCredits).toHaveBeenCalledWith(
+			expect.objectContaining({
+				purchaseId: "purchase_topup",
+				meterKey: "ai_tokens",
+				amount: 500_000,
+				userId: "user_123",
+			}),
+		);
+	});
+
+	it("skips the credit grant when topup_id is not in CREDIT_TOPUPS", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_bad" });
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_bad",
+				productId: "prod_x",
+				metadata: {
+					user_id: "user_123",
+					topup_id: "not_a_real_topup",
+					meter_key: "ai_tokens",
+					amount: 999_999_999,
+				},
+			},
+		]);
+
+		expect(mockGrantTopUpCredits).not.toHaveBeenCalled();
 	});
 
 	it("grants plan credits via @fuutu/credits on subscription activation", async () => {

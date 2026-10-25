@@ -5,7 +5,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
-import { sanitizePaymentUrl } from "../shared";
+import { sanitizePaymentUrl, throwIfPaymentsDisabled } from "../shared";
 
 const portalSchema = z.object({
 	organizationId: z.string().min(1).optional(),
@@ -48,10 +48,13 @@ export const createBillingPortal = authProcedure({
 			}
 			customerId = subscription.customerId;
 		}
-		const provider = resolvePaymentProvider();
-		const result = await provider.createCustomerPortalLink({
-			customerId,
-			returnUrl: sanitizePaymentUrl(input.returnUrl),
-		});
-		return result;
+		try {
+			const provider = resolvePaymentProvider();
+			return await provider.createCustomerPortalLink({
+				customerId,
+				returnUrl: sanitizePaymentUrl(input.returnUrl),
+			});
+		} catch (err) {
+			throwIfPaymentsDisabled(err);
+		}
 	});
