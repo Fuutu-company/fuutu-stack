@@ -15,6 +15,21 @@ const isProd = env.NODE_ENV === "production";
 // providers via NEXT_PUBLIC_ANALYTICS_PROVIDER needs no edits here.
 const analyticsCsp = analyticsCspOrigins();
 
+// Presigned uploads PUT directly from the browser to the storage
+// endpoint — allow its origin in connect-src. Matters for http://
+// endpoints like local MinIO (https endpoints are covered by `https:`).
+// Non-http(s) or malformed endpoints are ignored: the CSP stays strict
+// and boot never crashes when env validation is skipped.
+let storageConnectSrc = "";
+try {
+	const url = new URL(env.S3_ENDPOINT ?? "");
+	if (url.protocol === "http:" || url.protocol === "https:") {
+		storageConnectSrc = url.origin;
+	}
+} catch {
+	// invalid endpoint → CSP stays strict, uploads degrade
+}
+
 // Security headers applied to every SaaS response.
 // Known CSP compromise: `'unsafe-inline'` stays on `script-src` in every env
 // because next-themes + the React Compiler emit a small inline bootstrap
@@ -40,7 +55,7 @@ const securityHeaders = [
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https:",
 			"font-src 'self' data: https://fonts.scalar.com",
-			`connect-src 'self' https: ${analyticsCsp.connectSrc.join(" ")}`,
+			`connect-src 'self' https: ${storageConnectSrc} ${analyticsCsp.connectSrc.join(" ")}`,
 			"frame-ancestors 'none'",
 			"base-uri 'self'",
 			"form-action 'self'",

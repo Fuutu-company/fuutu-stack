@@ -1,11 +1,11 @@
 import { PERMISSIONS } from "@fuutu/rbac";
-import { resolveStorageProvider } from "@fuutu/storage";
+import { resolveStorageProvider, STORAGE_BUCKET_ALIASES } from "@fuutu/storage";
 import { z } from "zod";
 import { authProcedure } from "../../../orpc/procedures";
-import { resolveBucketOrThrow } from "../shared";
+import { callStorageOrThrow, resolveBucketOrThrow } from "../shared";
 
 const fileListSchema = z.object({
-	bucket: z.string().min(1),
+	bucket: z.enum(STORAGE_BUCKET_ALIASES),
 	prefix: z
 		.string()
 		.optional()
@@ -34,6 +34,10 @@ export const listObjectsProcedure = authProcedure({
 			? `${scope}/${input.prefix}`
 			: `${scope}/`;
 		const provider = resolveStorageProvider();
-		const items = await provider.listObjects(bucket, scopedPrefix);
+		// The guarded provider re-validates bucket/prefix — violations
+		// surface as BAD_REQUEST via callStorageOrThrow.
+		const items = await callStorageOrThrow(() =>
+			provider.listObjects(bucket, scopedPrefix),
+		);
 		return { items };
 	});
