@@ -153,8 +153,7 @@ export class InlineJobRunner implements JobRunner {
 	 * `getLastRunAt`), fail closed when the claim write itself errors —
 	 * a failed write means a degraded DB, and running every job
 	 * unclaimed on every instance would multiply the harm.
-	 */
-	/**
+	 *
 	 * Returns the claim timestamp (`lastRunAt` value the claim wrote)
 	 * when the slot was won, `undefined` when the run proceeds unclaimed
 	 * (unreadable run state — nothing to claim against), or `null` when

@@ -98,14 +98,14 @@
     Provider-Swappable
   </text>
   <text x="466" y="138" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#6B6F76">
-    7 interfaces — swap without touching business logic
+    provider interfaces — swap without touching business logic
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400">
     <text x="466" y="164" fill="#F7F8F8">· Mail <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Plunk</tspan> <tspan fill="#6B6F76">(Resend, Postmark…)</tspan></text>
     <text x="466" y="188" fill="#F7F8F8">· Payments <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Creem</tspan> <tspan fill="#6B6F76">(Stripe, Polar…)</tspan></text>
     <text x="466" y="212" fill="#F7F8F8">· Storage <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">S3 + MinIO</tspan> <tspan fill="#6B6F76">(R2…)</tspan></text>
     <text x="466" y="236" fill="#F7F8F8">· Analytics <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Umami</tspan> <tspan fill="#6B6F76">(Plausible…)</tspan></text>
-    <text x="466" y="260" fill="#F7F8F8">· AI <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Google</tspan> <tspan fill="#6B6F76">(OpenAI, Anthropic…)</tspan></text>
+    <text x="466" y="260" fill="#F7F8F8">· AI <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">OpenRouter</tspan> <tspan fill="#6B6F76">(Google, OpenAI, Anthropic…)</tspan></text>
     <text x="466" y="284" fill="#F7F8F8">· Search <tspan fill="#6B6F76">→</tspan> <tspan fill="#8A8F98">pluggable</tspan></text>
     <text x="466" y="308" fill="#F7F8F8">· Content <tspan fill="#6B6F76">→</tspan> <tspan fill="#8A8F98">pluggable</tspan></text>
   </g>

@@ -356,6 +356,115 @@ describe("stripe provider — SDK integration", () => {
 		});
 	});
 
+	it("maps invoice.paid to subscription.renewed carrying invoice details", async () => {
+		webhooksConstructEventAsync.mockResolvedValueOnce({
+			type: "invoice.paid",
+			id: "evt_inv_paid",
+			data: {
+				object: {
+					id: "in_123",
+					customer: "cust_123",
+					status: "paid",
+					amount_paid: 1900,
+					currency: "usd",
+					created: 1_700_000_000,
+					hosted_invoice_url: "https://pay.stripe.com/invoice/in_123",
+					invoice_pdf: "https://pay.stripe.com/invoice/in_123.pdf",
+					period_end: 1_702_678_400,
+					period_start: 1_700_000_000,
+					status_transitions: { paid_at: 1_700_000_100 },
+					parent: {
+						type: "subscription_details",
+						subscription_details: { subscription: "sub_123" },
+					},
+				},
+			},
+		} as never);
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "stripe-signature": "test" },
+			body: "{}",
+		});
+		const events = await stripePaymentProvider.parseWebhook(request);
+		expect(events[0]).toMatchObject({
+			type: "subscription.renewed",
+			eventId: "evt_inv_paid",
+			subscriptionId: "sub_123",
+			invoice: {
+				id: "in_123",
+				url: "https://pay.stripe.com/invoice/in_123",
+				pdfUrl: "https://pay.stripe.com/invoice/in_123.pdf",
+				amount: "19.00",
+				currency: "USD",
+				status: "paid",
+				issuedAt: new Date(1_700_000_000 * 1000),
+				paidAt: new Date(1_700_000_100 * 1000),
+			},
+		});
+	});
+
+	it("maps invoice.payment_failed to subscription.past_due carrying the open invoice", async () => {
+		webhooksConstructEventAsync.mockResolvedValueOnce({
+			type: "invoice.payment_failed",
+			id: "evt_inv_failed",
+			data: {
+				object: {
+					id: "in_456",
+					customer: "cust_123",
+					status: "open",
+					amount_due: 1900,
+					currency: "usd",
+					created: 1_700_000_000,
+					hosted_invoice_url: "https://pay.stripe.com/invoice/in_456",
+					parent: {
+						type: "subscription_details",
+						subscription_details: { subscription: "sub_123" },
+					},
+				},
+			},
+		} as never);
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "stripe-signature": "test" },
+			body: "{}",
+		});
+		const events = await stripePaymentProvider.parseWebhook(request);
+		expect(events[0]).toMatchObject({
+			type: "subscription.past_due",
+			eventId: "evt_inv_failed",
+			subscriptionId: "sub_123",
+			status: "PAST_DUE",
+			invoice: {
+				id: "in_456",
+				amount: "19.00",
+				status: "open",
+			},
+		});
+	});
+
+	it("returns no events for invoice.paid without a subscription", async () => {
+		webhooksConstructEventAsync.mockResolvedValueOnce({
+			type: "invoice.paid",
+			id: "evt_inv_orphan",
+			data: {
+				object: {
+					id: "in_789",
+					customer: "cust_123",
+					status: "paid",
+					amount_paid: 500,
+					currency: "usd",
+				},
+			},
+		} as never);
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "stripe-signature": "test" },
+			body: "{}",
+		});
+		const events = await stripePaymentProvider.parseWebhook(request);
+		expect(events).toEqual([]);
+	});
+
 	it("setSubscriptionSeats calls subscriptions.retrieve then update", async () => {
 		subscriptionsRetrieve.mockClear();
 		subscriptionsUpdate.mockClear();

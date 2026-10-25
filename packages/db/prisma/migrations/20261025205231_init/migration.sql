@@ -1,4 +1,3 @@
-◇ injected env (51) from ../../.env // tip: ⌘ override existing { override: true }
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "app";
 
@@ -627,3 +626,63 @@ ALTER TABLE "auth"."passkey" ADD CONSTRAINT "passkey_userId_fkey" FOREIGN KEY ("
 -- AddForeignKey
 ALTER TABLE "auth"."two_factor" ADD CONSTRAINT "two_factor_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+
+-- Custom constraints — not expressible in the .prisma schema
+-- (carried over verbatim from the pre-squash migrations
+-- 20260925114500_credit_owner_constraints and
+-- 20261012120000_credit_event_idempotency; do not mirror in schema)
+
+-- Polymorphic owner invariant: exactly one of "userId"/"organizationId"
+-- must be set on owner-scoped tables. Prisma cannot express CHECK
+-- constraints or partial unique indexes.
+ALTER TABLE "app"."credit_balance"
+    ADD CONSTRAINT "credit_balance_owner_xor"
+    CHECK (("userId" IS NULL) <> ("organizationId" IS NULL));
+
+ALTER TABLE "app"."credit_package"
+    ADD CONSTRAINT "credit_package_owner_xor"
+    CHECK (("userId" IS NULL) <> ("organizationId" IS NULL));
+
+ALTER TABLE "app"."purchase"
+    ADD CONSTRAINT "purchase_owner_xor"
+    CHECK (("userId" IS NULL) <> ("organizationId" IS NULL));
+
+-- Per-owner uniqueness on credit_balance. The schema's
+-- @@unique([userId, organizationId, meterKey]) is void when one owner is
+-- NULL (Postgres treats NULLs as distinct) — these partial indexes give
+-- the real "one balance per owner+meter" guarantee the find-then-create
+-- paths rely on.
+CREATE UNIQUE INDEX "credit_balance_user_meter_key"
+    ON "app"."credit_balance" ("userId", "meterKey")
+    WHERE "userId" IS NOT NULL;
+
+CREATE UNIQUE INDEX "credit_balance_organization_meter_key"
+    ON "app"."credit_balance" ("organizationId", "meterKey")
+    WHERE "organizationId" IS NOT NULL;
+
+-- One credit package per purchase — makes top-up credit grants
+-- idempotent under webhook redelivery.
+CREATE UNIQUE INDEX "credit_package_purchaseId_key"
+    ON "app"."credit_package" ("purchaseId")
+    WHERE "purchaseId" IS NOT NULL;
+
+-- Idempotency marker for one-time checkouts: webhook sync stores the
+-- provider event id in purchase.metadata->>'checkoutEventId'; this
+-- expression index makes a redelivered checkout.completed a no-op.
+CREATE UNIQUE INDEX "purchase_provider_checkoutEventId_key"
+    ON "app"."purchase" ("provider", (("metadata" ->> 'checkoutEventId')))
+    WHERE ("metadata" ->> 'checkoutEventId') IS NOT NULL;
+
+-- Consume idempotency on credit_event: one consume per idempotency key
+-- per owner+meter — a redelivered consume request replays the original
+-- result instead of debiting again. Two partial indexes because the
+-- owner XOR CHECK leaves the other owner column NULL. Only the first
+-- event of a consume carries the key, so multi-event consumes do not
+-- self-violate.
+CREATE UNIQUE INDEX "credit_event_user_idempotency_key"
+    ON "app"."credit_event" ("userId", "meterKey", "idempotencyKey")
+    WHERE "userId" IS NOT NULL AND "idempotencyKey" IS NOT NULL;
+
+CREATE UNIQUE INDEX "credit_event_organization_idempotency_key"
+    ON "app"."credit_event" ("organizationId", "meterKey", "idempotencyKey")
+    WHERE "organizationId" IS NOT NULL AND "idempotencyKey" IS NOT NULL;

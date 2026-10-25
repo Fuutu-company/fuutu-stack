@@ -55,6 +55,32 @@ export interface ProviderEvent {
 	currentPeriodEnd?: Date;
 	/** Contains user_id / organization_id (passed through checkout metadata). */
 	metadata?: Record<string, unknown>;
+	/**
+	 * Invoice details when the event is invoice-backed (e.g. Stripe
+	 * `invoice.paid` / `invoice.payment_failed`). Providers whose webhooks
+	 * carry no invoice object (Creem, Polar) omit it — the sync layer then
+	 * writes no Invoice row.
+	 */
+	invoice?: ProviderInvoiceData;
+}
+
+/**
+ * Provider-side invoice extracted from a webhook payload. `amount` is a
+ * major-unit decimal string (e.g. "19.00") matching `Invoice.amount`
+ * (Prisma Decimal) — the provider converts from minor units.
+ */
+export interface ProviderInvoiceData {
+	/** Provider-side invoice id — used as the dedup key. */
+	id: string;
+	/** Hosted invoice page URL (e.g. Stripe hosted_invoice_url). */
+	url?: string;
+	pdfUrl?: string;
+	amount: string;
+	currency?: string;
+	/** DB status literal: "paid" | "open" | "void" | "uncollectible". */
+	status: string;
+	issuedAt?: Date;
+	paidAt?: Date;
 }
 
 // ─── Status literal (mirrors PurchaseStatus enum in DB) ──────────────────────

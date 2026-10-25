@@ -50,6 +50,8 @@ export const createTopupCheckout = protectedProcedure
 				organizationId: input.organizationId,
 				successUrl: sanitizePaymentUrl(input.successUrl),
 				cancelUrl: sanitizePaymentUrl(input.cancelUrl),
+				// Session email — providers pre-fill the checkout form with it.
+				customerEmail: context.user.email,
 				metadata: {
 					// One-time purchase — providers like Stripe need this to pick
 					// mode "payment" instead of "subscription". Only topup_id is

@@ -1091,6 +1091,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.23.1
+      cross-env:
+        specifier: 'catalog:'
+        version: 10.1.0
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2

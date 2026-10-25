@@ -1,4 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const mockLogWarn = vi.hoisted(() => vi.fn());
+vi.mock("@fuutu/logs", () => ({
+	createLogger: () => ({
+		info: vi.fn(),
+		warn: mockLogWarn,
+		error: vi.fn(),
+		debug: vi.fn(),
+	}),
+}));
+
 import {
 	cronMatches,
 	isJobDue,
@@ -179,5 +190,14 @@ describe("isJobDue", () => {
 		// "31 February" parses but matches no real instant — an empty
 		// lookback proves the schedule can never fire.
 		expect(isJobDue("0 0 31 2 *", new Date(2025, 0, 1), now)).toBe(false);
+	});
+
+	it("warns only once per impossible schedule", () => {
+		const lastRunAt = new Date(2025, 0, 1);
+		mockLogWarn.mockClear();
+		expect(isJobDue("0 0 30 2 *", lastRunAt, now)).toBe(false);
+		expect(isJobDue("0 0 30 2 *", lastRunAt, now)).toBe(false);
+		expect(isJobDue("0 0 30 2 *", lastRunAt, now)).toBe(false);
+		expect(mockLogWarn).toHaveBeenCalledTimes(1);
 	});
 });

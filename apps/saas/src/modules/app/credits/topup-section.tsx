@@ -95,10 +95,14 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 								<Zap className="size-5 text-muted-foreground" />
 								<div>
 									<p className="font-medium">
-										{t(`packages.${topup.id}.label`)}
+										{t.has(`packages.${topup.id}.label`)
+											? t(`packages.${topup.id}.label`)
+											: `${topup.amount.toLocaleString()} ${topup.meterKey}`}
 									</p>
 									<p className="text-muted-foreground text-xs">
-										{t(`packages.${topup.id}.description`)}
+										{t.has(`packages.${topup.id}.description`)
+											? t(`packages.${topup.id}.description`)
+											: topup.meterKey}
 									</p>
 								</div>
 							</div>

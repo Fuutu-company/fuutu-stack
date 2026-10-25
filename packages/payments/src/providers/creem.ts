@@ -47,6 +47,28 @@ function creemFetch(path: string, init: RequestInit = {}) {
 	});
 }
 
+/**
+ * Creem requires an absolute success URL. Same contract as the Stripe and
+ * Polar providers — fail fast with a config error instead of letting a
+ * relative or missing URL reach the Creem API.
+ */
+function requireAbsoluteUrl(
+	url: string | null | undefined,
+	what: string,
+): string {
+	if (!url) {
+		throw new WebhookConfigError(
+			`[payments:creem] ${what} is not configured — pass it on the input or set NEXT_PUBLIC_SAAS_URL.`,
+		);
+	}
+	if (!/^https?:\/\//.test(url)) {
+		throw new WebhookConfigError(
+			`[payments:creem] ${what} must be an absolute http(s) URL, got "${url}".`,
+		);
+	}
+	return url;
+}
+
 function mapCreemStatus(status: string): PurchaseStatusLiteral {
 	switch (status) {
 		case "active":
@@ -166,7 +188,10 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			body: JSON.stringify({
 				product_id: input.priceId,
 				units: input.seats ?? 1,
-				success_url: input.successUrl,
+				success_url: requireAbsoluteUrl(
+					input.successUrl ?? env.NEXT_PUBLIC_SAAS_URL,
+					"checkout success URL (input.successUrl or NEXT_PUBLIC_SAAS_URL)",
+				),
 				metadata: {
 					// Owner keys last — caller metadata must not be able to
 					// override the billing owner on the signed webhook.

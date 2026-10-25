@@ -33,7 +33,7 @@ export function AuthSignIn({
 	// Forward the redirect target to sign-up so invite links survive the
 	// sign-in → sign-up hop (the invitation id is embedded in it).
 	const signUpHref = redirectParam
-		? `/auth/sign-up?redirect=${encodeURIComponent(redirectParam)}`
+		? `/auth/sign-up?redirect=${encodeURIComponent(redirectTo)}`
 		: "/auth/sign-up";
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);

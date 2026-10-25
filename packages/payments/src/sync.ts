@@ -29,9 +29,11 @@ import {
 	getPurchaseByProviderSubscriptionId,
 	getPurchasesByOrganizationId,
 	getPurchasesByUserId,
+	isUniqueViolation,
 	setOrganizationPaymentsCustomerId,
 	setPaymentsCustomerId,
 	updatePurchase,
+	upsertInvoiceByProviderId,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { dispatchEvent, type WebhookEventType } from "@fuutu/webhooks";
@@ -42,6 +44,7 @@ import { resolvePaymentProvider } from "./resolve";
 import type {
 	ProviderEvent,
 	ProviderEventType,
+	ProviderInvoiceData,
 	PurchaseStatusLiteral,
 } from "./types";
 
@@ -84,10 +87,6 @@ const DEFAULT_STATUS_FOR_TYPE: Partial<
 	"checkout.completed": "ACTIVE",
 	"one_time.purchased": "ACTIVE",
 };
-
-/** Prisma unique-violation error — a dedup marker already exists. */
-const isUniqueViolation = (err: unknown): boolean =>
-	err instanceof Error && "code" in err && err.code === "P2002";
 
 /**
  * Process an array of normalized provider events and update the Purchase
@@ -207,6 +206,24 @@ async function processSingleEvent(
 			resolvedOrganizationId,
 			userIdToSet,
 		);
+		// Invoice-backed events (Stripe invoice.paid / invoice.payment_failed)
+		// persist an Invoice row. Runs after the purchase update and also
+		// covers the protected-status early return inside it. An
+		// invoice-backed event arriving before the purchase exists is skipped
+		// above — the next invoice event converges the table.
+		if (event.invoice) {
+			await recordProviderInvoice(providerId, event.invoice, {
+				userId: resolvedUserId,
+				organizationId: resolvedOrganizationId,
+				// Invoice.userId is required even for org-owned purchases —
+				// attribution falls back to the user_id kept in the purchase's
+				// checkout metadata.
+				attributionUserId: extractId(
+					isRecord(existing.metadata) ? existing.metadata : undefined,
+					"user_id",
+				),
+			});
+		}
 		// Redelivered activation: re-attempt the recurring credit grant.
 		// The original delivery may have created the purchase but failed
 		// the grant (which propagates as 5xx and triggers a provider retry).
@@ -412,6 +429,47 @@ async function createNewSubscriptionPurchase(
 	});
 }
 
+/**
+ * Persist a provider invoice to the `invoice` table. Keyed on
+ * `<providerId>:<invoice.id>` so a redelivered invoice event refreshes
+ * the row instead of duplicating it. Only fires for providers whose
+ * webhooks carry an invoice object (Stripe); invoices for one-time
+ * purchases are not emitted by Stripe checkout payment mode, so the
+ * table effectively covers subscription invoices.
+ */
+async function recordProviderInvoice(
+	providerId: string,
+	invoice: ProviderInvoiceData,
+	owner: {
+		userId: string | null;
+		organizationId: string | null;
+		attributionUserId: string | null;
+	},
+): Promise<void> {
+	const userId = owner.userId ?? owner.attributionUserId;
+	if (!userId) {
+		// Invoice.userId is a required column — without an attributable
+		// user there is no valid row to write. Log rather than retry.
+		log.warn("invoice event without attributable user, skipping", {
+			providerInvoiceId: invoice.id,
+			organizationId: owner.organizationId,
+		});
+		return;
+	}
+	await upsertInvoiceByProviderId({
+		providerInvoiceId: `${providerId}:${invoice.id}`,
+		userId,
+		organizationId: owner.organizationId,
+		url: invoice.url ?? null,
+		pdfUrl: invoice.pdfUrl ?? null,
+		amount: invoice.amount,
+		currency: invoice.currency,
+		status: invoice.status,
+		issuedAt: invoice.issuedAt ?? new Date(),
+		paidAt: invoice.paidAt ?? null,
+	});
+}
+
 async function updateExistingPurchase(
 	providerId: string,
 	purchaseId: string,
@@ -556,6 +614,10 @@ async function cancelOldSubscriptionsForOwner(
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 function extractId(
 	metadata: Record<string, unknown> | undefined,

@@ -131,7 +131,7 @@ fuutu-stack/
 │   └── docs/          # docs template    — Port 4000 — write YOUR product docs here
 ├── packages/
 │   ├── config/        # cross-cutting config + theme.css (OKLCH)
-│   ├── env/           # env validation — saas.ts + marketing.ts + docs.ts
+│   ├── env/           # env validation — saas.ts + marketing.ts + docs.ts + public.ts
 │   ├── db/            # DB client + schema + queries (ORM-swappable — swap = reimplement query fns; Prisma types are part of the contract)
 │   ├── auth/          # Better Auth server + client + authConfig + hooks
 │   ├── api/           # Hono app + oRPC router + procedures + middleware

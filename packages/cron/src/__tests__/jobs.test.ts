@@ -18,6 +18,8 @@ vi.mock("@fuutu/webhooks", () => ({
 vi.mock("@fuutu/db", () => ({
 	deleteAuditLogsBefore: vi.fn(),
 	getTrialingSubscriptions: vi.fn(),
+	isUniqueViolation: (err: unknown) =>
+		err instanceof Error && "code" in err && err.code === "P2002",
 	notificationExists: vi.fn().mockResolvedValue(false),
 }));
 

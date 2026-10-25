@@ -7,6 +7,12 @@ import { z } from "zod";
 // the same vars.
 const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
 
+// Dangerous opt-in flags accept only explicit "1"/"true"/"0"/"false" —
+// a stray "on"/"yes"/"enabled" must not silently relax SSRF protection
+// or disable rate limiting.
+const strictFlag = () =>
+	z.stringbool({ truthy: ["1", "true"], falsy: ["0", "false"] });
+
 export const env = createEnv({
 	server: {
 		DATABASE_URL: z.url(),
@@ -74,7 +80,9 @@ export const env = createEnv({
 		CREDITS_AI_TOKENS_500K_PRICE_ID: z.string().optional(),
 		CREDITS_API_CALLS_50K_PRICE_ID: z.string().optional(),
 		// Payments — Provider selection
-		PAYMENTS_PROVIDER: z.enum(["polar", "stripe", "creem"]).optional(),
+		PAYMENTS_PROVIDER: z
+			.enum(["polar", "stripe", "creem", "custom", "noop"])
+			.optional(),
 		// Storage (S3 / MinIO)
 		STORAGE_PROVIDER: z.enum(["s3", "supabase", "noop"]).optional(),
 		// Search (@fuutu/search)
@@ -119,11 +127,11 @@ export const env = createEnv({
 		FUUTU_LICENSE_ENDPOINT: z.url().optional(),
 		FUUTU_TELEMETRY_ENDPOINT: z.url().optional(),
 		FUUTU_TELEMETRY_DISABLED: z.stringbool().optional(),
-		FUUTU_DISABLE_RATE_LIMIT: z.stringbool().optional(),
+		FUUTU_DISABLE_RATE_LIMIT: strictFlag().optional(),
 		// Explicit opt-in for outbound-webhook SSRF relaxation (http: +
 		// private/loopback targets). Needed for local receivers in dev —
 		// must NEVER be set in production.
-		WEBHOOK_ALLOW_PRIVATE_URLS: z.stringbool().optional(),
+		WEBHOOK_ALLOW_PRIVATE_URLS: strictFlag().optional(),
 	},
 	shared: {
 		NODE_ENV: z

@@ -9,15 +9,24 @@ export const getTopupPackages = protectedProcedure
 		path: "/payments/topup-packages",
 		tags: ["Payments"],
 		summary: "Get available top-up packages",
-		description:
-			"Returns a list of available credit top-up packages with their price IDs.",
+		description: "Returns a list of available credit top-up packages.",
 	})
 	.input(z.object({}).optional())
 	.handler(async () => {
-		const packages = CREDIT_TOPUPS.map((topup) => ({
-			...topup,
-			priceId: getCreditTopupPriceId(topup.id),
-		})).filter((topup) => topup.priceId !== undefined);
+		// Only catalog fields the UI needs — never the env var name or the
+		// resolved provider priceId. Price resolution stays server-side:
+		// topupCheckout.create takes the opaque topup `id` and resolves the
+		// price from env there. A package without a configured price is not
+		// purchasable and is filtered out.
+		const packages = CREDIT_TOPUPS.filter(
+			(topup) => getCreditTopupPriceId(topup.id) !== undefined,
+		).map((topup) => ({
+			id: topup.id,
+			meterKey: topup.meterKey,
+			amount: topup.amount,
+			displayPrice: topup.displayPrice,
+			popular: topup.popular,
+		}));
 
 		return { packages };
 	});

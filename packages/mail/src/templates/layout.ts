@@ -51,6 +51,8 @@ export function renderButton(href: string, label: string): string {
 /**
  * Scheme allowlist for hrefs — javascript:/data:/vbscript: links are
  * clickable in mail clients and appUrl values can be caller-supplied.
+ * Only http(s) is emitted: mailto: and relative URLs intentionally
+ * collapse to "#".
  */
 export function safeHref(href: string): string {
 	return /^https?:\/\//i.test(href) ? href : "#";

@@ -196,6 +196,17 @@ describe("pingTelemetry()", () => {
 		expect(body.kitVersion).toBeDefined();
 	});
 
+	it("never follows redirects and aborts via a timeout signal", async () => {
+		const mockFetch = vi
+			.fn()
+			.mockResolvedValue(new Response("ok", { status: 200 }));
+		globalThis.fetch = mockFetch;
+		await pingTelemetry("https://test.example.com/ping");
+		const options = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+		expect(options?.redirect).toBe("error");
+		expect(options?.signal).toBeInstanceOf(AbortSignal);
+	});
+
 	it("includes X-Framework header in the request", async () => {
 		const mockFetch = vi
 			.fn()

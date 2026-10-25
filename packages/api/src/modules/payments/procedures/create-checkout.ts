@@ -59,6 +59,9 @@ export const createCheckout = authProcedure({
 				successUrl: sanitizePaymentUrl(input.successUrl),
 				cancelUrl: sanitizePaymentUrl(input.cancelUrl),
 				seats: input.seats,
+				// Session email, not client input — providers pre-fill the
+				// checkout form with it.
+				customerEmail: context.user.email,
 			});
 		} catch (err) {
 			throwIfPaymentsDisabled(err);

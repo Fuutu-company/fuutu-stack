@@ -80,7 +80,7 @@ Every domain behind an interface — swap providers without touching business lo
 | **Payments** | `PaymentProvider` | Creem (Stripe implemented; Polar alpha) | Anything else via `customProvider`… |
 | **Storage** | `StorageProvider` | S3 + MinIO | Supabase, Noop… |
 | **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
-| **AI** | `AIProvider` | OpenRouter | Google, OpenAI, Anthropic, Noop… |
+| **AI** | `AIProvider` | OpenRouter (Google implemented) | OpenAI, Anthropic, Noop… |
 | **Search** | `SearchProvider` | Postgres | MeiliSearch, Typesense (`noop` returns empty — dev/test)… |
 
 ### AI-Native

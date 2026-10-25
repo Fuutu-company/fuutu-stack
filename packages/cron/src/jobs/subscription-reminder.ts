@@ -1,4 +1,8 @@
-import { getTrialingSubscriptions, notificationExists } from "@fuutu/db";
+import {
+	getTrialingSubscriptions,
+	isUniqueViolation,
+	notificationExists,
+} from "@fuutu/db";
 import { getMessagesForLocale } from "@fuutu/i18n";
 import { i18nConfig } from "@fuutu/i18n/config";
 import { createLogger } from "@fuutu/logs";
@@ -92,12 +96,7 @@ const errorMessage = (err: unknown): string => {
 
 const isLostRaceError = (err: unknown): boolean => {
 	const failures = err instanceof AggregateError ? err.errors : [err];
-	return (
-		failures.length > 0 &&
-		failures.every(
-			(f) => f instanceof Error && "code" in f && f.code === "P2002",
-		)
-	);
+	return failures.length > 0 && failures.every(isUniqueViolation);
 };
 
 /**

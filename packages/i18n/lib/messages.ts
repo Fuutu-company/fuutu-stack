@@ -71,20 +71,14 @@ export type FallbackChainConfig = {
 };
 
 /**
- * Resolution order: the locale itself, then its configured `fallbackLocale`
- * (recursively), then its nearest configured BCP-47 parent when no
- * `fallbackLocale` is configured ("de-AT" → "de"), and always `defaultLocale`
- * last. The `visited` set carries the accumulated chain through recursion so
- * configured fallback cycles (a → b → a) terminate instead of overflowing
- * the stack. `defaultLocale` is appended by the outermost call only —
- * inner frames must not re-append it, or a `defaultLocale` that also sits
- * inside the chain (e.g. defaultLocale "de" with de → en) would duplicate
- * and invert merge priority downstream.
+ * Recursive worker for `getFallbackChain` — the `visited` set carries
+ * the accumulated chain through recursion so configured fallback cycles
+ * (a → b → a) terminate instead of overflowing the stack.
  */
-export const getFallbackChain = (
+const buildFallbackChain = (
 	locale: string,
-	config: FallbackChainConfig = i18nConfig,
-	visited: ReadonlySet<string> = new Set(),
+	config: FallbackChainConfig,
+	visited: ReadonlySet<string>,
 ): string[] => {
 	const chain: string[] = [locale];
 	const seen = new Set(visited).add(locale);
@@ -106,13 +100,29 @@ export const getFallbackChain = (
 	}
 
 	if (fallback && !seen.has(fallback)) {
-		chain.push(...getFallbackChain(fallback, config, seen));
+		chain.push(...buildFallbackChain(fallback, config, seen));
 	}
 
-	if (visited.size === 0 && !chain.includes(config.defaultLocale)) {
+	return chain;
+};
+
+/**
+ * Resolution order: the locale itself, then its configured `fallbackLocale`
+ * (recursively), then its nearest configured BCP-47 parent when no
+ * `fallbackLocale` is configured ("de-AT" → "de"), and always `defaultLocale`
+ * last. `defaultLocale` is appended by the outermost call only — inner
+ * frames must not re-append it, or a `defaultLocale` that also sits
+ * inside the chain (e.g. defaultLocale "de" with de → en) would duplicate
+ * and invert merge priority downstream.
+ */
+export const getFallbackChain = (
+	locale: string,
+	config: FallbackChainConfig = i18nConfig,
+): string[] => {
+	const chain = buildFallbackChain(locale, config, new Set());
+	if (!chain.includes(config.defaultLocale)) {
 		chain.push(config.defaultLocale);
 	}
-
 	return chain;
 };
 

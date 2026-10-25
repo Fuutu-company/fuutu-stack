@@ -40,6 +40,7 @@
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",
 		"@types/pg": "catalog:",
+		"cross-env": "catalog:",
 		"dotenv": "catalog:",
 		"prisma": "catalog:",
 		"prisma-zod-generator": "catalog:",

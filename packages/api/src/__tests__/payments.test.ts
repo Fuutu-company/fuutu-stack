@@ -161,6 +161,7 @@ describe("payments.checkout.create", () => {
 			organizationId: undefined,
 			successUrl: undefined,
 			cancelUrl: undefined,
+			customerEmail: "test@fuutu.local",
 		});
 		expect(result).toEqual({ url: "https://checkout.example.com" });
 	});
@@ -183,7 +184,22 @@ describe("payments.checkout.create", () => {
 			organizationId: undefined,
 			successUrl: undefined,
 			cancelUrl: undefined,
+			customerEmail: "test@fuutu.local",
 		});
+	});
+
+	it("fails cleanly when the yearly price env var is missing", async () => {
+		envOverrides.PAYMENTS_PRO_YEARLY_PRICE_ID = undefined;
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "pro", interval: "year" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
 	});
 
 	it("rejects a non-checkoutable plan (free) with BAD_REQUEST", async () => {
@@ -273,6 +289,7 @@ describe("payments.checkout.create", () => {
 			organizationId: "12345678-1234-1234-8123-123456789abc",
 			successUrl: "http://localhost:3000/success",
 			cancelUrl: "http://localhost:3000/cancel",
+			customerEmail: "test@fuutu.local",
 		});
 	});
 
@@ -294,6 +311,7 @@ describe("payments.checkout.create", () => {
 			organizationId: undefined,
 			successUrl: "http://localhost:3000/",
 			cancelUrl: undefined,
+			customerEmail: "test@fuutu.local",
 		});
 	});
 
@@ -302,6 +320,61 @@ describe("payments.checkout.create", () => {
 			call(
 				paymentsRouter.checkout.create,
 				{ planId: "pro" },
+				{
+					context: unauthenticatedContext,
+				},
+			),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+	});
+});
+
+describe("payments.topupPackages.list", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns catalog data only — no priceId or env var names leak to clients", async () => {
+		const result = await call(
+			paymentsRouter.topupPackages.list,
+			{},
+			{ context: authenticatedContext },
+		);
+
+		expect(result.packages).toEqual([
+			{
+				id: "ai_tokens_100k",
+				meterKey: "ai_tokens",
+				amount: 100_000,
+				displayPrice: "$10",
+				popular: undefined,
+			},
+		]);
+		for (const pkg of result.packages) {
+			expect(pkg).not.toHaveProperty("priceId");
+			expect(pkg).not.toHaveProperty("priceIdEnvVar");
+		}
+	});
+
+	it("omits packages whose price ID is not configured", async () => {
+		const { getCreditTopupPriceId } = await import(
+			"@fuutu/payments/config.server"
+		);
+		vi.mocked(getCreditTopupPriceId).mockReturnValueOnce(undefined);
+
+		const result = await call(
+			paymentsRouter.topupPackages.list,
+			{},
+			{ context: authenticatedContext },
+		);
+
+		expect(result.packages).toEqual([]);
+	});
+
+	it("throws UNAUTHORIZED when unauthenticated", async () => {
+		await expect(
+			call(
+				paymentsRouter.topupPackages.list,
+				{},
 				{
 					context: unauthenticatedContext,
 				},

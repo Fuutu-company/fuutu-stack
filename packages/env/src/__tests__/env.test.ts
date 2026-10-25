@@ -169,6 +169,51 @@ describe("@fuutu/env/saas", () => {
 		expect(mod.env.WEBHOOK_ALLOW_PRIVATE_URLS).toBeUndefined();
 	});
 
+	it("rejects loose boolean words for WEBHOOK_ALLOW_PRIVATE_URLS", async () => {
+		for (const value of ["on", "yes", "enabled", "y"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.WEBHOOK_ALLOW_PRIVATE_URLS = value;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+	});
+
+	it("rejects loose boolean words for FUUTU_DISABLE_RATE_LIMIT", async () => {
+		for (const value of ["on", "yes", "enabled", "y"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.FUUTU_DISABLE_RATE_LIMIT = value;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+	});
+
+	it("accepts explicit boolean values for the dangerous flags", async () => {
+		for (const [key, expected] of [
+			["1", true],
+			["true", true],
+			["0", false],
+			["false", false],
+		] as const) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.WEBHOOK_ALLOW_PRIVATE_URLS = key;
+			process.env.FUUTU_DISABLE_RATE_LIMIT = key;
+			const { env } = await import("../saas");
+			expect(env.WEBHOOK_ALLOW_PRIVATE_URLS).toBe(expected);
+			expect(env.FUUTU_DISABLE_RATE_LIMIT).toBe(expected);
+		}
+	});
+
+	it("accepts noop and custom PAYMENTS_PROVIDER values", async () => {
+		for (const provider of ["polar", "stripe", "creem", "noop", "custom"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.PAYMENTS_PROVIDER = provider;
+			const { env } = await import("../saas");
+			expect(env.PAYMENTS_PROVIDER).toBe(provider);
+		}
+	});
+
 	it("transforms FUUTU_TELEMETRY_DISABLED string to boolean", async () => {
 		setRequiredSaasEnv();
 		process.env.FUUTU_TELEMETRY_DISABLED = "1";

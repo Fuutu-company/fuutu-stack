@@ -6,6 +6,7 @@ import type {
 	CustomerInput,
 	PortalInput,
 	ProviderEvent,
+	ProviderInvoiceData,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
 	SetSeatsInput,
@@ -68,6 +69,39 @@ function mapStripeStatusToPurchaseStatus(
 		default:
 			return "INCOMPLETE";
 	}
+}
+
+/**
+ * Extract the invoice fields the sync layer persists from a Stripe
+ * Invoice object. Returns undefined when the payload has no id — without
+ * a provider invoice id there is no dedup key and every redelivery would
+ * create a row.
+ */
+function toProviderInvoice(
+	invoice: Stripe.Invoice,
+	amountCents: number | null | undefined,
+): ProviderInvoiceData | undefined {
+	if (!invoice.id) return undefined;
+	// Stripe "draft" invoices are internal pre-finalization states — map
+	// everything that isn't a final status to "open".
+	const status =
+		invoice.status === "paid" ||
+		invoice.status === "void" ||
+		invoice.status === "uncollectible"
+			? invoice.status
+			: "open";
+	return {
+		id: invoice.id,
+		url: invoice.hosted_invoice_url ?? undefined,
+		pdfUrl: invoice.invoice_pdf ?? undefined,
+		amount: ((amountCents ?? 0) / 100).toFixed(2),
+		currency: invoice.currency?.toUpperCase(),
+		status,
+		issuedAt: invoice.created ? new Date(invoice.created * 1000) : undefined,
+		paidAt: invoice.status_transitions?.paid_at
+			? new Date(invoice.status_transitions.paid_at * 1000)
+			: undefined,
+	};
 }
 
 async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
@@ -188,6 +222,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 						currentPeriodEnd: new Date(
 							(invoice.period_end ?? invoice.period_start) * 1000,
 						),
+						invoice: toProviderInvoice(invoice, invoice.amount_paid),
 					},
 				];
 			}
@@ -211,6 +246,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 						subscriptionId,
 						customerId: invoice.customer as string,
 						status: "PAST_DUE",
+						invoice: toProviderInvoice(invoice, invoice.amount_due),
 					},
 				];
 			}

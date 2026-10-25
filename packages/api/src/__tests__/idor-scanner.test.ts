@@ -102,8 +102,53 @@ function handlerOnlyUsesContextUserId(content: string): boolean {
 	// `[^}]*` regex would miss.
 	const idx = content.indexOf(".handler(");
 	if (idx === -1) return false;
-	return !content.slice(idx).includes("input.organizationId");
+	const handlerBody = content.slice(idx);
+	if (handlerBody.includes("input.organizationId")) return false;
+	// `const { organizationId } = input` (also with renames or extra keys)
+	// is a use too — the substring check above cannot see it.
+	return !/\{[^}]*\borganizationId\b[^}]*\}\s*=\s*input\b/.test(handlerBody);
 }
+
+describe("handlerOnlyUsesContextUserId detection", () => {
+	const wrap = (handlerBody: string) =>
+		`export const proc = protectedProcedure.input(z.object({ organizationId: z.string() })).handler(async ({ input, context }) => { ${handlerBody} });`;
+
+	it("detects direct input.organizationId usage", () => {
+		expect(
+			handlerOnlyUsesContextUserId(wrap("return input.organizationId;")),
+		).toBe(false);
+	});
+
+	it("detects destructured organizationId from input", () => {
+		expect(
+			handlerOnlyUsesContextUserId(
+				wrap(
+					"const { id, organizationId, ...data } = input; return organizationId;",
+				),
+			),
+		).toBe(false);
+	});
+
+	it("detects renamed destructure of organizationId", () => {
+		expect(
+			handlerOnlyUsesContextUserId(
+				wrap("const { organizationId: orgId } = input; return orgId;"),
+			),
+		).toBe(false);
+	});
+
+	it("returns true when the handler ignores orgId", () => {
+		expect(handlerOnlyUsesContextUserId(wrap("return context.user.id;"))).toBe(
+			true,
+		);
+	});
+
+	it("returns true when destructuring omits organizationId", () => {
+		expect(
+			handlerOnlyUsesContextUserId(wrap("const { id } = input; return id;")),
+		).toBe(true);
+	});
+});
 
 describe("IDOR Scanner — all API procedures", () => {
 	const procedureFiles = findTsFiles(API_MODULES_DIR).filter((f) => {

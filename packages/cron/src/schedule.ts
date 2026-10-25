@@ -151,6 +151,13 @@ const MINUTE_MS = 60_000;
 const MAX_LOOKBACK_MS = 400 * 24 * 60 * MINUTE_MS;
 
 /**
+ * Impossible schedules already warned about. `isJobDue` runs on every
+ * trigger — without dedup a never-due schedule (e.g. `0 0 31 2 *`)
+ * would log-spam a warn on every tick, indefinitely.
+ */
+const warnedNeverDueSchedules = new Set<string>();
+
+/**
  * The most recent minute boundary ≤ `now` that matches the expression, or
  * `null` when nothing matches within the lookback window.
  */
@@ -193,10 +200,13 @@ export function isJobDue(
 	try {
 		const previous = previousScheduledRun(schedule, now);
 		if (!previous) {
-			log.warn(
-				"schedule matches no slot in the lookback window — job will never run",
-				{ schedule },
-			);
+			if (!warnedNeverDueSchedules.has(schedule)) {
+				warnedNeverDueSchedules.add(schedule);
+				log.warn(
+					"schedule matches no slot in the lookback window — job will never run",
+					{ schedule },
+				);
+			}
 			return false;
 		}
 		return previous.getTime() > lastRunAt.getTime();
