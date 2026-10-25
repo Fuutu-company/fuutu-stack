@@ -118,11 +118,11 @@
 					"items": [
 						{
 							"q": "Do I need a license to use Fuutu?",
-							"a": "Free for individuals and companies up to 10 employees or 250k € annual revenue. Beyond that, an Enterprise license is required. See LICENSE.md for the full terms."
+							"a": "Free for individuals and companies up to 10 employees or $250k annual revenue. Beyond that, an Enterprise license is required. See LICENSE.md for the full terms."
 						},
 						{
 							"q": "What happens when I exceed the free tier limits?",
-							"a": "You have 30 days from crossing the threshold (10 employees or 250k € revenue) to obtain an Enterprise license. Until then, everything continues to work — no feature gating, no trial expiry."
+							"a": "You have 30 days from crossing the threshold (10 employees or $250k revenue) to obtain an Enterprise license. Until then, everything continues to work — no feature gating, no trial expiry."
 						},
 						{
 							"q": "Can I use Fuutu for commercial products?",

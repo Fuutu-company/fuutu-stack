@@ -118,11 +118,11 @@
 					"items": [
 						{
 							"q": "Brauche ich eine Lizenz, um Fuutu zu nutzen?",
-							"a": "Kostenlos für Einzelpersonen und Firmen bis 10 Mitarbeiter:innen oder 250k € Jahresumsatz. Darüber hinaus ist eine Enterprise-Lizenz erforderlich. Die vollständigen Bedingungen findest du in der LICENSE.md."
+							"a": "Kostenlos für Einzelpersonen und Firmen bis 10 Mitarbeiter:innen oder 250.000 $ Jahresumsatz. Darüber hinaus ist eine Enterprise-Lizenz erforderlich. Die vollständigen Bedingungen findest du in der LICENSE.md."
 						},
 						{
 							"q": "Was passiert, wenn ich die Gratis-Grenzen überschreite?",
-							"a": "Du hast 30 Tage ab Überschreitung (10 Mitarbeiter:innen oder 250k € Umsatz), um eine Enterprise-Lizenz zu erwerben. Bis dahin funktioniert alles weiter — kein Feature-Gating, keine Testlaufzeit."
+							"a": "Du hast 30 Tage ab Überschreitung (10 Mitarbeiter:innen oder 250.000 $ Umsatz), um eine Enterprise-Lizenz zu erwerben. Bis dahin funktioniert alles weiter — kein Feature-Gating, keine Testlaufzeit."
 						},
 						{
 							"q": "Kann ich Fuutu für kommerzielle Produkte nutzen?",
