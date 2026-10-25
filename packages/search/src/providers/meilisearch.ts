@@ -2,6 +2,8 @@ import type { SearchProvider } from "../types";
 
 /**
  * Meilisearch provider — skeleton (not implemented in v1).
+ * Returned by the resolver so a misconfigured deploy fails loudly on
+ * first call.
  */
 export const meilisearchProvider: SearchProvider = {
 	id: "meilisearch",
