@@ -141,7 +141,7 @@ fuutu-stack/
 │   ├── search/           # SearchProvider interface
 │   ├── storage/          # StorageProvider interface + S3/MinIO
 │   ├── telemetry/        # build-time + runtime telemetry helpers
-│   ├── test-utils/       # shared test fixtures + helpers
+│   ├── test-utils/       # shared test helpers + architecture guard tests
 │   ├── ui/               # shared UI components (framework-agnostic)
 │   ├── utils/            # cn, getSafeRedirect, slugify, hash, invariant
 │   └── webhooks/         # signed delivery, retry, idempotent
