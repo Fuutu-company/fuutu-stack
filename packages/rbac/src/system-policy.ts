@@ -20,8 +20,8 @@ import { crud, PERMISSIONS } from "./permissions";
  * - user:  own resources + view system-generated + create/view orgs + use:ai
  * - admin: everything user has + manage users/audit-logs/payments/admin + admin panel
  */
-export const SYSTEM_POLICY: SystemAccessPolicy = {
-	user: [
+export const SYSTEM_POLICY: SystemAccessPolicy = Object.freeze({
+	user: Object.freeze([
 		// User-scoped — full CRUD (user owns these)
 		...crud("api-key"),
 		...crud("chat"),
@@ -39,13 +39,15 @@ export const SYSTEM_POLICY: SystemAccessPolicy = {
 		PERMISSIONS.ORGANIZATION.VIEW,
 		// Custom
 		PERMISSIONS.USE_AI,
-	],
-	admin: [
+	]),
+	admin: Object.freeze([
 		// Admin-only resources
 		...crud("user"),
 		...crud("audit-log"),
-		...crud("payment"),
+		PERMISSIONS.PAYMENT.CREATE,
+		PERMISSIONS.PAYMENT.UPDATE,
+		PERMISSIONS.PAYMENT.DELETE,
 		...crud("admin"),
 		PERMISSIONS.VIEW_ADMIN,
-	],
-};
+	]),
+});

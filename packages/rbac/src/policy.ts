@@ -1,7 +1,7 @@
 /**
  * Policy barrel — re-exports from the split files.
  *
- * - `permissions.ts`  → permission definitions (CUSTOM_PERMISSIONS, CRUD_RESOURCES, PERMISSIONS, KnownPermission, crud())
+ * - `permissions.ts`  → permission definitions (PERMISSIONS, KnownPermission, CRUD_RESOURCES, crud())
  * - `system-policy.ts` → SYSTEM_POLICY (system roles: user | admin)
  * - `org-policy.ts`    → ORG_POLICY (org roles: member | admin | owner)
  *
@@ -17,8 +17,4 @@ export {
 	type KnownPermission,
 	PERMISSIONS,
 } from "./permissions";
-// Backward compat — alias for SYSTEM_POLICY (used by older code/tests)
-export {
-	SYSTEM_POLICY,
-	SYSTEM_POLICY as DEFAULT_ACCESS_POLICY,
-} from "./system-policy";
+export { SYSTEM_POLICY } from "./system-policy";

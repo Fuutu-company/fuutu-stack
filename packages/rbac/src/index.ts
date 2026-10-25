@@ -16,15 +16,18 @@
  * separate policies, and separate AccessControl instances.
  */
 
-export const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
-export type CrudAction = (typeof CRUD_ACTIONS)[number];
+import type { CrudAction } from "./permissions";
 
 // ─── System roles (Better-Auth admin plugin: "user" | "admin") ─────────────
-export const SYSTEM_ROLE_HIERARCHY = ["user", "admin"] as const;
+export const SYSTEM_ROLE_HIERARCHY = Object.freeze(["user", "admin"] as const);
 export type SystemRole = (typeof SYSTEM_ROLE_HIERARCHY)[number];
 
 // ─── Org roles (Better-Auth organization plugin: "member" | "admin" | "owner") ─
-export const ORG_ROLE_HIERARCHY = ["member", "admin", "owner"] as const;
+export const ORG_ROLE_HIERARCHY = Object.freeze([
+	"member",
+	"admin",
+	"owner",
+] as const);
 export type OrgRole = (typeof ORG_ROLE_HIERARCHY)[number];
 
 /**
@@ -62,9 +65,9 @@ export type Role = SystemRole | OrgRole;
 
 /** True when `role` sits at or above `required` in the org hierarchy. */
 export function hasRoleAtLeast(role: OrgRole, required: OrgRole): boolean {
-	return (
-		ORG_ROLE_HIERARCHY.indexOf(role) >= ORG_ROLE_HIERARCHY.indexOf(required)
-	);
+	const r = ORG_ROLE_HIERARCHY.indexOf(role);
+	const req = ORG_ROLE_HIERARCHY.indexOf(required);
+	return r !== -1 && req !== -1 && r >= req;
 }
 
 export type ResourcePermissions<TResource extends string> = {
@@ -108,7 +111,7 @@ export class SystemAccessControl<TPermission extends Permission = Permission> {
 		const idx = SYSTEM_ROLE_HIERARCHY.indexOf(role);
 		if (idx === -1) return false;
 		for (const r of SYSTEM_ROLE_HIERARCHY.slice(0, idx + 1)) {
-			if (this.policy[r].includes(permission)) return true;
+			if (this.policy[r]?.includes(permission) === true) return true;
 		}
 		return false;
 	}
@@ -118,7 +121,7 @@ export class SystemAccessControl<TPermission extends Permission = Permission> {
 		if (idx === -1) return [];
 		const set = new Set<TPermission>();
 		for (const r of SYSTEM_ROLE_HIERARCHY.slice(0, idx + 1)) {
-			for (const p of this.policy[r]) set.add(p);
+			for (const p of this.policy[r] ?? []) set.add(p);
 		}
 		return Array.from(set);
 	}
@@ -139,7 +142,7 @@ export class OrgAccessControl<TPermission extends Permission = Permission> {
 		const idx = ORG_ROLE_HIERARCHY.indexOf(role);
 		if (idx === -1) return false;
 		for (const r of ORG_ROLE_HIERARCHY.slice(0, idx + 1)) {
-			if (this.policy[r].includes(permission)) return true;
+			if (this.policy[r]?.includes(permission) === true) return true;
 		}
 		return false;
 	}
@@ -149,7 +152,7 @@ export class OrgAccessControl<TPermission extends Permission = Permission> {
 		if (idx === -1) return [];
 		const set = new Set<TPermission>();
 		for (const r of ORG_ROLE_HIERARCHY.slice(0, idx + 1)) {
-			for (const p of this.policy[r]) set.add(p);
+			for (const p of this.policy[r] ?? []) set.add(p);
 		}
 		return Array.from(set);
 	}
@@ -230,8 +233,8 @@ export function createPermissionChecker<TPermission extends Permission>(
 	};
 }
 
+export { CRUD_ACTIONS, type CrudAction } from "./permissions";
 export {
-	DEFAULT_ACCESS_POLICY,
 	type KnownPermission,
 	ORG_POLICY,
 	PERMISSIONS,

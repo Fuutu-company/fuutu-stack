@@ -5,6 +5,7 @@ import {
 	hasRoleAtLeast,
 	ORG_ROLE_HIERARCHY,
 	OrgAccessControl,
+	type OrgRole,
 	SYSTEM_ROLE_HIERARCHY,
 	SystemAccessControl,
 } from "../index";
@@ -56,6 +57,18 @@ describe("hasRoleAtLeast() — org hierarchy", () => {
 
 	it("owner is at least owner", () => {
 		expect(hasRoleAtLeast("owner", "owner")).toBe(true);
+	});
+
+	it("returns false when required is an unknown role (fail-closed)", () => {
+		expect(hasRoleAtLeast("owner", "superuser" as OrgRole)).toBe(false);
+	});
+
+	it("returns false when role is unknown", () => {
+		expect(hasRoleAtLeast("superuser" as OrgRole, "member")).toBe(false);
+	});
+
+	it("returns false when both roles are unknown", () => {
+		expect(hasRoleAtLeast("foo" as OrgRole, "bar" as OrgRole)).toBe(false);
 	});
 });
 
