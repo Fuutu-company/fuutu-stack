@@ -102,7 +102,7 @@ function SidebarProvider({
 			// preference; a full Cookie Store abstraction would be overkill.
 			if (typeof document !== "undefined") {
 				// biome-ignore lint/suspicious/noDocumentCookie: UI-only preference flag
-				document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+				document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; SameSite=Lax`;
 			}
 		},
 		[setOpenProp, open],

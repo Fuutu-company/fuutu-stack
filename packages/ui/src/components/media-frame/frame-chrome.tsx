@@ -1,4 +1,5 @@
 import { cn } from "../../lib/utils";
+import { DEVICE_CHROME } from "./constants";
 import { FrameContent } from "./frame-content";
 import type { MediaFrameProps } from "./types";
 
@@ -58,33 +59,42 @@ export function FrameChrome({
 				borderRadius: "clamp(6px, 3cqi, 20px)",
 			}}
 		>
-			{/* macOS titlebar — scales with container via cqi */}
+			{/* macOS titlebar — scales with container via cqi; dark picks the *-dark vars (resolved via classes — inline vars can't be overridden by dark: utilities) */}
 			<div
-				className="flex items-center overflow-hidden border-[#d2d2d7] border-b bg-[#ececee] dark:border-[#38383a] dark:bg-[#3a3a3c]"
-				style={{
-					borderRadius: "clamp(5px, 3cqi, 18px) clamp(5px, 3cqi, 18px) 0 0",
-					gap: "clamp(3px, 1.5cqi, 10px)",
-					paddingInline: "clamp(6px, 3cqi, 20px)",
-					paddingBlock: "clamp(3px, 1.2cqi, 10px)",
-				}}
+				className="flex items-center overflow-hidden border-(--mf-titlebar-border) border-b bg-(--mf-titlebar-bg) dark:border-(--mf-titlebar-border-dark) dark:bg-(--mf-titlebar-bg-dark)"
+				style={
+					{
+						"--mf-titlebar-bg": DEVICE_CHROME.macTitlebarBg,
+						"--mf-titlebar-bg-dark": DEVICE_CHROME.macTitlebarBgDark,
+						"--mf-titlebar-border": DEVICE_CHROME.macTitlebarBorder,
+						"--mf-titlebar-border-dark": DEVICE_CHROME.macTitlebarBorderDark,
+						borderRadius: "clamp(5px, 3cqi, 18px) clamp(5px, 3cqi, 18px) 0 0",
+						gap: "clamp(3px, 1.5cqi, 10px)",
+						paddingInline: "clamp(6px, 3cqi, 20px)",
+						paddingBlock: "clamp(3px, 1.2cqi, 10px)",
+					} as React.CSSProperties
+				}
 			>
 				<span
-					className="rounded-full bg-[#ff5f57]"
+					className="rounded-full"
 					style={{
+						background: DEVICE_CHROME.trafficClose,
 						width: "clamp(6px, 2cqi, 12px)",
 						height: "clamp(6px, 2cqi, 12px)",
 					}}
 				/>
 				<span
-					className="rounded-full bg-[#febc2e]"
+					className="rounded-full"
 					style={{
+						background: DEVICE_CHROME.trafficMinimize,
 						width: "clamp(6px, 2cqi, 12px)",
 						height: "clamp(6px, 2cqi, 12px)",
 					}}
 				/>
 				<span
-					className="rounded-full bg-[#28c840]"
+					className="rounded-full"
 					style={{
+						background: DEVICE_CHROME.trafficMaximize,
 						width: "clamp(6px, 2cqi, 12px)",
 						height: "clamp(6px, 2cqi, 12px)",
 					}}

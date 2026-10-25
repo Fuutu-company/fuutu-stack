@@ -12,10 +12,8 @@ describe("buildImageCandidates", () => {
 		]);
 	});
 
-	it("produces the same order for the default locale", () => {
+	it("deduplicates candidates for the default locale", () => {
 		expect(buildImageCandidates("/shots/dash", "png", "en", "light")).toEqual([
-			"/shots/dash.en.light.png",
-			"/shots/dash.en.png",
 			"/shots/dash.en.light.png",
 			"/shots/dash.en.png",
 			"/shots/dash.png",

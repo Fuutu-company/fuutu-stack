@@ -8,6 +8,7 @@ import { Input } from "../input";
 import {
 	clampSeatCount,
 	computeSeatTotal,
+	formatSeatPrice,
 	resolveSeatLabel,
 	SEAT_MAX,
 	SEAT_MIN,
@@ -26,7 +27,9 @@ export interface SeatSelectorProps {
 	seatCount: number;
 	onChange: (n: number) => void;
 	pricePerSeat: number;
+	/** ISO 4217 code (e.g. "usd") — drives Intl currency formatting. */
 	currency: string;
+	/** Fallback symbol when `currency` can't be used by Intl. */
 	currencySymbol: string;
 	interval?: "month" | "year";
 	translations: SeatSelectorTranslations;
@@ -37,6 +40,7 @@ export function SeatSelector({
 	seatCount,
 	onChange,
 	pricePerSeat,
+	currency,
 	currencySymbol,
 	interval = "month",
 	translations,
@@ -61,6 +65,12 @@ export function SeatSelector({
 	};
 
 	const total = computeSeatTotal(pricePerSeat, seatCount);
+	const totalLabel = formatSeatPrice(total, currency, currencySymbol);
+	const perSeatLabel = formatSeatPrice(
+		pricePerSeat / 100,
+		currency,
+		currencySymbol,
+	);
 	const intervalLabel =
 		interval === "month" ? translations.perMonth : translations.perYear;
 	const seatLabel = resolveSeatLabel(seatCount, translations);
@@ -108,15 +118,13 @@ export function SeatSelector({
 
 				<div className="ml-auto text-right">
 					<p className="font-semibold text-sm">
-						{currencySymbol}
-						{total.toFixed(2)}
+						{totalLabel}
 						<span className="font-normal text-muted-foreground">
 							{intervalLabel}
 						</span>
 					</p>
 					<p className="text-muted-foreground text-xs">
-						{currencySymbol}
-						{pricePerSeat / 100} × {seatCount} {seatLabel}
+						{perSeatLabel} × {seatCount} {seatLabel}
 					</p>
 				</div>
 			</div>

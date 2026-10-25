@@ -2,6 +2,7 @@
 
 import { Button } from "../button";
 import type { LinkComponent, PricingTier } from "./types";
+import { safeHref } from "./utils";
 
 export function PricingCTA({
 	tier,
@@ -36,17 +37,18 @@ export function PricingCTA({
 		);
 	}
 	if (tier.ctaHref) {
+		const href = safeHref(tier.ctaHref);
 		const Link = LinkComponent;
 		if (Link) {
 			return (
 				<Button variant={variant} size={size} className="w-full" asChild>
-					<Link href={tier.ctaHref}>{tier.ctaLabel}</Link>
+					<Link href={href}>{tier.ctaLabel}</Link>
 				</Button>
 			);
 		}
 		return (
 			<Button variant={variant} size={size} className="w-full" asChild>
-				<a href={tier.ctaHref}>{tier.ctaLabel}</a>
+				<a href={href}>{tier.ctaLabel}</a>
 			</Button>
 		);
 	}

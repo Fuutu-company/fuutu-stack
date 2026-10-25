@@ -1,7 +1,7 @@
 import { cn } from "../../lib/utils";
 import { FramePlaceholder } from "./frame-placeholder";
 import type { InternalContentProps } from "./types";
-import { toDisplayHost, toYouTubeEmbed } from "./utils";
+import { toDisplayHost, toSafeIframeUrl, toYouTubeEmbed } from "./utils";
 import { VideoPlayer } from "./video";
 
 export function FrameContent({
@@ -28,6 +28,7 @@ export function FrameContent({
 	videoTitle,
 }: InternalContentProps) {
 	const embedUrl = videoSrc ? toYouTubeEmbed(videoSrc) : null;
+	const safeIframeSrc = iframeSrc ? toSafeIframeUrl(iframeSrc) : null;
 	const isVideo = Boolean(videoSrc);
 	const contentStyle = height ? { height } : undefined;
 	const fillClass = iphoneFill ? "absolute inset-0 size-full" : "";
@@ -44,7 +45,7 @@ export function FrameContent({
 		);
 	}
 
-	if (iframeSrc) {
+	if (safeIframeSrc) {
 		return (
 			<div
 				className={cn(
@@ -55,11 +56,13 @@ export function FrameContent({
 				)}
 				style={iphoneFill ? rs : { ...contentStyle, ...rs }}
 			>
+				{/* Sandboxed embed (no allow-same-origin → opaque origin). New domains
+				    also need a frame-src CSP entry in each app's next.config.ts. */}
 				<iframe
-					src={iframeSrc}
-					title={filename ?? iframeSrc}
+					src={safeIframeSrc}
+					title={filename ?? safeIframeSrc}
 					className="absolute inset-0 size-full border-0"
-					sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+					sandbox="allow-scripts allow-forms"
 				/>
 				{showUrl && (
 					<div
@@ -68,10 +71,10 @@ export function FrameContent({
 							iphoneFill ? "bottom-10 pb-1.5" : "bottom-2 pb-2",
 						)}
 					>
-						<div className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 backdrop-blur-md">
-							<span className="size-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_6px_theme(colors.emerald.400)]" />
-							<span className="max-w-[180px] truncate font-mono text-white text-xs">
-								{toDisplayHost(iframeSrc)}
+						<div className="flex items-center gap-1.5 rounded-full bg-background/70 px-3 py-1 backdrop-blur-md">
+							<span className="size-2 shrink-0 rounded-full bg-success shadow-[0_0_6px_var(--success)]" />
+							<span className="max-w-[180px] truncate font-mono text-foreground text-xs">
+								{toDisplayHost(safeIframeSrc)}
 							</span>
 						</div>
 					</div>

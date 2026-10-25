@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
  *   3. <base>.en.<theme>.<ext>
  *   4. <base>.en.<ext>
  *   5. <base>.<ext>
+ *
+ * Duplicates are removed, so `locale === "en"` yields a 3-entry list.
  */
 export function buildImageCandidates(
 	base: string,
@@ -17,13 +19,15 @@ export function buildImageCandidates(
 	locale: string,
 	theme: string,
 ): string[] {
-	return [
-		`${base}.${locale}.${theme}.${ext}`,
-		`${base}.${locale}.${ext}`,
-		`${base}.en.${theme}.${ext}`,
-		`${base}.en.${ext}`,
-		`${base}.${ext}`,
-	];
+	return Array.from(
+		new Set([
+			`${base}.${locale}.${theme}.${ext}`,
+			`${base}.${locale}.${ext}`,
+			`${base}.en.${theme}.${ext}`,
+			`${base}.en.${ext}`,
+			`${base}.${ext}`,
+		]),
+	);
 }
 
 export type LocaleThemeImageContext = {
@@ -37,10 +41,18 @@ export type LocaleThemeImageContext = {
  * Resolves the best available image path for the current locale + theme.
  *
  * Convention: place images in `public/` using the pattern:
- *   <base>.<locale>.<theme>.<ext>   →  /screenshots/dashboard.en.light.webp
+ *   <base>.<locale>.<theme>.<ext>   →  /screenshots/dashboard.de.dark.webp
  *
- * Last candidate is `<base>.<ext>`; if none resolve, `src` stays `null` and
- * the caller should render a placeholder or skeleton.
+ * Resolution order (first `HEAD` request returning 2xx wins):
+ *   1. <base>.<locale>.<theme>.<ext>
+ *   2. <base>.<locale>.<ext>
+ *   3. <base>.en.<theme>.<ext>
+ *   4. <base>.en.<ext>
+ *   5. <base>.<ext>
+ *
+ * If none resolve, `src` is `null` and the caller should render a
+ * placeholder or skeleton. `src` also resets to `null` whenever the inputs
+ * change or `theme` is still unresolved — never a stale path.
  *
  * Framework-agnostic: `locale` and `theme` are injected by the caller
  * (e.g. `useLocale()` / `useTheme().resolvedTheme` in a Next.js host).
@@ -70,6 +82,9 @@ export function useLocaleThemeImage(
 	const [src, setSrc] = useState<string | null>(null);
 
 	useEffect(() => {
+		// Reset so a previous resolution never renders as a stale image
+		// while inputs changed or the theme is still unresolved.
+		setSrc(null);
 		if (!resolvedTheme) return;
 
 		const theme = resolvedTheme === "dark" ? "dark" : "light";
@@ -79,6 +94,7 @@ export function useLocaleThemeImage(
 
 		async function resolve() {
 			for (const candidate of candidates) {
+				if (cancelled) break;
 				try {
 					const res = await fetch(candidate, { method: "HEAD" });
 					if (res.ok) {

@@ -29,6 +29,9 @@ function SheetOverlay({
 	return (
 		<SheetPrimitive.Overlay
 			data-slot="sheet-overlay"
+			// bg-black/80 is a deliberate exception to the semantic-token rule:
+			// a modal scrim must stay dark in both themes — no overlay token
+			// exists in the 4-token theme and foreground/neutral invert in .dark.
 			className={cn(
 				"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/80 data-[state=closed]:animate-out data-[state=open]:animate-in",
 				className,

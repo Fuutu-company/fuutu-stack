@@ -60,7 +60,7 @@ export function PricingFull({
 					className="pointer-events-none absolute inset-0 -z-10"
 					style={{
 						background:
-							"radial-gradient(ellipse 70% 40% at 50% -5%, oklch(from var(--primary) l c h / 0.1) 0%, transparent 60%)",
+							"radial-gradient(ellipse 70% 40% at 50% -25%, oklch(from var(--primary) l c h / 0.1) 0%, transparent 60%)",
 					}}
 				/>
 

@@ -6,6 +6,20 @@ export function toYouTubeEmbed(url: string): string | null {
 	return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=0&rel=0` : null;
 }
 
+/**
+ * Returns the URL if it is safe to embed in an iframe (http/https only),
+ * otherwise null. Blocks javascript:/data:/file: etc. — callers should
+ * degrade to the placeholder when this returns null.
+ */
+export function toSafeIframeUrl(url: string): string | null {
+	try {
+		const protocol = new URL(url).protocol;
+		return protocol === "https:" || protocol === "http:" ? url : null;
+	} catch {
+		return null;
+	}
+}
+
 /** Strip protocol and path from a URL, leaving only the hostname. */
 export function toDisplayHost(url: string): string {
 	return url.replace(/^https?:\/\//, "").replace(/\/.*$/, "");

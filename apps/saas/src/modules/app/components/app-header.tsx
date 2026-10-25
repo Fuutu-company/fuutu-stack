@@ -151,7 +151,7 @@ export function AppHeader() {
 				orientation="vertical"
 				className="mr-2 data-[orientation=vertical]:h-4"
 			/>
-			<Breadcrumb>
+			<Breadcrumb label={t("breadcrumb.ariaLabel")}>
 				<BreadcrumbList>
 					{crumbs.map((crumb, index) => {
 						const isLast = index === crumbs.length - 1;

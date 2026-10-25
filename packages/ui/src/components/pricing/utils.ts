@@ -16,6 +16,53 @@ export function computeSeatTotal(
 	return (pricePerSeatCents * seatCount) / 100;
 }
 
+/** Format a major-unit amount with two decimals (e.g. 19.9 → "19.90"). */
+export function formatAmount(value: number): string {
+	return value.toFixed(2);
+}
+
+/**
+ * Format a major-unit amount as currency via `Intl.NumberFormat` with the
+ * runtime's default locale (this package is framework-agnostic; hosts pass
+ * their locale-derived `currencySymbol` as the fallback). Falls back to
+ * `<symbol><fixed-decimals>` when `currency` isn't a valid ISO 4217 code.
+ */
+export function formatSeatPrice(
+	amount: number,
+	currency: string,
+	fallbackSymbol: string,
+): string {
+	try {
+		return new Intl.NumberFormat(undefined, {
+			style: "currency",
+			currency,
+		}).format(amount);
+	} catch {
+		return `${fallbackSymbol}${formatAmount(amount)}`;
+	}
+}
+
+/**
+ * Sanitize a caller-supplied href for rendering into `<a href>` / link
+ * components. Allows relative paths, anchors, http(s), mailto and tel;
+ * everything else (javascript:, data:, protocol-relative, …) falls back
+ * to "#" so a misconfigured tier can't inject an unsafe URL.
+ */
+export function safeHref(href: string): string {
+	const value = href.trim();
+	if (value.startsWith("//")) return "#";
+	// Everything before the first /, ? or # that ends in ':' is a scheme.
+	const scheme = /^[^/?#]*:/.exec(value);
+	if (!scheme) return value;
+	const name = scheme[0].slice(0, -1).toLowerCase();
+	return name === "http" ||
+		name === "https" ||
+		name === "mailto" ||
+		name === "tel"
+		? value
+		: "#";
+}
+
 /** Pick the singular/plural seat label for a count. */
 export function resolveSeatLabel(
 	seatCount: number,
