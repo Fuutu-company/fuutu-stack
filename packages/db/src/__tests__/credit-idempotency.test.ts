@@ -91,6 +91,37 @@ async function runTx(tx: unknown) {
 	);
 }
 
+/**
+ * Minimal evaluator for the creditBalance CAS guard — lets the mocked
+ * updateMany decide whether the stored row would match, like Postgres.
+ */
+const matchesBalanceWhere = (
+	balance: { recurringGranted: number; recurringPeriodEnd: Date },
+	where: { OR?: Record<string, unknown>[] } & Record<string, unknown>,
+): boolean => {
+	const checkCond = (cond: Record<string, unknown>): boolean =>
+		Object.entries(cond).every(([field, raw]) => {
+			if (field === "id") return true;
+			const stored =
+				field === "recurringPeriodEnd"
+					? balance.recurringPeriodEnd.getTime()
+					: balance.recurringGranted;
+			const asNumber = (v: unknown) =>
+				v instanceof Date ? v.getTime() : (v as number);
+			if (raw && typeof raw === "object" && !(raw instanceof Date)) {
+				return Object.entries(raw as Record<string, unknown>).every(
+					([op, v]) => {
+						if (op === "lt") return stored < asNumber(v);
+						if (op === "not") return stored !== asNumber(v);
+						throw new Error(`unsupported op ${op}`);
+					},
+				);
+			}
+			return stored === asNumber(raw);
+		});
+	return where.OR ? where.OR.some(checkCond) : checkCond(where);
+};
+
 const consumeParams = {
 	userId: "user-1",
 	meterKey: "ai_tokens",
@@ -270,8 +301,11 @@ describe("credit idempotency", () => {
 				where: {
 					id: "b-1",
 					OR: [
-						{ recurringGranted: { not: 200 } },
-						{ recurringPeriodEnd: { not: periodEnd } },
+						{ recurringPeriodEnd: { lt: periodEnd } },
+						{
+							recurringPeriodEnd: periodEnd,
+							recurringGranted: { not: 200 },
+						},
 					],
 				},
 				data: {
@@ -302,6 +336,64 @@ describe("credit idempotency", () => {
 
 			// CAS rejected the write → no balance update, no ledger event.
 			expect(tx.creditEvent.create).not.toHaveBeenCalled();
+		});
+
+		it("skips an out-of-order grant carrying an older periodEnd", async () => {
+			// The stored row already reflects the NEWER period and has
+			// consumption. A stale redelivery (older periodEnd, different
+			// amount — the classic webhook retry) must be rejected by the
+			// CAS guard; applying it would regress recurringPeriodEnd and
+			// re-zero recurringConsumed, re-spending consumed credits.
+			const balance = makeBalance({
+				recurringGranted: 300,
+				recurringConsumed: 40,
+				recurringPeriodEnd: new Date("2026-03-01"),
+			});
+			const tx = makeTx({ balance });
+			tx.creditBalance.updateMany.mockImplementation(
+				async (args: { where: Record<string, unknown> }) => ({
+					count: matchesBalanceWhere(balance, args.where) ? 1 : 0,
+				}),
+			);
+			await runTx(tx);
+
+			await creditBalanceQueries.grantRecurringCreditsTx({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 200,
+				periodEnd: new Date("2026-02-01"),
+			});
+
+			// Guard rejected the stale write → no balance update, no event.
+			expect(tx.creditEvent.create).not.toHaveBeenCalled();
+		});
+
+		it("applies a same-period grant carrying a different amount", async () => {
+			// Plan change inside the same period: equal periodEnd, different
+			// amount — same semantics as resetRecurringBalancesTx.
+			const periodEnd = new Date("2026-03-01");
+			const balance = makeBalance({
+				recurringGranted: 100,
+				recurringConsumed: 10,
+				recurringPeriodEnd: periodEnd,
+			});
+			const tx = makeTx({ balance });
+			tx.creditBalance.updateMany.mockImplementation(
+				async (args: { where: Record<string, unknown> }) => ({
+					count: matchesBalanceWhere(balance, args.where) ? 1 : 0,
+				}),
+			);
+			await runTx(tx);
+
+			await creditBalanceQueries.grantRecurringCreditsTx({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 300,
+				periodEnd,
+			});
+
+			expect(tx.creditBalance.updateMany).toHaveBeenCalledTimes(1);
+			expect(tx.creditEvent.create).toHaveBeenCalledTimes(1);
 		});
 	});
 

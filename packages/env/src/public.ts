@@ -23,7 +23,13 @@ export const publicEnvOptions = {
 			.optional(),
 		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
 		NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
-		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: z.string().optional(),
+		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: z
+			.string()
+			.max(253)
+			.regex(
+				/^\.?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i,
+			)
+			.optional(),
 		NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
 		NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
 	},

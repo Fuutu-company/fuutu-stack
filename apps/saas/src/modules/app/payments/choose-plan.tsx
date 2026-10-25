@@ -103,6 +103,7 @@ export function ChoosePlan() {
 					pricePerSeat={proPlan.amount}
 					currency={proPlan.currency}
 					currencySymbol={currencySymbol}
+					locale={locale}
 					interval={proPlan.interval}
 					translations={{
 						title: t("seatSelector.title"),

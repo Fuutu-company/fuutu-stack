@@ -22,18 +22,19 @@ export function formatAmount(value: number): string {
 }
 
 /**
- * Format a major-unit amount as currency via `Intl.NumberFormat` with the
- * runtime's default locale (this package is framework-agnostic; hosts pass
- * their locale-derived `currencySymbol` as the fallback). Falls back to
+ * Format a major-unit amount as currency via `Intl.NumberFormat` in the
+ * host-provided `locale` (this package is framework-agnostic; hosts inject
+ * their app locale so SSR and client render identically). Falls back to
  * `<symbol><fixed-decimals>` when `currency` isn't a valid ISO 4217 code.
  */
 export function formatSeatPrice(
 	amount: number,
 	currency: string,
 	fallbackSymbol: string,
+	locale: string,
 ): string {
 	try {
-		return new Intl.NumberFormat(undefined, {
+		return new Intl.NumberFormat(locale, {
 			style: "currency",
 			currency,
 		}).format(amount);

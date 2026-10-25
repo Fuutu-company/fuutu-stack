@@ -263,6 +263,37 @@ describe("@fuutu/env/marketing", () => {
 		}
 	});
 
+	it("accepts bare and leading-dot consent cookie domains", async () => {
+		for (const domain of ["example.com", ".example.com", "app.example.com"]) {
+			vi.resetModules();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			const { env } = await import("../marketing");
+			expect(env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN).toBe(domain);
+		}
+	});
+
+	it("rejects an invalid consent cookie domain", async () => {
+		for (const domain of [
+			"http://example.com",
+			"example.com/path",
+			"-bad.com",
+			"bad-.com",
+			"..example.com",
+			"exa mple.com",
+		]) {
+			vi.resetModules();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			await expect(import("../marketing")).rejects.toThrow();
+		}
+	});
+
+	it("treats an empty consent cookie domain as unset", async () => {
+		process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = "";
+
+		const { env } = await import("../marketing");
+		expect(env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN).toBeUndefined();
+	});
+
 	it("allows all client vars to be optional", async () => {
 		delete process.env.NEXT_PUBLIC_MARKETING_URL;
 		delete process.env.NEXT_PUBLIC_SAAS_URL;

@@ -177,8 +177,11 @@ describe("credit-balance queries - concurrency safety", () => {
 				where: {
 					id: "balance-1",
 					OR: [
-						{ recurringGranted: { not: 200 } },
-						{ recurringPeriodEnd: { not: new Date("2025-01-01") } },
+						{ recurringPeriodEnd: { lt: new Date("2025-01-01") } },
+						{
+							recurringPeriodEnd: new Date("2025-01-01"),
+							recurringGranted: { not: 200 },
+						},
 					],
 				},
 				data: {

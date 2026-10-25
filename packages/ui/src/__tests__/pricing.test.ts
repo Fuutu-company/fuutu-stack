@@ -141,16 +141,28 @@ describe("safeHref", () => {
 });
 
 describe("formatSeatPrice", () => {
-	it("formats ISO currency codes via Intl", () => {
-		expect(formatSeatPrice(59.97, "usd", "$")).toBe(
-			new Intl.NumberFormat(undefined, {
+	it("formats ISO currency codes via Intl in the given locale", () => {
+		expect(formatSeatPrice(59.97, "usd", "$", "en")).toBe(
+			new Intl.NumberFormat("en", {
 				style: "currency",
 				currency: "usd",
 			}).format(59.97),
 		);
 	});
 
+	it("produces different output for different locales", () => {
+		const de = formatSeatPrice(59.97, "usd", "$", "de");
+		const en = formatSeatPrice(59.97, "usd", "$", "en");
+		expect(de).toBe(
+			new Intl.NumberFormat("de", {
+				style: "currency",
+				currency: "usd",
+			}).format(59.97),
+		);
+		expect(de).not.toBe(en);
+	});
+
 	it("falls back to symbol + fixed decimals for malformed codes", () => {
-		expect(formatSeatPrice(59.97, "not-a-currency", "$")).toBe("$59.97");
+		expect(formatSeatPrice(59.97, "not-a-currency", "$", "en")).toBe("$59.97");
 	});
 });

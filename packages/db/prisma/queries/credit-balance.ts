@@ -461,16 +461,23 @@ export const grantRecurringCreditsTx = (params: {
 			});
 
 			if (existing) {
-				// Skip rows that already reflect this exact grant — a
-				// redelivered activation must not zero out recurringConsumed
-				// again. The guard lives inside updateMany so the check is
-				// atomic, not a read-then-write race.
+				// Compare-and-swap, same semantics as
+				// resetRecurringBalancesTx: apply only for a strictly newer
+				// periodEnd, or the same periodEnd carrying a different
+				// grant (plan change). A stale out-of-order grant (older
+				// periodEnd) never regresses recurringPeriodEnd or re-zeros
+				// recurringConsumed — that would re-spend consumed credits.
+				// The guard lives inside updateMany so the check is atomic,
+				// not a read-then-write race.
 				const result = await tx.creditBalance.updateMany({
 					where: {
 						id: existing.id,
 						OR: [
-							{ recurringGranted: { not: amount } },
-							{ recurringPeriodEnd: { not: periodEnd } },
+							{ recurringPeriodEnd: { lt: periodEnd } },
+							{
+								recurringPeriodEnd: periodEnd,
+								recurringGranted: { not: amount },
+							},
 						],
 					},
 					data: {

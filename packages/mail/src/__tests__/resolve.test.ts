@@ -61,14 +61,14 @@ describe("resolveProvider", () => {
 		expect(resolveProvider().name).toBe("plunk");
 	});
 
-	it("downgrades to console and warns when PLUNK_API_KEY is missing outside production", () => {
-		setEnv({ EMAIL_PROVIDER: "plunk" });
+	it("downgrades to console and warns when PLUNK_API_KEY is missing in test", () => {
+		setEnv({ EMAIL_PROVIDER: "plunk", NODE_ENV: "test" });
 		expect(resolveProvider().name).toBe("console");
 		expect(warnSpy).toHaveBeenCalledOnce();
 	});
 
-	it("downgrades to console and warns when RESEND_API_KEY is missing outside production", () => {
-		setEnv({ EMAIL_PROVIDER: "resend" });
+	it("downgrades to console and warns when RESEND_API_KEY is missing in development", () => {
+		setEnv({ EMAIL_PROVIDER: "resend", NODE_ENV: "development" });
 		expect(resolveProvider().name).toBe("console");
 		expect(warnSpy).toHaveBeenCalledOnce();
 	});
@@ -88,6 +88,19 @@ describe("resolveProvider", () => {
 		);
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
+
+	// env.NODE_ENV is a zod enum, so an out-of-band value can only appear if
+	// the schema gains one (e.g. "staging") — the resolver must fail closed
+	// for anything that is not an explicit dev/test context. Object.assign
+	// bypasses the enum type to simulate that future value.
+	it.each(["plunk", "resend"] as const)(
+		"throws instead of downgrading when %s key is missing and NODE_ENV is not dev/test",
+		(provider) => {
+			Object.assign(env, { EMAIL_PROVIDER: provider, NODE_ENV: "staging" });
+			expect(() => resolveProvider()).toThrow("[mail:");
+			expect(warnSpy).not.toHaveBeenCalled();
+		},
+	);
 
 	it("passes skeleton providers through — they throw on send", async () => {
 		setEnv({ EMAIL_PROVIDER: "postmark" });

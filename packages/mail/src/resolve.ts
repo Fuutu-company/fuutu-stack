@@ -23,8 +23,11 @@ const log = createLogger({ scope: "mail:config" });
  * Safety: if a real provider is selected but its API key is missing we
  * downgrade to the console provider and log a warning instead of letting
  * every outgoing mail throw at send-time. This keeps dev installs working
- * out-of-the-box. In production we throw instead — the console provider
- * logs full mail bodies (incl. token URLs) to stdout.
+ * out-of-the-box. The downgrade is allowed ONLY in an explicit dev/test
+ * context — anything else (production, unset, unknown) throws, because
+ * the console provider logs full mail bodies (incl. token URLs) to
+ * stdout. env.NODE_ENV defaults to "development" when unset, so the check
+ * keys on the dev/test side, never on `=== "production"`.
  */
 export function resolveProvider(): EmailProvider {
 	// `env.EMAIL_PROVIDER` is already a z.enum in `@fuutu/env/saas`, so
@@ -39,24 +42,24 @@ export function resolveProvider(): EmailProvider {
 			return noopProvider;
 		case "plunk":
 			if (!env.PLUNK_API_KEY) {
-				// env.NODE_ENV defaults to "development" when unset (@fuutu/env/saas)
-				// — bare-Node prod deploys must set NODE_ENV=production to hit this throw.
-				if (env.NODE_ENV === "production") {
+				if (!allowsConsoleFallback()) {
 					throw new Error("[mail:plunk] PLUNK_API_KEY is not set");
 				}
 				log.warn(
 					"EMAIL_PROVIDER=plunk but PLUNK_API_KEY is not set — falling back to console provider.",
+					{ provider: "plunk" },
 				);
 				return consoleProvider;
 			}
 			return plunkProvider;
 		case "resend":
 			if (!env.RESEND_API_KEY) {
-				if (env.NODE_ENV === "production") {
+				if (!allowsConsoleFallback()) {
 					throw new Error("[mail:resend] RESEND_API_KEY is not set");
 				}
 				log.warn(
 					"EMAIL_PROVIDER=resend but RESEND_API_KEY is not set — falling back to console provider.",
+					{ provider: "resend" },
 				);
 				return consoleProvider;
 			}
@@ -71,9 +74,22 @@ export function resolveProvider(): EmailProvider {
 		case "nodemailer":
 			return nodemailerProvider;
 		default:
-			log.warn(`unknown provider "${configured}", falling back to console.`);
+			log.warn("unknown provider, falling back to console.", {
+				provider: configured,
+			});
 			return consoleProvider;
 	}
+}
+
+/**
+ * The console provider logs full mail bodies (incl. password-reset and
+ * invitation token URLs) to stdout, so downgrading to it must fail
+ * closed: only an explicit dev/test context may downgrade. env.NODE_ENV
+ * defaults to "development" when unset (@fuutu/env/saas) — checking
+ * `=== "production"` would silently downgrade on any other value.
+ */
+function allowsConsoleFallback(): boolean {
+	return env.NODE_ENV === "development" || env.NODE_ENV === "test";
 }
 
 /**

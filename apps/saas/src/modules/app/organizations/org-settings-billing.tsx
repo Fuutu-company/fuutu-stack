@@ -307,6 +307,7 @@ export function OrgSettingsBilling({
 					pricePerSeat={proPlan.amount}
 					currency={proPlan.currency}
 					currencySymbol={currencySymbol}
+					locale={locale}
 					interval={proPlan.interval}
 					translations={{
 						title: tp("seatSelector.title"),

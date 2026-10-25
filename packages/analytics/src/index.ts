@@ -112,7 +112,8 @@ export function consentBannerVisible(): boolean {
  * providers need a `"granted"` cookie; consent-free providers track
  * immediately but still honor an explicit `"denied"` — a decline click
  * on a transparency banner is a real opt-out, not decoration. Read per
- * call so `deny()` stops tracking even with the script already loaded.
+ * call so `deny()` gates manual `trackEvent`/`trackPageview` — an
+ * already-injected script (e.g. Umami auto-track) keeps running until reload.
  */
 export function hasTrackingConsent(): boolean {
 	const value = readConsentCookie();

@@ -31,6 +31,8 @@ export interface SeatSelectorProps {
 	currency: string;
 	/** Fallback symbol when `currency` can't be used by Intl. */
 	currencySymbol: string;
+	/** BCP 47 locale (e.g. "en", "de") — drives Intl currency formatting. */
+	locale: string;
 	interval?: "month" | "year";
 	translations: SeatSelectorTranslations;
 	className?: string;
@@ -42,6 +44,7 @@ export function SeatSelector({
 	pricePerSeat,
 	currency,
 	currencySymbol,
+	locale,
 	interval = "month",
 	translations,
 	className,
@@ -65,11 +68,12 @@ export function SeatSelector({
 	};
 
 	const total = computeSeatTotal(pricePerSeat, seatCount);
-	const totalLabel = formatSeatPrice(total, currency, currencySymbol);
+	const totalLabel = formatSeatPrice(total, currency, currencySymbol, locale);
 	const perSeatLabel = formatSeatPrice(
 		pricePerSeat / 100,
 		currency,
 		currencySymbol,
+		locale,
 	);
 	const intervalLabel =
 		interval === "month" ? translations.perMonth : translations.perYear;
