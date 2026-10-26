@@ -35,7 +35,7 @@ catalog:
   "fumadocs-core": 16.15.17
   "fumadocs-mdx": 15.4.5
   "fumadocs-ui": 16.15.17
-  "fumadocs-openapi": ^11.2.2
+  "fumadocs-openapi": ^12.5.2
   "@scalar/api-client-react": ^2.0.53
   ogl: ^1.0.9
   "framer-motion": ^12.43.0
