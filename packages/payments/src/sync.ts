@@ -229,7 +229,13 @@ async function processSingleEvent(
 		// the grant (which propagates as 5xx and triggers a provider retry).
 		// grantCreditsForSubscription skips meters whose balance already
 		// matches, so a successful first delivery is a no-op here.
-		if (isSubscriptionActivationType(type)) {
+		// Protected statuses are excluded: updateExistingPurchase keeps a
+		// dead subscription dead, so a late renewal/activation must not
+		// top up credits on a plan the owner no longer holds.
+		if (
+			isSubscriptionActivationType(type) &&
+			!PROTECTED_STATUSES.includes(existing.status as PurchaseStatusLiteral)
+		) {
 			await grantCreditsForSubscription(
 				event,
 				resolvedUserId,
@@ -492,7 +498,7 @@ async function updateExistingPurchase(
 		}
 	}
 
-	if (isProtected && isRenewalOrActivation(event.type)) {
+	if (isProtected && isSubscriptionActivationType(event.type)) {
 		// Keep the protected status — don't overwrite with ACTIVE
 		log.info("keeping protected status, ignoring renewal", {
 			purchaseId,
@@ -632,14 +638,6 @@ function isSubscriptionActivationType(type: ProviderEventType): boolean {
 	return (
 		type === "subscription.activated" ||
 		type === "subscription.renewed" ||
-		type === "checkout.completed"
-	);
-}
-
-function isRenewalOrActivation(type: ProviderEventType): boolean {
-	return (
-		type === "subscription.renewed" ||
-		type === "subscription.activated" ||
 		type === "checkout.completed"
 	);
 }

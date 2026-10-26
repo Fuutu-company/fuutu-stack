@@ -491,6 +491,30 @@ describe("processWebhookEvents", () => {
 	);
 
 	it.each(["CANCELED", "EXPIRED"] as const)(
+		"does not grant plan credits on a late renewal for a %s subscription",
+		async (status) => {
+			mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+				id: "purchase_1",
+				status,
+				userId: "user_123",
+				metadata: { user_id: "user_123" },
+			});
+
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.renewed",
+					productId: "test-pro-price",
+					metadata: { user_id: "user_123" },
+					currentPeriodEnd: new Date("2027-02-01"),
+				}),
+			]);
+
+			expect(mockGrantRecurringCredits).not.toHaveBeenCalled();
+			expect(mockResetRecurringCredits).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each(["CANCELED", "EXPIRED"] as const)(
 		"does not reactivate a %s subscription on a late activation",
 		async (status) => {
 			mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
