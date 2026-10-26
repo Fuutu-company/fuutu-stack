@@ -80,7 +80,7 @@ describe("DB access guard", () => {
 
 		scanTsFiles(APPS_DIR, (filePath, content) => {
 			// Skip this test file itself
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			// Fail if importing/re-exporting { db } from "@fuutu/db"
 			if (RAW_DB_IMPORT_RE.test(content)) {
@@ -108,7 +108,7 @@ describe("DB access guard", () => {
 			// Skip packages/db itself, packages/auth (allowlist), and this test file
 			if (filePath.includes("packages/db/")) return;
 			if (filePath.includes("packages/auth/")) return;
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			// Fail if importing/re-exporting { db } from "@fuutu/db"
 			if (RAW_DB_IMPORT_RE.test(content)) {
@@ -144,7 +144,7 @@ describe("DB access guard", () => {
 
 		scanTsFiles(APPS_DIR, (filePath, content) => {
 			// Skip this test file itself
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			if (
 				DEEP_PRISMA_CLIENT_RE.test(content) ||
@@ -159,7 +159,7 @@ describe("DB access guard", () => {
 		scanTsFiles(PACKAGES_DIR, (filePath, content) => {
 			// Skip packages/db itself and this test file
 			if (filePath.includes("packages/db/")) return;
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			if (
 				DEEP_PRISMA_CLIENT_RE.test(content) ||
@@ -183,7 +183,7 @@ describe("DB access guard", () => {
 
 		scanTsFiles(APPS_DIR, (filePath, content) => {
 			// Skip this test file itself
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			if (
 				DEEP_INTERNAL_CLIENT_RE.test(content) ||
@@ -198,7 +198,7 @@ describe("DB access guard", () => {
 		scanTsFiles(PACKAGES_DIR, (filePath, content) => {
 			// Skip packages/db itself and this test file
 			if (filePath.includes("packages/db/")) return;
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			// Check if file is in allowlist
 			const isInAllowlist = ALLOWLIST_RAW_CLIENT.has(
@@ -228,7 +228,7 @@ describe("DB access guard", () => {
 
 		scanTsFiles(APPS_DIR, (filePath, content) => {
 			// Skip this test file itself
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			if (
 				RAW_PRISMA_IMPORT_RE.test(content) ||
@@ -241,7 +241,7 @@ describe("DB access guard", () => {
 		scanTsFiles(PACKAGES_DIR, (filePath, content) => {
 			// Skip packages/db itself and this test file
 			if (filePath.includes("packages/db/")) return;
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			if (
 				RAW_PRISMA_IMPORT_RE.test(content) ||
@@ -263,7 +263,7 @@ describe("DB access guard", () => {
 
 		scanTsFiles(APPS_DIR, (filePath, content) => {
 			// Skip this test file itself
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			if (/new\s+PrismaClient\s*\(/.test(content)) {
 				violations.push(`${filePath}: instantiates PrismaClient`);
@@ -273,7 +273,7 @@ describe("DB access guard", () => {
 		scanTsFiles(PACKAGES_DIR, (filePath, content) => {
 			// Skip packages/db itself and this test file
 			if (filePath.includes("packages/db/")) return;
-			if (filePath.includes("db-access-guard.test.ts")) return;
+			if (filePath.includes("-guard.test.ts")) return;
 
 			if (/new\s+PrismaClient\s*\(/.test(content)) {
 				violations.push(`${filePath}: instantiates PrismaClient`);

@@ -20,18 +20,28 @@ export const getPurchasesByOrganizationId = (organizationId: string) =>
 		orderBy: { createdAt: "desc" },
 	});
 
+/**
+ * Access-gating filter: ACTIVE/TRIALING, plus SCHEDULED_CANCEL while the
+ * paid period still runs — "cancel at period end" keeps access until
+ * currentPeriodEnd. Also self-heals: if the provider's cancel event
+ * never arrives, access still stops at currentPeriodEnd.
+ */
+const accessGatingWhere = (): Prisma.PurchaseWhereInput => ({
+	type: "SUBSCRIPTION",
+	OR: [
+		{ status: { in: ACTIVE_STATUSES } },
+		{ status: "SCHEDULED_CANCEL", currentPeriodEnd: { gt: new Date() } },
+	],
+});
+
 export const getActiveSubscriptionForUser = (userId: string) =>
 	db.purchase.findFirst({
-		where: { userId, type: "SUBSCRIPTION", status: { in: ACTIVE_STATUSES } },
+		where: { userId, ...accessGatingWhere() },
 	});
 
 export const getActiveSubscriptionForOrganization = (organizationId: string) =>
 	db.purchase.findFirst({
-		where: {
-			organizationId,
-			type: "SUBSCRIPTION",
-			status: { in: ACTIVE_STATUSES },
-		},
+		where: { organizationId, ...accessGatingWhere() },
 	});
 
 export const getPurchaseByProviderSubscriptionId = (

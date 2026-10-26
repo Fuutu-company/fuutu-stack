@@ -24,6 +24,9 @@ export const authConfig = {
 		// /change-password, /change-email, reset/verify paths) are covered by
 		// Better-Auth's built-in special rules (max 3/10s) — this limit only
 		// governs the rest, including read-heavy paths like /get-session.
+		// These built-in rules are version-pinned behavior — re-verify after
+		// any better-auth bump (if defaults are removed, brute-force
+		// protection silently weakens).
 		max: 100,
 	},
 	passwordPolicy: {

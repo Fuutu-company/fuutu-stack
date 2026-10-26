@@ -21,6 +21,7 @@ model User {
   // Fuutu custom fields (exposed via better-auth additionalFields)
   onboardingComplete       Boolean   @default(false)
   username                 String?   @unique
+  displayUsername          String?
   paymentsCustomerId       String?
   lastActiveOrganizationId String?
   // Atomic claim flag for the org-scoped `user.created` webhook —
@@ -204,6 +205,9 @@ model TwoFactor {
   // Added in better-auth 1.6: gate sign-in on verified TOTP enrollment.
   // Default true keeps legacy rows signed-in-capable.
   verified    Boolean @default(true)
+  // better-auth 1.7 TOTP lockout fields (required by plugin schema check).
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
 
   @@index([userId])
   @@map("two_factor")

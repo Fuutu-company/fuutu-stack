@@ -140,7 +140,7 @@ export type CreditEventScalarFieldEnum = z.infer<typeof CreditEventScalarFieldEn
 
 // File: UserScalarFieldEnum.schema.ts
 
-export const UserScalarFieldEnumSchema = z.enum(['id', 'name', 'email', 'emailVerified', 'image', 'createdAt', 'updatedAt', 'role', 'banned', 'banReason', 'banExpires', 'locale', 'twoFactorEnabled', 'onboardingComplete', 'username', 'paymentsCustomerId', 'lastActiveOrganizationId', 'userCreatedEventSent'])
+export const UserScalarFieldEnumSchema = z.enum(['id', 'name', 'email', 'emailVerified', 'image', 'createdAt', 'updatedAt', 'role', 'banned', 'banReason', 'banExpires', 'locale', 'twoFactorEnabled', 'onboardingComplete', 'username', 'displayUsername', 'paymentsCustomerId', 'lastActiveOrganizationId', 'userCreatedEventSent'])
 
 export type UserScalarFieldEnum = z.infer<typeof UserScalarFieldEnumSchema>;
 
@@ -194,7 +194,7 @@ export type RateLimitScalarFieldEnum = z.infer<typeof RateLimitScalarFieldEnumSc
 
 // File: TwoFactorScalarFieldEnum.schema.ts
 
-export const TwoFactorScalarFieldEnumSchema = z.enum(['id', 'secret', 'backupCodes', 'userId', 'verified'])
+export const TwoFactorScalarFieldEnumSchema = z.enum(['id', 'secret', 'backupCodes', 'userId', 'verified', 'failedVerificationCount', 'lockedUntil'])
 
 export type TwoFactorScalarFieldEnum = z.infer<typeof TwoFactorScalarFieldEnumSchema>;
 
@@ -1534,6 +1534,7 @@ const userwhereinputSchema = z.object({
   twoFactorEnabled: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
   onboardingComplete: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   username: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  displayUsername: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   paymentsCustomerId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   userCreatedEventSent: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
@@ -1574,6 +1575,7 @@ const __makeSchema_UserOrderByWithRelationInput_schema = () => z.object({
   twoFactorEnabled: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   onboardingComplete: SortOrderSchema.optional(),
   username: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  displayUsername: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paymentsCustomerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   lastActiveOrganizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   userCreatedEventSent: SortOrderSchema.optional(),
@@ -1624,6 +1626,7 @@ const __makeSchema_UserOrderByWithAggregationInput_schema = () => z.object({
   twoFactorEnabled: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   onboardingComplete: SortOrderSchema.optional(),
   username: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  displayUsername: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paymentsCustomerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   lastActiveOrganizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   userCreatedEventSent: SortOrderSchema.optional(),
@@ -1656,6 +1659,7 @@ const userscalarwherewithaggregatesinputSchema = z.object({
   twoFactorEnabled: z.union([z.lazy(() => BoolNullableWithAggregatesFilterObjectSchema), z.boolean()]).optional().nullable(),
   onboardingComplete: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   username: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  displayUsername: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   paymentsCustomerId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   userCreatedEventSent: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional()
@@ -2352,6 +2356,8 @@ const twofactorwhereinputSchema = z.object({
   backupCodes: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   verified: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  failedVerificationCount: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
+  lockedUntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   user: z.union([z.lazy(() => UserScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional()
 }).strict();
 export const TwoFactorWhereInputObjectSchema: z.ZodType<Prisma.TwoFactorWhereInput> = twofactorwhereinputSchema as unknown as z.ZodType<Prisma.TwoFactorWhereInput>;
@@ -2365,6 +2371,8 @@ const __makeSchema_TwoFactorOrderByWithRelationInput_schema = () => z.object({
   backupCodes: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   verified: SortOrderSchema.optional(),
+  failedVerificationCount: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  lockedUntil: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const TwoFactorOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.TwoFactorOrderByWithRelationInput> = __makeSchema_TwoFactorOrderByWithRelationInput_schema() as unknown as z.ZodType<Prisma.TwoFactorOrderByWithRelationInput>;
@@ -2386,9 +2394,13 @@ const __makeSchema_TwoFactorOrderByWithAggregationInput_schema = () => z.object(
   backupCodes: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   verified: SortOrderSchema.optional(),
+  failedVerificationCount: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  lockedUntil: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => TwoFactorCountOrderByAggregateInputObjectSchema).optional(),
+  _avg: z.lazy(() => TwoFactorAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => TwoFactorMaxOrderByAggregateInputObjectSchema).optional(),
-  _min: z.lazy(() => TwoFactorMinOrderByAggregateInputObjectSchema).optional()
+  _min: z.lazy(() => TwoFactorMinOrderByAggregateInputObjectSchema).optional(),
+  _sum: z.lazy(() => TwoFactorSumOrderByAggregateInputObjectSchema).optional()
 }).strict();
 export const TwoFactorOrderByWithAggregationInputObjectSchema: z.ZodType<Prisma.TwoFactorOrderByWithAggregationInput> = __makeSchema_TwoFactorOrderByWithAggregationInput_schema() as unknown as z.ZodType<Prisma.TwoFactorOrderByWithAggregationInput>;
 export const TwoFactorOrderByWithAggregationInputObjectZodSchema = __makeSchema_TwoFactorOrderByWithAggregationInput_schema();
@@ -2404,7 +2416,9 @@ const twofactorscalarwherewithaggregatesinputSchema = z.object({
   secret: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   backupCodes: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
-  verified: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional()
+  verified: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
+  failedVerificationCount: z.union([z.lazy(() => IntNullableWithAggregatesFilterObjectSchema), z.number().int()]).optional().nullable(),
+  lockedUntil: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const TwoFactorScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.TwoFactorScalarWhereWithAggregatesInput> = twofactorscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.TwoFactorScalarWhereWithAggregatesInput>;
 export const TwoFactorScalarWhereWithAggregatesInputObjectZodSchema = twofactorscalarwherewithaggregatesinputSchema;
@@ -4066,6 +4080,7 @@ const __makeSchema_UserCreateInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -4105,6 +4120,7 @@ const __makeSchema_UserUncheckedCreateInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -4145,6 +4161,7 @@ const __makeSchema_UserUpdateInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -4185,6 +4202,7 @@ const __makeSchema_UserUncheckedUpdateInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -4225,6 +4243,7 @@ const __makeSchema_UserCreateManyInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional()
@@ -4250,6 +4269,7 @@ const __makeSchema_UserUpdateManyMutationInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
@@ -4275,6 +4295,7 @@ const __makeSchema_UserUncheckedUpdateManyInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
@@ -5164,6 +5185,8 @@ const __makeSchema_TwoFactorCreateInput_schema = () => z.object({
   secret: z.string(),
   backupCodes: z.string(),
   verified: z.boolean().optional(),
+  failedVerificationCount: z.number().int().optional().nullable(),
+  lockedUntil: z.coerce.date().optional().nullable(),
   user: z.lazy(() => UserCreateNestedOneWithoutTwoFactorsInputObjectSchema)
 }).strict();
 export const TwoFactorCreateInputObjectSchema: z.ZodType<Prisma.TwoFactorCreateInput> = __makeSchema_TwoFactorCreateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorCreateInput>;
@@ -5176,7 +5199,9 @@ const __makeSchema_TwoFactorUncheckedCreateInput_schema = () => z.object({
   secret: z.string(),
   backupCodes: z.string(),
   userId: z.string(),
-  verified: z.boolean().optional()
+  verified: z.boolean().optional(),
+  failedVerificationCount: z.number().int().optional().nullable(),
+  lockedUntil: z.coerce.date().optional().nullable()
 }).strict();
 export const TwoFactorUncheckedCreateInputObjectSchema: z.ZodType<Prisma.TwoFactorUncheckedCreateInput> = __makeSchema_TwoFactorUncheckedCreateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUncheckedCreateInput>;
 export const TwoFactorUncheckedCreateInputObjectZodSchema = __makeSchema_TwoFactorUncheckedCreateInput_schema();
@@ -5188,6 +5213,8 @@ const __makeSchema_TwoFactorUpdateInput_schema = () => z.object({
   secret: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   backupCodes: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  failedVerificationCount: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  lockedUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   user: z.lazy(() => UserUpdateOneRequiredWithoutTwoFactorsNestedInputObjectSchema).optional()
 }).strict();
 export const TwoFactorUpdateInputObjectSchema: z.ZodType<Prisma.TwoFactorUpdateInput> = __makeSchema_TwoFactorUpdateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUpdateInput>;
@@ -5200,7 +5227,9 @@ const __makeSchema_TwoFactorUncheckedUpdateInput_schema = () => z.object({
   secret: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   backupCodes: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  failedVerificationCount: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  lockedUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TwoFactorUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.TwoFactorUncheckedUpdateInput> = __makeSchema_TwoFactorUncheckedUpdateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUncheckedUpdateInput>;
 export const TwoFactorUncheckedUpdateInputObjectZodSchema = __makeSchema_TwoFactorUncheckedUpdateInput_schema();
@@ -5212,7 +5241,9 @@ const __makeSchema_TwoFactorCreateManyInput_schema = () => z.object({
   secret: z.string(),
   backupCodes: z.string(),
   userId: z.string(),
-  verified: z.boolean().optional()
+  verified: z.boolean().optional(),
+  failedVerificationCount: z.number().int().optional().nullable(),
+  lockedUntil: z.coerce.date().optional().nullable()
 }).strict();
 export const TwoFactorCreateManyInputObjectSchema: z.ZodType<Prisma.TwoFactorCreateManyInput> = __makeSchema_TwoFactorCreateManyInput_schema() as unknown as z.ZodType<Prisma.TwoFactorCreateManyInput>;
 export const TwoFactorCreateManyInputObjectZodSchema = __makeSchema_TwoFactorCreateManyInput_schema();
@@ -5223,7 +5254,9 @@ const __makeSchema_TwoFactorUpdateManyMutationInput_schema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   secret: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   backupCodes: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  failedVerificationCount: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  lockedUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TwoFactorUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.TwoFactorUpdateManyMutationInput> = __makeSchema_TwoFactorUpdateManyMutationInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUpdateManyMutationInput>;
 export const TwoFactorUpdateManyMutationInputObjectZodSchema = __makeSchema_TwoFactorUpdateManyMutationInput_schema();
@@ -5235,7 +5268,9 @@ const __makeSchema_TwoFactorUncheckedUpdateManyInput_schema = () => z.object({
   secret: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   backupCodes: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  failedVerificationCount: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  lockedUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TwoFactorUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.TwoFactorUncheckedUpdateManyInput> = __makeSchema_TwoFactorUncheckedUpdateManyInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUncheckedUpdateManyInput>;
 export const TwoFactorUncheckedUpdateManyInputObjectZodSchema = __makeSchema_TwoFactorUncheckedUpdateManyInput_schema();
@@ -7005,6 +7040,7 @@ const __makeSchema_UserCountOrderByAggregateInput_schema = () => z.object({
   twoFactorEnabled: SortOrderSchema.optional(),
   onboardingComplete: SortOrderSchema.optional(),
   username: SortOrderSchema.optional(),
+  displayUsername: SortOrderSchema.optional(),
   paymentsCustomerId: SortOrderSchema.optional(),
   lastActiveOrganizationId: SortOrderSchema.optional(),
   userCreatedEventSent: SortOrderSchema.optional()
@@ -7030,6 +7066,7 @@ const __makeSchema_UserMaxOrderByAggregateInput_schema = () => z.object({
   twoFactorEnabled: SortOrderSchema.optional(),
   onboardingComplete: SortOrderSchema.optional(),
   username: SortOrderSchema.optional(),
+  displayUsername: SortOrderSchema.optional(),
   paymentsCustomerId: SortOrderSchema.optional(),
   lastActiveOrganizationId: SortOrderSchema.optional(),
   userCreatedEventSent: SortOrderSchema.optional()
@@ -7055,6 +7092,7 @@ const __makeSchema_UserMinOrderByAggregateInput_schema = () => z.object({
   twoFactorEnabled: SortOrderSchema.optional(),
   onboardingComplete: SortOrderSchema.optional(),
   username: SortOrderSchema.optional(),
+  displayUsername: SortOrderSchema.optional(),
   paymentsCustomerId: SortOrderSchema.optional(),
   lastActiveOrganizationId: SortOrderSchema.optional(),
   userCreatedEventSent: SortOrderSchema.optional()
@@ -7546,10 +7584,20 @@ const __makeSchema_TwoFactorCountOrderByAggregateInput_schema = () => z.object({
   secret: SortOrderSchema.optional(),
   backupCodes: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
-  verified: SortOrderSchema.optional()
+  verified: SortOrderSchema.optional(),
+  failedVerificationCount: SortOrderSchema.optional(),
+  lockedUntil: SortOrderSchema.optional()
 }).strict();
 export const TwoFactorCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorCountOrderByAggregateInput> = __makeSchema_TwoFactorCountOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorCountOrderByAggregateInput>;
 export const TwoFactorCountOrderByAggregateInputObjectZodSchema = __makeSchema_TwoFactorCountOrderByAggregateInput_schema();
+
+
+// File: TwoFactorAvgOrderByAggregateInput.schema.ts
+const __makeSchema_TwoFactorAvgOrderByAggregateInput_schema = () => z.object({
+  failedVerificationCount: SortOrderSchema.optional()
+}).strict();
+export const TwoFactorAvgOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorAvgOrderByAggregateInput> = __makeSchema_TwoFactorAvgOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorAvgOrderByAggregateInput>;
+export const TwoFactorAvgOrderByAggregateInputObjectZodSchema = __makeSchema_TwoFactorAvgOrderByAggregateInput_schema();
 
 
 // File: TwoFactorMaxOrderByAggregateInput.schema.ts
@@ -7558,7 +7606,9 @@ const __makeSchema_TwoFactorMaxOrderByAggregateInput_schema = () => z.object({
   secret: SortOrderSchema.optional(),
   backupCodes: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
-  verified: SortOrderSchema.optional()
+  verified: SortOrderSchema.optional(),
+  failedVerificationCount: SortOrderSchema.optional(),
+  lockedUntil: SortOrderSchema.optional()
 }).strict();
 export const TwoFactorMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorMaxOrderByAggregateInput> = __makeSchema_TwoFactorMaxOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorMaxOrderByAggregateInput>;
 export const TwoFactorMaxOrderByAggregateInputObjectZodSchema = __makeSchema_TwoFactorMaxOrderByAggregateInput_schema();
@@ -7570,10 +7620,20 @@ const __makeSchema_TwoFactorMinOrderByAggregateInput_schema = () => z.object({
   secret: SortOrderSchema.optional(),
   backupCodes: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
-  verified: SortOrderSchema.optional()
+  verified: SortOrderSchema.optional(),
+  failedVerificationCount: SortOrderSchema.optional(),
+  lockedUntil: SortOrderSchema.optional()
 }).strict();
 export const TwoFactorMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorMinOrderByAggregateInput> = __makeSchema_TwoFactorMinOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorMinOrderByAggregateInput>;
 export const TwoFactorMinOrderByAggregateInputObjectZodSchema = __makeSchema_TwoFactorMinOrderByAggregateInput_schema();
+
+
+// File: TwoFactorSumOrderByAggregateInput.schema.ts
+const __makeSchema_TwoFactorSumOrderByAggregateInput_schema = () => z.object({
+  failedVerificationCount: SortOrderSchema.optional()
+}).strict();
+export const TwoFactorSumOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorSumOrderByAggregateInput> = __makeSchema_TwoFactorSumOrderByAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorSumOrderByAggregateInput>;
+export const TwoFactorSumOrderByAggregateInputObjectZodSchema = __makeSchema_TwoFactorSumOrderByAggregateInput_schema();
 
 
 // File: UserCreateNestedOneWithoutPurchasesInput.schema.ts
@@ -10889,6 +10949,7 @@ const __makeSchema_UserCreateWithoutPurchasesInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -10928,6 +10989,7 @@ const __makeSchema_UserUncheckedCreateWithoutPurchasesInput_schema = () => z.obj
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -11106,6 +11168,7 @@ const __makeSchema_UserUpdateWithoutPurchasesInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -11145,6 +11208,7 @@ const __makeSchema_UserUncheckedUpdateWithoutPurchasesInput_schema = () => z.obj
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -11302,6 +11366,7 @@ const __makeSchema_UserCreateWithoutAuditLogsInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -11341,6 +11406,7 @@ const __makeSchema_UserUncheckedCreateWithoutAuditLogsInput_schema = () => z.obj
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -11467,6 +11533,7 @@ const __makeSchema_UserUpdateWithoutAuditLogsInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -11506,6 +11573,7 @@ const __makeSchema_UserUncheckedUpdateWithoutAuditLogsInput_schema = () => z.obj
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -11614,6 +11682,7 @@ const __makeSchema_UserCreateWithoutApiKeysInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -11653,6 +11722,7 @@ const __makeSchema_UserUncheckedCreateWithoutApiKeysInput_schema = () => z.objec
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -11779,6 +11849,7 @@ const __makeSchema_UserUpdateWithoutApiKeysInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -11818,6 +11889,7 @@ const __makeSchema_UserUncheckedUpdateWithoutApiKeysInput_schema = () => z.objec
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -11985,6 +12057,7 @@ const __makeSchema_UserCreateWithoutInvoicesInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -12024,6 +12097,7 @@ const __makeSchema_UserUncheckedCreateWithoutInvoicesInput_schema = () => z.obje
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -12160,6 +12234,7 @@ const __makeSchema_UserUpdateWithoutInvoicesInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -12199,6 +12274,7 @@ const __makeSchema_UserUncheckedUpdateWithoutInvoicesInput_schema = () => z.obje
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -12556,6 +12632,7 @@ const __makeSchema_UserCreateWithoutNotificationsInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -12595,6 +12672,7 @@ const __makeSchema_UserUncheckedCreateWithoutNotificationsInput_schema = () => z
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -12662,6 +12740,7 @@ const __makeSchema_UserUpdateWithoutNotificationsInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -12701,6 +12780,7 @@ const __makeSchema_UserUncheckedUpdateWithoutNotificationsInput_schema = () => z
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -12740,6 +12820,7 @@ const __makeSchema_UserCreateWithoutChatConversationsInput_schema = () => z.obje
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -12779,6 +12860,7 @@ const __makeSchema_UserUncheckedCreateWithoutChatConversationsInput_schema = () 
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -12945,6 +13027,7 @@ const __makeSchema_UserUpdateWithoutChatConversationsInput_schema = () => z.obje
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -12984,6 +13067,7 @@ const __makeSchema_UserUncheckedUpdateWithoutChatConversationsInput_schema = () 
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -13344,6 +13428,7 @@ const __makeSchema_UserCreateWithoutCreditBalancesInput_schema = () => z.object(
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -13383,6 +13468,7 @@ const __makeSchema_UserUncheckedCreateWithoutCreditBalancesInput_schema = () => 
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -13509,6 +13595,7 @@ const __makeSchema_UserUpdateWithoutCreditBalancesInput_schema = () => z.object(
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -13548,6 +13635,7 @@ const __makeSchema_UserUncheckedUpdateWithoutCreditBalancesInput_schema = () => 
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -13656,6 +13744,7 @@ const __makeSchema_UserCreateWithoutCreditPackagesInput_schema = () => z.object(
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -13695,6 +13784,7 @@ const __makeSchema_UserUncheckedCreateWithoutCreditPackagesInput_schema = () => 
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -13926,6 +14016,7 @@ const __makeSchema_UserUpdateWithoutCreditPackagesInput_schema = () => z.object(
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -13965,6 +14056,7 @@ const __makeSchema_UserUncheckedUpdateWithoutCreditPackagesInput_schema = () => 
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -14186,6 +14278,7 @@ const __makeSchema_UserCreateWithoutCreditEventsInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -14225,6 +14318,7 @@ const __makeSchema_UserUncheckedCreateWithoutCreditEventsInput_schema = () => z.
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -14394,6 +14488,7 @@ const __makeSchema_UserUpdateWithoutCreditEventsInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -14433,6 +14528,7 @@ const __makeSchema_UserUncheckedUpdateWithoutCreditEventsInput_schema = () => z.
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -14826,7 +14922,9 @@ const __makeSchema_TwoFactorCreateWithoutUserInput_schema = () => z.object({
   id: z.string(),
   secret: z.string(),
   backupCodes: z.string(),
-  verified: z.boolean().optional()
+  verified: z.boolean().optional(),
+  failedVerificationCount: z.number().int().optional().nullable(),
+  lockedUntil: z.coerce.date().optional().nullable()
 }).strict();
 export const TwoFactorCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.TwoFactorCreateWithoutUserInput> = __makeSchema_TwoFactorCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.TwoFactorCreateWithoutUserInput>;
 export const TwoFactorCreateWithoutUserInputObjectZodSchema = __makeSchema_TwoFactorCreateWithoutUserInput_schema();
@@ -14837,7 +14935,9 @@ const __makeSchema_TwoFactorUncheckedCreateWithoutUserInput_schema = () => z.obj
   id: z.string(),
   secret: z.string(),
   backupCodes: z.string(),
-  verified: z.boolean().optional()
+  verified: z.boolean().optional(),
+  failedVerificationCount: z.number().int().optional().nullable(),
+  lockedUntil: z.coerce.date().optional().nullable()
 }).strict();
 export const TwoFactorUncheckedCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.TwoFactorUncheckedCreateWithoutUserInput> = __makeSchema_TwoFactorUncheckedCreateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUncheckedCreateWithoutUserInput>;
 export const TwoFactorUncheckedCreateWithoutUserInputObjectZodSchema = __makeSchema_TwoFactorUncheckedCreateWithoutUserInput_schema();
@@ -15613,7 +15713,9 @@ const twofactorscalarwhereinputSchema = z.object({
   secret: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   backupCodes: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  verified: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional()
+  verified: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  failedVerificationCount: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
+  lockedUntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const TwoFactorScalarWhereInputObjectSchema: z.ZodType<Prisma.TwoFactorScalarWhereInput> = twofactorscalarwhereinputSchema as unknown as z.ZodType<Prisma.TwoFactorScalarWhereInput>;
 export const TwoFactorScalarWhereInputObjectZodSchema = twofactorscalarwhereinputSchema;
@@ -16042,6 +16144,7 @@ const __makeSchema_UserCreateWithoutSessionsInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -16081,6 +16184,7 @@ const __makeSchema_UserUncheckedCreateWithoutSessionsInput_schema = () => z.obje
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -16148,6 +16252,7 @@ const __makeSchema_UserUpdateWithoutSessionsInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -16187,6 +16292,7 @@ const __makeSchema_UserUncheckedUpdateWithoutSessionsInput_schema = () => z.obje
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -16226,6 +16332,7 @@ const __makeSchema_UserCreateWithoutAccountsInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -16265,6 +16372,7 @@ const __makeSchema_UserUncheckedCreateWithoutAccountsInput_schema = () => z.obje
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -16332,6 +16440,7 @@ const __makeSchema_UserUpdateWithoutAccountsInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -16371,6 +16480,7 @@ const __makeSchema_UserUncheckedUpdateWithoutAccountsInput_schema = () => z.obje
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -17455,6 +17565,7 @@ const __makeSchema_UserCreateWithoutMembersInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -17494,6 +17605,7 @@ const __makeSchema_UserUncheckedCreateWithoutMembersInput_schema = () => z.objec
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -17630,6 +17742,7 @@ const __makeSchema_UserUpdateWithoutMembersInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -17669,6 +17782,7 @@ const __makeSchema_UserUncheckedUpdateWithoutMembersInput_schema = () => z.objec
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -17767,6 +17881,7 @@ const __makeSchema_UserCreateWithoutInvitationsInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -17806,6 +17921,7 @@ const __makeSchema_UserUncheckedCreateWithoutInvitationsInput_schema = () => z.o
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -17942,6 +18058,7 @@ const __makeSchema_UserUpdateWithoutInvitationsInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -17981,6 +18098,7 @@ const __makeSchema_UserUncheckedUpdateWithoutInvitationsInput_schema = () => z.o
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18020,6 +18138,7 @@ const __makeSchema_UserCreateWithoutPasskeysInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -18059,6 +18178,7 @@ const __makeSchema_UserUncheckedCreateWithoutPasskeysInput_schema = () => z.obje
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -18126,6 +18246,7 @@ const __makeSchema_UserUpdateWithoutPasskeysInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18165,6 +18286,7 @@ const __makeSchema_UserUncheckedUpdateWithoutPasskeysInput_schema = () => z.obje
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18204,6 +18326,7 @@ const __makeSchema_UserCreateWithoutTwoFactorsInput_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -18243,6 +18366,7 @@ const __makeSchema_UserUncheckedCreateWithoutTwoFactorsInput_schema = () => z.ob
   twoFactorEnabled: z.boolean().optional().nullable(),
   onboardingComplete: z.boolean().optional(),
   username: z.string().optional().nullable(),
+  displayUsername: z.string().optional().nullable(),
   paymentsCustomerId: z.string().optional().nullable(),
   lastActiveOrganizationId: z.string().optional().nullable(),
   userCreatedEventSent: z.boolean().optional(),
@@ -18310,6 +18434,7 @@ const __makeSchema_UserUpdateWithoutTwoFactorsInput_schema = () => z.object({
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18349,6 +18474,7 @@ const __makeSchema_UserUncheckedUpdateWithoutTwoFactorsInput_schema = () => z.ob
   twoFactorEnabled: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   onboardingComplete: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   username: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  displayUsername: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paymentsCustomerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   lastActiveOrganizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userCreatedEventSent: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18699,7 +18825,9 @@ const __makeSchema_TwoFactorCreateManyUserInput_schema = () => z.object({
   id: z.string(),
   secret: z.string(),
   backupCodes: z.string(),
-  verified: z.boolean().optional()
+  verified: z.boolean().optional(),
+  failedVerificationCount: z.number().int().optional().nullable(),
+  lockedUntil: z.coerce.date().optional().nullable()
 }).strict();
 export const TwoFactorCreateManyUserInputObjectSchema: z.ZodType<Prisma.TwoFactorCreateManyUserInput> = __makeSchema_TwoFactorCreateManyUserInput_schema() as unknown as z.ZodType<Prisma.TwoFactorCreateManyUserInput>;
 export const TwoFactorCreateManyUserInputObjectZodSchema = __makeSchema_TwoFactorCreateManyUserInput_schema();
@@ -19093,7 +19221,9 @@ const __makeSchema_TwoFactorUpdateWithoutUserInput_schema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   secret: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   backupCodes: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  failedVerificationCount: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  lockedUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TwoFactorUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.TwoFactorUpdateWithoutUserInput> = __makeSchema_TwoFactorUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUpdateWithoutUserInput>;
 export const TwoFactorUpdateWithoutUserInputObjectZodSchema = __makeSchema_TwoFactorUpdateWithoutUserInput_schema();
@@ -19104,7 +19234,9 @@ const __makeSchema_TwoFactorUncheckedUpdateWithoutUserInput_schema = () => z.obj
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   secret: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   backupCodes: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  failedVerificationCount: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  lockedUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TwoFactorUncheckedUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.TwoFactorUncheckedUpdateWithoutUserInput> = __makeSchema_TwoFactorUncheckedUpdateWithoutUserInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUncheckedUpdateWithoutUserInput>;
 export const TwoFactorUncheckedUpdateWithoutUserInputObjectZodSchema = __makeSchema_TwoFactorUncheckedUpdateWithoutUserInput_schema();
@@ -19115,7 +19247,9 @@ const __makeSchema_TwoFactorUncheckedUpdateManyWithoutUserInput_schema = () => z
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   secret: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   backupCodes: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  verified: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  failedVerificationCount: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  lockedUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TwoFactorUncheckedUpdateManyWithoutUserInputObjectSchema: z.ZodType<Prisma.TwoFactorUncheckedUpdateManyWithoutUserInput> = __makeSchema_TwoFactorUncheckedUpdateManyWithoutUserInput_schema() as unknown as z.ZodType<Prisma.TwoFactorUncheckedUpdateManyWithoutUserInput>;
 export const TwoFactorUncheckedUpdateManyWithoutUserInputObjectZodSchema = __makeSchema_TwoFactorUncheckedUpdateManyWithoutUserInput_schema();
@@ -21170,6 +21304,7 @@ const __makeSchema_UserCountAggregateInput_schema = () => z.object({
   twoFactorEnabled: z.literal(true).optional(),
   onboardingComplete: z.literal(true).optional(),
   username: z.literal(true).optional(),
+  displayUsername: z.literal(true).optional(),
   paymentsCustomerId: z.literal(true).optional(),
   lastActiveOrganizationId: z.literal(true).optional(),
   userCreatedEventSent: z.literal(true).optional(),
@@ -21196,6 +21331,7 @@ const __makeSchema_UserMinAggregateInput_schema = () => z.object({
   twoFactorEnabled: z.literal(true).optional(),
   onboardingComplete: z.literal(true).optional(),
   username: z.literal(true).optional(),
+  displayUsername: z.literal(true).optional(),
   paymentsCustomerId: z.literal(true).optional(),
   lastActiveOrganizationId: z.literal(true).optional(),
   userCreatedEventSent: z.literal(true).optional()
@@ -21221,6 +21357,7 @@ const __makeSchema_UserMaxAggregateInput_schema = () => z.object({
   twoFactorEnabled: z.literal(true).optional(),
   onboardingComplete: z.literal(true).optional(),
   username: z.literal(true).optional(),
+  displayUsername: z.literal(true).optional(),
   paymentsCustomerId: z.literal(true).optional(),
   lastActiveOrganizationId: z.literal(true).optional(),
   userCreatedEventSent: z.literal(true).optional()
@@ -21638,10 +21775,28 @@ const __makeSchema_TwoFactorCountAggregateInput_schema = () => z.object({
   backupCodes: z.literal(true).optional(),
   userId: z.literal(true).optional(),
   verified: z.literal(true).optional(),
+  failedVerificationCount: z.literal(true).optional(),
+  lockedUntil: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const TwoFactorCountAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorCountAggregateInputType> = __makeSchema_TwoFactorCountAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorCountAggregateInputType>;
 export const TwoFactorCountAggregateInputObjectZodSchema = __makeSchema_TwoFactorCountAggregateInput_schema();
+
+
+// File: TwoFactorAvgAggregateInput.schema.ts
+const __makeSchema_TwoFactorAvgAggregateInput_schema = () => z.object({
+  failedVerificationCount: z.literal(true).optional()
+}).strict();
+export const TwoFactorAvgAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorAvgAggregateInputType> = __makeSchema_TwoFactorAvgAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorAvgAggregateInputType>;
+export const TwoFactorAvgAggregateInputObjectZodSchema = __makeSchema_TwoFactorAvgAggregateInput_schema();
+
+
+// File: TwoFactorSumAggregateInput.schema.ts
+const __makeSchema_TwoFactorSumAggregateInput_schema = () => z.object({
+  failedVerificationCount: z.literal(true).optional()
+}).strict();
+export const TwoFactorSumAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorSumAggregateInputType> = __makeSchema_TwoFactorSumAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorSumAggregateInputType>;
+export const TwoFactorSumAggregateInputObjectZodSchema = __makeSchema_TwoFactorSumAggregateInput_schema();
 
 
 // File: TwoFactorMinAggregateInput.schema.ts
@@ -21650,7 +21805,9 @@ const __makeSchema_TwoFactorMinAggregateInput_schema = () => z.object({
   secret: z.literal(true).optional(),
   backupCodes: z.literal(true).optional(),
   userId: z.literal(true).optional(),
-  verified: z.literal(true).optional()
+  verified: z.literal(true).optional(),
+  failedVerificationCount: z.literal(true).optional(),
+  lockedUntil: z.literal(true).optional()
 }).strict();
 export const TwoFactorMinAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorMinAggregateInputType> = __makeSchema_TwoFactorMinAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorMinAggregateInputType>;
 export const TwoFactorMinAggregateInputObjectZodSchema = __makeSchema_TwoFactorMinAggregateInput_schema();
@@ -21662,7 +21819,9 @@ const __makeSchema_TwoFactorMaxAggregateInput_schema = () => z.object({
   secret: z.literal(true).optional(),
   backupCodes: z.literal(true).optional(),
   userId: z.literal(true).optional(),
-  verified: z.literal(true).optional()
+  verified: z.literal(true).optional(),
+  failedVerificationCount: z.literal(true).optional(),
+  lockedUntil: z.literal(true).optional()
 }).strict();
 export const TwoFactorMaxAggregateInputObjectSchema: z.ZodType<Prisma.TwoFactorMaxAggregateInputType> = __makeSchema_TwoFactorMaxAggregateInput_schema() as unknown as z.ZodType<Prisma.TwoFactorMaxAggregateInputType>;
 export const TwoFactorMaxAggregateInputObjectZodSchema = __makeSchema_TwoFactorMaxAggregateInput_schema();
@@ -22313,6 +22472,7 @@ const __makeSchema_UserSelect_schema = () => z.object({
   twoFactorEnabled: z.boolean().optional(),
   onboardingComplete: z.boolean().optional(),
   username: z.boolean().optional(),
+  displayUsername: z.boolean().optional(),
   paymentsCustomerId: z.boolean().optional(),
   lastActiveOrganizationId: z.boolean().optional(),
   userCreatedEventSent: z.boolean().optional(),
@@ -22484,7 +22644,9 @@ const __makeSchema_TwoFactorSelect_schema = () => z.object({
   backupCodes: z.boolean().optional(),
   userId: z.boolean().optional(),
   user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-  verified: z.boolean().optional()
+  verified: z.boolean().optional(),
+  failedVerificationCount: z.boolean().optional(),
+  lockedUntil: z.boolean().optional()
 }).strict();
 export const TwoFactorSelectObjectSchema: z.ZodType<Prisma.TwoFactorSelect> = __makeSchema_TwoFactorSelect_schema() as unknown as z.ZodType<Prisma.TwoFactorSelect>;
 export const TwoFactorSelectObjectZodSchema = __makeSchema_TwoFactorSelect_schema();
@@ -25723,6 +25885,7 @@ export const UserFindFirstSelectSchema__findFirstUser_schema: z.ZodType<Prisma.U
     twoFactorEnabled: z.boolean().optional(),
     onboardingComplete: z.boolean().optional(),
     username: z.boolean().optional(),
+    displayUsername: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
     userCreatedEventSent: z.boolean().optional(),
@@ -25760,6 +25923,7 @@ export const UserFindFirstSelectZodSchema__findFirstUser_schema = z.object({
     twoFactorEnabled: z.boolean().optional(),
     onboardingComplete: z.boolean().optional(),
     username: z.boolean().optional(),
+    displayUsername: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
     userCreatedEventSent: z.boolean().optional(),
@@ -25806,6 +25970,7 @@ export const UserFindFirstOrThrowSelectSchema__findFirstOrThrowUser_schema: z.Zo
     twoFactorEnabled: z.boolean().optional(),
     onboardingComplete: z.boolean().optional(),
     username: z.boolean().optional(),
+    displayUsername: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
     userCreatedEventSent: z.boolean().optional(),
@@ -25843,6 +26008,7 @@ export const UserFindFirstOrThrowSelectZodSchema__findFirstOrThrowUser_schema = 
     twoFactorEnabled: z.boolean().optional(),
     onboardingComplete: z.boolean().optional(),
     username: z.boolean().optional(),
+    displayUsername: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
     userCreatedEventSent: z.boolean().optional(),
@@ -25889,6 +26055,7 @@ export const UserFindManySelectSchema__findManyUser_schema: z.ZodType<Prisma.Use
     twoFactorEnabled: z.boolean().optional(),
     onboardingComplete: z.boolean().optional(),
     username: z.boolean().optional(),
+    displayUsername: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
     userCreatedEventSent: z.boolean().optional(),
@@ -25926,6 +26093,7 @@ export const UserFindManySelectZodSchema__findManyUser_schema = z.object({
     twoFactorEnabled: z.boolean().optional(),
     onboardingComplete: z.boolean().optional(),
     username: z.boolean().optional(),
+    displayUsername: z.boolean().optional(),
     paymentsCustomerId: z.boolean().optional(),
     lastActiveOrganizationId: z.boolean().optional(),
     userCreatedEventSent: z.boolean().optional(),
@@ -27582,7 +27750,9 @@ export const TwoFactorFindFirstSelectSchema__findFirstTwoFactor_schema: z.ZodTyp
     backupCodes: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-    verified: z.boolean().optional()
+    verified: z.boolean().optional(),
+    failedVerificationCount: z.boolean().optional(),
+    lockedUntil: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TwoFactorSelect>;
 
 export const TwoFactorFindFirstSelectZodSchema__findFirstTwoFactor_schema = z.object({
@@ -27591,7 +27761,9 @@ export const TwoFactorFindFirstSelectZodSchema__findFirstTwoFactor_schema = z.ob
     backupCodes: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-    verified: z.boolean().optional()
+    verified: z.boolean().optional(),
+    failedVerificationCount: z.boolean().optional(),
+    lockedUntil: z.boolean().optional()
   }).strict();
 
 export const TwoFactorFindFirstSchema: z.ZodType<Prisma.TwoFactorFindFirstArgs> = z.object({ select: TwoFactorFindFirstSelectSchema__findFirstTwoFactor_schema.optional(), include: z.lazy(() => TwoFactorIncludeObjectSchema.optional()), orderBy: z.union([TwoFactorOrderByWithRelationInputObjectSchema, TwoFactorOrderByWithRelationInputObjectSchema.array()]).optional(), where: TwoFactorWhereInputObjectSchema.optional(), cursor: TwoFactorWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TwoFactorScalarFieldEnumSchema, TwoFactorScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TwoFactorFindFirstArgs>;
@@ -27609,7 +27781,9 @@ export const TwoFactorFindFirstOrThrowSelectSchema__findFirstOrThrowTwoFactor_sc
     backupCodes: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-    verified: z.boolean().optional()
+    verified: z.boolean().optional(),
+    failedVerificationCount: z.boolean().optional(),
+    lockedUntil: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TwoFactorSelect>;
 
 export const TwoFactorFindFirstOrThrowSelectZodSchema__findFirstOrThrowTwoFactor_schema = z.object({
@@ -27618,7 +27792,9 @@ export const TwoFactorFindFirstOrThrowSelectZodSchema__findFirstOrThrowTwoFactor
     backupCodes: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-    verified: z.boolean().optional()
+    verified: z.boolean().optional(),
+    failedVerificationCount: z.boolean().optional(),
+    lockedUntil: z.boolean().optional()
   }).strict();
 
 export const TwoFactorFindFirstOrThrowSchema: z.ZodType<Prisma.TwoFactorFindFirstOrThrowArgs> = z.object({ select: TwoFactorFindFirstOrThrowSelectSchema__findFirstOrThrowTwoFactor_schema.optional(), include: z.lazy(() => TwoFactorIncludeObjectSchema.optional()), orderBy: z.union([TwoFactorOrderByWithRelationInputObjectSchema, TwoFactorOrderByWithRelationInputObjectSchema.array()]).optional(), where: TwoFactorWhereInputObjectSchema.optional(), cursor: TwoFactorWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TwoFactorScalarFieldEnumSchema, TwoFactorScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TwoFactorFindFirstOrThrowArgs>;
@@ -27636,7 +27812,9 @@ export const TwoFactorFindManySelectSchema__findManyTwoFactor_schema: z.ZodType<
     backupCodes: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-    verified: z.boolean().optional()
+    verified: z.boolean().optional(),
+    failedVerificationCount: z.boolean().optional(),
+    lockedUntil: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TwoFactorSelect>;
 
 export const TwoFactorFindManySelectZodSchema__findManyTwoFactor_schema = z.object({
@@ -27645,7 +27823,9 @@ export const TwoFactorFindManySelectZodSchema__findManyTwoFactor_schema = z.obje
     backupCodes: z.boolean().optional(),
     userId: z.boolean().optional(),
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-    verified: z.boolean().optional()
+    verified: z.boolean().optional(),
+    failedVerificationCount: z.boolean().optional(),
+    lockedUntil: z.boolean().optional()
   }).strict();
 
 export const TwoFactorFindManySchema: z.ZodType<Prisma.TwoFactorFindManyArgs> = z.object({ select: TwoFactorFindManySelectSchema__findManyTwoFactor_schema.optional(), include: z.lazy(() => TwoFactorIncludeObjectSchema.optional()), orderBy: z.union([TwoFactorOrderByWithRelationInputObjectSchema, TwoFactorOrderByWithRelationInputObjectSchema.array()]).optional(), where: TwoFactorWhereInputObjectSchema.optional(), cursor: TwoFactorWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TwoFactorScalarFieldEnumSchema, TwoFactorScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TwoFactorFindManyArgs>;
@@ -27714,15 +27894,15 @@ export const TwoFactorUpsertOneZodSchema = z.object({ select: TwoFactorSelectObj
 
 // File: aggregateTwoFactor.schema.ts
 
-export const TwoFactorAggregateSchema: z.ZodType<Prisma.TwoFactorAggregateArgs> = z.object({ orderBy: z.union([TwoFactorOrderByWithRelationInputObjectSchema, TwoFactorOrderByWithRelationInputObjectSchema.array()]).optional(), where: TwoFactorWhereInputObjectSchema.optional(), cursor: TwoFactorWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TwoFactorAggregateArgs>;
+export const TwoFactorAggregateSchema: z.ZodType<Prisma.TwoFactorAggregateArgs> = z.object({ orderBy: z.union([TwoFactorOrderByWithRelationInputObjectSchema, TwoFactorOrderByWithRelationInputObjectSchema.array()]).optional(), where: TwoFactorWhereInputObjectSchema.optional(), cursor: TwoFactorWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional(), _avg: TwoFactorAvgAggregateInputObjectSchema.optional(), _sum: TwoFactorSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TwoFactorAggregateArgs>;
 
-export const TwoFactorAggregateZodSchema = z.object({ orderBy: z.union([TwoFactorOrderByWithRelationInputObjectSchema, TwoFactorOrderByWithRelationInputObjectSchema.array()]).optional(), where: TwoFactorWhereInputObjectSchema.optional(), cursor: TwoFactorWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional() }).strict();
+export const TwoFactorAggregateZodSchema = z.object({ orderBy: z.union([TwoFactorOrderByWithRelationInputObjectSchema, TwoFactorOrderByWithRelationInputObjectSchema.array()]).optional(), where: TwoFactorWhereInputObjectSchema.optional(), cursor: TwoFactorWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional(), _avg: TwoFactorAvgAggregateInputObjectSchema.optional(), _sum: TwoFactorSumAggregateInputObjectSchema.optional() }).strict();
 
 // File: groupByTwoFactor.schema.ts
 
-export const TwoFactorGroupBySchema: z.ZodType<Prisma.TwoFactorGroupByArgs> = z.object({ where: TwoFactorWhereInputObjectSchema.optional(), orderBy: z.union([TwoFactorOrderByWithAggregationInputObjectSchema, TwoFactorOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TwoFactorScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TwoFactorScalarFieldEnumSchema), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TwoFactorGroupByArgs>;
+export const TwoFactorGroupBySchema: z.ZodType<Prisma.TwoFactorGroupByArgs> = z.object({ where: TwoFactorWhereInputObjectSchema.optional(), orderBy: z.union([TwoFactorOrderByWithAggregationInputObjectSchema, TwoFactorOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TwoFactorScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TwoFactorScalarFieldEnumSchema), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional(), _avg: TwoFactorAvgAggregateInputObjectSchema.optional(), _sum: TwoFactorSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TwoFactorGroupByArgs>;
 
-export const TwoFactorGroupByZodSchema = z.object({ where: TwoFactorWhereInputObjectSchema.optional(), orderBy: z.union([TwoFactorOrderByWithAggregationInputObjectSchema, TwoFactorOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TwoFactorScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TwoFactorScalarFieldEnumSchema), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional() }).strict();
+export const TwoFactorGroupByZodSchema = z.object({ where: TwoFactorWhereInputObjectSchema.optional(), orderBy: z.union([TwoFactorOrderByWithAggregationInputObjectSchema, TwoFactorOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TwoFactorScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TwoFactorScalarFieldEnumSchema), _count: z.union([ z.literal(true), TwoFactorCountAggregateInputObjectSchema ]).optional(), _min: TwoFactorMinAggregateInputObjectSchema.optional(), _max: TwoFactorMaxAggregateInputObjectSchema.optional(), _avg: TwoFactorAvgAggregateInputObjectSchema.optional(), _sum: TwoFactorSumAggregateInputObjectSchema.optional() }).strict();
 
 // File: index.ts
 
@@ -27988,6 +28168,7 @@ export const UserSchema = z.object({
   twoFactorEnabled: z.boolean().nullish(),
   onboardingComplete: z.boolean(),
   username: z.string().nullish(),
+  displayUsername: z.string().nullish(),
   paymentsCustomerId: z.string().nullish(),
   lastActiveOrganizationId: z.string().nullish(),
   userCreatedEventSent: z.boolean(),
@@ -28132,6 +28313,8 @@ export const TwoFactorSchema = z.object({
   backupCodes: z.string(),
   userId: z.string(),
   verified: z.boolean().default(true),
+  failedVerificationCount: z.number().int().nullish(),
+  lockedUntil: z.date().nullish(),
 });
 
 export type TwoFactorType = z.infer<typeof TwoFactorSchema>;

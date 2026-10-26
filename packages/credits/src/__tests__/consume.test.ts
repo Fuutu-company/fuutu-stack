@@ -6,11 +6,14 @@ vi.mock("@fuutu/db", () => ({
 	getActiveCreditPackages: vi.fn(),
 }));
 
+const mockLogInfo = vi.hoisted(() => vi.fn());
+const mockLogDebug = vi.hoisted(() => vi.fn());
 vi.mock("@fuutu/logs", () => ({
 	createLogger: () => ({
-		info: vi.fn(),
+		info: mockLogInfo,
 		warn: vi.fn(),
 		error: vi.fn(),
+		debug: mockLogDebug,
 	}),
 }));
 
@@ -152,6 +155,33 @@ describe("consumeCredits", () => {
 		});
 
 		expect(result.deduplicated).toBe(true);
+	});
+
+	it("logs a deduplicated replay at debug instead of the consumed message", async () => {
+		vi.mocked(consumeCreditsTx).mockResolvedValue({
+			ok: true,
+			consumed: 10,
+			remaining: 90,
+			source: "recurring",
+			deduplicated: true,
+		});
+
+		await consumeCredits({
+			userId: "user-1",
+			meterKey: "ai_tokens",
+			amount: 10,
+			reason: "test",
+			idempotencyKey: "idem-1",
+		});
+
+		expect(mockLogDebug).toHaveBeenCalledWith(
+			"deduplicated credit consume replay",
+			expect.objectContaining({ meterKey: "ai_tokens" }),
+		);
+		expect(mockLogInfo).not.toHaveBeenCalledWith(
+			"consumed credits",
+			expect.anything(),
+		);
 	});
 
 	it("propagates tx errors", async () => {

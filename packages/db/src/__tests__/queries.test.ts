@@ -226,6 +226,50 @@ describe("DB query functions - smoke tests", () => {
 				await purchaseQueries.getPurchaseByCheckoutEventId("creem", "evt_x"),
 			).toBeNull();
 		});
+
+		it("getActiveSubscriptionForUser gates on ACTIVE/TRIALING or SCHEDULED_CANCEL within period", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
+
+			await purchaseQueries.getActiveSubscriptionForUser("user_1");
+
+			const where = vi
+				.mocked(db.purchase.findFirst)
+				.mock.calls.at(-1)?.[0] as unknown as {
+				where: {
+					userId: string;
+					type: string;
+					OR: [
+						{ status: { in: string[] } },
+						{
+							status: string;
+							currentPeriodEnd: { gt: Date };
+						},
+					];
+				};
+			};
+			expect(where.where.userId).toBe("user_1");
+			expect(where.where.type).toBe("SUBSCRIPTION");
+			expect(where.where.OR[0].status.in).toEqual(["ACTIVE", "TRIALING"]);
+			expect(where.where.OR[1].status).toBe("SCHEDULED_CANCEL");
+			// gt is evaluated per call — must be a fresh "now", not stale
+			expect(
+				Math.abs(where.where.OR[1].currentPeriodEnd.gt.getTime() - Date.now()),
+			).toBeLessThan(5000);
+		});
+
+		it("getActiveSubscriptionForOrganization uses the same access-gating filter", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
+
+			await purchaseQueries.getActiveSubscriptionForOrganization("org_1");
+
+			const where = vi
+				.mocked(db.purchase.findFirst)
+				.mock.calls.at(-1)?.[0] as unknown as {
+				where: { organizationId: string; OR: unknown[] };
+			};
+			expect(where.where.organizationId).toBe("org_1");
+			expect(where.where.OR).toHaveLength(2);
+		});
 	});
 
 	describe("invoice queries", () => {

@@ -37,11 +37,11 @@
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",
 		"@tailwindcss/postcss": "catalog:",
-		"@types/mdx": "^2.0.14",
+		"@types/mdx": "catalog:",
 		"@types/node": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
-		"postcss": "^8.5.29",
+		"postcss": "catalog:",
 		"tailwindcss": "catalog:",
 		"tw-animate-css": "catalog:",
 		"typescript": "catalog:"

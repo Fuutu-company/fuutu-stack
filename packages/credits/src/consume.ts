@@ -80,12 +80,22 @@ export async function consumeCredits(
 	});
 
 	if (result.ok) {
-		log.info("consumed credits", {
-			meterKey,
-			amount,
-			source: result.source,
-			remaining: result.remaining,
-		});
+		if (result.deduplicated) {
+			// Replay of an already-consumed request — nothing was consumed,
+			// so log at debug to keep the info-level ledger clean.
+			log.debug("deduplicated credit consume replay", {
+				meterKey,
+				amount,
+				idempotencyKey,
+			});
+		} else {
+			log.info("consumed credits", {
+				meterKey,
+				amount,
+				source: result.source,
+				remaining: result.remaining,
+			});
+		}
 	} else {
 		log.warn("credits exceeded", {
 			meterKey,

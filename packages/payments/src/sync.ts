@@ -54,9 +54,15 @@ const log = createLogger({ scope: "payments:sync" });
 const DEFAULT_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * Statuses that must not be overwritten by a renewal/activation event.
- * Terminal states (CANCELED, EXPIRED) are included — a late-arriving
- * renewal must never resurrect a dead subscription.
+ * Statuses that must not be overwritten by an activation-type event.
+ * Three classes:
+ *   - Terminal (CANCELED, EXPIRED): a real resubscribe creates a new
+ *     subscriptionId — a late activation must never resurrect a dead sub.
+ *   - User-intent (SCHEDULED_CANCEL): a renewal must not undo a scheduled
+ *     cancel; un-cancel arrives via subscription.updated on all providers.
+ *   - Recoverable (PAST_DUE, PAUSED): payment recovery / resume arrives as
+ *     subscription.activated or subscription.renewed — blocking it would
+ *     keep a paying customer gated out forever (see RECOVERABLE_STATUSES).
  */
 const PROTECTED_STATUSES: PurchaseStatusLiteral[] = [
 	"SCHEDULED_CANCEL",
@@ -65,6 +71,14 @@ const PROTECTED_STATUSES: PurchaseStatusLiteral[] = [
 	"CANCELED",
 	"EXPIRED",
 ];
+
+/**
+ * Protected statuses that subscription.activated / subscription.renewed
+ * may transition out of: PAST_DUE recovers when the retried payment
+ * succeeds, PAUSED when the subscription resumes. checkout.completed is
+ * a stale creation signal and never recovers an existing subscription.
+ */
+const RECOVERABLE_STATUSES: PurchaseStatusLiteral[] = ["PAST_DUE", "PAUSED"];
 
 /** Statuses that count as "active" for feature gating. */
 const ACTIVE_STATUSES: PurchaseStatusLiteral[] = ["ACTIVE", "TRIALING"];
@@ -326,21 +340,25 @@ async function handleOneTimePurchase(
 			// A concurrent redelivery won the race — treat as duplicate and
 			// still attempt the grant against the winning purchase: it may
 			// have committed the row but failed the grant before its 5xx.
-			log.info("duplicate checkout.completed (unique constraint)", {
-				eventId,
-			});
 			const winner = eventId
 				? await getPurchaseByCheckoutEventId(providerId, eventId)
 				: null;
 			if (winner) {
+				log.info("duplicate checkout.completed (unique constraint)", {
+					eventId,
+					purchaseId: winner.id,
+				});
 				await grantTopUpCreditsForStoredPurchase(
 					winner,
 					event,
 					userId,
 					organizationId,
 				);
+				return;
 			}
-			return;
+			// Not the dedup race — a violation on another constraint, or no
+			// eventId to attribute it. Propagate → 5xx → provider retries.
+			throw err;
 		}
 		throw err;
 	}
@@ -500,9 +518,14 @@ async function updateExistingPurchase(
 		}
 	}
 
-	if (isProtected && isSubscriptionActivationType(event.type)) {
-		// Keep the protected status — don't overwrite with ACTIVE
-		log.info("keeping protected status, ignoring renewal", {
+	if (
+		isProtected &&
+		isSubscriptionActivationType(event.type) &&
+		!isRecoveryTransition(event.type, currentStatusLit)
+	) {
+		// Keep the protected status — an activation-type event does not
+		// transition terminal or user-intent states.
+		log.info("keeping protected status on activation-type event", {
 			purchaseId,
 			currentStatus: currentStatusLit,
 			eventType: event.type,
@@ -641,6 +664,22 @@ function isSubscriptionActivationType(type: ProviderEventType): boolean {
 		type === "subscription.activated" ||
 		type === "subscription.renewed" ||
 		type === "checkout.completed"
+	);
+}
+
+/**
+ * True when an activation-type event is a real recovery signal for the
+ * stored status — payment recovered from PAST_DUE or subscription resumed
+ * from PAUSED. checkout.completed is excluded: on an existing purchase it
+ * is a stale creation signal, not a state transition.
+ */
+function isRecoveryTransition(
+	type: ProviderEventType,
+	currentStatus: PurchaseStatusLiteral,
+): boolean {
+	return (
+		(type === "subscription.activated" || type === "subscription.renewed") &&
+		RECOVERABLE_STATUSES.includes(currentStatus)
 	);
 }
 

@@ -10,8 +10,15 @@ import type { Context } from "../../context";
 
 type RateLimitEndpoint = keyof typeof apiConfig.rateLimit.endpoints;
 
-// The Redis driver is a declared stub that throws loudly until implemented
-// (see @fuutu/utils/rate-limit) — setting REDIS_URL opts in.
+// Fail at boot, not per-request: the Redis driver is a declared v1 stub
+// whose check() throws (see @fuutu/utils/rate-limit). Setting REDIS_URL
+// opts in — without this guard every rate-limited endpoint would 500 only
+// once production traffic arrives.
+if (env.REDIS_URL) {
+	throw new Error(
+		"[@fuutu/api] Redis rate-limit driver is a v1 stub — implement createRedisRateLimitStore or unset REDIS_URL.",
+	);
+}
 const configuredStore: RateLimitStore = env.REDIS_URL
 	? createRedisRateLimitStore({ url: env.REDIS_URL })
 	: defaultRateLimitStore;
