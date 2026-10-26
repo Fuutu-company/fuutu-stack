@@ -350,7 +350,7 @@ function stripComments(s) {
  */
 function extractArrayElements(source, exportName) {
 	const match = source.match(
-		new RegExp(`export\\s+const\\s+${exportName}[^=]*=\\s*\\[`),
+		new RegExp(`export\\s+const\\s+${exportName}\\b[^=]*=\\s*\\[`),
 	);
 	if (!match) return null;
 

@@ -3,7 +3,7 @@
 import { createLogger } from "@fuutu/logs";
 import { Badge, Button, Card, CardContent } from "@fuutu/ui";
 import { Zap } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { orpc } from "@/utils/orpc";
@@ -20,6 +20,7 @@ type TopupResult = Awaited<
 
 export function TopUpSection({ organizationId }: TopUpSectionProps) {
 	const t = useTranslations("credits.topup");
+	const locale = useLocale();
 	const [redirecting, setRedirecting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [topups, setTopups] = useState<TopupResult["packages"]>([]);
@@ -97,7 +98,7 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 									<p className="font-medium">
 										{t.has(`packages.${topup.id}.label`)
 											? t(`packages.${topup.id}.label`)
-											: `${topup.amount.toLocaleString()} ${topup.meterKey}`}
+											: `${topup.amount.toLocaleString(locale)} ${topup.meterKey}`}
 									</p>
 									<p className="text-muted-foreground text-xs">
 										{t.has(`packages.${topup.id}.description`)

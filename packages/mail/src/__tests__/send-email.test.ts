@@ -84,4 +84,22 @@ describe("sendEmail", () => {
 
 		expect(sendSpy.mock.calls[0][0].replyTo).toBe("support@fuutu.test");
 	});
+
+	it("strips CR/LF from to, from and replyTo (header-injection guard)", async () => {
+		await sendEmail({
+			to: "user@fuutu.test\r\nBCC: evil@test.dev",
+			template: "password-reset",
+			data: { resetUrl: "https://app.test/reset?token=abc" },
+			from: "Billing <billing@fuutu.test>\nX-Evil: 1",
+			replyTo: "support@fuutu.test\r\nBCC: evil@test.dev",
+		});
+
+		const message = sendSpy.mock.calls[0][0];
+		expect(message.to).toBe("user@fuutu.testBCC: evil@test.dev");
+		expect(message.from).toBe("Billing <billing@fuutu.test>X-Evil: 1");
+		expect(message.replyTo).toBe("support@fuutu.testBCC: evil@test.dev");
+		expect(message.to).not.toMatch(/[\r\n]/);
+		expect(message.from).not.toMatch(/[\r\n]/);
+		expect(message.replyTo).not.toMatch(/[\r\n]/);
+	});
 });

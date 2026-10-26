@@ -30,6 +30,10 @@ vi.mock("@fuutu/db", () => ({
 	setPaymentsCustomerId: vi.fn(),
 	setOrganizationPaymentsCustomerId: vi.fn(),
 	upsertInvoiceByProviderId: mockUpsertInvoiceByProviderId,
+	// Real implementation — the sync layer relies on P2002 detection to
+	// recover from find-then-create races on unique indexes.
+	isUniqueViolation: (err: unknown) =>
+		err instanceof Error && "code" in err && err.code === "P2002",
 }));
 
 // Mock @fuutu/credits — sync delegates credit mutations to its public API
@@ -441,6 +445,61 @@ describe("processWebhookEvents", () => {
 				organizationId: undefined,
 			}),
 		);
+	});
+
+	it("grants top-up credits to the winning purchase when create loses a redelivery race", async () => {
+		// A concurrent redelivery committed first — createPurchase throws
+		// P2002. The grant must target the winning row (a prior attempt may
+		// have inserted the purchase but failed the grant), not be skipped.
+		mockGetPurchaseByCheckoutEventId
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({
+				id: "purchase_winner",
+				userId: null,
+				organizationId: "org_winner",
+			});
+		const uniqueErr = Object.assign(new Error("unique"), { code: "P2002" });
+		mockCreatePurchase.mockRejectedValueOnce(uniqueErr);
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_race",
+				productId: "prod_topup",
+				metadata: {
+					user_id: "forged_user",
+					topup_id: "ai_tokens_100k",
+				},
+			},
+		]);
+
+		expect(mockGrantTopUpCredits).toHaveBeenCalledWith(
+			expect.objectContaining({
+				purchaseId: "purchase_winner",
+				userId: undefined,
+				organizationId: "org_winner",
+			}),
+		);
+	});
+
+	it("does not grant when the unique violation cannot be attributed to a winning purchase", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		const uniqueErr = Object.assign(new Error("unique"), { code: "P2002" });
+		mockCreatePurchase.mockRejectedValueOnce(uniqueErr);
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_orphan",
+				productId: "prod_topup",
+				metadata: {
+					user_id: "user_1",
+					topup_id: "ai_tokens_100k",
+				},
+			},
+		]);
+
+		expect(mockGrantTopUpCredits).not.toHaveBeenCalled();
 	});
 
 	it("re-attempts the top-up grant on a deduplicated redelivery", async () => {

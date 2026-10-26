@@ -616,7 +616,14 @@ export const resetRecurringBalancesTx = (params: {
 				},
 			});
 			if (result.count === 0) continue;
-			reset.push(balance);
+			// Return the applied post-update values — `balance` is the
+			// pre-update snapshot fetched before the CAS write.
+			reset.push({
+				...balance,
+				recurringConsumed: 0,
+				recurringPeriodEnd: newPeriodEnd,
+				...(newAmount !== undefined && { recurringGranted: newAmount }),
+			});
 			await tx.creditEvent.create({
 				data: {
 					userId: userId ?? null,

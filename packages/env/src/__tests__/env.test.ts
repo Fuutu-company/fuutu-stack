@@ -252,6 +252,29 @@ describe("@fuutu/env/saas", () => {
 		expect(mod.env.S3_FORCE_PATH_STYLE).toBe(false);
 	});
 
+	it("validates NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN like the public apps", async () => {
+		for (const domain of ["example.com", ".example.com", "app.example.com"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			const { env } = await import("../saas");
+			expect(env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN).toBe(domain);
+		}
+		for (const domain of [
+			"http://example.com",
+			"example.com/path",
+			"-bad.com",
+			"bad-.com",
+			"..example.com",
+			"exa mple.com",
+		]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+	});
+
 	it("skips validation when SKIP_ENV_VALIDATION is set", async () => {
 		delete process.env.DATABASE_URL;
 		delete process.env.BETTER_AUTH_SECRET;

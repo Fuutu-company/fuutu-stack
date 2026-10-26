@@ -242,7 +242,11 @@ describe("credit idempotency", () => {
 				}),
 			);
 			expect(tx.creditEvent.create).toHaveBeenCalledTimes(1);
-			expect(result).toEqual([balance]);
+			// The returned row must reflect the applied reset, not the
+			// pre-update snapshot.
+			expect(result).toEqual([
+				{ ...balance, recurringConsumed: 0, recurringGranted: 300 },
+			]);
 		});
 
 		it("skips a redelivered reset with the same periodEnd and the same grant", async () => {
@@ -279,7 +283,13 @@ describe("credit idempotency", () => {
 				newPeriodEnd: new Date("2026-03-01"),
 			});
 
-			expect(result).toEqual([b1]);
+			expect(result).toEqual([
+				{
+					...b1,
+					recurringConsumed: 0,
+					recurringPeriodEnd: new Date("2026-03-01"),
+				},
+			]);
 			expect(tx.creditEvent.create).toHaveBeenCalledTimes(1);
 		});
 	});

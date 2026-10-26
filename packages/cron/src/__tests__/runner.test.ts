@@ -228,6 +228,7 @@ describe("runAllJobs", () => {
 				success: true,
 				processed: 0,
 				errors: [],
+				skipped: true,
 			});
 			expect(processPendingDeliveries).not.toHaveBeenCalled();
 		} finally {
@@ -375,6 +376,40 @@ describe("in-flight guard", () => {
 
 		d.resolve(DONE);
 		await first;
+	});
+
+	it("skips a runAll slot when a force-run starts during the schedule/claim awaits", async () => {
+		// TOCTOU regression: the in-flight check in runAll happens before the
+		// awaited getLastRunAt/claim reads — a force-run starting in that
+		// window must still win, and runAll must not execute the job twice.
+		let resolveLastRun: (v: null) => void = () => {};
+		vi.mocked(getCronJobRun).mockImplementationOnce(
+			() =>
+				new Promise<null>((r) => {
+					resolveLastRun = r;
+				}) as never,
+		);
+		const d = deferred();
+		const run = vi.fn(() => d.promise);
+		const runner = new InlineJobRunner([makeRunnerJob("racy", run)]);
+
+		const all = runner.runAll();
+		// runAll is now parked inside `await getLastRunAt` — a force-run
+		// starting here marks the job in-flight before runAll resumes.
+		const force = runner.run("racy");
+		resolveLastRun(null);
+		const results = await all;
+
+		expect(results.racy).toEqual({
+			success: true,
+			processed: 0,
+			errors: [],
+			skipped: true,
+		});
+		expect(run).toHaveBeenCalledTimes(1);
+
+		d.resolve(DONE);
+		await force;
 	});
 
 	it("keeps blocking overlaps until the job promise settles, not the race timeout", async () => {

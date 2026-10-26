@@ -594,7 +594,8 @@ export const InvoiceOrderByWithRelationInputObjectZodSchema = __makeSchema_Invoi
 
 // File: InvoiceWhereUniqueInput.schema.ts
 const __makeSchema_InvoiceWhereUniqueInput_schema = () => z.object({
-  id: z.string().optional()
+  id: z.string().optional(),
+  providerInvoiceId: z.string().optional()
 }).strict();
 export const InvoiceWhereUniqueInputObjectSchema: z.ZodType<Prisma.InvoiceWhereUniqueInput> = __makeSchema_InvoiceWhereUniqueInput_schema() as unknown as z.ZodType<Prisma.InvoiceWhereUniqueInput>;
 export const InvoiceWhereUniqueInputObjectZodSchema = __makeSchema_InvoiceWhereUniqueInput_schema();

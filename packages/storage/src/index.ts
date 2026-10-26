@@ -157,12 +157,29 @@ export function resolveAllowedContentTypes(bucket: string): readonly string[] {
 	return storageConfig.allowedContentTypes[resolveLogicalBucketKey(bucket)];
 }
 
+/**
+ * SigV4 presigned URLs are hard-capped at 7 days — a larger
+ * `expiresInSeconds` produces a URL S3 rejects on use.
+ */
+const SIGV4_MAX_EXPIRES_IN_SECONDS = 604_800;
+
 function assertSafeKey(key: string): void {
 	if (!key) {
 		throw new StorageInputError("Storage key must not be empty.");
 	}
 	if (key.includes("..")) {
 		throw new StorageInputError(`Storage key "${key}" must not contain "..".`);
+	}
+}
+
+function assertExpiresInSeconds(expiresInSeconds: number | undefined): void {
+	if (
+		expiresInSeconds !== undefined &&
+		expiresInSeconds > SIGV4_MAX_EXPIRES_IN_SECONDS
+	) {
+		throw new StorageInputError(
+			`expiresInSeconds must not exceed ${SIGV4_MAX_EXPIRES_IN_SECONDS} (SigV4 hard cap).`,
+		);
 	}
 }
 
@@ -206,14 +223,19 @@ function guardStorageProvider(provider: StorageProvider): StorageProvider {
 					`contentLength must be a positive integer not exceeding ${maxBytes} bytes for bucket "${input.bucket}".`,
 				);
 			}
+			assertExpiresInSeconds(input.expiresInSeconds);
 			// Fail-close the provider: pin the bucket cap when the caller
-			// didn't set one so the presigned upload stays bounded.
-			input.maxSizeBytes ??= maxBytes;
-			return provider.getSignedUploadUrl(input);
+			// didn't set one so the presigned upload stays bounded. Copy —
+			// never mutate the caller's input object.
+			return provider.getSignedUploadUrl({
+				...input,
+				maxSizeBytes: input.maxSizeBytes ?? maxBytes,
+			});
 		},
 		getSignedDownloadUrl: async (input) => {
 			resolveBucket(input.bucket);
 			assertSafeKey(input.key);
+			assertExpiresInSeconds(input.expiresInSeconds);
 			return provider.getSignedDownloadUrl(input);
 		},
 		deleteObject: async (bucket, key) => {

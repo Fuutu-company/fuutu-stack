@@ -13,9 +13,8 @@ vi.mock("@fuutu/env/saas", () => ({
 	},
 }));
 
-const { getPlanIdForProductId, getCreditTopupPriceId } = await import(
-	"../config.server"
-);
+const { getPlanIdForProductId, getCreditTopupPriceId, getPlanPriceId } =
+	await import("../config.server");
 
 describe("getPlanIdForProductId()", () => {
 	it("maps the monthly price ID to its plan", () => {
@@ -28,6 +27,23 @@ describe("getPlanIdForProductId()", () => {
 
 	it("returns undefined for an unknown product ID", () => {
 		expect(getPlanIdForProductId("prod_unknown")).toBeUndefined();
+	});
+});
+
+describe("getPlanPriceId()", () => {
+	it("returns the monthly price ID for the pro plan", () => {
+		expect(getPlanPriceId("pro", "month")).toBe("price-pro-monthly");
+	});
+
+	it("returns the yearly price ID for the pro plan", () => {
+		expect(getPlanPriceId("pro", "year")).toBe("price-pro-yearly");
+	});
+
+	it("returns undefined for a plan without a price mapping", () => {
+		// Fails closed — a checkoutable plan with no `priceIdEnvVars` entry
+		// must never fall through to another plan's price.
+		expect(getPlanPriceId("free", "month")).toBeUndefined();
+		expect(getPlanPriceId("enterprise", "month")).toBeUndefined();
 	});
 });
 

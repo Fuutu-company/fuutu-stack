@@ -53,7 +53,7 @@
     <text x="56" y="531">· oRPC 1.15 (type-safe, OpenAPI)</text>
     <text x="56" y="555">· Zod validation on every input</text>
     <text x="56" y="579">· API keys (generate, revoke)</text>
-    <text x="56" y="603">· Webhooks (signed, retry, idempotent)</text>
+    <text x="56" y="603">· Webhooks (signed, retry, dedupe key)</text>
     <text x="56" y="627">· Cron jobs (4 scheduled tasks)</text>
   </g>
 
@@ -92,7 +92,7 @@
   <!-- COLUMN 2: x=450, width=390                                        -->
   <!-- ================================================================ -->
 
-  <!-- ===== 5. PROVIDER-SWAPPABLE (7 items) ===== -->
+  <!-- ===== 5. PROVIDER-SWAPPABLE (6 items) ===== -->
   <rect x="450" y="95" width="390" height="235" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
   <text x="466" y="120" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="700" fill="#F7F8F8">
     Provider-Swappable
@@ -103,11 +103,10 @@
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400">
     <text x="466" y="164" fill="#F7F8F8">· Mail <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Plunk</tspan> <tspan fill="#6B6F76">(Resend, Postmark…)</tspan></text>
     <text x="466" y="188" fill="#F7F8F8">· Payments <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Creem</tspan> <tspan fill="#6B6F76">(Stripe, Polar…)</tspan></text>
-    <text x="466" y="212" fill="#F7F8F8">· Storage <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">S3 + MinIO</tspan> <tspan fill="#6B6F76">(R2…)</tspan></text>
+    <text x="466" y="212" fill="#F7F8F8">· Storage <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">S3 + MinIO</tspan> <tspan fill="#6B6F76">(Supabase, Noop…)</tspan></text>
     <text x="466" y="236" fill="#F7F8F8">· Analytics <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Umami</tspan> <tspan fill="#6B6F76">(Plausible…)</tspan></text>
     <text x="466" y="260" fill="#F7F8F8">· AI <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">OpenRouter</tspan> <tspan fill="#6B6F76">(Google, OpenAI, Anthropic…)</tspan></text>
-    <text x="466" y="284" fill="#F7F8F8">· Search <tspan fill="#6B6F76">→</tspan> <tspan fill="#8A8F98">pluggable</tspan></text>
-    <text x="466" y="308" fill="#F7F8F8">· Content <tspan fill="#6B6F76">→</tspan> <tspan fill="#8A8F98">pluggable</tspan></text>
+    <text x="466" y="284" fill="#F7F8F8">· Search <tspan fill="#6B6F76">→</tspan> <tspan fill="#F7F8F8">Postgres</tspan> <tspan fill="#6B6F76">(MeiliSearch, Typesense…)</tspan></text>
   </g>
 
   <!-- ===== 6. AI-NATIVE (4 items) ===== -->

@@ -29,6 +29,8 @@ export const isSerializationConflict = (err: unknown): boolean => {
 
 /**
  * Retry a Serializable transaction on P2034 (max 3 attempts).
+ * A small backoff with jitter spreads retries out — an immediate retry
+ * would race the same conflicting transaction that is still in flight.
  * Precedent: `withUniqueViolationRetry` in queries/credit-balance.ts.
  */
 export const withSerializationRetry = async <T>(
@@ -40,6 +42,10 @@ export const withSerializationRetry = async <T>(
 			return await fn();
 		} catch (err) {
 			if (!isSerializationConflict(err) || attempt >= maxAttempts) throw err;
+			await sleep(10 * 2 ** (attempt - 1) + Math.random() * 10);
 		}
 	}
 };
+
+const sleep = (ms: number) =>
+	new Promise<void>((resolve) => setTimeout(resolve, ms));

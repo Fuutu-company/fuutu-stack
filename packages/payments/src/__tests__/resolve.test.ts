@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@fuutu/env/saas", () => ({
 	env: {
-		PAYMENTS_PROVIDER: "creem",
 		NODE_ENV: "test",
 	},
 }));

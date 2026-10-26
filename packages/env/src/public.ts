@@ -1,4 +1,18 @@
+import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+
+/**
+ * Cookie-domain shape for NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN —
+ * shared by public.ts, saas.ts, marketing.ts and docs.ts so every
+ * app validates identically.
+ */
+export const cookieDomainSchema = z
+	.string()
+	.max(253)
+	.regex(
+		/^\.?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i,
+	)
+	.optional();
 
 /**
  * Shared env surface for the public apps (marketing + docs).
@@ -23,13 +37,7 @@ export const publicEnvOptions = {
 			.optional(),
 		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
 		NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
-		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: z
-			.string()
-			.max(253)
-			.regex(
-				/^\.?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i,
-			)
-			.optional(),
+		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: cookieDomainSchema,
 		NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
 		NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
 	},
@@ -49,3 +57,15 @@ export const publicEnvOptions = {
 		NEXT_PUBLIC_UMAMI_SCRIPT_URL: process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL,
 	},
 };
+
+/**
+ * Client-bundle-safe env — exposes ONLY public `NEXT_PUBLIC_*` vars.
+ * Use this in modules shared between server and client (e.g.
+ * `@fuutu/auth/redirect`) where importing `@fuutu/env/saas` would
+ * pull server-only secrets into the client bundle.
+ */
+export const env = createEnv({
+	server: {},
+	...publicEnvOptions,
+	emptyStringAsUndefined: true,
+});

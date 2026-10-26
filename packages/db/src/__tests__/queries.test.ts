@@ -50,6 +50,10 @@ vi.mock("../../prisma/client", () => ({
 		purchase: {
 			findFirst: vi.fn(),
 		},
+		invoice: {
+			create: vi.fn(),
+			upsert: vi.fn(),
+		},
 		$queryRaw: vi.fn(),
 		$executeRaw: vi.fn(),
 	},
@@ -57,6 +61,7 @@ vi.mock("../../prisma/client", () => ({
 
 import { db } from "../../prisma/client";
 import * as apiKeyQueries from "../../prisma/queries/api-key";
+import * as invoiceQueries from "../../prisma/queries/invoice";
 import * as notificationQueries from "../../prisma/queries/notification";
 import * as organizationQueries from "../../prisma/queries/organization";
 import * as purchaseQueries from "../../prisma/queries/purchase";
@@ -220,6 +225,53 @@ describe("DB query functions - smoke tests", () => {
 			expect(
 				await purchaseQueries.getPurchaseByCheckoutEventId("creem", "evt_x"),
 			).toBeNull();
+		});
+	});
+
+	describe("invoice queries", () => {
+		const invoiceInput = {
+			userId: "user_1",
+			organizationId: "org_1",
+			providerInvoiceId: "stripe:in_1",
+			amount: "19.00",
+			status: "paid",
+			issuedAt: new Date("2026-01-01T00:00:00.000Z"),
+		};
+
+		it("upserts atomically keyed on providerInvoiceId", async () => {
+			vi.mocked(db.invoice.upsert).mockResolvedValueOnce({
+				id: "inv_1",
+			} as never);
+
+			await invoiceQueries.upsertInvoiceByProviderId(invoiceInput);
+
+			// Atomic upsert — a read-then-write would race concurrent invoice
+			// events and duplicate rows under the unique constraint.
+			expect(db.invoice.upsert).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { providerInvoiceId: "stripe:in_1" },
+					create: expect.objectContaining({
+						providerInvoiceId: "stripe:in_1",
+						userId: "user_1",
+					}),
+					update: expect.objectContaining({ status: "paid" }),
+				}),
+			);
+		});
+
+		it("plain-creates when no providerInvoiceId is given", async () => {
+			vi.mocked(db.invoice.upsert).mockClear();
+			vi.mocked(db.invoice.create).mockResolvedValueOnce({
+				id: "inv_2",
+			} as never);
+
+			await invoiceQueries.upsertInvoiceByProviderId({
+				...invoiceInput,
+				providerInvoiceId: null,
+			});
+
+			expect(db.invoice.create).toHaveBeenCalled();
+			expect(db.invoice.upsert).not.toHaveBeenCalled();
 		});
 	});
 

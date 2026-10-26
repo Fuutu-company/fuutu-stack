@@ -285,22 +285,11 @@ async function handleOneTimePurchase(
 				eventId,
 				purchaseId: existing.id,
 			});
-			// Still attempt the credit grant — it is idempotent via the
-			// unique index on credit_package.purchaseId, and a previous
-			// delivery may have created the purchase but failed the grant.
-			// The stored owner is authoritative — a redelivery with
-			// divergent/missing owner metadata must grant to the same
-			// owner the purchase was created for. Metadata of the other
-			// owner type must never merge in (credit rows are owner-XOR).
-			const grantUserId =
-				existing.userId ?? (existing.organizationId ? null : userId);
-			const grantOrganizationId =
-				existing.organizationId ?? (existing.userId ? null : organizationId);
-			await grantTopUpCreditsForPurchase(
+			await grantTopUpCreditsForStoredPurchase(
+				existing,
 				event,
-				grantUserId,
-				grantOrganizationId,
-				existing.id,
+				userId,
+				organizationId,
 			);
 			return;
 		}
@@ -334,10 +323,23 @@ async function handleOneTimePurchase(
 		purchaseId = purchase.id;
 	} catch (err) {
 		if (isUniqueViolation(err)) {
-			// A concurrent redelivery won the race — treat as duplicate.
+			// A concurrent redelivery won the race — treat as duplicate and
+			// still attempt the grant against the winning purchase: it may
+			// have committed the row but failed the grant before its 5xx.
 			log.info("duplicate checkout.completed (unique constraint)", {
 				eventId,
 			});
+			const winner = eventId
+				? await getPurchaseByCheckoutEventId(providerId, eventId)
+				: null;
+			if (winner) {
+				await grantTopUpCreditsForStoredPurchase(
+					winner,
+					event,
+					userId,
+					organizationId,
+				);
+			}
 			return;
 		}
 		throw err;
@@ -791,6 +793,38 @@ async function resetCreditsOnRenewal(
 const TopupMetadataSchema = z.object({
 	topup_id: z.string().min(1),
 });
+
+/**
+ * Re-attempt the top-up grant against an already-stored purchase
+ * (deduplicated redelivery or a create that lost the unique race).
+ * The grant is idempotent via the unique index on
+ * credit_package.purchaseId — a previous delivery may have created the
+ * purchase but failed the grant. The stored owner is authoritative: a
+ * redelivery with divergent/missing owner metadata must grant to the
+ * same owner the purchase was created for, and metadata of the other
+ * owner type must never merge in (credit rows are owner-XOR).
+ */
+async function grantTopUpCreditsForStoredPurchase(
+	purchase: {
+		id: string;
+		userId: string | null;
+		organizationId: string | null;
+	},
+	event: ProviderEvent,
+	userId: string | null,
+	organizationId: string | null,
+): Promise<void> {
+	const grantUserId =
+		purchase.userId ?? (purchase.organizationId ? null : userId);
+	const grantOrganizationId =
+		purchase.organizationId ?? (purchase.userId ? null : organizationId);
+	await grantTopUpCreditsForPurchase(
+		event,
+		grantUserId,
+		grantOrganizationId,
+		purchase.id,
+	);
+}
 
 /**
  * Grant top-up credits for a one-time purchase.

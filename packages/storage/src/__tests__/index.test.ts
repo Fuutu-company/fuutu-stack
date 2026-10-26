@@ -180,6 +180,54 @@ describe("guarded provider wrapper", () => {
 		).rejects.toThrow(StorageInputError);
 	});
 
+	it("rejects expiresInSeconds above the SigV4 hard cap on upload and download", async () => {
+		const provider = resolveStorageProvider();
+		await expect(
+			provider.getSignedUploadUrl({
+				bucket: "avatars",
+				key: "user-1.webp",
+				contentType: "image/webp",
+				contentLength: 1024,
+				expiresInSeconds: 604_801,
+			}),
+		).rejects.toThrow(StorageInputError);
+		await expect(
+			provider.getSignedDownloadUrl({
+				bucket: "avatars",
+				key: "user-1.webp",
+				expiresInSeconds: 604_801,
+			}),
+		).rejects.toThrow(StorageInputError);
+	});
+
+	it("does not mutate the caller's upload input when pinning maxSizeBytes", async () => {
+		const providerSpy = vi
+			.spyOn(storageConfig, "provider", "get")
+			.mockReturnValue("noop");
+		try {
+			const provider = resolveStorageProvider();
+			const input = {
+				bucket: "avatars",
+				key: "user-1.webp",
+				contentType: "image/webp",
+				contentLength: 1024,
+			};
+			// Reaches the noop provider (which rejects) — the point is that
+			// the caller's object is untouched afterwards.
+			await expect(provider.getSignedUploadUrl(input)).rejects.toThrow(
+				"not implemented",
+			);
+			expect(input).toEqual({
+				bucket: "avatars",
+				key: "user-1.webp",
+				contentType: "image/webp",
+				contentLength: 1024,
+			});
+		} finally {
+			providerSpy.mockRestore();
+		}
+	});
+
 	it("delegates to the resolved provider when all guards pass", async () => {
 		const providerSpy = vi
 			.spyOn(storageConfig, "provider", "get")

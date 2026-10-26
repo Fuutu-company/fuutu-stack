@@ -137,7 +137,7 @@ fuutu-stack/
 │   ├── api/           # Hono app + oRPC router + procedures + middleware
 │   ├── ui/            # shadcn components (framework-agnostic, no next/* imports)
 │   ├── i18n/          # translations (en/de) + i18nConfig + utils
-│   ├── mail/          # MailProvider interface + templates + active provider
+│   ├── mail/          # EmailProvider interface + templates + active provider
 │   ├── payments/      # PaymentProvider interface + PLANS/FEATURE_CATALOG/LIMITS + active provider
 │   ├── credits/       # credit meters + grant/consume/reset over @fuutu/db
 │   ├── storage/       # StorageProvider interface + active provider

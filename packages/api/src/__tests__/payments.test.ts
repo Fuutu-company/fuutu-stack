@@ -51,9 +51,14 @@ vi.mock("@fuutu/payments", () => ({
 	],
 }));
 
-vi.mock("@fuutu/payments/config.server", () => ({
-	getCreditTopupPriceId: vi.fn().mockReturnValue("price-topup-1"),
-}));
+vi.mock("@fuutu/payments/config.server", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@fuutu/payments/config.server")>();
+	return {
+		...actual,
+		getCreditTopupPriceId: vi.fn().mockReturnValue("price-topup-1"),
+	};
+});
 
 vi.mock("@fuutu/db", () => ({
 	getOrganizationById: vi.fn(),

@@ -7,7 +7,20 @@
  * `./config` — only server-only code imports from `./config.server`.
  */
 import { env } from "@fuutu/env/saas";
-import { CREDIT_TOPUPS, type CreditTopupPackage, type PlanId } from "./config";
+import {
+	CREDIT_TOPUPS,
+	type CreditTopupPackage,
+	PLAN_IDS,
+	PLANS,
+	type Plan,
+	type PlanId,
+} from "./config";
+
+// PLANS is `as const` — per-plan literal shapes only carry the keys they
+// declare, so `priceIdEnvVars` lookups need the widened Record view.
+const plans: Record<PlanId, Plan> = PLANS;
+
+const isEnvKey = (key: string): key is keyof typeof env => key in env;
 
 /**
  * Reverse lookup: given a provider-side product/price ID, find the plan ID.
@@ -15,15 +28,35 @@ import { CREDIT_TOPUPS, type CreditTopupPackage, type PlanId } from "./config";
  *
  * Reads the validated env vars via @fuutu/env/saas — sandbox and
  * production carry different price IDs, so they never live in code.
+ * The env var names are declared per plan in `PLANS[].priceIdEnvVars`.
  */
 export function getPlanIdForProductId(productId: string): PlanId | undefined {
-	if (env.PAYMENTS_PRO_PRICE_ID === productId) return "pro";
-	if (env.PAYMENTS_PRO_YEARLY_PRICE_ID === productId) return "pro";
-
+	for (const planId of PLAN_IDS) {
+		for (const key of Object.values(plans[planId].priceIdEnvVars ?? {})) {
+			if (isEnvKey(key) && env[key] === productId) {
+				return planId;
+			}
+		}
+	}
 	return undefined;
 }
 
-const isEnvKey = (key: string): key is keyof typeof env => key in env;
+/**
+ * Resolve the provider-side price/product ID for a plan + billing interval.
+ * The env var names are declared per plan in `PLANS[].priceIdEnvVars`
+ * (same pattern as `CREDIT_TOPUPS[].priceIdEnvVar`). Returns undefined when
+ * the plan has no mapping for the interval or the env var is unset —
+ * callers fail closed.
+ */
+export function getPlanPriceId(
+	planId: PlanId,
+	interval: "month" | "year",
+): string | undefined {
+	const key = plans[planId].priceIdEnvVars?.[interval];
+	if (!key || !isEnvKey(key)) return undefined;
+	const value = env[key];
+	return typeof value === "string" ? value : undefined;
+}
 
 /**
  * Resolve the provider-side price ID for a credit top-up package.

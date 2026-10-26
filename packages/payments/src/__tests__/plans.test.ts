@@ -15,6 +15,7 @@ const ALL_LIMIT_KEYS: LimitKey[] = [
 	"organizations",
 	"membersPerOrg",
 	"apiKeys",
+	"webhooks",
 	"storageMb",
 	"auditLogDays",
 ];

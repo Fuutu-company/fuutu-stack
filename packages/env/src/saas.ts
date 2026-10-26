@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+import { cookieDomainSchema } from "./public";
 
 // Must stay in sync with packages/logs/src/config.ts — @fuutu/logs reads
 // process.env.LOG_DRAIN/LOG_AUDIT_SINK/LOG_LEVEL/SERVICE_NAME directly
@@ -146,7 +147,7 @@ export const env = createEnv({
 			.optional(),
 		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
 		NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
-		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: z.string().optional(),
+		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: cookieDomainSchema,
 		NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
 		NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
 	},

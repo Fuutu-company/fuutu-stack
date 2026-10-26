@@ -18,22 +18,17 @@ export const createInvoice = (data: InvoiceInput) =>
 
 /**
  * internal — webhook callbacks only.
- * Upsert keyed on `providerInvoiceId` (callers store `<provider>:<id>` to
- * keep the key unique across providers). A redelivered invoice event
- * refreshes status/URLs instead of creating a second row. There is no DB
- * unique constraint on providerInvoiceId — the lookup is a read-then-write
- * and relies on sequential webhook processing, same as the rest of the
- * sync layer's dedup lookups.
+ * Atomic upsert keyed on `providerInvoiceId` (callers store
+ * `<provider>:<id>` to keep the key unique across providers; the column
+ * carries a unique constraint). A redelivered invoice event refreshes
+ * status/URLs instead of creating a second row.
  */
-export const upsertInvoiceByProviderId = async (data: InvoiceInput) => {
+export const upsertInvoiceByProviderId = (data: InvoiceInput) => {
 	if (!data.providerInvoiceId) return createInvoice(data);
-	const existing = await db.invoice.findFirst({
+	return db.invoice.upsert({
 		where: { providerInvoiceId: data.providerInvoiceId },
-	});
-	if (!existing) return createInvoice(data);
-	return db.invoice.update({
-		where: { id: existing.id },
-		data: {
+		create: data,
+		update: {
 			status: data.status,
 			amount: data.amount,
 			...(data.url !== undefined && { url: data.url }),

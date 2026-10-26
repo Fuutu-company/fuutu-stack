@@ -1,6 +1,6 @@
-import { env } from "@fuutu/env/saas";
 import { resolvePaymentProvider } from "@fuutu/payments";
 import { PLAN_IDS, PLANS } from "@fuutu/payments/config";
+import { getPlanPriceId } from "@fuutu/payments/config.server";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
@@ -37,13 +37,13 @@ export const createCheckout = authProcedure({
 			});
 		}
 		// Provider-side price/product IDs are resolved server-side from env —
-		// clients must never pick the catalog price themselves. The default
-		// catalog has a single checkoutable plan ("pro"); extend this mapping
-		// when adding checkoutable plans.
-		const priceId =
-			input.interval === "year"
-				? env.PAYMENTS_PRO_YEARLY_PRICE_ID
-				: env.PAYMENTS_PRO_PRICE_ID;
+		// clients must never pick the catalog price themselves. The env var
+		// names are declared per plan in `PLANS[].priceIdEnvVars`; a
+		// checkoutable plan without a mapping (or unset env var) fails closed.
+		const priceId = getPlanPriceId(
+			input.planId,
+			input.interval ?? plan.interval ?? "month",
+		);
 		if (!priceId) {
 			throw new ORPCError("PRECONDITION_FAILED", {
 				message: "Checkout is not configured for this plan",

@@ -198,6 +198,13 @@ export interface Plan {
 	 * Used to map active subscriptions back to plan IDs.
 	 */
 	productId?: string;
+	/**
+	 * Env var names holding the provider-side price/product ID per billing
+	 * interval (mirrors `CREDIT_TOPUPS[].priceIdEnvVar`). Resolved
+	 * server-side via `getPlanPriceId()` in `./config.server` — a
+	 * checkoutable plan without a mapping fails closed at checkout.
+	 */
+	priceIdEnvVars?: { month?: string; year?: string };
 }
 
 export const PLANS = {
@@ -226,6 +233,10 @@ export const PLANS = {
 		highlight: true,
 		showInSaas: true,
 		showInMarketing: true,
+		priceIdEnvVars: {
+			month: "PAYMENTS_PRO_PRICE_ID",
+			year: "PAYMENTS_PRO_YEARLY_PRICE_ID",
+		},
 	},
 	enterprise: {
 		amount: -1,

@@ -6,7 +6,8 @@
 	"exports": {
 		"./saas": "./src/saas.ts",
 		"./marketing": "./src/marketing.ts",
-		"./docs": "./src/docs.ts"
+		"./docs": "./src/docs.ts",
+		"./public": "./src/public.ts"
 	},
 	"scripts": {
 		"check-types": "tsc --noEmit",

@@ -2,7 +2,7 @@
 
 import { authClient } from "@fuutu/auth/client";
 import { authConfig } from "@fuutu/auth/config";
-import { getSafeRedirect } from "@fuutu/auth/redirect";
+import { extractInvitationId, getSafeRedirect } from "@fuutu/auth/redirect";
 import { validatePassword } from "@fuutu/auth/validate-password";
 import { env } from "@fuutu/env/saas";
 import {
@@ -50,18 +50,10 @@ export function AuthSignUp({
 	// Invitation-bound sign-up: when the redirect target is the
 	// accept-invitation page, forward its `id` as `invitationId` so the
 	// server-side invitation-only gate can bind the new account to that
-	// exact invite token.
-	const invitationId = (() => {
-		if (!redirectParam) return null;
-		try {
-			const url = new URL(redirectParam, "http://localhost");
-			return url.pathname.replace(/\/$/, "") === "/auth/accept-invitation"
-				? url.searchParams.get("id")
-				: null;
-		} catch {
-			return null;
-		}
-	})();
+	// exact invite token. Parsed from the SANITIZED redirect — a crafted
+	// raw `?redirect=` pointing at an external accept-invitation lookalike
+	// must not inject an invitation id.
+	const invitationId = extractInvitationId(redirectTo);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 

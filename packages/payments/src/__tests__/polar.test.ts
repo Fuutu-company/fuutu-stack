@@ -553,6 +553,17 @@ describe("polar provider — event mapping", () => {
 		});
 		expect(events).toEqual([]);
 	});
+
+	it("acks unmapped event types without parsing data — a missing id must not 400 into infinite provider retries", async () => {
+		// Valid signed events of types we don't map carry payload shapes our
+		// strict data schema doesn't guarantee (e.g. no `id`). Rejecting them
+		// made the webhook handler answer 400 and Polar retried forever.
+		const events = await parsePayload({
+			type: "benefit_grant.created",
+			data: { grantMetadata: { foo: "bar" } },
+		});
+		expect(events).toEqual([]);
+	});
 });
 
 describe("polar provider — SDK validation errors", () => {

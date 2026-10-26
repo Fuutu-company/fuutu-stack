@@ -54,7 +54,7 @@ feat: add subscription cancellation flow
 fix: correct seat count on organization update
 docs: update authentication guide
 chore: bump prisma to 7.0.1
-breaking: rename MailProvider.send() to MailProvider.sendMail()
+breaking: rename EmailProvider.send() to EmailProvider.sendMail()
 ```
 
 | Prefix | Bump | Example |

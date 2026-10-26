@@ -414,6 +414,9 @@ CREATE INDEX "invoice_userId_idx" ON "app"."invoice"("userId");
 CREATE INDEX "invoice_status_idx" ON "app"."invoice"("status");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "invoice_providerInvoiceId_key" ON "app"."invoice"("providerInvoiceId");
+
+-- CreateIndex
 CREATE INDEX "webhook_organizationId_idx" ON "app"."webhook"("organizationId");
 
 -- CreateIndex

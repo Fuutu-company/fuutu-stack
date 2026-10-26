@@ -31,8 +31,9 @@ const log = createLogger({ scope: "payments:polar" });
  * IMPORTANT: `validateEvent` returns the POST-TRANSFORM models — the SDK's
  * inbound zod schemas remap the wire format (billing_reason→billingReason,
  * subscription_id→subscriptionId, *_at → Date objects). This schema must
- * read the camelCase model, not the wire payload. `id` is required on
- * every Polar resource, so a shape that lacks it fails here → 400.
+ * read the camelCase model, not the wire payload. Only event types in
+ * `PARSED_POLAR_EVENT_TYPES` reach this schema — `id` is required on all
+ * of them, so a shape that lacks it fails here → 400.
  */
 const PolarEventDataSchema = z
 	.looseObject({
@@ -124,6 +125,27 @@ function mapPolarStatus(status: string): PurchaseStatusLiteral {
  * Several Polar types need the payload to disambiguate (checkout.updated
  * status, order.paid billing_reason, canceled cancel_at_period_end).
  */
+/**
+ * Polar event types whose `data` payload we inspect. Types outside this
+ * set are acked BEFORE the strict data schema runs — their payload shape
+ * isn't guaranteed by `PolarEventDataSchema` (e.g. `benefit_grant.created`
+ * carries no `id`), and rejecting a valid signed event would 400 the
+ * webhook endpoint into infinite provider retries.
+ */
+const PARSED_POLAR_EVENT_TYPES = new Set([
+	"checkout.updated",
+	"order.paid",
+	"subscription.created",
+	"subscription.active",
+	"subscription.updated",
+	"subscription.past_due",
+	"subscription.paused",
+	"subscription.resumed",
+	"subscription.canceled",
+	"subscription.uncanceled",
+	"subscription.revoked",
+]);
+
 function mapPolarEventToProviderEvent(
 	polarEventType: string,
 	data: PolarEventData,
@@ -268,6 +290,13 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 				throw new Error("Malformed webhook payload");
 			}
 			throw err;
+		}
+
+		if (!PARSED_POLAR_EVENT_TYPES.has(event.type)) {
+			log.debug("ignoring unmapped polar event type", {
+				polarEventType: event.type,
+			});
+			return [];
 		}
 
 		const parsed = PolarEventDataSchema.safeParse(event.data);

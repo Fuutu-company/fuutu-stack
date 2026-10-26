@@ -60,6 +60,9 @@ try {
 		},
 		body: JSON.stringify(payload),
 		signal: controller.signal,
+		// Never follow redirects — a 307/308 would re-POST the payload
+		// to the redirect target's host.
+		redirect: "error",
 	});
 } catch {
 	// best-effort, swallow

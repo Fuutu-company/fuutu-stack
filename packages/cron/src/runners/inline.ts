@@ -90,7 +90,12 @@ export class InlineJobRunner implements JobRunner {
 		const now = new Date();
 		for (const job of this.jobs) {
 			if (!job.enabled) {
-				results[job.name] = { success: true, processed: 0, errors: [] };
+				results[job.name] = {
+					success: true,
+					processed: 0,
+					errors: [],
+					skipped: true,
+				};
 				continue;
 			}
 			if (this.inFlight.has(job.name)) {
@@ -111,6 +116,17 @@ export class InlineJobRunner implements JobRunner {
 			if (claimedAt === null) {
 				// A concurrent trigger/instance claimed the slot first,
 				// or the claim write itself failed (fail-closed).
+				results[job.name] = {
+					success: true,
+					processed: 0,
+					errors: [],
+					skipped: true,
+				};
+				continue;
+			}
+			// Re-check the in-flight guard: another trigger may have started
+			// this job while we awaited the schedule/claim reads above.
+			if (this.inFlight.has(job.name)) {
 				results[job.name] = {
 					success: true,
 					processed: 0,
