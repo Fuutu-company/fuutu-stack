@@ -23,8 +23,6 @@ permissions:
 
 env:
   FUUTU_TELEMETRY_DISABLED: "1"
-  # Must match the pnpm catalog @playwright/test version.
-  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble
 
 jobs:
   changes:
@@ -128,7 +126,8 @@ jobs:
       contents: write       # baseline auto-commit pushes to the branch
       actions: write        # dispatch follow-up run for required checks
       pull-requests: write  # slim visual-result comment
-    container: ${{ env.PLAYWRIGHT_IMAGE }}
+    # Must match the pnpm catalog @playwright/test version.
+    container: mcr.microsoft.com/playwright:v1.63.0-noble
     services:
       postgres:
         image: postgres:16-alpine
