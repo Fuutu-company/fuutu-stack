@@ -171,6 +171,9 @@ jobs:
           - app: marketing
             db: false
     env:
+      # SWC materializes its native binding into a cache dir and validates
+      # parent permissions — /github/home fails that check inside containers.
+      SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
       # Container jobs reach services via their service name, not localhost.
       DATABASE_URL: postgresql://postgres:password@postgres:5432/fuutu-stack
       BETTER_AUTH_URL: http://localhost:3000
