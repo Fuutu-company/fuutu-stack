@@ -65,7 +65,14 @@ breaking: rename EmailProvider.send() to EmailProvider.sendMail()
 | `docs:` | none | `docs: add deployment guide` |
 | `chore:` | none | `chore: update dependencies` |
 
-Squash-merge uses the PR title as the commit message. This drives automatic semantic versioning on releases.
+Squash-merge uses the PR title as the commit message — keep it a valid Conventional Commit.
+
+Releases are **manual**:
+
+1. Move the `CHANGELOG.md` `Unreleased` entries into a dated section.
+2. Bump `KIT_VERSION` in `packages/config/index.ts` **and** `packages/telemetry/bin/ping.mjs`.
+3. Sync the app `package.json` versions.
+4. Tag `vX.Y.Z` and create the GitHub Release.
 
 ### Pull Request Process
 
@@ -74,7 +81,7 @@ Squash-merge uses the PR title as the commit message. This drives automatic sema
 3. Run `pnpm check` (lint + types + tests)
 4. Open a PR targeting `develop` (or `main` for hotfixes)
 5. Fill in the PR template checklist
-6. CI must pass (lint, types, tests, e2e, translations)
+6. CI must pass: `verify` (lint, types, translations, unit/integration tests), `build`, `e2e (saas)` / `e2e (marketing)`
 7. Address review feedback
 8. Squash-merge when approved
 
@@ -107,6 +114,10 @@ If you add a new provider implementation (e.g. Resend for mail):
 3. Add a skeleton entry in `packages/<domain>/src/providers/skeletons.ts`
 4. Add tests in `packages/<domain>/src/__tests__/`
 5. Document in the provider's README
+
+## Enabling CI
+
+CI ships **disabled**. To activate it on your repo, set the repository variable `FUUTU_CI_ENABLED` = `true` under **Settings → Secrets and variables → Actions → Variables**. Until then every job is skipped.
 
 ## Reporting Issues
 

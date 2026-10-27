@@ -1,0 +1,25 @@
+name: Dependency Audit
+
+# Weekly dependency report → job summary. Replaces the old per-PR audit job
+# and Dependabot; updates are batched consciously from this report.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: vars.FUUTU_CI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          db-generate: "false"
+      - name: Write dependency report to job summary
+        run: node tooling/scripts/dependency-report.mjs >> "$GITHUB_STEP_SUMMARY"

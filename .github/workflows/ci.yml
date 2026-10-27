@@ -1,13 +1,16 @@
 name: CI
 
+# Kit CI — disabled by default. Enabled repos set the repository variable
+# FUUTU_CI_ENABLED=true (Settings → Secrets and variables → Actions →
+# Variables). Clones get a silent pipeline until they opt in.
+
 on:
   push:
     branches: [main, develop]
   pull_request:
-  # Also triggered by the e2e jobs after a baseline commit on a PR branch —
-  # GITHUB_TOKEN pushes fire no events, so the dispatched run is what gives
-  # required checks a conclusion on the baseline commit (png-only diff →
-  # code=false → jobs skip → skipped counts as passed).
+  # Also dispatched by the e2e job after a baseline commit on a PR branch —
+  # GITHUB_TOKEN pushes fire no events, so the dispatched run gives required
+  # checks a conclusion on the bot commit (png-only diff → code=false → skip).
   workflow_dispatch:
 
 concurrency:
@@ -19,20 +22,20 @@ permissions:
   pull-requests: write
 
 env:
-  NODE_VERSION: "22"
-  PNPM_VERSION: "10.11.0"
   FUUTU_TELEMETRY_DISABLED: "1"
+  # Must match the pnpm catalog @playwright/test version.
+  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble
 
 jobs:
   changes:
     runs-on: ubuntu-latest
+    if: vars.FUUTU_CI_ENABLED == 'true'
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
       - name: Filter changed files
         id: filter
         run: |
@@ -41,215 +44,24 @@ jobs:
             git fetch origin "$BASE" --depth=1
             DIFF=$(git diff --name-only "origin/$BASE" HEAD)
           else
-            # Multi-commit pushes: diff the whole push, not just HEAD~1.
             BEFORE="${{ github.event.before }}"
             if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
               BEFORE="HEAD~1"
             fi
             DIFF=$(git diff --name-only "$BEFORE" HEAD)
           fi
-
-          # Code = anything that isn't pure docs/static assets. An allowlist
-          # misses real changes (nested package.json, .prisma, .mjs, .css,
-          # lockfile, i18n json, tooling/) and silently skips all gates.
           if echo "$DIFF" | grep -qvE '\.(md|png|jpe?g|svg|webp|gif|ico|mp4|woff2?|ttf)$|(^|/)(README|CHANGELOG|LICENSE)(\.md)?$'; then
             echo "code=true" >> $GITHUB_OUTPUT
           else
             echo "code=false" >> $GITHUB_OUTPUT
           fi
 
-  lint-and-types:
+  # Lint + types + translations + unit/integration tests — one install.
+  verify:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - run: pnpm install
-
-      - run: pnpm db:generate
-
-      # check:ci (biome check, non-mutating) — `pnpm check` would --write
-      # autofix violations and exit green, so the gate never fails.
-      - run: pnpm check:ci
-
-      - run: pnpm check-types
-
-  # ─────────────────────────────────────────────────────────
-  # Translation Checks — blocking; also posts a PR comment on issues
-  # ─────────────────────────────────────────────────────────
-  translations:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - run: pnpm install
-
-      - name: Run translation checks
-        id: check-translations
-        run: |
-          echo "## Translation Checks" > /tmp/translation-report.md
-          echo "" >> /tmp/translation-report.md
-          if pnpm check-translations 2>&1 | tee /tmp/check-translations.log; then
-            echo "✅ All translation checks passed." >> /tmp/translation-report.md
-          else
-            echo "❌ Translation checks failed:" >> /tmp/translation-report.md
-            echo "" >> /tmp/translation-report.md
-            echo '```' >> /tmp/translation-report.md
-            cat /tmp/check-translations.log >> /tmp/translation-report.md
-            echo '```' >> /tmp/translation-report.md
-            echo "TRANSLATION_ISSUES=1" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-
-      - name: Post PR comment if issues found
-        if: always() && github.event_name == 'pull_request' && steps.check-translations.outputs.TRANSLATION_ISSUES == '1'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs = require('fs');
-            const report = fs.readFileSync('/tmp/translation-report.md', 'utf-8');
-            const body = [
-              '## ⚠️ Translation Issues Detected',
-              '',
-              report,
-              '',
-              '> The translations job **fails** on these issues — fix them before merging.',
-            ].join('\n');
-            github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.issue.number,
-              body
-            });
-
-  # ─────────────────────────────────────────────────────────
-  # Dependency Audit — non-blocking, posts PR comment on outdated packages
-  # ─────────────────────────────────────────────────────────
-  dependency-audit:
-    needs: changes
-    if: needs.changes.outputs.code == 'true' && github.repository == 'Fuutu-company/fuutu-stack'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - run: pnpm install
-
-      # The report script classifies by installability — "ready now" means a
-      # version that satisfies minimumReleaseAge actually exists, not just
-      # that `pnpm outdated` lists something newer. See the script header.
-      - name: Generate dependency report
-        id: check-outdated
-        continue-on-error: true
-        run: |
-          node tooling/scripts/dependency-report.mjs > /tmp/outdated-report.md || true
-          if [ -s /tmp/outdated-report.md ]; then
-            echo "OUTDATED_FOUND=1" >> $GITHUB_OUTPUT
-          else
-            echo "OUTDATED_FOUND=0" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Post PR comment if outdated packages found
-        if: always() && github.event_name == 'pull_request' && steps.check-outdated.outputs.OUTDATED_FOUND == '1'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs = require('fs');
-            const body = fs.readFileSync('/tmp/outdated-report.md', 'utf8');
-            github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.issue.number,
-              body
-            });
-
-  build:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && vars.FUUTU_CI_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
-      BETTER_AUTH_URL: http://localhost:3000
-      EMAIL_PROVIDER: console
-      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
-      FUUTU_TELEMETRY_DISABLED: "1"
-    steps:
-      # Throwaway per-run secret — never commit a real auth secret to CI.
-      - name: Generate CI auth secret
-        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
-
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - run: pnpm install
-
-      - run: pnpm db:generate
-
-      - run: pnpm build
-        env:
-          FUUTU_TELEMETRY_DISABLED: "1"
-
-  # ─────────────────────────────────────────────────────────
-  # Unit / Integration tests — Vitest across all packages
-  # Runs in parallel with build + E2E jobs
-  # ─────────────────────────────────────────────────────────
-  unit-tests:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # Postgres for the @fuutu/db integration test tier (same service as e2e-saas).
     services:
       postgres:
         image: postgres:16-alpine
@@ -257,32 +69,16 @@ jobs:
           POSTGRES_DB: fuutu-stack
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
       RUN_DB_TESTS: "1"
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      # .env for dotenv-cli (db scripts + test:integration) and @fuutu/env
-      # validation — prisma.config.ts and the test script read ../../.env.
+      - uses: ./.github/actions/setup
       - name: Create .env for dotenv-cli
         run: |
           cat > .env << 'EOF'
@@ -291,55 +87,48 @@ jobs:
           EOF
           # Throwaway per-run secret — never commit a real auth secret to CI.
           echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-
-      - run: pnpm install
-
-      - run: pnpm db:generate
-
-      # `migrate deploy`, not `db:push` — the integration tests exercise the
-      # raw-SQL migrations (partial unique indexes, owner XOR CHECKs) that
-      # `prisma db push` does not apply.
+      # `migrate deploy`, not `db:push` — integration tests exercise raw-SQL
+      # migrations that `prisma db push` does not apply.
       - name: Apply DB migrations
         run: pnpm -F @fuutu/db exec prisma migrate deploy
-
+      - run: pnpm check:ci
+      - run: pnpm check-types
+      - run: pnpm check-translations
       - run: pnpm test
-        env:
-          FUUTU_TELEMETRY_DISABLED: "1"
-
       - run: pnpm -F @fuutu/db test:integration
 
-  # ─────────────────────────────────────────────────────────
-  # E2E + Visual Regression — SaaS
-  #
-  # Baselines are committed PNGs in .fuutu/visual-baselines/saas/ —
-  # they travel with the code, so every PR compares against the exact
-  # baselines of its merge ref. No cache, no self-baselining.
-  #
-  # PR workflow (runs on the branch tip, not the merge ref):
-  #   1. Run non-visual tests → must pass (pipeline fails if they don't)
-  #   2. Run visual tests with --update-snapshots → pixel diffs become a
-  #      git diff; real failures still fail the step
-  #   3. Changed baselines are committed back onto the PR branch — pushes to
-  #      a feature branch need no protection bypass, works on any repo
-  #
-  # Merge workflow (push to main or develop):
-  #   1. Run all tests → must pass
-  #   2. Run --update-snapshots → baselines rewritten under .fuutu/
-  #   3. Auto-commit the new baselines back onto the branch ([skip ci]);
-  #      on protected branches the push is rejected — baselines then arrive
-  #      via PR-branch commits instead (warning, not failure)
-  # ─────────────────────────────────────────────────────────
-  e2e-saas:
+  build:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && vars.FUUTU_CI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
+      BETTER_AUTH_URL: http://localhost:3000
+      EMAIL_PROVIDER: console
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Generate CI auth secret
+        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - run: pnpm build
+
+  # E2E + visual regression for both apps — one definition, matrix-per-app.
+  # The Playwright image ships browsers AND system deps: no install step,
+  # no cache, no apt. Baselines are committed PNGs in
+  # .fuutu/visual-baselines/<app>/ — they travel with the code, so every PR
+  # compares against the exact baselines of its branch.
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && vars.FUUTU_CI_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: write # baseline auto-commit pushes to the branch
-      actions: write  # dispatch follow-up run for required checks on bot commits
-    outputs:
-      visual_changed: ${{ steps.saas-visual.outputs.changed == '1' }}
-      visual_error: ${{ steps.saas-visual.outcome == 'failure' }}
+      contents: write       # baseline auto-commit pushes to the branch
+      actions: write        # dispatch follow-up run for required checks
+      pull-requests: write  # slim visual-result comment
+    container: ${{ env.PLAYWRIGHT_IMAGE }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -347,489 +136,140 @@ jobs:
           POSTGRES_DB: fuutu-stack
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: saas
+            db: true
+          - app: marketing
+            db: false
     env:
-      DATABASE_URL: postgresql://postgres:password@localhost:5432/fuutu-stack
+      # Container jobs reach services via their service name, not localhost.
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/fuutu-stack
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
-      FUUTU_TELEMETRY_DISABLED: "1"
     steps:
-      # Throwaway per-run secret — never commit a real auth secret to CI.
       - name: Generate CI auth secret
         run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
-
       - uses: actions/checkout@v5
         with:
-          # PRs check out the branch tip, not the merge ref — baseline commits
-          # must be pushable back onto the PR branch.
+          # PRs check out the branch tip — baseline commits must be pushable
+          # back onto the PR branch; full history for the rebase-retry.
           ref: ${{ github.head_ref || github.ref }}
-          fetch-depth: 0 # full history: baseline commits rebase onto remote tip
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - run: pnpm install
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
-
-      - run: pnpm -F @fuutu/saas exec playwright install --with-deps
-
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
       - name: Create .env for dotenv-cli
         run: |
           cat > .env << 'EOF'
-          DATABASE_URL=postgresql://postgres:password@localhost:5432/fuutu-stack
+          DATABASE_URL=postgresql://postgres:password@postgres:5432/fuutu-stack
           BETTER_AUTH_URL=http://localhost:3000
           EMAIL_PROVIDER=console
           NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
           FUUTU_TELEMETRY_DISABLED=1
-          FUUTU_DISABLE_RATE_LIMIT=1
           EOF
-          # Throwaway per-run secret — never commit a real auth secret.
-          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
-
-      - run: pnpm db:generate
-
-      - run: pnpm db:push
-
-      - run: pnpm db:seed
-        env:
-          NODE_ENV: development
-
-      - name: Build SaaS app
-        run: pnpm -F @fuutu/saas build
-        env:
-          FUUTU_TELEMETRY_DISABLED: "1"
-
+          if [ "${{ matrix.db }}" = "true" ]; then
+            echo "FUUTU_DISABLE_RATE_LIMIT=1" >> .env
+            echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+          fi
+      - name: Prepare database
+        if: matrix.db == 'true'
+        run: |
+          pnpm db:push
+          NODE_ENV=development pnpm db:seed
+      - name: Build ${{ matrix.app }}
+        run: pnpm -F @fuutu/${{ matrix.app }} build
       - name: Run non-visual tests (must pass, chromium only)
-        run: pnpm -F @fuutu/saas exec playwright test --grep-invert "visual regression" --project=chromium
+        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep-invert "visual regression" --project=chromium
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
-      # --update-snapshots "passes" on pixel diffs — the diff signal is the git
-      # diff afterwards. A real failure (page crash, timeout) aborts the step
-      # before the status check → visual_error → "tests incomplete" comment.
+      # --update-snapshots "passes" on pixel diffs — the diff signal is the
+      # git diff afterwards. A real failure aborts before the status check.
       - name: Run visual tests + refresh baselines (PR)
-        id: saas-visual
+        id: visual
         if: github.event_name == 'pull_request'
         continue-on-error: true
         run: |
-          pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
-          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/saas)" ]; then
+          pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
             echo "changed=1" >> $GITHUB_OUTPUT
           fi
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
       - name: Commit updated baselines to PR branch
-        if: github.event_name == 'pull_request' && steps.saas-visual.outputs.changed == '1'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .fuutu/visual-baselines/saas
-          git commit -m "chore(visual): update saas baselines"
-          PUSHED=0
-          # e2e-marketing may push its own baseline commit first — rebase + retry
-          for attempt in 1 2 3; do
-            git fetch origin "${{ github.head_ref }}"
-            if git rebase "origin/${{ github.head_ref }}" && git push origin "HEAD:${{ github.head_ref }}"; then
-              PUSHED=1
-              break
-            fi
-          done
-          if [ "$PUSHED" = "0" ]; then
-            echo "::warning::Could not push baselines to ${{ github.head_ref }} (fork PR?). Regenerate locally: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots"
-            exit 0
-          fi
-          # GITHUB_TOKEN pushes fire no events → dispatch a run so required
-          # checks get a conclusion on the new commit (png-only → all skip).
-          gh workflow run ci.yml --ref "${{ github.head_ref }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: baseline-pr
+        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1'
+        run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.head_ref }}" pr
+
+      # GITHUB_TOKEN pushes fire no events → dispatch a run so required checks
+      # get a conclusion on the baseline commit (png-only diff → all skip).
+      - name: Re-dispatch CI for the baseline commit
+        if: steps.baseline-pr.outputs.pushed == '1'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: "ci.yml",
+              ref: "${{ github.head_ref }}",
+            });
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
-        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
       - name: Update baselines (merge to main — all browsers)
         if: github.event_name == 'push' && github.ref_name == 'main'
-        run: pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots
+        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
-      # Baselines live in the repo → after --update-snapshots the diff is a
-      # normal working-tree change. [skip ci] prevents loops on unprotected
-      # branches; on protected ones the push is rejected — then baselines
-      # arrive via PR-branch commits instead (warning, not failure).
-      - name: Commit updated baselines (push to develop/main)
+      - name: Commit updated baselines (push)
         if: github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .fuutu/visual-baselines/saas
-          if git diff --cached --quiet; then
-            echo "Baselines unchanged — nothing to commit"
-            exit 0
-          fi
-          git commit -m "chore(visual): update saas baselines [skip ci]"
-          PUSHED=0
-          for attempt in 1 2 3; do
-            git fetch origin "${{ github.ref_name }}"
-            if git rebase "origin/${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}"; then
-              PUSHED=1
-              break
-            fi
-          done
-          if [ "$PUSHED" = "0" ]; then
-            echo "::warning::Baseline push rejected (branch protection?) — baselines arrive via PR-branch commits instead."
-          fi
+        run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.ref_name }}" push
+
+      - name: Comment on visual result (PR)
+        if: github.event_name == 'pull_request' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const changed = "${{ steps.visual.outputs.changed }}" === "1";
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = changed
+              ? [
+                  "## ⚠️ Visual Changes — ${{ matrix.app }}",
+                  "",
+                  "Updated baseline screenshots were committed to this branch. Review the PNG diffs under `.fuutu/visual-baselines/${{ matrix.app }}/` in \"Files changed\".",
+                  `📦 [Run + report artifacts](${runUrl})`,
+                  "",
+                  "> Intentional → merge. Unintentional → fix the code and push; baselines regenerate.",
+                ].join("\n")
+              : [
+                  "## ⚠️ Visual Regression Did Not Complete — ${{ matrix.app }}",
+                  "",
+                  `Visual tests failed before baselines could update. Check the [run](${runUrl}).`,
+                ].join("\n");
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body,
+            });
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: playwright-saas-report
+          name: playwright-${{ matrix.app }}-report
           path: |
-            apps/saas/playwright-report
-            apps/saas/test-results
+            apps/${{ matrix.app }}/playwright-report
+            apps/${{ matrix.app }}/test-results
           if-no-files-found: ignore
           retention-days: 14
-
-  # ─────────────────────────────────────────────────────────
-  # E2E + Visual Regression — Marketing
-  # Same workflow as SaaS, no database needed
-  # ─────────────────────────────────────────────────────────
-  e2e-marketing:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write # baseline auto-commit pushes to the branch
-      actions: write  # dispatch follow-up run for required checks on bot commits
-    outputs:
-      visual_changed: ${{ steps.marketing-visual.outputs.changed == '1' }}
-      visual_error: ${{ steps.marketing-visual.outcome == 'failure' }}
-      coverage_pct: ${{ steps.coverage.outputs.pct }}
-      coverage_available: ${{ steps.coverage.outputs.available }}
-      coverage_scripts: ${{ steps.coverage.outputs.scripts }}
-    env:
-      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
-      FUUTU_TELEMETRY_DISABLED: "1"
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          # PRs check out the branch tip, not the merge ref — baseline commits
-          # must be pushable back onto the PR branch.
-          ref: ${{ github.head_ref || github.ref }}
-          fetch-depth: 0 # full history: baseline commits rebase onto remote tip
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - run: pnpm install
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml') }}
-
-      - run: pnpm -F @fuutu/marketing exec playwright install --with-deps
-
-      - name: Create .env for dotenv-cli
-        run: |
-          cat > .env << 'EOF'
-          NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
-          FUUTU_TELEMETRY_DISABLED=1
-          EOF
-
-      - name: Build Marketing app
-        run: pnpm -F @fuutu/marketing build
-        env:
-          FUUTU_TELEMETRY_DISABLED: "1"
-
-      - name: Run non-visual tests (must pass, chromium only)
-        run: pnpm -F @fuutu/marketing exec playwright test --grep-invert "visual regression" --project=chromium
-        env:
-          PLAYWRIGHT_USE_PROD: "1"
-
-      - name: Run E2E with coverage (chromium only)
-        id: marketing-coverage
-        if: github.event_name == 'pull_request'
-        run: pnpm -F @fuutu/marketing exec playwright test --grep-invert "visual regression" --project=chromium --workers=1
-        continue-on-error: true
-        env:
-          PLAYWRIGHT_USE_PROD: "1"
-          COVERAGE: "1"
-
-      - name: Read coverage summary
-        if: always() && steps.marketing-coverage.outcome != 'skipped'
-        id: coverage
-        run: |
-          if [ -f apps/marketing/coverage-v8/coverage-summary.json ]; then
-            PCT=$(jq -r '.overall.pct' apps/marketing/coverage-v8/coverage-summary.json)
-            USED=$(jq -r '.overall.used' apps/marketing/coverage-v8/coverage-summary.json)
-            TOTAL=$(jq -r '.overall.total' apps/marketing/coverage-v8/coverage-summary.json)
-            SCRIPTS=$(jq -r '.scripts | length' apps/marketing/coverage-v8/coverage-summary.json)
-            echo "pct=$PCT" >> $GITHUB_OUTPUT
-            echo "used=$USED" >> $GITHUB_OUTPUT
-            echo "total=$TOTAL" >> $GITHUB_OUTPUT
-            echo "scripts=$SCRIPTS" >> $GITHUB_OUTPUT
-            echo "available=true" >> $GITHUB_OUTPUT
-          else
-            echo "available=false" >> $GITHUB_OUTPUT
-          fi
-
-      - uses: actions/upload-artifact@v7
-        if: always() && steps.marketing-coverage.outcome != 'skipped'
-        with:
-          name: marketing-coverage-report
-          path: apps/marketing/coverage-v8/
-          if-no-files-found: ignore
-          retention-days: 14
-
-      # Same pattern as e2e-saas — see there for the full rationale.
-      - name: Run visual tests + refresh baselines (PR)
-        id: marketing-visual
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        run: |
-          pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
-          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/marketing)" ]; then
-            echo "changed=1" >> $GITHUB_OUTPUT
-          fi
-        env:
-          PLAYWRIGHT_USE_PROD: "1"
-
-      - name: Commit updated baselines to PR branch
-        if: github.event_name == 'pull_request' && steps.marketing-visual.outputs.changed == '1'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .fuutu/visual-baselines/marketing
-          git commit -m "chore(visual): update marketing baselines"
-          PUSHED=0
-          for attempt in 1 2 3; do
-            git fetch origin "${{ github.head_ref }}"
-            if git rebase "origin/${{ github.head_ref }}" && git push origin "HEAD:${{ github.head_ref }}"; then
-              PUSHED=1
-              break
-            fi
-          done
-          if [ "$PUSHED" = "0" ]; then
-            echo "::warning::Could not push baselines to ${{ github.head_ref }} (fork PR?). Regenerate locally: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots"
-            exit 0
-          fi
-          # GITHUB_TOKEN pushes fire no events → dispatch a run so required
-          # checks get a conclusion on the new commit (png-only → all skip).
-          gh workflow run ci.yml --ref "${{ github.head_ref }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update baselines (merge to develop — chromium + mobile-safari only)
-        if: github.event_name == 'push' && github.ref_name == 'develop'
-        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
-        env:
-          PLAYWRIGHT_USE_PROD: "1"
-
-      - name: Update baselines (merge to main — all browsers)
-        if: github.event_name == 'push' && github.ref_name == 'main'
-        run: pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots
-        env:
-          PLAYWRIGHT_USE_PROD: "1"
-
-      - name: Commit updated baselines (push to develop/main)
-        if: github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .fuutu/visual-baselines/marketing
-          if git diff --cached --quiet; then
-            echo "Baselines unchanged — nothing to commit"
-            exit 0
-          fi
-          git commit -m "chore(visual): update marketing baselines [skip ci]"
-          PUSHED=0
-          for attempt in 1 2 3; do
-            git fetch origin "${{ github.ref_name }}"
-            if git rebase "origin/${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}"; then
-              PUSHED=1
-              break
-            fi
-          done
-          if [ "$PUSHED" = "0" ]; then
-            echo "::warning::Baseline push rejected (branch protection?) — baselines arrive via PR-branch commits instead."
-          fi
-
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: playwright-marketing-report
-          path: |
-            apps/marketing/playwright-report
-            apps/marketing/test-results
-          if-no-files-found: ignore
-          retention-days: 14
-
-  # ─────────────────────────────────────────────────────────
-  # Visual Report — PR comment on visual regression outcome
-  # Baselines are committed PNGs in .fuutu/visual-baselines/<app>/,
-  # so "no changes" means a real comparison, not a self-baseline.
-  # Review diffs via the playwright-*-report artifacts on the e2e runs.
-  # ─────────────────────────────────────────────────────────
-  visual-report:
-    # `changes` must be in needs — otherwise `needs.changes.outputs.code`
-    # evaluates empty and this job is silently skipped on every PR.
-    needs: [changes, e2e-saas, e2e-marketing]
-    if: always() && github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Check if e2e jobs ran
-        id: check
-        run: |
-          SAAS_RESULT="${{ needs.e2e-saas.result }}"
-          MKT_RESULT="${{ needs.e2e-marketing.result }}"
-          SAAS_CHANGED="${{ needs.e2e-saas.outputs.visual_changed }}"
-          MKT_CHANGED="${{ needs.e2e-marketing.outputs.visual_changed }}"
-          SAAS_ERR="${{ needs.e2e-saas.outputs.visual_error }}"
-          MKT_ERR="${{ needs.e2e-marketing.outputs.visual_error }}"
-
-          # Distinguish: visual step crashed → incomplete; baselines changed →
-          # visual changes; both green → no changes.
-          if [ "$SAAS_ERR" = "true" ] || [ "$MKT_ERR" = "true" ]; then
-            echo "status=tests_incomplete" >> $GITHUB_OUTPUT
-            echo "saas_result=$SAAS_RESULT" >> $GITHUB_OUTPUT
-            echo "mkt_result=$MKT_RESULT" >> $GITHUB_OUTPUT
-          elif [ "$SAAS_CHANGED" = "true" ] || [ "$MKT_CHANGED" = "true" ]; then
-            echo "status=visual_changes" >> $GITHUB_OUTPUT
-          elif [ "$SAAS_RESULT" = "success" ] && [ "$MKT_RESULT" = "success" ]; then
-            echo "status=no_changes" >> $GITHUB_OUTPUT
-          else
-            # One or both e2e jobs failed/skipped/cancelled before reaching the visual step
-            echo "status=tests_incomplete" >> $GITHUB_OUTPUT
-            echo "saas_result=$SAAS_RESULT" >> $GITHUB_OUTPUT
-            echo "mkt_result=$MKT_RESULT" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Post visual changes warning with report link
-        if: steps.check.outputs.status == 'visual_changes'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const repo = `${context.repo.owner}/${context.repo.repo}`;
-            const runId = '${{ github.run_id }}';
-            const artifactUrl = `https://github.com/${repo}/actions/runs/${runId}`;
-            const prUrl = `https://github.com/${repo}/pull/${context.issue.number}`;
-            github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.issue.number,
-              body: [
-                '## ⚠️ Visual Changes Detected',
-                '',
-                'UI changes were found during visual regression testing. The refreshed baseline screenshots were **committed to this branch automatically** — review the PNG diffs in "Files changed" under `.fuutu/visual-baselines/`.',
-                '',
-                '**Links:**',
-                `- 📦 [Download Report Artifact](${artifactUrl}) — download & unzip, then open \`playwright-report/index.html\` in your browser`,
-                `- 🔗 [View PR](${prUrl})`,
-                '',
-                'In the report you\'ll see expected vs actual vs diff for every changed page.',
-                '',
-                '**What to do:**',
-                '1. Review the baseline PNG diffs in this PR (or the HTML report for expected/actual/diff)',
-                '2. If the changes are **intentional** → merge this PR — the new baselines travel with it',
-                '3. If the changes are **unintentional** → fix the code and push — the baselines will be regenerated again',
-                '',
-                '> The pipeline did **not** fail — this is a warning only. Non-visual tests must still pass.',
-              ].join('\n')
-            });
-
-      - name: Post all-clear comment
-        if: steps.check.outputs.status == 'no_changes'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.issue.number,
-              body: '## ✅ No Visual Changes\n\nVisual regression tests passed — no UI changes detected.'
-            });
-
-      - name: Post tests-incomplete warning
-        if: steps.check.outputs.status == 'tests_incomplete'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const saas = '${{ steps.check.outputs.saas_result }}';
-            const mkt = '${{ steps.check.outputs.mkt_result }}';
-            const runId = '${{ github.run_id }}';
-            const repo = `${context.repo.owner}/${context.repo.repo}`;
-            const runUrl = `https://github.com/${repo}/actions/runs/${runId}`;
-            const lines = [
-              '## ⚠️ Visual Regression Did Not Complete',
-              '',
-              'Visual regression tests did **not** run to completion — no "all clear" can be given.',
-              '',
-              '**E2E job results:**',
-              `- SaaS: \`${saas}\``,
-              `- Marketing: \`${mkt}\``,
-              '',
-              `👉 Check the [failed run](${runUrl}) and re-run the failed jobs before merging.`,
-              '',
-              '> This comment replaces the previous false "No Visual Changes" message that was posted when e2e jobs failed before reaching the visual step.',
-            ];
-            github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.issue.number,
-              body: lines.join('\n')
-            });
-
-      - name: Post E2E coverage comment
-        if: always() && needs.e2e-marketing.outputs.coverage_available == 'true'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const pct = '${{ needs.e2e-marketing.outputs.coverage_pct }}';
-            const scripts = '${{ needs.e2e-marketing.outputs.coverage_scripts }}';
-            const runId = '${{ github.run_id }}';
-            const repo = `${context.repo.owner}/${context.repo.repo}`;
-            const artifactUrl = `https://github.com/${repo}/actions/runs/${runId}`;
-            const emoji = parseInt(pct) >= 90 ? '🟢' : parseInt(pct) >= 70 ? '🟡' : '🔴';
-            github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.issue.number,
-              body: [
-                '## 📊 E2E Code Coverage — Marketing',
-                '',
-                `${emoji} **${pct}%** coverage — ${scripts} scripts analyzed`,
-                '',
-                `- 📦 [Download full report](${artifactUrl}) — open \`coverage-report.md\` for per-script breakdown`,
-                '',
-                '> Collected via Playwright V8 coverage during E2E tests. Measures JS executed by browser during test runs.',
-              ].join('\n')
-            });

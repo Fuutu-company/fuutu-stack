@@ -1,0 +1,22 @@
+name: setup
+description: Toolchain for every CI job — pnpm + Node + install + prisma generate
+inputs:
+  db-generate:
+    description: Run pnpm db:generate after install
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+      with:
+        version: "10.11.0"
+    - uses: actions/setup-node@v5
+      with:
+        node-version: "22"
+        cache: pnpm
+    - shell: bash
+      run: pnpm install --frozen-lockfile
+    - shell: bash
+      if: inputs.db-generate == 'true'
+      run: pnpm db:generate
