@@ -100,7 +100,9 @@ catalog:
   "@aws-sdk/client-s3": ^3.1143.0
   "@aws-sdk/s3-request-presigner": ^3.1143.0
   # Testing (T-092)
-  "@playwright/test": ^1.63.0
+  # Pinned exactly: the CI e2e job runs inside mcr.microsoft.com/playwright:<same version>-noble —
+  # a caret would resolve a newer minor than the container image ships (browser mismatch).
+  "@playwright/test": 1.64.0
   "@axe-core/playwright": ^4.13.0
   vitest: ^4.1.10
   "@vitest/coverage-v8": ^4.1.10
