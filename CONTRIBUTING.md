@@ -117,7 +117,7 @@ If you add a new provider implementation (e.g. Resend for mail):
 
 ## Enabling CI
 
-CI ships **disabled**. To activate it on your repo, set the repository variable `FUUTU_CI_ENABLED` = `true` under **Settings → Secrets and variables → Actions → Variables**. Until then every job is skipped.
+CI ships **disabled**. To activate it on your repo, set the repository variable `FUUTU_CI_ENABLED` = `true` under **Settings → Secrets and variables → Actions → Variables**. Until then every job is skipped — skipped runs explain themselves via the run name and a summary page with these same steps.
 
 ## Reporting Issues
 
