@@ -1,4 +1,5 @@
 name: CI
+run-name: ${{ vars.FUUTU_CI_ENABLED == 'true' && 'CI' || 'CI disabled — set FUUTU_CI_ENABLED=true to enable' }}
 
 # Kit CI — disabled by default. Enabled repos set the repository variable
 # FUUTU_CI_ENABLED=true (Settings → Secrets and variables → Actions →
@@ -25,6 +26,28 @@ env:
   FUUTU_TELEMETRY_DISABLED: "1"
 
 jobs:
+  # Runs only while CI is disabled — kit clones see why nothing ran and how
+  # to opt in, right in the run summary. Skipped (by design) once enabled.
+  enable-ci:
+    name: ℹ️ CI disabled — how to enable
+    runs-on: ubuntu-latest
+    if: vars.FUUTU_CI_ENABLED != 'true'
+    steps:
+      - run: |
+          {
+            echo "## Fuutu Stack CI is disabled"
+            echo ""
+            echo "This kit ships with the pipeline turned **off by default**, so cloned repos don't get surprise CI runs. Every job in this run was skipped on purpose — this is not an error."
+            echo ""
+            echo "**To enable CI on this repository:**"
+            echo "1. Go to **Settings → Secrets and variables → Actions → Variables**"
+            echo "2. Create the repository variable \`FUUTU_CI_ENABLED\` with value \`true\`"
+            echo "3. Re-run this workflow or push a new commit"
+            echo ""
+            echo "See CONTRIBUTING.md → \"Enabling CI\"."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Fuutu Stack CI is disabled — set repository variable FUUTU_CI_ENABLED=true to activate it (see run summary)."
+
   changes:
     runs-on: ubuntu-latest
     if: vars.FUUTU_CI_ENABLED == 'true'

@@ -1,4 +1,5 @@
 name: Dependency Audit
+run-name: ${{ vars.FUUTU_CI_ENABLED == 'true' && 'Dependency Audit' || 'Dependency Audit disabled — set FUUTU_CI_ENABLED=true' }}
 
 # Weekly dependency report → job summary. Replaces the old per-PR audit job
 # and Dependabot; updates are batched consciously from this report.
@@ -12,6 +13,20 @@ permissions:
   contents: read
 
 jobs:
+  # Explains itself in the run summary while CI is disabled — see ci.yml.
+  enable-ci:
+    name: ℹ️ CI disabled — how to enable
+    runs-on: ubuntu-latest
+    if: vars.FUUTU_CI_ENABLED != 'true'
+    steps:
+      - run: |
+          {
+            echo "## Fuutu Stack CI is disabled"
+            echo ""
+            echo "Set the repository variable \`FUUTU_CI_ENABLED\` = \`true\` under **Settings → Secrets and variables → Actions → Variables** to activate CI, then re-run this workflow. See CONTRIBUTING.md → \"Enabling CI\"."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Fuutu Stack CI is disabled — set repository variable FUUTU_CI_ENABLED=true to activate it."
+
   audit:
     if: vars.FUUTU_CI_ENABLED == 'true'
     runs-on: ubuntu-latest
