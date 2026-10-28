@@ -158,7 +158,8 @@ jobs:
           POSTGRES_DB: fuutu-stack
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
-        ports: ["5432:5432"]
+        # No ports mapping — container jobs share a Docker network where the
+        # service is reachable at hostname `postgres` on every port.
         options: >-
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
@@ -203,7 +204,7 @@ jobs:
             echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
           fi
       - name: Prepare database
-        if: matrix.db == 'true'
+        if: matrix.db
         run: |
           pnpm db:push
           NODE_ENV=development pnpm db:seed
