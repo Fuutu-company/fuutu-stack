@@ -50,7 +50,9 @@ async function main() {
 	// WHATWG URL wraps IPv6 literals in brackets — hostname reports "[::1]".
 	// "postgres" = the docker-compose / Actions service-container hostname —
 	// still a local throwaway DB, just reached over the container network.
-	if (!["localhost", "127.0.0.1", "::1", "[::1]", "postgres"].includes(seedHost)) {
+	if (
+		!["localhost", "127.0.0.1", "::1", "[::1]", "postgres"].includes(seedHost)
+	) {
 		throw new Error(`Refusing to seed non-local database (${seedHost})`);
 	}
 
