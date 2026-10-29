@@ -15,6 +15,10 @@ runs:
       with:
         node-version: "22"
         cache: pnpm
+    # Container jobs: the workspace mount is owned by the runner UID, not the
+    # container user — git refuses all commands without this.
+    - shell: bash
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
     - shell: bash
       run: pnpm install --frozen-lockfile
     - shell: bash
