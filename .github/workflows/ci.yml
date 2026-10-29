@@ -229,6 +229,14 @@ jobs:
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
+      # Must run before the baseline commit — git status vs HEAD is the diff
+      # signal, and the commit would erase it.
+      - name: Generate visual report
+        if: github.event_name == 'pull_request'
+        run: node tooling/scripts/visual-report.mjs --app "${{ matrix.app }}"
+        env:
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
+
       - name: Commit updated baselines to PR branch
         id: baseline-pr
         if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1'
@@ -259,9 +267,26 @@ jobs:
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
+      # Same report on push — placed after the update steps above so the
+      # regenerated baselines are what gets diffed.
+      - name: Generate visual report
+        if: github.event_name == 'push'
+        run: node tooling/scripts/visual-report.mjs --app "${{ matrix.app }}"
+
       - name: Commit updated baselines (push)
         if: github.event_name == 'push'
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.ref_name }}" push
+
+      # Hosted report: pr-<N>/<app>/ on PRs, <branch>/<app>/ on pushes. Opt-in
+      # via FUUTU_PAGES_ENABLED; requires Pages → deploy from branch gh-pages.
+      - name: Deploy visual report to GitHub Pages
+        if: vars.FUUTU_PAGES_ENABLED == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: apps/${{ matrix.app }}/visual-report
+          destination_dir: ${{ github.event_name == 'pull_request' && format('pr-{0}/{1}', github.event.pull_request.number, matrix.app) || format('{0}/{1}', github.ref_name, matrix.app) }}
+          keep_files: true
 
       - name: Comment on visual result (PR)
         if: github.event_name == 'pull_request' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')
@@ -270,12 +295,17 @@ jobs:
           script: |
             const changed = "${{ steps.visual.outputs.changed }}" === "1";
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const pagesEnabled = "${{ vars.FUUTU_PAGES_ENABLED }}" === "true";
+            // If Pages uses a custom domain, adjust this base URL.
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/pr-${context.issue.number}/${{ matrix.app }}/`;
             const body = changed
               ? [
                   "## ⚠️ Visual Changes — ${{ matrix.app }}",
                   "",
                   "Updated baseline screenshots were committed to this branch. Review the PNG diffs under `.fuutu/visual-baselines/${{ matrix.app }}/` in \"Files changed\".",
-                  `📦 [Run + report artifacts](${runUrl})`,
+                  pagesEnabled
+                    ? `📊 [Visual diff report](${reportUrl}) · 📦 [Artifacts](${runUrl})`
+                    : `📦 [Run + report artifacts](${runUrl})`,
                   "",
                   "> Intentional → merge. Unintentional → fix the code and push; baselines regenerate.",
                 ].join("\n")
@@ -297,5 +327,6 @@ jobs:
           path: |
             apps/${{ matrix.app }}/playwright-report
             apps/${{ matrix.app }}/test-results
+            apps/${{ matrix.app }}/visual-report
           if-no-files-found: ignore
           retention-days: 14

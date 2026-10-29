@@ -37,6 +37,10 @@ feature/xxx ──PR──▶ develop ──release──▶ main ──tag
 | Hotfix → `main` | **Squash** | One commit, then `main → develop` back-merge |
 | `main` → `develop` (after hotfix) | **Merge commit** | Brings hotfix back cleanly |
 
+**Squash-merge rule:** the PR title *is* the squash commit message. It must be a valid Conventional Commit — that single line is what drives the semver bump at release time, so get the type right before merging.
+
+**Hotfix flow:** branch `hotfix/<x>` from `main` → PR → squash-merge → tag the **patch** release immediately → back-merge `main → develop` the same day. Skipping the back-merge lets the fix drift out of `develop` and resurface as a regression in the next release.
+
 ### Branch Naming
 
 - `feature/<short-description>` — new features
@@ -60,10 +64,9 @@ breaking: rename EmailProvider.send() to EmailProvider.sendMail()
 | Prefix | Bump | Example |
 |---|---|---|
 | `feat:` | minor | `feat: add API key revocation` |
-| `fix:` | patch | `fix: prevent duplicate webhook delivery` |
-| `breaking:` | major | `breaking: remove deprecated auth callback` |
-| `docs:` | none | `docs: add deployment guide` |
-| `chore:` | none | `chore: update dependencies` |
+| `fix:` / `perf:` | patch | `fix: prevent duplicate webhook delivery` |
+| `breaking:` or any `!` suffix | major | `feat!: drop node 18 support` |
+| `docs:` / `chore:` / `ci:` / `test:` / `refactor:` / `style:` | none | `docs: add deployment guide` |
 
 Squash-merge uses the PR title as the commit message — keep it a valid Conventional Commit.
 
@@ -117,7 +120,24 @@ If you add a new provider implementation (e.g. Resend for mail):
 
 ## Enabling CI
 
-CI ships **disabled**. To activate it on your repo, set the repository variable `FUUTU_CI_ENABLED` = `true` under **Settings → Secrets and variables → Actions → Variables**. Until then every job is skipped — skipped runs explain themselves via the run name and a summary page with these same steps.
+CI ships **disabled**. Until you opt in, every job is skipped — skipped runs explain themselves via the run name and a summary page with these same steps.
+
+**Step 1 — set the repository variable:**
+
+1. Open your repo on GitHub → **Settings** (top bar)
+2. Left sidebar → **Secrets and variables** → **Actions** → tab **Variables**
+3. **New repository variable** → Name `FUUTU_CI_ENABLED`, Value `true` → **Add variable**
+
+**Step 2 — optional, hosted visual reports** (requires step 1):
+
+1. Same place: create a second variable `FUUTU_PAGES_ENABLED` = `true`
+2. **Settings** → left sidebar **Pages** (under *Code and automation*)
+3. Under **Build and deployment → Source** select **Deploy from a branch**
+4. Under **Branch** select `gh-pages` and folder `/(root)` → **Save**
+
+CI then publishes the per-PR visual-diff report to `https://<owner>.github.io/<repo>/pr-<N>/<app>/` and links it in the visual-changes PR comment. Without `FUUTU_PAGES_ENABLED`, reports still ship as workflow artifacts.
+
+> The `gh-pages` branch is created automatically on the first deploy — if it doesn't appear in the Branch dropdown yet, open a PR that produces a visual report first, then finish step 2.
 
 ## Reporting Issues
 

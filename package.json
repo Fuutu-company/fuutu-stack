@@ -53,6 +53,8 @@
 		"@vitest/ui": "catalog:",
 		"cross-env": "catalog:",
 		"dotenv-cli": "catalog:",
+		"pixelmatch": "^8.0.0",
+		"pngjs": "^7.0.0",
 		"sharp": "catalog:",
 		"turbo": "catalog:",
 		"typescript": "catalog:",

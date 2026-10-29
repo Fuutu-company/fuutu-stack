@@ -1,8 +1,9 @@
-name: Dependency Audit
-run-name: ${{ vars.FUUTU_CI_ENABLED == 'true' && 'Dependency Audit' || 'Dependency Audit disabled — set FUUTU_CI_ENABLED=true' }}
+name: Maintenance
+run-name: ${{ vars.FUUTU_CI_ENABLED == 'true' && 'Maintenance' || 'Maintenance disabled — set FUUTU_CI_ENABLED=true' }}
 
-# Weekly dependency report → job summary. Replaces the old per-PR audit job
-# and Dependabot; updates are batched consciously from this report.
+# Weekly maintenance: dependency report → job summary (replaces the old per-PR
+# audit job and Dependabot; updates are batched consciously from this report)
+# plus pruning of visual-report Pages dirs for closed PRs.
 
 on:
   schedule:
@@ -38,3 +39,20 @@ jobs:
           db-generate: "false"
       - name: Write dependency report to job summary
         run: node tooling/scripts/dependency-report.mjs >> "$GITHUB_STEP_SUMMARY"
+
+  # Removes pr-<N>/ dirs from gh-pages once the PR is closed — keep_files on
+  # the deploy action never deletes, so stale PR reports would accumulate.
+  pages-cleanup:
+    if: vars.FUUTU_CI_ENABLED == 'true' && vars.FUUTU_PAGES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # prunes pr-* dirs on gh-pages
+    steps:
+      # Default-branch checkout — the script lives here; it fetches gh-pages
+      # into a worktree itself (that branch only holds published reports).
+      - uses: actions/checkout@v5
+      - name: Prune visual reports of closed PRs
+        run: tooling/scripts/cleanup-visual-pages.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
