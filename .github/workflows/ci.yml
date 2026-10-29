@@ -297,15 +297,16 @@ jobs:
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const pagesEnabled = "${{ vars.FUUTU_PAGES_ENABLED }}" === "true";
             // If Pages uses a custom domain, adjust this base URL.
-            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/pr-${context.issue.number}/${{ matrix.app }}/`;
+            const pagesBase = `https://${context.repo.owner}.github.io/${context.repo.repo}/pr-${context.issue.number}`;
+            const reportsLine = pagesEnabled
+              ? `📊 [SaaS report](${pagesBase}/saas/) · [Marketing report](${pagesBase}/marketing/) · 📦 [Artifacts](${runUrl})`
+              : `📦 [Run + report artifacts](${runUrl})`;
             const body = changed
               ? [
                   "## ⚠️ Visual Changes — ${{ matrix.app }}",
                   "",
                   "Updated baseline screenshots were committed to this branch. Review the PNG diffs under `.fuutu/visual-baselines/${{ matrix.app }}/` in \"Files changed\".",
-                  pagesEnabled
-                    ? `📊 [Visual diff report](${reportUrl}) · 📦 [Artifacts](${runUrl})`
-                    : `📦 [Run + report artifacts](${runUrl})`,
+                  reportsLine,
                   "",
                   "> Intentional → merge. Unintentional → fix the code and push; baselines regenerate.",
                 ].join("\n")

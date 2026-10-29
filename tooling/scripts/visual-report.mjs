@@ -247,12 +247,31 @@ const img = (src, label) =>
 		? `<figure><figcaption>${label}</figcaption><img src="${esc(src)}" alt="${label}" loading="lazy"></figure>`
 		: "";
 
+// Filter dimensions, built from whatever the filenames actually encode.
+const projects = [
+	...new Set(results.map((r) => r.project).filter(Boolean)),
+].sort();
+const viewports = [
+	...new Set(results.map((r) => r.viewport).filter(Boolean)),
+].sort();
+const statuses = Object.keys(order).filter((s) => count(s) > 0);
+
+const options = (values) =>
+	values.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+
 const cards = results
 	.map((r) => {
 		const [label, color] = BADGES[r.status];
-		const chips = [r.locale, r.viewport, r.project]
-			.filter(Boolean)
-			.map((c) => `<span class="chip">${esc(c)}</span>`)
+		const chips = [
+			["browser", r.project],
+			["device", r.viewport],
+			["locale", r.locale],
+		]
+			.filter(([, v]) => v)
+			.map(
+				([k, v]) =>
+					`<span class="chip"><span class="k">${k}</span>${esc(v)}</span>`,
+			)
 			.join("");
 		const note =
 			r.diffRatio !== null
@@ -260,7 +279,7 @@ const cards = results
 				: r.dimensionMismatch
 					? `<p class="note warn">${esc(r.dimensionMismatch)} — no pixel diff</p>`
 					: "";
-		return `<section class="card">
+		return `<section class="card" data-status="${r.status}" data-project="${esc(r.project ?? "")}" data-viewport="${esc(r.viewport ?? "")}" data-locale="${esc(r.locale ?? "")}" data-search="${esc(`${r.page} ${r.file}`.toLowerCase())}">
   <header><h2>${esc(r.page)}</h2>${chips}<span class="badge" style="background:${color}">${label}</span></header>
   <p class="file">${esc(r.file)}</p>
   ${note}
@@ -268,6 +287,12 @@ const cards = results
 </section>`;
 	})
 	.join("\n");
+
+const statusColors = JSON.stringify(
+	Object.fromEntries(
+		Object.entries(BADGES).map(([status, [, color]]) => [status, color]),
+	),
+);
 
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -277,9 +302,17 @@ const html = `<!doctype html>
 body{background:#0a0a0b;color:#e4e4e7;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:2rem;max-width:1400px;margin:auto}
 h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 .meta{color:#a1a1aa;margin:.5rem 0 1.5rem}.meta code{color:#e4e4e7}
+.filters{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin:0 -2rem 1.5rem;padding:.75rem 2rem;background:rgba(10,10,11,.94);border-bottom:1px solid #27272a;backdrop-filter:blur(8px)}
+.filters label{display:flex;align-items:center;gap:.4rem;color:#a1a1aa;font-size:.85rem}
+.filters select,.filters input{background:#18181b;border:1px solid #27272a;border-radius:.5rem;color:#e4e4e7;font:inherit;padding:.35rem .6rem}
+.filters input{min-width:11rem}
+.filters select:focus,.filters input:focus{outline:1px solid #52525b}
+.counts{display:flex;gap:.5rem;flex-wrap:wrap;margin-left:auto}
 .chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem}
 .chips .chip,.chip{background:#18181b;border:1px solid #27272a;border-radius:999px;padding:.15rem .7rem;font-size:.8rem;color:#d4d4d8}
+.chip .k{color:#71717a;margin-right:.35rem}
 .card{background:#111113;border:1px solid #27272a;border-radius:.75rem;padding:1.25rem;margin-bottom:1.25rem}
+.card[hidden]{display:none}
 .card header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .badge{color:#0a0a0b;border-radius:.375rem;padding:.1rem .55rem;font-size:.75rem;font-weight:600;margin-left:auto}
 .file{color:#71717a;font-size:.8rem;font-family:ui-monospace,Menlo,monospace;margin:.35rem 0}
@@ -292,6 +325,13 @@ img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;imag
 </style></head><body>
 <h1>Visual diff report — ${esc(app)}</h1>
 <p class="meta">branch <code>${esc(summary.branch)}</code>${summary.pr ? ` · PR <code>#${esc(summary.pr)}</code>` : ""} · commit <code>${esc(summary.sha)}</code> · ${esc(summary.generatedAt)} · ${(threshold * 100).toFixed(0)}% pixel tolerance</p>
+<nav class="filters">
+<label>Browser <select id="f-project"><option value="">all</option>${options(projects)}</select></label>
+${viewports.length ? `<label>Device <select id="f-viewport"><option value="">all</option>${options(viewports)}</select></label>` : ""}
+<label>Status <select id="f-status"><option value="">all</option>${options(statuses)}</select></label>
+<input id="f-search" type="search" placeholder="Search pages…" autocomplete="off">
+<span class="counts" id="counts"></span>
+</nav>
 <div class="chips">
 <span class="chip">${summary.total} pages</span>
 <span class="chip" style="color:#f59e0b">${summary.changed} changed</span>
@@ -300,6 +340,24 @@ ${summary.removed ? `<span class="chip" style="color:#ef4444">${summary.removed}
 <span class="chip">${summary.unchanged} unchanged</span>
 </div>
 ${cards}
+<script>
+const COLORS=${statusColors};
+const cards=[...document.querySelectorAll(".card")];
+const countsEl=document.getElementById("counts");
+const els={project:document.getElementById("f-project"),viewport:document.getElementById("f-viewport"),status:document.getElementById("f-status"),search:document.getElementById("f-search")};
+function apply(){
+const p=els.project.value,v=els.viewport?els.viewport.value:"",s=els.status.value,q=els.search.value.trim().toLowerCase();
+const tally={};let shown=0;
+for(const c of cards){
+const ok=(!p||c.dataset.project===p)&&(!v||c.dataset.viewport===v)&&(!s||c.dataset.status===s)&&(!q||c.dataset.search.includes(q));
+c.hidden=!ok;
+if(ok){shown++;tally[c.dataset.status]=(tally[c.dataset.status]||0)+1;}
+}
+countsEl.innerHTML='<span class="chip">'+shown+" shown</span>"+Object.keys(tally).sort().map(st=>'<span class="chip" style="color:'+(COLORS[st]||"#d4d4d8")+'">'+st+" ("+tally[st]+")</span>").join("");
+}
+for(const el of Object.values(els))if(el)el.addEventListener("input",apply);
+apply();
+</script>
 </body></html>`;
 
 writeFileSync(path.join(outDir, "index.html"), html);
