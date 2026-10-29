@@ -83,6 +83,7 @@ function parseFilename(file) {
 	const tokens = file.replace(/\.png$/, "").split("-");
 	const meta = {
 		page: file.replace(/\.png$/, ""),
+		category: "other",
 		locale: null,
 		viewport: null,
 		project: null,
@@ -101,6 +102,14 @@ function parseFilename(file) {
 			meta.locale = tokens.pop();
 	}
 	if (tokens.length) meta.page = tokens.join("-");
+	// Snapshot names are `category--slug` — the category drives report
+	// grouping and the category filter. Unprefixed names land in "other".
+	if (meta.page.includes("--"))
+		meta.category = meta.page.split("--")[0] || "other";
+	// SaaS filenames carry no viewport token — derive the device class
+	// from the project so the Device filter works there too.
+	if (!meta.viewport && meta.project)
+		meta.viewport = meta.project.startsWith("mobile-") ? "mobile" : "desktop";
 	return meta;
 }
 
@@ -254,37 +263,52 @@ const projects = [
 const viewports = [
 	...new Set(results.map((r) => r.viewport).filter(Boolean)),
 ].sort();
+const categories = [...new Set(results.map((r) => r.category))].sort((a, b) =>
+	a === "other" ? 1 : b === "other" ? -1 : a.localeCompare(b),
+);
 const statuses = Object.keys(order).filter((s) => count(s) > 0);
 
 const options = (values) =>
 	values.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
 
-const cards = results
-	.map((r) => {
-		const [label, color] = BADGES[r.status];
-		const chips = [
-			["browser", r.project],
-			["device", r.viewport],
-			["locale", r.locale],
-		]
-			.filter(([, v]) => v)
-			.map(
-				([k, v]) =>
-					`<span class="chip"><span class="k">${k}</span>${esc(v)}</span>`,
-			)
-			.join("");
-		const note =
-			r.diffRatio !== null
-				? `<p class="note">${r.diffPx.toLocaleString("en")} px differ (${(r.diffRatio * 100).toFixed(2)}%)${r.withinTolerance ? " — within tolerance" : ""}</p>`
-				: r.dimensionMismatch
-					? `<p class="note warn">${esc(r.dimensionMismatch)} — no pixel diff</p>`
-					: "";
-		return `<section class="card" data-status="${r.status}" data-project="${esc(r.project ?? "")}" data-viewport="${esc(r.viewport ?? "")}" data-locale="${esc(r.locale ?? "")}" data-search="${esc(`${r.page} ${r.file}`.toLowerCase())}">
+const renderCard = (r) => {
+	const [label, color] = BADGES[r.status];
+	const chips = [
+		["category", r.category],
+		["browser", r.project],
+		["device", r.viewport],
+		["locale", r.locale],
+	]
+		.filter(([, v]) => v)
+		.map(
+			([k, v]) =>
+				`<span class="chip"><span class="k">${k}</span>${esc(v)}</span>`,
+		)
+		.join("");
+	const note =
+		r.diffRatio !== null
+			? `<p class="note">${r.diffPx.toLocaleString("en")} px differ (${(r.diffRatio * 100).toFixed(2)}%)${r.withinTolerance ? " — within tolerance" : ""}</p>`
+			: r.dimensionMismatch
+				? `<p class="note warn">${esc(r.dimensionMismatch)} — no pixel diff</p>`
+				: "";
+	return `<section class="card${r.viewport ? ` vp-${esc(r.viewport)}` : ""}" data-status="${r.status}" data-category="${esc(r.category)}" data-project="${esc(r.project ?? "")}" data-viewport="${esc(r.viewport ?? "")}" data-locale="${esc(r.locale ?? "")}" data-search="${esc(`${r.page} ${r.file}`.toLowerCase())}">
   <header><h2>${esc(r.page)}</h2>${chips}<span class="badge" style="background:${color}">${label}</span></header>
   <p class="file">${esc(r.file)}</p>
   ${note}
   <div class="imgs">${img(r.expectedImg, "expected")}${img(r.actualImg, r.status === "added" ? "actual (new)" : "actual")}${img(r.diffImg, "diff")}</div>
 </section>`;
+};
+
+// Group cards by category — each section gets a heading with the
+// section's changed-count so regressions are scannable per domain.
+const sections = categories
+	.map((cat) => {
+		const entries = results.filter((r) => r.category === cat);
+		const changed = entries.filter((r) => r.status === "changed").length;
+		return `<div class="cat-group" data-category="${esc(cat)}">
+<h2 class="cat-heading">${esc(cat)}<span class="cat-meta">${entries.length} ${entries.length === 1 ? "page" : "pages"} · ${changed} changed</span></h2>
+${entries.map(renderCard).join("\n")}
+</div>`;
 	})
 	.join("\n");
 
@@ -311,6 +335,10 @@ h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 .chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem}
 .chips .chip,.chip{background:#18181b;border:1px solid #27272a;border-radius:999px;padding:.15rem .7rem;font-size:.8rem;color:#d4d4d8}
 .chip .k{color:#71717a;margin-right:.35rem}
+.cat-group{margin-bottom:2rem}
+.cat-group[hidden]{display:none}
+.cat-heading{font-size:1.15rem;font-weight:700;text-transform:capitalize;margin-bottom:1rem;display:flex;align-items:baseline;gap:.6rem}
+.cat-meta{color:#71717a;font-size:.8rem;font-weight:400;text-transform:none}
 .card{background:#111113;border:1px solid #27272a;border-radius:.75rem;padding:1.25rem;margin-bottom:1.25rem}
 .card[hidden]{display:none}
 .card header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
@@ -322,12 +350,16 @@ h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 figure{flex:1 1 280px;min-width:0}
 figcaption{color:#a1a1aa;font-size:.8rem;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em}
 img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;image-rendering:auto}
+/* Cap narrow viewports so mobile shots don't dominate the layout. */
+.vp-mobile figure{flex:0 1 390px;max-width:390px}
+.vp-tablet figure{flex:0 1 560px;max-width:560px}
 </style></head><body>
 <h1>Visual diff report — ${esc(app)}</h1>
 <p class="meta">branch <code>${esc(summary.branch)}</code>${summary.pr ? ` · PR <code>#${esc(summary.pr)}</code>` : ""} · commit <code>${esc(summary.sha)}</code> · ${esc(summary.generatedAt)} · ${(threshold * 100).toFixed(0)}% pixel tolerance</p>
 <nav class="filters">
+<label>Category <select id="f-category"><option value="">all</option>${options(categories)}</select></label>
 <label>Browser <select id="f-project"><option value="">all</option>${options(projects)}</select></label>
-${viewports.length ? `<label>Device <select id="f-viewport"><option value="">all</option>${options(viewports)}</select></label>` : ""}
+<label>Device <select id="f-viewport"><option value="">all</option>${options(viewports)}</select></label>
 <label>Status <select id="f-status"><option value="">all</option>${options(statuses)}</select></label>
 <input id="f-search" type="search" placeholder="Search pages…" autocomplete="off">
 <span class="counts" id="counts"></span>
@@ -339,20 +371,22 @@ ${viewports.length ? `<label>Device <select id="f-viewport"><option value="">all
 ${summary.removed ? `<span class="chip" style="color:#ef4444">${summary.removed} removed</span>` : ""}
 <span class="chip">${summary.unchanged} unchanged</span>
 </div>
-${cards}
+${sections}
 <script>
 const COLORS=${statusColors};
 const cards=[...document.querySelectorAll(".card")];
+const groups=[...document.querySelectorAll(".cat-group")];
 const countsEl=document.getElementById("counts");
-const els={project:document.getElementById("f-project"),viewport:document.getElementById("f-viewport"),status:document.getElementById("f-status"),search:document.getElementById("f-search")};
+const els={category:document.getElementById("f-category"),project:document.getElementById("f-project"),viewport:document.getElementById("f-viewport"),status:document.getElementById("f-status"),search:document.getElementById("f-search")};
 function apply(){
-const p=els.project.value,v=els.viewport?els.viewport.value:"",s=els.status.value,q=els.search.value.trim().toLowerCase();
+const cat=els.category.value,p=els.project.value,v=els.viewport.value,s=els.status.value,q=els.search.value.trim().toLowerCase();
 const tally={};let shown=0;
 for(const c of cards){
-const ok=(!p||c.dataset.project===p)&&(!v||c.dataset.viewport===v)&&(!s||c.dataset.status===s)&&(!q||c.dataset.search.includes(q));
+const ok=(!cat||c.dataset.category===cat)&&(!p||c.dataset.project===p)&&(!v||c.dataset.viewport===v)&&(!s||c.dataset.status===s)&&(!q||c.dataset.search.includes(q));
 c.hidden=!ok;
 if(ok){shown++;tally[c.dataset.status]=(tally[c.dataset.status]||0)+1;}
 }
+for(const g of groups)g.hidden=![...g.querySelectorAll(".card")].some(c=>!c.hidden);
 countsEl.innerHTML='<span class="chip">'+shown+" shown</span>"+Object.keys(tally).sort().map(st=>'<span class="chip" style="color:'+(COLORS[st]||"#d4d4d8")+'">'+st+" ("+tally[st]+")</span>").join("");
 }
 for(const el of Object.values(els))if(el)el.addEventListener("input",apply);

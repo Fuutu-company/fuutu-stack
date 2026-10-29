@@ -209,23 +209,51 @@ function formatBytes(bytes: number): string {
  */
 export async function scrollThroughPage(page: import("@playwright/test").Page) {
 	await page.evaluate(async () => {
-		await new Promise<void>((resolve) => {
-			let scrolled = 0;
-			const step = window.innerHeight;
-			const timer = setInterval(() => {
-				window.scrollBy(0, step);
-				scrolled += step;
-				if (scrolled >= document.body.scrollHeight) {
-					clearInterval(timer);
-					window.scrollTo(0, 0);
-					resolve();
-				}
-			}, 50);
-		});
+		const scroller = document.scrollingElement ?? document.documentElement;
+		const step = window.innerHeight;
+		const dwell = 120;
+		const sleep = (ms: number) =>
+			new Promise((resolve) => setTimeout(resolve, ms));
+
+		let y = 0;
+		let stable = 0;
+		// Scroll in viewport steps until the bottom is reached twice in a
+		// row with an unchanged scrollHeight — whileInView sections can
+		// grow the page as they mount, so a single pass exits too early.
+		while (stable < 2) {
+			y += step;
+			window.scrollTo(0, y);
+			await sleep(dwell);
+			if (y + window.innerHeight >= scroller.scrollHeight) {
+				const before = scroller.scrollHeight;
+				await sleep(dwell);
+				stable = scroller.scrollHeight === before ? stable + 1 : 0;
+			}
+			if (y > 50_000) break; // safety bound for pathological pages
+		}
+		window.scrollTo(0, 0);
 	});
+
+	// Wait for in-flight animations to settle…
 	await page
 		.waitForFunction(
 			() => document.getAnimations().every((a) => a.playState === "finished"),
+			undefined,
+			{ timeout: 5000 },
+		)
+		.catch(() => {});
+
+	// …then give whileInView sections time to transition out of their
+	// initial opacity:0 state (framer-motion does not always register
+	// with getAnimations()). Bounded — a stuck element must not hang the
+	// test, `animations: "disabled"` still stabilizes the screenshot.
+	await page
+		.waitForFunction(
+			() =>
+				[...document.querySelectorAll("main [style]")].every((el) => {
+					const opacity = (el as HTMLElement).style.opacity;
+					return opacity === "" || Number.parseFloat(opacity) > 0.05;
+				}),
 			undefined,
 			{ timeout: 3000 },
 		)

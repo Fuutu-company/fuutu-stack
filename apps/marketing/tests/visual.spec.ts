@@ -9,15 +9,22 @@ import { expect, scrollThroughPage, test } from "./fixtures";
  * PR branch (plus on push to develop/main where allowed) —
  * see ../../.github/workflows/ci.yml. Locally, run --update-snapshots
  * to create your platform's baselines (gitignored outside linux).
+ *
+ * Snapshot names are category-prefixed (`category--slug-…`) so the
+ * visual report can group pages by domain (marketing, legal,
+ * component).
  */
 
 const PAGES = [
-	{ path: "", name: "landing" },
-	{ path: "/pricing", name: "pricing" },
-	{ path: "/blog", name: "blog" },
-	{ path: "/changelog", name: "changelog" },
-	{ path: "/contact", name: "contact" },
-	{ path: "/legal/privacy", name: "privacy" },
+	{ path: "", name: "marketing--landing" },
+	{ path: "/pricing", name: "marketing--pricing" },
+	{ path: "/blog", name: "marketing--blog" },
+	{ path: "/blog/welcome", name: "marketing--blog-post" },
+	{ path: "/changelog", name: "marketing--changelog" },
+	{ path: "/contact", name: "marketing--contact" },
+	{ path: "/legal/privacy", name: "legal--privacy" },
+	{ path: "/legal/terms", name: "legal--terms" },
+	{ path: "/legal/imprint", name: "legal--imprint" },
 ] as const;
 
 const VIEWPORTS = [
@@ -53,10 +60,10 @@ test.describe("visual regression — marketing pages", () => {
 	// (Reduces snapshot count; DE layout is identical to EN.)
 
 	const KEY_PAGES = [
-		{ path: "", name: "landing" },
-		{ path: "/pricing", name: "pricing" },
-		{ path: "/blog", name: "blog" },
-		{ path: "/contact", name: "contact" },
+		{ path: "", name: "marketing--landing" },
+		{ path: "/pricing", name: "marketing--pricing" },
+		{ path: "/blog", name: "marketing--blog" },
+		{ path: "/contact", name: "marketing--contact" },
 	] as const;
 
 	for (const viewport of VIEWPORTS) {
@@ -80,4 +87,34 @@ test.describe("visual regression — marketing pages", () => {
 			});
 		}
 	}
+});
+
+test.describe("visual regression — components", () => {
+	test("locale switcher dropdown matches baseline", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Desktop navbar switcher is hidden on mobile");
+		await page.goto("/en");
+		await page.waitForLoadState("domcontentloaded");
+		await page
+			.getByRole("button", { name: /switch language/i })
+			.first()
+			.click();
+		const menu = page.getByRole("menu");
+		await expect(menu).toBeVisible();
+		await expect(menu).toHaveScreenshot("component--locale-switcher.png");
+	});
+
+	test("mobile nav menu matches baseline", async ({ page }) => {
+		await page.setViewportSize({ width: 375, height: 812 });
+		await page.goto("/en");
+		await page.waitForLoadState("domcontentloaded");
+		const toggle = page.getByRole("button", { name: /toggle menu/i });
+		await toggle.click();
+		await expect(toggle).toHaveAttribute("aria-expanded", "true");
+		await expect(page.locator("header").first()).toHaveScreenshot(
+			"component--mobile-nav.png",
+		);
+	});
 });
