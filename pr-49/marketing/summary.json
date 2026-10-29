@@ -2,14 +2,14 @@
   "app": "marketing",
   "branch": "49/merge",
   "pr": "49",
-  "sha": "e861cb9",
-  "generatedAt": "2026-10-29T22:27:56.912Z",
+  "sha": "6d2e68f",
+  "generatedAt": "2026-10-29T22:33:14.985Z",
   "threshold": 0.02,
   "total": 55,
-  "changed": 0,
-  "added": 55,
+  "changed": 3,
+  "added": 0,
   "removed": 0,
-  "unchanged": 0,
+  "unchanged": 52,
   "files": [
     {
       "file": "component--locale-switcher-chromium-linux.png",
@@ -18,7 +18,7 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -29,7 +29,7 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -40,7 +40,7 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -51,7 +51,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -62,7 +62,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -73,7 +73,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -84,7 +84,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -95,7 +95,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -106,7 +106,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -117,7 +117,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -128,7 +128,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -139,7 +139,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -150,7 +150,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -161,7 +161,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -172,7 +172,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -183,7 +183,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -194,7 +194,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -205,7 +205,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -216,7 +216,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -227,7 +227,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -238,7 +238,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -249,7 +249,7 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -260,7 +260,7 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -271,7 +271,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -282,7 +282,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -293,7 +293,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -304,7 +304,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -315,7 +315,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -326,7 +326,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -337,7 +337,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -348,7 +348,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -359,7 +359,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -370,7 +370,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -381,7 +381,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -392,7 +392,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -403,7 +403,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -414,7 +414,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -425,7 +425,7 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -436,7 +436,7 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -447,7 +447,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -458,7 +458,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -469,7 +469,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -480,9 +480,10 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 295597,
+      "diffRatio": 0.08113864253343983,
+      "withinTolerance": false
     },
     {
       "file": "marketing--landing-en-mobile-chromium-linux.png",
@@ -491,7 +492,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -502,7 +503,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -513,9 +514,10 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "chromium",
-      "status": "added",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 313112,
+      "diffRatio": 0.053265993815869696,
+      "withinTolerance": false
     },
     {
       "file": "marketing--landing-en-tablet-mobile-safari-linux.png",
@@ -524,9 +526,10 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "mobile-safari",
-      "status": "added",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 312545,
+      "diffRatio": 0.0531625911713477,
+      "withinTolerance": false
     },
     {
       "file": "marketing--pricing-de-desktop-chromium-linux.png",
@@ -535,7 +538,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -546,7 +549,7 @@
       "locale": "de",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -557,7 +560,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -568,7 +571,7 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -579,7 +582,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -590,7 +593,7 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -601,7 +604,7 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "chromium",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     },
@@ -612,7 +615,7 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "mobile-safari",
-      "status": "added",
+      "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
     }
