@@ -1,0 +1,215 @@
+{
+  "app": "saas",
+  "branch": "49/merge",
+  "pr": "49",
+  "sha": "e5abb57",
+  "generatedAt": "2026-10-29T18:53:04.479Z",
+  "threshold": 0.02,
+  "total": 20,
+  "changed": 0,
+  "added": 0,
+  "removed": 0,
+  "unchanged": 20,
+  "files": [
+    {
+      "file": "admin-chromium-linux.png",
+      "page": "admin",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "admin-mobile-safari-linux.png",
+      "page": "admin",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "auth-forgot-password-chromium-linux.png",
+      "page": "auth-forgot-password",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "auth-forgot-password-mobile-safari-linux.png",
+      "page": "auth-forgot-password",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "auth-sign-in-chromium-linux.png",
+      "page": "auth-sign-in",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "auth-sign-in-mobile-safari-linux.png",
+      "page": "auth-sign-in",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "auth-sign-up-chromium-linux.png",
+      "page": "auth-sign-up",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "auth-sign-up-mobile-safari-linux.png",
+      "page": "auth-sign-up",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "chat-chromium-linux.png",
+      "page": "chat",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "chat-mobile-safari-linux.png",
+      "page": "chat",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "choose-plan-chromium-linux.png",
+      "page": "choose-plan",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "choose-plan-mobile-safari-linux.png",
+      "page": "choose-plan",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "crm-chromium-linux.png",
+      "page": "crm",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "crm-mobile-safari-linux.png",
+      "page": "crm",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "dashboard-chromium-linux.png",
+      "page": "dashboard",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "dashboard-mobile-safari-linux.png",
+      "page": "dashboard",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "organizations-chromium-linux.png",
+      "page": "organizations",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "organizations-mobile-safari-linux.png",
+      "page": "organizations",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "settings-chromium-linux.png",
+      "page": "settings",
+      "locale": null,
+      "viewport": null,
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "settings-mobile-safari-linux.png",
+      "page": "settings",
+      "locale": null,
+      "viewport": null,
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    }
+  ]
+}
