@@ -1,0 +1,417 @@
+{
+  "app": "marketing",
+  "branch": "49/merge",
+  "pr": "49",
+  "sha": "e5abb57",
+  "generatedAt": "2026-10-29T18:53:14.048Z",
+  "threshold": 0.02,
+  "total": 40,
+  "changed": 2,
+  "added": 0,
+  "removed": 0,
+  "unchanged": 38,
+  "files": [
+    {
+      "file": "blog-de-desktop-chromium-linux.png",
+      "page": "blog",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "blog-de-desktop-mobile-safari-linux.png",
+      "page": "blog",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "blog-en-desktop-chromium-linux.png",
+      "page": "blog",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "blog-en-desktop-mobile-safari-linux.png",
+      "page": "blog",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "blog-en-mobile-chromium-linux.png",
+      "page": "blog",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "blog-en-mobile-mobile-safari-linux.png",
+      "page": "blog",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "blog-en-tablet-chromium-linux.png",
+      "page": "blog",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "blog-en-tablet-mobile-safari-linux.png",
+      "page": "blog",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "changelog-de-desktop-chromium-linux.png",
+      "page": "changelog",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "changelog-de-desktop-mobile-safari-linux.png",
+      "page": "changelog",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "changelog-en-desktop-chromium-linux.png",
+      "page": "changelog",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "changelog-en-desktop-mobile-safari-linux.png",
+      "page": "changelog",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-de-desktop-chromium-linux.png",
+      "page": "contact",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-de-desktop-mobile-safari-linux.png",
+      "page": "contact",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-en-desktop-chromium-linux.png",
+      "page": "contact",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-en-desktop-mobile-safari-linux.png",
+      "page": "contact",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-en-mobile-chromium-linux.png",
+      "page": "contact",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-en-mobile-mobile-safari-linux.png",
+      "page": "contact",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-en-tablet-chromium-linux.png",
+      "page": "contact",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "contact-en-tablet-mobile-safari-linux.png",
+      "page": "contact",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "landing-de-desktop-chromium-linux.png",
+      "page": "landing",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "landing-de-desktop-mobile-safari-linux.png",
+      "page": "landing",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "changed",
+      "diffPx": 298875,
+      "diffRatio": 0.07986727401870478,
+      "withinTolerance": false
+    },
+    {
+      "file": "landing-en-desktop-chromium-linux.png",
+      "page": "landing",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "landing-en-desktop-mobile-safari-linux.png",
+      "page": "landing",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "changed",
+      "diffPx": 307489,
+      "diffRatio": 0.08440288654473788,
+      "withinTolerance": false
+    },
+    {
+      "file": "landing-en-mobile-chromium-linux.png",
+      "page": "landing",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "landing-en-mobile-mobile-safari-linux.png",
+      "page": "landing",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "landing-en-tablet-chromium-linux.png",
+      "page": "landing",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "landing-en-tablet-mobile-safari-linux.png",
+      "page": "landing",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-de-desktop-chromium-linux.png",
+      "page": "pricing",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-de-desktop-mobile-safari-linux.png",
+      "page": "pricing",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-en-desktop-chromium-linux.png",
+      "page": "pricing",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-en-desktop-mobile-safari-linux.png",
+      "page": "pricing",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-en-mobile-chromium-linux.png",
+      "page": "pricing",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-en-mobile-mobile-safari-linux.png",
+      "page": "pricing",
+      "locale": "en",
+      "viewport": "mobile",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-en-tablet-chromium-linux.png",
+      "page": "pricing",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "pricing-en-tablet-mobile-safari-linux.png",
+      "page": "pricing",
+      "locale": "en",
+      "viewport": "tablet",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "privacy-de-desktop-chromium-linux.png",
+      "page": "privacy",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "privacy-de-desktop-mobile-safari-linux.png",
+      "page": "privacy",
+      "locale": "de",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "privacy-en-desktop-chromium-linux.png",
+      "page": "privacy",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "chromium",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "privacy-en-desktop-mobile-safari-linux.png",
+      "page": "privacy",
+      "locale": "en",
+      "viewport": "desktop",
+      "project": "mobile-safari",
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
+    }
+  ]
+}
