@@ -15,6 +15,10 @@ h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 .chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem}
 .chips .chip,.chip{background:#18181b;border:1px solid #27272a;border-radius:999px;padding:.15rem .7rem;font-size:.8rem;color:#d4d4d8}
 .chip .k{color:#71717a;margin-right:.35rem}
+.cat-group{margin-bottom:2rem}
+.cat-group[hidden]{display:none}
+.cat-heading{font-size:1.15rem;font-weight:700;text-transform:capitalize;margin-bottom:1rem;display:flex;align-items:baseline;gap:.6rem}
+.cat-meta{color:#71717a;font-size:.8rem;font-weight:400;text-transform:none}
 .card{background:#111113;border:1px solid #27272a;border-radius:.75rem;padding:1.25rem;margin-bottom:1.25rem}
 .card[hidden]{display:none}
 .card header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
@@ -26,156 +30,369 @@ h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 figure{flex:1 1 280px;min-width:0}
 figcaption{color:#a1a1aa;font-size:.8rem;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em}
 img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;image-rendering:auto}
+/* Cap narrow viewports so mobile shots don't dominate the layout. */
+.vp-mobile figure{flex:0 1 390px;max-width:390px}
+.vp-tablet figure{flex:0 1 560px;max-width:560px}
 </style></head><body>
 <h1>Visual diff report — saas</h1>
-<p class="meta">branch <code>49/merge</code> · PR <code>#49</code> · commit <code>f578a07</code> · 2026-10-29T19:17:13.084Z · 2% pixel tolerance</p>
+<p class="meta">branch <code>49/merge</code> · PR <code>#49</code> · commit <code>6d2e68f</code> · 2026-10-29T22:41:27.316Z · 2% pixel tolerance</p>
 <nav class="filters">
+<label>Category <select id="f-category"><option value="">all</option><option value="admin">admin</option><option value="auth">auth</option><option value="component">component</option><option value="core">core</option><option value="dialog">dialog</option><option value="org">org</option><option value="settings">settings</option></select></label>
 <label>Browser <select id="f-project"><option value="">all</option><option value="chromium">chromium</option><option value="mobile-safari">mobile-safari</option></select></label>
-
-<label>Status <select id="f-status"><option value="">all</option><option value="unchanged">unchanged</option></select></label>
+<label>Device <select id="f-viewport"><option value="">all</option><option value="desktop">desktop</option><option value="mobile">mobile</option></select></label>
+<label>Status <select id="f-status"><option value="">all</option><option value="added">added</option></select></label>
 <input id="f-search" type="search" placeholder="Search pages…" autocomplete="off">
 <span class="counts" id="counts"></span>
 </nav>
 <div class="chips">
-<span class="chip">20 pages</span>
+<span class="chip">51 pages</span>
 <span class="chip" style="color:#f59e0b">0 changed</span>
-<span class="chip" style="color:#22c55e">0 added</span>
+<span class="chip" style="color:#22c55e">51 added</span>
 
-<span class="chip">20 unchanged</span>
+<span class="chip">0 unchanged</span>
 </div>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="admin admin-chromium-linux.png">
-  <header><h2>admin</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">admin-chromium-linux.png</p>
+<div class="cat-group" data-category="admin">
+<h2 class="cat-heading">admin<span class="cat-meta">5 pages · 0 changed</span></h2>
+<section class="card vp-desktop" data-status="added" data-category="admin" data-project="chromium" data-viewport="desktop" data-locale="" data-search="admin--admin admin--admin-chromium-linux.png">
+  <header><h2>admin--admin</h2><span class="chip"><span class="k">category</span>admin</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">admin--admin-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/admin-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/admin-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/admin--admin-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="admin admin-mobile-safari-linux.png">
-  <header><h2>admin</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">admin-mobile-safari-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="admin" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="admin--admin admin--admin-mobile-safari-linux.png">
+  <header><h2>admin--admin</h2><span class="chip"><span class="k">category</span>admin</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">admin--admin-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/admin-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/admin-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/admin--admin-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="auth-forgot-password auth-forgot-password-chromium-linux.png">
-  <header><h2>auth-forgot-password</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">auth-forgot-password-chromium-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="admin" data-project="chromium" data-viewport="desktop" data-locale="" data-search="admin--audit-logs admin--audit-logs-chromium-linux.png">
+  <header><h2>admin--audit-logs</h2><span class="chip"><span class="k">category</span>admin</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">admin--audit-logs-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/auth-forgot-password-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/auth-forgot-password-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/admin--audit-logs-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="auth-forgot-password auth-forgot-password-mobile-safari-linux.png">
-  <header><h2>auth-forgot-password</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">auth-forgot-password-mobile-safari-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="admin" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="admin--audit-logs admin--audit-logs-mobile-safari-linux.png">
+  <header><h2>admin--audit-logs</h2><span class="chip"><span class="k">category</span>admin</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">admin--audit-logs-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/auth-forgot-password-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/auth-forgot-password-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/admin--audit-logs-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="auth-sign-in auth-sign-in-chromium-linux.png">
-  <header><h2>auth-sign-in</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">auth-sign-in-chromium-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="admin" data-project="chromium" data-viewport="desktop" data-locale="" data-search="admin--users admin--users-chromium-linux.png">
+  <header><h2>admin--users</h2><span class="chip"><span class="k">category</span>admin</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">admin--users-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/auth-sign-in-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/auth-sign-in-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/admin--users-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="auth-sign-in auth-sign-in-mobile-safari-linux.png">
-  <header><h2>auth-sign-in</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">auth-sign-in-mobile-safari-linux.png</p>
+</div>
+<div class="cat-group" data-category="auth">
+<h2 class="cat-heading">auth<span class="cat-meta">12 pages · 0 changed</span></h2>
+<section class="card vp-desktop" data-status="added" data-category="auth" data-project="chromium" data-viewport="desktop" data-locale="" data-search="auth--forgot-password auth--forgot-password-chromium-linux.png">
+  <header><h2>auth--forgot-password</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--forgot-password-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/auth-sign-in-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/auth-sign-in-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--forgot-password-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="auth-sign-up auth-sign-up-chromium-linux.png">
-  <header><h2>auth-sign-up</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">auth-sign-up-chromium-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="auth" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="auth--forgot-password auth--forgot-password-mobile-safari-linux.png">
+  <header><h2>auth--forgot-password</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--forgot-password-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/auth-sign-up-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/auth-sign-up-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--forgot-password-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="auth-sign-up auth-sign-up-mobile-safari-linux.png">
-  <header><h2>auth-sign-up</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">auth-sign-up-mobile-safari-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="auth" data-project="chromium" data-viewport="desktop" data-locale="" data-search="auth--reset-password auth--reset-password-chromium-linux.png">
+  <header><h2>auth--reset-password</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--reset-password-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/auth-sign-up-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/auth-sign-up-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--reset-password-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="chat chat-chromium-linux.png">
-  <header><h2>chat</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">chat-chromium-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="auth" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="auth--reset-password auth--reset-password-mobile-safari-linux.png">
+  <header><h2>auth--reset-password</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--reset-password-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/chat-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/chat-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--reset-password-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="chat chat-mobile-safari-linux.png">
-  <header><h2>chat</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">chat-mobile-safari-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="auth" data-project="chromium" data-viewport="desktop" data-locale="" data-search="auth--sign-in auth--sign-in-chromium-linux.png">
+  <header><h2>auth--sign-in</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--sign-in-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/chat-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/chat-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--sign-in-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="choose-plan choose-plan-chromium-linux.png">
-  <header><h2>choose-plan</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">choose-plan-chromium-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="auth" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="auth--sign-in auth--sign-in-mobile-safari-linux.png">
+  <header><h2>auth--sign-in</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--sign-in-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/choose-plan-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/choose-plan-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--sign-in-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="choose-plan choose-plan-mobile-safari-linux.png">
-  <header><h2>choose-plan</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">choose-plan-mobile-safari-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="auth" data-project="chromium" data-viewport="desktop" data-locale="" data-search="auth--sign-up auth--sign-up-chromium-linux.png">
+  <header><h2>auth--sign-up</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--sign-up-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/choose-plan-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/choose-plan-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--sign-up-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="crm crm-chromium-linux.png">
-  <header><h2>crm</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">crm-chromium-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="auth" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="auth--sign-up auth--sign-up-mobile-safari-linux.png">
+  <header><h2>auth--sign-up</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--sign-up-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/crm-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/crm-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--sign-up-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="crm crm-mobile-safari-linux.png">
-  <header><h2>crm</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">crm-mobile-safari-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="auth" data-project="chromium" data-viewport="desktop" data-locale="" data-search="auth--suspended auth--suspended-chromium-linux.png">
+  <header><h2>auth--suspended</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--suspended-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/crm-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/crm-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--suspended-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="dashboard dashboard-chromium-linux.png">
-  <header><h2>dashboard</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">dashboard-chromium-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="auth" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="auth--suspended auth--suspended-mobile-safari-linux.png">
+  <header><h2>auth--suspended</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--suspended-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/dashboard-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/dashboard-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--suspended-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="dashboard dashboard-mobile-safari-linux.png">
-  <header><h2>dashboard</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">dashboard-mobile-safari-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="auth" data-project="chromium" data-viewport="desktop" data-locale="" data-search="auth--verify auth--verify-chromium-linux.png">
+  <header><h2>auth--verify</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--verify-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/dashboard-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/dashboard-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--verify-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="organizations organizations-chromium-linux.png">
-  <header><h2>organizations</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">organizations-chromium-linux.png</p>
+<section class="card vp-mobile" data-status="added" data-category="auth" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="auth--verify auth--verify-mobile-safari-linux.png">
+  <header><h2>auth--verify</h2><span class="chip"><span class="k">category</span>auth</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">auth--verify-mobile-safari-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/organizations-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/organizations-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/auth--verify-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="organizations organizations-mobile-safari-linux.png">
-  <header><h2>organizations</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">organizations-mobile-safari-linux.png</p>
+</div>
+<div class="cat-group" data-category="component">
+<h2 class="cat-heading">component<span class="cat-meta">3 pages · 0 changed</span></h2>
+<section class="card vp-desktop" data-status="added" data-category="component" data-project="chromium" data-viewport="desktop" data-locale="" data-search="component--nav-user component--nav-user-chromium-linux.png">
+  <header><h2>component--nav-user</h2><span class="chip"><span class="k">category</span>component</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">component--nav-user-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/organizations-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/organizations-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/component--nav-user-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="chromium" data-viewport="" data-locale="" data-search="settings settings-chromium-linux.png">
-  <header><h2>settings</h2><span class="chip"><span class="k">browser</span>chromium</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">settings-chromium-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="component" data-project="chromium" data-viewport="desktop" data-locale="" data-search="component--notification-bell component--notification-bell-chromium-linux.png">
+  <header><h2>component--notification-bell</h2><span class="chip"><span class="k">category</span>component</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">component--notification-bell-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/settings-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/settings-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/component--notification-bell-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
-<section class="card" data-status="unchanged" data-project="mobile-safari" data-viewport="" data-locale="" data-search="settings settings-mobile-safari-linux.png">
-  <header><h2>settings</h2><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">settings-mobile-safari-linux.png</p>
+<section class="card vp-desktop" data-status="added" data-category="component" data-project="chromium" data-viewport="desktop" data-locale="" data-search="component--org-switcher component--org-switcher-chromium-linux.png">
+  <header><h2>component--org-switcher</h2><span class="chip"><span class="k">category</span>component</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">component--org-switcher-chromium-linux.png</p>
   
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/settings-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/settings-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/component--org-switcher-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
 </section>
+</div>
+<div class="cat-group" data-category="core">
+<h2 class="cat-heading">core<span class="cat-meta">16 pages · 0 changed</span></h2>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--chat core--chat-chromium-linux.png">
+  <header><h2>core--chat</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--chat-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--chat-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--chat core--chat-mobile-safari-linux.png">
+  <header><h2>core--chat</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--chat-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--chat-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--choose-plan core--choose-plan-chromium-linux.png">
+  <header><h2>core--choose-plan</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--choose-plan-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--choose-plan-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--choose-plan core--choose-plan-mobile-safari-linux.png">
+  <header><h2>core--choose-plan</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--choose-plan-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--choose-plan-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--crm core--crm-chromium-linux.png">
+  <header><h2>core--crm</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--crm-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--crm-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--crm core--crm-mobile-safari-linux.png">
+  <header><h2>core--crm</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--crm-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--crm-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--dashboard core--dashboard-chromium-linux.png">
+  <header><h2>core--dashboard</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--dashboard-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--dashboard-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--dashboard core--dashboard-mobile-safari-linux.png">
+  <header><h2>core--dashboard</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--dashboard-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--dashboard-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--notifications core--notifications-chromium-linux.png">
+  <header><h2>core--notifications</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--notifications-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--notifications-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--notifications core--notifications-mobile-safari-linux.png">
+  <header><h2>core--notifications</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--notifications-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--notifications-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--onboarding core--onboarding-chromium-linux.png">
+  <header><h2>core--onboarding</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--onboarding-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--onboarding-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--onboarding core--onboarding-mobile-safari-linux.png">
+  <header><h2>core--onboarding</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--onboarding-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--onboarding-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--organizations core--organizations-chromium-linux.png">
+  <header><h2>core--organizations</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--organizations-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--organizations-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--organizations core--organizations-mobile-safari-linux.png">
+  <header><h2>core--organizations</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--organizations-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--organizations-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="core" data-project="chromium" data-viewport="desktop" data-locale="" data-search="core--settings core--settings-chromium-linux.png">
+  <header><h2>core--settings</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--settings-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--settings-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="core" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="core--settings core--settings-mobile-safari-linux.png">
+  <header><h2>core--settings</h2><span class="chip"><span class="k">category</span>core</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">core--settings-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/core--settings-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+</div>
+<div class="cat-group" data-category="dialog">
+<h2 class="cat-heading">dialog<span class="cat-meta">2 pages · 0 changed</span></h2>
+<section class="card vp-desktop" data-status="added" data-category="dialog" data-project="chromium" data-viewport="desktop" data-locale="" data-search="dialog--api-key-create dialog--api-key-create-chromium-linux.png">
+  <header><h2>dialog--api-key-create</h2><span class="chip"><span class="k">category</span>dialog</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">dialog--api-key-create-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/dialog--api-key-create-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="dialog" data-project="chromium" data-viewport="desktop" data-locale="" data-search="dialog--webhook-create dialog--webhook-create-chromium-linux.png">
+  <header><h2>dialog--webhook-create</h2><span class="chip"><span class="k">category</span>dialog</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">dialog--webhook-create-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/dialog--webhook-create-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+</div>
+<div class="cat-group" data-category="org">
+<h2 class="cat-heading">org<span class="cat-meta">7 pages · 0 changed</span></h2>
+<section class="card vp-desktop" data-status="added" data-category="org" data-project="chromium" data-viewport="desktop" data-locale="" data-search="org--dashboard org--dashboard-chromium-linux.png">
+  <header><h2>org--dashboard</h2><span class="chip"><span class="k">category</span>org</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">org--dashboard-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/org--dashboard-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="org" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="org--dashboard org--dashboard-mobile-safari-linux.png">
+  <header><h2>org--dashboard</h2><span class="chip"><span class="k">category</span>org</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">org--dashboard-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/org--dashboard-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="org" data-project="chromium" data-viewport="desktop" data-locale="" data-search="org--general org--general-chromium-linux.png">
+  <header><h2>org--general</h2><span class="chip"><span class="k">category</span>org</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">org--general-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/org--general-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="org" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="org--general org--general-mobile-safari-linux.png">
+  <header><h2>org--general</h2><span class="chip"><span class="k">category</span>org</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">org--general-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/org--general-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="org" data-project="chromium" data-viewport="desktop" data-locale="" data-search="org--invoices org--invoices-chromium-linux.png">
+  <header><h2>org--invoices</h2><span class="chip"><span class="k">category</span>org</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">org--invoices-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/org--invoices-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="org" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="org--invoices org--invoices-mobile-safari-linux.png">
+  <header><h2>org--invoices</h2><span class="chip"><span class="k">category</span>org</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">org--invoices-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/org--invoices-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="org" data-project="chromium" data-viewport="desktop" data-locale="" data-search="org--members org--members-chromium-linux.png">
+  <header><h2>org--members</h2><span class="chip"><span class="k">category</span>org</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">org--members-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/org--members-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+</div>
+<div class="cat-group" data-category="settings">
+<h2 class="cat-heading">settings<span class="cat-meta">6 pages · 0 changed</span></h2>
+<section class="card vp-desktop" data-status="added" data-category="settings" data-project="chromium" data-viewport="desktop" data-locale="" data-search="settings--api-keys settings--api-keys-chromium-linux.png">
+  <header><h2>settings--api-keys</h2><span class="chip"><span class="k">category</span>settings</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">settings--api-keys-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/settings--api-keys-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="settings" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="settings--api-keys settings--api-keys-mobile-safari-linux.png">
+  <header><h2>settings--api-keys</h2><span class="chip"><span class="k">category</span>settings</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">settings--api-keys-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/settings--api-keys-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="settings" data-project="chromium" data-viewport="desktop" data-locale="" data-search="settings--billing settings--billing-chromium-linux.png">
+  <header><h2>settings--billing</h2><span class="chip"><span class="k">category</span>settings</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">settings--billing-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/settings--billing-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="settings" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="settings--billing settings--billing-mobile-safari-linux.png">
+  <header><h2>settings--billing</h2><span class="chip"><span class="k">category</span>settings</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">settings--billing-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/settings--billing-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-desktop" data-status="added" data-category="settings" data-project="chromium" data-viewport="desktop" data-locale="" data-search="settings--credits settings--credits-chromium-linux.png">
+  <header><h2>settings--credits</h2><span class="chip"><span class="k">category</span>settings</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">settings--credits-chromium-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/settings--credits-chromium-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+<section class="card vp-mobile" data-status="added" data-category="settings" data-project="mobile-safari" data-viewport="mobile" data-locale="" data-search="settings--credits settings--credits-mobile-safari-linux.png">
+  <header><h2>settings--credits</h2><span class="chip"><span class="k">category</span>settings</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>mobile</span><span class="badge" style="background:#22c55e">added</span></header>
+  <p class="file">settings--credits-mobile-safari-linux.png</p>
+  
+  <div class="imgs"><figure><figcaption>actual (new)</figcaption><img src="images/settings--credits-mobile-safari-linux-actual.png" alt="actual (new)" loading="lazy"></figure></div>
+</section>
+</div>
 <script>
 const COLORS={"changed":"#f59e0b","added":"#22c55e","removed":"#ef4444","unchanged":"#71717a"};
 const cards=[...document.querySelectorAll(".card")];
+const groups=[...document.querySelectorAll(".cat-group")];
 const countsEl=document.getElementById("counts");
-const els={project:document.getElementById("f-project"),viewport:document.getElementById("f-viewport"),status:document.getElementById("f-status"),search:document.getElementById("f-search")};
+const els={category:document.getElementById("f-category"),project:document.getElementById("f-project"),viewport:document.getElementById("f-viewport"),status:document.getElementById("f-status"),search:document.getElementById("f-search")};
 function apply(){
-const p=els.project.value,v=els.viewport?els.viewport.value:"",s=els.status.value,q=els.search.value.trim().toLowerCase();
+const cat=els.category.value,p=els.project.value,v=els.viewport.value,s=els.status.value,q=els.search.value.trim().toLowerCase();
 const tally={};let shown=0;
 for(const c of cards){
-const ok=(!p||c.dataset.project===p)&&(!v||c.dataset.viewport===v)&&(!s||c.dataset.status===s)&&(!q||c.dataset.search.includes(q));
+const ok=(!cat||c.dataset.category===cat)&&(!p||c.dataset.project===p)&&(!v||c.dataset.viewport===v)&&(!s||c.dataset.status===s)&&(!q||c.dataset.search.includes(q));
 c.hidden=!ok;
 if(ok){shown++;tally[c.dataset.status]=(tally[c.dataset.status]||0)+1;}
 }
+for(const g of groups)g.hidden=![...g.querySelectorAll(".card")].some(c=>!c.hidden);
 countsEl.innerHTML='<span class="chip">'+shown+" shown</span>"+Object.keys(tally).sort().map(st=>'<span class="chip" style="color:'+(COLORS[st]||"#d4d4d8")+'">'+st+" ("+tally[st]+")</span>").join("");
 }
 for(const el of Object.values(els))if(el)el.addEventListener("input",apply);
