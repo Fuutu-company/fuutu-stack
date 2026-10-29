@@ -44,7 +44,9 @@
 	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 	 * BASE TOKENS — edit these 4 colors to rebrand the whole stack.
 	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-	--brand: oklch(0.42 0.22 270); /* primary brand color (≥4.5:1 vs white text) */
+	--brand: oklch(
+		0.42 0.22 270
+	); /* primary brand color (≥4.5:1 vs white text) */
 	--neutral: oklch(0.13 0.03 260); /* dark neutral (text)         */
 	--success: oklch(0.65 0.18 150); /* success state               */
 	--destructive: oklch(0.6 0.2 25); /* error / danger              */
