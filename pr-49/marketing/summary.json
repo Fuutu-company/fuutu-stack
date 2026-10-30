@@ -2,14 +2,14 @@
   "app": "marketing",
   "branch": "49/merge",
   "pr": "49",
-  "sha": "1344054",
-  "generatedAt": "2026-10-30T13:51:33.516Z",
+  "sha": "ef093cc",
+  "generatedAt": "2026-10-30T14:49:07.539Z",
   "threshold": 0.005,
-  "total": 55,
-  "changed": 2,
+  "total": 35,
+  "changed": 0,
   "added": 0,
   "removed": 0,
-  "unchanged": 53,
+  "unchanged": 35,
   "files": [
     {
       "file": "component--locale-switcher-chromium-linux.png",
@@ -56,34 +56,12 @@
       "diffRatio": null
     },
     {
-      "file": "legal--imprint-de-desktop-mobile-safari-linux.png",
-      "page": "legal--imprint",
-      "category": "legal",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "legal--imprint-en-desktop-chromium-linux.png",
       "page": "legal--imprint",
       "category": "legal",
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "legal--imprint-en-desktop-mobile-safari-linux.png",
-      "page": "legal--imprint",
-      "category": "legal",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -100,34 +78,12 @@
       "diffRatio": null
     },
     {
-      "file": "legal--privacy-de-desktop-mobile-safari-linux.png",
-      "page": "legal--privacy",
-      "category": "legal",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "legal--privacy-en-desktop-chromium-linux.png",
       "page": "legal--privacy",
       "category": "legal",
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "legal--privacy-en-desktop-mobile-safari-linux.png",
-      "page": "legal--privacy",
-      "category": "legal",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -144,34 +100,12 @@
       "diffRatio": null
     },
     {
-      "file": "legal--terms-de-desktop-mobile-safari-linux.png",
-      "page": "legal--terms",
-      "category": "legal",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "legal--terms-en-desktop-chromium-linux.png",
       "page": "legal--terms",
       "category": "legal",
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "legal--terms-en-desktop-mobile-safari-linux.png",
-      "page": "legal--terms",
-      "category": "legal",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -188,34 +122,12 @@
       "diffRatio": null
     },
     {
-      "file": "marketing--blog-de-desktop-mobile-safari-linux.png",
-      "page": "marketing--blog",
-      "category": "marketing",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "marketing--blog-en-desktop-chromium-linux.png",
       "page": "marketing--blog",
       "category": "marketing",
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "marketing--blog-en-desktop-mobile-safari-linux.png",
-      "page": "marketing--blog",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -254,34 +166,12 @@
       "diffRatio": null
     },
     {
-      "file": "marketing--blog-en-tablet-mobile-safari-linux.png",
-      "page": "marketing--blog",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "tablet",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "marketing--blog-post-de-desktop-chromium-linux.png",
       "page": "marketing--blog-post",
       "category": "marketing",
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "marketing--blog-post-de-desktop-mobile-safari-linux.png",
-      "page": "marketing--blog-post",
-      "category": "marketing",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -298,34 +188,12 @@
       "diffRatio": null
     },
     {
-      "file": "marketing--blog-post-en-desktop-mobile-safari-linux.png",
-      "page": "marketing--blog-post",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "marketing--changelog-de-desktop-chromium-linux.png",
       "page": "marketing--changelog",
       "category": "marketing",
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "marketing--changelog-de-desktop-mobile-safari-linux.png",
-      "page": "marketing--changelog",
-      "category": "marketing",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -342,17 +210,6 @@
       "diffRatio": null
     },
     {
-      "file": "marketing--changelog-en-desktop-mobile-safari-linux.png",
-      "page": "marketing--changelog",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "marketing--contact-de-desktop-chromium-linux.png",
       "page": "marketing--contact",
       "category": "marketing",
@@ -364,34 +221,12 @@
       "diffRatio": null
     },
     {
-      "file": "marketing--contact-de-desktop-mobile-safari-linux.png",
-      "page": "marketing--contact",
-      "category": "marketing",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "marketing--contact-en-desktop-chromium-linux.png",
       "page": "marketing--contact",
       "category": "marketing",
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "marketing--contact-en-desktop-mobile-safari-linux.png",
-      "page": "marketing--contact",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -430,34 +265,12 @@
       "diffRatio": null
     },
     {
-      "file": "marketing--contact-en-tablet-mobile-safari-linux.png",
-      "page": "marketing--contact",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "tablet",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "marketing--landing-de-desktop-chromium-linux.png",
       "page": "marketing--landing",
       "category": "marketing",
       "locale": "de",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "marketing--landing-de-desktop-mobile-safari-linux.png",
-      "page": "marketing--landing",
-      "category": "marketing",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -480,10 +293,9 @@
       "locale": "en",
       "viewport": "desktop",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 295597,
-      "diffRatio": 0.08113864253343983,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "marketing--landing-en-mobile-chromium-linux.png",
@@ -525,10 +337,9 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 312545,
-      "diffRatio": 0.0531625911713477,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "marketing--pricing-de-desktop-chromium-linux.png",
@@ -542,34 +353,12 @@
       "diffRatio": null
     },
     {
-      "file": "marketing--pricing-de-desktop-mobile-safari-linux.png",
-      "page": "marketing--pricing",
-      "category": "marketing",
-      "locale": "de",
-      "viewport": "desktop",
-      "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
       "file": "marketing--pricing-en-desktop-chromium-linux.png",
       "page": "marketing--pricing",
       "category": "marketing",
       "locale": "en",
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "marketing--pricing-en-desktop-mobile-safari-linux.png",
-      "page": "marketing--pricing",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "desktop",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
@@ -603,17 +392,6 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
-    },
-    {
-      "file": "marketing--pricing-en-tablet-mobile-safari-linux.png",
-      "page": "marketing--pricing",
-      "category": "marketing",
-      "locale": "en",
-      "viewport": "tablet",
-      "project": "mobile-safari",
       "status": "unchanged",
       "diffPx": null,
       "diffRatio": null
