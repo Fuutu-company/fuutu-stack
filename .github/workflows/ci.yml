@@ -294,6 +294,7 @@ jobs:
       # regenerates the index.
       - name: Update gh-pages index
         if: vars.FUUTU_PAGES_ENABLED == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')
+        shell: bash
         run: |
           set -euo pipefail
           repo="$GITHUB_WORKSPACE"
