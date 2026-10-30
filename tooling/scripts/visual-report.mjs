@@ -410,11 +410,14 @@ h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 /* Fixed 3-column grid on every card — expected | actual | diff — so card
    layouts never shift between statuses. Missing content is a placeholder
    cell, not a missing column. */
-.imgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:.75rem}
-figure{min-width:0}
+.imgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:.75rem;align-items:stretch}
+figure{min-width:0;display:flex;flex-direction:column;height:100%}
 figcaption{color:#a1a1aa;font-size:.8rem;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em}
-.ph{display:grid;place-items:center;min-height:6rem;height:100%;border:1px dashed #3f3f46;border-radius:.5rem;color:#52525b;font-size:.8rem;font-style:italic}
-img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;image-rendering:auto}
+.ph{display:grid;place-items:center;flex:1;min-height:6rem;border:1px dashed #3f3f46;border-radius:.5rem;color:#52525b;font-size:.8rem;font-style:italic}
+img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;image-rendering:auto;cursor:zoom-in}
+.lb{position:fixed;inset:0;z-index:50;display:none;overflow:auto;background:rgba(0,0,0,.85);padding:2.5rem 1.5rem;cursor:zoom-out}
+.lb.open{display:block}
+.lb img{display:block;width:auto;max-width:95vw;margin:0 auto;cursor:zoom-out}
 /* Cap narrow viewports inside their grid cells so mobile shots don't
    dominate the layout. */
 .vp-mobile figure{max-width:390px}
@@ -457,6 +460,16 @@ for(const g of groups)g.hidden=![...g.querySelectorAll(".card")].some(c=>!c.hidd
 countsEl.innerHTML='<span class="chip">'+shown+" shown</span>"+Object.keys(tally).sort().map(st=>'<span class="chip" style="color:'+(COLORS[st]||"#d4d4d8")+'">'+st+" ("+tally[st]+")</span>").join("");
 }
 for(const el of Object.values(els))if(el)el.addEventListener("input",apply);
+const lb=document.createElement("div");
+lb.className="lb";
+lb.innerHTML="<img alt='preview'>";
+document.body.appendChild(lb);
+const lbImg=lb.querySelector("img");
+document.addEventListener("click",e=>{
+  if(e.target.matches(".imgs img")){lbImg.src=e.target.src;lb.classList.add("open");lb.scrollTop=0}
+  else if(e.target.closest(".lb")){lb.classList.remove("open")}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
 apply();
 </script>
 </body></html>`;
