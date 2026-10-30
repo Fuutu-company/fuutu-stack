@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>pr-54 — visual reports</title><style>
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+body{background:#0a0a0b;color:#e4e4e7;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:2rem;max-width:1400px;margin:auto}
+h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
+.top{position:sticky;top:0;z-index:10;display:flex;align-items:baseline;gap:1.25rem;margin:0 -2rem 1.5rem;padding:.75rem 2rem;background:rgba(10,10,11,.94);border-bottom:1px solid #27272a;backdrop-filter:blur(8px)}
+.top h1{font-size:1.15rem}
+.top a{color:#a1a1aa;text-decoration:none;font-size:.85rem}
+.top a:hover{color:#e4e4e7;text-decoration:underline}
+.meta{color:#a1a1aa;margin:.5rem 0 1.5rem}
+.section{font-size:1.15rem;font-weight:700;margin:1.5rem 0 1rem}
+/* Root index: table-like list — one row per report dir. */
+.list{border:1px solid #27272a;border-radius:.75rem;overflow:hidden}
+.row{display:grid;grid-template-columns:9.5rem minmax(0,1fr) auto 11rem;gap:1rem;align-items:center;padding:.85rem 1.25rem;background:#111113;border-bottom:1px solid #27272a}
+.row:last-child{border-bottom:0}
+.row:hover{background:#17171a}
+.cell{min-width:0;color:inherit;text-decoration:none}
+.ref{font-weight:600;display:flex;align-items:center;gap:.5rem}
+a.ref{color:#e4e4e7}
+a.ref:hover{text-decoration:underline}
+a.pr-link{color:#a1a1aa}
+a.pr-link:hover{color:#e4e4e7;text-decoration:underline}
+.ext{font-size:.75em;color:#71717a}
+.desc{display:flex;flex-direction:column;gap:.1rem}
+a.desc:hover .title{text-decoration:underline}
+.title{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.branch{color:#71717a;font-size:.8rem;font-family:ui-monospace,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apps{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:flex-end}
+a.chip{background:#18181b;border:1px solid #27272a;border-radius:999px;padding:.15rem .7rem;font-size:.8rem;color:#d4d4d8;text-decoration:none}
+a.chip:hover{border-color:#52525b;color:#e4e4e7}
+.time{color:#71717a;font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:760px){.row{grid-template-columns:1fr;gap:.5rem}.apps{justify-content:flex-start}.time{text-align:left}}
+/* Landing pages: one card per app report. */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+.card{display:block;background:#111113;border:1px solid #27272a;border-radius:.75rem;padding:1.25rem;color:inherit;text-decoration:none}
+.card:hover{border-color:#52525b}
+.card h2{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.badge{color:#0a0a0b;background:#22c55e;border-radius:.375rem;padding:.1rem .55rem;font-size:.75rem;font-weight:600}
+.dir{color:#71717a;font-size:.8rem;font-family:ui-monospace,Menlo,monospace;margin-top:.4rem}
+</style></head><body>
+<nav class="top"><a href="../">← All reports</a><h1>pr-54 — visual reports</h1><a href="https://github.com/Fuutu-company/fuutu-stack/pull/54" target="_blank" rel="noopener">PR #54 <span class="ext">↗</span></a></nav>
+<p class="meta">Choose app:</p>
+<div class="grid"><a class="card" href="marketing/"><h2>Marketing</h2><p class="dir">pr-54/marketing/</p></a></div>
+</body></html>
