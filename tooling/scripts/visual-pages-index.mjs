@@ -46,14 +46,16 @@ const appName = (d) => APP_NAMES[d] ?? d;
 // App subdirs = dirs that contain a report index.html. Anything else
 // (images/, stray files) is ignored.
 const appDirs = (dir) =>
-	readdirSync(path.join(root, dir), { withFileTypes: true })
-		.filter(
-			(e) =>
-				e.isDirectory() &&
-				existsSync(path.join(root, dir, e.name, "index.html")),
-		)
-		.map((e) => e.name)
-		.sort();
+	existsSync(path.join(root, dir))
+		? readdirSync(path.join(root, dir), { withFileTypes: true })
+				.filter(
+					(e) =>
+						e.isDirectory() &&
+						existsSync(path.join(root, dir, e.name, "index.html")),
+				)
+				.map((e) => e.name)
+				.sort()
+		: [];
 
 const topDirs = readdirSync(root, { withFileTypes: true })
 	.filter((e) => e.isDirectory())
