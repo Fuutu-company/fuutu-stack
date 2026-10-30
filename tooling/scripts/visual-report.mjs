@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Build a self-contained visual-diff HTML report from .fuutu/visual-baselines/<app>/.
 // "expected" = baseline committed in HEAD (git show), "actual" = the PNG on disk.
-// Usage: node tooling/scripts/visual-report.mjs --app <saas|marketing> [--out <dir>] [--threshold 0.02]
+// Usage: node tooling/scripts/visual-report.mjs --app <saas|marketing> [--out <dir>] [--threshold 0.005]
 
 import { execFileSync } from "node:child_process";
 import {
@@ -24,11 +24,13 @@ const arg = (name, fallback) => {
 const app = arg("app");
 if (!app) {
 	console.error(
-		"Usage: visual-report.mjs --app <saas|marketing> [--out <dir>] [--threshold 0.02]",
+		"Usage: visual-report.mjs --app <saas|marketing> [--out <dir>] [--threshold 0.005]",
 	);
 	process.exit(2);
 }
-const threshold = Number.parseFloat(arg("threshold", "0.02"));
+const threshold = Number.parseFloat(arg("threshold", "0.005"));
+// Repo slug for GitHub PR links — GITHUB_REPOSITORY is set in CI.
+const repoSlug = process.env.GITHUB_REPOSITORY ?? "Fuutu-company/fuutu-stack";
 const outDir = arg("out", `apps/${app}/visual-report`);
 const imagesDir = path.join(outDir, "images");
 
@@ -247,9 +249,43 @@ const BADGES = {
 	unchanged: ["unchanged", "#71717a"],
 };
 const order = { changed: 0, added: 1, removed: 2, unchanged: 3 };
-results.sort(
-	(a, b) => order[a.status] - order[b.status] || a.file.localeCompare(b.file),
-);
+
+// Within-category ordering: group variants of the same logical page
+// (meta.page already excludes viewport/locale/project tokens), groups
+// alphabetically with any group containing a changed/added variant floated
+// above unchanged groups. Within a group: viewport desktop → tablet →
+// mobile, then locale en → de, then project in the matrix order below.
+const VIEWPORT_RANK = { desktop: 0, tablet: 1, mobile: 2 };
+const LOCALE_RANK = { en: 0, de: 1 };
+const PROJECT_RANK = {
+	chromium: 0,
+	firefox: 1,
+	webkit: 2,
+	"mobile-safari": 3,
+	"mobile-chrome": 4,
+};
+const rank = (map, key, fallback) => map[key] ?? fallback;
+
+const sortEntries = (entries) => {
+	const dirty = new Map();
+	for (const e of entries)
+		dirty.set(
+			e.page,
+			(dirty.get(e.page) ?? false) ||
+				e.status === "changed" ||
+				e.status === "added",
+		);
+	return entries.sort(
+		(a, b) =>
+			Number(dirty.get(a.page)) - Number(dirty.get(b.page)) ||
+			a.page.localeCompare(b.page) ||
+			rank(VIEWPORT_RANK, a.viewport, 3) - rank(VIEWPORT_RANK, b.viewport, 3) ||
+			rank(LOCALE_RANK, a.locale, 2) - rank(LOCALE_RANK, b.locale, 2) ||
+			rank(PROJECT_RANK, a.project, 5) - rank(PROJECT_RANK, b.project, 5) ||
+			(a.project ?? "").localeCompare(b.project ?? "") ||
+			a.file.localeCompare(b.file),
+	);
+};
 
 const img = (src, label) =>
 	src
@@ -303,7 +339,7 @@ const renderCard = (r) => {
 // section's changed-count so regressions are scannable per domain.
 const sections = categories
 	.map((cat) => {
-		const entries = results.filter((r) => r.category === cat);
+		const entries = sortEntries(results.filter((r) => r.category === cat));
 		const changed = entries.filter((r) => r.status === "changed").length;
 		return `<div class="cat-group" data-category="${esc(cat)}">
 <h2 class="cat-heading">${esc(cat)}<span class="cat-meta">${entries.length} ${entries.length === 1 ? "page" : "pages"} · ${changed} changed</span></h2>
@@ -326,6 +362,7 @@ const html = `<!doctype html>
 body{background:#0a0a0b;color:#e4e4e7;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:2rem;max-width:1400px;margin:auto}
 h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 .meta{color:#a1a1aa;margin:.5rem 0 1.5rem}.meta code{color:#e4e4e7}
+.meta a{color:#a1a1aa}.meta a:hover{color:#e4e4e7}
 .backnav{display:flex;gap:1.25rem;margin-bottom:.75rem;font-size:.85rem}
 .backnav a{color:#a1a1aa;text-decoration:none}
 .backnav a:hover{color:#e4e4e7;text-decoration:underline}
@@ -364,7 +401,7 @@ img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;imag
 </style></head><body>
 <nav class="backnav"><a href="../">← ${summary.pr ? "PR" : esc(summary.branch)} overview</a><a href="../../">All reports</a></nav>
 <h1>Visual diff report — ${esc(app)}</h1>
-<p class="meta">branch <code>${esc(summary.branch)}</code>${summary.pr ? ` · PR <code>#${esc(summary.pr)}</code>` : ""} · commit <code>${esc(summary.sha)}</code> · ${esc(summary.generatedAt)} · ${(threshold * 100).toFixed(0)}% pixel tolerance</p>
+<p class="meta">branch <code>${esc(summary.branch)}</code>${summary.pr ? ` · PR <a href="https://github.com/${esc(repoSlug)}/pull/${esc(summary.pr)}" target="_blank" rel="noopener"><code>#${esc(summary.pr)}</code></a>` : ""} · commit <code>${esc(summary.sha)}</code> · ${esc(summary.generatedAt)} · ${(threshold * 100).toFixed(2).replace(/\.?0+$/, "")}% pixel tolerance</p>
 <nav class="filters">
 <label>Category <select id="f-category"><option value="">all</option>${options(categories)}</select></label>
 <label>Browser <select id="f-project"><option value="">all</option>${options(projects)}</select></label>
