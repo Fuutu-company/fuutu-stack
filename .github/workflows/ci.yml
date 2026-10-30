@@ -305,7 +305,7 @@ jobs:
               : `📦 [Run + report artifacts](${runUrl})`;
             const body = changed
               ? [
-                  "## ⚠️ Visual Changes — ${{ matrix.app }}",
+                  "## 🖼️ Visual Changes — ${{ matrix.app }}",
                   "",
                   "Updated baseline screenshots were committed to this branch. Review the PNG diffs under `.fuutu/visual-baselines/${{ matrix.app }}/` in \"Files changed\".",
                   reportsLine,
@@ -313,7 +313,7 @@ jobs:
                   "> Intentional → merge. Unintentional → fix the code and push; baselines regenerate.",
                 ].join("\n")
               : [
-                  "## ⚠️ Visual Regression Did Not Complete — ${{ matrix.app }}",
+                  "## 🔴 Visual Regression Did Not Complete — ${{ matrix.app }}",
                   "",
                   `Visual tests failed before baselines could update. Check the [run](${runUrl}).`,
                 ].join("\n");
