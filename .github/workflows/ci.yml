@@ -153,12 +153,10 @@ jobs:
           --health-timeout 5s --health-retries 5
     strategy:
       fail-fast: false
+      # Plain app list — keeps check names clean ("e2e (saas)") for required
+      # status checks; extra matrix vars would leak into the name.
       matrix:
-        include:
-          - app: saas
-            db: true
-          - app: marketing
-            db: false
+        app: [saas, marketing]
     env:
       # SWC materializes its native binding into a cache dir and validates
       # parent permissions — /github/home fails that check inside containers.
@@ -187,12 +185,12 @@ jobs:
           NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
           FUUTU_TELEMETRY_DISABLED=1
           EOF
-          if [ "${{ matrix.db }}" = "true" ]; then
+          if [ "${{ matrix.app }}" = "saas" ]; then
             echo "FUUTU_DISABLE_RATE_LIMIT=1" >> .env
             echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
           fi
       - name: Prepare database
-        if: matrix.db
+        if: matrix.app == 'saas'
         run: |
           pnpm db:push
           NODE_ENV=development pnpm db:seed
