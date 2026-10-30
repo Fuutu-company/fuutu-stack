@@ -2,8 +2,8 @@
   "app": "saas",
   "branch": "develop",
   "pr": null,
-  "sha": "212d2ad",
-  "generatedAt": "2026-10-30T20:19:17.718Z",
+  "sha": "5984ef4",
+  "generatedAt": "2026-10-30T21:24:11.377Z",
   "threshold": 0.005,
   "total": 55,
   "changed": 2,
@@ -41,8 +41,8 @@
       "viewport": "desktop",
       "project": "chromium",
       "status": "changed",
-      "diffPx": 10353,
-      "diffRatio": 0.011233723958333334,
+      "diffPx": 10638,
+      "diffRatio": 0.01154296875,
       "withinTolerance": false
     },
     {
@@ -74,10 +74,9 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 3904,
-      "diffRatio": 0.015074115689204477,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "auth--forgot-password-chromium-linux.png",
@@ -548,9 +547,10 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 2180,
+      "diffRatio": 0.007066336039934523,
+      "withinTolerance": false
     },
     {
       "file": "settings--api-keys-chromium-linux.png",
