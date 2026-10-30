@@ -161,6 +161,9 @@ jobs:
       # SWC materializes its native binding into a cache dir and validates
       # parent permissions — /github/home fails that check inside containers.
       SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
+      # Firefox/WebKit refuse to launch when $HOME is owned by another user
+      # (/github/home belongs to the runner uid, not the container user).
+      HOME: /tmp/pw-home
       # Container jobs reach services via their service name, not localhost.
       DATABASE_URL: postgresql://postgres:password@postgres:5432/fuutu-stack
       BETTER_AUTH_URL: http://localhost:3000
@@ -168,7 +171,9 @@ jobs:
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
     steps:
       - name: Generate CI auth secret
-        run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+        run: |
+          mkdir -p "$HOME"
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
         with:
           # PRs check out the branch tip — baseline commits must be pushable
