@@ -81,7 +81,7 @@ Releases are **manual**:
 
 1. Create a feature branch from `develop` (or `main` for hotfixes)
 2. Make your changes — follow the code conventions below
-3. Run `pnpm check` (lint + types + tests)
+3. Run `pnpm check:ci`, `pnpm check-types` and `pnpm test` (lint, types, tests)
 4. Open a PR targeting `develop` (or `main` for hotfixes)
 5. Fill in the PR template checklist
 6. CI must pass: `verify` (lint, types, translations, unit/integration tests), `build`, `e2e (saas)` / `e2e (marketing)`
@@ -105,7 +105,8 @@ Releases are **manual**:
 pnpm test              # all unit + integration tests
 pnpm test:e2e          # Playwright E2E (saas + marketing)
 pnpm check-types       # TypeScript type checking (all workspaces)
-pnpm check             # lint + types + tests (full pipeline)
+pnpm check             # Biome lint/format with autofix (mutating)
+pnpm check:ci          # Biome lint/format check, no writes — what CI runs
 ```
 
 ### Provider Swaps

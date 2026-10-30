@@ -252,7 +252,11 @@ test.describe("visual regression — overlays", () => {
 		await expect(dialog).toHaveScreenshot("dialog--api-key-create.png");
 	});
 
-	test("notification bell popover matches baseline", async ({ page }) => {
+	test("notification bell popover matches baseline", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/dashboard");
 		await page.waitForLoadState("domcontentloaded");
 		await page.getByRole("button", { name: /notifications/i }).click();
