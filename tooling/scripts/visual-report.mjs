@@ -295,7 +295,7 @@ const renderCard = (r) => {
   <header><h2>${esc(r.page)}</h2>${chips}<span class="badge" style="background:${color}">${label}</span></header>
   <p class="file">${esc(r.file)}</p>
   ${note}
-  <div class="imgs">${img(r.expectedImg, "expected")}${img(r.actualImg, r.status === "added" ? "actual (new)" : "actual")}${img(r.diffImg, "diff")}</div>
+  <div class="imgs${r.diffImg ? " has-diff" : ""}">${img(r.expectedImg, "expected")}${img(r.actualImg, r.status === "added" ? "actual (new)" : "actual")}${img(r.diffImg, "diff")}</div>
 </section>`;
 };
 
@@ -326,6 +326,9 @@ const html = `<!doctype html>
 body{background:#0a0a0b;color:#e4e4e7;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:2rem;max-width:1400px;margin:auto}
 h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 .meta{color:#a1a1aa;margin:.5rem 0 1.5rem}.meta code{color:#e4e4e7}
+.backnav{display:flex;gap:1.25rem;margin-bottom:.75rem;font-size:.85rem}
+.backnav a{color:#a1a1aa;text-decoration:none}
+.backnav a:hover{color:#e4e4e7;text-decoration:underline}
 .filters{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin:0 -2rem 1.5rem;padding:.75rem 2rem;background:rgba(10,10,11,.94);border-bottom:1px solid #27272a;backdrop-filter:blur(8px)}
 .filters label{display:flex;align-items:center;gap:.4rem;color:#a1a1aa;font-size:.85rem}
 .filters select,.filters input{background:#18181b;border:1px solid #27272a;border-radius:.5rem;color:#e4e4e7;font:inherit;padding:.35rem .6rem}
@@ -347,6 +350,11 @@ h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 .note{color:#fbbf24;font-size:.85rem;margin:.4rem 0}
 .note.warn{color:#f87171}
 .imgs{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem}
+/* Changed pages keep expected | actual | diff on one row — grid columns
+   never wrap the diff onto its own line (minmax(0,…) shrinks instead).
+   Mobile shots may wrap below the 390px cap rather than squeeze. */
+.imgs.has-diff{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.vp-mobile .imgs.has-diff{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 figure{flex:1 1 280px;min-width:0}
 figcaption{color:#a1a1aa;font-size:.8rem;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em}
 img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;image-rendering:auto}
@@ -354,6 +362,7 @@ img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;imag
 .vp-mobile figure{flex:0 1 390px;max-width:390px}
 .vp-tablet figure{flex:0 1 560px;max-width:560px}
 </style></head><body>
+<nav class="backnav"><a href="../">← ${summary.pr ? "PR" : esc(summary.branch)} overview</a><a href="../../">All reports</a></nav>
 <h1>Visual diff report — ${esc(app)}</h1>
 <p class="meta">branch <code>${esc(summary.branch)}</code>${summary.pr ? ` · PR <code>#${esc(summary.pr)}</code>` : ""} · commit <code>${esc(summary.sha)}</code> · ${esc(summary.generatedAt)} · ${(threshold * 100).toFixed(0)}% pixel tolerance</p>
 <nav class="filters">
