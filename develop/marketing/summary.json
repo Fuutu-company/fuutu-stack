@@ -2,14 +2,14 @@
   "app": "marketing",
   "branch": "develop",
   "pr": null,
-  "sha": "212d2ad",
-  "generatedAt": "2026-10-30T20:18:52.050Z",
+  "sha": "5984ef4",
+  "generatedAt": "2026-10-30T21:23:12.142Z",
   "threshold": 0.005,
   "total": 35,
-  "changed": 1,
+  "changed": 2,
   "added": 0,
   "removed": 0,
-  "unchanged": 34,
+  "unchanged": 33,
   "files": [
     {
       "file": "component--locale-switcher-chromium-linux.png",
@@ -327,9 +327,10 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 313112,
+      "diffRatio": 0.053265993815869696,
+      "withinTolerance": false
     },
     {
       "file": "marketing--landing-en-tablet-mobile-safari-linux.png",
