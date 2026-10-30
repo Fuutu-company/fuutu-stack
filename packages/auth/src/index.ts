@@ -242,7 +242,11 @@ const authOptions = {
 	advanced: {
 		defaultCookieAttributes: {
 			sameSite: authConfig.cookies.sameSite,
-			secure: env.NODE_ENV === "production",
+			// `secure` is intentionally NOT overridden — Better Auth derives it
+			// (and the `__Secure-` prefix) from the BETTER_AUTH_URL protocol.
+			// Forcing it on via NODE_ENV broke E2E on WebKit: http://localhost in
+			// CI + Secure cookies = session cookie dropped (WebKit only treats
+			// loopback as secure on Cocoa builds, not the Linux port).
 			httpOnly: authConfig.cookies.httpOnly,
 		},
 	},

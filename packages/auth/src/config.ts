@@ -40,7 +40,8 @@ export const authConfig = {
 	cookies: {
 		sameSite: "lax" as const,
 		httpOnly: true,
-		// `secure` is set dynamically based on NODE_ENV in the auth server.
+		// `secure` is NOT set here — Better Auth derives it (and the
+		// `__Secure-` cookie prefix) from the BETTER_AUTH_URL protocol.
 	},
 	accountLinking: {
 		enabled: true,
