@@ -253,8 +253,9 @@ const order = { changed: 0, added: 1, removed: 2, unchanged: 3 };
 // Within-category ordering: group variants of the same logical page
 // (meta.page already excludes viewport/locale/project tokens), groups
 // alphabetically with any group containing a changed/added variant floated
-// above unchanged groups. Within a group: viewport desktop → tablet →
-// mobile, then locale en → de, then project in the matrix order below.
+// above unchanged groups. Within a group: locale en → de first, then
+// viewport desktop → tablet → mobile, then project in the matrix order
+// below — so a page reads EN-desktop, EN-tablet, EN-mobile, DE-desktop, …
 const VIEWPORT_RANK = { desktop: 0, tablet: 1, mobile: 2 };
 const LOCALE_RANK = { en: 0, de: 1 };
 const PROJECT_RANK = {
@@ -279,18 +280,24 @@ const sortEntries = (entries) => {
 		(a, b) =>
 			Number(dirty.get(a.page)) - Number(dirty.get(b.page)) ||
 			a.page.localeCompare(b.page) ||
-			rank(VIEWPORT_RANK, a.viewport, 3) - rank(VIEWPORT_RANK, b.viewport, 3) ||
 			rank(LOCALE_RANK, a.locale, 2) - rank(LOCALE_RANK, b.locale, 2) ||
+			rank(VIEWPORT_RANK, a.viewport, 3) - rank(VIEWPORT_RANK, b.viewport, 3) ||
 			rank(PROJECT_RANK, a.project, 5) - rank(PROJECT_RANK, b.project, 5) ||
 			(a.project ?? "").localeCompare(b.project ?? "") ||
 			a.file.localeCompare(b.file),
 	);
 };
 
-const img = (src, label) =>
+// Every card renders the same expected | actual | diff grid — a missing
+// image becomes a labelled placeholder cell so card layouts never shift.
+const cell = (src, label, placeholder) =>
 	src
 		? `<figure><figcaption>${label}</figcaption><img src="${esc(src)}" alt="${label}" loading="lazy"></figure>`
-		: "";
+		: `<figure><figcaption>${label}</figcaption><div class="ph">${esc(placeholder)}</div></figure>`;
+
+// Locale flags — same countries as the in-app locale switcher
+// (iconify circle-flags gb/de), rendered as emoji for a self-contained file.
+const FLAGS = { en: "🇬🇧", de: "🇩🇪" };
 
 // Filter dimensions, built from whatever the filenames actually encode.
 const projects = [
@@ -318,7 +325,7 @@ const renderCard = (r) => {
 		.filter(([, v]) => v)
 		.map(
 			([k, v]) =>
-				`<span class="chip"><span class="k">${k}</span>${esc(v)}</span>`,
+				`<span class="chip"><span class="k">${k}</span>${k === "locale" ? `${FLAGS[v] ?? ""} ` : ""}${esc(v)}</span>`,
 		)
 		.join("");
 	const note =
@@ -327,11 +334,20 @@ const renderCard = (r) => {
 			: r.dimensionMismatch
 				? `<p class="note warn">${esc(r.dimensionMismatch)} — no pixel diff</p>`
 				: "";
+	const flag = r.locale
+		? `<span class="flag" title="${esc(r.locale)}">${FLAGS[r.locale] ?? ""}</span>`
+		: "";
+	const diffPlaceholder =
+		r.status === "unchanged"
+			? "no changes"
+			: r.status === "changed"
+				? "no pixel diff"
+				: "—";
 	return `<section class="card${r.viewport ? ` vp-${esc(r.viewport)}` : ""}" data-status="${r.status}" data-category="${esc(r.category)}" data-project="${esc(r.project ?? "")}" data-viewport="${esc(r.viewport ?? "")}" data-locale="${esc(r.locale ?? "")}" data-search="${esc(`${r.page} ${r.file}`.toLowerCase())}">
-  <header><h2>${esc(r.page)}</h2>${chips}<span class="badge" style="background:${color}">${label}</span></header>
+  <header>${flag}<h2>${esc(r.page)}</h2>${chips}<span class="badge" style="background:${color}">${label}</span></header>
   <p class="file">${esc(r.file)}</p>
   ${note}
-  <div class="imgs${r.diffImg ? " has-diff" : ""}">${img(r.expectedImg, "expected")}${img(r.actualImg, r.status === "added" ? "actual (new)" : "actual")}${img(r.diffImg, "diff")}</div>
+  <div class="imgs">${cell(r.expectedImg, "expected", r.status === "added" ? "no baseline" : "—")}${cell(r.actualImg, r.status === "added" ? "actual (new)" : "actual", r.status === "removed" ? "deleted" : "—")}${cell(r.diffImg, "diff", diffPlaceholder)}</div>
 </section>`;
 };
 
@@ -380,24 +396,29 @@ h1{font-size:1.5rem}h2{font-size:1.05rem;font-weight:600}
 .cat-heading{font-size:1.15rem;font-weight:700;text-transform:capitalize;margin-bottom:1rem;display:flex;align-items:baseline;gap:.6rem}
 .cat-meta{color:#71717a;font-size:.8rem;font-weight:400;text-transform:none}
 .card{background:#111113;border:1px solid #27272a;border-radius:.75rem;padding:1.25rem;margin-bottom:1.25rem}
+/* Status borders: changed screams amber, added/removed get quieter hints. */
+.card[data-status="changed"]{border-color:#f59e0b;box-shadow:0 0 0 1px rgba(245,158,11,.35),0 6px 24px rgba(245,158,11,.15)}
+.card[data-status="added"]{border-color:rgba(34,197,94,.55)}
+.card[data-status="removed"]{border-color:rgba(239,68,68,.55)}
 .card[hidden]{display:none}
 .card header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.flag{font-size:1.5rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
 .badge{color:#0a0a0b;border-radius:.375rem;padding:.1rem .55rem;font-size:.75rem;font-weight:600;margin-left:auto}
 .file{color:#71717a;font-size:.8rem;font-family:ui-monospace,Menlo,monospace;margin:.35rem 0}
 .note{color:#fbbf24;font-size:.85rem;margin:.4rem 0}
 .note.warn{color:#f87171}
-.imgs{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem}
-/* Changed pages keep expected | actual | diff on one row — grid columns
-   never wrap the diff onto its own line (minmax(0,…) shrinks instead).
-   Mobile shots may wrap below the 390px cap rather than squeeze. */
-.imgs.has-diff{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-.vp-mobile .imgs.has-diff{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-figure{flex:1 1 280px;min-width:0}
+/* Fixed 3-column grid on every card — expected | actual | diff — so card
+   layouts never shift between statuses. Missing content is a placeholder
+   cell, not a missing column. */
+.imgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:.75rem}
+figure{min-width:0}
 figcaption{color:#a1a1aa;font-size:.8rem;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em}
+.ph{display:grid;place-items:center;min-height:6rem;height:100%;border:1px dashed #3f3f46;border-radius:.5rem;color:#52525b;font-size:.8rem;font-style:italic}
 img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;image-rendering:auto}
-/* Cap narrow viewports so mobile shots don't dominate the layout. */
-.vp-mobile figure{flex:0 1 390px;max-width:390px}
-.vp-tablet figure{flex:0 1 560px;max-width:560px}
+/* Cap narrow viewports inside their grid cells so mobile shots don't
+   dominate the layout. */
+.vp-mobile figure{max-width:390px}
+.vp-tablet figure{max-width:560px}
 </style></head><body>
 <nav class="backnav"><a href="../">← ${summary.pr ? "PR" : esc(summary.branch)} overview</a><a href="../../">All reports</a></nav>
 <h1>Visual diff report — ${esc(app)}</h1>

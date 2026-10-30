@@ -59,23 +59,11 @@ jobs:
           fetch-depth: 0
       - name: Filter changed files
         id: filter
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.base_ref }}"
-            git fetch origin "$BASE" --depth=1
-            DIFF=$(git diff --name-only "origin/$BASE" HEAD)
-          else
-            BEFORE="${{ github.event.before }}"
-            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-              BEFORE="HEAD~1"
-            fi
-            DIFF=$(git diff --name-only "$BEFORE" HEAD)
-          fi
-          if echo "$DIFF" | grep -qvE '\.(md|png|jpe?g|svg|webp|gif|ico|mp4|woff2?|ttf)$|(^|/)(README|CHANGELOG|LICENSE)(\.md)?$'; then
-            echo "code=true" >> $GITHUB_OUTPUT
-          else
-            echo "code=false" >> $GITHUB_OUTPUT
-          fi
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_BEFORE: ${{ github.event.before }}
+        run: tooling/scripts/ci-changes-filter.sh
 
   # Lint + types + translations + unit/integration tests — one install.
   verify:
@@ -300,63 +288,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          repo="$GITHUB_WORKSPACE"
-          wt=/tmp/gh-pages
-          meta=/tmp/pr-meta.json
-          cd "$repo"
-          git worktree remove --force "$wt" 2>/dev/null || true
-          if ! git fetch origin gh-pages; then
-            echo "::warning::gh-pages branch not found — skipping index update"
-            exit 0
-          fi
-          git worktree add --detach "$wt" origin/gh-pages
-          cd "$wt"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          pushed=0
-          for attempt in 1 2 3; do
-            git fetch origin gh-pages
-            git reset --hard origin/gh-pages
-            # PR metadata → /tmp/pr-meta.json: title + head branch via
-            # `gh api` (failures tolerated → the "PR #N" fallback renders),
-            # last-commit time for the dir via `git log` (→ "updated").
-            echo '{}' > "$meta"
-            for d in "$wt"/pr-*/; do
-              [ -d "$d" ] || continue
-              name="$(basename "$d")"
-              n="${name#pr-}"
-              info="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$n" --jq '{title, branch: .head.ref}' 2>/dev/null || echo '{}')"
-              updated="$(git -C "$wt" log -1 --format=%cI -- "$name" 2>/dev/null || true)"
-              node -e '
-                const fs = require("node:fs");
-                const [metaPath, num, infoJson, upd] = process.argv.slice(1);
-                const m = JSON.parse(fs.readFileSync(metaPath, "utf8"));
-                let info = {};
-                try { info = JSON.parse(infoJson || "{}"); } catch {}
-                m[num] = { ...info, ...(upd ? { updated: upd } : {}) };
-                fs.writeFileSync(metaPath, JSON.stringify(m));
-              ' "$meta" "$n" "$info" "$updated"
-            done
-            node "$repo/tooling/scripts/visual-pages-index.mjs" "$wt" --pr-meta "$meta"
-            git add -A
-            if git diff --cached --quiet; then
-              echo "index unchanged — nothing to commit"
-              pushed=1
-              break
-            fi
-            git commit -m "chore(pages): update visual-report index [skip ci]"
-            if git push origin "HEAD:gh-pages"; then
-              pushed=1
-              break
-            fi
-          done
-          if [ "$pushed" != "1" ]; then
-            echo "::warning::Could not push gh-pages index update after 3 attempts (fork PR?). It regenerates on the next deploy."
-          fi
-          cd "$repo"
-          git worktree remove --force "$wt" 2>/dev/null || true
+        run: tooling/scripts/ci-pages-index.sh
 
       - name: Comment on visual result (PR)
         if: github.event_name == 'pull_request' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')

@@ -4,6 +4,12 @@ import { expect, scrollThroughPage, test } from "./fixtures";
  * Visual regression tests for the marketing site.
  * Covers all pages in EN + DE at desktop, tablet, and mobile viewports.
  *
+ * Each viewport is shot by exactly one project class — desktop and tablet
+ * on desktop-class projects (chromium/firefox/webkit), mobile on mobile
+ * projects (mobile-safari/mobile-chrome). Without the `isMobile` skips,
+ * every project would emit every viewport and each page+locale+viewport
+ * combo would be doubled.
+ *
  * Baselines are committed PNGs in .fuutu/visual-baselines/marketing/.
  * CI regenerates them on PRs and commits the diff back onto the
  * PR branch (plus on push to develop/main where allowed) —
@@ -37,7 +43,8 @@ test.describe("visual regression — marketing pages", () => {
 	// ── Desktop: EN + DE ──────────────────────────────────────────────
 
 	for (const { path, name } of PAGES) {
-		test(`en ${name} desktop matches baseline`, async ({ page }) => {
+		test(`en ${name} desktop matches baseline`, async ({ page, isMobile }) => {
+			test.skip(isMobile, "desktop baselines are shot by desktop projects");
 			await page.goto(`/en${path}`);
 			await page.waitForLoadState("domcontentloaded");
 			await scrollThroughPage(page);
@@ -46,7 +53,8 @@ test.describe("visual regression — marketing pages", () => {
 			});
 		});
 
-		test(`de ${name} desktop matches baseline`, async ({ page }) => {
+		test(`de ${name} desktop matches baseline`, async ({ page, isMobile }) => {
+			test.skip(isMobile, "desktop baselines are shot by desktop projects");
 			await page.goto(`/de${path}`);
 			await page.waitForLoadState("domcontentloaded");
 			await scrollThroughPage(page);
@@ -72,7 +80,14 @@ test.describe("visual regression — marketing pages", () => {
 		for (const { path, name } of KEY_PAGES) {
 			test(`en ${name} ${viewport.label} matches baseline`, async ({
 				page,
+				isMobile,
 			}) => {
+				test.skip(
+					viewport.label === "mobile" ? !isMobile : isMobile,
+					`${viewport.label} baselines are shot by ${
+						viewport.label === "mobile" ? "mobile" : "desktop"
+					} projects`,
+				);
 				await page.setViewportSize({
 					width: viewport.width,
 					height: viewport.height,
@@ -106,7 +121,8 @@ test.describe("visual regression — components", () => {
 		await expect(menu).toHaveScreenshot("component--locale-switcher.png");
 	});
 
-	test("mobile nav menu matches baseline", async ({ page }) => {
+	test("mobile nav menu matches baseline", async ({ page, isMobile }) => {
+		test.skip(!isMobile, "mobile nav baselines are shot by mobile projects");
 		await page.setViewportSize({ width: 375, height: 812 });
 		await page.goto("/en");
 		await page.waitForLoadState("domcontentloaded");
