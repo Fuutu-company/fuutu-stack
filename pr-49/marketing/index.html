@@ -44,21 +44,21 @@ img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;imag
 </style></head><body>
 <nav class="backnav"><a href="../">← PR overview</a><a href="../../">All reports</a></nav>
 <h1>Visual diff report — marketing</h1>
-<p class="meta">branch <code>49/merge</code> · PR <code>#49</code> · commit <code>861ebb0</code> · 2026-10-30T12:52:03.762Z · 2% pixel tolerance</p>
+<p class="meta">branch <code>49/merge</code> · PR <code>#49</code> · commit <code>fba3020</code> · 2026-10-30T13:27:41.087Z · 2% pixel tolerance</p>
 <nav class="filters">
 <label>Category <select id="f-category"><option value="">all</option><option value="component">component</option><option value="legal">legal</option><option value="marketing">marketing</option></select></label>
 <label>Browser <select id="f-project"><option value="">all</option><option value="chromium">chromium</option><option value="mobile-safari">mobile-safari</option></select></label>
 <label>Device <select id="f-viewport"><option value="">all</option><option value="desktop">desktop</option><option value="mobile">mobile</option><option value="tablet">tablet</option></select></label>
-<label>Status <select id="f-status"><option value="">all</option><option value="unchanged">unchanged</option></select></label>
+<label>Status <select id="f-status"><option value="">all</option><option value="changed">changed</option><option value="unchanged">unchanged</option></select></label>
 <input id="f-search" type="search" placeholder="Search pages…" autocomplete="off">
 <span class="counts" id="counts"></span>
 </nav>
 <div class="chips">
 <span class="chip">55 pages</span>
-<span class="chip" style="color:#f59e0b">0 changed</span>
+<span class="chip" style="color:#f59e0b">1 changed</span>
 <span class="chip" style="color:#22c55e">0 added</span>
 
-<span class="chip">55 unchanged</span>
+<span class="chip">54 unchanged</span>
 </div>
 <div class="cat-group" data-category="component">
 <h2 class="cat-heading">component<span class="cat-meta">3 pages · 0 changed</span></h2>
@@ -157,7 +157,13 @@ img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;imag
 </section>
 </div>
 <div class="cat-group" data-category="marketing">
-<h2 class="cat-heading">marketing<span class="cat-meta">40 pages · 0 changed</span></h2>
+<h2 class="cat-heading">marketing<span class="cat-meta">40 pages · 1 changed</span></h2>
+<section class="card vp-tablet" data-status="changed" data-category="marketing" data-project="mobile-safari" data-viewport="tablet" data-locale="en" data-search="marketing--landing marketing--landing-en-tablet-mobile-safari-linux.png">
+  <header><h2>marketing--landing</h2><span class="chip"><span class="k">category</span>marketing</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>tablet</span><span class="chip"><span class="k">locale</span>en</span><span class="badge" style="background:#f59e0b">changed</span></header>
+  <p class="file">marketing--landing-en-tablet-mobile-safari-linux.png</p>
+  <p class="note">312,545 px differ (5.32%)</p>
+  <div class="imgs has-diff"><figure><figcaption>expected</figcaption><img src="images/marketing--landing-en-tablet-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/marketing--landing-en-tablet-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure><figure><figcaption>diff</figcaption><img src="images/marketing--landing-en-tablet-mobile-safari-linux-diff.png" alt="diff" loading="lazy"></figure></div>
+</section>
 <section class="card vp-desktop" data-status="unchanged" data-category="marketing" data-project="chromium" data-viewport="desktop" data-locale="de" data-search="marketing--blog marketing--blog-de-desktop-chromium-linux.png">
   <header><h2>marketing--blog</h2><span class="chip"><span class="k">category</span>marketing</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="chip"><span class="k">locale</span>de</span><span class="badge" style="background:#71717a">unchanged</span></header>
   <p class="file">marketing--blog-de-desktop-chromium-linux.png</p>
@@ -343,12 +349,6 @@ img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;imag
   <p class="file">marketing--landing-en-tablet-chromium-linux.png</p>
   
   <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/marketing--landing-en-tablet-chromium-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/marketing--landing-en-tablet-chromium-linux-actual.png" alt="actual" loading="lazy"></figure></div>
-</section>
-<section class="card vp-tablet" data-status="unchanged" data-category="marketing" data-project="mobile-safari" data-viewport="tablet" data-locale="en" data-search="marketing--landing marketing--landing-en-tablet-mobile-safari-linux.png">
-  <header><h2>marketing--landing</h2><span class="chip"><span class="k">category</span>marketing</span><span class="chip"><span class="k">browser</span>mobile-safari</span><span class="chip"><span class="k">device</span>tablet</span><span class="chip"><span class="k">locale</span>en</span><span class="badge" style="background:#71717a">unchanged</span></header>
-  <p class="file">marketing--landing-en-tablet-mobile-safari-linux.png</p>
-  
-  <div class="imgs"><figure><figcaption>expected</figcaption><img src="images/marketing--landing-en-tablet-mobile-safari-linux-expected.png" alt="expected" loading="lazy"></figure><figure><figcaption>actual</figcaption><img src="images/marketing--landing-en-tablet-mobile-safari-linux-actual.png" alt="actual" loading="lazy"></figure></div>
 </section>
 <section class="card vp-desktop" data-status="unchanged" data-category="marketing" data-project="chromium" data-viewport="desktop" data-locale="de" data-search="marketing--pricing marketing--pricing-de-desktop-chromium-linux.png">
   <header><h2>marketing--pricing</h2><span class="chip"><span class="k">category</span>marketing</span><span class="chip"><span class="k">browser</span>chromium</span><span class="chip"><span class="k">device</span>desktop</span><span class="chip"><span class="k">locale</span>de</span><span class="badge" style="background:#71717a">unchanged</span></header>
