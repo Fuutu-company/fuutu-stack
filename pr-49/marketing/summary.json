@@ -2,14 +2,14 @@
   "app": "marketing",
   "branch": "49/merge",
   "pr": "49",
-  "sha": "b16dcab",
-  "generatedAt": "2026-10-30T11:04:54.253Z",
+  "sha": "63bcb32",
+  "generatedAt": "2026-10-30T12:44:56.319Z",
   "threshold": 0.02,
   "total": 55,
-  "changed": 2,
+  "changed": 0,
   "added": 0,
   "removed": 0,
-  "unchanged": 53,
+  "unchanged": 55,
   "files": [
     {
       "file": "component--locale-switcher-chromium-linux.png",
@@ -513,10 +513,9 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "chromium",
-      "status": "changed",
-      "diffPx": 313112,
-      "diffRatio": 0.053265993815869696,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "marketing--landing-en-tablet-mobile-safari-linux.png",
@@ -525,10 +524,9 @@
       "locale": "en",
       "viewport": "tablet",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 312545,
-      "diffRatio": 0.0531625911713477,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "marketing--pricing-de-desktop-chromium-linux.png",
