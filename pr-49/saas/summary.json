@@ -2,14 +2,14 @@
   "app": "saas",
   "branch": "49/merge",
   "pr": "49",
-  "sha": "998f25b",
-  "generatedAt": "2026-10-30T19:31:24.319Z",
+  "sha": "b352715",
+  "generatedAt": "2026-10-30T19:56:49.180Z",
   "threshold": 0.005,
   "total": 55,
-  "changed": 2,
+  "changed": 1,
   "added": 0,
   "removed": 0,
-  "unchanged": 53,
+  "unchanged": 54,
   "files": [
     {
       "file": "admin--admin-chromium-linux.png",
@@ -40,10 +40,9 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "changed",
-      "diffPx": 7926,
-      "diffRatio": 0.008600260416666667,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "admin--audit-logs-mobile-safari-linux.png",
