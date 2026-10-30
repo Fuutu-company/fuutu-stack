@@ -20,7 +20,7 @@
  * **not** the downstream app version and **not** the @fuutu/api package
  * version. It is surfaced by:
  *   - `GET /api/version`            (ops / telemetry correlation)
- *   - Build-time telemetry ping
+ *   - Telemetry ping (build-time + runtime)
  *   - `X-Framework` response header (`Fuutu-Stack/<version>`)
  */
 export const KIT_VERSION = "1.0.0" as const;
@@ -64,7 +64,8 @@ export const config = {
 			githubUrl: "https://github.com/Fuutu-company/fuutu-stack",
 		},
 		/**
-		 * Provider-swappable domains shipped by the kit (see AGENTS.md §2).
+		 * Domains that ship with a swappable provider interface — one
+		 * active provider each, selected via its own `<domain>Config`.
 		 * Consumers needing the count use `config.app.swappableDomains.length`.
 		 */
 		swappableDomains: [

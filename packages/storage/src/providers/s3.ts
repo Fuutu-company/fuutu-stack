@@ -4,6 +4,7 @@ import {
 	ListObjectsV2Command,
 	PutObjectCommand,
 	S3Client,
+	S3ServiceException,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@fuutu/env/saas";
@@ -28,6 +29,12 @@ import type {
  * handshakes) and the client is safe to share across concurrent requests.
  */
 const log = createLogger({ scope: "storage:s3" });
+
+/**
+ * Hard cap on list pagination — a misbehaving backend that keeps
+ * returning a `NextContinuationToken` would otherwise loop forever.
+ */
+const MAX_LIST_PAGES = 100;
 
 let _client: S3Client | null = null;
 
@@ -147,19 +154,40 @@ export const s3StorageProvider: StorageProvider = {
 
 	async listObjects(bucket: string, prefix?: string): Promise<StorageObject[]> {
 		const client = getClient();
-		const res = await client.send(
-			new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix }),
-		);
-		return (res.Contents ?? [])
-			.filter(
-				(o): o is Required<Pick<typeof o, "Key" | "Size" | "LastModified">> =>
-					Boolean(o.Key && o.Size !== undefined && o.LastModified),
-			)
-			.map((o) => ({
-				key: o.Key,
-				size: o.Size,
-				lastModified: o.LastModified,
-			}));
+		// ListObjectsV2 returns at most 1000 objects per call — paginate on
+		// IsTruncated/NextContinuationToken so results are never silently
+		// truncated.
+		const objects: StorageObject[] = [];
+		let continuationToken: string | undefined;
+		let pages = 0;
+		do {
+			pages += 1;
+			if (pages > MAX_LIST_PAGES) {
+				throw new Error(
+					`[storage:s3] listObjects exceeded ${MAX_LIST_PAGES} pages for bucket "${bucket}" — aborting (stuck continuation token).`,
+				);
+			}
+			const res = await client.send(
+				new ListObjectsV2Command({
+					Bucket: bucket,
+					Prefix: prefix,
+					ContinuationToken: continuationToken,
+				}),
+			);
+			for (const o of res.Contents ?? []) {
+				if (o.Key && o.Size !== undefined && o.LastModified) {
+					objects.push({
+						key: o.Key,
+						size: o.Size,
+						lastModified: o.LastModified,
+					});
+				}
+			}
+			continuationToken = res.IsTruncated
+				? res.NextContinuationToken
+				: undefined;
+		} while (continuationToken);
+		return objects;
 	},
 
 	async getObjectStream(
@@ -171,7 +199,9 @@ export const s3StorageProvider: StorageProvider = {
 			const res = await client.send(
 				new GetObjectCommand({ Bucket: bucket, Key: key }),
 			);
-			const body = res.Body as ReadableStream<Uint8Array> | undefined;
+			// AWS SDK v3 returns a Node Readable with SdkStreamMixin in the
+			// Node runtime — transformToWebStream() yields a true web stream.
+			const body = res.Body?.transformToWebStream();
 			if (!body) return null;
 			return {
 				body,
@@ -179,17 +209,14 @@ export const s3StorageProvider: StorageProvider = {
 				contentLength: res.ContentLength ?? null,
 			};
 		} catch (err) {
-			const name = (err as { name?: string }).name ?? "";
-			if (name === "NoSuchKey" || name === "NotFound") {
+			if (
+				err instanceof S3ServiceException &&
+				(err.name === "NoSuchKey" || err.name === "NotFound")
+			) {
 				log.warn("getObjectStream miss", { bucket, key });
 				return null;
 			}
-			log.error("getObjectStream failed", {
-				bucket,
-				key,
-				name,
-				err: String(err),
-			});
+			log.error("getObjectStream failed", { bucket, key, err });
 			throw err;
 		}
 	},

@@ -12,6 +12,7 @@ export const prismaAuditSink: AuditSink = {
 	async record(event) {
 		await createAuditLog({
 			userId: event.userId ?? null,
+			organizationId: event.organizationId ?? null,
 			action: event.action,
 			ip: event.ip ?? null,
 			userAgent: event.userAgent ?? null,

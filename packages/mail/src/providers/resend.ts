@@ -37,6 +37,7 @@ export const resendProvider: EmailProvider = {
 				text: message.text,
 				reply_to: message.replyTo,
 			}),
+			signal: AbortSignal.timeout(10_000),
 		});
 
 		if (!res.ok) {

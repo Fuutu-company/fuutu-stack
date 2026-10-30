@@ -12,32 +12,8 @@ import { TopUpSection } from "./topup-section";
 
 const log = createLogger({ scope: "org-credit-balance-view" });
 
-type CreditBalanceSummary = {
-	meterKey: string;
-	label: string;
-	unit: string;
-	recurring: {
-		granted: number;
-		consumed: number;
-		remaining: number;
-		periodEnd: Date | null;
-	};
-	topups: {
-		total: number;
-		consumed: number;
-		remaining: number;
-		packageCount: number;
-	};
-	total: number;
-};
-
-type CreditEvent = {
-	id: string;
-	meterKey: string;
-	amount: number;
-	source: string;
-	createdAt: Date;
-};
+type BalanceResult = Awaited<ReturnType<typeof orpc.credits.balance.call>>;
+type HistoryResult = Awaited<ReturnType<typeof orpc.credits.history.call>>;
 
 interface OrgCreditBalanceViewProps {
 	slug: string;
@@ -47,8 +23,8 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 	const t = useTranslations("credits");
 	const locale = useLocale();
 	const { data: activeOrg } = authClient.useActiveOrganization();
-	const [balances, setBalances] = useState<CreditBalanceSummary[]>([]);
-	const [history, setHistory] = useState<CreditEvent[]>([]);
+	const [balances, setBalances] = useState<BalanceResult["balances"]>([]);
+	const [history, setHistory] = useState<HistoryResult["events"]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -62,10 +38,8 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 				orpc.credits.balance.call({ organizationId: activeOrg.id }),
 				orpc.credits.history.call({ organizationId: activeOrg.id }),
 			]);
-			setBalances(
-				(balanceRes as { balances: CreditBalanceSummary[] }).balances ?? [],
-			);
-			setHistory((historyRes as { events: CreditEvent[] }).events ?? []);
+			setBalances(balanceRes.balances ?? []);
+			setHistory(historyRes.events ?? []);
 		} catch (err) {
 			log.warn("org credits fetch failed", { err });
 			setError(t("loadError"));
@@ -112,7 +86,11 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 									<div className="flex items-center gap-3">
 										<Coins className="size-5 text-muted-foreground" />
 										<div>
-											<p className="font-medium">{balance.label}</p>
+											<p className="font-medium">
+												{t.has(`meters.${balance.meterKey}`)
+													? t(`meters.${balance.meterKey}`)
+													: balance.label}
+											</p>
 											<p className="text-muted-foreground text-xs">
 												{t("total")}: {t("remaining", { count: balance.total })}
 											</p>
@@ -195,7 +173,9 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 								>
 									<div>
 										<p className="font-medium text-sm">
-											{t(`source.${event.source}`) || event.source}
+											{t.has(`source.${event.source}`)
+												? t(`source.${event.source}`)
+												: event.source}
 										</p>
 										<p className="text-muted-foreground text-xs">
 											{new Date(event.createdAt).toLocaleString(locale)}

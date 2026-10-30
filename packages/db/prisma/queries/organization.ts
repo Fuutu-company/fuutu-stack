@@ -41,7 +41,24 @@ export const getInvitationOrganizationId = (invitationId: string) =>
 export const findPendingInvitation = (email: string) =>
 	db.invitation.findFirst({
 		where: {
-			email: email.toLowerCase(),
+			email: { equals: email, mode: "insensitive" },
+			status: "pending",
+			expiresAt: { gt: new Date() },
+		},
+		select: { id: true },
+	});
+
+/**
+ * Invite-bound lookup: the pending invitation must exist by id AND match
+ * the signing-up email (case-insensitive) — binds `/sign-up/email` to the
+ * exact invite token so an invitee's link can't be reused for another
+ * address.
+ */
+export const findPendingInvitationById = (id: string, email: string) =>
+	db.invitation.findFirst({
+		where: {
+			id,
+			email: { equals: email, mode: "insensitive" },
 			status: "pending",
 			expiresAt: { gt: new Date() },
 		},

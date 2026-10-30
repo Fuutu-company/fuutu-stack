@@ -10,6 +10,7 @@ import {
 
 export { PERMISSIONS } from "@fuutu/rbac";
 
+import { type EvlogOrpcContext, evlog } from "@fuutu/logs/orpc";
 import { ORPCError, os } from "@orpc/server";
 import type { Context } from "../context";
 import { type AuthorizeOptions, runAuthorize } from "./middleware/authorize";
@@ -17,7 +18,16 @@ import { type AuthorizeOptions, runAuthorize } from "./middleware/authorize";
 // System AC — checks the user's SYSTEM role (Better-Auth admin plugin: "admin"/"user")
 const systemAC = new SystemAccessControl(SYSTEM_POLICY);
 
-export const publicProcedure = os.$context<Context>();
+// evlog() records `operation` (procedure path) on the request wide event,
+// captures thrown errors onto it, and translates EvlogError → ORPCError so
+// catalog errors keep their code/status on the wire. The request logger
+// itself is injected by withEvlog() around the fetch handlers (handler.ts);
+// when a procedure runs without it (e.g. `call()` in tests) the middleware
+// is a no-op — so `log` stays Partial<> here (typed as possibly absent)
+// rather than the hard `EvlogOrpcContext` the evlog docs prescribe.
+export const publicProcedure = os
+	.$context<Context & Partial<EvlogOrpcContext>>()
+	.use(evlog<Context & Partial<EvlogOrpcContext>>());
 
 export const protectedProcedure = publicProcedure.use(
 	async ({ context, next }, input) => {

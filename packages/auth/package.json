@@ -27,8 +27,7 @@
 		"@fuutu/utils": "workspace:*",
 		"@fuutu/webhooks": "workspace:*",
 		"@better-auth/passkey": "catalog:",
-		"better-auth": "catalog:",
-		"zod": "catalog:"
+		"better-auth": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",

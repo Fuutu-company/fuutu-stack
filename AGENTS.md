@@ -86,7 +86,7 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 
 ## 2 · Tech Stack
 
-> Kit defaults — swap any provider without editing this file. Active choices: `pnpm-workspace.yaml` (catalog) + `packages/<domain>/src/config.ts`.
+> Kit defaults — swap any provider without editing this file. Active choices: `pnpm-workspace.yaml` (catalog) + `packages/<domain>/src/config.ts` (mail: `config/defaults.ts` + `resolve.ts`).
 
 | Layer | Default |
 |---|---|
@@ -94,9 +94,9 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 | Language | TypeScript 5 strict, ESM only (`"type": "module"`) |
 | Framework | Next.js 16 (App Router, React 19.2, Turbopack) |
 | Backend | Hono 4 at `/api/[[...rest]]` |
-| API | oRPC 1.12 — type-safe RPC + auto OpenAPI |
+| API | oRPC 1.15 — type-safe RPC + auto OpenAPI |
 | Database | PostgreSQL 16 + ORM of your choice (`packages/db/`) |
-| Auth | Better Auth 1.6 (`packages/auth/`) |
+| Auth | Better Auth 1.7 (`packages/auth/`) |
 | Styling | Tailwind CSS v4 (OKLCH, `packages/config/theme.css`) |
 | UI | `@fuutu/ui` — shadcn/Radix, **framework-agnostic** (zero `next/*` imports) |
 | i18n | next-intl 4 + `@fuutu/i18n` (en, de) |
@@ -116,6 +116,8 @@ You are a **Senior Full-Stack Engineer** on the **Fuutu Stack** — a production
 | Logs | `packages/logs/` |
 | ORM/DB | `packages/db/` |
 
+Exception: `packages/db/` has no `<Domain>Provider`/config flag — callers use typed query functions, so an ORM swap is a code change inside one package, not a config flip.
+
 ---
 
 ## 3 · Workspace Structure
@@ -129,13 +131,13 @@ fuutu-stack/
 │   └── docs/          # docs template    — Port 4000 — write YOUR product docs here
 ├── packages/
 │   ├── config/        # cross-cutting config + theme.css (OKLCH)
-│   ├── env/           # env validation — saas.ts + marketing.ts + docs.ts
-│   ├── db/            # DB client + schema + queries (ORM-agnostic export)
+│   ├── env/           # env validation — saas.ts + marketing.ts + docs.ts + public.ts
+│   ├── db/            # DB client + schema + queries (ORM-swappable — swap = reimplement query fns; Prisma types are part of the contract)
 │   ├── auth/          # Better Auth server + client + authConfig + hooks
 │   ├── api/           # Hono app + oRPC router + procedures + middleware
 │   ├── ui/            # shadcn components (framework-agnostic, no next/* imports)
 │   ├── i18n/          # translations (en/de) + i18nConfig + utils
-│   ├── mail/          # MailProvider interface + templates + active provider
+│   ├── mail/          # EmailProvider interface + templates + active provider
 │   ├── payments/      # PaymentProvider interface + PLANS/FEATURE_CATALOG/LIMITS + active provider
 │   ├── credits/       # credit meters + grant/consume/reset over @fuutu/db
 │   ├── storage/       # StorageProvider interface + active provider
@@ -145,8 +147,8 @@ fuutu-stack/
 │   ├── notifications/ # in-app notifications + channel fan-out (email etc.)
 │   ├── cron/          # job registry + runners + schedule honoring
 │   ├── search/        # SearchProvider interface + tenant-scoped queries
-│   ├── utils/         # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl
-│   ├── content/       # MDX collections: posts, changelog, legal
+│   ├── utils/         # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl, rate-limit
+│   ├── content/       # TSX collections: posts, changelog, legal
 │   ├── license/       # checkLicense(), getLicenseMode() — soft-fails to "oss"
 │   ├── telemetry/     # bin/ping.mjs (build-time) + pingTelemetry() (runtime)
 │   ├── webhooks/      # Webhook delivery worker (sign, deliver, retry)
@@ -168,7 +170,7 @@ pnpm dev:saas / dev:marketing
 pnpm check                  # Biome format+lint --write  ← run before every commit
 pnpm check-types            # tsc --noEmit all workspaces ← run before every commit
 pnpm build
-pnpm db:start / db:push / db:migrate / db:generate / db:seed / db:studio / db:stop
+pnpm db:start / db:watch / db:stop / db:down / db:migrate / db:push / db:generate / db:seed / db:studio
 pnpm test:e2e / test:e2e:saas / test:e2e:marketing
 ```
 
@@ -184,16 +186,17 @@ pnpm test:e2e / test:e2e:saas / test:e2e:marketing
 // ✅
 import { z } from "zod";
 import type { User } from "@/types";
-import { db } from "@fuutu/db";
+import { getUserById } from "@fuutu/db";
 const input = z.object({ id: z.string().uuid() });
-export async function getUserById(raw: unknown): Promise<User | null> {
+export async function findUser(raw: unknown): Promise<User | null> {
   const { id } = input.parse(raw);
-  return db.user.findById(id); // use whatever your DB client exposes
+  return getUserById(id); // only exported query fns — the raw client is internal
 }
-// ❌ any, no validation, console.log in prod
+// ❌ raw client (arch-guard banned), any, no validation, console.log in prod
+import { db } from "@fuutu/db/internal/client";
 export async function get(x: any) {
   console.log("fetch", x);
-  return db.user.findById(x);
+  return db.user.findUnique({ where: { id: x } });
 }
 ```
 
@@ -352,7 +355,7 @@ Commit secrets/`.env` · edit generated files (`node_modules/`, `.next/`, `dist/
 | SaaS proxy | `apps/saas/src/proxy.ts` |
 | Marketing proxy | `apps/marketing/src/proxy.ts` |
 | Auth helpers (app) | `apps/saas/src/lib/auth-server.ts` |
-| Provider configs | `packages/<domain>/src/config.ts` |
+| Provider configs | `packages/<domain>/src/config.ts` (mail: `config/defaults.ts` + `resolve.ts`) |
 | Dep versions | `pnpm-workspace.yaml` |
 | Rules / skills / agents | host harness dirs — see host adapter |
 
@@ -419,3 +422,14 @@ When the host supports named subagents, prefer: `harvest` → `verifier` → `im
 ---
 
 **Final rule**: between two valid options, pick the one that is **replaceable, extensible, and maintainable**. That is the core principle of the Fuutu Stack.
+
+<!-- BEGIN:turborepo-agent-rules -->
+
+# This is NOT the Turborepo you know
+
+Turborepo configuration, task behavior, and CLI commands can vary between installed versions and may differ from your training data. Resolve the `turbo` package from this file's directory or relevant workspace; in monorepos, it may not be visible from the repository root. For example, run `node -p "require.resolve('turbo/package.json')"` from a workspace that depends on `turbo`.
+
+Read `docs/README.md` inside that installed package first, then read the relevant pages from its `docs/` directory before changing Turborepo configuration or commands. Heed deprecation notices. These bundled docs match the installed package version and are available without network access.
+
+This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
+<!-- END:turborepo-agent-rules -->

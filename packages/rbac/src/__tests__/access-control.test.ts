@@ -3,7 +3,11 @@ import {
 	createResourcePermissions,
 	OrgAccessControl,
 	type OrgAccessPolicy,
+	type OrgRole,
 	type Permission,
+	SystemAccessControl,
+	type SystemAccessPolicy,
+	type SystemRole,
 } from "../index";
 
 const posts = createResourcePermissions("posts");
@@ -112,6 +116,62 @@ describe("OrgAccessControl.permissionsFor()", () => {
 			owner: [posts.view],
 		});
 		expect(dupAc.permissionsFor("owner")).toEqual([posts.view]);
+	});
+});
+
+describe("adversarial roles and malformed policies", () => {
+	const sysAc = new SystemAccessControl({
+		user: [posts.view],
+		admin: [posts.create, posts.update],
+	});
+
+	it("denies an unknown role in OrgAccessControl", () => {
+		expect(ac.can("superuser" as OrgRole, posts.view)).toBe(false);
+	});
+
+	it("denies an unknown role in SystemAccessControl", () => {
+		expect(sysAc.can("superuser" as SystemRole, posts.view)).toBe(false);
+	});
+
+	it("denies an org role in SystemAccessControl (no cross-system leak)", () => {
+		expect(sysAc.can("owner" as SystemRole, posts.view)).toBe(false);
+	});
+
+	it("denies a system role in OrgAccessControl (no cross-system leak)", () => {
+		expect(ac.can("user" as OrgRole, posts.view)).toBe(false);
+	});
+
+	it("can() returns false when the policy is missing a role key (system)", () => {
+		const malformed: Partial<SystemAccessPolicy> = { user: [posts.view] };
+		const partial = new SystemAccessControl(malformed as SystemAccessPolicy);
+		expect(partial.can("admin", posts.create)).toBe(false);
+	});
+
+	it("permissionsFor() does not throw when the policy is missing a role key (system)", () => {
+		const malformed: Partial<SystemAccessPolicy> = { user: [posts.view] };
+		const partial = new SystemAccessControl(malformed as SystemAccessPolicy);
+		expect(() => partial.permissionsFor("admin")).not.toThrow();
+		expect(partial.permissionsFor("admin")).toEqual([posts.view]);
+	});
+
+	it("can() returns false when the policy is missing a role key (org)", () => {
+		const malformed: Partial<OrgAccessPolicy> = {
+			member: [posts.view],
+			admin: [posts.create],
+		};
+		const partial = new OrgAccessControl(malformed as OrgAccessPolicy);
+		expect(partial.can("owner", posts.delete)).toBe(false);
+		expect(partial.can("owner", posts.view)).toBe(true);
+	});
+
+	it("permissionsFor() does not throw when the policy is missing a role key (org)", () => {
+		const malformed: Partial<OrgAccessPolicy> = {
+			member: [posts.view],
+			admin: [posts.create],
+		};
+		const partial = new OrgAccessControl(malformed as OrgAccessPolicy);
+		expect(() => partial.permissionsFor("owner")).not.toThrow();
+		expect(partial.permissionsFor("owner")).toEqual([posts.view, posts.create]);
 	});
 });
 

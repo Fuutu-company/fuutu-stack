@@ -53,10 +53,21 @@ export const countConversations = (
 	});
 };
 
-export const getConversation = async (id: string, userId: string) => {
+export const getConversation = async (
+	id: string,
+	userId: string,
+	opts: { take?: number } = {},
+) => {
 	const owned = await db.chatConversation.findFirst({
 		where: { id, userId },
-		include: { messages: { orderBy: { createdAt: "asc" } } },
+		include: {
+			messages:
+				opts.take === undefined
+					? { orderBy: { createdAt: "asc" } }
+					: // Newest N, descending — callers reverse back to
+						// chronological order before use.
+						{ orderBy: { createdAt: "desc" }, take: opts.take },
+		},
 	});
 	return owned;
 };
@@ -110,8 +121,13 @@ export const listMessages = async (
 	});
 };
 
-export const countMessages = (conversationId: string) =>
-	db.chatMessage.count({ where: { conversationId } });
+export const countMessages = async (conversationId: string, userId: string) => {
+	const owned = await db.chatConversation.findFirst({
+		where: { id: conversationId, userId },
+	});
+	if (!owned) return null;
+	return db.chatMessage.count({ where: { conversationId } });
+};
 
 export const updateConversationTitle = async (
 	id: string,

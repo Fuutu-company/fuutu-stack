@@ -6,9 +6,11 @@ import { storageRouter } from "../modules/storage/router";
 
 vi.mock("@fuutu/storage", () => ({
 	resolveStorageProvider: vi.fn(),
-	resolveBucket: vi.fn((bucket: string) => bucket),
+	resolveBucketAlias: vi.fn((alias: string) => alias),
 	resolveMaxUploadBytes: vi.fn(() => 5 * 1024 * 1024),
+	STORAGE_BUCKET_ALIASES: ["avatars", "organization-logos"],
 	StorageBucketError: class StorageBucketError extends Error {},
+	StorageInputError: class StorageInputError extends Error {},
 }));
 
 vi.mock("@fuutu/ai", () => ({
@@ -184,7 +186,7 @@ describe("storage.upload.createPresigned", () => {
 			call(
 				storageRouter.upload.createPresigned,
 				{
-					bucket: "",
+					bucket: "" as never,
 					key: "test.png",
 					contentType: "image/png",
 					contentLength: 1024,
@@ -194,10 +196,27 @@ describe("storage.upload.createPresigned", () => {
 		).rejects.toBeDefined();
 	});
 
-	it("rejects unconfigured bucket name", async () => {
-		const { resolveBucket } = await import("@fuutu/storage");
-		vi.mocked(resolveBucket).mockImplementation(() => {
-			throw new Error("Bucket not configured");
+	it("rejects a traversal key with BAD_REQUEST", async () => {
+		await expect(
+			call(
+				storageRouter.upload.createPresigned,
+				{
+					bucket: "avatars",
+					key: "../escape.png",
+					contentType: "image/png",
+					contentLength: 1024,
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	});
+
+	it("rejects an unconfigured bucket alias with BAD_REQUEST", async () => {
+		const { resolveBucketAlias, StorageBucketError } = await import(
+			"@fuutu/storage"
+		);
+		vi.mocked(resolveBucketAlias).mockImplementationOnce(() => {
+			throw new StorageBucketError("unknown alias");
 		});
 		vi.mocked(resolveStorageProvider).mockReturnValue(mockProvider as never);
 
@@ -205,16 +224,35 @@ describe("storage.upload.createPresigned", () => {
 			call(
 				storageRouter.upload.createPresigned,
 				{
-					bucket: "secret-backups",
+					bucket: "avatars",
 					key: "test.png",
 					contentType: "image/png",
 					contentLength: 1024,
 				},
 				{ context: authenticatedContext },
 			),
-		).rejects.toBeDefined();
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	});
 
-		vi.mocked(resolveBucket).mockImplementation((b: string) => b);
+	it("rejects a non-image contentType with BAD_REQUEST", async () => {
+		const { StorageInputError } = await import("@fuutu/storage");
+		vi.mocked(resolveStorageProvider).mockReturnValue(mockProvider as never);
+		mockProvider.getSignedUploadUrl.mockRejectedValue(
+			new StorageInputError("contentType not allowed"),
+		);
+
+		await expect(
+			call(
+				storageRouter.upload.createPresigned,
+				{
+					bucket: "avatars",
+					key: "test.png",
+					contentType: "text/html",
+					contentLength: 1024,
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
 
 	it("rejects empty key", async () => {
@@ -291,10 +329,20 @@ describe("storage.file.delete", () => {
 		await expect(
 			call(
 				storageRouter.file.delete,
-				{ bucket: "", key: "test.png" },
+				{ bucket: "" as never, key: "test.png" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
+	});
+
+	it("rejects a traversal key with BAD_REQUEST", async () => {
+		await expect(
+			call(
+				storageRouter.file.delete,
+				{ bucket: "avatars", key: "../escape.png" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
 });
 
@@ -359,6 +407,16 @@ describe("storage.file.list", () => {
 		);
 
 		expect(mockProvider.listObjects).toHaveBeenCalledWith("avatars", "org-1/");
+	});
+
+	it("rejects a traversal prefix with BAD_REQUEST", async () => {
+		await expect(
+			call(
+				storageRouter.file.list,
+				{ bucket: "avatars", prefix: "../" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
 
 	it("returns empty items when bucket is empty", async () => {

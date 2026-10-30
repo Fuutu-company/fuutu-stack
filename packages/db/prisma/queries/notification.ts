@@ -1,5 +1,4 @@
-import { db } from "../client";
-import type { Prisma } from "../generated/client";
+import { db, type JsonValue } from "../client";
 
 export type NotificationInput = {
 	id?: string;
@@ -7,7 +6,7 @@ export type NotificationInput = {
 	type: string;
 	title: string;
 	body: string;
-	data?: Prisma.InputJsonValue;
+	data?: JsonValue;
 };
 
 export const createNotification = (input: NotificationInput) =>
@@ -73,7 +72,10 @@ export const searchNotifications = (
 		where: {
 			userId: scope.userId,
 			...(type ? { type } : {}),
-			OR: [{ title: { contains: text } }, { body: { contains: text } }],
+			OR: [
+				{ title: { contains: text, mode: "insensitive" } },
+				{ body: { contains: text, mode: "insensitive" } },
+			],
 		},
 		take,
 		skip,

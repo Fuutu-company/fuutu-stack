@@ -1,15 +1,15 @@
 import deepmerge from "deepmerge";
 import { i18nConfig } from "../config";
-import type { Messages } from "../types";
+import type { Locale, Messages } from "../types";
+import { isValidLocale } from "./locale-utils";
 
 export type AppName = "marketing" | "saas" | "docs";
+type Namespace = "common" | AppName;
+type NamespaceLoader = () => Promise<Record<string, unknown>>;
 
-const VALID_LOCALES = Object.keys(i18nConfig.locales);
-
-const namespaceLoaders: Record<
-	string,
-	Record<string, () => Promise<Record<string, unknown>>>
-> = {
+// Keyed by `Locale` — adding a locale to i18nConfig.locales without a
+// matching entry here fails type-checking.
+const namespaceLoaders: Record<Locale, Record<Namespace, NamespaceLoader>> = {
 	en: {
 		common: async () =>
 			(await import("../translations/en/common/index")).default,
@@ -29,8 +29,8 @@ const namespaceLoaders: Record<
 };
 
 const loadNamespace = async (
-	locale: string,
-	app: string,
+	locale: Locale,
+	app: Namespace,
 ): Promise<Record<string, unknown>> => {
 	const loaders =
 		namespaceLoaders[locale] ?? namespaceLoaders[i18nConfig.defaultLocale];
@@ -43,7 +43,7 @@ export const importLocale = async (
 	locale: string,
 	app?: AppName,
 ): Promise<Messages> => {
-	const effectiveLocale = VALID_LOCALES.includes(locale)
+	const effectiveLocale: Locale = isValidLocale(locale)
 		? locale
 		: i18nConfig.defaultLocale;
 
@@ -60,26 +60,69 @@ export const importLocale = async (
 	return { ...common, ...appMessages } as Messages;
 };
 
-const getFallbackChain = (locale: string): string[] => {
-	const chain: string[] = [locale];
-	const localeConfig =
-		i18nConfig.locales[locale as keyof typeof i18nConfig.locales];
+export type FallbackChainConfig = {
+	// Index signature keeps the entry non-weak — locales without a
+	// `fallbackLocale` property (e.g. the default locale) stay assignable.
+	readonly locales: Record<
+		string,
+		{ readonly fallbackLocale?: string; [key: string]: unknown }
+	>;
+	readonly defaultLocale: string;
+};
 
-	if (
-		localeConfig &&
-		"fallbackLocale" in localeConfig &&
-		localeConfig.fallbackLocale
-	) {
-		const fallback = localeConfig.fallbackLocale;
-		if (fallback !== locale && !chain.includes(fallback)) {
-			chain.push(...getFallbackChain(fallback));
+/**
+ * Recursive worker for `getFallbackChain` — the `visited` set carries
+ * the accumulated chain through recursion so configured fallback cycles
+ * (a → b → a) terminate instead of overflowing the stack.
+ */
+const buildFallbackChain = (
+	locale: string,
+	config: FallbackChainConfig,
+	visited: ReadonlySet<string>,
+): string[] => {
+	const chain: string[] = [locale];
+	const seen = new Set(visited).add(locale);
+
+	let fallback = config.locales[locale]?.fallbackLocale;
+	if (!fallback) {
+		// Walk BCP-47 subtags up to the nearest configured parent
+		// ("de-AT-x" → "de-AT" → "de"), skipping unconfigured intermediates.
+		let candidate = locale;
+		let separator = candidate.lastIndexOf("-");
+		while (separator > 0) {
+			candidate = candidate.slice(0, separator);
+			if (Object.hasOwn(config.locales, candidate)) {
+				fallback = candidate;
+				break;
+			}
+			separator = candidate.lastIndexOf("-");
 		}
 	}
 
-	if (!chain.includes(i18nConfig.defaultLocale)) {
-		chain.push(i18nConfig.defaultLocale);
+	if (fallback && !seen.has(fallback)) {
+		chain.push(...buildFallbackChain(fallback, config, seen));
 	}
 
+	return chain;
+};
+
+/**
+ * Resolution order: the locale itself, then its configured `fallbackLocale`
+ * (recursively), then its nearest configured BCP-47 parent when no
+ * `fallbackLocale` is configured ("de-AT" → "de"), and always `defaultLocale`
+ * last. `defaultLocale` is appended by the outermost call only — inner
+ * frames must not re-append it, or a `defaultLocale` that also sits
+ * inside the chain (e.g. defaultLocale "de" with de → en) would duplicate
+ * and invert merge priority downstream.
+ */
+export const getFallbackChain = (
+	locale: string,
+	config: FallbackChainConfig = i18nConfig,
+): string[] => {
+	const chain = buildFallbackChain(locale, config, new Set());
+	if (!chain.includes(config.defaultLocale)) {
+		chain.push(config.defaultLocale);
+	}
 	return chain;
 };
 
@@ -87,14 +130,24 @@ export const getMessagesForLocale = async (
 	locale: string,
 	app?: AppName,
 ): Promise<Messages> => {
-	const fallbackChain = getFallbackChain(locale);
+	// Load order: lowest priority first so the requested locale merges last.
+	// Unconfigured locales (e.g. "fr") resolve to the default bundle inside
+	// importLocale — dedupe on the resolved locale so each bundle is
+	// imported exactly once.
+	const loadOrder = [
+		...new Set(
+			getFallbackChain(locale)
+				.reverse()
+				.map((loc) => (isValidLocale(loc) ? loc : i18nConfig.defaultLocale)),
+		),
+	];
 
-	if (fallbackChain.length === 1) {
-		return await importLocale(locale, app);
+	if (loadOrder.length === 1) {
+		return await importLocale(loadOrder[0] ?? i18nConfig.defaultLocale, app);
 	}
 
 	const messages = await Promise.all(
-		fallbackChain.reverse().map((loc) => importLocale(loc, app)),
+		loadOrder.map((loc) => importLocale(loc, app)),
 	);
 
 	// Arrays are replacements, not concatenations — prevents duplicate React keys and double-rendering when merging fallback chains.

@@ -112,6 +112,30 @@ describe("grantRecurringCredits", () => {
 		).rejects.toThrow();
 	});
 
+	it("throws on unknown meter key without calling the tx", async () => {
+		await expect(
+			grantRecurringCredits({
+				userId: "user-1",
+				meterKey: "unknown_meter",
+				amount: 100,
+				periodEnd: new Date(),
+			}),
+		).rejects.toThrow('unknown meter key "unknown_meter"');
+
+		expect(grantRecurringCreditsTx).not.toHaveBeenCalled();
+	});
+
+	it("rejects amount above int4 max", async () => {
+		await expect(
+			grantRecurringCredits({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 2_147_483_648,
+				periodEnd: new Date(),
+			}),
+		).rejects.toThrow();
+	});
+
 	it("propagates tx errors", async () => {
 		vi.mocked(grantRecurringCreditsTx).mockRejectedValue(new Error("db down"));
 
@@ -144,6 +168,18 @@ describe("grantTopUpCredits", () => {
 		).rejects.toThrow();
 	});
 
+	it("throws on unknown meter key without calling the tx", async () => {
+		await expect(
+			grantTopUpCredits({
+				userId: "user-1",
+				meterKey: "unknown_meter",
+				amount: 10_000,
+			}),
+		).rejects.toThrow('unknown meter key "unknown_meter"');
+
+		expect(grantTopUpCreditsTx).not.toHaveBeenCalled();
+	});
+
 	it("calls grantTopUpCreditsTx with parsed params and defaults", async () => {
 		vi.mocked(grantTopUpCreditsTx).mockResolvedValue(undefined);
 
@@ -166,7 +202,7 @@ describe("grantTopUpCredits", () => {
 
 	it("passes optional fields through", async () => {
 		vi.mocked(grantTopUpCreditsTx).mockResolvedValue(undefined);
-		const expiresAt = new Date("2027-01-01");
+		const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000);
 
 		await grantTopUpCredits({
 			organizationId: "org-1",
@@ -188,6 +224,17 @@ describe("grantTopUpCredits", () => {
 		});
 	});
 
+	it("rejects a past expiresAt", async () => {
+		await expect(
+			grantTopUpCredits({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 10_000,
+				expiresAt: new Date("2000-01-01"),
+			}),
+		).rejects.toThrow();
+	});
+
 	it("accepts null expiresAt and purchaseId", async () => {
 		vi.mocked(grantTopUpCreditsTx).mockResolvedValue(undefined);
 
@@ -202,6 +249,40 @@ describe("grantTopUpCredits", () => {
 		expect(grantTopUpCreditsTx).toHaveBeenCalledWith(
 			expect.objectContaining({ expiresAt: null, purchaseId: null }),
 		);
+	});
+
+	it("rejects an empty purchaseId", async () => {
+		await expect(
+			grantTopUpCredits({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 10_000,
+				purchaseId: "",
+			}),
+		).rejects.toThrow();
+
+		expect(grantTopUpCreditsTx).not.toHaveBeenCalled();
+	});
+
+	it("rejects priority outside the int4 range", async () => {
+		await expect(
+			grantTopUpCredits({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 10_000,
+				priority: 2_147_483_648,
+			}),
+		).rejects.toThrow();
+		await expect(
+			grantTopUpCredits({
+				userId: "user-1",
+				meterKey: "ai_tokens",
+				amount: 10_000,
+				priority: -2_147_483_649,
+			}),
+		).rejects.toThrow();
+
+		expect(grantTopUpCreditsTx).not.toHaveBeenCalled();
 	});
 
 	it("rejects non-positive amount", async () => {

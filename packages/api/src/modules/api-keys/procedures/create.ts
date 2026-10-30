@@ -1,5 +1,11 @@
-import { countApiKeys, countOrgApiKeys, createApiKey } from "@fuutu/db";
+import {
+	countApiKeys,
+	countOrgApiKeys,
+	createApiKeyWithinLimit,
+} from "@fuutu/db";
+import { getPlanLimit } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
@@ -33,11 +39,23 @@ export const createApiKeyProcedure = authProcedure({
 	})
 	.input(createApiKeySchema)
 	.handler(async ({ input, context }) => {
-		const result = await createApiKey(
-			context.user.id,
-			input.name,
-			input.organizationId ?? null,
-			input.expiresAt ?? null,
-		);
+		// Race-safe re-check: the `limit` option above is a friendly
+		// pre-flight — the count+insert inside createApiKeyWithinLimit runs
+		// in a Serializable transaction so concurrent creates cannot both pass.
+		const limitValue = getPlanLimit(context.planId ?? "free", "apiKeys");
+		// `false` (feature not available on plan) must not collapse to
+		// unlimited — map it to a zero cap so the create always refuses.
+		const max =
+			limitValue === false ? 0 : limitValue === "unlimited" ? null : limitValue;
+		const result = await createApiKeyWithinLimit({
+			userId: context.user.id,
+			name: input.name,
+			organizationId: input.organizationId ?? null,
+			expiresAt: input.expiresAt ?? null,
+			max,
+		});
+		if (!result) {
+			throw new ORPCError("FORBIDDEN", { message: "Limit exceeded" });
+		}
 		return result;
 	});

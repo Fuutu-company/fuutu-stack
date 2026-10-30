@@ -44,6 +44,7 @@
 			"loadingUserAccount": "Benutzerkonto wird geladen"
 		},
 		"breadcrumb": {
+			"ariaLabel": "Brotkrumen",
 			"dashboard": "Dashboard",
 			"settings": "Einstellungen",
 			"organizations": "Organisationen",

@@ -19,8 +19,8 @@ git clone https://github.com/Fuutu-company/fuutu-stack my-saas
 cd my-saas
 pnpm install
 cp .env.example .env
-pnpm db:start        # Postgres + MinIO via docker-compose
-pnpm db:push         # push schema
+pnpm db:start        # Postgres 16 + MinIO via docker-compose (local dev only)
+pnpm db:migrate      # apply migrations — includes raw-SQL constraints (db:push skips those)
 pnpm db:seed         # optional: seed admin@fuutu.local / DevPassword!2345
 pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 ```
@@ -29,9 +29,9 @@ pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 
 ## What is Fuutu Stack?
 
-A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.js 16, Hono, oRPC, Better Auth, Prisma, TailwindCSS v4. Every domain (mail, payments, storage, analytics, AI) is behind a provider interface with one active implementation and skeletons for the rest. Swap Plunk for Resend, Polar for Stripe, S3 for Cloudflare R2 — without touching business logic.
+A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.js 16, Hono, oRPC, Better Auth, Prisma, TailwindCSS v4. Every domain (mail, payments, storage, analytics, AI, search) is behind a provider interface with one active implementation and skeletons (stubs that throw until implemented) for the rest. Swap Plunk for Resend, Creem for Stripe, S3 for Cloudflare R2 — without touching business logic.
 
-**AI-native**: built-in MCP (Model Context Protocol) integration so LLM agents can discover and operate your project. AI provider-swappable (Google / OpenAI / Anthropic / Noop).
+**AI-native**: built-in MCP (Model Context Protocol) integration so LLM agents can discover and operate your project. AI provider-swappable (OpenRouter / Google / OpenAI / Anthropic / Noop).
 
 ---
 
@@ -52,23 +52,23 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 
 ### API & Backend
 - **Hono 4** server (mounted at `/api/[[...rest]]`)
-- **oRPC 1.12** — end-to-end type-safe API with auto-OpenAPI spec
+- **oRPC 1.15** — end-to-end type-safe API with auto-OpenAPI spec
 - **Zod** validation on every input
 - **API keys** — generate, revoke, scoped access
-- **Webhooks** — signed delivery, retry with backoff, idempotent
+- **Webhooks** — signed delivery, retry with backoff, at-least-once with `X-Fuutu-Event-Id` dedupe key for receivers
 - **Cron jobs** — audit-log cleanup, subscription reminders, telemetry ping, webhook retry
 
 ### Database & ORM
 - **Prisma 7** on PostgreSQL 16
 - Split `auth` + `app` schemas
 - Generated Zod schemas from Prisma types
-- ORM-agnostic export — queries isolated in `@fuutu/db`
+- ORM-swappable queries — all callers go through typed `@fuutu/db` functions; swapping ORMs touches one package
 
 ### Frontend & UI
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TailwindCSS v4** with OKLCH theme
 - **shadcn/ui** — framework-agnostic shared components (`@fuutu/ui`)
-- **next-intl 4** — `en` + `de`, 100% translation policy
+- **next-intl 4** — `en` + `de`, 100% translation policy ([guide](https://stack.fuutu.com/docs/guides/i18n))
 - **MediaFrame** — locale-aware images, CSP-safe
 
 ### Provider-Swappable Architecture
@@ -76,16 +76,15 @@ Every domain behind an interface — swap providers without touching business lo
 
 | Domain | Interface | Active | Skeletons |
 |---|---|---|---|
-| **Mail** | `MailProvider` | Plunk | Resend, SendGrid, Mailgun… |
-| **Payments** | `PaymentProvider` | Polar | Stripe, Paddle, LemonSqueezy… |
-| **Storage** | `StorageProvider` | S3 + MinIO | Cloudflare R2, Azure Blob… |
-| **Analytics** | `AnalyticsProvider` | Umami | Plausible, PostHog, GA… |
-| **AI** | `AIProvider` | Google | OpenAI, Anthropic, Noop… |
-| **Search** | `SearchProvider` | — | MeiliSearch, Typesense, Algolia… |
-| **Content** | `ContentProvider` | — | MDX, CMS, headless… |
+| **Mail** | `EmailProvider` | Plunk (Resend implemented) | Postmark, Mailgun, Nodemailer… |
+| **Payments** | `PaymentProvider` | Creem (Stripe implemented; Polar alpha) | Anything else via `customProvider`… |
+| **Storage** | `StorageProvider` | S3 + MinIO | Supabase, Noop… |
+| **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
+| **AI** | `AIProvider` | OpenRouter (Google implemented) | OpenAI, Anthropic, Noop… |
+| **Search** | `SearchProvider` | Postgres | MeiliSearch, Typesense (`noop` returns empty — dev/test)… |
 
 ### AI-Native
-- **AI provider-swappable** — Google / OpenAI / Anthropic / Noop
+- **AI provider-swappable** — OpenRouter / Google / OpenAI / Anthropic / Noop
 - **Chat module** — conversations, messages, streaming
 - **MCP-ready** — Model Context Protocol integration for LLM agents
 - **AI agent harness** via Fuutu MCP (see Developer Experience below)
@@ -99,7 +98,7 @@ Every domain behind an interface — swap providers without touching business lo
 - **Onboarding** — guided setup flow
 - **Settings** — profile, API keys, billing
 - **Admin** — audit logs, user management
-- **Billing** — plans, subscriptions, invoices
+- **Billing** — plans, subscriptions, invoices, credit metering + top-up packages
 
 ### Infrastructure
 - **Turborepo** + pnpm workspaces (version-catalog)
@@ -122,32 +121,33 @@ fuutu-stack/
 │   ├── docs/             # documentation (port 4000)
 │   └── mail-preview/     # mail template preview (dev only)
 ├── packages/
-│   ├── ai/               # AI provider-swappable (Google/OpenAI/Anthropic/Noop)
+│   ├── ai/               # AI provider-swappable (OpenRouter/Google/OpenAI/Anthropic/Noop)
 │   ├── analytics/        # AnalyticsProvider interface + Umami
 │   ├── api/              # oRPC routers + Hono server
 │   ├── auth/             # Better Auth (server + client)
 │   ├── config/           # cross-cutting config + theme.css
-│   ├── content/          # ContentProvider interface + active provider
+│   ├── content/          # TSX content collections: posts, changelog, legal
+│   ├── credits/          # credit meters + grant/consume/reset over @fuutu/db
 │   ├── cron/             # scheduled jobs (audit cleanup, reminders, telemetry)
-│   ├── db/               # Prisma client + queries (ORM-agnostic export)
+│   ├── db/               # Prisma client + queries (ORM-swappable export)
 │   ├── env/              # environment validation (@t3-oss/env-nextjs)
 │   ├── i18n/             # next-intl utilities + i18nConfig
 │   ├── license/          # checkLicense(), getLicenseMode() — compliance
 │   ├── logs/             # createLogger({ scope }) + provider interface
-│   ├── mail/             # MailProvider interface + templates
+│   ├── mail/             # EmailProvider interface + templates
 │   ├── notifications/    # in-app + multi-channel notifications
-│   ├── payments/         # PaymentProvider interface + Polar
+│   ├── payments/         # PaymentProvider interface + Creem/Stripe/Polar (alpha)
 │   ├── rbac/             # role-based access control
 │   ├── search/           # SearchProvider interface
 │   ├── storage/          # StorageProvider interface + S3/MinIO
 │   ├── telemetry/        # build-time + runtime telemetry helpers
-│   ├── test-utils/       # shared test fixtures + helpers
+│   ├── test-utils/       # shared test helpers + architecture guard tests
 │   ├── ui/               # shared UI components (framework-agnostic)
-│   ├── utils/            # cn, getSafeRedirect, slugify, hash, invariant
+│   ├── utils/            # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl, rate-limit
 │   └── webhooks/         # signed delivery, retry, idempotent
 ├── tooling/
 │   ├── typescript/       # shared tsconfigs (base / nextjs / react-library)
-│   └── tailwind/         # shared Tailwind preset + theme.css
+│   └── scripts/          # repo tooling (assets-sync.mjs, dependency-report.mjs)
 ```
 
 Detailed architecture: **[stack.fuutu.com/docs/architecture](https://stack.fuutu.com/docs/architecture)**
@@ -182,24 +182,24 @@ This repository contains the **integration point** for that server. No MCP runti
 
 ### Fuutu MCP
 
-The AI agent harness — 28 skills, 5 subagents, 21 rules — is delivered via the **Fuutu MCP server**, not bundled in this repo. Point your MCP-aware editor (Cursor, Devin, Windsurf, VS Code) at the Fuutu MCP server and the full harness activates. The MCP exposes **tool calls** — deterministic functions the LLM can invoke (scaffold, swap provider, check compliance) instead of guessing code from context.
+The AI agent harness — skills, subagents, and coding rules — is delivered via the **Fuutu MCP server**, not bundled in this repo. Point your MCP-aware editor (Cursor, Devin, Windsurf, VS Code) at the Fuutu MCP server and the full harness activates. The MCP exposes **tool calls** — deterministic functions the LLM can invoke (scaffold, swap provider, check compliance) instead of guessing code from context.
 
 | Layer | Count | What it does |
 |---|---|---|
-| **Skills** | 27 | TDD, brainstorming, systematic-debugging, browser-verification, self-learning, commit-proposal, review… — auto-invoked based on task context |
-| **Subagents** | 5 | `harvest` (scan/grep/read) · `implementer` (code/TDD) · `verifier` (run/parse) · `synthesizer` (cross-ref) · `designer` (architecture) — cost-tiered, parallel dispatch |
+| **Skills** | 30 | TDD, brainstorming, systematic-debugging, browser-verification, self-learning, commit-proposal, review… — auto-invoked based on task context |
+| **Subagents** | 5 | Scan/read, code/TDD, run/verify, cross-reference, architecture — cost-tiered, parallel dispatch |
 | **Rules** | 21 | global, auth, backend, frontend, ui, testing, security, i18n, rbac, logging, license, review… — enforced, not suggestions |
 | **Multi-host** | 4 editors | Cursor · Devin · Windsurf · VS Code |
 
 Beyond the agent harness, the MCP server also provides:
 
 - **Project Scaffolding** — "add a new package", "create a route with auth guard", "scaffold a new module" — generates code that follows Fuutu conventions by default
-- **Provider Swaps** — "swap Plunk for Resend", "switch Polar to Stripe" — generates the active implementation from the provider interface
+- **Provider Swaps** — "swap Plunk for Resend", "switch Creem to Stripe" — generates the active implementation from the provider interface
 - **Versioning API** — Kit updates, breaking-change alerts, auto-migration suggestions when a new Fuutu Stack version drops
 - **Compliance Check** — verifies all 5 fingerprint emission points, license validity, telemetry setup
 - **Smart Debugging** — send errors to the MCP, it knows the Fuutu codebase structure and can pinpoint root causes
 
-**Default workflow:** `brainstorm → plan → implement (TDD) → verify → browser-check → commit`. The orchestrator dispatches subagents in parallel, each with the cheapest capable cost tier.
+**Default workflow:** `brainstorm → plan → implement (TDD) → verify → browser-check → commit`. Subagents are dispatched in parallel, each at the cheapest capable cost tier.
 
 ---
 
@@ -221,13 +221,13 @@ pnpm test:e2e              # Playwright (saas + marketing)
 
 ## License
 
-**Free for teams up to 10 employees or $250k annual revenue.** Above that, you need an Enterprise License.
+**Free for teams up to 10 employees or $250k annual revenue.** Once you exceed both thresholds, you need an Enterprise License.
 
 | Tier | Price | Who |
 |---|---|---|
-| **OSS** | Free | ≤ 10 employees AND ≤ $250k revenue |
+| **OSS** | Free | ≤ 10 employees OR ≤ $250k revenue |
 | **MCP Subscription** | Monthly | Anyone who wants MCP + versioning API |
-| **Enterprise** | Yearly | Above either OSS threshold |
+| **Enterprise** | Yearly | Above both OSS thresholds |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[stack.fuutu.com/pricing](https://stack.fuutu.com/pricing)**
 

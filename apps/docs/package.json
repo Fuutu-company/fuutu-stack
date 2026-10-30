@@ -10,14 +10,17 @@
 		"postinstall": "fumadocs-mdx"
 	},
 	"dependencies": {
+		"@fuutu/analytics": "workspace:*",
 		"@fuutu/config": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/i18n": "workspace:*",
+		"@fuutu/logs": "workspace:*",
 		"@fuutu/ui": "workspace:*",
 		"@fuutu/utils": "workspace:*",
 		"@iconify/icons-circle-flags": "catalog:",
 		"@iconify/react": "catalog:",
 		"@scalar/api-client-react": "catalog:",
+		"evlog": "catalog:",
 		"fumadocs-core": "catalog:",
 		"fumadocs-mdx": "catalog:",
 		"fumadocs-openapi": "catalog:",
@@ -34,11 +37,11 @@
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",
 		"@tailwindcss/postcss": "catalog:",
-		"@types/mdx": "^2.0.14",
+		"@types/mdx": "catalog:",
 		"@types/node": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
-		"postcss": "^8.5.29",
+		"postcss": "catalog:",
 		"tailwindcss": "catalog:",
 		"tw-animate-css": "catalog:",
 		"typescript": "catalog:"

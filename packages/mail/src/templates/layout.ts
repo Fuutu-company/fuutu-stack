@@ -45,7 +45,17 @@ export function renderLayout(body: string, opts: LayoutOptions = {}): string {
  * Apple Mail. Uses a table fallback-free approach — enough for dev.
  */
 export function renderButton(href: string, label: string): string {
-	return `<a href="${escapeAttr(href)}" style="display:inline-block;padding:12px 20px;background:#111;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">${escapeHtml(label)}</a>`;
+	return `<a href="${escapeAttr(safeHref(href))}" style="display:inline-block;padding:12px 20px;background:#111;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">${escapeHtml(label)}</a>`;
+}
+
+/**
+ * Scheme allowlist for hrefs — javascript:/data:/vbscript: links are
+ * clickable in mail clients and appUrl values can be caller-supplied.
+ * Only http(s) is emitted: mailto: and relative URLs intentionally
+ * collapse to "#".
+ */
+export function safeHref(href: string): string {
+	return /^https?:\/\//i.test(href) ? href : "#";
 }
 
 export function escapeHtml(s: string): string {

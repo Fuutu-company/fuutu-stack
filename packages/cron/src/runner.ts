@@ -3,23 +3,28 @@ import { InlineJobRunner } from "./runners/inline";
 import { TriggerDevJobRunner } from "./runners/trigger-dev";
 import type { CronJobResult, JobRunner } from "./types";
 
-const inlineRunner = new InlineJobRunner();
-const triggerDevRunner = new TriggerDevJobRunner();
+let inlineRunner: InlineJobRunner | undefined;
+let triggerDevRunner: TriggerDevJobRunner | undefined;
 
 /**
  * Resolve the active job runner from `cronConfig.runner`.
  *
- * Provider instances are cached as singletons (module-level) — consistent
- * with mail/storage/ai. The inline runner is always available; the
+ * Provider instances are lazily created once and then cached as
+ * singletons — consistent with mail/storage/ai, but only the selected
+ * runner is constructed. The inline runner is always available; the
  * Trigger.dev runner is a skeleton that throws until wired up.
  */
 export function resolveJobRunner(): JobRunner {
 	switch (cronConfig.runner) {
 		case "inline":
+			inlineRunner ??= new InlineJobRunner();
 			return inlineRunner;
 		case "trigger-dev":
+			triggerDevRunner ??= new TriggerDevJobRunner();
 			return triggerDevRunner;
 		default:
+			// Unreachable for the closed JobRunnerId union — kept as a
+			// runtime guard against out-of-union values (e.g. casts).
 			throw new Error(`Unknown cron runner: ${cronConfig.runner}`);
 	}
 }

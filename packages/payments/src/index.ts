@@ -1,25 +1,26 @@
+/**
+ * @fuutu/payments — server-side barrel.
+ *
+ * Importing this entry pulls env validation, the DB client, and provider
+ * SDKs — it is for server code only (API procedures, auth hooks, webhook
+ * routes). Client components must import from the leaf subpaths instead:
+ *   `@fuutu/payments/config`  — paymentsConfig, PLANS, LIMITS, CREDITS
+ *   `@fuutu/payments/plans`   — buildPricingTiers()
+ *   `@fuutu/payments/features`— feature/limit helpers
+ */
 export {
 	type AudienceId,
 	type BillingAttachedTo,
 	type BillingInterval,
 	type BillingType,
-	CREDIT_METERS,
 	CREDIT_TOPUPS,
 	CREDITS,
-	type CreditMeter,
 	type CreditTopupPackage,
 	FEATURE_CATALOG,
 	type FeatureEntry,
-	getCreditGrant,
-	getCreditTopupsForMeter,
-	getMeter,
-	getMeterKeysForPlan,
-	getPlanIdForProductId,
-	getPriceIdForPlan,
-	getYearlyPriceIdForPlan,
+	isPaymentsEnabled,
 	LIMITS,
 	type LimitValue,
-	MARKETING_PLANS,
 	type PaymentProviderId,
 	type PaymentsConfig,
 	PLAN_IDS,
@@ -29,22 +30,17 @@ export {
 	type PlanId,
 	type PlanLimits,
 	type PlanTier,
-	PRICE_IDS,
 	paymentsConfig,
-	SAAS_PLANS,
 	setPaymentProvider,
-	setPriceIds,
-	YEARLY_PRICE_IDS,
 } from "./config";
+export { getPlanIdForProductId } from "./config.server";
 export { createCustomerForUser } from "./customers";
 export {
 	type CatalogFeature,
 	FEATURE_GROUPS,
 	type FeatureGroup,
 	formatLimit,
-	getFeaturesForTier,
 	getLimit,
-	getPlansForAudience,
 	getPricingFeaturesForPlan,
 	type LimitKey,
 	planIdToTier,
@@ -73,11 +69,7 @@ export {
 	cancelAllSubscriptionsForOrganization,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
-export {
-	getActivePlanId,
-	hasActiveSubscription,
-	processWebhookEvents,
-} from "./sync";
+export { getActivePlanId, processWebhookEvents } from "./sync";
 export type {
 	CheckoutInput,
 	CustomerInput,
@@ -90,9 +82,10 @@ export type {
 	SeatAwarePaymentProvider,
 	SetSeatsInput,
 } from "./types";
-export { isSeatAware } from "./types";
 export {
-	getPaymentsWebhookHandler,
-	handlePaymentsWebhook,
-	noopPaymentsWebhookHandler,
-} from "./webhook";
+	isSeatAware,
+	PaymentsDisabledError,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "./types";
+export { handlePaymentsWebhook } from "./webhook";

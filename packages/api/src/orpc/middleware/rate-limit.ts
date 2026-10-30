@@ -1,4 +1,6 @@
+import { env } from "@fuutu/env/saas";
 import {
+	createRedisRateLimitStore,
 	defaultRateLimitStore,
 	type RateLimitStore,
 } from "@fuutu/utils/rate-limit";
@@ -7,6 +9,19 @@ import { apiConfig } from "../../config";
 import type { Context } from "../../context";
 
 type RateLimitEndpoint = keyof typeof apiConfig.rateLimit.endpoints;
+
+// Fail at boot, not per-request: the Redis driver is a declared v1 stub
+// whose check() throws (see @fuutu/utils/rate-limit). Setting REDIS_URL
+// opts in — without this guard every rate-limited endpoint would 500 only
+// once production traffic arrives.
+if (env.REDIS_URL) {
+	throw new Error(
+		"[@fuutu/api] Redis rate-limit driver is a v1 stub — implement createRedisRateLimitStore or unset REDIS_URL.",
+	);
+}
+const configuredStore: RateLimitStore = env.REDIS_URL
+	? createRedisRateLimitStore({ url: env.REDIS_URL })
+	: defaultRateLimitStore;
 
 type RateLimitOptions = {
 	endpoint?: RateLimitEndpoint;
@@ -65,14 +80,20 @@ export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
 		}
 
 		// Generate rate limit key
+		// Forwarding headers are client-supplied unless a trusted proxy
+		// overwrites them (apiConfig.rateLimit.trustProxyHeaders) — untrusted
+		// values would let anonymous callers rotate keys, so default to a
+		// single shared bucket.
 		const key = options.keyGenerator
 			? options.keyGenerator(context)
 			: (context.session?.user?.id ??
-				context.headers.get("x-forwarded-for") ??
-				context.headers.get("x-real-ip") ??
-				"anonymous");
+				(apiConfig.rateLimit.trustProxyHeaders
+					? (context.headers.get("x-forwarded-for") ??
+						context.headers.get("x-real-ip") ??
+						"anonymous")
+					: "anonymous"));
 
-		const store = options.store ?? defaultRateLimitStore;
+		const store = options.store ?? configuredStore;
 		const result = await store.check(key, { maxRequests, windowMs });
 
 		if (!result.allowed) {

@@ -20,18 +20,28 @@ export const getPurchasesByOrganizationId = (organizationId: string) =>
 		orderBy: { createdAt: "desc" },
 	});
 
+/**
+ * Access-gating filter: ACTIVE/TRIALING, plus SCHEDULED_CANCEL while the
+ * paid period still runs — "cancel at period end" keeps access until
+ * currentPeriodEnd. Also self-heals: if the provider's cancel event
+ * never arrives, access still stops at currentPeriodEnd.
+ */
+const accessGatingWhere = (): Prisma.PurchaseWhereInput => ({
+	type: "SUBSCRIPTION",
+	OR: [
+		{ status: { in: ACTIVE_STATUSES } },
+		{ status: "SCHEDULED_CANCEL", currentPeriodEnd: { gt: new Date() } },
+	],
+});
+
 export const getActiveSubscriptionForUser = (userId: string) =>
 	db.purchase.findFirst({
-		where: { userId, type: "SUBSCRIPTION", status: { in: ACTIVE_STATUSES } },
+		where: { userId, ...accessGatingWhere() },
 	});
 
 export const getActiveSubscriptionForOrganization = (organizationId: string) =>
 	db.purchase.findFirst({
-		where: {
-			organizationId,
-			type: "SUBSCRIPTION",
-			status: { in: ACTIVE_STATUSES },
-		},
+		where: { organizationId, ...accessGatingWhere() },
 	});
 
 export const getPurchaseByProviderSubscriptionId = (
@@ -63,10 +73,39 @@ export const getPurchaseByCheckoutEventId = async (
 	return rows[0] ?? null;
 };
 
-export const getTrialingSubscriptions = () =>
+/**
+ * Trialing subscriptions ending within a reminder window, for the
+ * subscription-reminder cron job. `currentPeriodEnd` must fall inside
+ * [now, windowEnd] — trials already past their period end no longer
+ * qualify for an "ending soon" reminder, and later-ending trials are
+ * picked up by a subsequent daily run.
+ *
+ * Purchases are polymorphically owned (userId XOR organizationId). Org
+ * members are returned unfiltered: `member.role` is a comma-separated
+ * Better-Auth role string that SQL cannot exact-match (a `contains`
+ * filter would also match custom roles like "co-owner"), so callers
+ * filter for the org "owner" role themselves.
+ */
+export const getTrialingSubscriptions = (now: Date, windowEnd: Date) =>
 	db.purchase.findMany({
-		where: { type: "SUBSCRIPTION", status: "TRIALING" },
-		include: { user: { select: { locale: true } } },
+		where: {
+			type: "SUBSCRIPTION",
+			status: "TRIALING",
+			currentPeriodEnd: { gte: now, lte: windowEnd },
+		},
+		include: {
+			user: { select: { locale: true } },
+			organization: {
+				select: {
+					members: {
+						select: {
+							role: true,
+							user: { select: { id: true, locale: true } },
+						},
+					},
+				},
+			},
+		},
 	});
 
 export type CreatePurchaseInput = {

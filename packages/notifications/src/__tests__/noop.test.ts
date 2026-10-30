@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { noopChannel } from "../channels/noop";
 import { testNotificationProviderContract } from "./provider-contract";
 
@@ -16,10 +16,9 @@ testNotificationProviderContract(
 
 describe("NoopChannel", () => {
 	it("send() resolves and has no side effects", async () => {
-		const spy = vi.fn();
+		expect(noopChannel.channel).toBe("noop");
 		await expect(
 			noopChannel.send("user-1", "system", "Test", "Body"),
 		).resolves.toBeUndefined();
-		expect(spy).not.toHaveBeenCalled();
 	});
 });

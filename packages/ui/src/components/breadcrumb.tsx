@@ -8,7 +8,7 @@ function Breadcrumb({
 	label = "Breadcrumb",
 	...props
 }: React.ComponentProps<"nav"> & {
-	/** Accessible label for the nav landmark (pass a localized value). */
+	/** Accessible label for the nav landmark — the default is an English fallback for framework-agnostic use; pass a localized value. */
 	label?: string;
 }) {
 	return <nav data-slot="breadcrumb" aria-label={label} {...props} />;
@@ -19,7 +19,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
 		<ol
 			data-slot="breadcrumb-list"
 			className={cn(
-				"flex flex-wrap items-center gap-1.5 break-words text-muted-foreground text-sm sm:gap-2.5",
+				"wrap-break-word flex flex-wrap items-center gap-1.5 text-muted-foreground text-sm sm:gap-2.5",
 				className,
 			)}
 			{...props}

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { sha256 } from "@fuutu/utils/hash";
 import { db } from "../client";
+import { withSerializationRetry } from "./transaction";
 
 const KEY_PREFIX = "futu_sk_";
 const PREFIX_VISIBLE_LEN = 12;
@@ -43,6 +44,51 @@ export const createApiKey = async (
 		},
 	});
 	return { id: record.id, key, prefix: record.prefix };
+};
+
+/**
+ * Create an API key while enforcing a plan limit atomically — the count
+ * check and the insert run inside one Serializable transaction so two
+ * concurrent requests cannot both pass the check (TOCTOU). The limit
+ * counts org keys for org-scoped creates and user keys otherwise,
+ * matching the `limit` pre-check in the authorize middleware.
+ * Returns `null` when the limit is already reached.
+ */
+export const createApiKeyWithinLimit = (params: {
+	userId: string;
+	name: string;
+	organizationId?: string | null;
+	expiresAt?: Date | null;
+	max: number | null;
+}): Promise<CreatedApiKey | null> => {
+	const { userId, name, organizationId, expiresAt, max } = params;
+	return withSerializationRetry(() =>
+		db.$transaction(
+			async (tx) => {
+				const count = await tx.apiKey.count({
+					where: {
+						...(organizationId ? { organizationId } : { userId }),
+						revokedAt: null,
+					},
+				});
+				if (max !== null && count >= max) return null;
+				const key = generateKey();
+				const hashed = await sha256(key);
+				const record = await tx.apiKey.create({
+					data: {
+						key: hashed,
+						prefix: buildPrefix(key),
+						name,
+						userId,
+						organizationId: organizationId ?? null,
+						expiresAt: expiresAt ?? null,
+					},
+				});
+				return { id: record.id, key, prefix: record.prefix };
+			},
+			{ isolationLevel: "Serializable" },
+		),
+	);
 };
 
 export const listApiKeys = (

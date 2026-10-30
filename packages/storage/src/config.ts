@@ -19,14 +19,20 @@ export interface StorageBuckets {
 }
 
 export interface StorageConfig {
-	provider: StorageProviderId | (() => StorageProviderId);
+	provider: StorageProviderId;
 	/** Logical → physical bucket name mapping (env-driven). */
 	buckets: StorageBuckets;
-	/** Per-bucket max upload size (bytes). Enforced at presign time. */
-	maxUploadBytes: {
-		avatars: number;
-		organizationLogos: number;
-	};
+	/**
+	 * Per-bucket max upload size (bytes). Enforced at presign time.
+	 * Keyed off `StorageBuckets` so a new logical bucket fails to
+	 * compile until its cap is declared.
+	 */
+	maxUploadBytes: Record<keyof StorageBuckets, number>;
+	/**
+	 * Per-bucket allowed upload MIME types. Enforced at presign time.
+	 * Keyed off `StorageBuckets` for the same reason as above.
+	 */
+	allowedContentTypes: Record<keyof StorageBuckets, readonly string[]>;
 }
 
 export const storageConfig: StorageConfig = {
@@ -43,5 +49,9 @@ export const storageConfig: StorageConfig = {
 	maxUploadBytes: {
 		avatars: 5 * 1024 * 1024, // 5 MB
 		organizationLogos: 5 * 1024 * 1024, // 5 MB
+	},
+	allowedContentTypes: {
+		avatars: ["image/png", "image/jpeg", "image/webp"],
+		organizationLogos: ["image/png", "image/jpeg", "image/webp"],
 	},
 };

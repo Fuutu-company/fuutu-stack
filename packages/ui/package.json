@@ -34,8 +34,7 @@
 		"input-otp": "catalog:",
 		"lucide-react": "catalog:",
 		"ogl": "catalog:",
-		"sonner": "catalog:",
-		"tw-animate-css": "catalog:"
+		"sonner": "catalog:"
 	},
 	"devDependencies": {
 		"@fuutu/config": "workspace:*",
@@ -45,6 +44,7 @@
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"tailwindcss": "catalog:",
+		"tw-animate-css": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:"
 	},

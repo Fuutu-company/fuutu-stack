@@ -1,9 +1,9 @@
 import { PERMISSIONS } from "@fuutu/rbac";
-import { resolveSearchProvider } from "@fuutu/search";
+import { resolveSearchProvider, searchConfig } from "@fuutu/search";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { protectedProcedure } from "../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const searchSchema = z.object({
 	text: z.string().min(1).max(200),
@@ -11,8 +11,18 @@ const searchSchema = z.object({
 	// Org ids are provider-generated (Better Auth ids are not UUIDs), so
 	// accept any non-empty string — the org access check enforces validity.
 	organizationId: z.string().min(1).optional(),
-	limit: z.number().int().min(1).max(50).optional(),
-	offset: z.number().int().min(0).optional(),
+	limit: z
+		.number()
+		.int()
+		.min(1)
+		.max(searchConfig.maxLimit ?? 50)
+		.optional(),
+	offset: z
+		.number()
+		.int()
+		.min(0)
+		.max(searchConfig.maxOffset ?? 10_000)
+		.optional(),
 });
 
 /**

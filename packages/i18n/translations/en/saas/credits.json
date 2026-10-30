@@ -27,6 +27,11 @@
 			"admin_grant": "Granted",
 			"reset": "Reset"
 		},
+		"meters": {
+			"ai_tokens": "AI Tokens",
+			"api_calls": "API Calls",
+			"documents": "Documents"
+		},
 		"topup": {
 			"title": "Buy more credits",
 			"description": "Top up your credit balance with one-time purchases",
@@ -34,7 +39,21 @@
 			"popular": "Popular",
 			"perPackage": "per package",
 			"redirecting": "Redirecting to checkout...",
-			"unavailable": "Top-ups are not currently available."
+			"unavailable": "Top-ups are not currently available.",
+			"packages": {
+				"ai_tokens_100k": {
+					"label": "100K AI Tokens",
+					"description": "Top up your AI token balance"
+				},
+				"ai_tokens_500k": {
+					"label": "500K AI Tokens",
+					"description": "Best value for AI tokens"
+				},
+				"api_calls_50k": {
+					"label": "50K API Calls",
+					"description": "Top up your API call balance"
+				}
+			}
 		}
 	}
 }

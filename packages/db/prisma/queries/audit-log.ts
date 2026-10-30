@@ -1,12 +1,13 @@
-import { db } from "../client";
+import { db, type JsonValue } from "../client";
 import type { Prisma } from "../generated/client";
 
 export type AuditLogInput = {
 	userId?: string | null;
+	organizationId?: string | null;
 	action: string;
 	ip?: string | null;
 	userAgent?: string | null;
-	metadata?: Prisma.InputJsonValue;
+	metadata?: JsonValue;
 };
 
 export const createAuditLog = (input: AuditLogInput) =>
@@ -42,11 +43,11 @@ export const countAuditLogs = (opts: { userId?: string; action?: string }) =>
 	});
 
 /**
- * Find audit logs scoped to an organization by filtering on its members' user IDs.
- * The AuditLog table has no `organizationId` column, so we resolve org members
- * first and filter by their user IDs.
+ * Find audit logs scoped to an organization.
+ * Rows recorded before the `organizationId` column existed carry NULL here —
+ * only events written via org-scoped call sites appear.
  */
-export const findAuditLogsByOrg = async (
+export const findAuditLogsByOrg = (
 	organizationId: string,
 	opts: {
 		action?: string;
@@ -55,13 +56,6 @@ export const findAuditLogsByOrg = async (
 	} = {},
 ) => {
 	const { action, take = 50, skip = 0 } = opts;
-	const members = await db.member.findMany({
-		where: { organizationId },
-		select: { userId: true },
-	});
-	const userIds = members.map((m) => m.userId);
-	if (userIds.length === 0) return [];
-
 	const actionFilter = action
 		? action.includes(".")
 			? { action }
@@ -69,7 +63,7 @@ export const findAuditLogsByOrg = async (
 		: undefined;
 	return db.auditLog.findMany({
 		where: {
-			userId: { in: userIds },
+			organizationId,
 			...(actionFilter ? actionFilter : {}),
 		},
 		orderBy: { createdAt: "desc" },
@@ -91,30 +85,18 @@ export type AuditLogSearchScope =
 /**
  * Full-text search over audit logs.
  * `scope` is required — audit logs must never be searched across tenants.
- * Organization scope is resolved via member user IDs (the table has no
- * `organizationId` column), same as `findAuditLogsByOrg`.
  */
-export const searchAuditLogs = async (
+export const searchAuditLogs = (
 	text: string,
 	scope: AuditLogSearchScope,
 	opts: { action?: string; take?: number; skip?: number } = {},
 ) => {
 	const { action, take = 50, skip = 0 } = opts;
 
-	let userIdFilter: { userId: string } | { userId: { in: string[] } };
-	if ("organizationId" in scope) {
-		const members = await db.member.findMany({
-			where: { organizationId: scope.organizationId },
-			select: { userId: true },
-		});
-		const userIds = members.map((m) => m.userId);
-		if (userIds.length === 0) return [];
-		userIdFilter = { userId: { in: userIds } };
-	} else {
-		userIdFilter = { userId: scope.userId };
-	}
-
-	const actionFilter: Prisma.StringFilter = { contains: text };
+	const actionFilter: Prisma.StringFilter = {
+		contains: text,
+		mode: "insensitive",
+	};
 	if (action) {
 		// Same convention as findAuditLogsByOrg: a dotted action is an
 		// exact match, a bare domain matches as a prefix ("user" → "user.*").
@@ -128,7 +110,7 @@ export const searchAuditLogs = async (
 	return db.auditLog.findMany({
 		where: {
 			action: actionFilter,
-			...userIdFilter,
+			...scope,
 		},
 		take,
 		skip,
@@ -136,18 +118,11 @@ export const searchAuditLogs = async (
 	});
 };
 
-export const countAuditLogsByOrg = async (
+export const countAuditLogsByOrg = (
 	organizationId: string,
 	opts: { action?: string } = {},
 ) => {
 	const { action } = opts;
-	const members = await db.member.findMany({
-		where: { organizationId },
-		select: { userId: true },
-	});
-	const userIds = members.map((m) => m.userId);
-	if (userIds.length === 0) return 0;
-
 	const actionFilter = action
 		? action.includes(".")
 			? { action }
@@ -155,7 +130,7 @@ export const countAuditLogsByOrg = async (
 		: undefined;
 	return db.auditLog.count({
 		where: {
-			userId: { in: userIds },
+			organizationId,
 			...(actionFilter ? actionFilter : {}),
 		},
 	});

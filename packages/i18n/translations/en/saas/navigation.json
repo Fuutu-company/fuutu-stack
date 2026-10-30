@@ -44,6 +44,7 @@
 			"loadingUserAccount": "Loading user account"
 		},
 		"breadcrumb": {
+			"ariaLabel": "Breadcrumb",
 			"dashboard": "Dashboard",
 			"settings": "Settings",
 			"organizations": "Organizations",

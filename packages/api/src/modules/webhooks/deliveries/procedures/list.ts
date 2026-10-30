@@ -2,8 +2,8 @@ import { countDeliveries, getWebhook, listDeliveries } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import { protectedProcedure } from "../../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const listDeliveriesSchema = z.object({
 	webhookId: z.string().min(1),

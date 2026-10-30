@@ -14,10 +14,11 @@ const fetchMock = vi.fn();
 beforeEach(() => {
 	fetchMock.mockReset();
 	fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
-	globalThis.fetch = fetchMock as unknown as typeof fetch;
+	vi.stubGlobal("fetch", fetchMock);
 });
 
 afterEach(() => {
+	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
 });
 
@@ -45,6 +46,29 @@ describe("resend provider — fetch integration", () => {
 		expect(init.method).toBe("POST");
 		const headers = init.headers as Record<string, string>;
 		expect(headers.authorization).toBe("Bearer test-resend-key");
+	});
+
+	it("sends the Resend request body shape (replyTo→reply_to)", async () => {
+		const message = createMock<EmailMessage>({
+			from: "noreply@fuutu.test",
+			to: "user@fuutu.test",
+			subject: "Body shape",
+			html: "<p>shape</p>",
+			text: "shape",
+			replyTo: "support@fuutu.test",
+		});
+
+		await resendProvider.send(message);
+		const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(JSON.parse(init.body as string)).toEqual({
+			from: "noreply@fuutu.test",
+			to: "user@fuutu.test",
+			subject: "Body shape",
+			html: "<p>shape</p>",
+			text: "shape",
+			reply_to: "support@fuutu.test",
+		});
+		expect(init.signal).toBeInstanceOf(AbortSignal);
 	});
 
 	it("throws when Resend returns a non-2xx status", async () => {

@@ -3,8 +3,9 @@ import { getOrganizationBySlug } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
-import { requireOrgPermissionAccess, slugSchema } from "../shared";
+import { slugSchema } from "../shared";
 
 export const getOrganization = permissionProcedure(
 	PERMISSIONS.ORGANIZATION.VIEW,

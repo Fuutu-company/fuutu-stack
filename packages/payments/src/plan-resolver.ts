@@ -13,6 +13,7 @@ import {
 	type LimitValue,
 	planIdToTier,
 } from "./features";
+import { getActivePlanId } from "./sync";
 
 export type ResolvedPlan = {
 	planId: PlanId;
@@ -32,7 +33,6 @@ export async function resolveActivePlan(
 	userId?: string | null,
 	organizationId?: string | null,
 ): Promise<ResolvedPlan> {
-	const { getActivePlanId } = await import("./sync");
 	const productId = await getActivePlanId(userId, organizationId);
 	if (!productId) return { planId: "free", tier: "free" };
 	const planId = getPlanIdForProductId(productId);

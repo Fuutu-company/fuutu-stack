@@ -22,7 +22,7 @@ export function resolveNotificationProvider(): NotificationProvider {
 	const handlers = notificationsConfig.channels.map((ch) => {
 		const handler = channelMap[ch];
 		if (!handler) {
-			log.warn(`unknown channel "${ch}", skipping.`);
+			log.warn("unknown channel, skipping", { channel: ch });
 			return null;
 		}
 		return handler;

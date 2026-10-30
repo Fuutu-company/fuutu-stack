@@ -2,10 +2,39 @@ import { describe, expect, it } from "vitest";
 import {
 	hasOrgPermission,
 	hasSystemPermission,
+	ORG_ROLE_HIERARCHY,
 	OrgAccessControl,
+	SYSTEM_ROLE_HIERARCHY,
 	SystemAccessControl,
 } from "../index";
 import { ORG_POLICY, PERMISSIONS, SYSTEM_POLICY } from "../policy";
+
+describe("immutability", () => {
+	it("freezes the role hierarchies", () => {
+		expect(Object.isFrozen(SYSTEM_ROLE_HIERARCHY)).toBe(true);
+		expect(Object.isFrozen(ORG_ROLE_HIERARCHY)).toBe(true);
+	});
+
+	it("freezes SYSTEM_POLICY and its role arrays", () => {
+		expect(Object.isFrozen(SYSTEM_POLICY)).toBe(true);
+		expect(Object.isFrozen(SYSTEM_POLICY.user)).toBe(true);
+		expect(Object.isFrozen(SYSTEM_POLICY.admin)).toBe(true);
+	});
+
+	it("freezes ORG_POLICY and its role arrays", () => {
+		expect(Object.isFrozen(ORG_POLICY)).toBe(true);
+		expect(Object.isFrozen(ORG_POLICY.member)).toBe(true);
+		expect(Object.isFrozen(ORG_POLICY.admin)).toBe(true);
+		expect(Object.isFrozen(ORG_POLICY.owner)).toBe(true);
+	});
+
+	it("throws on mutation attempts to frozen structures", () => {
+		const user = SYSTEM_POLICY.user as unknown as string[];
+		const admin = ORG_POLICY.admin as unknown as string[];
+		expect(() => user.push("update:user")).toThrow(TypeError);
+		expect(() => admin.push("delete:organization")).toThrow(TypeError);
+	});
+});
 
 describe("SYSTEM_POLICY", () => {
 	const ac = new SystemAccessControl(SYSTEM_POLICY);

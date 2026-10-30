@@ -26,8 +26,10 @@ export type FrameContentProps = {
 	/** Path/URL to a video file or YouTube link */
 	videoSrc?: string;
 	/**
-	 * Live website URL rendered in an interactive iframe.
-	 * The target site must allow embedding (no X-Frame-Options: DENY).
+	 * Live website URL rendered in a sandboxed iframe (http/https only —
+	 * anything else falls back to the placeholder). The target site must
+	 * allow embedding (no X-Frame-Options: DENY), and new domains need a
+	 * frame-src CSP entry in the app's next.config.ts.
 	 */
 	iframeSrc?: string;
 	/** Show the URL pill overlay on iframeSrc. Default: true */
@@ -65,12 +67,26 @@ export type MediaFrameProps = FrameContentProps & {
 	filename?: string;
 	/** Width of the frame wrapper (e.g. 800, "100%"). Controls overall size. */
 	width?: number | string;
-	/** Click to expand the frame in-place with a spring animation + backdrop. */
-	expandable?: boolean;
-	/** Accessible label for the expand button (required when expandable=true) */
-	expandLabel?: string;
 	className?: string;
-};
+} & (
+		| {
+				/** Click to expand the frame in-place with a spring animation + backdrop. */
+				expandable?: false;
+				/** Accessible label for the expand button */
+				expandLabel?: string;
+		  }
+		| {
+				/** Click to expand the frame in-place with a spring animation + backdrop. Requires expandLabel. */
+				expandable: boolean;
+				/** Accessible label for the expand button — required when expandable */
+				expandLabel: string;
+		  }
+	);
+
+/** Omit that distributes over union members — preserves discriminated unions. */
+export type DistributiveOmit<T, K extends keyof T> = T extends unknown
+	? Omit<T, K>
+	: never;
 
 /** Internal props passed down to FrameContent. */
 export type InternalContentProps = FrameContentProps & {

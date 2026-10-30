@@ -12,6 +12,9 @@ const DEFAULT_TIMEOUT_MS = 5_000;
  *  validator, short enough that a freshly-purchased key starts working
  *  on the next process restart. */
 const CACHE_TTL_MS = 60 * 60 * 1_000;
+/** Failures get a short TTL — a transient boot blip must not pin
+ *  `mode: "oss"` for the full hour, while still damping a dead validator. */
+const FAILURE_TTL_MS = 5 * 60 * 1_000;
 
 let cached: { at: number; status: LicenseStatus } | null = null;
 
@@ -33,18 +36,29 @@ let cached: { at: number; status: LicenseStatus } | null = null;
  *
  *   200 OK  → { "mode": "mcp" | "enterprise", "valid": true }
  *   401 / 403 → { "valid": false, "reason": "..." }
+ *
+ * The result cache is global — not keyed on key or endpoint. Intended
+ * callers are the boot warm-up and admin diagnostics; passing different
+ * options per call still returns the cached status until it expires.
  */
 export async function checkLicense(
 	options: CheckLicenseOptions = {},
 ): Promise<LicenseStatus> {
 	const now = Date.now();
-	if (!options.force && cached && now - cached.at < CACHE_TTL_MS) {
+	if (
+		!options.force &&
+		cached &&
+		now - cached.at < (cached.status.valid ? CACHE_TTL_MS : FAILURE_TTL_MS)
+	) {
 		return cached.status;
 	}
 
 	// `||` (not `??`) — an explicitly passed "" must fall back to the
-	// configured env key, not short-circuit to OSS mode.
-	const licenseKey = options.licenseKey || env.FUUTU_LICENSE_KEY || "";
+	// configured env key, not short-circuit to OSS mode. `.trim()` runs
+	// per operand so a whitespace-only override falls back the same way
+	// instead of winning the `||` and trimming to "".
+	const licenseKey =
+		(options.licenseKey || "").trim() || (env.FUUTU_LICENSE_KEY || "").trim();
 	const licenseKeyHash = hashLicenseKey(licenseKey);
 
 	// No key configured → OSS mode. This is a legitimate, supported state
@@ -65,8 +79,9 @@ export async function checkLicense(
 	const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
 	try {
-		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), timeoutMs);
+		// AbortSignal.timeout governs the full round-trip including the
+		// body read — a manual AbortController cleared in .finally only
+		// covers until headers arrive.
 		const res = await fetch(endpoint, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -75,21 +90,33 @@ export async function checkLicense(
 				kitName: KIT_NAME,
 				kitVersion: KIT_VERSION,
 			}),
-			signal: controller.signal,
-		}).finally(() => clearTimeout(timer));
+			signal: AbortSignal.timeout(timeoutMs),
+			// Never follow redirects — a 307/308 would re-POST the raw
+			// license key to the redirect target's host.
+			redirect: "error",
+		});
 
 		if (!res.ok) {
 			return fallback(licenseKeyHash, now, `HTTP ${res.status}`);
 		}
 
 		const body = (await res.json().catch(() => null)) as {
-			mode?: LicenseMode;
+			mode?: string;
 			valid?: boolean;
 			reason?: string;
 		} | null;
 
-		if (body?.valid !== true || !body.mode) {
-			return fallback(licenseKeyHash, now, body?.reason ?? "invalid response");
+		// Contract: 200 → { valid: true, mode: "mcp" | "enterprise" }.
+		// Anything else — including a contradictory "oss" — is invalid.
+		if (
+			body?.valid !== true ||
+			(body.mode !== "mcp" && body.mode !== "enterprise")
+		) {
+			return fallback(
+				licenseKeyHash,
+				now,
+				typeof body?.reason === "string" ? body.reason : "invalid response",
+			);
 		}
 
 		const status: LicenseStatus = {

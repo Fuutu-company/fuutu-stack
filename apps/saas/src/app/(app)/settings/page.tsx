@@ -127,7 +127,10 @@ export default async function SettingsPage({
 						</Card>
 						<UserSettingsBilling
 							priceIds={{
-								pro: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
+								pro: {
+									monthly: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
+									yearly: env.PAYMENTS_PRO_YEARLY_PRICE_ID ?? undefined,
+								},
 							}}
 						/>
 					</TabsContent>

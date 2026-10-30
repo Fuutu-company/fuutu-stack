@@ -137,6 +137,63 @@ describe("dispatchEvent", () => {
 		).rejects.toThrow();
 	});
 
+	it("rejects payloads larger than webhooksConfig.maxPayloadBytes", async () => {
+		await expect(
+			dispatchEvent({
+				event: "user.updated",
+				organizationId: "org-1",
+				payload: { blob: "x".repeat(64 * 1024 + 1) },
+			}),
+		).rejects.toThrow(/payload/i);
+		expect(recordDeliveryMock).not.toHaveBeenCalled();
+	});
+
+	it("accepts a payload at exactly maxPayloadBytes serialized", async () => {
+		listActiveWebhooksByOrgMock.mockResolvedValue([]);
+		// {"blob":"<N>x"} = N + 11 bytes serialized — N = 65525 hits exactly 64 KiB.
+		const result = await dispatchEvent({
+			event: "user.updated",
+			organizationId: "org-1",
+			payload: { blob: "x".repeat(64 * 1024 - 11) },
+		});
+
+		expect(result.enqueued).toBe(0);
+	});
+
+	it("rejects multi-byte payloads by UTF-8 byte size, not string length", async () => {
+		// "€" is 1 code unit but 3 UTF-8 bytes: .length stays under 64 KiB
+		// while the serialized payload exceeds it.
+		await expect(
+			dispatchEvent({
+				event: "user.updated",
+				organizationId: "org-1",
+				payload: { blob: "€".repeat(21846) },
+			}),
+		).rejects.toThrow(/payload/i);
+		expect(recordDeliveryMock).not.toHaveBeenCalled();
+	});
+
+	it("rejects non-JSON-serializable payloads instead of casting to JsonValue", async () => {
+		await expect(
+			dispatchEvent({
+				event: "user.updated",
+				organizationId: "org-1",
+				payload: { big: BigInt(1) },
+			}),
+		).rejects.toThrow();
+
+		const circular: Record<string, unknown> = {};
+		circular.self = circular;
+		await expect(
+			dispatchEvent({
+				event: "user.updated",
+				organizationId: "org-1",
+				payload: circular,
+			}),
+		).rejects.toThrow();
+		expect(recordDeliveryMock).not.toHaveBeenCalled();
+	});
+
 	it("counts only successful deliveries when some recordDelivery calls reject", async () => {
 		listActiveWebhooksByOrgMock.mockResolvedValue([
 			{ id: "wh-1" },

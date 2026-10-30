@@ -9,6 +9,8 @@ export type BrandLogoProps = {
 	className?: string;
 	/** Alt text — defaults to empty (use when logo is paired with a brand name) */
 	alt?: string;
+	/** Image source — defaults to "/logo.svg" served from the app's public dir */
+	src?: string;
 };
 
 const SIZE_MAP: Record<BrandLogoSize, string> = {
@@ -24,10 +26,11 @@ export function BrandLogo({
 	size = "md",
 	className,
 	alt = "",
+	src = "/logo.svg",
 }: BrandLogoProps) {
 	return (
 		<img
-			src="/logo.svg"
+			src={src}
 			alt={alt}
 			className={cn("shrink-0 object-contain", SIZE_MAP[size], className)}
 		/>

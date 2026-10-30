@@ -1,4 +1,4 @@
-import { getLegalDocument } from "@fuutu/content";
+import { getLegalDocument, legal } from "@fuutu/content";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
@@ -7,10 +7,8 @@ interface LegalPageProps {
 	params: Promise<{ locale: string; slug: string }>;
 }
 
-const KNOWN_SLUGS = ["privacy", "terms", "imprint"] as const;
-
 export function generateStaticParams() {
-	return KNOWN_SLUGS.map((slug) => ({ slug }));
+	return [...new Set(legal.map((d) => d.slug))].map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({

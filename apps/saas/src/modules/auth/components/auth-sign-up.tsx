@@ -2,7 +2,7 @@
 
 import { authClient } from "@fuutu/auth/client";
 import { authConfig } from "@fuutu/auth/config";
-import { getSafeRedirect } from "@fuutu/auth/redirect";
+import { extractInvitationId, getSafeRedirect } from "@fuutu/auth/redirect";
 import { validatePassword } from "@fuutu/auth/validate-password";
 import { env } from "@fuutu/env/saas";
 import {
@@ -43,9 +43,17 @@ export function AuthSignUp({
 	]
 		.filter(Boolean)
 		.join(", ");
+	const redirectParam = searchParams.get("redirect");
 	const redirectTo = getSafeRedirect(
-		searchParams.get("redirect") ?? authConfig.redirects.afterSignUp,
+		redirectParam ?? authConfig.redirects.afterSignUp,
 	);
+	// Invitation-bound sign-up: when the redirect target is the
+	// accept-invitation page, forward its `id` as `invitationId` so the
+	// server-side invitation-only gate can bind the new account to that
+	// exact invite token. Parsed from the SANITIZED redirect — a crafted
+	// raw `?redirect=` pointing at an external accept-invitation lookalike
+	// must not inject an invitation id.
+	const invitationId = extractInvitationId(redirectTo);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -83,11 +91,16 @@ export function AuthSignUp({
 		}
 
 		try {
-			const result = await authClient.signUp.email({
+			// `invitationId` is consumed by the invitation-only sign-up gate
+			// (the /sign-up/email schema forwards unknown body keys); it is
+			// not a user field, so it lives outside the typed payload shape.
+			const payload = {
 				email,
 				password,
 				name,
-			});
+				...(invitationId ? { invitationId } : {}),
+			};
+			const result = await authClient.signUp.email(payload);
 
 			if (result.error) {
 				setError(t("signUpForm.errorInvalid"));

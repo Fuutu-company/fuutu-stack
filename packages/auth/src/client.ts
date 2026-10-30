@@ -1,4 +1,5 @@
 import { passkeyClient } from "@better-auth/passkey/client";
+import { config } from "@fuutu/config";
 import type { BetterAuthClientOptions } from "better-auth";
 import {
 	adminClient,
@@ -12,6 +13,7 @@ import {
 } from "better-auth/client/plugins";
 import type { ReactAuthClient } from "better-auth/react";
 import { createAuthClient } from "better-auth/react";
+import { authConfig } from "./config";
 import type { auth } from "./index";
 
 /**
@@ -23,21 +25,25 @@ import type { auth } from "./index";
  * Plugins must match the server-side auth configuration:
  * - inferAdditionalFields: Syncs custom user fields with server
  * - adminClient: Admin features
- * - magicLinkClient: Magic link authentication
+ * - magicLinkClient: Magic link authentication (gated on features.magicLink)
  * - multiSessionClient: Multiple device sessions
- * - organizationClient: Organization management
+ * - organizationClient: Organization management (gated on organizationsMode)
+ * - twoFactorClient: 2FA (gated on features.twoFactor)
+ * - passkeyClient: Passkeys (gated on features.passkeys)
  */
 const authClientOptions = {
 	plugins: [
 		inferAdditionalFields<typeof auth>(),
 		adminClient(),
-		magicLinkClient(),
 		multiSessionClient(),
-		organizationClient(),
-		twoFactorClient(),
 		usernameClient(),
-		passkeyClient(),
 		lastLoginMethodClient(),
+		...(authConfig.features.magicLink ? [magicLinkClient()] : []),
+		...(config.features.organizationsMode !== "off"
+			? [organizationClient()]
+			: []),
+		...(authConfig.features.twoFactor ? [twoFactorClient()] : []),
+		...(authConfig.features.passkeys ? [passkeyClient()] : []),
 	],
 } satisfies BetterAuthClientOptions;
 

@@ -69,7 +69,7 @@ export function createRedisRateLimitStore(_config: {
 	return {
 		async check() {
 			throw new Error(
-				"[@fuutu/utils/rate-limit] Redis driver is a v1 stub — implement with an ioredis INCR+PEXPIRE pipeline before enabling.",
+				"[@fuutu/utils/rate-limit] Redis driver is a v1 stub — implement createRedisRateLimitStore with a Redis INCR+PEXPIRE pipeline, or unset REDIS_URL to use the in-memory store.",
 			);
 		},
 	};

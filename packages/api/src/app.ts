@@ -14,12 +14,16 @@ import { handlePaymentsWebhook } from "@fuutu/payments";
 import { pingTelemetry } from "@fuutu/telemetry";
 import { Hono, type Context as HonoContext } from "hono";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import { createContext } from "./context";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
 
 const log = createLogger({ scope: "api" });
 
 const docsHandler = async (c: HonoContext) => {
+	// withEvlog-wrapped handler emits the wide event — skip the request-log
+	// middleware's duplicate line (same flag as the dispatch below).
+	c.set("evlogWideEvent", true);
 	const { matched, response } = await openApiHandler.handle(c.req.raw, {
 		prefix: "/api",
 		context: {
@@ -48,11 +52,20 @@ void checkLicense();
 // telemetry endpoint with kit identity and license fingerprint.
 void pingTelemetry();
 
-export const app = new Hono()
+export const app = new Hono<{
+	Variables: { evlogWideEvent: boolean };
+}>()
 	.basePath("/api")
 	.use("*", async (c, next) => {
 		const start = performance.now();
 		await next();
+		// Requests that reach the oRPC dispatch below already emit an evlog
+		// wide event (method/path/status/duration) — don't log them twice.
+		// This stays the request log for terminal routes mounted before the
+		// dispatch (/auth/**, /health, /version, /webhooks, /cron, /docs).
+		if (c.get("evlogWideEvent")) {
+			return;
+		}
 		const { method } = c.req;
 		const path = c.req.path;
 		const status = c.res.status;
@@ -160,6 +173,11 @@ export const app = new Hono()
 	.get("/spec.json", docsHandler)
 	.use("*", async (c, next) => {
 		const context = await createContext({ context: c });
+		// Every request reaching this point goes through a withEvlog-wrapped
+		// handler, which emits one wide event per handle() call (matched,
+		// unmatched, and thrown). Flag it so the request-log middleware
+		// above skips its duplicate line.
+		c.set("evlogWideEvent", true);
 		const isRpc = c.req.path.includes("/rpc/");
 		const handler = isRpc ? rpcHandler : openApiHandler;
 		const prefix = isRpc ? "/api/rpc" : "/api";
@@ -174,6 +192,24 @@ export const app = new Hono()
 		}
 
 		await next();
+	})
+	// Thrown exceptions (createContext, auth.handler, webhook/cron handlers)
+	// bypass the `.use("*")` fingerprint middleware — the header is set on the
+	// error response here too so emission point 1 covers every /api/* response.
+	.onError((err, c) => {
+		log.error("unhandled error", {
+			err,
+			method: c.req.method,
+			path: c.req.path,
+		});
+		// Preserve Hono's HTTPException semantics (intended status codes)
+		// instead of flattening everything to a generic 500.
+		const res =
+			err instanceof HTTPException
+				? err.getResponse()
+				: c.json({ error: "internal_error" }, 500);
+		res.headers.set(KIT_FINGERPRINT_HEADER_NAME, KIT_FINGERPRINT_HEADER_VALUE);
+		return res;
 	});
 
 export type App = typeof app;

@@ -20,6 +20,12 @@ vi.mock("@fuutu/auth", () => ({
 
 vi.mock("@fuutu/search", () => ({
 	resolveSearchProvider: vi.fn(),
+	searchConfig: {
+		provider: "postgres",
+		defaultLimit: 20,
+		maxLimit: 50,
+		maxOffset: 10_000,
+	},
 }));
 
 const { auth } = await import("@fuutu/auth");

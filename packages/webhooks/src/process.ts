@@ -19,13 +19,27 @@ const log = createLogger({ scope: "webhooks:process" });
  * workers never duplicate work), attempts delivery, and updates the existing
  * delivery record with the result. Failed deliveries are scheduled for
  * retry with backoff up to `maxRetries`.
+ *
+ * Deliveries are attempted strictly serially (one `await` per row). That is
+ * deliberate for a starter kit: predictable load on receivers, no outbound
+ * connection storms, and no extra concurrency machinery for kit buyers to
+ * reason about. If you outgrow it, batch `deliverWebhook` calls here — the
+ * claim/lock semantics in `claimPendingDeliveries` already support it.
  */
 export async function processPendingDeliveries(): Promise<{
 	processed: number;
 	succeeded: number;
 	failed: number;
 }> {
-	await recoverStaleDeliveries(webhooksConfig.staleProcessingTimeoutMs);
+	// Recovery consumes retry budget (a crashed attempt is an attempt), so
+	// the backoff knobs are passed in — @fuutu/db cannot import this config
+	// (dependency direction is webhooks → db).
+	await recoverStaleDeliveries({
+		timeoutMs: webhooksConfig.staleProcessingTimeoutMs,
+		maxRetries: webhooksConfig.maxRetries,
+		retryBaseDelayMs: webhooksConfig.retryBaseDelayMs,
+		maxRetryDelayMs: webhooksConfig.maxRetryDelayMs,
+	});
 	const deliveries = await claimPendingDeliveries(100);
 
 	let succeeded = 0;
@@ -91,7 +105,9 @@ export async function processPendingDeliveries(): Promise<{
 				await updateDeliveryStatus(delivery.id, {
 					status: shouldRetry ? "retrying" : "failed",
 					responseCode: result.responseCode,
-					responseBody: result.responseBody,
+					// Fall back to the transport error so DNS/timeout/network
+					// failures still leave a visible failure reason on the row.
+					responseBody: result.responseBody ?? result.error,
 					attempt,
 					nextRetryAt: shouldRetry ? calculateNextRetry(attempt) : null,
 				});

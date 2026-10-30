@@ -3,8 +3,8 @@ import { ExpandableWrapper } from "./expandable";
 import { FrameChrome } from "./frame-chrome";
 import { FrameContent } from "./frame-content";
 import { FrameIphone } from "./frame-iphone";
-import type { MediaFrameProps } from "./types";
-import { resolveAutoFilename } from "./utils";
+import type { DistributiveOmit, MediaFrameProps } from "./types";
+import { resolveAutoFilename, toSafeIframeUrl } from "./utils";
 
 /**
  * Flexible media frame — placeholder, image, video, iframe, or custom children.
@@ -57,6 +57,14 @@ export function MediaFrame({
 		videoSrc,
 		iframeSrc,
 	});
+
+	// Mirror FrameContent's priority (children → iframe → image → video →
+	// placeholder): interactive modes can't sit inside a <button>, so
+	// expandable uses a dedicated corner control instead of a full-area trigger.
+	const interactiveContent =
+		Boolean(children) ||
+		Boolean(iframeSrc && toSafeIframeUrl(iframeSrc)) ||
+		(!imageSrc && Boolean(videoSrc));
 
 	let frameContent: React.ReactNode;
 
@@ -144,7 +152,10 @@ export function MediaFrame({
 
 	if (expandable) {
 		return (
-			<ExpandableWrapper ariaLabel={expandLabel}>
+			<ExpandableWrapper
+				ariaLabel={expandLabel}
+				interactive={interactiveContent}
+			>
 				{frameContent}
 			</ExpandableWrapper>
 		);
@@ -154,6 +165,6 @@ export function MediaFrame({
 }
 
 /** @deprecated Use `<MediaFrame chrome />` instead. */
-export const MacFrame = (props: Omit<MediaFrameProps, "chrome">) => (
-	<MediaFrame {...props} chrome />
-);
+export const MacFrame = (
+	props: DistributiveOmit<MediaFrameProps, "chrome">,
+) => <MediaFrame {...props} chrome />;

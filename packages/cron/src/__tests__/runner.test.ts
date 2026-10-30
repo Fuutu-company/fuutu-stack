@@ -13,6 +13,7 @@ vi.mock("@fuutu/db", () => ({
 	getTrialingSubscriptions: vi.fn().mockResolvedValue([]),
 	notificationExists: vi.fn().mockResolvedValue(false),
 	getCronJobRun: vi.fn().mockResolvedValue(null),
+	claimCronJobRun: vi.fn().mockResolvedValue(true),
 	recordCronJobRun: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -20,7 +21,8 @@ vi.mock("@fuutu/payments/config", () => ({
 	LIMITS: {
 		free: { auditLogDays: false },
 		pro: { auditLogDays: 30 },
-		enterprise: { auditLogDays: "unlimited" },
+		// Finite on every plan — "unlimited" makes the job a no-op.
+		enterprise: { auditLogDays: 90 },
 	},
 }));
 
@@ -46,10 +48,12 @@ vi.mock("@fuutu/telemetry", () => ({
 	pingTelemetry: vi.fn().mockResolvedValue({ sent: true, status: 200 }),
 }));
 
-import { getCronJobRun, recordCronJobRun } from "@fuutu/db";
+import { claimCronJobRun, getCronJobRun, recordCronJobRun } from "@fuutu/db";
 import { processPendingDeliveries } from "@fuutu/webhooks";
 import { cronConfig } from "../config";
 import { listJobs, runAllJobs, runJob } from "../runner";
+import { InlineJobRunner } from "../runners/inline";
+import type { CronJob, CronJobResult } from "../types";
 
 const ALL_JOBS = [
 	"webhook-retry",
@@ -57,6 +61,23 @@ const ALL_JOBS = [
 	"subscription-reminder",
 	"telemetry-ping",
 ];
+
+const DONE: CronJobResult = { success: true, processed: 1, errors: [] };
+
+function makeRunnerJob(name: string, run: CronJob["run"]): CronJob {
+	return { name, schedule: "* * * * *", enabled: true, run };
+}
+
+function deferred(): {
+	promise: Promise<CronJobResult>;
+	resolve: (r: CronJobResult) => void;
+} {
+	let resolve: (r: CronJobResult) => void = () => {};
+	const promise = new Promise<CronJobResult>((r) => {
+		resolve = r;
+	});
+	return { promise, resolve };
+}
 
 describe("runJob", () => {
 	it("runs a known job and returns a result", async () => {
@@ -71,6 +92,19 @@ describe("runJob", () => {
 		expect(result.errors).toContain('unknown job "nonexistent"');
 	});
 
+	it("reports failure when force-running a disabled job", async () => {
+		cronConfig.jobs.webhookRetry = false;
+		try {
+			vi.mocked(processPendingDeliveries).mockClear();
+			const result = await runJob("webhook-retry");
+			expect(result.success).toBe(false);
+			expect(result.errors).toContain('job "webhook-retry" is disabled');
+			expect(processPendingDeliveries).not.toHaveBeenCalled();
+		} finally {
+			cronConfig.jobs.webhookRetry = true;
+		}
+	});
+
 	it("force-runs a job even when it is not due", async () => {
 		vi.mocked(getCronJobRun).mockResolvedValue({
 			lastRunAt: new Date(),
@@ -83,7 +117,14 @@ describe("runJob", () => {
 			"success",
 			expect.any(Date),
 			undefined,
+			undefined,
 		);
+	});
+
+	it("does not claim a slot on the force-run path", async () => {
+		vi.mocked(claimCronJobRun).mockClear();
+		await runJob("webhook-retry");
+		expect(claimCronJobRun).not.toHaveBeenCalled();
 	});
 });
 
@@ -133,6 +174,7 @@ describe("runAllJobs", () => {
 				"success",
 				expect.any(Date),
 				undefined,
+				expect.any(Date),
 			);
 			expect(
 				vi
@@ -186,6 +228,7 @@ describe("runAllJobs", () => {
 				success: true,
 				processed: 0,
 				errors: [],
+				skipped: true,
 			});
 			expect(processPendingDeliveries).not.toHaveBeenCalled();
 		} finally {
@@ -201,6 +244,201 @@ describe("runAllJobs", () => {
 		expect(results["webhook-retry"]?.success).toBe(false);
 		expect(results["webhook-retry"]?.errors).toContain("boom");
 		expect(results["audit-log-cleanup"]?.success).toBe(true);
+	});
+
+	it("skips a due job whose claim is lost to a concurrent trigger", async () => {
+		vi.mocked(claimCronJobRun).mockResolvedValueOnce(false);
+		vi.mocked(processPendingDeliveries).mockClear();
+
+		const results = await runAllJobs();
+
+		expect(results["webhook-retry"]).toEqual({
+			success: true,
+			processed: 0,
+			errors: [],
+			skipped: true,
+		});
+		expect(processPendingDeliveries).not.toHaveBeenCalled();
+	});
+
+	it("skips a due job when the claim write fails (fail-closed)", async () => {
+		vi.mocked(claimCronJobRun).mockRejectedValueOnce(new Error("db down"));
+		vi.mocked(processPendingDeliveries).mockClear();
+
+		const results = await runAllJobs();
+
+		expect(results["webhook-retry"]).toEqual({
+			success: true,
+			processed: 0,
+			errors: [],
+			skipped: true,
+		});
+		expect(processPendingDeliveries).not.toHaveBeenCalled();
+	});
+
+	it("records a job's skipped result with status skipped", async () => {
+		const runner = new InlineJobRunner([
+			makeRunnerJob(
+				"skip-me",
+				vi.fn().mockResolvedValue({ ...DONE, processed: 0, skipped: true }),
+			),
+		]);
+		vi.mocked(recordCronJobRun).mockClear();
+
+		await runner.run("skip-me");
+
+		expect(recordCronJobRun).toHaveBeenCalledWith(
+			"skip-me",
+			"skipped",
+			expect.any(Date),
+			undefined,
+			undefined,
+		);
+	});
+
+	it("claims a due job against the observed lastRunAt", async () => {
+		const lastRunAt = new Date(2025, 5, 5, 0, 0, 0);
+		vi.mocked(getCronJobRun).mockResolvedValue({ lastRunAt } as never);
+		vi.mocked(claimCronJobRun).mockClear();
+
+		await runAllJobs();
+
+		expect(claimCronJobRun).toHaveBeenCalledWith(
+			"webhook-retry",
+			lastRunAt,
+			expect.any(Date),
+		);
+	});
+
+	it("fails open when run state is unreadable — runs without claiming", async () => {
+		vi.mocked(getCronJobRun).mockRejectedValue(new Error("db down"));
+		vi.mocked(claimCronJobRun).mockClear();
+		vi.mocked(processPendingDeliveries).mockClear();
+		try {
+			const results = await runAllJobs();
+			expect(processPendingDeliveries).toHaveBeenCalled();
+			expect(results["webhook-retry"]?.success).toBe(true);
+			// No claim possible without a readable lastRunAt — documented
+			// fail-open means the job runs unclaimed rather than not at all.
+			expect(claimCronJobRun).not.toHaveBeenCalled();
+		} finally {
+			vi.mocked(getCronJobRun).mockResolvedValue(null);
+		}
+	});
+
+	it("still returns the result when recording the run fails", async () => {
+		vi.mocked(recordCronJobRun).mockRejectedValueOnce(new Error("db down"));
+		const results = await runAllJobs();
+		expect(results["webhook-retry"]?.success).toBe(true);
+	});
+});
+
+describe("in-flight guard", () => {
+	it("rejects a force-run while the same job is already running", async () => {
+		const d = deferred();
+		const run = vi.fn(() => d.promise);
+		const runner = new InlineJobRunner([makeRunnerJob("slow", run)]);
+
+		const first = runner.run("slow");
+		const second = await runner.run("slow");
+
+		expect(second).toEqual({
+			success: false,
+			processed: 0,
+			errors: ['job "slow" is already running'],
+		});
+		expect(run).toHaveBeenCalledTimes(1);
+
+		d.resolve(DONE);
+		expect((await first).success).toBe(true);
+	});
+
+	it("skips an in-flight job in runAll without claiming", async () => {
+		const d = deferred();
+		const runner = new InlineJobRunner([
+			makeRunnerJob(
+				"slow",
+				vi.fn(() => d.promise),
+			),
+		]);
+		vi.mocked(claimCronJobRun).mockClear();
+
+		const first = runner.run("slow");
+		const results = await runner.runAll();
+
+		expect(results.slow).toEqual({
+			success: true,
+			processed: 0,
+			errors: [],
+			skipped: true,
+		});
+		expect(claimCronJobRun).not.toHaveBeenCalled();
+
+		d.resolve(DONE);
+		await first;
+	});
+
+	it("skips a runAll slot when a force-run starts during the schedule/claim awaits", async () => {
+		// TOCTOU regression: the in-flight check in runAll happens before the
+		// awaited getLastRunAt/claim reads — a force-run starting in that
+		// window must still win, and runAll must not execute the job twice.
+		let resolveLastRun: (v: null) => void = () => {};
+		vi.mocked(getCronJobRun).mockImplementationOnce(
+			() =>
+				new Promise<null>((r) => {
+					resolveLastRun = r;
+				}) as never,
+		);
+		const d = deferred();
+		const run = vi.fn(() => d.promise);
+		const runner = new InlineJobRunner([makeRunnerJob("racy", run)]);
+
+		const all = runner.runAll();
+		// runAll is now parked inside `await getLastRunAt` — a force-run
+		// starting here marks the job in-flight before runAll resumes.
+		const force = runner.run("racy");
+		resolveLastRun(null);
+		const results = await all;
+
+		expect(results.racy).toEqual({
+			success: true,
+			processed: 0,
+			errors: [],
+			skipped: true,
+		});
+		expect(run).toHaveBeenCalledTimes(1);
+
+		d.resolve(DONE);
+		await force;
+	});
+
+	it("keeps blocking overlaps until the job promise settles, not the race timeout", async () => {
+		vi.useFakeTimers();
+		const d = deferred();
+		const runner = new InlineJobRunner([
+			makeRunnerJob(
+				"slow",
+				vi.fn(() => d.promise),
+			),
+		]);
+		try {
+			const first = runner.run("slow");
+			// Past the per-job timeout — the run reports failure, but the
+			// underlying promise is still pending (zombie execution).
+			await vi.advanceTimersByTimeAsync(6 * 60_000);
+			expect((await first).success).toBe(false);
+
+			const overlap = await runner.run("slow");
+			expect(overlap.errors[0]).toBe('job "slow" is already running');
+
+			d.resolve(DONE);
+			// Let the job promise's own finally remove the guard.
+			await vi.advanceTimersByTimeAsync(0);
+			const after = await runner.run("slow");
+			expect(after.success).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 

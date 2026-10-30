@@ -5,6 +5,7 @@ import type { Context } from "../context";
 import { creditsRouter } from "../modules/credits/router";
 
 vi.mock("@fuutu/db", () => ({
+	getCreditEventsForMeter: vi.fn(),
 	getCreditEventsForOrganization: vi.fn(),
 	getCreditEventsForUser: vi.fn(),
 	getCreditPackagesForOrganization: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock("@fuutu/auth", () => ({
 }));
 
 const {
+	getCreditEventsForMeter,
 	getCreditEventsForOrganization,
 	getCreditEventsForUser,
 	getCreditPackagesForOrganization,
@@ -127,6 +129,49 @@ describe("credits.history — IDOR protection", () => {
 		vi.clearAllMocks();
 		vi.mocked(getCreditEventsForUser).mockResolvedValue([] as never);
 		vi.mocked(getCreditEventsForOrganization).mockResolvedValue([] as never);
+		vi.mocked(getCreditEventsForMeter).mockResolvedValue([] as never);
+	});
+
+	it("filters events by meterKey for the current user", async () => {
+		await call(
+			creditsRouter.history,
+			{ meterKey: "ai.tokens" },
+			{ context: authenticatedContext },
+		);
+
+		expect(getCreditEventsForMeter).toHaveBeenCalledWith({
+			userId: "user-1",
+			organizationId: undefined,
+			meterKey: "ai.tokens",
+			limit: 50,
+		});
+		expect(getCreditEventsForUser).not.toHaveBeenCalled();
+		expect(getCreditEventsForOrganization).not.toHaveBeenCalled();
+	});
+
+	it("filters events by meterKey for an org when user is a member", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+
+		await call(
+			creditsRouter.history,
+			{
+				organizationId: "12345678-1234-1234-8123-123456789abc",
+				meterKey: "ai.tokens",
+				limit: 10,
+			},
+			{ context: authenticatedContext },
+		);
+
+		expect(getCreditEventsForMeter).toHaveBeenCalledWith({
+			userId: undefined,
+			organizationId: "12345678-1234-1234-8123-123456789abc",
+			meterKey: "ai.tokens",
+			limit: 10,
+		});
+		expect(getCreditEventsForOrganization).not.toHaveBeenCalled();
+		expect(getCreditEventsForUser).not.toHaveBeenCalled();
 	});
 
 	it("returns events for the current user when no organizationId", async () => {
@@ -162,11 +207,15 @@ describe("credits.history — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.history,
-				{ organizationId: "87654321-4321-4321-9123-210fedcba987" },
+				{
+					organizationId: "87654321-4321-4321-9123-210fedcba987",
+					meterKey: "ai.tokens",
+				},
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
 
+		expect(getCreditEventsForMeter).not.toHaveBeenCalled();
 		expect(getCreditEventsForOrganization).not.toHaveBeenCalled();
 		expect(getCreditEventsForUser).not.toHaveBeenCalled();
 	});
@@ -177,12 +226,42 @@ describe("credits.history — IDOR protection", () => {
 		await expect(
 			call(
 				creditsRouter.history,
-				{ organizationId: "99999999-9999-1999-9123-999999999999" },
+				{
+					organizationId: "99999999-9999-1999-9123-999999999999",
+					meterKey: "ai.tokens",
+				},
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
 
+		expect(getCreditEventsForMeter).not.toHaveBeenCalled();
 		expect(getCreditEventsForOrganization).not.toHaveBeenCalled();
+		expect(getCreditEventsForUser).not.toHaveBeenCalled();
+	});
+
+	it("filters events by meterKey for an org when user has member role", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [{ userId: "user-1", role: "member", id: "member-1" }],
+		} as never);
+
+		await call(
+			creditsRouter.history,
+			{
+				organizationId: "12345678-1234-1234-8123-123456789abc",
+				meterKey: "ai.tokens",
+			},
+			{ context: authenticatedContext },
+		);
+
+		expect(getCreditEventsForMeter).toHaveBeenCalledWith({
+			userId: undefined,
+			organizationId: "12345678-1234-1234-8123-123456789abc",
+			meterKey: "ai.tokens",
+			limit: 50,
+		});
+		expect(getCreditEventsForOrganization).not.toHaveBeenCalled();
+		expect(getCreditEventsForUser).not.toHaveBeenCalled();
 	});
 
 	it("throws UNAUTHORIZED when unauthenticated", async () => {

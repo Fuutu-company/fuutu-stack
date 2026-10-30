@@ -32,6 +32,7 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 		const conversation = await getConversation(
 			input.conversationId,
 			context.user.id,
+			{ take: 50 },
 		);
 		if (!conversation) {
 			throw new ORPCError("NOT_FOUND", {
@@ -46,7 +47,11 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 			input.content,
 		);
 
+		// getConversation returned the newest 50 messages descending —
+		// reverse back to chronological order for the provider.
 		const history = conversation.messages
+			.slice()
+			.reverse()
 			.filter((m) => {
 				if (!VALID_ROLES.includes(m.role as ValidRole)) {
 					log.warn("Skipping message with invalid role", {

@@ -22,6 +22,15 @@ vi.mock("../../prisma/client", () => ({
 
 import * as creditBalanceQueries from "../../prisma/queries/credit-balance";
 
+function makeP2002(target: string[]): Error {
+	return Object.assign(
+		new Error(
+			`Unique constraint failed on the fields: (${target.map((t) => `\`${t}\``).join(",")})`,
+		),
+		{ code: "P2002", meta: { target } },
+	);
+}
+
 describe("credit-balance queries - concurrency safety", () => {
 	describe("consumeCreditsTx", () => {
 		it("uses conditional updateMany for recurring credits to prevent double-spend", async () => {
@@ -165,13 +174,52 @@ describe("credit-balance queries - concurrency safety", () => {
 			});
 
 			expect(mockTx.creditBalance.updateMany).toHaveBeenCalledWith({
-				where: { id: "balance-1" },
+				where: {
+					id: "balance-1",
+					OR: [
+						{ recurringPeriodEnd: { lt: new Date("2025-01-01") } },
+						{
+							recurringPeriodEnd: new Date("2025-01-01"),
+							recurringGranted: { not: 200 },
+						},
+					],
+				},
 				data: {
 					recurringGranted: 200,
 					recurringConsumed: 0,
 					recurringPeriodEnd: new Date("2025-01-01"),
 				},
 			});
+		});
+	});
+
+	describe("grantTopUpCreditsTx", () => {
+		it("swallows a P2002 targeting purchaseId (duplicate top-up is a no-op)", async () => {
+			const { db } = await import("../../prisma/client");
+			vi.mocked(db.$transaction).mockRejectedValue(makeP2002(["purchaseId"]));
+
+			await expect(
+				creditBalanceQueries.grantTopUpCreditsTx({
+					userId: "user-1",
+					meterKey: "ai_tokens",
+					amount: 100,
+					purchaseId: "pur-1",
+				}),
+			).resolves.toBeUndefined();
+		});
+
+		it("rethrows a P2002 targeting any other column", async () => {
+			const { db } = await import("../../prisma/client");
+			vi.mocked(db.$transaction).mockRejectedValue(makeP2002(["id"]));
+
+			await expect(
+				creditBalanceQueries.grantTopUpCreditsTx({
+					userId: "user-1",
+					meterKey: "ai_tokens",
+					amount: 100,
+					purchaseId: "pur-1",
+				}),
+			).rejects.toThrow("Unique constraint failed");
 		});
 	});
 });

@@ -6,19 +6,18 @@
 	"exports": {
 		"./saas": "./src/saas.ts",
 		"./marketing": "./src/marketing.ts",
-		"./docs": "./src/docs.ts"
+		"./docs": "./src/docs.ts",
+		"./public": "./src/public.ts"
 	},
 	"scripts": {
 		"check-types": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"dependencies": {
-		"@t3-oss/env-core": "catalog:",
 		"@t3-oss/env-nextjs": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@fuutu/config": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",

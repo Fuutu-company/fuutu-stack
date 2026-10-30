@@ -12,7 +12,7 @@ cd fuutu-stack
 pnpm install
 cp .env.example .env
 pnpm db:start        # Postgres + MinIO via docker-compose
-pnpm db:push         # push schema
+pnpm db:migrate      # apply migrations (db:push skips raw-SQL constraints)
 pnpm db:seed         # optional: seed admin@fuutu.local / DevPassword!2345
 pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 ```
@@ -37,6 +37,10 @@ feature/xxx ──PR──▶ develop ──release──▶ main ──tag
 | Hotfix → `main` | **Squash** | One commit, then `main → develop` back-merge |
 | `main` → `develop` (after hotfix) | **Merge commit** | Brings hotfix back cleanly |
 
+**Squash-merge rule:** the PR title *is* the squash commit message. It must be a valid Conventional Commit — that single line is what drives the semver bump at release time, so get the type right before merging.
+
+**Hotfix flow:** branch `hotfix/<x>` from `main` → PR → squash-merge → tag the **patch** release immediately → back-merge `main → develop` the same day. Skipping the back-merge lets the fix drift out of `develop` and resurface as a regression in the next release.
+
 ### Branch Naming
 
 - `feature/<short-description>` — new features
@@ -54,27 +58,33 @@ feat: add subscription cancellation flow
 fix: correct seat count on organization update
 docs: update authentication guide
 chore: bump prisma to 7.0.1
-breaking: rename MailProvider.send() to MailProvider.sendMail()
+breaking: rename EmailProvider.send() to EmailProvider.sendMail()
 ```
 
 | Prefix | Bump | Example |
 |---|---|---|
 | `feat:` | minor | `feat: add API key revocation` |
-| `fix:` | patch | `fix: prevent duplicate webhook delivery` |
-| `breaking:` | major | `breaking: remove deprecated auth callback` |
-| `docs:` | none | `docs: add deployment guide` |
-| `chore:` | none | `chore: update dependencies` |
+| `fix:` / `perf:` | patch | `fix: prevent duplicate webhook delivery` |
+| `breaking:` or any `!` suffix | major | `feat!: drop node 18 support` |
+| `docs:` / `chore:` / `ci:` / `test:` / `refactor:` / `style:` | none | `docs: add deployment guide` |
 
-Squash-merge uses the PR title as the commit message. This drives automatic semantic versioning on releases.
+Squash-merge uses the PR title as the commit message — keep it a valid Conventional Commit.
+
+Releases are **manual**:
+
+1. Move the `CHANGELOG.md` `Unreleased` entries into a dated section.
+2. Bump `KIT_VERSION` in `packages/config/index.ts` **and** `packages/telemetry/bin/ping.mjs`.
+3. Sync the app `package.json` versions.
+4. Tag `vX.Y.Z` and create the GitHub Release.
 
 ### Pull Request Process
 
 1. Create a feature branch from `develop` (or `main` for hotfixes)
 2. Make your changes — follow the code conventions below
-3. Run `pnpm check` (lint + types + tests)
+3. Run `pnpm check:ci`, `pnpm check-types` and `pnpm test` (lint, types, tests)
 4. Open a PR targeting `develop` (or `main` for hotfixes)
 5. Fill in the PR template checklist
-6. CI must pass (lint, types, tests, e2e, translations)
+6. CI must pass: `verify` (lint, types, translations, unit/integration tests), `build`, `e2e (saas)` / `e2e (marketing)`
 7. Address review feedback
 8. Squash-merge when approved
 
@@ -95,7 +105,8 @@ Squash-merge uses the PR title as the commit message. This drives automatic sema
 pnpm test              # all unit + integration tests
 pnpm test:e2e          # Playwright E2E (saas + marketing)
 pnpm check-types       # TypeScript type checking (all workspaces)
-pnpm check             # lint + types + tests (full pipeline)
+pnpm check             # Biome lint/format with autofix (mutating)
+pnpm check:ci          # Biome lint/format check, no writes — what CI runs
 ```
 
 ### Provider Swaps
@@ -107,6 +118,27 @@ If you add a new provider implementation (e.g. Resend for mail):
 3. Add a skeleton entry in `packages/<domain>/src/providers/skeletons.ts`
 4. Add tests in `packages/<domain>/src/__tests__/`
 5. Document in the provider's README
+
+## Enabling CI
+
+CI ships **disabled**. Until you opt in, every job is skipped — skipped runs explain themselves via the run name and a summary page with these same steps.
+
+**Step 1 — set the repository variable:**
+
+1. Open your repo on GitHub → **Settings** (top bar)
+2. Left sidebar → **Secrets and variables** → **Actions** → tab **Variables**
+3. **New repository variable** → Name `FUUTU_CI_ENABLED`, Value `true` → **Add variable**
+
+**Step 2 — optional, hosted visual reports** (requires step 1):
+
+1. Same place: create a second variable `FUUTU_PAGES_ENABLED` = `true`
+2. **Settings** → left sidebar **Pages** (under *Code and automation*)
+3. Under **Build and deployment → Source** select **Deploy from a branch**
+4. Under **Branch** select `gh-pages` and folder `/(root)` → **Save**
+
+CI then publishes the per-PR visual-diff report to `https://<owner>.github.io/<repo>/pr-<N>/<app>/` and links it in the visual-changes PR comment. Without `FUUTU_PAGES_ENABLED`, reports still ship as workflow artifacts.
+
+> The `gh-pages` branch is created automatically on the first deploy — if it doesn't appear in the Branch dropdown yet, open a PR that produces a visual report first, then finish step 2.
 
 ## Reporting Issues
 

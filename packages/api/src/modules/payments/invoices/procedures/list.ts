@@ -6,8 +6,8 @@ import {
 } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
+import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import { protectedProcedure } from "../../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const invoicesListSchema = z.object({
 	organizationId: z.string().optional(),

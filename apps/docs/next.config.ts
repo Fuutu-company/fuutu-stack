@@ -1,3 +1,4 @@
+import { analyticsCspOrigins } from "@fuutu/analytics";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
@@ -13,6 +14,10 @@ const withMDX = createMDX();
 
 const isProd = env.NODE_ENV === "production";
 
+// Analytics CSP origins come from the active provider — switching
+// providers via NEXT_PUBLIC_ANALYTICS_PROVIDER needs no edits here.
+const analyticsCsp = analyticsCspOrigins();
+
 const securityHeaders = [
 	{ key: "X-Frame-Options", value: "DENY" },
 	{ key: "X-Content-Type-Options", value: "nosniff" },
@@ -26,11 +31,11 @@ const securityHeaders = [
 		key: "Content-Security-Policy",
 		value: [
 			"default-src 'self'",
-			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline'`,
+			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' ${analyticsCsp.scriptSrc.join(" ")}`,
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https:",
 			"font-src 'self' data: https:",
-			"connect-src 'self' https:",
+			`connect-src 'self' https: ${analyticsCsp.connectSrc.join(" ")}`,
 			"frame-ancestors 'none'",
 			"base-uri 'self'",
 			"form-action 'self'",
@@ -50,7 +55,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
 	typedRoutes: false,
 	reactCompiler: true,
-	transpilePackages: ["shiki", "@fuutu/ui", "@fuutu/i18n"],
+	transpilePackages: ["shiki", "@fuutu/ui", "@fuutu/i18n", "@fuutu/analytics"],
 	async headers() {
 		return [
 			{

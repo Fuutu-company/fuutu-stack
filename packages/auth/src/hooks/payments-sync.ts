@@ -16,6 +16,8 @@ import {
 
 const log = createLogger({ scope: "auth:payments-sync" });
 
+type UserPurchase = Awaited<ReturnType<typeof getPurchasesByUserId>>[number];
+
 /**
  * Recomputes the current member count of the org and syncs it with the
  * payment provider. No-op when the org has no active subscription.
@@ -54,12 +56,12 @@ export async function cancelActiveSubscriptionsForUser(
 	const results = await Promise.allSettled(
 		purchases
 			.filter(
-				(p) =>
+				(p): p is UserPurchase & { subscriptionId: string } =>
 					p.type === "SUBSCRIPTION" &&
-					p.subscriptionId &&
+					p.subscriptionId != null &&
 					(p.status === "ACTIVE" || p.status === "TRIALING"),
 			)
-			.map((p) => provider.cancelSubscription(p.subscriptionId as string)),
+			.map((p) => provider.cancelSubscription(p.subscriptionId)),
 	);
 	for (const r of results) {
 		if (r.status === "rejected") {

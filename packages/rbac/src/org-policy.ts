@@ -7,7 +7,7 @@ import { crud, PERMISSIONS } from "./permissions";
  * Source: Better-Auth `organization` plugin → `member.role`
  * Roles:  "member" | "admin" | "owner"
  *
- * Checked by: `requireOrgPermission()` / `requireOrgPermissionAccess()` / `requireOrgRole()`
+ * Checked by: `requireOrgPermission()` / `requireOrgPermissionAccess()`
  *
  * Design principle: The org `member` base tier mirrors the system `user` base tier
  * for resources that exist in both scopes. The admin/owner tiers add management, not
@@ -19,8 +19,8 @@ import { crud, PERMISSIONS } from "./permissions";
  *
  * Note: Notifications are NOT here — they are always user-scoped (checked via SYSTEM_POLICY).
  */
-export const ORG_POLICY: OrgAccessPolicy = {
-	member: [
+export const ORG_POLICY: OrgAccessPolicy = Object.freeze({
+	member: Object.freeze([
 		// Org-scoped resources — full CRUD (member can use these like a user would)
 		...crud("api-key"),
 		...crud("webhook"),
@@ -33,8 +33,8 @@ export const ORG_POLICY: OrgAccessPolicy = {
 		PERMISSIONS.PAYMENT.VIEW,
 		// Organization — view only (update/delete gated by admin/owner below)
 		PERMISSIONS.ORGANIZATION.VIEW,
-	],
-	admin: [
+	]),
+	admin: Object.freeze([
 		// Org management
 		PERMISSIONS.ORGANIZATION.UPDATE,
 		PERMISSIONS.INVITE_MEMBER,
@@ -44,6 +44,6 @@ export const ORG_POLICY: OrgAccessPolicy = {
 		PERMISSIONS.PAYMENT.UPDATE,
 		// Org audit log is sensitive — admin-only within the org
 		PERMISSIONS.AUDIT_LOG.VIEW,
-	],
-	owner: [PERMISSIONS.ORGANIZATION.DELETE],
-};
+	]),
+	owner: Object.freeze([PERMISSIONS.ORGANIZATION.DELETE]),
+});

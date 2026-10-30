@@ -1,6 +1,8 @@
 export { type CronConfig, cronConfig } from "./config";
 export {
+	allJobs,
 	auditLogCleanupJob,
+	registerJob,
 	subscriptionReminderJob,
 	telemetryPingJob,
 	webhookRetryJob,

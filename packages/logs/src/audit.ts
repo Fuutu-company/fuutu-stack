@@ -1,3 +1,4 @@
+import { log as evlogLog } from "evlog";
 import type {
 	AuditEvent,
 	AuditLogger,
@@ -5,21 +6,41 @@ import type {
 	LoggerOptions,
 } from "./types";
 
+// Metadata keys dropped from console output — caller metadata is
+// documented as PII-free, but defence-in-depth keeps obvious secrets
+// out of the log stream. The persisted sink row always keeps the full
+// event.
+const SENSITIVE_METADATA_KEY =
+	/password|secret|token|api[-_]?key|credential|session|cookie|private/i;
+
+/** Copy of audit metadata with sensitive keys removed — for console mirrors. */
+function safeMetadata(
+	metadata: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+	return Object.fromEntries(
+		Object.entries(metadata ?? {}).filter(
+			([key]) => !SENSITIVE_METADATA_KEY.test(key),
+		),
+	);
+}
+
 /**
  * Default AuditSink for dev/local-only setups. Mirrors into console
  * so tests and the dev shell never need a DB connection. Replace at
  * boot via `setAuditSink(prismaAuditSink)` in production code.
  *
- * Uses `console.info` directly (not evlog) so this module is browser-safe
- * and doesn't pull evlog's Node-only modules into client bundles.
+ * Uses `console.info` for the mirror (not evlog) so audit events don't
+ * re-enter the log stream. The module only imports evlog's browser-safe
+ * `log` object (same as compat.ts) for sink-failure reporting.
  */
 export const consoleAuditSink: AuditSink = {
 	async record(event) {
 		console.info("[audit]", event.action, {
 			userId: event.userId ?? null,
+			organizationId: event.organizationId ?? null,
 			ip: event.ip ?? null,
 			userAgent: event.userAgent ?? null,
-			metadata: event.metadata ?? {},
+			metadata: safeMetadata(event.metadata),
 		});
 	},
 };
@@ -53,16 +74,36 @@ export function createAuditLogger(options: LoggerOptions = {}): AuditLogger {
 			try {
 				await activeAuditSink.record(event);
 			} catch (error) {
-				console.error(`[${tag}] audit sink failure`, {
+				const failure = {
 					action: event.action,
 					error: error instanceof Error ? error.message : String(error),
-				});
+				};
+				// Through evlog so the failure reaches configured drains;
+				// console.error stays as fallback for the drains-broken case.
+				// Each call is guarded separately — a throwing logger must not
+				// break the other fallback or violate the never-throw contract.
+				try {
+					evlogLog.error({
+						tag,
+						message: "audit sink failure",
+						...failure,
+					});
+				} catch {
+					// evlog itself is broken — fall through to console.
+				}
+				try {
+					console.error(`[${tag}] audit sink failure`, failure);
+				} catch {
+					// Nothing left to report to.
+				}
 			}
 			console.info(`[${tag}] audit: ${event.action}`, {
+				// Metadata first — canonical fields must win on key collisions.
+				...safeMetadata(event.metadata),
 				userId: event.userId ?? null,
+				organizationId: event.organizationId ?? null,
 				ip: event.ip ?? null,
 				userAgent: event.userAgent ?? null,
-				...(event.metadata ?? {}),
 			});
 		},
 	};

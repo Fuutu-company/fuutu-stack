@@ -5,8 +5,8 @@ import { dispatchEvent } from "@fuutu/webhooks";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import type { OrgMember } from "../../../../orpc/org-access";
 import { authProcedure } from "../../../../orpc/procedures";
-import type { OrgMember } from "../../../organizations/shared";
 
 const log = createLogger({ scope: "api:organizations" });
 

@@ -30,8 +30,6 @@ const log = createLogger({ scope: "org-members" });
 
 const ac = new OrgAccessControl(ORG_POLICY);
 
-const ORG_ROLE_OWNER = "owner";
-
 type Member = {
 	id: string;
 	userId: string;
@@ -243,10 +241,11 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 												{m.user?.name ?? m.user?.email ?? m.userId}
 											</p>
 											<p className="text-muted-foreground text-xs">
-												{m.user?.email} · {roleLabel[m.role] ?? m.role}
+												{m.user?.email} ·{" "}
+												{roleLabel[toOrgRole(m.role)] ?? m.role}
 											</p>
 										</div>
-										{canManageMembers && m.role !== ORG_ROLE_OWNER && (
+										{canManageMembers && toOrgRole(m.role) !== "owner" && (
 											<Button
 												variant="ghost"
 												size="sm"
@@ -281,7 +280,7 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 											<div>
 												<p className="font-medium text-sm">{i.email}</p>
 												<p className="text-muted-foreground text-xs">
-													{roleLabel[i.role] ?? i.role}
+													{roleLabel[toOrgRole(i.role)] ?? i.role}
 												</p>
 											</div>
 											{canManageMembers && (

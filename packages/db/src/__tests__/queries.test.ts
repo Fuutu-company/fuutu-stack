@@ -50,12 +50,18 @@ vi.mock("../../prisma/client", () => ({
 		purchase: {
 			findFirst: vi.fn(),
 		},
+		invoice: {
+			create: vi.fn(),
+			upsert: vi.fn(),
+		},
 		$queryRaw: vi.fn(),
+		$executeRaw: vi.fn(),
 	},
 }));
 
 import { db } from "../../prisma/client";
 import * as apiKeyQueries from "../../prisma/queries/api-key";
+import * as invoiceQueries from "../../prisma/queries/invoice";
 import * as notificationQueries from "../../prisma/queries/notification";
 import * as organizationQueries from "../../prisma/queries/organization";
 import * as purchaseQueries from "../../prisma/queries/purchase";
@@ -220,6 +226,97 @@ describe("DB query functions - smoke tests", () => {
 				await purchaseQueries.getPurchaseByCheckoutEventId("creem", "evt_x"),
 			).toBeNull();
 		});
+
+		it("getActiveSubscriptionForUser gates on ACTIVE/TRIALING or SCHEDULED_CANCEL within period", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
+
+			await purchaseQueries.getActiveSubscriptionForUser("user_1");
+
+			const where = vi
+				.mocked(db.purchase.findFirst)
+				.mock.calls.at(-1)?.[0] as unknown as {
+				where: {
+					userId: string;
+					type: string;
+					OR: [
+						{ status: { in: string[] } },
+						{
+							status: string;
+							currentPeriodEnd: { gt: Date };
+						},
+					];
+				};
+			};
+			expect(where.where.userId).toBe("user_1");
+			expect(where.where.type).toBe("SUBSCRIPTION");
+			expect(where.where.OR[0].status.in).toEqual(["ACTIVE", "TRIALING"]);
+			expect(where.where.OR[1].status).toBe("SCHEDULED_CANCEL");
+			// gt is evaluated per call — must be a fresh "now", not stale
+			expect(
+				Math.abs(where.where.OR[1].currentPeriodEnd.gt.getTime() - Date.now()),
+			).toBeLessThan(5000);
+		});
+
+		it("getActiveSubscriptionForOrganization uses the same access-gating filter", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
+
+			await purchaseQueries.getActiveSubscriptionForOrganization("org_1");
+
+			const where = vi
+				.mocked(db.purchase.findFirst)
+				.mock.calls.at(-1)?.[0] as unknown as {
+				where: { organizationId: string; OR: unknown[] };
+			};
+			expect(where.where.organizationId).toBe("org_1");
+			expect(where.where.OR).toHaveLength(2);
+		});
+	});
+
+	describe("invoice queries", () => {
+		const invoiceInput = {
+			userId: "user_1",
+			organizationId: "org_1",
+			providerInvoiceId: "stripe:in_1",
+			amount: "19.00",
+			status: "paid",
+			issuedAt: new Date("2026-01-01T00:00:00.000Z"),
+		};
+
+		it("upserts atomically keyed on providerInvoiceId", async () => {
+			vi.mocked(db.invoice.upsert).mockResolvedValueOnce({
+				id: "inv_1",
+			} as never);
+
+			await invoiceQueries.upsertInvoiceByProviderId(invoiceInput);
+
+			// Atomic upsert — a read-then-write would race concurrent invoice
+			// events and duplicate rows under the unique constraint.
+			expect(db.invoice.upsert).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { providerInvoiceId: "stripe:in_1" },
+					create: expect.objectContaining({
+						providerInvoiceId: "stripe:in_1",
+						userId: "user_1",
+					}),
+					update: expect.objectContaining({ status: "paid" }),
+				}),
+			);
+		});
+
+		it("plain-creates when no providerInvoiceId is given", async () => {
+			vi.mocked(db.invoice.upsert).mockClear();
+			vi.mocked(db.invoice.create).mockResolvedValueOnce({
+				id: "inv_2",
+			} as never);
+
+			await invoiceQueries.upsertInvoiceByProviderId({
+				...invoiceInput,
+				providerInvoiceId: null,
+			});
+
+			expect(db.invoice.create).toHaveBeenCalled();
+			expect(db.invoice.upsert).not.toHaveBeenCalled();
+		});
 	});
 
 	describe("webhook queries", () => {
@@ -271,8 +368,51 @@ describe("DB query functions - smoke tests", () => {
 			expect(typeof webhookQueries.claimPendingDeliveries).toBe("function");
 		});
 
+		it("claimPendingDeliveries stamps attemptedAt at claim time", async () => {
+			vi.mocked(db.$queryRaw).mockResolvedValueOnce([] as never);
+
+			await webhookQueries.claimPendingDeliveries(10);
+
+			const calls = vi.mocked(db.$queryRaw).mock.calls;
+			const [strings, ...values] = calls.at(-1) as unknown as [
+				TemplateStringsArray,
+				...number[],
+			];
+			const sql = strings.join(" ");
+			// Staleness for recoverStaleDeliveries is measured from the claim —
+			// without this stamp a still-in-flight row could be recycled early.
+			expect(sql).toContain('"attemptedAt" = NOW()');
+			expect(sql).toContain("status = 'processing'");
+			expect(values).toEqual([10]);
+		});
+
 		it("exports recoverStaleDeliveries function", () => {
 			expect(typeof webhookQueries.recoverStaleDeliveries).toBe("function");
+		});
+
+		it("recoverStaleDeliveries consumes retry budget: increments attempt, schedules backoff, fails exhausted rows", async () => {
+			vi.mocked(db.$executeRaw).mockResolvedValueOnce(2 as never);
+
+			const result = await webhookQueries.recoverStaleDeliveries({
+				timeoutMs: 60_000,
+				maxRetries: 5,
+				retryBaseDelayMs: 1000,
+				maxRetryDelayMs: 3_600_000,
+			});
+
+			expect(result).toEqual({ count: 2 });
+			const [strings, ...values] = vi.mocked(db.$executeRaw).mock
+				.calls[0] as unknown as [TemplateStringsArray, ...number[]];
+			const sql = strings.join(" ");
+			// A crashed attempt is still an attempt — it must consume budget.
+			expect(sql).toContain('"attempt" = "attempt" + 1');
+			// Rows past maxRetries go terminal instead of looping forever.
+			expect(sql).toContain("'failed'");
+			// Recovered rows get a backoff nextRetryAt (same exponential +
+			// jitter formula as retry.ts), not an immediate re-claim.
+			expect(sql).toContain('POWER(2, "attempt" + 1)');
+			expect(sql).toContain("INTERVAL '1 millisecond'");
+			expect(values).toEqual([5, 5, 1000, 3_600_000, 5, 60_000]);
 		});
 
 		it("exports listActiveWebhooksByOrg function", () => {

@@ -1,6 +1,7 @@
 import { grantRecurringCreditsTx, grantTopUpCreditsTx } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
+import { getMeter } from "./meters";
 import { ownerXorCheck } from "./owner";
 
 const log = createLogger({ scope: "credits:grant" });
@@ -9,8 +10,8 @@ export const GrantRecurringCreditsSchema = ownerXorCheck(
 	z.object({
 		userId: z.string().optional(),
 		organizationId: z.string().optional(),
-		meterKey: z.string(),
-		amount: z.number().int().positive(),
+		meterKey: z.string().min(1),
+		amount: z.number().int().positive().max(2_147_483_647),
 		periodEnd: z.date(),
 	}),
 );
@@ -19,11 +20,22 @@ export const GrantTopUpCreditsSchema = ownerXorCheck(
 	z.object({
 		userId: z.string().optional(),
 		organizationId: z.string().optional(),
-		meterKey: z.string(),
-		amount: z.number().int().positive(),
-		expiresAt: z.date().nullable().optional(),
-		purchaseId: z.string().nullable().optional(),
-		priority: z.number().int().optional(),
+		meterKey: z.string().min(1),
+		amount: z.number().int().positive().max(2_147_483_647),
+		expiresAt: z
+			.date()
+			.nullable()
+			.optional()
+			.refine((d) => d == null || d.getTime() > Date.now(), {
+				message: "expiresAt must be in the future",
+			}),
+		purchaseId: z.string().min(1).nullable().optional(),
+		priority: z
+			.number()
+			.int()
+			.min(-2_147_483_648)
+			.max(2_147_483_647)
+			.optional(),
 	}),
 );
 
@@ -40,6 +52,10 @@ export async function grantRecurringCredits(params: {
 }): Promise<void> {
 	const { userId, organizationId, meterKey, amount, periodEnd } =
 		GrantRecurringCreditsSchema.parse(params);
+
+	if (!getMeter(meterKey)) {
+		throw new Error(`grantRecurringCredits: unknown meter key "${meterKey}"`);
+	}
 
 	await grantRecurringCreditsTx({
 		userId,
@@ -80,6 +96,10 @@ export async function grantTopUpCredits(params: {
 		purchaseId,
 		priority,
 	} = GrantTopUpCreditsSchema.parse(params);
+
+	if (!getMeter(meterKey)) {
+		throw new Error(`grantTopUpCredits: unknown meter key "${meterKey}"`);
+	}
 
 	await grantTopUpCreditsTx({
 		userId,

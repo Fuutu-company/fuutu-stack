@@ -4,8 +4,8 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import { protectedProcedure } from "../../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../shared";
 
 const revokeInvitationSchema = z.object({
 	invitationId: z.string().min(1),

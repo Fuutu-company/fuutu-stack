@@ -70,14 +70,40 @@ describe("resetRecurringCredits", () => {
 		).rejects.toThrow();
 	});
 
-	it("rejects non-positive amounts in newGranted map", async () => {
+	it("accepts a 0 grant in newGranted map (plan change zeroing a meter)", async () => {
+		vi.mocked(resetRecurringBalancesTx).mockResolvedValue([]);
+
+		await resetRecurringCredits({
+			userId: "user-1",
+			newPeriodEnd: new Date(),
+			newGranted: { ai_tokens: 0 },
+		});
+
+		expect(resetRecurringBalancesTx).toHaveBeenCalledWith(
+			expect.objectContaining({ newGranted: { ai_tokens: 0 } }),
+		);
+	});
+
+	it("rejects negative amounts in newGranted map", async () => {
 		await expect(
 			resetRecurringCredits({
 				userId: "user-1",
 				newPeriodEnd: new Date(),
-				newGranted: { ai_tokens: 0 },
+				newGranted: { ai_tokens: -5 },
 			}),
 		).rejects.toThrow();
+	});
+
+	it("rejects an unknown meter key in newGranted map without calling the tx", async () => {
+		await expect(
+			resetRecurringCredits({
+				userId: "user-1",
+				newPeriodEnd: new Date(),
+				newGranted: { ai_tokens: 100, unknown_meter: 50 },
+			}),
+		).rejects.toThrow('unknown meter key "unknown_meter"');
+
+		expect(resetRecurringBalancesTx).not.toHaveBeenCalled();
 	});
 
 	it("rejects non-integer amounts in newGranted map", async () => {

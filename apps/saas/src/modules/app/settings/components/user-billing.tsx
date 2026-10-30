@@ -1,7 +1,11 @@
 "use client";
 
 import { createLogger } from "@fuutu/logs";
-import { PLANS, type PlanId } from "@fuutu/payments/config";
+import {
+	type BillingInterval,
+	PLANS,
+	type PlanId,
+} from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
 	type PlanTranslations,
@@ -22,10 +26,13 @@ type ActiveSubscription = {
 	currentPeriodEnd?: Date | null;
 };
 
+/** Provider-side price IDs per plan, keyed by billing interval. */
+type PlanPriceIds = { monthly?: string; yearly?: string };
+
 export function UserSettingsBilling({
 	priceIds,
 }: {
-	priceIds: Partial<Record<PlanId, string>>;
+	priceIds: Partial<Record<PlanId, PlanPriceIds>>;
 }) {
 	const t = useTranslations();
 	const tp = useTranslations("payments");
@@ -57,28 +64,33 @@ export function UserSettingsBilling({
 		void load();
 	}, [load]);
 
-	const activePlanId: PlanId = (() => {
-		if (!activeSub?.productId) return "free";
-		for (const id of Object.keys(PLANS) as PlanId[]) {
-			const planPriceId = priceIds[id];
-			if (planPriceId && planPriceId === activeSub.productId) {
-				return id;
+	// A yearly subscription carries the yearly price ID — check both so a
+	// yearly sub resolves to its plan (and the correct interval label).
+	const { activePlanId, activeInterval } = ((): {
+		activePlanId: PlanId;
+		activeInterval: BillingInterval;
+	} => {
+		if (activeSub?.productId) {
+			for (const id of Object.keys(PLANS) as PlanId[]) {
+				const ids = priceIds[id];
+				if (ids?.yearly === activeSub.productId) {
+					return { activePlanId: id, activeInterval: "year" };
+				}
+				if (ids?.monthly === activeSub.productId) {
+					return { activePlanId: id, activeInterval: "month" };
+				}
 			}
 		}
-		return "free";
+		return { activePlanId: "free", activeInterval: "month" };
 	})();
 
-	async function checkout(planId: PlanId) {
-		const priceId = priceIds[planId];
-		if (!priceId) {
-			setError(tp("choosePlan.unavailable"));
-			return;
-		}
+	async function checkout(planId: PlanId, interval?: BillingInterval) {
 		setCheckoutLoading(planId);
 		setError(null);
 		try {
 			const result = await orpc.payments.checkout.create.call({
-				priceId,
+				planId,
+				interval,
 				successUrl: "/settings?tab=billing",
 				cancelUrl: "/settings?tab=billing",
 			});
@@ -158,7 +170,11 @@ export function UserSettingsBilling({
 									{activeSub
 										? tp("planInterval", {
 												plan: tp(`plans.${activePlanId}.name`),
-												interval: tp("choosePlan.monthly"),
+												interval: tp(
+													activeInterval === "year"
+														? "choosePlan.yearly"
+														: "choosePlan.monthly",
+												),
 											})
 										: t("organizations.settings.billingNoPlan")}
 								</p>

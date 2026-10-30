@@ -35,6 +35,12 @@ vi.mock("@aws-sdk/client-s3", () => ({
 			this.input = input;
 		}
 	},
+	S3ServiceException: class MockS3ServiceException extends Error {
+		constructor(options: { name?: string; message?: string }) {
+			super(options.message ?? "S3 error");
+			if (options.name) this.name = options.name;
+		}
+	},
 }));
 
 vi.mock("@aws-sdk/s3-request-presigner", () => ({
@@ -141,5 +147,106 @@ describe("s3 provider — presigned URL generation", () => {
 		expect(objects[0]?.key).toBe("a.webp");
 		expect(objects[0]?.size).toBe(100);
 		expect(objects[1]?.key).toBe("b.webp");
+	});
+
+	it("listObjects paginates with ContinuationToken until IsTruncated is false", async () => {
+		sendMock.mockClear();
+		sendMock
+			.mockResolvedValueOnce({
+				Contents: [
+					{ Key: "a.webp", Size: 100, LastModified: new Date("2025-01-01") },
+				],
+				IsTruncated: true,
+				NextContinuationToken: "token-page-2",
+			})
+			.mockResolvedValueOnce({
+				Contents: [
+					{ Key: "b.webp", Size: 200, LastModified: new Date("2025-01-02") },
+				],
+				IsTruncated: false,
+			});
+
+		const objects = await s3StorageProvider.listObjects("avatars", "p/");
+
+		expect(sendMock).toHaveBeenCalledTimes(2);
+		const secondCommand = sendMock.mock.calls[1]?.[0] as
+			| { input: { ContinuationToken?: string } }
+			| undefined;
+		expect(secondCommand?.input.ContinuationToken).toBe("token-page-2");
+		expect(objects.map((o) => o.key)).toEqual(["a.webp", "b.webp"]);
+	});
+
+	it("listObjects aborts after the page cap when the token never advances", async () => {
+		sendMock.mockClear();
+		sendMock.mockResolvedValue({
+			Contents: [
+				{ Key: "a.webp", Size: 100, LastModified: new Date("2025-01-01") },
+			],
+			IsTruncated: true,
+			NextContinuationToken: "stuck-token",
+		});
+		try {
+			await expect(
+				s3StorageProvider.listObjects("avatars", "p/"),
+			).rejects.toThrow(/100 pages/);
+			expect(sendMock).toHaveBeenCalledTimes(100);
+		} finally {
+			sendMock.mockResolvedValue({
+				Contents: [
+					{
+						Key: "file-1.webp",
+						Size: 1024,
+						LastModified: new Date("2025-01-01"),
+					},
+				],
+			});
+		}
+	});
+});
+
+describe("s3 provider — getObjectStream", () => {
+	it("returns the web stream plus metadata on success", async () => {
+		sendMock.mockClear();
+		const stream = new ReadableStream<Uint8Array>();
+		sendMock.mockResolvedValueOnce({
+			Body: { transformToWebStream: () => stream },
+			ContentType: "image/webp",
+			ContentLength: 512,
+		});
+
+		const result = await s3StorageProvider.getObjectStream?.(
+			"avatars",
+			"user-1.webp",
+		);
+
+		expect(result?.body).toBe(stream);
+		expect(result?.contentType).toBe("image/webp");
+		expect(result?.contentLength).toBe(512);
+	});
+
+	it("returns null when the object does not exist", async () => {
+		sendMock.mockClear();
+		const { S3ServiceException } = await import("@aws-sdk/client-s3");
+		for (const name of ["NoSuchKey", "NotFound"]) {
+			sendMock.mockRejectedValueOnce(
+				new S3ServiceException({
+					name,
+					message: "missing",
+					$fault: "server",
+					$metadata: {},
+				}),
+			);
+			await expect(
+				s3StorageProvider.getObjectStream?.("avatars", "gone.webp"),
+			).resolves.toBeNull();
+		}
+	});
+
+	it("rethrows non-miss errors", async () => {
+		sendMock.mockClear();
+		sendMock.mockRejectedValueOnce(new Error("connection reset"));
+		await expect(
+			s3StorageProvider.getObjectStream?.("avatars", "user-1.webp"),
+		).rejects.toThrow("connection reset");
 	});
 });
