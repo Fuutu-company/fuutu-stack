@@ -2,12 +2,12 @@
   "app": "saas",
   "branch": "49/merge",
   "pr": "49",
-  "sha": "6d2e68f",
-  "generatedAt": "2026-10-29T22:41:27.316Z",
+  "sha": "b16dcab",
+  "generatedAt": "2026-10-30T11:07:31.455Z",
   "threshold": 0.02,
-  "total": 51,
+  "total": 55,
   "changed": 0,
-  "added": 51,
+  "added": 55,
   "removed": 0,
   "unchanged": 0,
   "files": [
@@ -62,6 +62,17 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
+      "status": "added",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "admin--users-mobile-safari-linux.png",
+      "page": "admin--users",
+      "category": "admin",
+      "locale": null,
+      "viewport": "mobile",
+      "project": "mobile-safari",
       "status": "added",
       "diffPx": null,
       "diffRatio": null
@@ -419,12 +430,34 @@
       "diffRatio": null
     },
     {
+      "file": "dialog--api-key-create-mobile-safari-linux.png",
+      "page": "dialog--api-key-create",
+      "category": "dialog",
+      "locale": null,
+      "viewport": "mobile",
+      "project": "mobile-safari",
+      "status": "added",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
       "file": "dialog--webhook-create-chromium-linux.png",
       "page": "dialog--webhook-create",
       "category": "dialog",
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
+      "status": "added",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "dialog--webhook-create-mobile-safari-linux.png",
+      "page": "dialog--webhook-create",
+      "category": "dialog",
+      "locale": null,
+      "viewport": "mobile",
+      "project": "mobile-safari",
       "status": "added",
       "diffPx": null,
       "diffRatio": null
@@ -502,6 +535,17 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
+      "status": "added",
+      "diffPx": null,
+      "diffRatio": null
+    },
+    {
+      "file": "org--members-mobile-safari-linux.png",
+      "page": "org--members",
+      "category": "org",
+      "locale": null,
+      "viewport": "mobile",
+      "project": "mobile-safari",
       "status": "added",
       "diffPx": null,
       "diffRatio": null
