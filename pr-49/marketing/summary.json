@@ -2,8 +2,8 @@
   "app": "marketing",
   "branch": "49/merge",
   "pr": "49",
-  "sha": "be9f846",
-  "generatedAt": "2026-10-30T18:56:56.247Z",
+  "sha": "6c7d665",
+  "generatedAt": "2026-10-30T19:22:37.371Z",
   "threshold": 0.005,
   "total": 35,
   "changed": 1,
@@ -316,8 +316,8 @@
       "viewport": "mobile",
       "project": "mobile-safari",
       "status": "changed",
-      "diffPx": 209669,
-      "diffRatio": 0.05951222281355331,
+      "diffPx": 203416,
+      "diffRatio": 0.05773737803796346,
       "withinTolerance": false
     },
     {
