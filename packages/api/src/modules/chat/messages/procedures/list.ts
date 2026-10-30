@@ -1,4 +1,4 @@
-import { countMessages, getConversation, listMessages } from "@fuutu/db";
+import { countMessages, listMessages } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
@@ -21,25 +21,23 @@ export const listMessagesProcedure = permissionProcedure(PERMISSIONS.CHAT.VIEW)
 	})
 	.input(listMessagesSchema)
 	.handler(async ({ input, context }) => {
-		const conversation = await getConversation(
-			input.conversationId,
-			context.user.id,
-		);
-		if (!conversation) {
-			throw new ORPCError("NOT_FOUND", {
-				message: "Conversation not found",
-			});
-		}
 		const skip = (input.page - 1) * input.limit;
+		// Both queries enforce ownership themselves and return null for a
+		// missing or foreign conversation — no separate check needed.
 		const [items, total] = await Promise.all([
 			listMessages(input.conversationId, context.user.id, {
 				take: input.limit,
 				skip,
 			}),
-			countMessages(input.conversationId),
+			countMessages(input.conversationId, context.user.id),
 		]);
+		if (items === null || total === null) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Conversation not found",
+			});
+		}
 		return {
-			items: items ?? [],
+			items,
 			page: input.page,
 			limit: input.limit,
 			total,

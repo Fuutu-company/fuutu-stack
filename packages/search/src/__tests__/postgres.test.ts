@@ -6,11 +6,14 @@ vi.mock("@fuutu/db", () => ({
 }));
 
 import { searchAuditLogs, searchNotifications } from "@fuutu/db";
+import { searchConfig } from "../config";
 import { postgresProvider } from "../providers/postgres";
 import { testSearchProviderContract } from "./provider-contract";
 
-vi.mocked(searchNotifications).mockResolvedValue([]);
-vi.mocked(searchAuditLogs).mockResolvedValue([]);
+beforeEach(() => {
+	vi.mocked(searchNotifications).mockResolvedValue([]);
+	vi.mocked(searchAuditLogs).mockResolvedValue([]);
+});
 
 testSearchProviderContract("postgres", () => postgresProvider, {
 	searchBehavior: "resolves",
@@ -33,6 +36,7 @@ const auditLogRow = {
 	id: "a1",
 	action: "user.login",
 	userId: "u1",
+	organizationId: null,
 	ip: null,
 	userAgent: null,
 	metadata: null,
@@ -65,8 +69,10 @@ describe("PostgresProvider", () => {
 			expect.objectContaining({ take: 20, skip: 0 }),
 		);
 		expect(results).toHaveLength(2);
-		expect(results[0]?.collection).toBe("notifications");
-		expect(results[1]?.collection).toBe("audit-logs");
+		// Sorted by score desc — the audit-log hit (1) outranks the
+		// body-only notification match (0.5).
+		expect(results[0]?.collection).toBe("audit-logs");
+		expect(results[1]?.collection).toBe("notifications");
 	});
 
 	it("rejects unscoped searches — never returns cross-tenant rows", async () => {
@@ -156,6 +162,178 @@ describe("PostgresProvider", () => {
 		});
 
 		expect(results[0]?.score).toBeGreaterThan(results[1]?.score ?? 0);
+	});
+
+	it("paginates globally — an offset past a full page surfaces later hits", async () => {
+		// 20 title-matching notifications fill page 1 entirely; the single
+		// audit-log hit must land on page 2 instead of being re-skipped.
+		const notifications = Array.from({ length: 20 }, (_, i) => ({
+			...notificationRow,
+			id: `n${i + 1}`,
+			title: `Hello ${i + 1}`,
+		}));
+		vi.mocked(searchNotifications).mockResolvedValue(notifications);
+		vi.mocked(searchAuditLogs).mockResolvedValue([auditLogRow]);
+
+		const page1 = await postgresProvider.search({
+			text: "hello",
+			userId: "u1",
+		});
+		const page2 = await postgresProvider.search({
+			text: "hello",
+			userId: "u1",
+			offset: 20,
+		});
+
+		expect(page1).toHaveLength(20);
+		expect(page1.every((r) => r.collection === "notifications")).toBe(true);
+		expect(searchNotifications).toHaveBeenLastCalledWith(
+			"hello",
+			{ userId: "u1" },
+			expect.objectContaining({ take: 40, skip: 0 }),
+		);
+		expect(searchAuditLogs).toHaveBeenLastCalledWith(
+			"hello",
+			{ userId: "u1" },
+			expect.objectContaining({ take: 40, skip: 0 }),
+		);
+		expect(page2).toHaveLength(1);
+		expect(page2[0]?.collection).toBe("audit-logs");
+	});
+
+	it("scopes org-only queries to audit logs without touching notifications", async () => {
+		vi.mocked(searchAuditLogs).mockResolvedValue([auditLogRow]);
+
+		const results = await postgresProvider.search({
+			text: "login",
+			organizationId: "org-1",
+		});
+
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(results.map((r) => r.collection)).toEqual(["audit-logs"]);
+	});
+
+	it("throws for an unknown collection instead of silently returning nothing", async () => {
+		await expect(
+			postgresProvider.search({
+				text: "hello",
+				collection: "bogus",
+				userId: "u1",
+			}),
+		).rejects.toThrow('Unknown collection "bogus"');
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("throws for an empty-string collection instead of treating it as all", async () => {
+		await expect(
+			postgresProvider.search({
+				text: "hello",
+				collection: "",
+				userId: "u1",
+			}),
+		).rejects.toThrow("Unknown collection");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("rejects empty search text", async () => {
+		await expect(
+			postgresProvider.search({ text: "   ", userId: "u1" }),
+		).rejects.toThrow("non-empty");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("trims the search text before it reaches the db", async () => {
+		vi.mocked(searchNotifications).mockResolvedValue([]);
+		vi.mocked(searchAuditLogs).mockResolvedValue([]);
+
+		await postgresProvider.search({ text: "  hello  ", userId: "u1" });
+
+		expect(searchNotifications).toHaveBeenCalledWith(
+			"hello",
+			{ userId: "u1" },
+			expect.objectContaining({ take: 20, skip: 0 }),
+		);
+		expect(searchAuditLogs).toHaveBeenCalledWith(
+			"hello",
+			{ userId: "u1" },
+			expect.objectContaining({ take: 20, skip: 0 }),
+		);
+	});
+
+	it("rejects a limit below 1", async () => {
+		await expect(
+			postgresProvider.search({ text: "x", userId: "u1", limit: 0 }),
+		).rejects.toThrow("limit");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("accepts a limit equal to the configured max", async () => {
+		vi.mocked(searchNotifications).mockResolvedValue([]);
+		vi.mocked(searchAuditLogs).mockResolvedValue([]);
+
+		await postgresProvider.search({
+			text: "x",
+			userId: "u1",
+			limit: searchConfig.maxLimit,
+		});
+
+		expect(searchNotifications).toHaveBeenCalledWith(
+			"x",
+			{ userId: "u1" },
+			expect.objectContaining({ take: searchConfig.maxLimit, skip: 0 }),
+		);
+	});
+
+	it("rejects a limit above the configured max", async () => {
+		await expect(
+			postgresProvider.search({
+				text: "x",
+				userId: "u1",
+				limit: (searchConfig.maxLimit ?? 50) + 1,
+			}),
+		).rejects.toThrow("limit");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("rejects a non-integer limit", async () => {
+		await expect(
+			postgresProvider.search({ text: "x", userId: "u1", limit: 1.5 }),
+		).rejects.toThrow("limit");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("rejects a negative offset", async () => {
+		await expect(
+			postgresProvider.search({ text: "x", userId: "u1", offset: -1 }),
+		).rejects.toThrow("offset");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("rejects a non-integer offset", async () => {
+		await expect(
+			postgresProvider.search({ text: "x", userId: "u1", offset: 1.5 }),
+		).rejects.toThrow("offset");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
+	});
+
+	it("rejects an offset above the configured max", async () => {
+		await expect(
+			postgresProvider.search({
+				text: "x",
+				userId: "u1",
+				offset: (searchConfig.maxOffset ?? 10_000) + 1,
+			}),
+		).rejects.toThrow("offset");
+		expect(searchNotifications).not.toHaveBeenCalled();
+		expect(searchAuditLogs).not.toHaveBeenCalled();
 	});
 
 	it("index() is a no-op that resolves", async () => {

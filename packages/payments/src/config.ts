@@ -13,16 +13,20 @@
  */
 
 import { config } from "@fuutu/config";
+import { createLogger } from "@fuutu/logs";
 import type { PaymentProvider } from "./types";
 
+const log = createLogger({ scope: "payments" });
+
 // ─── 1. Provider ──────────────────────────────────────────────────────────────
+// Providers not shipped with the kit (e.g. LemonSqueezy, DodoPayments) are
+// integrated via `provider: "custom"` + `paymentsConfig.customProvider` —
+// they intentionally have no union member of their own.
 
 export type PaymentProviderId =
 	| "polar"
 	| "stripe"
-	| "lemonsqueezy"
 	| "creem"
-	| "dodopayments"
 	| "custom"
 	| "noop";
 
@@ -57,15 +61,23 @@ export interface PaymentsConfig {
 
 export const paymentsConfig: PaymentsConfig = {
 	// Active payment provider — edit this to switch between "polar", "stripe",
-	// "creem", "custom", or "noop".
+	// "creem", "custom", or "noop". Runtime overrides must go through
+	// `setPaymentProvider()` — a direct `paymentsConfig.provider = "x"`
+	// assignment bypasses the `config.features.payments` guard.
 	// This is the primary configuration point for kit users.
+	//
+	// `config.features.payments === false` is the master off-switch: it
+	// derives the "noop" provider and cannot be overridden at runtime.
 	//
 	// `config.ts` must stay client-safe (no `@fuutu/env/saas` import at module
 	// level) because client components import `paymentsConfig` for display logic.
 	// The SaaS app's `instrumentation.ts` can optionally override this at server
 	// startup via `setPaymentProvider(env.PAYMENTS_PROVIDER)` when the env var
 	// is set — useful for deploys where the provider differs per environment.
-	provider: "creem",
+	// `!== true` instead of `=== false`: config.features is `as const`, so the
+	// flag's declared type is a literal — a `=== false` comparison has no type
+	// overlap and fails TS2367.
+	provider: config.features.payments !== true ? "noop" : "creem",
 	billingAttachedTo:
 		config.features.organizationsMode !== "off" ? "organization" : "user",
 	requireActiveSubscription: false,
@@ -73,56 +85,37 @@ export const paymentsConfig: PaymentsConfig = {
 };
 
 /**
+ * Whether a real payment provider is active. False when the provider is
+ * "noop" — either set directly or derived from `config.features.payments`.
+ */
+export function isPaymentsEnabled(): boolean {
+	return paymentsConfig.provider !== "noop";
+}
+
+/**
  * Override the active payment provider at server-app startup.
  * Called from the SaaS app's `instrumentation.ts` only when `PAYMENTS_PROVIDER`
  * env var is set — otherwise the `paymentsConfig.provider` default above wins.
  * Client components must never call this.
+ *
+ * When `config.features.payments === false` the flag is the master
+ * off-switch — this call warns and leaves the noop provider in place.
  */
 export function setPaymentProvider(provider: PaymentProviderId): void {
+	if (config.features.payments !== true) {
+		log.warn(
+			`setPaymentProvider("${provider}") ignored — config.features.payments is false`,
+		);
+		return;
+	}
 	paymentsConfig.provider = provider;
 }
 
-// ─── 1b. Price-ID mapping ───────────────────────────────────────────────────
-// Maps plan IDs to provider-side price IDs. This is populated by the app
-// (server-side) and passed to client components as props — env vars are
-// server-only and must not be accessed in client components.
-// The app sets these at startup via `setPriceIds()`.
-
-export const PRICE_IDS: Partial<Record<PlanId, string>> = {};
-export const YEARLY_PRICE_IDS: Partial<Record<PlanId, string>> = {};
-
-export function setPriceIds(
-	priceIds: Partial<Record<PlanId, string>>,
-	yearlyPriceIds?: Partial<Record<PlanId, string>>,
-): void {
-	Object.assign(PRICE_IDS, priceIds);
-	if (yearlyPriceIds) {
-		Object.assign(YEARLY_PRICE_IDS, yearlyPriceIds);
-	}
-}
-
-export function getPriceIdForPlan(planId: PlanId): string | undefined {
-	return PRICE_IDS[planId];
-}
-
-export function getYearlyPriceIdForPlan(planId: PlanId): string | undefined {
-	return YEARLY_PRICE_IDS[planId];
-}
-
-/**
- * Reverse lookup: given a provider-side product/price ID, find the plan ID.
- * Used by webhook sync to map active subscriptions back to plans.
- *
- * Checks the runtime-populated PRICE_IDS map only. For env-var fallback
- * (server-only), use `getPlanIdForProductId` from `@fuutu/payments/config.server`.
- */
-export function getPlanIdForProductId(productId: string): PlanId | undefined {
-	return (Object.keys(PRICE_IDS) as PlanId[]).find(
-		(key) => PRICE_IDS[key] === productId,
-	);
-}
-
-// ─── 1c. Credit Top-Up Packages ─────────────────────────────────────────────────
+// ─── 1b. Credit Top-Up Packages ─────────────────────────────────────────────────
+// Top-up credit packages do not expire.
+// Labels/descriptions come from i18n keys, not this catalog — adding a
+// package requires `credits.topup.packages.<id>.{label,description}` in
+// every locale (enforced by check-translations.mjs).
 
 export interface CreditTopupPackage {
 	id: string;
@@ -130,8 +123,6 @@ export interface CreditTopupPackage {
 	amount: number;
 	displayPrice: string;
 	priceIdEnvVar: string;
-	label: string;
-	description?: string;
 	popular?: boolean;
 }
 
@@ -142,8 +133,6 @@ export const CREDIT_TOPUPS: CreditTopupPackage[] = [
 		amount: 100_000,
 		displayPrice: "$10",
 		priceIdEnvVar: "CREDITS_AI_TOKENS_100K_PRICE_ID",
-		label: "100K AI Tokens",
-		description: "Top up your AI token balance",
 		popular: true,
 	},
 	{
@@ -152,8 +141,6 @@ export const CREDIT_TOPUPS: CreditTopupPackage[] = [
 		amount: 500_000,
 		displayPrice: "$40",
 		priceIdEnvVar: "CREDITS_AI_TOKENS_500K_PRICE_ID",
-		label: "500K AI Tokens",
-		description: "Best value for AI tokens",
 	},
 	{
 		id: "api_calls_50k",
@@ -161,16 +148,8 @@ export const CREDIT_TOPUPS: CreditTopupPackage[] = [
 		amount: 50_000,
 		displayPrice: "$5",
 		priceIdEnvVar: "CREDITS_API_CALLS_50K_PRICE_ID",
-		label: "50K API Calls",
-		description: "Top up your API call balance",
 	},
 ];
-
-export function getCreditTopupsForMeter(
-	meterKey: string,
-): CreditTopupPackage[] {
-	return CREDIT_TOPUPS.filter((t) => t.meterKey === meterKey);
-}
 
 // getCreditTopupPriceId lives in ./config.server (needs env access).
 // All callers are server-only (oRPC procedures, webhook sync).
@@ -219,6 +198,13 @@ export interface Plan {
 	 * Used to map active subscriptions back to plan IDs.
 	 */
 	productId?: string;
+	/**
+	 * Env var names holding the provider-side price/product ID per billing
+	 * interval (mirrors `CREDIT_TOPUPS[].priceIdEnvVar`). Resolved
+	 * server-side via `getPlanPriceId()` in `./config.server` — a
+	 * checkoutable plan without a mapping fails closed at checkout.
+	 */
+	priceIdEnvVars?: { month?: string; year?: string };
 }
 
 export const PLANS = {
@@ -247,6 +233,10 @@ export const PLANS = {
 		highlight: true,
 		showInSaas: true,
 		showInMarketing: true,
+		priceIdEnvVars: {
+			month: "PAYMENTS_PRO_PRICE_ID",
+			year: "PAYMENTS_PRO_YEARLY_PRICE_ID",
+		},
 	},
 	enterprise: {
 		amount: -1,
@@ -310,16 +300,6 @@ export const LIMITS = {
 
 // ─── 4. Credits ────────────────────────────────────────────────────────────────
 
-export type { CreditMeter } from "@fuutu/credits/meters";
-/**
- * Credit meter definitions live in `@fuutu/credits/meters` — the
- * dependency-free leaf module both packages share (payments → credits,
- * never the reverse). Re-exported here so existing
- * `@fuutu/payments/config` consumers keep working. The subpath is a
- * pure-data module, so this file stays client-safe.
- */
-export { CREDIT_METERS, getMeter } from "@fuutu/credits/meters";
-
 /**
  * Per-plan credit grants (recurring, reset each period).
  * - number = exact amount per period
@@ -343,21 +323,6 @@ export const CREDITS: Record<PlanId, Record<string, LimitValue>> = {
 		documents: "unlimited",
 	},
 };
-
-/** Get the credit grant for a plan + meter. Returns undefined if not configured. */
-export function getCreditGrant(
-	planId: PlanId,
-	meterKey: string,
-): LimitValue | undefined {
-	return CREDITS[planId]?.[meterKey];
-}
-
-/** Get all meter keys configured for a plan. */
-export function getMeterKeysForPlan(planId: PlanId): string[] {
-	const planCredits = CREDITS[planId];
-	if (!planCredits) return [];
-	return Object.keys(planCredits).filter((key) => planCredits[key] !== 0);
-}
 
 // ─── 5. Features ────────────────────────────────────────────────────────────────
 
@@ -411,14 +376,6 @@ export const FEATURE_CATALOG = {
 
 /** All plan IDs, in display order. */
 export const PLAN_IDS = Object.keys(PLANS) as PlanId[];
-
-/** Plans visible in the SaaS in-app upgrade page. */
-export const SAAS_PLANS = PLAN_IDS.filter((id) => PLANS[id].showInSaas);
-
-/** Plans visible on the marketing pricing page. */
-export const MARKETING_PLANS = PLAN_IDS.filter(
-	(id) => PLANS[id].showInMarketing,
-);
 
 export type AudienceId = "saas" | "marketing";
 export type BillingType = Plan["billingType"];

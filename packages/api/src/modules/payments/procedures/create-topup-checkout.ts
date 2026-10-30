@@ -4,9 +4,9 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
+import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { protectedProcedure } from "../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
-import { sanitizePaymentUrl } from "../shared";
+import { sanitizePaymentUrl, throwIfPaymentsDisabled } from "../shared";
 
 const topupSchema = z.object({
 	topupId: z.string().min(1).max(200),
@@ -42,21 +42,26 @@ export const createTopupCheckout = protectedProcedure
 				message: "Top-up package not available",
 			});
 		}
-		const provider = resolvePaymentProvider();
-		const result = await provider.createCheckoutLink({
-			priceId,
-			userId: context.user.id,
-			organizationId: input.organizationId,
-			successUrl: sanitizePaymentUrl(input.successUrl),
-			cancelUrl: sanitizePaymentUrl(input.cancelUrl),
-			metadata: {
-				// One-time purchase — providers like Stripe need this to pick
-				// mode "payment" instead of "subscription".
-				mode: "payment",
-				topup_id: input.topupId,
-				meter_key: topup.meterKey,
-				amount: topup.amount,
-			},
-		});
-		return result;
+		try {
+			const provider = resolvePaymentProvider();
+			return await provider.createCheckoutLink({
+				priceId,
+				userId: context.user.id,
+				organizationId: input.organizationId,
+				successUrl: sanitizePaymentUrl(input.successUrl),
+				cancelUrl: sanitizePaymentUrl(input.cancelUrl),
+				// Session email — providers pre-fill the checkout form with it.
+				customerEmail: context.user.email,
+				metadata: {
+					// One-time purchase — providers like Stripe need this to pick
+					// mode "payment" instead of "subscription". Only topup_id is
+					// echoed — webhook sync re-derives meter/amount from
+					// CREDIT_TOPUPS, so echoed values would be forgeable.
+					mode: "payment",
+					topup_id: input.topupId,
+				},
+			});
+		} catch (err) {
+			throwIfPaymentsDisabled(err);
+		}
 	});

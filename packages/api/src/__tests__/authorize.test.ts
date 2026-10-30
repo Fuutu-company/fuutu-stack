@@ -1,3 +1,5 @@
+// The repeated `as unknown as Context` casts below are intentional
+// test-mock shims — they adapt partial fixtures to the full Context shape.
 import { checkLimit, meetsTier } from "@fuutu/payments/plan-resolver";
 import { ORPCError } from "@orpc/server";
 import { describe, expect, it, vi } from "vitest";

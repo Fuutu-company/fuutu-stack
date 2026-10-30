@@ -54,6 +54,17 @@ export async function updateSeatsInOrganizationSubscription(
 		return;
 	}
 
+	// Never send quantity 0 or negative to the provider — a member count
+	// of 0 can arrive transiently (e.g. last member mid-removal).
+	if (seats < 1) {
+		log.warn("resolved seat count < 1 — skipping provider seat sync", {
+			organizationId,
+			subscriptionId: subscription.subscriptionId,
+			seats,
+		});
+		return;
+	}
+
 	await provider.setSubscriptionSeats({
 		subscriptionId: subscription.subscriptionId,
 		seats,
@@ -65,6 +76,12 @@ export async function updateSeatsInOrganizationSubscription(
  * Cancel every active subscription for an organization. Called from the
  * `organization.delete.before` hook to avoid dangling paid seats after a
  * workspace is removed.
+ *
+ * Local `Purchase` rows are not marked CANCELED here — the Prisma
+ * `Purchase.organization` relation is `onDelete: Cascade`, so the rows
+ * are removed with the organization. The provider-side cancel is the
+ * authoritative stop-billing action; any `subscription.canceled` webhook
+ * that arrives before deletion resolves on a gone row harmlessly.
  */
 export async function cancelAllSubscriptionsForOrganization(
 	organizationId: string,

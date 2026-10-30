@@ -1,6 +1,9 @@
-import { resolveFromAddress, resolveProvider } from "./config";
+import { resolveFromAddress, resolveProvider } from "./resolve";
 import { renderTemplate } from "./templates";
 import type { TemplateName, TemplatePayloads } from "./types";
+
+// Header-injection guard — CR/LF must never reach provider headers.
+const stripLineBreaks = (value: string) => value.replace(/[\r\n]/g, "");
 
 export interface SendEmailOptions<T extends TemplateName> {
 	to: string;
@@ -27,11 +30,11 @@ export async function sendEmail<T extends TemplateName>(
 	const rendered = renderTemplate(options.template, options.data);
 
 	await provider.send({
-		from: options.from ?? resolveFromAddress(),
-		to: options.to,
-		subject: options.subject ?? rendered.subject,
+		from: stripLineBreaks(options.from ?? resolveFromAddress()),
+		to: stripLineBreaks(options.to),
+		subject: (options.subject ?? rendered.subject).replace(/[\r\n]+/g, " "),
 		html: rendered.html,
 		text: rendered.text,
-		replyTo: options.replyTo,
+		replyTo: options.replyTo && stripLineBreaks(options.replyTo),
 	});
 }

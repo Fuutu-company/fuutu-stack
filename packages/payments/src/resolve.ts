@@ -4,7 +4,7 @@ import { creemPaymentProvider } from "./providers/creem";
 import { polarPaymentProvider } from "./providers/polar";
 import { noopPaymentProvider } from "./providers/skeletons";
 import { stripePaymentProvider } from "./providers/stripe";
-import type { PaymentProvider } from "./types";
+import { type PaymentProvider, WebhookConfigError } from "./types";
 
 const log = createLogger({ scope: "payments:resolve" });
 
@@ -29,7 +29,7 @@ export function resolvePaymentProvider(): PaymentProvider {
 				log.error(
 					'provider is "custom" but no customProvider implementation is set in paymentsConfig.customProvider',
 				);
-				throw new Error(
+				throw new WebhookConfigError(
 					'[payments] provider is "custom" but paymentsConfig.customProvider is not set. Pass your PaymentProvider implementation.',
 				);
 			}
@@ -37,10 +37,15 @@ export function resolvePaymentProvider(): PaymentProvider {
 		case "noop":
 			return noopPaymentProvider;
 		default: {
-			log.warn(
-				`unknown provider "${paymentsConfig.provider}", falling back to noop.`,
+			// Unreachable per the PaymentProviderId union — a value landing
+			// here is a stale runtime override (e.g. a removed provider id).
+			// Fail loud instead of silently disabling payments.
+			log.error(
+				`unknown provider "${String(paymentsConfig.provider)}" — implement it via paymentsConfig.customProvider`,
 			);
-			return noopPaymentProvider;
+			throw new WebhookConfigError(
+				`[payments] unknown provider "${String(paymentsConfig.provider)}" — implement it via paymentsConfig.customProvider`,
+			);
 		}
 	}
 }

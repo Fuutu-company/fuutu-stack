@@ -2,7 +2,7 @@ import type { Locale } from "@fuutu/i18n";
 import { describe, expect, it } from "vitest";
 import { getMailStrings } from "../i18n";
 import { renderTemplate } from "../templates";
-import { escapeAttr, escapeHtml } from "../templates/layout";
+import { escapeAttr, escapeHtml, renderButton } from "../templates/layout";
 import type { TemplateName, TemplatePayloads } from "../types";
 
 const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
@@ -89,6 +89,62 @@ describe("renderTemplate", () => {
 		expect(rendered.html).not.toContain('" onmouseover="');
 		expect(rendered.html).toContain("&quot;");
 	});
+
+	it("neutralizes a javascript: URL in the notification CTA", () => {
+		const rendered = renderTemplate("notification", {
+			title: "Notice",
+			body: "Something happened.",
+			appUrl: "javascript:alert(1)",
+		});
+		expect(rendered.html).not.toContain('href="javascript:');
+	});
+
+	it.each([
+		["password-reset", { resetUrl: "JAVASCRIPT:alert(1)" }],
+		["magic-link", { magicLinkUrl: "JAVASCRIPT:alert(1)" }],
+		["email-verification", { verificationUrl: "JAVASCRIPT:alert(1)" }],
+		[
+			"email-change-verification",
+			{ verificationUrl: "JAVASCRIPT:alert(1)", newEmail: "new@test.dev" },
+		],
+		[
+			"organization-invitation",
+			{ inviteUrl: "JAVASCRIPT:alert(1)", organizationName: "Acme" },
+		],
+		["new-user", { appUrl: "JAVASCRIPT:alert(1)" }],
+		[
+			"notification",
+			{ title: "Notice", body: "b", appUrl: "JAVASCRIPT:alert(1)" },
+		],
+	] as const)(
+		"neutralizes a JAVASCRIPT: URL in every %s anchor",
+		(name, data) => {
+			const rendered = renderTemplate(name, { ...data });
+			expect(rendered.html).not.toMatch(/href="javascript:/i);
+			expect(rendered.html).toContain('href="#"');
+		},
+	);
+});
+
+describe("renderButton", () => {
+	it("renders http(s) hrefs unchanged", () => {
+		expect(renderButton("https://app.test/x", "Go")).toContain(
+			'href="https://app.test/x"',
+		);
+	});
+
+	it('renders href="#" for non-http(s) schemes', () => {
+		for (const href of [
+			"javascript:alert(1)",
+			"JAVASCRIPT:alert(1)",
+			" javascript:alert(1)",
+			"data:text/html,<b>x</b>",
+			"vbscript:msgbox(1)",
+		]) {
+			expect(renderButton(href, "Go")).toContain('href="#"');
+			expect(renderButton(href, "Go")).not.toContain(href);
+		}
+	});
 });
 
 describe("escapeHtml", () => {
@@ -119,10 +175,14 @@ describe("getMailStrings", () => {
 		expect(getMailStrings("de").signature).toBe("— Dein Fuutu-Team");
 	});
 
-	it("falls back to en for a locale with no bundle and no configured fallback", () => {
+	it("resolves a BCP-47 parent before falling back to en", () => {
 		// "de-AT" is not a configured Locale — cast simulates a locale the
 		// app adds to i18nConfig before the mail bundle ships it.
 		expect(getMailStrings("de-AT" as Locale).signature).toBe(
+			"— Dein Fuutu-Team",
+		);
+		// "fr-CA" has no bundle and its parent "fr" is not configured → en.
+		expect(getMailStrings("fr-CA" as Locale).signature).toBe(
 			"— The Fuutu team",
 		);
 	});

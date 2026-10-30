@@ -15,7 +15,7 @@
  * ║                                                                       ║
  * ║  Dark mode (`.dark`) mirrors this exactly: 4 base tokens only, then   ║
  * ║  the same oklch(from …) derivations with an inverted lightness curve. ║
- * ║  See UI package documentation for component/token conventions.           ║
+ * ║  See UI package documentation for component/token conventions.        ║
  * ╚═══════════════════════════════════════════════════════════════════════╝
  *
  * Note: Fonts are imported in each app's globals.css.
@@ -44,7 +44,9 @@
 	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 	 * BASE TOKENS — edit these 4 colors to rebrand the whole stack.
 	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-	--brand: oklch(0.45 0.22 270); /* primary brand color         */
+	--brand: oklch(
+		0.42 0.22 270
+	); /* primary brand color (≥4.5:1 vs white text) */
 	--neutral: oklch(0.13 0.03 260); /* dark neutral (text)         */
 	--success: oklch(0.65 0.18 150); /* success state               */
 	--destructive: oklch(0.6 0.2 25); /* error / danger              */
@@ -76,9 +78,11 @@
 	--border: oklch(from var(--neutral) 0.92 0.008 h);
 	--input: oklch(from var(--neutral) 0.92 0.008 h);
 
-	/* Brand — auto-contrast foreground (white on dark brand, black on light).
-	 * `clamp(0, (0.5 - l) * 100, 1)` becomes a step function at l = 0.5:
-	 *   l < 0.5 → 1 (white)    l > 0.5 → 0 (black).
+	/* Auto-contrast foregrounds — `clamp(0, (T - l) * 100, 1)` is a step
+	 * function at threshold T: l < T → 1 (white), l > T → 0 (black).
+	 * Brand/sidebar use T = 0.6 (brand accents keep white text further up
+	 * the lightness curve); state colors use T = 0.5. Dark mode uses 0.6
+	 * throughout — its base tokens are brighter by design.
 	 * The trailing `/ 1` forces full opacity so a user-provided alpha on
 	 * --brand / --success / --destructive can't bleed into buttons. */
 	--primary: oklch(from var(--brand) l c h / 1);

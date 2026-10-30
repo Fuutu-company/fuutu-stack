@@ -1,3 +1,4 @@
+import type { PlanId } from "@fuutu/payments/config";
 import { makeSession, makeUser } from "@fuutu/test-utils";
 import { call } from "@orpc/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,9 +13,52 @@ vi.mock("@fuutu/payments/plans", () => ({
 		]),
 }));
 
+const envOverrides = vi.hoisted(() => ({
+	PAYMENTS_PRO_PRICE_ID: "price-pro-monthly" as string | undefined,
+	PAYMENTS_PRO_YEARLY_PRICE_ID: "price-pro-yearly" as string | undefined,
+}));
+
+vi.mock("@fuutu/env/saas", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/env/saas")>();
+	return {
+		...actual,
+		env: new Proxy(actual.env, {
+			get(target, prop, receiver) {
+				if (prop === "PAYMENTS_PRO_PRICE_ID") {
+					return envOverrides.PAYMENTS_PRO_PRICE_ID;
+				}
+				if (prop === "PAYMENTS_PRO_YEARLY_PRICE_ID") {
+					return envOverrides.PAYMENTS_PRO_YEARLY_PRICE_ID;
+				}
+				return Reflect.get(target, prop, receiver);
+			},
+		}),
+	};
+});
+
 vi.mock("@fuutu/payments", () => ({
 	resolvePaymentProvider: vi.fn(),
+	isPaymentsEnabled: vi.fn().mockReturnValue(true),
+	PaymentsDisabledError: class PaymentsDisabledError extends Error {},
+	CREDIT_TOPUPS: [
+		{
+			id: "ai_tokens_100k",
+			meterKey: "ai_tokens",
+			amount: 100_000,
+			displayPrice: "$10",
+			priceIdEnvVar: "CREDITS_AI_TOKENS_100K_PRICE_ID",
+		},
+	],
 }));
+
+vi.mock("@fuutu/payments/config.server", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@fuutu/payments/config.server")>();
+	return {
+		...actual,
+		getCreditTopupPriceId: vi.fn().mockReturnValue("price-topup-1"),
+	};
+});
 
 vi.mock("@fuutu/db", () => ({
 	getOrganizationById: vi.fn(),
@@ -31,7 +75,8 @@ vi.mock("@fuutu/ai", () => ({
 	resolveAIProvider: vi.fn(),
 }));
 
-const { resolvePaymentProvider } = await import("@fuutu/payments");
+const { resolvePaymentProvider, PaymentsDisabledError, isPaymentsEnabled } =
+	await import("@fuutu/payments");
 const { buildPricingTiers } = await import("@fuutu/payments/plans");
 const {
 	getOrganizationById,
@@ -99,9 +144,11 @@ describe("payments.plans.list", () => {
 describe("payments.checkout.create", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		envOverrides.PAYMENTS_PRO_PRICE_ID = "price-pro-monthly";
+		envOverrides.PAYMENTS_PRO_YEARLY_PRICE_ID = "price-pro-yearly";
 	});
 
-	it("creates a checkout link", async () => {
+	it("creates a checkout link, resolving the price ID server-side", async () => {
 		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
 		mockProvider.createCheckoutLink.mockResolvedValue({
 			url: "https://checkout.example.com",
@@ -109,18 +156,118 @@ describe("payments.checkout.create", () => {
 
 		const result = await call(
 			paymentsRouter.checkout.create,
-			{ priceId: "price-123" },
+			{ planId: "pro" },
 			{ context: authenticatedContext },
 		);
 
 		expect(mockProvider.createCheckoutLink).toHaveBeenCalledWith({
-			priceId: "price-123",
+			priceId: "price-pro-monthly",
 			userId: "user-1",
 			organizationId: undefined,
 			successUrl: undefined,
 			cancelUrl: undefined,
+			customerEmail: "test@fuutu.local",
 		});
 		expect(result).toEqual({ url: "https://checkout.example.com" });
+	});
+
+	it("uses the yearly price ID when interval is year", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockResolvedValue({
+			url: "https://checkout.example.com",
+		});
+
+		await call(
+			paymentsRouter.checkout.create,
+			{ planId: "pro", interval: "year" },
+			{ context: authenticatedContext },
+		);
+
+		expect(mockProvider.createCheckoutLink).toHaveBeenCalledWith({
+			priceId: "price-pro-yearly",
+			userId: "user-1",
+			organizationId: undefined,
+			successUrl: undefined,
+			cancelUrl: undefined,
+			customerEmail: "test@fuutu.local",
+		});
+	});
+
+	it("fails cleanly when the yearly price env var is missing", async () => {
+		envOverrides.PAYMENTS_PRO_YEARLY_PRICE_ID = undefined;
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "pro", interval: "year" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+
+	it("rejects a non-checkoutable plan (free) with BAD_REQUEST", async () => {
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "free" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+
+	it("rejects a non-checkoutable plan (custom) with BAD_REQUEST", async () => {
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "enterprise" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+
+	it("rejects an unknown plan ID", async () => {
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				// invalid runtime value — a non-catalog plan must not reach the provider
+				{ planId: "gold" as PlanId },
+				{ context: authenticatedContext },
+			),
+		).rejects.toBeDefined();
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+
+	it("fails cleanly when the price env var is missing", async () => {
+		envOverrides.PAYMENTS_PRO_PRICE_ID = undefined;
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "pro" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+
+	it("maps PaymentsDisabledError to NOT_IMPLEMENTED", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockRejectedValue(
+			new PaymentsDisabledError("provider not enabled"),
+		);
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "pro" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
 	});
 
 	it("passes organizationId and sanitized same-origin URLs when provided", async () => {
@@ -133,7 +280,7 @@ describe("payments.checkout.create", () => {
 		await call(
 			paymentsRouter.checkout.create,
 			{
-				priceId: "price-123",
+				planId: "pro",
 				organizationId: "12345678-1234-1234-8123-123456789abc",
 				successUrl: "/success",
 				cancelUrl: "/cancel",
@@ -142,11 +289,12 @@ describe("payments.checkout.create", () => {
 		);
 
 		expect(mockProvider.createCheckoutLink).toHaveBeenCalledWith({
-			priceId: "price-123",
+			priceId: "price-pro-monthly",
 			userId: "user-1",
 			organizationId: "12345678-1234-1234-8123-123456789abc",
 			successUrl: "http://localhost:3000/success",
 			cancelUrl: "http://localhost:3000/cancel",
+			customerEmail: "test@fuutu.local",
 		});
 	});
 
@@ -158,41 +306,106 @@ describe("payments.checkout.create", () => {
 
 		await call(
 			paymentsRouter.checkout.create,
-			{ priceId: "price-123", successUrl: "https://evil.com/steal" },
+			{ planId: "pro", successUrl: "https://evil.com/steal" },
 			{ context: authenticatedContext },
 		);
 
 		expect(mockProvider.createCheckoutLink).toHaveBeenCalledWith({
-			priceId: "price-123",
+			priceId: "price-pro-monthly",
 			userId: "user-1",
 			organizationId: undefined,
 			successUrl: "http://localhost:3000/",
 			cancelUrl: undefined,
+			customerEmail: "test@fuutu.local",
 		});
-	});
-
-	it("rejects empty priceId", async () => {
-		await expect(
-			call(
-				paymentsRouter.checkout.create,
-				{ priceId: "" },
-				{
-					context: authenticatedContext,
-				},
-			),
-		).rejects.toBeDefined();
 	});
 
 	it("throws UNAUTHORIZED when unauthenticated", async () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ priceId: "price-123" },
+				{ planId: "pro" },
 				{
 					context: unauthenticatedContext,
 				},
 			),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+	});
+});
+
+describe("payments.topupPackages.list", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns catalog data only — no priceId or env var names leak to clients", async () => {
+		const result = await call(
+			paymentsRouter.topupPackages.list,
+			{},
+			{ context: authenticatedContext },
+		);
+
+		expect(result.packages).toEqual([
+			{
+				id: "ai_tokens_100k",
+				meterKey: "ai_tokens",
+				amount: 100_000,
+				displayPrice: "$10",
+				popular: undefined,
+			},
+		]);
+		for (const pkg of result.packages) {
+			expect(pkg).not.toHaveProperty("priceId");
+			expect(pkg).not.toHaveProperty("priceIdEnvVar");
+		}
+	});
+
+	it("omits packages whose price ID is not configured", async () => {
+		const { getCreditTopupPriceId } = await import(
+			"@fuutu/payments/config.server"
+		);
+		vi.mocked(getCreditTopupPriceId).mockReturnValueOnce(undefined);
+
+		const result = await call(
+			paymentsRouter.topupPackages.list,
+			{},
+			{ context: authenticatedContext },
+		);
+
+		expect(result.packages).toEqual([]);
+	});
+
+	it("throws UNAUTHORIZED when unauthenticated", async () => {
+		await expect(
+			call(
+				paymentsRouter.topupPackages.list,
+				{},
+				{
+					context: unauthenticatedContext,
+				},
+			),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+	});
+});
+
+describe("payments.topupCheckout.create", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("maps PaymentsDisabledError to NOT_IMPLEMENTED", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockRejectedValue(
+			new PaymentsDisabledError("provider not enabled"),
+		);
+
+		await expect(
+			call(
+				paymentsRouter.topupCheckout.create,
+				{ topupId: "ai_tokens_100k" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
 	});
 });
 
@@ -305,6 +518,22 @@ describe("payments.portal.open", () => {
 			call(paymentsRouter.portal.open, {}, { context: authenticatedContext }),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
 	});
+
+	it("maps PaymentsDisabledError to NOT_IMPLEMENTED", async () => {
+		vi.mocked(getActiveSubscriptionForUser).mockResolvedValue({
+			id: "sub-1",
+			customerId: "cust-user-123",
+			status: "ACTIVE",
+		} as never);
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCustomerPortalLink.mockRejectedValue(
+			new PaymentsDisabledError("provider not enabled"),
+		);
+
+		await expect(
+			call(paymentsRouter.portal.open, {}, { context: authenticatedContext }),
+		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
+	});
 });
 
 describe("payments.subscription.status", () => {
@@ -365,6 +594,22 @@ describe("payments.subscription.status", () => {
 describe("payments.subscription.cancel", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(isPaymentsEnabled).mockReturnValue(true);
+	});
+
+	it("throws NOT_IMPLEMENTED when payments are disabled", async () => {
+		// Disabled installs must short-circuit to 501 — the noop provider id
+		// would otherwise miss the purchase lookup and surface NOT_FOUND.
+		vi.mocked(isPaymentsEnabled).mockReturnValue(false);
+
+		await expect(
+			call(
+				paymentsRouter.subscription.cancel,
+				{ subscriptionId: "sub-1" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
+		expect(getPurchaseByProviderSubscriptionId).not.toHaveBeenCalled();
 	});
 
 	it("cancels a subscription owned by the user", async () => {
@@ -448,6 +693,26 @@ describe("payments.subscription.cancel", () => {
 				},
 			),
 		).rejects.toBeDefined();
+	});
+
+	it("maps PaymentsDisabledError to NOT_IMPLEMENTED", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-1",
+			userId: "user-1",
+			organizationId: null,
+		} as never);
+		mockProvider.cancelSubscription.mockRejectedValue(
+			new PaymentsDisabledError("provider not enabled"),
+		);
+
+		await expect(
+			call(
+				paymentsRouter.subscription.cancel,
+				{ subscriptionId: "sub-1" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
 	});
 });
 

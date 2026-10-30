@@ -8,7 +8,6 @@ import {
 	type FeatureEntry,
 	LIMITS,
 	type LimitValue,
-	PLANS,
 	type PlanId,
 	type PlanTier,
 } from "./config";
@@ -79,12 +78,4 @@ export function formatLimit(value: LimitValue): string {
 	if (value === false) return "—";
 	if (value === "unlimited") return "∞";
 	return String(value);
-}
-
-export function getPlansForAudience(audience: "saas" | "marketing"): PlanId[] {
-	const key = audience === "saas" ? "showInSaas" : "showInMarketing";
-	return (Object.keys(PLANS) as PlanId[]).filter(
-		(id) =>
-			(PLANS[id] as { showInSaas: boolean; showInMarketing: boolean })[key],
-	);
 }

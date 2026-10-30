@@ -51,7 +51,7 @@ export function buildTelemetryPayload(): TelemetryPayload {
 }
 
 /**
- * Build-time telemetry ping.
+ * Runtime telemetry ping.
  *
  * Non-blocking, silent on failure, opt-out via `FUUTU_TELEMETRY_DISABLED`.
  *
@@ -59,7 +59,7 @@ export function buildTelemetryPayload(): TelemetryPayload {
  * publicly hosted by Fuutu. The function attempts the POST anyway because
  * the contract — payload shape, timeout, opt-out switch — is what
  * downstream forks integrate against; once the receiving service is live
- * no client change is needed. All errors are swallowed so user builds are
+ * no client change is needed. All errors are swallowed so callers are
  * never blocked or slowed.
  */
 export async function pingTelemetry(
@@ -73,8 +73,9 @@ export async function pingTelemetry(
 	const payload = buildTelemetryPayload();
 
 	try {
-		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), timeoutMs);
+		// AbortSignal.timeout governs the full round-trip — a manual
+		// AbortController cleared in .finally only covers until headers
+		// arrive. Same pattern as checkLicense() in @fuutu/license.
 		const res = await fetch(endpoint, {
 			method: "POST",
 			headers: {
@@ -82,8 +83,11 @@ export async function pingTelemetry(
 				[KIT_FINGERPRINT_HEADER_NAME]: KIT_FINGERPRINT_HEADER_VALUE,
 			},
 			body: JSON.stringify(payload),
-			signal: controller.signal,
-		}).finally(() => clearTimeout(timer));
+			signal: AbortSignal.timeout(timeoutMs),
+			// Never follow redirects — a 307/308 would re-POST the payload
+			// to the redirect target's host.
+			redirect: "error",
+		});
 		return { sent: true, status: res.status };
 	} catch (err) {
 		const reason = err instanceof Error ? err.message : "network error";

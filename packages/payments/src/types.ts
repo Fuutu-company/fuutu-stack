@@ -55,6 +55,32 @@ export interface ProviderEvent {
 	currentPeriodEnd?: Date;
 	/** Contains user_id / organization_id (passed through checkout metadata). */
 	metadata?: Record<string, unknown>;
+	/**
+	 * Invoice details when the event is invoice-backed (e.g. Stripe
+	 * `invoice.paid` / `invoice.payment_failed`). Providers whose webhooks
+	 * carry no invoice object (Creem, Polar) omit it — the sync layer then
+	 * writes no Invoice row.
+	 */
+	invoice?: ProviderInvoiceData;
+}
+
+/**
+ * Provider-side invoice extracted from a webhook payload. `amount` is a
+ * major-unit decimal string (e.g. "19.00") matching `Invoice.amount`
+ * (Prisma Decimal) — the provider converts from minor units.
+ */
+export interface ProviderInvoiceData {
+	/** Provider-side invoice id — used as the dedup key. */
+	id: string;
+	/** Hosted invoice page URL (e.g. Stripe hosted_invoice_url). */
+	url?: string;
+	pdfUrl?: string;
+	amount: string;
+	currency?: string;
+	/** DB status literal: "paid" | "open" | "void" | "uncollectible". */
+	status: string;
+	issuedAt?: Date;
+	paidAt?: Date;
 }
 
 // ─── Status literal (mirrors PurchaseStatus enum in DB) ──────────────────────
@@ -141,7 +167,9 @@ export interface PaymentProvider {
 	 * calls this and feeds the result to `WebhookSync`.
 	 *
 	 * Must NOT write to the database — that's `WebhookSync`'s job.
-	 * Must return a 401/400 Response on verification failure via throw.
+	 * On failure, throw a typed error — the shared webhook handler maps
+	 * `WebhookSignatureError` → 401, `WebhookConfigError` → 500,
+	 * `PaymentsDisabledError` → 501, anything else → 400.
 	 */
 	parseWebhook(request: Request): Promise<ProviderEvent[]>;
 }
@@ -164,4 +192,42 @@ export function isSeatAware(
 		typeof (provider as SeatAwarePaymentProvider).setSubscriptionSeats ===
 		"function"
 	);
+}
+
+// ─── Typed errors ─────────────────────────────────────────────────────────────
+// Providers throw these so shared layers (webhook HTTP handler, callers)
+// can map them by `instanceof` instead of sniffing error-message substrings.
+
+/**
+ * Payments are disabled — the active provider is `noop` (either
+ * `paymentsConfig.provider = "noop"` or `config.features.payments === false`).
+ * Maps to HTTP 501 at the webhook boundary.
+ */
+export class PaymentsDisabledError extends Error {
+	constructor(message?: string) {
+		super(message);
+		this.name = "PaymentsDisabledError";
+	}
+}
+
+/**
+ * Webhook signature verification failed — the delivery is not authentic.
+ * Maps to HTTP 401 at the webhook boundary.
+ */
+export class WebhookSignatureError extends Error {
+	constructor(message?: string) {
+		super(message);
+		this.name = "WebhookSignatureError";
+	}
+}
+
+/**
+ * Webhook handling is misconfigured on our side (missing secret, missing
+ * API key). Maps to HTTP 500 so the provider retries after the fix.
+ */
+export class WebhookConfigError extends Error {
+	constructor(message?: string) {
+		super(message);
+		this.name = "WebhookConfigError";
+	}
 }

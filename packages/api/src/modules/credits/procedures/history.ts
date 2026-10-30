@@ -1,12 +1,13 @@
 import {
+	getCreditEventsForMeter,
 	getCreditEventsForOrganization,
 	getCreditEventsForUser,
 } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 
 import { z } from "zod";
+import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../organizations/shared";
 
 const historySchema = z.object({
 	organizationId: z.string().min(1).optional(),
@@ -32,8 +33,18 @@ export const getHistory = permissionProcedure(PERMISSIONS.CREDIT.VIEW)
 				context,
 			);
 		}
-		const events = input.organizationId
-			? await getCreditEventsForOrganization(input.organizationId, input.limit)
-			: await getCreditEventsForUser(context.user.id, input.limit);
+		const events = input.meterKey
+			? await getCreditEventsForMeter({
+					userId: input.organizationId ? undefined : context.user.id,
+					organizationId: input.organizationId,
+					meterKey: input.meterKey,
+					limit: input.limit,
+				})
+			: input.organizationId
+				? await getCreditEventsForOrganization(
+						input.organizationId,
+						input.limit,
+					)
+				: await getCreditEventsForUser(context.user.id, input.limit);
 		return { events };
 	});

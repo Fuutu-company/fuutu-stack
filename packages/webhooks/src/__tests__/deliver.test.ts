@@ -22,6 +22,7 @@ vi.mock("@fuutu/logs", () => ({
 	}),
 }));
 
+import { KIT_NAME, KIT_VERSION } from "@fuutu/config";
 import { deliverWebhook } from "../deliver";
 import { signPayloadWithTimestamp } from "../sign";
 import type { WebhookEndpoint, WebhookEvent } from "../types";
@@ -67,6 +68,10 @@ describe("deliverWebhook", () => {
 		expect(init.redirect).toBe("error");
 		expect(init.headers["Content-Type"]).toBe("application/json");
 		expect(init.headers["X-Fuutu-Event"]).toBe("order.created");
+		expect(init.headers["X-Fuutu-Event-Id"]).toBe("evt-1");
+		expect(init.headers["User-Agent"]).toBe(
+			`${KIT_NAME}-Webhook/${KIT_VERSION}`,
+		);
 
 		const timestamp = Math.floor(Date.now() / 1000);
 		expect(init.headers["X-Fuutu-Timestamp"]).toBe(String(timestamp));

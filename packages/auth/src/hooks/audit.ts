@@ -2,9 +2,9 @@
  * Audit-log hooks for authentication lifecycle events.
  *
  * Routed through `@fuutu/logs` → `createAuditLogger` so that:
- *   1. events persist via the active `AuditSink` (Prisma in production),
- *   2. the same event is mirrored through the regular `LogProvider`
- *      stream for dev visibility.
+ *   1. events persist via the active `AuditSink` (Prisma in production,
+ *      console otherwise),
+ *   2. the same event is mirrored to the console for dev visibility.
  *
  * Sink failures are swallowed inside the logger — auth flows never
  * block on audit-log infrastructure.
@@ -19,6 +19,7 @@ export type AuditableUser = {
 
 export type AuditableSession = {
 	userId: string;
+	activeOrganizationId?: string | null;
 	ipAddress?: string | null;
 	userAgent?: string | null;
 };
@@ -47,6 +48,7 @@ export async function logSessionCreated(
 ): Promise<void> {
 	await audit.record({
 		userId: session.userId,
+		organizationId: session.activeOrganizationId ?? null,
 		action: "auth.session_created",
 		ip: session.ipAddress ?? null,
 		userAgent: session.userAgent ?? null,

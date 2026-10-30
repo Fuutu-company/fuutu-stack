@@ -125,6 +125,95 @@ describe("@fuutu/env/saas", () => {
 		await expect(import("../saas")).rejects.toThrow();
 	});
 
+	it("enforces the 32-char BETTER_AUTH_SECRET boundary", async () => {
+		process.env.DATABASE_URL = "postgresql://localhost:5432/test";
+		process.env.BETTER_AUTH_SECRET = "a".repeat(31);
+		process.env.BETTER_AUTH_URL = "http://localhost:3000";
+
+		await expect(import("../saas")).rejects.toThrow();
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+
+		const { env } = await import("../saas");
+		expect(env.BETTER_AUTH_SECRET).toBe("a".repeat(32));
+	});
+
+	it("rejects a CRON_SECRET shorter than 16 chars", async () => {
+		setRequiredSaasEnv();
+		process.env.CRON_SECRET = "too-short";
+
+		await expect(import("../saas")).rejects.toThrow();
+	});
+
+	it("accepts a CRON_SECRET of 16+ chars", async () => {
+		setRequiredSaasEnv();
+		process.env.CRON_SECRET = "s".repeat(16);
+
+		const { env } = await import("../saas");
+		expect(env.CRON_SECRET).toBe("s".repeat(16));
+	});
+
+	it("transforms WEBHOOK_ALLOW_PRIVATE_URLS string to boolean", async () => {
+		setRequiredSaasEnv();
+		process.env.WEBHOOK_ALLOW_PRIVATE_URLS = "1";
+
+		let mod = await import("../saas");
+		expect(mod.env.WEBHOOK_ALLOW_PRIVATE_URLS).toBe(true);
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+		delete process.env.WEBHOOK_ALLOW_PRIVATE_URLS;
+
+		mod = await import("../saas");
+		expect(mod.env.WEBHOOK_ALLOW_PRIVATE_URLS).toBeUndefined();
+	});
+
+	it("rejects loose boolean words for WEBHOOK_ALLOW_PRIVATE_URLS", async () => {
+		for (const value of ["on", "yes", "enabled", "y"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.WEBHOOK_ALLOW_PRIVATE_URLS = value;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+	});
+
+	it("rejects loose boolean words for FUUTU_DISABLE_RATE_LIMIT", async () => {
+		for (const value of ["on", "yes", "enabled", "y"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.FUUTU_DISABLE_RATE_LIMIT = value;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+	});
+
+	it("accepts explicit boolean values for the dangerous flags", async () => {
+		for (const [key, expected] of [
+			["1", true],
+			["true", true],
+			["0", false],
+			["false", false],
+		] as const) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.WEBHOOK_ALLOW_PRIVATE_URLS = key;
+			process.env.FUUTU_DISABLE_RATE_LIMIT = key;
+			const { env } = await import("../saas");
+			expect(env.WEBHOOK_ALLOW_PRIVATE_URLS).toBe(expected);
+			expect(env.FUUTU_DISABLE_RATE_LIMIT).toBe(expected);
+		}
+	});
+
+	it("accepts noop and custom PAYMENTS_PROVIDER values", async () => {
+		for (const provider of ["polar", "stripe", "creem", "noop", "custom"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.PAYMENTS_PROVIDER = provider;
+			const { env } = await import("../saas");
+			expect(env.PAYMENTS_PROVIDER).toBe(provider);
+		}
+	});
+
 	it("transforms FUUTU_TELEMETRY_DISABLED string to boolean", async () => {
 		setRequiredSaasEnv();
 		process.env.FUUTU_TELEMETRY_DISABLED = "1";
@@ -140,6 +229,14 @@ describe("@fuutu/env/saas", () => {
 		expect(mod.env.FUUTU_TELEMETRY_DISABLED).toBe(false);
 	});
 
+	it("accepts case-insensitive FUUTU_TELEMETRY_DISABLED values", async () => {
+		setRequiredSaasEnv();
+		process.env.FUUTU_TELEMETRY_DISABLED = "TRUE";
+
+		const { env } = await import("../saas");
+		expect(env.FUUTU_TELEMETRY_DISABLED).toBe(true);
+	});
+
 	it("transforms S3_FORCE_PATH_STYLE string to boolean", async () => {
 		setRequiredSaasEnv();
 		process.env.S3_FORCE_PATH_STYLE = "true";
@@ -153,6 +250,29 @@ describe("@fuutu/env/saas", () => {
 
 		mod = await import("../saas");
 		expect(mod.env.S3_FORCE_PATH_STYLE).toBe(false);
+	});
+
+	it("validates NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN like the public apps", async () => {
+		for (const domain of ["example.com", ".example.com", "app.example.com"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			const { env } = await import("../saas");
+			expect(env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN).toBe(domain);
+		}
+		for (const domain of [
+			"http://example.com",
+			"example.com/path",
+			"-bad.com",
+			"bad-.com",
+			"..example.com",
+			"exa mple.com",
+		]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			await expect(import("../saas")).rejects.toThrow();
+		}
 	});
 
 	it("skips validation when SKIP_ENV_VALIDATION is set", async () => {
@@ -211,6 +331,37 @@ describe("@fuutu/env/marketing", () => {
 		}
 	});
 
+	it("accepts bare and leading-dot consent cookie domains", async () => {
+		for (const domain of ["example.com", ".example.com", "app.example.com"]) {
+			vi.resetModules();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			const { env } = await import("../marketing");
+			expect(env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN).toBe(domain);
+		}
+	});
+
+	it("rejects an invalid consent cookie domain", async () => {
+		for (const domain of [
+			"http://example.com",
+			"example.com/path",
+			"-bad.com",
+			"bad-.com",
+			"..example.com",
+			"exa mple.com",
+		]) {
+			vi.resetModules();
+			process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = domain;
+			await expect(import("../marketing")).rejects.toThrow();
+		}
+	});
+
+	it("treats an empty consent cookie domain as unset", async () => {
+		process.env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN = "";
+
+		const { env } = await import("../marketing");
+		expect(env.NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN).toBeUndefined();
+	});
+
 	it("allows all client vars to be optional", async () => {
 		delete process.env.NEXT_PUBLIC_MARKETING_URL;
 		delete process.env.NEXT_PUBLIC_SAAS_URL;
@@ -221,5 +372,27 @@ describe("@fuutu/env/marketing", () => {
 
 		const { env } = await import("../marketing");
 		expect(env.NEXT_PUBLIC_ANALYTICS_PROVIDER).toBeUndefined();
+	});
+});
+
+describe("@fuutu/env/docs", () => {
+	const originalEnv = process.env;
+
+	beforeEach(() => {
+		vi.resetModules();
+		process.env = { ...originalEnv };
+	});
+
+	it("validates with no required server env vars", async () => {
+		const { env } = await import("../docs");
+		expect(env).toBeDefined();
+		expect("DATABASE_URL" in env).toBe(false);
+	});
+
+	it("roundtrips NEXT_PUBLIC_DOCS_URL", async () => {
+		process.env.NEXT_PUBLIC_DOCS_URL = "https://docs.example.com";
+
+		const { env } = await import("../docs");
+		expect(env.NEXT_PUBLIC_DOCS_URL).toBe("https://docs.example.com");
 	});
 });

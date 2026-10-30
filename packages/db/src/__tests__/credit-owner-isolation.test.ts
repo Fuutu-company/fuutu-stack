@@ -258,34 +258,40 @@ describe("credit owner isolation", () => {
 		});
 	});
 
-	describe("upsertCreditBalance", () => {
-		it("retries the find-then-create on P2002 (concurrent first-touch)", async () => {
-			const existing = {
+	describe("consumeCreditsTx first-touch race", () => {
+		it("retries the transaction on P2002 from the first-touch balance create", async () => {
+			const winner = {
 				id: "b-1",
 				userId: "user-1",
 				organizationId: null,
 				meterKey: "ai_tokens",
-				recurringGranted: 10,
+				recurringGranted: 100,
 				recurringConsumed: 0,
 				recurringPeriodEnd: new Date(),
 			};
-			vi.mocked(db.creditBalance.findFirst)
-				.mockResolvedValueOnce(null)
-				.mockResolvedValueOnce(existing as never);
-			vi.mocked(db.creditBalance.create).mockRejectedValueOnce(makeP2002());
-			vi.mocked(db.creditBalance.update).mockResolvedValue(existing as never);
+			const txFail = makeTx({ balance: null });
+			txFail.creditBalance.create.mockRejectedValueOnce(makeP2002());
+			const txOk = makeTx({ balance: winner });
 
-			const result = await creditBalanceQueries.upsertCreditBalance({
+			vi.mocked(db.$transaction)
+				.mockImplementationOnce(
+					async (callback) => (await callback(txFail as never)) as never,
+				)
+				.mockImplementationOnce(
+					async (callback) => (await callback(txOk as never)) as never,
+				);
+
+			const result = await creditBalanceQueries.consumeCreditsTx({
 				userId: "user-1",
 				meterKey: "ai_tokens",
-				recurringGranted: 100,
+				amount: 50,
+				reason: "test",
+				allowOverage: false,
 			});
 
-			expect(result.id).toBe("b-1");
-			expect(db.creditBalance.findFirst).toHaveBeenCalledTimes(2);
-			expect(db.creditBalance.update).toHaveBeenCalledWith(
-				expect.objectContaining({ where: { id: "b-1" } }),
-			);
+			expect(result.ok).toBe(true);
+			expect(db.$transaction).toHaveBeenCalledTimes(2);
+			expect(txOk.creditBalance.updateMany).toHaveBeenCalledOnce();
 		});
 	});
 
@@ -322,7 +328,7 @@ describe("credit owner isolation", () => {
 			expect(db.$transaction).toHaveBeenCalledTimes(2);
 			expect(txOk.creditBalance.updateMany).toHaveBeenCalledWith(
 				expect.objectContaining({
-					where: { id: "b-1" },
+					where: expect.objectContaining({ id: "b-1" }),
 					data: expect.objectContaining({ recurringGranted: 200 }),
 				}),
 			);

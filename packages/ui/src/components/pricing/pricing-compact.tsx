@@ -6,7 +6,7 @@ import { cn } from "../../lib/utils";
 import { BillingToggle } from "./billing-toggle";
 import { PricingCTA } from "./pricing-cta";
 import type { PricingCompactProps, PricingTier } from "./types";
-import { resolveTierDisplay } from "./utils";
+import { resolveTierDisplay, safeHref } from "./utils";
 
 /**
  * Home-page pricing variant.
@@ -46,7 +46,7 @@ export function PricingCompact({
 				className="pointer-events-none absolute inset-0 -z-10"
 				style={{
 					background:
-						"radial-gradient(ellipse 70% 50% at 50% -5%, oklch(from var(--primary) l c h / 0.12) 0%, transparent 65%)",
+						"radial-gradient(ellipse 70% 50% at 50% -30%, oklch(from var(--primary) l c h / 0.12) 0%, transparent 65%)",
 				}}
 			/>
 
@@ -257,7 +257,12 @@ function RegularCard({
 			)}
 
 			<div className="mt-auto pt-5">
-				<PricingCTA tier={tier} LinkComponent={LinkComponent} inverted={hl} />
+				<PricingCTA
+					tier={tier}
+					LinkComponent={LinkComponent}
+					inverted={hl}
+					isYearly={isYearly}
+				/>
 			</div>
 		</div>
 	);
@@ -410,15 +415,16 @@ function SeeAllLink({
 			<ChevronRight className="size-3 shrink-0" />
 		</>
 	);
+	const safe = safeHref(href);
 	const Link = LinkComponent;
 	if (Link)
 		return (
-			<Link href={href} className={cls}>
+			<Link href={safe} className={cls}>
 				{content}
 			</Link>
 		);
 	return (
-		<a href={href} className={cls}>
+		<a href={safe} className={cls}>
 			{content}
 		</a>
 	);

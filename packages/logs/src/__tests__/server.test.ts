@@ -97,4 +97,44 @@ describe("initLogs", () => {
 		await initLogs();
 		expect(initLoggerSpy).toHaveBeenCalledOnce();
 	});
+
+	it("dedupes concurrent calls into a single init", async () => {
+		const { initLogs } = await import("../server");
+		await Promise.all([initLogs(), initLogs(), initLogs()]);
+		expect(initLoggerSpy).toHaveBeenCalledOnce();
+	});
+
+	it("locks the logger so a later createEvlog() can't wipe the drain", async () => {
+		process.env.LOG_DRAIN = "memory";
+		const { initLogs } = await import("../server");
+		const { clearMemoryLogs, readMemoryLogs } = await import("evlog/memory");
+		clearMemoryLogs();
+		await initLogs();
+
+		// Route modules call createEvlog() at scope — its configureHandler()
+		// re-runs initLogger (last-call-wins) unless the logger is locked.
+		const { createEvlog } = await import("evlog/next");
+		createEvlog({ service: "spoof" });
+
+		// If the implicit init was skipped, the initLogs-configured drain
+		// still receives events.
+		const { log } = await import("evlog");
+		log.info({ message: "post-createevlog" });
+		// Drains run async — flush microtasks before asserting delivery.
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(readMemoryLogs().some((e) => e.message === "post-createevlog")).toBe(
+			true,
+		);
+	});
+
+	it("retries after a failed init instead of staying uninitialized", async () => {
+		initLoggerSpy.mockImplementationOnce(() => {
+			throw new Error("boom");
+		});
+		const { initLogs } = await import("../server");
+
+		await expect(initLogs()).rejects.toThrow("boom");
+		await expect(initLogs()).resolves.toBeUndefined();
+		expect(initLoggerSpy).toHaveBeenCalledTimes(2);
+	});
 });

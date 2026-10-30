@@ -1,5 +1,4 @@
 import { db } from "../client";
-import type { Prisma } from "../generated/client";
 
 export type InvoiceInput = {
 	organizationId?: string | null;
@@ -16,6 +15,29 @@ export type InvoiceInput = {
 
 export const createInvoice = (data: InvoiceInput) =>
 	db.invoice.create({ data });
+
+/**
+ * internal — webhook callbacks only.
+ * Atomic upsert keyed on `providerInvoiceId` (callers store
+ * `<provider>:<id>` to keep the key unique across providers; the column
+ * carries a unique constraint). A redelivered invoice event refreshes
+ * status/URLs instead of creating a second row.
+ */
+export const upsertInvoiceByProviderId = (data: InvoiceInput) => {
+	if (!data.providerInvoiceId) return createInvoice(data);
+	return db.invoice.upsert({
+		where: { providerInvoiceId: data.providerInvoiceId },
+		create: data,
+		update: {
+			status: data.status,
+			amount: data.amount,
+			...(data.url !== undefined && { url: data.url }),
+			...(data.pdfUrl !== undefined && { pdfUrl: data.pdfUrl }),
+			...(data.currency && { currency: data.currency }),
+			...(data.paidAt ? { paidAt: data.paidAt } : {}),
+		},
+	});
+};
 
 export const listInvoicesByOrg = (
 	organizationId: string,
@@ -64,7 +86,7 @@ export const getInvoiceById = (
 
 /**
  * internal — webhook callbacks only.
- * Updates an invoice by provider ID without an ownership scope because
+ * Updates an invoice by internal `id` without an ownership scope because
  * webhook callbacks authenticate via HMAC signature, not a user session.
  */
 export const updateInvoiceStatus = (
@@ -82,5 +104,3 @@ export const countInvoicesByOrg = (organizationId: string) =>
 
 export const countInvoicesByUser = (userId: string) =>
 	db.invoice.count({ where: { userId } });
-
-export type InvoiceWhereInput = Prisma.InvoiceWhereInput;

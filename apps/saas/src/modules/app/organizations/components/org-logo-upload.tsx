@@ -9,7 +9,7 @@ import {
 	PERMISSIONS,
 	toOrgRole,
 } from "@fuutu/rbac";
-import { storageConfig } from "@fuutu/storage";
+import type { StorageBucketAlias } from "@fuutu/storage";
 import { Button, Card, CardContent } from "@fuutu/ui";
 import { slugify } from "@fuutu/utils";
 import { Building2, Trash2, Upload } from "lucide-react";
@@ -78,7 +78,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 
 	async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
-		if (!file || !org) return;
+		if (!file || !org || uploading) return;
 		if (file.size > MAX_LOGO_SIZE) {
 			setStatus(t("settings.logo.tooLarge"));
 			return;
@@ -87,19 +87,23 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 		setStatus(null);
 		try {
 			const key = slugify(file.name);
+			const bucket: StorageBucketAlias = "organization-logos";
 			const presigned = await orpc.storage.upload.createPresigned.call({
-				bucket: storageConfig.buckets.organizationLogos,
+				bucket,
 				key,
 				contentType: file.type,
 				contentLength: file.size,
 				organizationId: org.id,
 			});
 
-			await fetch(presigned.url, {
+			const putRes = await fetch(presigned.url, {
 				method: "PUT",
 				body: file,
 				headers: presigned.headers,
 			});
+			if (!putRes.ok) {
+				throw new Error(`logo upload rejected: ${putRes.status}`);
+			}
 
 			const logoUrl = `/image-proxy/organization-logos/${org.id}/${key}`;
 			await orpc.organizations.update.call({
@@ -149,7 +153,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 					</p>
 				</div>
 				<div className="flex items-center gap-4">
-					<div className="relative size-16 overflow-hidden rounded-lg border bg-muted">
+					<div className="relative flex size-16 items-center justify-center overflow-hidden rounded-lg border bg-muted">
 						{org.logo ? (
 							<Image
 								src={org.logo}
@@ -165,16 +169,16 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 					<div className="space-y-2">
 						{canEdit && (
 							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={uploading}
-									onClick={() => fileInputRef.current?.click()}
-								>
-									<Upload className="size-4" />
-									{uploading
-										? t("settings.logo.uploading")
-										: t("settings.logo.upload")}
+								{/* The button is a <label> for the file input — the dialog
+								    opens natively without JS, so it works in every browser
+								    (Safari ignores .click() on hidden file inputs). */}
+								<Button variant="outline" size="sm" asChild>
+									<label htmlFor="org-logo-input" className="cursor-pointer">
+										<Upload className="size-4" />
+										{uploading
+											? t("settings.logo.uploading")
+											: t("settings.logo.upload")}
+									</label>
 								</Button>
 								{org.logo && (
 									<Button
@@ -198,10 +202,11 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 				</div>
 				{status && <p className="text-muted-foreground text-sm">{status}</p>}
 				<input
+					id="org-logo-input"
 					ref={fileInputRef}
 					type="file"
 					accept="image/png,image/jpeg,image/webp"
-					className="hidden"
+					className="sr-only"
 					onChange={handleUpload}
 				/>
 			</CardContent>

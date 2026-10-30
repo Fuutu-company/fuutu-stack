@@ -14,6 +14,25 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 	const [hovered, setHovered] = useState(false);
 	const [pos, setPos] = useState<TooltipPos | null>(null);
 	const ref = useRef<HTMLDivElement>(null);
+	const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const handleEnter = () => {
+		if (hideTimer.current) clearTimeout(hideTimer.current);
+		setHovered(true);
+	};
+
+	const handleLeave = () => {
+		setHovered(false);
+		// Keep the tooltip mounted for the 150ms fade-out, then unmount it so
+		// the DOM isn't retained forever after the first hover.
+		hideTimer.current = setTimeout(() => setPos(null), 150);
+	};
+
+	useEffect(() => {
+		return () => {
+			if (hideTimer.current) clearTimeout(hideTimer.current);
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!hovered || !ref.current) return;
@@ -39,8 +58,8 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 		<div
 			ref={ref}
 			className="relative overflow-visible"
-			onMouseEnter={() => setHovered(true)}
-			onMouseLeave={() => setHovered(false)}
+			onMouseEnter={handleEnter}
+			onMouseLeave={handleLeave}
 		>
 			{/* Glow aura — fixed negative inset avoids layout overflow / scrollbar */}
 			<div

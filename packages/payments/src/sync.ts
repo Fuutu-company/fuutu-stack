@@ -22,35 +22,63 @@ import {
 } from "@fuutu/credits";
 import {
 	createPurchase,
+	getActiveSubscriptionForOrganization,
+	getActiveSubscriptionForUser,
 	getCreditBalance,
 	getPurchaseByCheckoutEventId,
 	getPurchaseByProviderSubscriptionId,
 	getPurchasesByOrganizationId,
 	getPurchasesByUserId,
+	isUniqueViolation,
 	setOrganizationPaymentsCustomerId,
 	setPaymentsCustomerId,
 	updatePurchase,
+	upsertInvoiceByProviderId,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { dispatchEvent, type WebhookEventType } from "@fuutu/webhooks";
 import { z } from "zod";
-import { CREDITS, type PlanId } from "./config";
+import { CREDIT_TOPUPS, CREDITS, type PlanId } from "./config";
 import { getPlanIdForProductId } from "./config.server";
 import { resolvePaymentProvider } from "./resolve";
 import type {
 	ProviderEvent,
 	ProviderEventType,
+	ProviderInvoiceData,
 	PurchaseStatusLiteral,
 } from "./types";
 
 const log = createLogger({ scope: "payments:sync" });
 
-/** Statuses that must not be overwritten by a renewal/activation event. */
+/** Fallback subscription period when an event carries no currentPeriodEnd. */
+const DEFAULT_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Statuses that must not be overwritten by an activation-type event.
+ * Three classes:
+ *   - Terminal (CANCELED, EXPIRED): a real resubscribe creates a new
+ *     subscriptionId — a late activation must never resurrect a dead sub.
+ *   - User-intent (SCHEDULED_CANCEL): a renewal must not undo a scheduled
+ *     cancel; un-cancel arrives via subscription.updated on all providers.
+ *   - Recoverable (PAST_DUE, PAUSED): payment recovery / resume arrives as
+ *     subscription.activated or subscription.renewed — blocking it would
+ *     keep a paying customer gated out forever (see RECOVERABLE_STATUSES).
+ */
 const PROTECTED_STATUSES: PurchaseStatusLiteral[] = [
 	"SCHEDULED_CANCEL",
 	"PAST_DUE",
 	"PAUSED",
+	"CANCELED",
+	"EXPIRED",
 ];
+
+/**
+ * Protected statuses that subscription.activated / subscription.renewed
+ * may transition out of: PAST_DUE recovers when the retried payment
+ * succeeds, PAUSED when the subscription resumes. checkout.completed is
+ * a stale creation signal and never recovers an existing subscription.
+ */
+const RECOVERABLE_STATUSES: PurchaseStatusLiteral[] = ["PAST_DUE", "PAUSED"];
 
 /** Statuses that count as "active" for feature gating. */
 const ACTIVE_STATUSES: PurchaseStatusLiteral[] = ["ACTIVE", "TRIALING"];
@@ -73,10 +101,6 @@ const DEFAULT_STATUS_FOR_TYPE: Partial<
 	"checkout.completed": "ACTIVE",
 	"one_time.purchased": "ACTIVE",
 };
-
-/** Prisma unique-violation error — a dedup marker already exists. */
-const isUniqueViolation = (err: unknown): boolean =>
-	err instanceof Error && "code" in err && err.code === "P2002";
 
 /**
  * Process an array of normalized provider events and update the Purchase
@@ -137,8 +161,16 @@ async function processSingleEvent(
 		organizationId,
 	});
 
-	// One-time purchase — checkout.completed without a subscription
-	if (type === "checkout.completed" && !subscriptionId && productId) {
+	// One-time purchase — checkout.completed without a subscription, or an
+	// explicit one_time.purchased event (the event type is authoritative,
+	// even when a provider echoes a subscriptionId on the payload).
+	const isOneTimePurchase =
+		type === "one_time.purchased" ||
+		(type === "checkout.completed" && !subscriptionId);
+	// Route on the flag alone — a productId-less one-time event hits
+	// handleOneTimePurchase's own warn instead of the misleading
+	// "subscription event without subscriptionId" branch below.
+	if (isOneTimePurchase) {
 		await handleOneTimePurchase(providerId, event, userId, organizationId);
 		return;
 	}
@@ -172,25 +204,56 @@ async function processSingleEvent(
 			!existing.userId && !existing.organizationId && userId ? userId : null;
 		// The stored owner is authoritative — renewal/invoice events often
 		// carry no user_id metadata, so fall back to the purchase row.
+		// Divergent metadata of the other owner type must never merge in:
+		// credit rows have an owner XOR constraint, so an org-owned
+		// purchase keeps userId null (and vice versa).
+		const resolvedUserId =
+			existing.userId ?? (existing.organizationId ? null : userId);
+		const resolvedOrganizationId =
+			existing.organizationId ?? (existing.userId ? null : organizationId);
 		await updateExistingPurchase(
 			providerId,
 			existing.id,
 			event,
 			existing.status,
-			existing.userId ?? userId,
-			existing.organizationId ?? organizationId,
+			resolvedUserId,
+			resolvedOrganizationId,
 			userIdToSet,
 		);
+		// Invoice-backed events (Stripe invoice.paid / invoice.payment_failed)
+		// persist an Invoice row. Runs after the purchase update and also
+		// covers the protected-status early return inside it. An
+		// invoice-backed event arriving before the purchase exists is skipped
+		// above — the next invoice event converges the table.
+		if (event.invoice) {
+			await recordProviderInvoice(providerId, event.invoice, {
+				userId: resolvedUserId,
+				organizationId: resolvedOrganizationId,
+				// Invoice.userId is required even for org-owned purchases —
+				// attribution falls back to the user_id kept in the purchase's
+				// checkout metadata.
+				attributionUserId: extractId(
+					isRecord(existing.metadata) ? existing.metadata : undefined,
+					"user_id",
+				),
+			});
+		}
 		// Redelivered activation: re-attempt the recurring credit grant.
 		// The original delivery may have created the purchase but failed
 		// the grant (which propagates as 5xx and triggers a provider retry).
 		// grantCreditsForSubscription skips meters whose balance already
 		// matches, so a successful first delivery is a no-op here.
-		if (isSubscriptionActivationType(type)) {
+		// Protected statuses are excluded: updateExistingPurchase keeps a
+		// dead subscription dead, so a late renewal/activation must not
+		// top up credits on a plan the owner no longer holds.
+		if (
+			isSubscriptionActivationType(type) &&
+			!PROTECTED_STATUSES.includes(existing.status as PurchaseStatusLiteral)
+		) {
 			await grantCreditsForSubscription(
 				event,
-				existing.userId ?? userId,
-				existing.organizationId ?? organizationId,
+				resolvedUserId,
+				resolvedOrganizationId,
 			);
 		}
 		return;
@@ -216,14 +279,8 @@ async function handleOneTimePurchase(
 	organizationId: string | null,
 ): Promise<void> {
 	if (!event.productId) {
-		log.warn("one_time.purchased without productId, skipping");
-		return;
-	}
-	if (!userId && !organizationId) {
-		// An ownerless purchase is rejected by the DB XOR constraint and
-		// useless downstream — skip instead of retrying a poisoned event.
-		log.error("checkout.completed without owner metadata, skipping", {
-			productId: event.productId,
+		log.warn("one-time purchase event without productId, skipping", {
+			type: event.type,
 		});
 		return;
 	}
@@ -231,7 +288,9 @@ async function handleOneTimePurchase(
 	// Idempotency: the provider event id is stored as
 	// metadata.checkoutEventId and backed by a partial unique index on
 	// (provider, metadata->>'checkoutEventId') — a redelivered
-	// checkout.completed must not create a second Purchase.
+	// checkout.completed must not create a second Purchase. The dedup
+	// lookup runs BEFORE the owner-metadata check: the stored row
+	// supplies the owner when a redelivery carries none.
 	const eventId = event.eventId ?? null;
 	if (eventId) {
 		const existing = await getPurchaseByCheckoutEventId(providerId, eventId);
@@ -240,17 +299,23 @@ async function handleOneTimePurchase(
 				eventId,
 				purchaseId: existing.id,
 			});
-			// Still attempt the credit grant — it is idempotent via the
-			// unique index on credit_package.purchaseId, and a previous
-			// delivery may have created the purchase but failed the grant.
-			await grantTopUpCreditsForPurchase(
+			await grantTopUpCreditsForStoredPurchase(
+				existing,
 				event,
 				userId,
 				organizationId,
-				existing.id,
 			);
 			return;
 		}
+	}
+
+	if (!userId && !organizationId) {
+		// An ownerless purchase is rejected by the DB XOR constraint and
+		// useless downstream — skip instead of retrying a poisoned event.
+		log.error("checkout.completed without owner metadata, skipping", {
+			productId: event.productId,
+		});
+		return;
 	}
 
 	let purchaseId: string;
@@ -272,11 +337,28 @@ async function handleOneTimePurchase(
 		purchaseId = purchase.id;
 	} catch (err) {
 		if (isUniqueViolation(err)) {
-			// A concurrent redelivery won the race — treat as duplicate.
-			log.info("duplicate checkout.completed (unique constraint)", {
-				eventId,
-			});
-			return;
+			// A concurrent redelivery won the race — treat as duplicate and
+			// still attempt the grant against the winning purchase: it may
+			// have committed the row but failed the grant before its 5xx.
+			const winner = eventId
+				? await getPurchaseByCheckoutEventId(providerId, eventId)
+				: null;
+			if (winner) {
+				log.info("duplicate checkout.completed (unique constraint)", {
+					eventId,
+					purchaseId: winner.id,
+				});
+				await grantTopUpCreditsForStoredPurchase(
+					winner,
+					event,
+					userId,
+					organizationId,
+				);
+				return;
+			}
+			// Not the dedup race — a violation on another constraint, or no
+			// eventId to attribute it. Propagate → 5xx → provider retries.
+			throw err;
 		}
 		throw err;
 	}
@@ -373,6 +455,47 @@ async function createNewSubscriptionPurchase(
 	});
 }
 
+/**
+ * Persist a provider invoice to the `invoice` table. Keyed on
+ * `<providerId>:<invoice.id>` so a redelivered invoice event refreshes
+ * the row instead of duplicating it. Only fires for providers whose
+ * webhooks carry an invoice object (Stripe); invoices for one-time
+ * purchases are not emitted by Stripe checkout payment mode, so the
+ * table effectively covers subscription invoices.
+ */
+async function recordProviderInvoice(
+	providerId: string,
+	invoice: ProviderInvoiceData,
+	owner: {
+		userId: string | null;
+		organizationId: string | null;
+		attributionUserId: string | null;
+	},
+): Promise<void> {
+	const userId = owner.userId ?? owner.attributionUserId;
+	if (!userId) {
+		// Invoice.userId is a required column — without an attributable
+		// user there is no valid row to write. Log rather than retry.
+		log.warn("invoice event without attributable user, skipping", {
+			providerInvoiceId: invoice.id,
+			organizationId: owner.organizationId,
+		});
+		return;
+	}
+	await upsertInvoiceByProviderId({
+		providerInvoiceId: `${providerId}:${invoice.id}`,
+		userId,
+		organizationId: owner.organizationId,
+		url: invoice.url ?? null,
+		pdfUrl: invoice.pdfUrl ?? null,
+		amount: invoice.amount,
+		currency: invoice.currency,
+		status: invoice.status,
+		issuedAt: invoice.issuedAt ?? new Date(),
+		paidAt: invoice.paidAt ?? null,
+	});
+}
+
 async function updateExistingPurchase(
 	providerId: string,
 	purchaseId: string,
@@ -395,9 +518,14 @@ async function updateExistingPurchase(
 		}
 	}
 
-	if (isProtected && isRenewalOrActivation(event.type)) {
-		// Keep the protected status — don't overwrite with ACTIVE
-		log.info("keeping protected status, ignoring renewal", {
+	if (
+		isProtected &&
+		isSubscriptionActivationType(event.type) &&
+		!isRecoveryTransition(event.type, currentStatusLit)
+	) {
+		// Keep the protected status — an activation-type event does not
+		// transition terminal or user-intent states.
+		log.info("keeping protected status on activation-type event", {
 			purchaseId,
 			currentStatus: currentStatusLit,
 			eventType: event.type,
@@ -518,6 +646,10 @@ async function cancelOldSubscriptionsForOwner(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function extractId(
 	metadata: Record<string, unknown> | undefined,
 	key: string,
@@ -531,16 +663,23 @@ function isSubscriptionActivationType(type: ProviderEventType): boolean {
 	return (
 		type === "subscription.activated" ||
 		type === "subscription.renewed" ||
-		type === "checkout.completed" ||
-		type === "one_time.purchased"
+		type === "checkout.completed"
 	);
 }
 
-function isRenewalOrActivation(type: ProviderEventType): boolean {
+/**
+ * True when an activation-type event is a real recovery signal for the
+ * stored status — payment recovered from PAST_DUE or subscription resumed
+ * from PAUSED. checkout.completed is excluded: on an existing purchase it
+ * is a stale creation signal, not a state transition.
+ */
+function isRecoveryTransition(
+	type: ProviderEventType,
+	currentStatus: PurchaseStatusLiteral,
+): boolean {
 	return (
-		type === "subscription.renewed" ||
-		type === "subscription.activated" ||
-		type === "checkout.completed"
+		(type === "subscription.activated" || type === "subscription.renewed") &&
+		RECOVERABLE_STATUSES.includes(currentStatus)
 	);
 }
 
@@ -572,27 +711,6 @@ async function emitWebhookEvent(
 }
 
 /**
- * Check if a user or organization has an active (ACTIVE or TRIALING)
- * subscription. Used by feature gates in the app.
- */
-export async function hasActiveSubscription(
-	userId?: string | null,
-	organizationId?: string | null,
-): Promise<boolean> {
-	if (organizationId) {
-		const { getActiveSubscriptionForOrganization } = await import("@fuutu/db");
-		const purchase = await getActiveSubscriptionForOrganization(organizationId);
-		return purchase !== null;
-	}
-	if (userId) {
-		const { getActiveSubscriptionForUser } = await import("@fuutu/db");
-		const purchase = await getActiveSubscriptionForUser(userId);
-		return purchase !== null;
-	}
-	return false;
-}
-
-/**
  * Get the active subscription's plan ID for a user or organization.
  * Returns null if no active subscription exists.
  */
@@ -600,17 +718,11 @@ export async function getActivePlanId(
 	userId?: string | null,
 	organizationId?: string | null,
 ): Promise<string | null> {
-	let purchase: Awaited<
-		ReturnType<typeof import("@fuutu/db")["getActiveSubscriptionForUser"]>
-	> = null;
-
-	if (organizationId) {
-		const { getActiveSubscriptionForOrganization } = await import("@fuutu/db");
-		purchase = await getActiveSubscriptionForOrganization(organizationId);
-	} else if (userId) {
-		const { getActiveSubscriptionForUser } = await import("@fuutu/db");
-		purchase = await getActiveSubscriptionForUser(userId);
-	}
+	const purchase = organizationId
+		? await getActiveSubscriptionForOrganization(organizationId)
+		: userId
+			? await getActiveSubscriptionForUser(userId)
+			: null;
 
 	if (!purchase) return null;
 	return purchase.productId ?? purchase.priceId;
@@ -653,7 +765,7 @@ async function grantCreditsForSubscription(
 	}
 
 	const periodEnd =
-		event.currentPeriodEnd ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+		event.currentPeriodEnd ?? new Date(Date.now() + DEFAULT_PERIOD_MS);
 
 	for (const [meterKey, grant] of Object.entries(
 		numericGrantsForPlan(planId),
@@ -717,25 +829,49 @@ async function resetCreditsOnRenewal(
 	log.info("reset credits on renewal", { userId, organizationId });
 }
 
-const NestedTopupMetadataSchema = z.object({
-	meterKey: z.string().min(1),
-	amount: z.number().int().positive(),
-	expiryDays: z.number().int().positive().optional(),
-});
-
-const FlatTopupMetadataSchema = z.object({
-	meter_key: z.string().min(1),
-	amount: z.number().int().positive(),
-	expiryDays: z.number().int().positive().optional(),
+const TopupMetadataSchema = z.object({
+	topup_id: z.string().min(1),
 });
 
 /**
+ * Re-attempt the top-up grant against an already-stored purchase
+ * (deduplicated redelivery or a create that lost the unique race).
+ * The grant is idempotent via the unique index on
+ * credit_package.purchaseId — a previous delivery may have created the
+ * purchase but failed the grant. The stored owner is authoritative: a
+ * redelivery with divergent/missing owner metadata must grant to the
+ * same owner the purchase was created for, and metadata of the other
+ * owner type must never merge in (credit rows are owner-XOR).
+ */
+async function grantTopUpCreditsForStoredPurchase(
+	purchase: {
+		id: string;
+		userId: string | null;
+		organizationId: string | null;
+	},
+	event: ProviderEvent,
+	userId: string | null,
+	organizationId: string | null,
+): Promise<void> {
+	const grantUserId =
+		purchase.userId ?? (purchase.organizationId ? null : userId);
+	const grantOrganizationId =
+		purchase.organizationId ?? (purchase.userId ? null : organizationId);
+	await grantTopUpCreditsForPurchase(
+		event,
+		grantUserId,
+		grantOrganizationId,
+		purchase.id,
+	);
+}
+
+/**
  * Grant top-up credits for a one-time purchase.
- * Top-up detection relies on metadata passed from the checkout:
- * - Nested format: { credit_topup: { meterKey, amount, expiryDays? } }
- * - Flat format: { topup_id, meter_key, amount, expiryDays? }
  *
- * Both formats are Zod-validated — malformed metadata is skipped, never cast.
+ * Top-up detection relies on the `topup_id` echoed back in checkout
+ * metadata. The grant amount and meter are re-derived from the
+ * `CREDIT_TOPUPS` catalog — never from echoed metadata, which a forged
+ * checkout could inflate. Unknown top-up ids are logged and skipped.
  */
 async function grantTopUpCreditsForPurchase(
 	event: ProviderEvent,
@@ -745,45 +881,35 @@ async function grantTopUpCreditsForPurchase(
 ): Promise<void> {
 	if (!event.productId || (!userId && !organizationId)) return;
 
-	const metadata = event.metadata;
-	const nested = NestedTopupMetadataSchema.safeParse(metadata?.credit_topup);
-	const flat =
-		metadata?.topup_id !== undefined
-			? FlatTopupMetadataSchema.safeParse(metadata)
-			: null;
-
-	const topupInfo = nested.success
-		? nested.data
-		: flat?.success
-			? {
-					meterKey: flat.data.meter_key,
-					amount: flat.data.amount,
-					expiryDays: flat.data.expiryDays,
-				}
-			: undefined;
-
-	if (!topupInfo) {
+	const parsed = TopupMetadataSchema.safeParse(event.metadata);
+	if (!parsed.success) {
 		// Not a credit top-up purchase — skip silently
 		return;
 	}
 
-	const expiresAt = topupInfo.expiryDays
-		? new Date(Date.now() + topupInfo.expiryDays * 24 * 60 * 60 * 1000)
-		: null;
+	const topup = CREDIT_TOPUPS.find((t) => t.id === parsed.data.topup_id);
+	if (!topup) {
+		log.error("one-time purchase references unknown topup_id, skipping grant", {
+			topupId: parsed.data.topup_id,
+			productId: event.productId,
+			purchaseId,
+		});
+		return;
+	}
 
 	await grantTopUpCredits({
 		userId: userId ?? undefined,
 		organizationId: organizationId ?? undefined,
-		meterKey: topupInfo.meterKey,
-		amount: topupInfo.amount,
-		expiresAt,
+		meterKey: topup.meterKey,
+		amount: topup.amount,
 		purchaseId,
 	});
 
 	log.info("granted top-up credits for one-time purchase", {
 		purchaseId,
-		meterKey: topupInfo.meterKey,
-		amount: topupInfo.amount,
+		topupId: topup.id,
+		meterKey: topup.meterKey,
+		amount: topup.amount,
 		userId,
 		organizationId,
 	});

@@ -2,7 +2,11 @@
 
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
-import { PLANS, type PlanId } from "@fuutu/payments/config";
+import {
+	type BillingInterval,
+	PLANS,
+	type PlanId,
+} from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
 	type PlanTranslations,
@@ -36,6 +40,9 @@ type ActiveSubscription = {
 	currentPeriodEnd?: Date;
 };
 
+/** Provider-side price IDs per plan, keyed by billing interval. */
+type PlanPriceIds = { monthly?: string; yearly?: string };
+
 export function OrgSettingsBilling({
 	slug,
 	paymentsEnabled,
@@ -44,7 +51,7 @@ export function OrgSettingsBilling({
 	slug: string;
 	paymentsEnabled: boolean;
 	/** Maps plan IDs to their provider-side price IDs (env-backed). */
-	productIds: Partial<Record<PlanId, string>>;
+	productIds: Partial<Record<PlanId, PlanPriceIds>>;
 }) {
 	const t = useTranslations();
 	const tp = useTranslations("payments");
@@ -97,32 +104,37 @@ export function OrgSettingsBilling({
 		void load();
 	}, [load]);
 
-	// Map the active subscription's provider productId to a plan ID
-	const activePlanId: PlanId = (() => {
-		if (!activeSub?.productId) return "free";
-		for (const id of Object.keys(PLANS) as PlanId[]) {
-			const planProductId = priceIds[id];
-			if (planProductId && planProductId === activeSub.productId) {
-				return id;
+	// Map the active subscription's provider productId to a plan ID.
+	// A yearly subscription carries the yearly price ID — check both so a
+	// yearly sub resolves to its plan (and the correct interval label).
+	const { activePlanId, activeInterval } = ((): {
+		activePlanId: PlanId;
+		activeInterval: BillingInterval;
+	} => {
+		if (activeSub?.productId) {
+			for (const id of Object.keys(PLANS) as PlanId[]) {
+				const ids = priceIds[id];
+				if (ids?.yearly === activeSub.productId) {
+					return { activePlanId: id, activeInterval: "year" };
+				}
+				if (ids?.monthly === activeSub.productId) {
+					return { activePlanId: id, activeInterval: "month" };
+				}
 			}
 		}
-		return "free";
+		return { activePlanId: "free", activeInterval: "month" };
 	})();
 
-	async function checkout(planId: PlanId) {
+	async function checkout(planId: PlanId, interval?: BillingInterval) {
 		if (!org) return;
-		const priceId = priceIds[planId];
-		if (!priceId) {
-			setError(tp("choosePlan.unavailable"));
-			return;
-		}
 		setCheckoutLoading(planId);
 		setError(null);
 		try {
 			const plan = PLANS[planId];
 			const seats = plan.seatBased ? seatCount : undefined;
 			const result = await orpc.payments.checkout.create.call({
-				priceId,
+				planId,
+				interval,
 				organizationId: org.id,
 				successUrl: `/organizations/${slug}/settings/billing`,
 				cancelUrl: `/organizations/${slug}/settings/billing`,
@@ -234,7 +246,11 @@ export function OrgSettingsBilling({
 									{activeSub
 										? tp("planInterval", {
 												plan: tp(`plans.${activePlanId}.name`),
-												interval: tp("choosePlan.monthly"),
+												interval: tp(
+													activeInterval === "year"
+														? "choosePlan.yearly"
+														: "choosePlan.monthly",
+												),
 											})
 										: t("organizations.settings.billingNoPlan")}
 								</p>
@@ -291,6 +307,7 @@ export function OrgSettingsBilling({
 					pricePerSeat={proPlan.amount}
 					currency={proPlan.currency}
 					currencySymbol={currencySymbol}
+					locale={locale}
 					interval={proPlan.interval}
 					translations={{
 						title: tp("seatSelector.title"),

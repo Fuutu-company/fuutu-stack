@@ -22,5 +22,5 @@ export const getAllLocales = (): Locale[] => {
 };
 
 export const isValidLocale = (locale: string): locale is Locale => {
-	return locale in i18nConfig.locales;
+	return Object.hasOwn(i18nConfig.locales, locale);
 };

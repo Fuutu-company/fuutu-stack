@@ -1,20 +1,43 @@
 import { randomUUID } from "node:crypto";
 import {
+	type JsonValue,
 	listActiveWebhooksByOrg,
 	listOrganizationsForUser,
-	type Prisma,
 	recordDelivery,
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
+import { webhooksConfig } from "./config";
 import { WEBHOOK_EVENTS, type WebhookEventType } from "./events";
 
 const log = createLogger({ scope: "webhooks:dispatch" });
 
+/**
+ * True when `value` survives `JSON.stringify` (throws on BigInt / circular
+ * references — both would otherwise crash the Prisma Json write) and its
+ * serialized form fits the configured size cap. Size is measured in UTF-8
+ * bytes, not code units — multi-byte characters count more than once.
+ * Note that `JSON.stringify` silently drops unserializable members
+ * (functions, `undefined`, symbols) rather than failing.
+ */
+function isSerializablePayload(value: unknown): boolean {
+	try {
+		const serialized = JSON.stringify(value);
+		return (
+			typeof serialized === "string" &&
+			Buffer.byteLength(serialized, "utf8") <= webhooksConfig.maxPayloadBytes
+		);
+	} catch {
+		return false;
+	}
+}
+
 const dispatchEventInput = z
 	.object({
 		event: z.enum(WEBHOOK_EVENTS),
-		payload: z.record(z.string(), z.unknown()),
+		payload: z.record(z.string(), z.unknown()).refine(isSerializablePayload, {
+			message: `payload must be JSON-serializable and within ${webhooksConfig.maxPayloadBytes} bytes when serialized`,
+		}),
 		organizationId: z.string().min(1).optional(),
 		userId: z.string().min(1).optional(),
 	})
@@ -72,7 +95,7 @@ export async function dispatchEvent(
 					webhookId: webhook.id,
 					eventId,
 					eventType: input.event,
-					payload: input.payload as Prisma.InputJsonValue,
+					payload: input.payload as JsonValue,
 					status: "pending",
 				}),
 			),

@@ -84,6 +84,66 @@ describe("getSafeRedirect", () => {
 		});
 	});
 
+	describe("absolute-URL normalization tricks", () => {
+		it("rejects https:\\\\evil.com (backslash normalizes to //evil.com)", () => {
+			// `new URL` treats `\` as `/` for special schemes — the parsed origin
+			// is https://evil.com, which is not allow-listed.
+			expect(
+				getSafeRedirect("https:\\\\evil.com", {
+					allowedOrigins: ["https://app.example.com"],
+				}),
+			).toBe("/");
+		});
+
+		it("rejects https://allowed.com@evil.com (userinfo trick)", () => {
+			// `allowed.com` is the userinfo, not the host — origin is
+			// https://evil.com and must be rejected.
+			expect(
+				getSafeRedirect("https://allowed.com@evil.com", {
+					allowedOrigins: ["https://allowed.com"],
+				}),
+			).toBe("/");
+		});
+
+		it("rejects https:evil.com (scheme without slashes)", () => {
+			expect(
+				getSafeRedirect("https:evil.com", {
+					allowedOrigins: ["https://app.example.com"],
+				}),
+			).toBe("/");
+		});
+
+		it("normalizes backslash inside an allowed path to a same-origin URL", () => {
+			// `\\` becomes `/`, `@` stays in the path — the result is a
+			// normalized same-origin URL, not a redirect to evil.com.
+			expect(
+				getSafeRedirect("https://app.example.com\\@evil.com", {
+					allowedOrigins: ["https://app.example.com"],
+				}),
+			).toBe("https://app.example.com/@evil.com");
+		});
+	});
+
+	describe("allowedOrigins matching", () => {
+		it("requires exact origins — a trailing slash never matches", () => {
+			// Fail-closed: `url.origin` never has a trailing slash, so an
+			// entry like "https://app.example.com/" silently matches nothing.
+			expect(
+				getSafeRedirect("https://app.example.com/dashboard", {
+					allowedOrigins: ["https://app.example.com/"],
+				}),
+			).toBe("/");
+		});
+
+		it("requires exact origins — an entry with a path never matches", () => {
+			expect(
+				getSafeRedirect("https://app.example.com/dashboard", {
+					allowedOrigins: ["https://app.example.com/app"],
+				}),
+			).toBe("/");
+		});
+	});
+
 	describe("protocol-relative URLs", () => {
 		it("rejects //evil.com", () => {
 			expect(getSafeRedirect("//evil.com")).toBe("/");

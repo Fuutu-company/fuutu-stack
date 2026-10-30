@@ -9,7 +9,7 @@ const log = createLogger({ scope: "api:users" });
 
 const updateProfileSchema = z.object({
 	name: z.string().min(1).max(100).optional(),
-	image: z.string().url().optional(),
+	image: z.url().optional(),
 });
 
 export const updateUserProfile = protectedProcedure

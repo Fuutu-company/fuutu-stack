@@ -1,7 +1,7 @@
 {
 	"credits": {
 		"title": "Guthaben",
-		"description": "Verwalten Sie Ihre Guthaben und Nutzung",
+		"description": "Verwalte deine Guthaben und Nutzung",
 		"recurring": "Monatliches Kontingent",
 		"topups": "Aufladepakete",
 		"total": "Gesamt verbleibend",
@@ -22,19 +22,38 @@
 		"source": {
 			"recurring": "Monatlich",
 			"topup": "Aufladung",
-			"overage": "Überbuchung",
+			"overage": "Mehrverbrauch",
 			"refund": "Rückerstattung",
 			"admin_grant": "Gewährt",
 			"reset": "Zurückgesetzt"
 		},
+		"meters": {
+			"ai_tokens": "KI-Tokens",
+			"api_calls": "API-Aufrufe",
+			"documents": "Dokumente"
+		},
 		"topup": {
 			"title": "Weitere Credits kaufen",
-			"description": "Füllen Sie Ihr Credit-Guthaben mit einmaligen Käufen auf",
+			"description": "Fülle dein Credit-Guthaben mit einmaligen Käufen auf",
 			"buy": "Kaufen",
 			"popular": "Beliebt",
 			"perPackage": "pro Paket",
 			"redirecting": "Weiterleitung zum Checkout...",
-			"unavailable": "Top-Ups sind derzeit nicht verfügbar."
+			"unavailable": "Top-Ups sind derzeit nicht verfügbar.",
+			"packages": {
+				"ai_tokens_100k": {
+					"label": "100K KI-Tokens",
+					"description": "Lade dein KI-Token-Guthaben auf"
+				},
+				"ai_tokens_500k": {
+					"label": "500K KI-Tokens",
+					"description": "Bestes Angebot für KI-Tokens"
+				},
+				"api_calls_50k": {
+					"label": "50K API-Aufrufe",
+					"description": "Lade dein API-Aufruf-Guthaben auf"
+				}
+			}
 		}
 	}
 }

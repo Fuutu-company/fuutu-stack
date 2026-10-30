@@ -25,36 +25,70 @@ export function VideoPlayer({
 	pauseLabel,
 }: VideoPlayerProps) {
 	const videoRef = useRef<HTMLVideoElement>(null);
+	const mountedRef = useRef(true);
 	const [playing, setPlaying] = useState(false);
 	const [hovered, setHovered] = useState(false);
+
+	// Tracks mount state so async play() resolutions can't set state after unmount
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	// Auto-play on mount (muted required by browsers)
 	useEffect(() => {
 		const video = videoRef.current;
 		if (!video || !autoPlay) return;
+		let cancelled = false;
 		video.muted = true;
 		video
 			.play()
-			.then(() => setPlaying(true))
+			.then(() => {
+				if (!cancelled) setPlaying(true);
+			})
 			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
 	}, [autoPlay]);
 
 	// Hover-to-play
 	useEffect(() => {
 		const video = videoRef.current;
 		if (!video || !hoverPlay) return;
+		let cancelled = false;
 		if (hovered) {
 			video.muted = true;
 			video
 				.play()
-				.then(() => setPlaying(true))
+				.then(() => {
+					if (!cancelled) setPlaying(true);
+				})
 				.catch(() => {});
 		} else {
 			video.pause();
 			video.currentTime = 0;
 			setPlaying(false);
 		}
+		return () => {
+			cancelled = true;
+		};
 	}, [hovered, hoverPlay]);
+
+	// Pause when hoverPlay is disabled mid-hover — the hover effect above
+	// early-returns on !hoverPlay, so the transition is handled here
+	const prevHoverPlay = useRef(hoverPlay);
+	useEffect(() => {
+		const wasEnabled = prevHoverPlay.current;
+		prevHoverPlay.current = hoverPlay;
+		const video = videoRef.current;
+		if (wasEnabled && !hoverPlay && video && !video.paused) {
+			video.pause();
+			setPlaying(false);
+		}
+	}, [hoverPlay]);
 
 	const togglePlay = useCallback(() => {
 		const video = videoRef.current;
@@ -62,7 +96,9 @@ export function VideoPlayer({
 		if (video.paused) {
 			video
 				.play()
-				.then(() => setPlaying(true))
+				.then(() => {
+					if (mountedRef.current) setPlaying(true);
+				})
 				.catch(() => {});
 		} else {
 			video.pause();
@@ -98,7 +134,7 @@ export function VideoPlayer({
 						onClick={togglePlay}
 						aria-label={playing ? pauseLabel : playLabel}
 						className={cn(
-							"flex size-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-opacity duration-200 hover:bg-black/70",
+							"flex size-9 items-center justify-center rounded-full bg-background/60 text-foreground backdrop-blur-sm transition-opacity duration-200 hover:bg-background/80",
 							showControls && !hovered ? "opacity-0" : "opacity-100",
 						)}
 					>

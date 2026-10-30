@@ -11,7 +11,7 @@
  * To extend: add the locale key, keep the shape identical across all locales.
  */
 
-import type { Locale } from "@fuutu/i18n";
+import { getFallbackChain, type Locale } from "@fuutu/i18n";
 import { i18nConfig } from "@fuutu/i18n/config";
 
 export interface MailStrings {
@@ -196,16 +196,17 @@ const de: MailStrings = {
 const bundles: Record<Locale, MailStrings> = { en, de };
 
 /**
- * Resolve the mail string bundle for a given locale, honouring the i18n
- * fallback chain (e.g. de-AT → de → en) before defaulting to English.
+ * Resolve the mail string bundle for a given locale via the shared i18n
+ * fallback chain — exact match, then its configured `fallbackLocale`
+ * (or the nearest configured BCP-47 parent when none is configured,
+ * e.g. de-AT → de), then the default locale — returning the first
+ * locale that has a mail bundle.
  */
 export function getMailStrings(locale?: Locale): MailStrings {
-	if (!locale) return bundles[i18nConfig.defaultLocale as Locale] ?? en;
-	const direct = bundles[locale];
-	if (direct) return direct;
-	const fallback = (
-		i18nConfig.locales as Record<string, { fallbackLocale?: string }>
-	)[locale]?.fallbackLocale as Locale | undefined;
-	if (fallback && bundles[fallback]) return bundles[fallback];
+	const bundlesByCode: Partial<Record<string, MailStrings>> = bundles;
+	for (const loc of getFallbackChain(locale ?? i18nConfig.defaultLocale)) {
+		const bundle = bundlesByCode[loc];
+		if (bundle) return bundle;
+	}
 	return en;
 }

@@ -16,9 +16,17 @@
  */
 
 import { createLogger } from "@fuutu/logs";
+import { isPaymentsEnabled, paymentsConfig } from "./config";
 import { resolvePaymentProvider } from "./resolve";
 import { processWebhookEvents } from "./sync";
-import type { PaymentsWebhookHandler, ProviderEvent } from "./types";
+import {
+	type PaymentProvider,
+	PaymentsDisabledError,
+	type PaymentsWebhookHandler,
+	type ProviderEvent,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "./types";
 
 const log = createLogger({ scope: "payments:webhook" });
 
@@ -29,24 +37,38 @@ const log = createLogger({ scope: "payments:webhook" });
 export const handlePaymentsWebhook: PaymentsWebhookHandler = async (
 	request: Request,
 ): Promise<Response> => {
-	const provider = resolvePaymentProvider();
+	if (!isPaymentsEnabled()) {
+		return new Response("payments disabled", { status: 501 });
+	}
 
+	// Resolution lives inside the try so a provider-misconfig throw
+	// (WebhookConfigError from resolve.ts) lands in the status mapping
+	// below instead of escaping as an unhandled 500 with no body.
+	let providerId: string = paymentsConfig.provider;
+	let provider: PaymentProvider;
 	let events: ProviderEvent[];
 	try {
+		provider = resolvePaymentProvider();
+		providerId = provider.id;
 		events = await provider.parseWebhook(request);
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		const lower = message.toLowerCase();
-		// Misconfiguration (missing webhook secret, provider not configured)
-		// is OUR problem → 500 so the provider retries after a fix.
-		// Signature failures → 401; everything else → 400 malformed.
-		const isMisconfig =
-			lower.includes("secret") || lower.includes("not configured");
-		const status = isMisconfig ? 500 : lower.includes("signature") ? 401 : 400;
+		// Status is mapped by error type, never by message content:
+		//   WebhookSignatureError → 401 (inauthentic delivery)
+		//   WebhookConfigError    → 500 (our misconfig — provider should retry)
+		//   PaymentsDisabledError → 501 (provider skeleton / payments off)
+		//   anything else         → 400 (malformed payload)
+		const status =
+			err instanceof WebhookSignatureError
+				? 401
+				: err instanceof WebhookConfigError
+					? 500
+					: err instanceof PaymentsDisabledError
+						? 501
+						: 400;
 		log.warn("webhook parse failed", {
-			provider: provider.id,
+			provider: providerId,
 			status,
-			err: message,
+			err: err instanceof Error ? err.message : String(err),
 		});
 		// Generic body — the raw provider error may leak internals.
 		const body =
@@ -54,7 +76,9 @@ export const handlePaymentsWebhook: PaymentsWebhookHandler = async (
 				? "invalid signature"
 				: status === 500
 					? "webhook misconfigured"
-					: "malformed payload";
+					: status === 501
+						? "payments disabled"
+						: "malformed payload";
 		return new Response(body, { status });
 	}
 
@@ -76,28 +100,3 @@ export const handlePaymentsWebhook: PaymentsWebhookHandler = async (
 
 	return new Response(null, { status: 200 });
 };
-
-/**
- * Resolve the active webhook handler from the configured provider.
- * Kept for backward compatibility — prefer `handlePaymentsWebhook` directly.
- */
-export function getPaymentsWebhookHandler(): PaymentsWebhookHandler {
-	return handlePaymentsWebhook;
-}
-
-/**
- * Default webhook handler used when no payment provider is configured.
- * Returns 501 so ops can tell "provider missing" apart from "signature invalid".
- */
-export const noopPaymentsWebhookHandler: PaymentsWebhookHandler = async () =>
-	new Response(
-		JSON.stringify({
-			error: "payments_provider_not_configured",
-			message:
-				"No payments provider is active. Configure `paymentsConfig.provider`.",
-		}),
-		{
-			status: 501,
-			headers: { "content-type": "application/json" },
-		},
-	);

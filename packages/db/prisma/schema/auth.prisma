@@ -21,8 +21,12 @@ model User {
   // Fuutu custom fields (exposed via better-auth additionalFields)
   onboardingComplete       Boolean   @default(false)
   username                 String?   @unique
+  displayUsername          String?
   paymentsCustomerId       String?
   lastActiveOrganizationId String?
+  // Atomic claim flag for the org-scoped `user.created` webhook —
+  // flipped by claimUserCreatedEvent() on first membership.
+  userCreatedEventSent     Boolean   @default(false)
 
   sessions      Session[]
   accounts      Account[]
@@ -119,6 +123,7 @@ model Organization {
   creditBalances   CreditBalance[]
   creditPackages   CreditPackage[]
   creditEvents     CreditEvent[]
+  auditLogs        AuditLog[]
 
   @@unique([slug])
   @@map("organization")
@@ -178,6 +183,18 @@ model Passkey {
   @@schema("auth")
 }
 
+// Better-Auth database rate limiting (rateLimit.storage = "database")
+model RateLimit {
+  id          String @id
+  key         String
+  count       Int
+  lastRequest BigInt
+
+  @@unique([key])
+  @@map("rate_limit")
+  @@schema("auth")
+}
+
 // Better-Auth twoFactor plugin
 model TwoFactor {
   id          String  @id
@@ -188,6 +205,9 @@ model TwoFactor {
   // Added in better-auth 1.6: gate sign-in on verified TOTP enrollment.
   // Default true keeps legacy rows signed-in-capable.
   verified    Boolean @default(true)
+  // better-auth 1.7 TOTP lockout fields (required by plugin schema check).
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
 
   @@index([userId])
   @@map("two_factor")

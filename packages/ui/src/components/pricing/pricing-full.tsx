@@ -60,7 +60,7 @@ export function PricingFull({
 					className="pointer-events-none absolute inset-0 -z-10"
 					style={{
 						background:
-							"radial-gradient(ellipse 70% 40% at 50% -5%, oklch(from var(--primary) l c h / 0.1) 0%, transparent 60%)",
+							"radial-gradient(ellipse 70% 40% at 50% -25%, oklch(from var(--primary) l c h / 0.1) 0%, transparent 60%)",
 					}}
 				/>
 
@@ -77,7 +77,7 @@ export function PricingFull({
 
 				{/* Single table — thead aligns perfectly with tbody columns */}
 				<div className="hidden overflow-x-auto md:block">
-					<table className="w-full min-w-[560px] border-collapse">
+					<table className="w-full min-w-140 border-collapse">
 						<colgroup>
 							<col style={{ width: "30%" }} />
 							{tiers.map((t) => (
@@ -193,7 +193,7 @@ function PlanHeader({
 	return (
 		<div
 			className={cn(
-				"relative flex h-[290px] flex-col rounded-2xl p-5",
+				"relative flex h-72.5 flex-col rounded-2xl p-5",
 				hl
 					? "bg-primary text-primary-foreground shadow-2xl ring-2 ring-primary/30"
 					: isEnterprise
@@ -299,6 +299,7 @@ function PlanHeader({
 					LinkComponent={LinkComponent}
 					inverted={hl}
 					size="sm"
+					isYearly={isYearly}
 				/>
 			</div>
 		</div>
@@ -573,6 +574,7 @@ function MobilePlanCard({
 					LinkComponent={LinkComponent}
 					inverted={hl}
 					size="sm"
+					isYearly={isYearly}
 				/>
 			</div>
 

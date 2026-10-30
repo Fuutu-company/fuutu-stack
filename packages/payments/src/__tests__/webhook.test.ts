@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { paymentsConfig } from "../config";
+import {
+	PaymentsDisabledError,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const mockParseWebhook = vi.fn();
+const mockResolvePaymentProvider = vi.fn();
 const mockProcessWebhookEvents = vi.fn();
 
 vi.mock("../resolve", () => ({
-	resolvePaymentProvider: () => ({
-		id: "test-provider",
-		parseWebhook: mockParseWebhook,
-	}),
+	resolvePaymentProvider: () => mockResolvePaymentProvider(),
 }));
 
 vi.mock("../sync", () => ({
@@ -34,10 +38,17 @@ const req = () =>
 describe("handlePaymentsWebhook", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		paymentsConfig.provider = "creem";
+		mockResolvePaymentProvider.mockReturnValue({
+			id: "test-provider",
+			parseWebhook: mockParseWebhook,
+		});
 	});
 
 	it("returns 401 + generic body on signature failure", async () => {
-		mockParseWebhook.mockRejectedValue(new Error("Invalid signature"));
+		mockParseWebhook.mockRejectedValue(
+			new WebhookSignatureError("Invalid signature"),
+		);
 
 		const res = await handlePaymentsWebhook(req());
 
@@ -59,13 +70,48 @@ describe("handlePaymentsWebhook", () => {
 
 	it("returns 500 on missing webhook secret (provider should retry)", async () => {
 		mockParseWebhook.mockRejectedValue(
-			new Error("POLAR_WEBHOOK_SECRET is not configured"),
+			new WebhookConfigError("POLAR_WEBHOOK_SECRET is not configured"),
 		);
 
 		const res = await handlePaymentsWebhook(req());
 
 		expect(res.status).toBe(500);
 		expect(await res.text()).toBe("webhook misconfigured");
+	});
+
+	it("returns 500 when provider resolution throws a misconfig error", async () => {
+		// e.g. provider "custom" without paymentsConfig.customProvider —
+		// resolvePaymentProvider() throws WebhookConfigError, which must land
+		// in the error-type mapping (not escape as an unhandled throw).
+		mockResolvePaymentProvider.mockImplementation(() => {
+			throw new WebhookConfigError("customProvider is not set");
+		});
+
+		const res = await handlePaymentsWebhook(req());
+
+		expect(res.status).toBe(500);
+		expect(await res.text()).toBe("webhook misconfigured");
+		expect(mockParseWebhook).not.toHaveBeenCalled();
+	});
+
+	it("returns 501 when the provider reports payments disabled", async () => {
+		mockParseWebhook.mockRejectedValue(
+			new PaymentsDisabledError("not implemented"),
+		);
+
+		const res = await handlePaymentsWebhook(req());
+
+		expect(res.status).toBe(501);
+	});
+
+	it("returns 501 without touching the provider when payments are disabled", async () => {
+		paymentsConfig.provider = "noop";
+
+		const res = await handlePaymentsWebhook(req());
+
+		expect(res.status).toBe(501);
+		expect(mockResolvePaymentProvider).not.toHaveBeenCalled();
+		expect(mockParseWebhook).not.toHaveBeenCalled();
 	});
 
 	it("returns 200 without syncing when no events parsed", async () => {

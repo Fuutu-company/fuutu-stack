@@ -6,9 +6,11 @@
  * Storage). Concrete provider files live in `./providers/*` and expose
  * a `StorageProvider` instance.
  *
- * The interface intentionally exposes only presigned-URL flows and
- * server-side delete/list. No direct `putObject` in here — all uploads
- * go through presigned URLs so the app never proxies file bytes.
+ * The interface intentionally exposes presigned-URL flows, server-side
+ * delete/list, and an optional `getObjectStream` escape hatch for
+ * proxying object bytes (used by the image-proxy route). No direct
+ * `putObject` in here — all uploads go through presigned URLs so the
+ * app never proxies file bytes on write.
  */
 
 export interface SignedUploadInput {
@@ -31,14 +33,22 @@ export interface SignedUploadInput {
 	 * rejected when it exceeds the cap.
 	 */
 	maxSizeBytes?: number;
-	/** Seconds until the URL expires. Defaults to 600 (10 min). */
+	/**
+	 * Seconds until the URL expires. Defaults to 600 (10 min).
+	 * SigV4 presigned URLs are hard-capped at 604800s (7 days) — larger
+	 * values produce a URL that S3 rejects on use.
+	 */
 	expiresInSeconds?: number;
 }
 
 export interface SignedDownloadInput {
 	bucket: string;
 	key: string;
-	/** Seconds until the URL expires. Defaults to 600 (10 min). */
+	/**
+	 * Seconds until the URL expires. Defaults to 600 (10 min).
+	 * SigV4 presigned URLs are hard-capped at 604800s (7 days) — larger
+	 * values produce a URL that S3 rejects on use.
+	 */
 	expiresInSeconds?: number;
 }
 

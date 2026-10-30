@@ -22,6 +22,16 @@ export function testAnalyticsProviderContract(
 			expect(provider.id).toBe(options.id);
 		});
 
+		it("declares requiresConsent as a boolean", () => {
+			const provider = createProvider();
+			expect(typeof provider.requiresConsent).toBe("boolean");
+		});
+
+		it("declares showConsentBanner as a boolean", () => {
+			const provider = createProvider();
+			expect(typeof provider.showConsentBanner).toBe("boolean");
+		});
+
 		it("trackEvent() does not throw", () => {
 			const provider = createProvider();
 			expect(() => provider.trackEvent("test_event")).not.toThrow();
@@ -42,6 +52,14 @@ export function testAnalyticsProviderContract(
 		it("trackPageview() accepts a URL without throwing", () => {
 			const provider = createProvider();
 			expect(() => provider.trackPageview("/dashboard")).not.toThrow();
+		});
+
+		it("getCspOrigins() returns origin arrays when defined", () => {
+			const provider = createProvider();
+			const origins = provider.getCspOrigins?.();
+			if (origins === undefined) return;
+			expect(Array.isArray(origins.scriptSrc)).toBe(true);
+			expect(Array.isArray(origins.connectSrc)).toBe(true);
 		});
 	});
 }

@@ -1,3 +1,5 @@
+import { env } from "@fuutu/env/saas";
+
 /**
  * API configuration — owned by @fuutu/api.
  *
@@ -6,7 +8,11 @@
  */
 export const apiConfig = {
 	rateLimit: {
-		enabled: true,
+		enabled: !env.FUUTU_DISABLE_RATE_LIMIT,
+		// Only set true behind a trusted proxy that overwrites
+		// X-Forwarded-For / X-Real-IP — otherwise client-supplied headers
+		// let anonymous callers rotate rate-limit keys at will.
+		trustProxyHeaders: false,
 		defaults: {
 			maxRequests: 100,
 			windowMs: 60 * 1000, // 1 minute

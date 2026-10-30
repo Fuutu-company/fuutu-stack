@@ -6,12 +6,15 @@ export function expectNonEmptyString(value: unknown): asserts value is string {
 	expect((value as string).length).toBeGreaterThan(0);
 }
 
-/** Asserts the promise resolves without throwing. */
+/**
+ * Asserts the promise resolves (does not reject).
+ * Awaits the promise directly: a rejection propagates and fails the test.
+ */
 export async function expectResolves(
 	promise: Promise<unknown> | (() => Promise<unknown>),
 ): Promise<void> {
 	const fn = typeof promise === "function" ? promise : () => promise;
-	await expect(fn()).resolves.not.toThrow();
+	await fn();
 }
 
 /** Asserts the promise rejects, optionally matching the error message substring. */

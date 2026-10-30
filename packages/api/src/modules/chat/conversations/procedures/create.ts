@@ -2,8 +2,8 @@ import { createConversation } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import { permissionProcedure } from "../../../../orpc/procedures";
-import { requireOrgPermissionAccess } from "../../../organizations/shared";
 
 const createConversationSchema = z.object({
 	title: z.string().min(1).max(200).optional(),

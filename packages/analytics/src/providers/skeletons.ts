@@ -11,10 +11,22 @@ import type { AnalyticsProvider, AnalyticsProviderId } from "../types";
  * inject a script for the active functional provider (Umami). Shipping
  * script props here would inject real third-party URLs with placeholder
  * IDs after consent. The expected script tag is noted per provider below.
+ *
+ * Skeletons default to `requiresConsent: true` — third-party trackers
+ * (GA4, Mixpanel, …) must not load before consent, and the banner is
+ * implied anyway while the gate is on. Revisit the flags when
+ * activating a privacy-first provider; `analyticsConfig` can always
+ * override both.
  */
-function makeSkeleton(id: AnalyticsProviderId): AnalyticsProvider {
+function makeSkeleton(
+	id: AnalyticsProviderId,
+	requiresConsent = true,
+	showConsentBanner = true,
+): AnalyticsProvider {
 	return {
 		id,
+		requiresConsent,
+		showConsentBanner,
 		trackEvent() {
 			// not implemented — skeleton provider
 		},
@@ -36,4 +48,5 @@ export const mixpanelAnalyticsProvider = makeSkeleton("mixpanel");
 /** Activate: inject `https://www.googletagmanager.com/gtag/js?id=<G-*>`. */
 export const ga4AnalyticsProvider = makeSkeleton("ga4");
 
-export const noopAnalyticsProvider = makeSkeleton("noop");
+// `noop` never tracks anything — nothing to consent to, nothing to show.
+export const noopAnalyticsProvider = makeSkeleton("noop", false, false);

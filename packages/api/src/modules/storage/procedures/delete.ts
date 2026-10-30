@@ -1,12 +1,12 @@
 import { PERMISSIONS } from "@fuutu/rbac";
-import { resolveStorageProvider } from "@fuutu/storage";
+import { resolveStorageProvider, STORAGE_BUCKET_ALIASES } from "@fuutu/storage";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
-import { resolveBucketOrThrow } from "../shared";
+import { callStorageOrThrow, resolveBucketOrThrow } from "../shared";
 
 const fileDeleteSchema = z.object({
-	bucket: z.string().min(1),
+	bucket: z.enum(STORAGE_BUCKET_ALIASES),
 	key: z
 		.string()
 		.min(1)
@@ -34,6 +34,8 @@ export const deleteObject = authProcedure({
 		const prefix = context.org?.id ?? context.user.id;
 		const scopedKey = `${prefix}/${input.key}`;
 		const provider = resolveStorageProvider();
-		await provider.deleteObject(bucket, scopedKey);
+		// The guarded provider re-validates bucket/key — violations
+		// surface as BAD_REQUEST via callStorageOrThrow.
+		await callStorageOrThrow(() => provider.deleteObject(bucket, scopedKey));
 		return { success: true };
 	});

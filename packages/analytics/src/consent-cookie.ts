@@ -28,3 +28,33 @@ export function buildConsentCookie(
 	}
 	return parts.join("; ");
 }
+
+/**
+ * Read the consent decision cookie. Returns the raw stored value
+ * (`"granted"` / `"denied"`) or null when absent or malformed — a
+ * foreign cookie containing a bare `%` must never crash the caller.
+ */
+export function readConsentCookie(): string | null {
+	if (typeof document === "undefined") return null;
+	const name = `${analyticsConfig.consentCookieName}=`;
+	const found = document.cookie
+		.split(";")
+		.map((c) => c.trim())
+		.find((c) => c.startsWith(name));
+	if (!found) return null;
+	try {
+		return decodeURIComponent(found.substring(name.length));
+	} catch {
+		return null;
+	}
+}
+
+export function writeConsentCookie(value: "granted" | "denied") {
+	if (typeof document === "undefined") return;
+	// Consent must be readable from JS (useConsent + <AnalyticsScript />),
+	// so httpOnly is not an option — SameSite=Lax still applies.
+	// biome-ignore lint/suspicious/noDocumentCookie: JS-readable consent cookie by design
+	document.cookie = buildConsentCookie(value, {
+		secure: window.location.protocol === "https:",
+	});
+}

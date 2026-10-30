@@ -1,7 +1,5 @@
-import type { CrudAction } from "./index";
-
-// Defined locally to avoid a circular import (index.ts re-exports from here).
-const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
+export const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
+export type CrudAction = (typeof CRUD_ACTIONS)[number];
 
 // ─── Custom permissions (non-CRUD) ─────────────────────────────
 // Flat or nested. See wiki/guides/rbac.md for nested custom permission examples.

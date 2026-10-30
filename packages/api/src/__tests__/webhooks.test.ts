@@ -5,7 +5,7 @@ import type { Context } from "../context";
 import { webhooksRouter } from "../modules/webhooks/router";
 
 vi.mock("@fuutu/db", () => ({
-	createWebhook: vi.fn(),
+	createWebhookWithinLimit: vi.fn(),
 	listWebhooks: vi.fn(),
 	countWebhooks: vi.fn(),
 	updateWebhook: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock("@fuutu/ai", () => ({
 }));
 
 const {
-	createWebhook,
+	createWebhookWithinLimit,
 	listWebhooks,
 	countWebhooks,
 	updateWebhook,
@@ -74,7 +74,7 @@ describe("webhooks.create", () => {
 	});
 
 	it("creates a webhook and returns the secret once", async () => {
-		vi.mocked(createWebhook).mockResolvedValue({
+		vi.mocked(createWebhookWithinLimit).mockResolvedValue({
 			id: "wh-1",
 			url: "https://example.com/webhook",
 			events: ["invoice.paid"],
@@ -93,11 +93,12 @@ describe("webhooks.create", () => {
 			{ context: authenticatedContext },
 		);
 
-		expect(createWebhook).toHaveBeenCalledWith(
-			"org-1",
-			"https://example.com/webhook",
-			["invoice.paid"],
-		);
+		expect(createWebhookWithinLimit).toHaveBeenCalledWith({
+			organizationId: "org-1",
+			url: "https://example.com/webhook",
+			events: ["invoice.paid"],
+			max: 10, // pro plan webhooks limit
+		});
 		expect(result).toMatchObject({ id: "wh-1", secret: "whsec_abc123" });
 	});
 

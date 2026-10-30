@@ -102,4 +102,41 @@ describe("combineDrains", () => {
 		expect(a).toHaveBeenCalledOnce();
 		expect(b).toHaveBeenCalledOnce();
 	});
+
+	it("wraps a single drain so a throwing drain warns once and doesn't throw", async () => {
+		const { combineDrains } = await import("../drains");
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const bad = vi.fn(async () => {
+			throw new Error("drain down");
+		});
+		const drain = combineDrains([bad]);
+
+		await expect(drain?.(makeCtx({ message: "a" }))).resolves.toBeUndefined();
+		await drain?.(makeCtx({ message: "b" }));
+
+		const runtimeWarnings = warn.mock.calls.filter(([msg]) =>
+			String(msg).includes("failed at runtime"),
+		);
+		expect(runtimeWarnings).toHaveLength(1);
+		warn.mockRestore();
+	});
+
+	it("warns once per failing drain at runtime and keeps delivering", async () => {
+		const { combineDrains } = await import("../drains");
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const bad = vi.fn(async () => {
+			throw new Error("drain down");
+		});
+		const good = vi.fn(async () => {});
+		const drain = combineDrains([bad, good]);
+
+		await drain?.(makeCtx({ message: "a" }));
+		await drain?.(makeCtx({ message: "b" }));
+
+		expect(good).toHaveBeenCalledTimes(2);
+		const runtimeWarnings = warn.mock.calls.filter(([msg]) =>
+			String(msg).includes("failed at runtime"),
+		);
+		expect(runtimeWarnings).toHaveLength(1);
+	});
 });

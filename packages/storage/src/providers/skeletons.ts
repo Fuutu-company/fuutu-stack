@@ -17,10 +17,10 @@ function makeSkeleton(id: string): StorageProvider {
 	};
 	return {
 		id,
-		getSignedUploadUrl: notImpl("getSignedUploadUrl") as never,
-		getSignedDownloadUrl: notImpl("getSignedDownloadUrl") as never,
-		deleteObject: notImpl("deleteObject") as never,
-		listObjects: notImpl("listObjects") as never,
+		getSignedUploadUrl: notImpl("getSignedUploadUrl"),
+		getSignedDownloadUrl: notImpl("getSignedDownloadUrl"),
+		deleteObject: notImpl("deleteObject"),
+		listObjects: notImpl("listObjects"),
 	};
 }
 

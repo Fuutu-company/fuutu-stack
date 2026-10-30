@@ -21,9 +21,9 @@ export default function WelcomePost() {
 			<h2>What's inside</h2>
 			<p>
 				The kit ships with auth, payments, mail, storage, audit logging,
-				rate-limiting, RBAC, i18n, MDX content and Playwright E2E tests — all
-				wired against provider interfaces so you can swap any external service
-				with a single config change.
+				rate-limiting, RBAC, i18n, file-based content collections and Playwright
+				E2E tests — all wired against provider interfaces so you can swap any
+				external service with a single config change.
 			</p>
 			<h2>What's not inside (yet)</h2>
 			<p>

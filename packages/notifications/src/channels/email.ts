@@ -10,7 +10,8 @@ const log = createLogger({ scope: "notifications:email" });
  * Email channel — resolves the recipient address (and display name /
  * locale) from the user record when not provided explicitly in `data`.
  * An explicit `data.email` always wins, letting callers override the
- * recipient (e.g. billing contact) without a user lookup.
+ * recipient (e.g. billing contact). The user lookup is skipped only when
+ * both `email` and `name` are provided.
  */
 export const emailChannel: NotificationChannelHandler = {
 	channel: "email",

@@ -34,4 +34,12 @@ describe("expectResolves", () => {
 	it("accepts a thunk", async () => {
 		await expectResolves(() => Promise.resolve("ok"));
 	});
+
+	it("passes when the resolved value is a throwing function", async () => {
+		await expectResolves(
+			Promise.resolve(() => {
+				throw new Error("not called");
+			}),
+		);
+	});
 });

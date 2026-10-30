@@ -1,9 +1,15 @@
 import { env } from "@fuutu/env/saas";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { PrismaClient } from "./generated/client";
+import { type Prisma, PrismaClient } from "./generated/client";
 
-export type { Prisma } from "./generated/client";
+export type { Prisma };
+
+/**
+ * ORM-neutral JSON input type for public query signatures — consumers
+ * never need to import the generated `Prisma` namespace.
+ */
+export type JsonValue = Prisma.InputJsonValue;
 
 const createPrismaClient = () => {
 	const adapter = new PrismaPg({

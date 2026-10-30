@@ -20,7 +20,7 @@ const orgAc = new OrgAccessControl({
 	owner: [posts.delete, orgs.delete],
 });
 
-const systemAc = new SystemAccessControl({
+const systemAc = new SystemAccessControl<string>({
 	user: [posts.view],
 	admin: [posts.create, posts.update],
 });
@@ -125,6 +125,35 @@ describe("canCRUD()", () => {
 	});
 });
 
+describe("canCRUD() — SystemAccessControl", () => {
+	it("returns only view for user", () => {
+		expect(canCRUD(systemAc, "user", "posts")).toEqual({
+			view: true,
+			create: false,
+			update: false,
+			delete: false,
+		});
+	});
+
+	it("returns view+create+update for admin (inherits user)", () => {
+		expect(canCRUD(systemAc, "admin", "posts")).toEqual({
+			view: true,
+			create: true,
+			update: true,
+			delete: false,
+		});
+	});
+
+	it("returns all false for an org-only role on a system AC", () => {
+		expect(canCRUD(systemAc, "owner", "posts")).toEqual({
+			view: false,
+			create: false,
+			update: false,
+			delete: false,
+		});
+	});
+});
+
 describe("createPermissionChecker()", () => {
 	it("exposes the bound role", () => {
 		const checker = createPermissionChecker(orgAc, "admin");
@@ -135,12 +164,19 @@ describe("createPermissionChecker()", () => {
 		const checker = createPermissionChecker(orgAc, "owner");
 		expect(checker.can(posts.view)).toBe(true);
 		expect(checker.can(posts.delete)).toBe(true);
-		expect(checker.can("unknown:perm" as never)).toBe(false);
+		expect(
+			checker.can("unknown:perm" as Parameters<typeof checker.can>[0]),
+		).toBe(false);
 	});
 
 	it("canAny() returns true if any permission is granted", () => {
 		const checker = createPermissionChecker(orgAc, "owner");
-		expect(checker.canAny([posts.view, "unknown:perm" as never])).toBe(true);
+		expect(
+			checker.canAny([
+				posts.view,
+				"unknown:perm" as Parameters<typeof checker.can>[0],
+			]),
+		).toBe(true);
 	});
 
 	it("canAny() returns false if no permission is granted", () => {
@@ -163,6 +199,23 @@ describe("createPermissionChecker()", () => {
 		expect(checker.role).toBeNull();
 		expect(checker.can(posts.view)).toBe(false);
 		expect(checker.canAny([posts.view])).toBe(false);
+		expect(checker.canAll([posts.view])).toBe(false);
+	});
+});
+
+describe("createPermissionChecker() — SystemAccessControl", () => {
+	it("checks permissions against the system policy", () => {
+		const checker = createPermissionChecker(systemAc, "admin");
+		expect(checker.role).toBe("admin");
+		expect(checker.can(posts.view)).toBe(true);
+		expect(checker.can(posts.create)).toBe(true);
+		expect(checker.can(posts.delete)).toBe(false);
+	});
+
+	it("denies an org-only role bound to a system AC", () => {
+		const checker = createPermissionChecker(systemAc, "owner");
+		expect(checker.can(posts.view)).toBe(false);
+		expect(checker.canAny([posts.view, posts.create])).toBe(false);
 		expect(checker.canAll([posts.view])).toBe(false);
 	});
 });
@@ -297,5 +350,13 @@ describe("toOrgRole()", () => {
 
 	it("returns owner when owner appears after admin in the list", () => {
 		expect(toOrgRole("admin,owner")).toBe("owner");
+	});
+
+	it("returns member for a single member role", () => {
+		expect(toOrgRole("member")).toBe("member");
+	});
+
+	it("is case-sensitive — 'Admin' does not match 'admin'", () => {
+		expect(toOrgRole("Admin")).toBe("member");
 	});
 });

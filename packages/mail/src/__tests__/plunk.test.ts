@@ -14,10 +14,11 @@ const fetchMock = vi.fn();
 beforeEach(() => {
 	fetchMock.mockReset();
 	fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
-	globalThis.fetch = fetchMock as unknown as typeof fetch;
+	vi.stubGlobal("fetch", fetchMock);
 });
 
 afterEach(() => {
+	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
 });
 
@@ -46,6 +47,28 @@ describe("plunk provider — fetch integration", () => {
 		expect(init.method).toBe("POST");
 		const headers = init.headers as Record<string, string>;
 		expect(headers.authorization).toBe("Bearer test-plunk-key");
+	});
+
+	it("sends the Plunk request body shape (reply→reply, html→body)", async () => {
+		const message = createMock<EmailMessage>({
+			from: "noreply@fuutu.test",
+			to: "user@fuutu.test",
+			subject: "Body shape",
+			html: "<p>shape</p>",
+			text: "shape",
+			replyTo: "support@fuutu.test",
+		});
+
+		await plunkProvider.send(message);
+		const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(JSON.parse(init.body as string)).toEqual({
+			to: "user@fuutu.test",
+			subject: "Body shape",
+			body: "<p>shape</p>",
+			from: "noreply@fuutu.test",
+			reply: "support@fuutu.test",
+		});
+		expect(init.signal).toBeInstanceOf(AbortSignal);
 	});
 
 	it("throws when Plunk returns a non-2xx status", async () => {
