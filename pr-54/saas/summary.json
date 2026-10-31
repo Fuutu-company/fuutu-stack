@@ -2,14 +2,14 @@
   "app": "saas",
   "branch": "54/merge",
   "pr": "54",
-  "sha": "0cab8e6",
-  "generatedAt": "2026-10-31T12:31:27.708Z",
+  "sha": "90877fe",
+  "generatedAt": "2026-10-31T12:37:25.279Z",
   "threshold": 0.005,
   "total": 55,
-  "changed": 6,
+  "changed": 4,
   "added": 0,
   "removed": 0,
-  "unchanged": 49,
+  "unchanged": 51,
   "files": [
     {
       "file": "admin--admin-chromium-linux.png",
@@ -41,8 +41,8 @@
       "viewport": "desktop",
       "project": "chromium",
       "status": "changed",
-      "diffPx": 10945,
-      "diffRatio": 0.011876085069444445,
+      "diffPx": 9278,
+      "diffRatio": 0.010067274305555556,
       "withinTolerance": false
     },
     {
@@ -55,7 +55,7 @@
       "status": "changed",
       "diffPx": null,
       "diffRatio": null,
-      "dimensionMismatch": "393x735 → 393x767"
+      "dimensionMismatch": "393x767 → 393x735"
     },
     {
       "file": "admin--users-chromium-linux.png",
@@ -527,10 +527,9 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 1896,
-      "diffRatio": 0.0073208307752898796,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "org--members-chromium-linux.png",
@@ -595,10 +594,9 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 1896,
-      "diffRatio": 0.0073208307752898796,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "settings--credits-chromium-linux.png",
