@@ -30,7 +30,7 @@ function alternates(base: string, path: string) {
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-	const base = env.NEXT_PUBLIC_MARKETING_URL ?? "https://stack.fuutu.com";
+	const base = env.NEXT_PUBLIC_MARKETING_URL ?? "https://fuutustack.com";
 	const now = new Date();
 
 	const entries: MetadataRoute.Sitemap = [];

@@ -59,7 +59,7 @@ export const config = {
 		kitName: KIT_NAME,
 		kitVersion: KIT_VERSION,
 		contact: {
-			email: "hello@fuutu.com",
+			email: "hello@fuutustack.com",
 			github: "github.com/Fuutu-company/fuutu-stack",
 			githubUrl: "https://github.com/Fuutu-company/fuutu-stack",
 		},

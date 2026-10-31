@@ -70,9 +70,9 @@
     Enterprise license above. No reselling as a competing kit.
   </text>
 
-  <!-- Right side: stack.fuutu.com = ORANGE (primary CTA) · sub-links = blue -->
+  <!-- Right side: fuutustack.com = ORANGE (primary CTA) · sub-links = blue -->
   <text x="820" y="348" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#FF4B1A">
-    stack.fuutu.com →
+    fuutustack.com →
   </text>
   <text x="820" y="372" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#6B6F76">
     <tspan fill="#3B82F6">docs</tspan> · <tspan fill="#3B82F6">pricing</tspan> · <tspan fill="#3B82F6">MCP</tspan> · <tspan fill="#3B82F6">license</tspan>

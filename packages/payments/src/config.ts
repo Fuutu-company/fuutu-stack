@@ -246,7 +246,7 @@ export const PLANS = {
 		showInSaas: true,
 		showInMarketing: true,
 		seatBased: undefined,
-		marketingCtaHref: "mailto:license@fuutu.com",
+		marketingCtaHref: "mailto:license@fuutustack.com",
 	},
 } as const satisfies Record<PlanId, Plan>;
 
