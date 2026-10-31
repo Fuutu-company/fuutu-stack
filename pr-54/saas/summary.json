@@ -2,14 +2,14 @@
   "app": "saas",
   "branch": "54/merge",
   "pr": "54",
-  "sha": "8050e52",
-  "generatedAt": "2026-10-30T21:53:35.512Z",
+  "sha": "0cab8e6",
+  "generatedAt": "2026-10-31T12:31:27.708Z",
   "threshold": 0.005,
   "total": 55,
-  "changed": 1,
+  "changed": 6,
   "added": 0,
   "removed": 0,
-  "unchanged": 54,
+  "unchanged": 49,
   "files": [
     {
       "file": "admin--admin-chromium-linux.png",
@@ -41,8 +41,8 @@
       "viewport": "desktop",
       "project": "chromium",
       "status": "changed",
-      "diffPx": 9839,
-      "diffRatio": 0.010675998263888889,
+      "diffPx": 10945,
+      "diffRatio": 0.011876085069444445,
       "withinTolerance": false
     },
     {
@@ -52,9 +52,10 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "unchanged",
+      "status": "changed",
       "diffPx": null,
-      "diffRatio": null
+      "diffRatio": null,
+      "dimensionMismatch": "393x735 → 393x767"
     },
     {
       "file": "admin--users-chromium-linux.png",
@@ -74,9 +75,10 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 3904,
+      "diffRatio": 0.015074115689204477,
+      "withinTolerance": false
     },
     {
       "file": "auth--forgot-password-chromium-linux.png",
@@ -525,9 +527,10 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 1896,
+      "diffRatio": 0.0073208307752898796,
+      "withinTolerance": false
     },
     {
       "file": "org--members-chromium-linux.png",
@@ -547,9 +550,10 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 2180,
+      "diffRatio": 0.007066336039934523,
+      "withinTolerance": false
     },
     {
       "file": "settings--api-keys-chromium-linux.png",
@@ -591,9 +595,10 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 1896,
+      "diffRatio": 0.0073208307752898796,
+      "withinTolerance": false
     },
     {
       "file": "settings--credits-chromium-linux.png",
