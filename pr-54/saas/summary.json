@@ -2,14 +2,14 @@
   "app": "saas",
   "branch": "54/merge",
   "pr": "54",
-  "sha": "8e82674",
-  "generatedAt": "2026-10-31T12:42:01.976Z",
+  "sha": "bd22333",
+  "generatedAt": "2026-10-31T12:47:03.083Z",
   "threshold": 0.005,
   "total": 55,
-  "changed": 3,
+  "changed": 1,
   "added": 0,
   "removed": 0,
-  "unchanged": 52,
+  "unchanged": 54,
   "files": [
     {
       "file": "admin--admin-chromium-linux.png",
@@ -41,8 +41,8 @@
       "viewport": "desktop",
       "project": "chromium",
       "status": "changed",
-      "diffPx": 9258,
-      "diffRatio": 0.010045572916666667,
+      "diffPx": 8146,
+      "diffRatio": 0.008838975694444445,
       "withinTolerance": false
     },
     {
@@ -52,10 +52,9 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
+      "status": "unchanged",
       "diffPx": null,
-      "diffRatio": null,
-      "dimensionMismatch": "393x735 → 393x767"
+      "diffRatio": null
     },
     {
       "file": "admin--users-chromium-linux.png",
@@ -548,10 +547,9 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 2180,
-      "diffRatio": 0.007066336039934523,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "settings--api-keys-chromium-linux.png",
