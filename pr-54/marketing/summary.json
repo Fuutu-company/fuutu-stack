@@ -2,14 +2,14 @@
   "app": "marketing",
   "branch": "54/merge",
   "pr": "54",
-  "sha": "0cab8e6",
-  "generatedAt": "2026-10-31T12:30:29.651Z",
+  "sha": "90877fe",
+  "generatedAt": "2026-10-31T12:35:59.873Z",
   "threshold": 0.005,
   "total": 35,
-  "changed": 1,
+  "changed": 0,
   "added": 0,
   "removed": 0,
-  "unchanged": 34,
+  "unchanged": 35,
   "files": [
     {
       "file": "component--locale-switcher-chromium-linux.png",
@@ -315,10 +315,9 @@
       "locale": "en",
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 71765,
-      "diffRatio": 0.02036970019513926,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "marketing--landing-en-tablet-chromium-linux.png",
