@@ -352,7 +352,7 @@ describe("checkLicense()", () => {
 		await checkLicense({ licenseKey: "some-key", force: true });
 		expect(mockFetch).toHaveBeenCalledTimes(1);
 		expect(String(mockFetch.mock.calls[0]?.[0])).toBe(
-			"https://stackapp.fuutu.com/api/license/validate",
+			"https://app.fuutustack.com/api/license/validate",
 		);
 	});
 

@@ -90,6 +90,9 @@
 		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
 		1
 	);
+	/* Darker hover — an alpha blend (bg-primary/90) lightens against the
+	 * card and can break the 4.5:1 contrast of the white label. */
+	--primary-hover: oklch(from var(--brand) calc(l - 0.08) c h / 1);
 	--ring: var(--brand);
 
 	/* State */
@@ -162,6 +165,7 @@
 		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
 		1
 	);
+	--primary-hover: oklch(from var(--brand) calc(l - 0.08) c h / 1);
 	--ring: var(--brand);
 
 	/* State */
@@ -212,6 +216,7 @@
 
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
+	--color-primary-hover: var(--primary-hover);
 
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);

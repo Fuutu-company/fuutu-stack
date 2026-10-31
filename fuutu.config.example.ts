@@ -12,7 +12,7 @@
  *
  *   1. Copy this file to `fuutu.config.ts` in the repo root.
  *   2. Fill in `projectId` (issued by Fuutu when you connect the project)
- *      and `mcpEndpoint` (defaults to `https://stackapp.fuutu.com/api/mcp/sse`).
+ *      and `mcpEndpoint` (defaults to `https://app.fuutustack.com/api/mcp/sse`).
  *   3. Point your MCP-aware editor at the Fuutu MCP server. See the
  *      "Fuutu MCP Integration" section in README.md.
  */
@@ -31,7 +31,7 @@ export type FuutuMcpConfig = {
 
 const config: FuutuMcpConfig = {
 	projectId: "",
-	mcpEndpoint: "https://stackapp.fuutu.com/api/mcp/sse",
+	mcpEndpoint: "https://app.fuutustack.com/api/mcp/sse",
 	flags: {},
 };
 

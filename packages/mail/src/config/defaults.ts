@@ -21,7 +21,7 @@ export const emailConfig = {
 	 */
 	provider: "plunk" as ProviderName,
 	/** Default From address when EMAIL_FROM is not set. */
-	from: "Fuutu <noreply@fuutu.com>",
+	from: "Fuutu <noreply@fuutustack.com>",
 } as const;
 
 export type EmailConfig = typeof emailConfig;

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://stack.fuutu.com">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
+  <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://fuutustack.com">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
 </p>
 
 ---
@@ -68,7 +68,7 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TailwindCSS v4** with OKLCH theme
 - **shadcn/ui** — framework-agnostic shared components (`@fuutu/ui`)
-- **next-intl 4** — `en` + `de`, 100% translation policy ([guide](https://stack.fuutu.com/docs/guides/i18n))
+- **next-intl 4** — `en` + `de`, 100% translation policy ([guide](https://fuutustack.com/docs/guides/i18n))
 - **MediaFrame** — locale-aware images, CSP-safe
 
 ### Provider-Swappable Architecture
@@ -150,7 +150,7 @@ fuutu-stack/
 │   └── scripts/          # repo tooling (assets-sync.mjs, dependency-report.mjs)
 ```
 
-Detailed architecture: **[stack.fuutu.com/docs/architecture](https://stack.fuutu.com/docs/architecture)**
+Detailed architecture: **[fuutustack.com/docs/architecture](https://fuutustack.com/docs/architecture)**
 
 ---
 
@@ -161,7 +161,7 @@ Fuutu publishes a separate MCP (Model Context Protocol) server that lets LLM age
 This repository contains the **integration point** for that server. No MCP runtime is bundled. To enable:
 
 1. Copy `fuutu.config.example.ts` to `fuutu.config.ts` in the repo root
-2. Fill in `projectId` (issued at [stack.fuutu.com](https://stack.fuutu.com))
+2. Fill in `projectId` (issued at [fuutustack.com](https://fuutustack.com))
 3. Point your MCP-aware editor at the Fuutu MCP server
 
 `fuutu.config.ts` is gitignored by default — keep it local unless you want every developer to share the same `projectId`.
@@ -229,13 +229,13 @@ pnpm test:e2e              # Playwright (saas + marketing)
 | **MCP Subscription** | Monthly | Anyone who wants MCP + versioning API |
 | **Enterprise** | Yearly | Above both OSS thresholds |
 
-Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[stack.fuutu.com/pricing](https://stack.fuutu.com/pricing)**
+Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
 
 ---
 
 ## Links
 
-- **Documentation**: [stack.fuutu.com/docs](https://stack.fuutu.com/docs)
-- **Pricing**: [stack.fuutu.com/pricing](https://stack.fuutu.com/pricing)
-- **Support**: [stack.fuutu.com](https://stack.fuutu.com)
+- **Documentation**: [fuutustack.com/docs](https://fuutustack.com/docs)
+- **Pricing**: [fuutustack.com/pricing](https://fuutustack.com/pricing)
+- **Support**: [fuutustack.com](https://fuutustack.com)
 - **License**: [LICENSE.md](./LICENSE.md)
