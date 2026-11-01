@@ -20,7 +20,10 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # event_name in the group: the baseline re-dispatch (workflow_dispatch on
+  # the same ref) must not cancel the still-running parent pull_request run —
+  # otherwise its remaining jobs stay "action required" forever.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
