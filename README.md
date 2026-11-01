@@ -239,3 +239,22 @@ Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing
 - **Pricing**: [fuutustack.com/pricing](https://fuutustack.com/pricing)
 - **Support**: [fuutustack.com](https://fuutustack.com)
 - **License**: [LICENSE.md](./LICENSE.md)
+
+---
+
+## Top Sponsors
+
+<!-- Top-5 sponsor slots — the 5 largest sponsors by tier/size.
+     Replace each placeholder with the sponsor logo + name.
+     Updated manually on sponsorship changes. -->
+<p align="center">
+  <a href="https://fuutustack.com/sponsors">Sponsor&nbsp;1</a> ·
+  <a href="https://fuutustack.com/sponsors">Sponsor&nbsp;2</a> ·
+  <a href="https://fuutustack.com/sponsors">Sponsor&nbsp;3</a> ·
+  <a href="https://fuutustack.com/sponsors">Sponsor&nbsp;4</a> ·
+  <a href="https://fuutustack.com/sponsors">Sponsor&nbsp;5</a>
+</p>
+
+<p align="center">
+  <a href="https://fuutustack.com/sponsors">See all supporters →</a>
+</p>

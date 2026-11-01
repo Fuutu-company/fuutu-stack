@@ -9,6 +9,11 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+    # Baseline bot commits touch only this dir — without the ignore they'd
+    # fire a pull_request run gated on approval (bot = first-time contributor
+    # on public repos) → approve/run/commit loop. The self-dispatch below
+    # still reports the required checks on the bot commit.
+    paths-ignore: [".fuutu/visual-baselines/**"]
   # Also dispatched by the e2e job after a baseline commit on a PR branch —
   # GITHUB_TOKEN pushes fire no events, so the dispatched run gives required
   # checks a conclusion on the bot commit (png-only diff → code=false → skip).
