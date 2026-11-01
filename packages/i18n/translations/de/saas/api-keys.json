@@ -10,6 +10,7 @@
 		"col": {
 			"name": "Name",
 			"prefix": "Schlüssel",
+			"scopes": "Bereiche",
 			"lastUsed": "Zuletzt verwendet",
 			"createdAt": "Erstellt",
 			"status": "Status",
@@ -28,7 +29,18 @@
 			"namePlaceholder": "Produktionsserver",
 			"expiryLabel": "Ablaufdatum (optional)",
 			"expiryPlaceholder": "Datum wählen",
+			"typeLabel": "Schlüsseltyp",
+			"types": {
+				"personal": "Persönlich",
+				"org": "Organisation (voller Zugriff)"
+			},
 			"submit": "Schlüssel erstellen"
+		},
+		"scopes": {
+			"personal": "Persönlich",
+			"full": "Vollzugriff",
+			"mcp": "MCP",
+			"versioning": "Versionierung"
 		},
 		"createdDialog": {
 			"title": "Dein neuer API-Schlüssel",

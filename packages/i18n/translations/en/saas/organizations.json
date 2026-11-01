@@ -14,7 +14,10 @@
 			"failed": "Could not create organization.",
 			"slugTaken": "This slug is already taken. Please choose a different name.",
 			"slug": "Slug",
-			"slugPlaceholder": "acme-inc"
+			"slugPlaceholder": "acme-inc",
+			"pendingInvitations": "Pending invitations",
+			"acceptInvitation": "Accept invitation",
+			"createDisabled": "Organization creation is disabled. Accept a pending invitation or ask an administrator to invite you."
 		},
 		"settings": {
 			"general": "General",
@@ -33,6 +36,9 @@
 			"removeMember": "Remove",
 			"pendingInvitations": "Pending invitations",
 			"cancelInvite": "Cancel invite",
+			"seatLimitReached": "Seat limit reached ({seats} seats)",
+			"seatLimitHint": "Remove a member or cancel a pending invitation to free a seat, or upgrade your plan.",
+			"seatLimitCta": "Upgrade plan",
 			"danger": "Danger zone",
 			"dangerDescription": "Permanently delete this organization.",
 			"deleteOrg": "Delete organization",

@@ -126,6 +126,47 @@ describe("apiKeys.create", () => {
 		expect(result.key).toBeDefined();
 	});
 
+	it("passes scopes through for an org key", async () => {
+		await call(
+			apiKeysRouter.create,
+			{ name: "Scoped Key", organizationId: "org-1", scopes: ["mcp"] },
+			{ context: authenticatedContext },
+		);
+
+		expect(createApiKeyWithinLimit).toHaveBeenCalledWith({
+			userId: "user-1",
+			name: "Scoped Key",
+			organizationId: "org-1",
+			expiresAt: null,
+			max: 2,
+			scopes: ["mcp"],
+		});
+	});
+
+	it("rejects scopes on a personal key (scopes are an org-key concept)", async () => {
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{ name: "Scoped Key", scopes: ["mcp"] },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	});
+
+	it("rejects an unknown scope", async () => {
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{
+					name: "Scoped Key",
+					organizationId: "org-1",
+					scopes: ["bogus-scope"],
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	});
+
 	it("rejects empty name", async () => {
 		await expect(
 			call(

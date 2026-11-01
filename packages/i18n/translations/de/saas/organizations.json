@@ -14,7 +14,10 @@
 			"failed": "Organisation konnte nicht erstellt werden.",
 			"slugTaken": "Dieser Slug ist bereits vergeben. Bitte wähle einen anderen Namen.",
 			"slug": "Slug",
-			"slugPlaceholder": "acme-gmbh"
+			"slugPlaceholder": "acme-gmbh",
+			"pendingInvitations": "Offene Einladungen",
+			"acceptInvitation": "Einladung annehmen",
+			"createDisabled": "Das Erstellen von Organisationen ist deaktiviert. Nimm eine offene Einladung an oder bitte eine Administratorin oder einen Administrator um eine Einladung."
 		},
 		"settings": {
 			"general": "Allgemein",
@@ -33,6 +36,9 @@
 			"removeMember": "Entfernen",
 			"pendingInvitations": "Offene Einladungen",
 			"cancelInvite": "Einladung zurückziehen",
+			"seatLimitReached": "Sitzplatzlimit erreicht ({seats} Plätze)",
+			"seatLimitHint": "Entferne ein Mitglied oder ziehe eine offene Einladung zurück, um einen Platz freizugeben, oder upgrade deinen Plan.",
+			"seatLimitCta": "Plan upgraden",
 			"danger": "Gefahrenzone",
 			"dangerDescription": "Lösche diese Organisation unwiderruflich.",
 			"deleteOrg": "Organisation löschen",

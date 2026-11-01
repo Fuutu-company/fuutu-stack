@@ -18,6 +18,8 @@ type ApiKey = {
 	id: string;
 	name: string;
 	prefix: string;
+	scopes: string[];
+	organizationId: string | null;
 	lastUsedAt: Date | null;
 	createdAt: Date;
 	revokedAt: Date | null;
@@ -129,6 +131,7 @@ export function ApiKeyList({
 									<tr className="text-left">
 										<th className="p-3 font-medium">{t("col.name")}</th>
 										<th className="p-3 font-medium">{t("col.prefix")}</th>
+										<th className="p-3 font-medium">{t("col.scopes")}</th>
 										<th className="p-3 font-medium">{t("col.lastUsed")}</th>
 										<th className="p-3 font-medium">{t("col.createdAt")}</th>
 										<th className="p-3 font-medium">{t("col.status")}</th>
@@ -145,6 +148,23 @@ export function ApiKeyList({
 												<td className="p-3 font-medium">{key.name}</td>
 												<td className="p-3 font-mono text-muted-foreground text-xs">
 													{key.prefix}
+												</td>
+												<td className="p-3">
+													<div className="flex flex-wrap gap-1">
+														{key.scopes.length === 0 ? (
+															<Badge variant="secondary">
+																{key.organizationId
+																	? t("scopes.full")
+																	: t("scopes.personal")}
+															</Badge>
+														) : (
+															key.scopes.map((scope) => (
+																<Badge key={scope} variant="secondary">
+																	{t(`scopes.${scope}`)}
+																</Badge>
+															))
+														)}
+													</div>
 												</td>
 												<td className="p-3 text-muted-foreground text-xs">
 													{formatDate(key.lastUsedAt)}

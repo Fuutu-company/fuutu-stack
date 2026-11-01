@@ -68,7 +68,7 @@ export type AuditLogScalarFieldEnum = z.infer<typeof AuditLogScalarFieldEnumSche
 
 // File: ApiKeyScalarFieldEnum.schema.ts
 
-export const ApiKeyScalarFieldEnumSchema = z.enum(['id', 'key', 'prefix', 'name', 'userId', 'organizationId', 'lastUsedAt', 'expiresAt', 'createdAt', 'revokedAt'])
+export const ApiKeyScalarFieldEnumSchema = z.enum(['id', 'key', 'prefix', 'name', 'userId', 'organizationId', 'scopes', 'lastUsedAt', 'expiresAt', 'createdAt', 'revokedAt'])
 
 export type ApiKeyScalarFieldEnum = z.infer<typeof ApiKeyScalarFieldEnumSchema>;
 
@@ -457,6 +457,7 @@ const apikeywhereinputSchema = z.object({
   name: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  scopes: z.lazy(() => StringNullableListFilterObjectSchema).optional(),
   lastUsedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   expiresAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
@@ -476,6 +477,7 @@ const __makeSchema_ApiKeyOrderByWithRelationInput_schema = () => z.object({
   name: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   organizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  scopes: SortOrderSchema.optional(),
   lastUsedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   expiresAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
@@ -504,6 +506,7 @@ const __makeSchema_ApiKeyOrderByWithAggregationInput_schema = () => z.object({
   name: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   organizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  scopes: SortOrderSchema.optional(),
   lastUsedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   expiresAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
@@ -528,6 +531,7 @@ const apikeyscalarwherewithaggregatesinputSchema = z.object({
   name: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   organizationId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  scopes: z.lazy(() => StringNullableListFilterObjectSchema).optional(),
   lastUsedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   expiresAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
@@ -2687,6 +2691,7 @@ const __makeSchema_ApiKeyCreateInput_schema = () => z.object({
   key: z.string(),
   prefix: z.string(),
   name: z.string(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -2706,6 +2711,7 @@ const __makeSchema_ApiKeyUncheckedCreateInput_schema = () => z.object({
   name: z.string(),
   userId: z.string(),
   organizationId: z.string().optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -2721,6 +2727,7 @@ const __makeSchema_ApiKeyUpdateInput_schema = () => z.object({
   key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -2740,6 +2747,7 @@ const __makeSchema_ApiKeyUncheckedUpdateInput_schema = () => z.object({
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -2757,6 +2765,7 @@ const __makeSchema_ApiKeyCreateManyInput_schema = () => z.object({
   name: z.string(),
   userId: z.string(),
   organizationId: z.string().optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -2772,6 +2781,7 @@ const __makeSchema_ApiKeyUpdateManyMutationInput_schema = () => z.object({
   key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -2789,6 +2799,7 @@ const __makeSchema_ApiKeyUncheckedUpdateManyInput_schema = () => z.object({
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -5731,6 +5742,18 @@ export const AuditLogMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.Audi
 export const AuditLogMinOrderByAggregateInputObjectZodSchema = __makeSchema_AuditLogMinOrderByAggregateInput_schema();
 
 
+// File: StringNullableListFilter.schema.ts
+const __makeSchema_StringNullableListFilter_schema = () => z.object({
+  equals: z.string().array().optional().nullable(),
+  has: z.string().optional().nullable(),
+  hasEvery: z.string().array().optional(),
+  hasSome: z.string().array().optional(),
+  isEmpty: z.boolean().optional()
+}).strict();
+export const StringNullableListFilterObjectSchema: z.ZodType<Prisma.StringNullableListFilter> = __makeSchema_StringNullableListFilter_schema() as unknown as z.ZodType<Prisma.StringNullableListFilter>;
+export const StringNullableListFilterObjectZodSchema = __makeSchema_StringNullableListFilter_schema();
+
+
 // File: UserScalarRelationFilter.schema.ts
 const __makeSchema_UserScalarRelationFilter_schema = () => z.object({
   is: z.lazy(() => UserWhereInputObjectSchema).optional(),
@@ -5748,6 +5771,7 @@ const __makeSchema_ApiKeyCountOrderByAggregateInput_schema = () => z.object({
   name: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   organizationId: SortOrderSchema.optional(),
+  scopes: SortOrderSchema.optional(),
   lastUsedAt: SortOrderSchema.optional(),
   expiresAt: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
@@ -6027,18 +6051,6 @@ const __makeSchema_DecimalWithAggregatesFilter_schema = () => z.object({
 }).strict();
 export const DecimalWithAggregatesFilterObjectSchema: z.ZodType<Prisma.DecimalWithAggregatesFilter> = __makeSchema_DecimalWithAggregatesFilter_schema() as unknown as z.ZodType<Prisma.DecimalWithAggregatesFilter>;
 export const DecimalWithAggregatesFilterObjectZodSchema = __makeSchema_DecimalWithAggregatesFilter_schema();
-
-
-// File: StringNullableListFilter.schema.ts
-const __makeSchema_StringNullableListFilter_schema = () => z.object({
-  equals: z.string().array().optional().nullable(),
-  has: z.string().optional().nullable(),
-  hasEvery: z.string().array().optional(),
-  hasSome: z.string().array().optional(),
-  isEmpty: z.boolean().optional()
-}).strict();
-export const StringNullableListFilterObjectSchema: z.ZodType<Prisma.StringNullableListFilter> = __makeSchema_StringNullableListFilter_schema() as unknown as z.ZodType<Prisma.StringNullableListFilter>;
-export const StringNullableListFilterObjectZodSchema = __makeSchema_StringNullableListFilter_schema();
 
 
 // File: BoolFilter.schema.ts
@@ -7850,6 +7862,14 @@ export const OrganizationUpdateOneWithoutAuditLogsNestedInputObjectSchema: z.Zod
 export const OrganizationUpdateOneWithoutAuditLogsNestedInputObjectZodSchema = __makeSchema_OrganizationUpdateOneWithoutAuditLogsNestedInput_schema();
 
 
+// File: ApiKeyCreatescopesInput.schema.ts
+const __makeSchema_ApiKeyCreatescopesInput_schema = () => z.object({
+  set: z.string().array()
+}).strict();
+export const ApiKeyCreatescopesInputObjectSchema: z.ZodType<Prisma.ApiKeyCreatescopesInput> = __makeSchema_ApiKeyCreatescopesInput_schema() as unknown as z.ZodType<Prisma.ApiKeyCreatescopesInput>;
+export const ApiKeyCreatescopesInputObjectZodSchema = __makeSchema_ApiKeyCreatescopesInput_schema();
+
+
 // File: UserCreateNestedOneWithoutApiKeysInput.schema.ts
 const __makeSchema_UserCreateNestedOneWithoutApiKeysInput_schema = () => z.object({
   create: z.union([z.lazy(() => UserCreateWithoutApiKeysInputObjectSchema), z.lazy(() => UserUncheckedCreateWithoutApiKeysInputObjectSchema)]).optional(),
@@ -7868,6 +7888,15 @@ const __makeSchema_OrganizationCreateNestedOneWithoutApiKeysInput_schema = () =>
 }).strict();
 export const OrganizationCreateNestedOneWithoutApiKeysInputObjectSchema: z.ZodType<Prisma.OrganizationCreateNestedOneWithoutApiKeysInput> = __makeSchema_OrganizationCreateNestedOneWithoutApiKeysInput_schema() as unknown as z.ZodType<Prisma.OrganizationCreateNestedOneWithoutApiKeysInput>;
 export const OrganizationCreateNestedOneWithoutApiKeysInputObjectZodSchema = __makeSchema_OrganizationCreateNestedOneWithoutApiKeysInput_schema();
+
+
+// File: ApiKeyUpdatescopesInput.schema.ts
+const __makeSchema_ApiKeyUpdatescopesInput_schema = () => z.object({
+  set: z.string().array().optional(),
+  push: z.union([z.string(), z.string().array()]).optional()
+}).strict();
+export const ApiKeyUpdatescopesInputObjectSchema: z.ZodType<Prisma.ApiKeyUpdatescopesInput> = __makeSchema_ApiKeyUpdatescopesInput_schema() as unknown as z.ZodType<Prisma.ApiKeyUpdatescopesInput>;
+export const ApiKeyUpdatescopesInputObjectZodSchema = __makeSchema_ApiKeyUpdatescopesInput_schema();
 
 
 // File: UserUpdateOneRequiredWithoutApiKeysNestedInput.schema.ts
@@ -15075,6 +15104,7 @@ const __makeSchema_ApiKeyCreateWithoutUserInput_schema = () => z.object({
   key: z.string(),
   prefix: z.string(),
   name: z.string(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -15092,6 +15122,7 @@ const __makeSchema_ApiKeyUncheckedCreateWithoutUserInput_schema = () => z.object
   prefix: z.string(),
   name: z.string(),
   organizationId: z.string().optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -15862,6 +15893,7 @@ const apikeyscalarwhereinputSchema = z.object({
   name: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   userId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  scopes: z.lazy(() => StringNullableListFilterObjectSchema).optional(),
   lastUsedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   expiresAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
@@ -16657,6 +16689,7 @@ const __makeSchema_ApiKeyCreateWithoutOrganizationInput_schema = () => z.object(
   key: z.string(),
   prefix: z.string(),
   name: z.string(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -16674,6 +16707,7 @@ const __makeSchema_ApiKeyUncheckedCreateWithoutOrganizationInput_schema = () => 
   prefix: z.string(),
   name: z.string(),
   userId: z.string(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -18875,6 +18909,7 @@ const __makeSchema_ApiKeyCreateManyUserInput_schema = () => z.object({
   prefix: z.string(),
   name: z.string(),
   organizationId: z.string().optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -19368,6 +19403,7 @@ const __makeSchema_ApiKeyUpdateWithoutUserInput_schema = () => z.object({
   key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -19385,6 +19421,7 @@ const __makeSchema_ApiKeyUncheckedUpdateWithoutUserInput_schema = () => z.object
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -19401,6 +19438,7 @@ const __makeSchema_ApiKeyUncheckedUpdateManyWithoutUserInput_schema = () => z.ob
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -19770,6 +19808,7 @@ const __makeSchema_ApiKeyCreateManyOrganizationInput_schema = () => z.object({
   prefix: z.string(),
   name: z.string(),
   userId: z.string(),
+  scopes: z.union([z.lazy(() => ApiKeyCreatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.coerce.date().optional().nullable(),
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -20056,6 +20095,7 @@ const __makeSchema_ApiKeyUpdateWithoutOrganizationInput_schema = () => z.object(
   key: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -20073,6 +20113,7 @@ const __makeSchema_ApiKeyUncheckedUpdateWithoutOrganizationInput_schema = () => 
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -20089,6 +20130,7 @@ const __makeSchema_ApiKeyUncheckedUpdateManyWithoutOrganizationInput_schema = ()
   prefix: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  scopes: z.union([z.lazy(() => ApiKeyUpdatescopesInputObjectSchema), z.string().array()]).optional(),
   lastUsedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -20630,6 +20672,7 @@ const __makeSchema_ApiKeyCountAggregateInput_schema = () => z.object({
   name: z.literal(true).optional(),
   userId: z.literal(true).optional(),
   organizationId: z.literal(true).optional(),
+  scopes: z.literal(true).optional(),
   lastUsedAt: z.literal(true).optional(),
   expiresAt: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
@@ -22249,6 +22292,7 @@ const __makeSchema_ApiKeySelect_schema = () => z.object({
   user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   organizationId: z.boolean().optional(),
   organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+  scopes: z.boolean().optional(),
   lastUsedAt: z.boolean().optional(),
   expiresAt: z.boolean().optional(),
   createdAt: z.boolean().optional(),
@@ -23538,6 +23582,7 @@ export const ApiKeyFindFirstSelectSchema__findFirstApiKey_schema: z.ZodType<Pris
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+    scopes: z.boolean().optional(),
     lastUsedAt: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
@@ -23553,6 +23598,7 @@ export const ApiKeyFindFirstSelectZodSchema__findFirstApiKey_schema = z.object({
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+    scopes: z.boolean().optional(),
     lastUsedAt: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
@@ -23577,6 +23623,7 @@ export const ApiKeyFindFirstOrThrowSelectSchema__findFirstOrThrowApiKey_schema: 
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+    scopes: z.boolean().optional(),
     lastUsedAt: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
@@ -23592,6 +23639,7 @@ export const ApiKeyFindFirstOrThrowSelectZodSchema__findFirstOrThrowApiKey_schem
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+    scopes: z.boolean().optional(),
     lastUsedAt: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
@@ -23616,6 +23664,7 @@ export const ApiKeyFindManySelectSchema__findManyApiKey_schema: z.ZodType<Prisma
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+    scopes: z.boolean().optional(),
     lastUsedAt: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
@@ -23631,6 +23680,7 @@ export const ApiKeyFindManySelectZodSchema__findManyApiKey_schema = z.object({
     user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
+    scopes: z.boolean().optional(),
     lastUsedAt: z.boolean().optional(),
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
@@ -27954,6 +28004,7 @@ export const ApiKeySchema = z.object({
   name: z.string(),
   userId: z.string(),
   organizationId: z.string().nullish(),
+  scopes: z.array(z.string()),
   lastUsedAt: z.date().nullish(),
   expiresAt: z.date().nullish(),
   createdAt: z.date(),

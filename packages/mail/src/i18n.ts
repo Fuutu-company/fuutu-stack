@@ -202,7 +202,7 @@ const bundles: Record<Locale, MailStrings> = { en, de };
  * e.g. de-AT → de), then the default locale — returning the first
  * locale that has a mail bundle.
  */
-export function getMailStrings(locale?: Locale): MailStrings {
+export function getMailStrings(locale?: string): MailStrings {
 	const bundlesByCode: Partial<Record<string, MailStrings>> = bundles;
 	for (const loc of getFallbackChain(locale ?? i18nConfig.defaultLocale)) {
 		const bundle = bundlesByCode[loc];

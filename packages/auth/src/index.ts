@@ -28,6 +28,10 @@ import {
 	cancelActiveSubscriptionsForUser,
 	syncSeatsForOrganization,
 } from "./hooks/payments-sync";
+import {
+	assertInviteSeatAvailable,
+	assertSeatAvailable,
+} from "./hooks/seat-limit";
 import { assertSignupPolicy } from "./hooks/signup-policy";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
 import { sendEmail } from "./lib/email";
@@ -120,7 +124,7 @@ const authOptions = {
 				newEmail,
 				url,
 			}: {
-				user: { email: string; name: string; locale?: "en" | "de" };
+				user: { email: string; name: string; locale?: string };
 				newEmail: string;
 				url: string;
 			}) => {
@@ -162,7 +166,7 @@ const authOptions = {
 			user,
 			url,
 		}: {
-			user: { email: string; name: string; locale?: "en" | "de" };
+			user: { email: string; name: string; locale?: string };
 			url: string;
 		}) => {
 			try {
@@ -193,7 +197,7 @@ const authOptions = {
 					data: {
 						name: user.name,
 						verificationUrl: url,
-						locale: (user as { locale?: "en" | "de" }).locale,
+						locale: (user as { locale?: string }).locale,
 					},
 				});
 			} catch (err) {
@@ -285,7 +289,7 @@ const authOptions = {
 							data: {
 								name: user.name,
 								appUrl: saasBaseUrl,
-								locale: (user as { locale?: "en" | "de" }).locale,
+								locale: (user as { locale?: string }).locale,
 							},
 						});
 					} catch (err) {
@@ -353,6 +357,11 @@ const authOptions = {
 		...(config.features.organizationsMode !== "off"
 			? [
 					organization({
+						allowUserToCreateOrganization:
+							authConfig.organizations.allowUserToCreateOrganization === "admin"
+								? (user) => (user as { role?: string }).role === "admin"
+								: authConfig.organizations.allowUserToCreateOrganization ===
+									"all",
 						async sendInvitationEmail({ email, id, organization, inviter }) {
 							const inviteUrl = `${saasBaseUrl}/auth/accept-invitation?id=${id}`;
 							try {
@@ -363,15 +372,25 @@ const authOptions = {
 										organizationName: organization.name,
 										inviteUrl,
 										inviterName: inviter.user.name,
-										locale: (inviter.user as { locale?: "en" | "de" }).locale,
+										locale: (inviter.user as { locale?: string }).locale,
 									},
 								});
 							} catch (err) {
 								log.error("invitation email failed", { err: String(err) });
 							}
 						},
-						// Sync seats with the payment provider on membership changes.
+						// Sync seats with the payment provider on membership changes;
+						// before* hooks enforce the plan's membersPerOrg seat cap.
 						organizationHooks: {
+							beforeAddMember: async ({ member }) => {
+								await assertSeatAvailable(member.organizationId);
+							},
+							beforeCreateInvitation: async ({ invitation }) => {
+								await assertInviteSeatAvailable(invitation.organizationId);
+							},
+							beforeAcceptInvitation: async ({ invitation }) => {
+								await assertSeatAvailable(invitation.organizationId);
+							},
 							afterAddMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);
 								await emitUserCreatedOnFirstMembership(
@@ -421,8 +440,7 @@ const authOptions = {
 									template: "magic-link",
 									data: {
 										magicLinkUrl: url,
-										locale: (recipient as { locale?: "en" | "de" } | null)
-											?.locale,
+										locale: (recipient as { locale?: string } | null)?.locale,
 									},
 								});
 							} catch (err) {

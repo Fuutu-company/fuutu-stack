@@ -8,7 +8,12 @@ import {
 	getLocaleConfig,
 	isValidLocale,
 } from "../../lib/locale-utils";
-import { getMessagesForLocale, importLocale } from "../../lib/messages";
+import {
+	getMessagesForLocale,
+	importLocale,
+	isKnownLocale,
+	namespaceLoaders,
+} from "../../lib/messages";
 
 describe("getAllLocales()", () => {
 	it("returns all configured locales", () => {
@@ -105,6 +110,72 @@ describe("isValidLocale()", () => {
 
 	it("returns false for uppercase EN", () => {
 		expect(isValidLocale("EN")).toBe(false);
+	});
+});
+
+describe("isKnownLocale()", () => {
+	it("returns true for configured locales", () => {
+		expect(isKnownLocale("en")).toBe(true);
+		expect(isKnownLocale("de")).toBe(true);
+	});
+
+	it("returns true for a dormant locale with registered loaders", () => {
+		namespaceLoaders.tlh = dormantLoaders;
+		try {
+			expect(isKnownLocale("tlh")).toBe(true);
+			// Dormant ≠ configured: still not a valid (routable) locale.
+			expect(isValidLocale("tlh")).toBe(false);
+		} finally {
+			delete namespaceLoaders.tlh;
+		}
+	});
+
+	it.each(["xx", "__proto__", "constructor", "hasOwnProperty", ""])(
+		"returns false for garbage tag %s",
+		(tag) => {
+			expect(isKnownLocale(tag)).toBe(false);
+		},
+	);
+});
+
+const dormantLoaders = {
+	common: async () => ({ dormantProbe: "tlh-probe" }),
+	marketing: async () => ({}),
+	saas: async () => ({ dormantSaas: "tlh-saas" }),
+	docs: async () => ({}),
+};
+
+describe("dormant locales", () => {
+	it("importLocale loads a dormant locale's bundles instead of the default", async () => {
+		namespaceLoaders.tlh = dormantLoaders;
+		try {
+			const messages = await importLocale("tlh", "saas");
+			expect(messages).toMatchObject({
+				dormantProbe: "tlh-probe",
+				dormantSaas: "tlh-saas",
+			});
+			expect(messages).not.toHaveProperty("auth");
+		} finally {
+			delete namespaceLoaders.tlh;
+		}
+	});
+
+	it("importLocale still falls back to the default locale for unknown tags", async () => {
+		const messages = await importLocale("xx", "saas");
+		const en = await importLocale("en", "saas");
+		expect(messages).toEqual(en);
+	});
+
+	it("getMessagesForLocale merges a dormant locale over the default", async () => {
+		namespaceLoaders.tlh = dormantLoaders;
+		try {
+			const messages = await getMessagesForLocale("tlh", "saas");
+			expect(messages).toMatchObject({ dormantProbe: "tlh-probe" });
+			// Default-locale keys still resolve via the fallback chain.
+			expect(messages.auth.signIn).toBe("Sign In");
+		} finally {
+			delete namespaceLoaders.tlh;
+		}
 	});
 });
 

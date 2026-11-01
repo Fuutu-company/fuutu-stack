@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { config } from "@fuutu/config";
 import {
 	Button,
 	Card,
@@ -12,7 +13,8 @@ import {
 	Progress,
 } from "@fuutu/ui";
 import { slugify } from "@fuutu/utils";
-import { ArrowRight, Check, User } from "lucide-react";
+import { ArrowRight, Building2, Check, User } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -22,14 +24,26 @@ import { completeOnboardingAction } from "./actions";
 const STEPS = ["profile", "organization", "done"] as const;
 type Step = (typeof STEPS)[number];
 
+const forcedOrgs = config.features.organizationsMode === "forced";
+
+type PendingInvitation = {
+	id: string;
+	organizationName: string;
+	role: string;
+};
+
 interface OnboardingWizardProps {
 	initialName: string;
 	userEmail: string;
+	pendingInvitations: PendingInvitation[];
+	canCreateOrg: boolean;
 }
 
 export function OnboardingWizard({
 	initialName,
 	userEmail,
+	pendingInvitations: invitations,
+	canCreateOrg,
 }: OnboardingWizardProps) {
 	const t = useTranslations("onboarding");
 	const router = useRouter();
@@ -39,8 +53,10 @@ export function OnboardingWizard({
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const currentIndex = STEPS.indexOf(step);
-	const progress = ((currentIndex + 1) / STEPS.length) * 100;
+	const orgsEnabled = config.features.organizationsMode !== "off";
+	const steps: Step[] = orgsEnabled ? [...STEPS] : ["profile", "done"];
+	const currentIndex = steps.indexOf(step);
+	const progress = ((currentIndex + 1) / steps.length) * 100;
 
 	async function saveProfile() {
 		setIsLoading(true);
@@ -51,7 +67,7 @@ export function OnboardingWizard({
 				setError(t("failed"));
 				return;
 			}
-			setStep("organization");
+			setStep(orgsEnabled ? "organization" : "done");
 		} catch {
 			setError(t("failed"));
 		} finally {
@@ -61,6 +77,8 @@ export function OnboardingWizard({
 
 	async function createOrgAndContinue(skip = false) {
 		if (skip || !orgName.trim()) {
+			// Forced mode never allows skipping the org step.
+			if (forcedOrgs) return;
 			setStep("done");
 			return;
 		}
@@ -80,6 +98,17 @@ export function OnboardingWizard({
 	async function finish() {
 		setIsLoading(true);
 		try {
+			// Forced mode requires real membership before onboarding completes —
+			// otherwise requireOrg() bounces the user back anyway.
+			if (forcedOrgs) {
+				const res = await authClient.organization.list();
+				const orgs = Array.isArray(res?.data) ? res.data : [];
+				if (orgs.length === 0) {
+					setError(t("org.required"));
+					setStep(orgsEnabled ? "organization" : "done");
+					return;
+				}
+			}
 			await completeOnboardingAction();
 			// Refresh the cached session cookie so the server-side onboarding
 			// guard sees onboardingComplete=true immediately (cookie cache TTL
@@ -144,36 +173,75 @@ export function OnboardingWizard({
 							<div>
 								<h2 className="font-semibold">{t("org.heading")}</h2>
 								<p className="text-muted-foreground text-sm">
-									{t("org.description")}
+									{canCreateOrg
+										? t(
+												forcedOrgs
+													? "org.forcedDescription"
+													: "org.description",
+											)
+										: t("org.createDisabled")}
 								</p>
 							</div>
-							<Field>
-								<FieldLabel htmlFor="org">{t("org.name")}</FieldLabel>
-								<Input
-									id="org"
-									value={orgName}
-									onChange={(e) => setOrgName(e.target.value)}
-									placeholder={t("org.placeholder")}
-								/>
-							</Field>
-							<div className="flex gap-3">
-								<Button
-									variant="outline"
-									onClick={() => createOrgAndContinue(true)}
-									disabled={isLoading}
-									className="flex-1"
-								>
-									{t("org.skip")}
-								</Button>
-								<Button
-									onClick={() => createOrgAndContinue(false)}
-									disabled={isLoading || !orgName.trim()}
-									className="flex-1"
-								>
-									{t("org.create")}
-									<ArrowRight className="ml-2 size-4" />
-								</Button>
-							</div>
+							{canCreateOrg && (
+								<Field>
+									<FieldLabel htmlFor="org">{t("org.name")}</FieldLabel>
+									<Input
+										id="org"
+										value={orgName}
+										onChange={(e) => setOrgName(e.target.value)}
+										placeholder={t("org.placeholder")}
+									/>
+								</Field>
+							)}
+							{(canCreateOrg || !forcedOrgs) && (
+								<div className="flex gap-3">
+									{!forcedOrgs && (
+										<Button
+											variant="outline"
+											onClick={() => createOrgAndContinue(true)}
+											disabled={isLoading}
+											className="flex-1"
+										>
+											{t("org.skip")}
+										</Button>
+									)}
+									{canCreateOrg && (
+										<Button
+											onClick={() => createOrgAndContinue(false)}
+											disabled={isLoading || !orgName.trim()}
+											className="flex-1"
+										>
+											{t("org.create")}
+											<ArrowRight className="ml-2 size-4" />
+										</Button>
+									)}
+								</div>
+							)}
+							{invitations.length > 0 && (
+								<div>
+									<p className="mb-2 font-medium text-sm">
+										{t("org.pendingInvitations")}
+									</p>
+									<ul className="divide-y rounded-lg border">
+										{invitations.map((inv) => (
+											<li key={inv.id}>
+												<Link
+													href={`/auth/accept-invitation?id=${inv.id}`}
+													className="flex items-center justify-between gap-4 p-3 transition-colors hover:bg-accent"
+												>
+													<span className="flex items-center gap-2 font-medium text-sm">
+														<Building2 className="size-4 text-muted-foreground" />
+														{inv.organizationName}
+													</span>
+													<span className="text-primary text-sm">
+														{t("org.acceptInvitation")}
+													</span>
+												</Link>
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
 						</FieldGroup>
 					)}
 					{step === "done" && (

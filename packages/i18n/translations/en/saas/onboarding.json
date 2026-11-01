@@ -15,7 +15,12 @@
 			"name": "Organization name",
 			"placeholder": "Acme Inc.",
 			"create": "Create organization",
-			"skip": "Skip for now"
+			"skip": "Skip for now",
+			"pendingInvitations": "Pending invitations",
+			"acceptInvitation": "Accept invitation",
+			"createDisabled": "Organization creation is disabled. Accept a pending invitation to continue.",
+			"required": "An organization is required. Create one or accept a pending invitation.",
+			"forcedDescription": "Organizations let you collaborate with your team. This workspace requires an organization to continue."
 		},
 		"done": {
 			"heading": "You're all set",

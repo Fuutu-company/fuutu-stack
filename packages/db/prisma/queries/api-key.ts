@@ -30,6 +30,7 @@ export const createApiKey = async (
 	name: string,
 	organizationId?: string | null,
 	expiresAt?: Date | null,
+	scopes: string[] = [],
 ): Promise<CreatedApiKey> => {
 	const key = generateKey();
 	const hashed = await sha256(key);
@@ -41,6 +42,7 @@ export const createApiKey = async (
 			userId,
 			organizationId: organizationId ?? null,
 			expiresAt: expiresAt ?? null,
+			scopes,
 		},
 	});
 	return { id: record.id, key, prefix: record.prefix };
@@ -59,9 +61,10 @@ export const createApiKeyWithinLimit = (params: {
 	name: string;
 	organizationId?: string | null;
 	expiresAt?: Date | null;
+	scopes?: string[];
 	max: number | null;
 }): Promise<CreatedApiKey | null> => {
-	const { userId, name, organizationId, expiresAt, max } = params;
+	const { userId, name, organizationId, expiresAt, scopes = [], max } = params;
 	return withSerializationRetry(() =>
 		db.$transaction(
 			async (tx) => {
@@ -82,6 +85,7 @@ export const createApiKeyWithinLimit = (params: {
 						userId,
 						organizationId: organizationId ?? null,
 						expiresAt: expiresAt ?? null,
+						scopes,
 					},
 				});
 				return { id: record.id, key, prefix: record.prefix };

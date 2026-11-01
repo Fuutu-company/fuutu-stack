@@ -90,6 +90,10 @@ export async function proxy(req: NextRequest) {
 		return stamp(NextResponse.redirect(loginUrl));
 	}
 
+	// Forced-mode org enforcement lives in `requireOrg()` ((app) layout):
+	// it needs a DB membership count — a cookie can't distinguish "member
+	// with no active org" from "no memberships", so an optimistic check
+	// here would redirect valid members. Proxy stays auth-only.
 	return stamp(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 

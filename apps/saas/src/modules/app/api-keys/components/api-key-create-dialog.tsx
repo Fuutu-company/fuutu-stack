@@ -1,5 +1,6 @@
 "use client";
 
+import { API_KEY_SCOPES } from "@fuutu/api/api-key-scopes";
 import { createLogger } from "@fuutu/logs";
 import {
 	Button,
@@ -13,10 +14,15 @@ import {
 	Field,
 	FieldLabel,
 	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 } from "@fuutu/ui";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
@@ -41,8 +47,21 @@ export function ApiKeyCreateDialog({
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
 	const [expiresAt, setExpiresAt] = useState("");
+	// "personal" | "org" | one of API_KEY_SCOPES. Org context
+	// defaults to the first scope option.
+	const [type, setType] = useState<string>(
+		organizationId ? API_KEY_SCOPES[0] : "personal",
+	);
 	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	// The org id can resolve after mount (loaded async by the parent) —
+	// re-apply the context default when it changes.
+	useEffect(() => {
+		setType(organizationId ? API_KEY_SCOPES[0] : "personal");
+	}, [organizationId]);
+
+	const isScopeType = (API_KEY_SCOPES as readonly string[]).includes(type);
 
 	async function submit(e: React.FormEvent) {
 		e.preventDefault();
@@ -52,11 +71,13 @@ export function ApiKeyCreateDialog({
 			const result = await orpc.apiKeys.create.call({
 				name,
 				...(organizationId ? { organizationId } : {}),
+				...(isScopeType ? { scopes: [type] } : {}),
 				...(expiresAt ? { expiresAt: new Date(expiresAt) } : {}),
 			});
 			setOpen(false);
 			setName("");
 			setExpiresAt("");
+			setType(organizationId ? API_KEY_SCOPES[0] : "personal");
 			onCreated(result);
 		} catch (e) {
 			log.error("api key creation failed", { err: e });
@@ -93,6 +114,33 @@ export function ApiKeyCreateDialog({
 							placeholder={t("createDialog.namePlaceholder")}
 							required
 						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="api-key-type">
+							{t("createDialog.typeLabel")}
+						</FieldLabel>
+						<Select value={type} onValueChange={setType}>
+							<SelectTrigger id="api-key-type" className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{!organizationId && (
+									<SelectItem value="personal">
+										{t("createDialog.types.personal")}
+									</SelectItem>
+								)}
+								{organizationId && (
+									<SelectItem value="org">
+										{t("createDialog.types.org")}
+									</SelectItem>
+								)}
+								{API_KEY_SCOPES.map((scope) => (
+									<SelectItem key={scope} value={scope}>
+										{t(`scopes.${scope}`)}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</Field>
 					<Field>
 						<FieldLabel htmlFor="api-key-expiry">

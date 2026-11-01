@@ -13,6 +13,9 @@
 		"./config.server": {
 			"default": "./src/config.server.ts"
 		},
+		"./entitlements": {
+			"default": "./src/entitlements.ts"
+		},
 		"./features": {
 			"default": "./src/features.ts"
 		},

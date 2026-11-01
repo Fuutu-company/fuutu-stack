@@ -140,7 +140,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write       # baseline auto-commit pushes to the branch
-      actions: write        # dispatch follow-up run for required checks
       pull-requests: write  # slim visual-result comment
     # Must match the pinned catalog @playwright/test version exactly — bump both together.
     container: mcr.microsoft.com/playwright:v1.64.0-noble
@@ -163,6 +162,10 @@ jobs:
       matrix:
         app: [saas, marketing]
     env:
+      # PAT/GitHub App token for the baseline auto-commit push — empty means
+      # the feature degrades to report-only (GITHUB_TOKEN pushes only
+      # produce "action_required" ghost suites).
+      BOT_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN }}
       # SWC materializes its native binding into a cache dir and validates
       # parent permissions — /github/home fails that check inside containers.
       SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
@@ -183,6 +186,10 @@ jobs:
         with:
           # PRs check out the branch tip — baseline commits must be pushable
           # back onto the PR branch; full history for the rebase-retry.
+          # FUUTU_CI_BOT_TOKEN (PAT/GitHub App token) makes the baseline push
+          # fire a real pull_request synchronize run — GITHUB_TOKEN pushes
+          # only produce permanently "action_required" ghost suites.
+          token: ${{ secrets.FUUTU_CI_BOT_TOKEN || github.token }}
           ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
       - uses: ./.github/actions/setup
@@ -213,43 +220,54 @@ jobs:
 
       # --update-snapshots "passes" on pixel diffs — the diff signal is the
       # git diff afterwards. A real failure aborts before the status check.
+      # Update mode only on user commits: when the head commit is already a
+      # CI baseline commit (bot push → synchronize run), we compare instead
+      # of regenerating — guarantees the auto-update chain terminates.
       - name: Run visual tests + refresh baselines (PR)
         id: visual
         if: github.event_name == 'pull_request'
         continue-on-error: true
         run: |
-          pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
-          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
-            echo "changed=1" >> $GITHUB_OUTPUT
-          fi
+          head_msg="$(git log -1 --format=%s)"
+          # POSIX case — this job's shell is `sh`, not bash ([[ ]] silently
+          # fails the condition and would loop the baseline commit).
+          case "$head_msg" in
+            chore\(visual\)*)
+              echo "mode=compare" >> "$GITHUB_OUTPUT"
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --project=chromium --project=mobile-safari
+              ;;
+            *)
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+              if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
+                echo "changed=1" >> $GITHUB_OUTPUT
+              fi
+              ;;
+          esac
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
-      # Must run before the baseline commit — git status vs HEAD is the diff
-      # signal, and the commit would erase it.
+      # Reads the git-status diff signal left by the visual step — must run
+      # before the baseline commit below, which would erase the diff.
       - name: Generate visual report
         if: github.event_name == 'pull_request'
         run: node tooling/scripts/visual-report.mjs --app "${{ matrix.app }}"
         env:
           GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
 
+      # Baselines live in-repo and must be CI-generated (screenshots differ
+      # per OS/GPU — local updates would break the comparison). The push
+      # only happens when FUUTU_CI_BOT_TOKEN (PAT or GitHub App token) is
+      # configured: it fires a REAL pull_request synchronize run whose
+      # checks conclude on the baseline commit — the loop-terminating
+      # mechanism, since that run sees a chore(visual) head and only
+      # compares. With plain GITHUB_TOKEN the push would leave permanently
+      # "action_required" ghost suites, so the feature degrades to
+      # report-only (baselines still refresh on merge to develop/main).
       - name: Commit updated baselines to PR branch
         id: baseline-pr
-        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1'
+        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1' && env.BOT_TOKEN != ''
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.head_ref }}" pr
 
-      # GITHUB_TOKEN pushes fire no events → dispatch a run so required checks
-      # get a conclusion on the baseline commit (png-only diff → all skip).
-      - name: Re-dispatch CI for the baseline commit
-        if: steps.baseline-pr.outputs.pushed == '1'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              ...context.repo,
-              workflow_id: "ci.yml",
-              ref: "${{ github.head_ref }}",
-            });
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
@@ -299,7 +317,7 @@ jobs:
         run: tooling/scripts/ci-pages-index.sh
 
       - name: Comment on visual result (PR)
-        if: github.event_name == 'pull_request' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')
+        if: github.event_name == 'pull_request' && steps.visual.outputs.mode != 'compare' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')
         uses: actions/github-script@v8
         with:
           script: |

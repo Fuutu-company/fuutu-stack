@@ -29,7 +29,19 @@ type Org = {
 	logo?: string | null;
 };
 
-export function OrganizationsList() {
+type PendingInvitation = {
+	id: string;
+	organizationName: string;
+	role: string;
+};
+
+export function OrganizationsList({
+	pendingInvitations: invitations,
+	canCreateOrg,
+}: {
+	pendingInvitations: PendingInvitation[];
+	canCreateOrg: boolean;
+}) {
 	const t = useTranslations();
 	const router = useRouter();
 	const [orgs, setOrgs] = useState<Org[]>([]);
@@ -90,11 +102,41 @@ export function OrganizationsList() {
 						{t("organizations.list.description")}
 					</p>
 				</div>
-				<Button onClick={() => setCreating((v) => !v)}>
-					<Plus className="mr-2 size-4" />
-					{t("organizations.list.create")}
-				</Button>
+				{canCreateOrg && (
+					<Button onClick={() => setCreating((v) => !v)}>
+						<Plus className="mr-2 size-4" />
+						{t("organizations.list.create")}
+					</Button>
+				)}
 			</div>
+
+			{invitations.length > 0 && (
+				<Card>
+					<CardContent className="p-6">
+						<h2 className="font-semibold">
+							{t("organizations.list.pendingInvitations")}
+						</h2>
+						<ul className="mt-3 divide-y rounded-lg border">
+							{invitations.map((inv) => (
+								<li key={inv.id}>
+									<Link
+										href={`/auth/accept-invitation?id=${inv.id}`}
+										className="flex items-center justify-between gap-4 p-3 transition-colors hover:bg-accent"
+									>
+										<span className="flex items-center gap-2 font-medium text-sm">
+											<Building2 className="size-4 text-muted-foreground" />
+											{inv.organizationName}
+										</span>
+										<span className="text-primary text-sm">
+											{t("organizations.list.acceptInvitation")}
+										</span>
+									</Link>
+								</li>
+							))}
+						</ul>
+					</CardContent>
+				</Card>
+			)}
 
 			{creating && (
 				<Card>
@@ -148,7 +190,9 @@ export function OrganizationsList() {
 						</div>
 						<h3 className="font-semibold">{t("organizations.list.empty")}</h3>
 						<p className="mx-auto mt-2 max-w-sm text-muted-foreground text-sm">
-							{t("organizations.list.emptyDescription")}
+							{canCreateOrg
+								? t("organizations.list.emptyDescription")
+								: t("organizations.list.createDisabled")}
 						</p>
 					</CardContent>
 				</Card>

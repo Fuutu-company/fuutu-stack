@@ -77,6 +77,17 @@ export const authConfig = {
 		allowedDomains: [] as string[], // empty = all domains allowed
 		invitationOnly: false,
 	},
+	organizations: {
+		// Who may create organizations:
+		//  "all"   — any signed-in user (self-serve SaaS)
+		//  "admin" — only system admins (user.role "admin"); sales-led /
+		//            white-glove flows where staff provision orgs and invite
+		//            owners. Non-admins see invite/contact states instead of
+		//            the create form.
+		//  "none"  — org creation fully disabled; users join via invitation
+		//            only (orgs provisioned externally, e.g. seed/admin API).
+		allowUserToCreateOrganization: "all" as "all" | "admin" | "none",
+	},
 	redirects: {
 		afterSignIn: "/dashboard",
 		afterSignOut: "/auth/sign-in",

@@ -1,8 +1,6 @@
 /**
  * Email domain types — shared across templates and providers.
  */
-import type { Locale } from "@fuutu/i18n";
-
 export interface EmailMessage {
 	from: string;
 	to: string;
@@ -26,8 +24,12 @@ export interface EmailProvider {
 
 /** Base payload fields every template accepts for i18n selection. */
 interface BasePayload {
-	/** Recipient locale — selects the translated strings (default: en). */
-	locale?: Locale;
+	/**
+	 * Recipient locale — selects the translated strings (default: en).
+	 * Any string is accepted: dormant locales resolve through the i18n
+	 * fallback chain, unknown tags fall back to the default bundle.
+	 */
+	locale?: string;
 }
 
 /**
