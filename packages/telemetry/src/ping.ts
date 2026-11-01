@@ -8,7 +8,7 @@ import {
 import { env } from "@fuutu/env/saas";
 import { hashLicenseKey } from "@fuutu/license";
 
-const DEFAULT_ENDPOINT = "https://stackapp.fuutu.com/api/telemetry/ping";
+const DEFAULT_ENDPOINT = "https://app.fuutustack.com/api/telemetry/ping";
 const DEFAULT_TIMEOUT_MS = 5_000;
 
 export type TelemetryPayload = {

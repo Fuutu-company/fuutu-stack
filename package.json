@@ -11,7 +11,7 @@
 		"dev": "dotenv -c -- turbo dev",
 		"build": "cross-env NODE_ENV=production dotenv -c -- turbo build",
 		"prebuild": "dotenv -c -- node packages/telemetry/bin/ping.mjs",
-		"postinstall": "node -e \"console.log('\\n  Fuutu Stack — Free for teams ≤ 10 employees or ≤ \\u0024250k/yr revenue.\\n  Enterprise license required once you exceed both (see LICENSE.md §3, §4).\\n  Get your key at https://stack.fuutu.com/pricing\\n  Opt-out of telemetry pings: FUUTU_TELEMETRY_DISABLED=1\\n')\"",
+		"postinstall": "node -e \"console.log('\\n  Fuutu Stack — Free for teams ≤ 10 employees or ≤ \\u0024250k/yr revenue.\\n  Enterprise license required once you exceed both (see LICENSE.md §3, §4).\\n  Get your key at https://fuutustack.com/pricing\\n  Opt-out of telemetry pings: FUUTU_TELEMETRY_DISABLED=1\\n')\"",
 		"check-types": "turbo check-types",
 		"check:ci": "biome check .",
 		"dev:saas": "dotenv -c -- turbo -F @fuutu/saas dev",

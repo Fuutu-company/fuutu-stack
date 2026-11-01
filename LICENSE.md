@@ -33,7 +33,7 @@ convenience and does **not** override the binding text.
   access to the Fuutu MCP server and the versioning API), and
   **Enterprise License** (paid yearly — required above the Eligibility
   Thresholds, includes MCP). Current prices live at
-  https://stack.fuutu.com/pricing.
+  https://fuutustack.com/pricing.
 - **Free for small teams.** You may use the Kit at no charge if you qualify
   as an *Eligible User* under section 3.
 - **Paid for larger organisations.** Once you exceed **both** Eligibility
@@ -80,7 +80,7 @@ binding text controls.
   copyright and trademarks referenced in section 8.
 - **"MCP Subscription"** — the recurring paid subscription described in
   section 4a, granting authenticated access to the Fuutu MCP server
-  (mounted under `stackapp.fuutu.com/api/mcp/sse`) and to the Fuutu
+  (mounted under `app.fuutustack.com/api/mcp/sse`) and to the Fuutu
   versioning API.
 - **"Released Application"** — a Production Application (or any portion
   thereof) that the Licensee has published or made available to third
@@ -121,15 +121,15 @@ Derivative Work created under this section 3.
 Independently of sections 3 and 4, the Licensee may purchase a recurring
 **MCP Subscription** to obtain authenticated access to:
 
-- the Fuutu MCP server (mounted under `stackapp.fuutu.com/api/mcp/sse`,
+- the Fuutu MCP server (mounted under `app.fuutustack.com/api/mcp/sse`,
   read-only and mutating tools);
 - the Fuutu versioning API (semantic-version inference from commit logs);
 - such additional Fuutu-hosted developer services as Fuutu publishes from
-  time to time at `https://stack.fuutu.com/pricing`.
+  time to time at `https://fuutustack.com/pricing`.
 
 The subscription is sold per natural-person subscriber. The current
 price, subscription period and any volume terms are published at
-`https://stack.fuutu.com/pricing` and form part of this License by
+`https://fuutustack.com/pricing` and form part of this License by
 reference at the moment of purchase.
 
 The MCP Subscription is **not** a license to the Kit itself: it does
@@ -157,8 +157,8 @@ options, license-key issuance, optional removal of telemetry).
 
 The Fuutu Enterprise License is sold per legal entity. The current
 price, subscription period and any volume terms are published at
-**https://stack.fuutu.com/pricing** and form part of this License by
-reference at the moment of purchase. Contact `license@fuutu.com` to
+**https://fuutustack.com/pricing** and form part of this License by
+reference at the moment of purchase. Contact `license@fuutustack.com` to
 obtain a license key.
 
 A valid Fuutu Enterprise License is identified by a license key issued by
@@ -249,7 +249,7 @@ In relation to any Released Application:
    work, and must preserve the kit fingerprint (section 7) intact.
 4. **Notice obligation.** Before publishing a Released Application that
    contains Kit-derived material under any open-source license, the
-   Licensee must notify `license@fuutu.com` with the public repository
+   Licensee must notify `license@fuutustack.com` with the public repository
    URL and a brief description of the released portions. This notice
    does not grant approval; it merely permits Fuutu to assess compliance
    with sections 6 and 6a. Failure to give notice is a breach.
@@ -303,7 +303,7 @@ the Kit identity, the license mode or the deploying entity) is **not** and
 constitutes a material breach of this License.
 
 The privacy notice for the telemetry endpoint is published at
-`https://fuutu.com/legal/telemetry`.
+`https://fuutustack.com/legal/telemetry`.
 
 ---
 
@@ -392,7 +392,7 @@ matches the original intent.
 
 ## Contact
 
-- Licensing & enterprise inquiries: `license@fuutu.com`
-- Security disclosures: `security@fuutu.com`
-- General: `hello@fuutu.com`
-- Pricing: `https://stack.fuutu.com/pricing`
+- Licensing & enterprise inquiries: `license@fuutustack.com`
+- Security disclosures: `security@fuutustack.com`
+- General: `hello@fuutustack.com`
+- Pricing: `https://fuutustack.com/pricing`

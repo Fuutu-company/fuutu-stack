@@ -6,18 +6,18 @@
  *   - `"mcp"`         — a paid **MCP Subscription** key. Grants access to
  *                       both Fuutu agent surfaces:
  *                         * MCP for editors at
- *                           `stackapp.fuutu.com/api/mcp/sse`,
+ *                           `app.fuutustack.com/api/mcp/sse`,
  *                         * Better-Auth Agent-Auth for custom agents at
- *                           `stackapp.fuutu.com/.well-known/agent-configuration`.
+ *                           `app.fuutustack.com/.well-known/agent-configuration`.
  *                       Also grants the versioning API. Does **not** lift the
  *                       Eligibility Thresholds for the commercial-use
  *                       grant. See LICENSE.md §4a. Current price at
- *                       https://stack.fuutu.com/pricing.
+ *                       https://fuutustack.com/pricing.
  *   - `"enterprise"`  — a Fuutu Enterprise License key validated by the
  *                       Fuutu license endpoint. Lifts the Eligibility
  *                       Thresholds and includes MCP access. See
  *                       LICENSE.md §4. Current price at
- *                       https://stack.fuutu.com/pricing.
+ *                       https://fuutustack.com/pricing.
  */
 export type LicenseMode = "oss" | "mcp" | "enterprise";
 

@@ -6,7 +6,7 @@
 
 If you discover a security vulnerability in Fuutu Stack, please report it responsibly:
 
-1. **Email**: security@fuutu.com
+1. **Email**: security@fuutustack.com
 2. **Subject**: `[SECURITY] Fuutu Stack — <brief description>`
 3. Include:
    - Description of the vulnerability

@@ -40,6 +40,12 @@ Rules for demo content:
 
 ---
 
+## § Fuutu MCP
+
+When a Fuutu MCP subscription key is configured (`FUUTU_MCP_API_KEY` env or `apiKey` in `fuutu.config.ts`), call the MCP tools — `docs.search`, `docs.get`, `rules.get` — for current framework details (APIs, conventions, rules) instead of guessing or relying on training data. Responses are version-matched to this kit's `KIT_VERSION`. Full docs: <https://docs.fuutustack.com>.
+
+---
+
 ## § AI Soul
 
 > These directives define how the AI agent should behave in this repository, on top of the technical rules in the sections below. They apply to every task, every response, every code edit.

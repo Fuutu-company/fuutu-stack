@@ -1,0 +1,130 @@
+name: Version
+run-name: ${{ vars.FUUTU_VERSIONING_ENABLED == 'true' && 'Version' || 'Versioning disabled — set FUUTU_VERSIONING_ENABLED=true' }}
+
+# Automated kit versioning — requires a Fuutu versioning API key
+# (MCP Subscription / Enterprise). Disabled by default; enable by setting
+# the repository variable FUUTU_VERSIONING_ENABLED=true, plus:
+#   variable FUUTU_VERSIONING_API_URL  — e.g. https://app.fuutustack.com
+#   secret   FUUTU_VERSIONING_API_KEY  — org key with `versioning` scope
+# (Settings → Secrets and variables → Actions).
+#
+# On every push to main the conventional-commit subjects since the last
+# git tag are sent to POST <FUUTU_VERSIONING_API_URL>/api/versioning/next;
+# the returned nextVersion is written to KIT_VERSION (packages/config +
+# packages/telemetry ping copy) and every workspace package.json tracking
+# the kit version, then committed and tagged by the bot.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # release commit + tag push
+
+jobs:
+  # Explains itself in the run summary while versioning is disabled — see ci.yml.
+  enable-versioning:
+    name: ℹ️ Versioning disabled — how to enable
+    runs-on: ubuntu-latest
+    if: vars.FUUTU_VERSIONING_ENABLED != 'true'
+    steps:
+      - run: |
+          {
+            echo "## Fuutu Stack versioning is disabled"
+            echo ""
+            echo "Automated releases require a **Fuutu versioning API key** (MCP Subscription / Enterprise)."
+            echo ""
+            echo "**To enable versioning on this repository:**"
+            echo "1. Create the variable \`FUUTU_VERSIONING_ENABLED\` = \`true\`"
+            echo "2. Create the variable \`FUUTU_VERSIONING_API_URL\` (e.g. \`https://app.fuutustack.com\`)"
+            echo "3. Create the secret \`FUUTU_VERSIONING_API_KEY\` (org key with \`versioning\` scope)"
+            echo ""
+            echo "Under **Settings → Secrets and variables → Actions**, then push to main."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Fuutu Stack versioning is disabled — set repository variable FUUTU_VERSIONING_ENABLED=true to activate it (see run summary)."
+
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # GITHUB_TOKEN pushes fire no events, so the bot's release commit cannot
+    # retrigger this workflow; the head_commit guard covers PAT/manual pushes
+    # of a release commit.
+    if: vars.FUUTU_VERSIONING_ENABLED == 'true' && !startsWith(github.event.head_commit.message, 'chore(release):')
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history for tag lookup + commit range
+      - uses: ./.github/actions/setup
+        with:
+          db-generate: "false"
+
+      - name: Collect commits since last tag
+        id: commits
+        run: |
+          LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [ -n "$LAST_TAG" ] && [ "$(git rev-parse "$LAST_TAG^{commit}")" = "$(git rev-parse HEAD)" ]; then
+            echo "::notice::HEAD is already tagged $LAST_TAG — nothing to version."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git log --pretty=%s ${LAST_TAG:+$LAST_TAG..}HEAD | jq -R . | jq -s . > commits.json
+          if [ "$(jq length commits.json)" -eq 0 ]; then
+            echo "::notice::No commits since last tag — nothing to version."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Request next version
+        id: api
+        if: steps.commits.outputs.skip != '1'
+        env:
+          API_URL: ${{ vars.FUUTU_VERSIONING_API_URL }}
+          API_KEY: ${{ secrets.FUUTU_VERSIONING_API_KEY }}
+        run: |
+          CURRENT=$(node -p "require('fs').readFileSync('packages/config/index.ts','utf8').match(/KIT_VERSION = \"([^\"]+)\"/)[1]")
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          jq -n --arg v "$CURRENT" --slurpfile c commits.json \
+            '{framework:"fuutu-stack", currentVersion:$v, commits:$c[0]}' > body.json
+          curl --fail-with-body -sS -X POST "$API_URL/api/versioning/next" \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @body.json -o response.json
+          NEXT=$(jq -r '.nextVersion // empty' response.json)
+          echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          jq '{bump, nextVersion, rationale}' response.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write version, commit and tag
+        if: steps.commits.outputs.skip != '1'
+        env:
+          CURRENT: ${{ steps.api.outputs.current }}
+          NEXT: ${{ steps.api.outputs.next }}
+        run: |
+          # KIT_VERSION — fingerprint source of truth + the telemetry ping
+          # copy, which must stay in sync on every release.
+          sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/config/index.ts
+          sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/telemetry/bin/ping.mjs
+          # Workspace package.json files tracking the kit version (apps/*).
+          # Unpublished packages stay at 0.0.0 per the release convention.
+          node -e '
+            const fs = require("fs");
+            const { execSync } = require("child_process");
+            const files = execSync("git ls-files \"**/package.json\"").toString().trim().split("\n");
+            for (const f of files) {
+              const pkg = JSON.parse(fs.readFileSync(f, "utf8"));
+              if (pkg.version === process.env.CURRENT) {
+                pkg.version = process.env.NEXT;
+                fs.writeFileSync(f, JSON.stringify(pkg, null, "\t") + "\n");
+              }
+            }
+          '
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u # tracked modifications only — temp JSON files stay untracked
+          git commit -m "chore(release): v$NEXT"
+          git tag -a "v$NEXT" -m "Fuutu Stack v$NEXT"
+          git push --follow-tags
