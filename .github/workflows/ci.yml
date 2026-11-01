@@ -20,10 +20,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # event_name in the group: the baseline re-dispatch (workflow_dispatch on
-  # the same ref) must not cancel the still-running parent pull_request run —
-  # otherwise its remaining jobs stay "action required" forever.
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -165,6 +162,10 @@ jobs:
       matrix:
         app: [saas, marketing]
     env:
+      # PAT/GitHub App token for the baseline auto-commit push — empty means
+      # the feature degrades to report-only (GITHUB_TOKEN pushes only
+      # produce "action_required" ghost suites).
+      BOT_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN }}
       # SWC materializes its native binding into a cache dir and validates
       # parent permissions — /github/home fails that check inside containers.
       SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
@@ -185,6 +186,10 @@ jobs:
         with:
           # PRs check out the branch tip — baseline commits must be pushable
           # back onto the PR branch; full history for the rebase-retry.
+          # FUUTU_CI_BOT_TOKEN (PAT/GitHub App token) makes the baseline push
+          # fire a real pull_request synchronize run — GITHUB_TOKEN pushes
+          # only produce permanently "action_required" ghost suites.
+          token: ${{ secrets.FUUTU_CI_BOT_TOKEN || github.token }}
           ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
       - uses: ./.github/actions/setup
@@ -215,14 +220,23 @@ jobs:
 
       # --update-snapshots "passes" on pixel diffs — the diff signal is the
       # git diff afterwards. A real failure aborts before the status check.
+      # Update mode only on user commits: when the head commit is already a
+      # CI baseline commit (bot push → synchronize run), we compare instead
+      # of regenerating — guarantees the auto-update chain terminates.
       - name: Run visual tests + refresh baselines (PR)
         id: visual
         if: github.event_name == 'pull_request'
         continue-on-error: true
         run: |
-          pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
-          if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
-            echo "changed=1" >> $GITHUB_OUTPUT
+          head_msg="$(git log -1 --format=%s)"
+          if [[ "$head_msg" == chore\(visual\)* ]]; then
+            echo "mode=compare" >> "$GITHUB_OUTPUT"
+            pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --project=chromium --project=mobile-safari
+          else
+            pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+            if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
+              echo "changed=1" >> $GITHUB_OUTPUT
+            fi
           fi
         env:
           PLAYWRIGHT_USE_PROD: "1"
@@ -236,14 +250,17 @@ jobs:
           GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
 
       # Baselines live in-repo and must be CI-generated (screenshots differ
-      # per OS/GPU — local updates would break the comparison). The commit
-      # carries [skip ci]: a GITHUB_TOKEN push would otherwise leave a
-      # pull_request check suite permanently "action_required". The
-      # baseline-redispatch job below gives the commit real check
-      # conclusions exactly once, after the whole matrix finished.
+      # per OS/GPU — local updates would break the comparison). The push
+      # only happens when FUUTU_CI_BOT_TOKEN (PAT or GitHub App token) is
+      # configured: it fires a REAL pull_request synchronize run whose
+      # checks conclude on the baseline commit — the loop-terminating
+      # mechanism, since that run sees a chore(visual) head and only
+      # compares. With plain GITHUB_TOKEN the push would leave permanently
+      # "action_required" ghost suites, so the feature degrades to
+      # report-only (baselines still refresh on merge to develop/main).
       - name: Commit updated baselines to PR branch
         id: baseline-pr
-        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1'
+        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1' && env.BOT_TOKEN != ''
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.head_ref }}" pr
 
 
@@ -337,34 +354,3 @@ jobs:
             apps/${{ matrix.app }}/visual-report
           if-no-files-found: ignore
           retention-days: 14
-
-  # A baseline push inside an e2e leg moves the remote head — dispatch one
-  # run so the required checks (verify, build, e2e (saas)/(marketing))
-  # conclude on the baseline commit. Runs once after ALL matrix legs so it
-  # can't cancel a sibling mid-push, and only when the head actually moved.
-  baseline-redispatch:
-    if: github.event_name == 'pull_request' && vars.FUUTU_CI_ENABLED == 'true'
-    needs: e2e
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read        # getBranch to detect the baseline push
-      actions: write        # dispatch the follow-up run
-    steps:
-      - uses: actions/github-script@v8
-        with:
-          script: |
-            const headSha = context.payload.pull_request.head.sha;
-            const { data: branch } = await github.rest.repos.getBranch({
-              ...context.repo,
-              branch: context.payload.pull_request.head.ref,
-            });
-            if (branch.commit.sha === headSha) {
-              core.info("no baseline commit — head unchanged");
-              return;
-            }
-            core.info(`baseline commit landed (${branch.commit.sha}) — dispatching`);
-            await github.rest.actions.createWorkflowDispatch({
-              ...context.repo,
-              workflow_id: "ci.yml",
-              ref: context.payload.pull_request.head.ref,
-            });
