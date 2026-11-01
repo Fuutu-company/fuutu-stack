@@ -2,14 +2,14 @@
   "app": "saas",
   "branch": "develop",
   "pr": null,
-  "sha": "5984ef4",
-  "generatedAt": "2026-10-30T21:24:11.377Z",
+  "sha": "7e878be",
+  "generatedAt": "2026-11-01T12:59:48.005Z",
   "threshold": 0.005,
   "total": 55,
-  "changed": 2,
+  "changed": 1,
   "added": 0,
   "removed": 0,
-  "unchanged": 53,
+  "unchanged": 54,
   "files": [
     {
       "file": "admin--admin-chromium-linux.png",
@@ -40,10 +40,9 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "changed",
-      "diffPx": 10638,
-      "diffRatio": 0.01154296875,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "admin--audit-logs-mobile-safari-linux.png",
@@ -74,9 +73,10 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 3904,
+      "diffRatio": 0.015074115689204477,
+      "withinTolerance": false
     },
     {
       "file": "auth--forgot-password-chromium-linux.png",
@@ -547,10 +547,9 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
-      "diffPx": 2180,
-      "diffRatio": 0.007066336039934523,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "settings--api-keys-chromium-linux.png",
