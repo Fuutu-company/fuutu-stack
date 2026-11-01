@@ -143,7 +143,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write       # baseline auto-commit pushes to the branch
-      actions: write        # dispatch follow-up run for required checks
       pull-requests: write  # slim visual-result comment
     # Must match the pinned catalog @playwright/test version exactly — bump both together.
     container: mcr.microsoft.com/playwright:v1.64.0-noble
@@ -241,17 +240,35 @@ jobs:
         if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1'
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.head_ref }}" pr
 
-      # GITHUB_TOKEN pushes fire no events → dispatch a run so required checks
-      # get a conclusion on the baseline commit (png-only diff → all skip).
-      - name: Re-dispatch CI for the baseline commit
-        if: steps.baseline-pr.outputs.pushed == '1'
-        uses: actions/github-script@v8
+
+  # Baseline pushes happen inside the e2e matrix legs — dispatch exactly
+  # once, after ALL legs finished, so the dispatched run can't cancel a
+  # sibling still pushing. Compares remote head vs the PR head sha this
+  # run started with; a mismatch means a baseline commit landed.
+  baseline-redispatch:
+    if: github.event_name == 'pull_request' && vars.FUUTU_CI_ENABLED == 'true'
+    needs: e2e
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write        # dispatch the follow-up run
+    steps:
+      - uses: actions/github-script@v8
         with:
           script: |
+            const headSha = context.payload.pull_request.head.sha;
+            const { data: branch } = await github.rest.repos.getBranch({
+              ...context.repo,
+              branch: context.payload.pull_request.head.ref,
+            });
+            if (branch.commit.sha === headSha) {
+              core.info("no baseline commit — head unchanged");
+              return;
+            }
+            core.info(`baseline commit landed (${branch.commit.sha}) — dispatching`);
             await github.rest.actions.createWorkflowDispatch({
               ...context.repo,
               workflow_id: "ci.yml",
-              ref: "${{ github.head_ref }}",
+              ref: context.payload.pull_request.head.ref,
             });
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)

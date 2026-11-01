@@ -8,6 +8,13 @@ set -euo pipefail
 if [ "$EVENT_NAME" = "pull_request" ]; then
   git fetch origin "$BASE_REF" --depth=1
   DIFF=$(git diff --name-only "origin/$BASE_REF" HEAD)
+elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+  # Baseline re-dispatch: the png-only commit must get a REAL suite — the
+  # ruleset's required checks (e2e (saas), e2e (marketing), …) only exist
+  # as matrix runs, and a skipped/collapsed suite leaves them "Expected"
+  # forever on the baseline commit.
+  echo "code=true" >> "$GITHUB_OUTPUT"
+  exit 0
 else
   BEFORE="$EVENT_BEFORE"
   if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
