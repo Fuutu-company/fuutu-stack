@@ -2,14 +2,14 @@
   "app": "saas",
   "branch": "57/merge",
   "pr": "57",
-  "sha": "205e5a9",
-  "generatedAt": "2026-11-01T21:28:17.176Z",
+  "sha": "6fe81ed",
+  "generatedAt": "2026-11-01T21:37:28.074Z",
   "threshold": 0.005,
   "total": 55,
-  "changed": 5,
+  "changed": 1,
   "added": 0,
   "removed": 0,
-  "unchanged": 50,
+  "unchanged": 54,
   "files": [
     {
       "file": "admin--admin-chromium-linux.png",
@@ -40,10 +40,9 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "changed",
-      "diffPx": 10149,
-      "diffRatio": 0.011012369791666667,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "admin--audit-logs-mobile-safari-linux.png",
@@ -427,10 +426,9 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "changed",
+      "status": "unchanged",
       "diffPx": null,
-      "diffRatio": null,
-      "dimensionMismatch": "512x334 → 512x416"
+      "diffRatio": null
     },
     {
       "file": "dialog--api-key-create-mobile-safari-linux.png",
@@ -439,10 +437,9 @@
       "locale": null,
       "viewport": "mobile",
       "project": "mobile-safari",
-      "status": "changed",
+      "status": "unchanged",
       "diffPx": null,
-      "diffRatio": null,
-      "dimensionMismatch": "393x333 → 393x417"
+      "diffRatio": null
     },
     {
       "file": "dialog--webhook-create-chromium-linux.png",
@@ -561,10 +558,9 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "changed",
-      "diffPx": 7253,
-      "diffRatio": 0.007870008680555556,
-      "withinTolerance": false
+      "status": "unchanged",
+      "diffPx": null,
+      "diffRatio": null
     },
     {
       "file": "settings--api-keys-mobile-safari-linux.png",
