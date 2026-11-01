@@ -227,49 +227,25 @@ jobs:
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
-      # Must run before the baseline commit — git status vs HEAD is the diff
-      # signal, and the commit would erase it.
+      # Reads the git-status diff signal left by the visual step — must run
+      # before the baseline commit below, which would erase the diff.
       - name: Generate visual report
         if: github.event_name == 'pull_request'
         run: node tooling/scripts/visual-report.mjs --app "${{ matrix.app }}"
         env:
           GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
 
+      # Baselines live in-repo and must be CI-generated (screenshots differ
+      # per OS/GPU — local updates would break the comparison). The commit
+      # carries [skip ci]: a GITHUB_TOKEN push would otherwise leave a
+      # pull_request check suite permanently "action_required". The
+      # baseline-redispatch job below gives the commit real check
+      # conclusions exactly once, after the whole matrix finished.
       - name: Commit updated baselines to PR branch
         id: baseline-pr
         if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1'
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.head_ref }}" pr
 
-
-  # Baseline pushes happen inside the e2e matrix legs — dispatch exactly
-  # once, after ALL legs finished, so the dispatched run can't cancel a
-  # sibling still pushing. Compares remote head vs the PR head sha this
-  # run started with; a mismatch means a baseline commit landed.
-  baseline-redispatch:
-    if: github.event_name == 'pull_request' && vars.FUUTU_CI_ENABLED == 'true'
-    needs: e2e
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write        # dispatch the follow-up run
-    steps:
-      - uses: actions/github-script@v8
-        with:
-          script: |
-            const headSha = context.payload.pull_request.head.sha;
-            const { data: branch } = await github.rest.repos.getBranch({
-              ...context.repo,
-              branch: context.payload.pull_request.head.ref,
-            });
-            if (branch.commit.sha === headSha) {
-              core.info("no baseline commit — head unchanged");
-              return;
-            }
-            core.info(`baseline commit landed (${branch.commit.sha}) — dispatching`);
-            await github.rest.actions.createWorkflowDispatch({
-              ...context.repo,
-              workflow_id: "ci.yml",
-              ref: context.payload.pull_request.head.ref,
-            });
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
@@ -361,3 +337,34 @@ jobs:
             apps/${{ matrix.app }}/visual-report
           if-no-files-found: ignore
           retention-days: 14
+
+  # A baseline push inside an e2e leg moves the remote head — dispatch one
+  # run so the required checks (verify, build, e2e (saas)/(marketing))
+  # conclude on the baseline commit. Runs once after ALL matrix legs so it
+  # can't cancel a sibling mid-push, and only when the head actually moved.
+  baseline-redispatch:
+    if: github.event_name == 'pull_request' && vars.FUUTU_CI_ENABLED == 'true'
+    needs: e2e
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read        # getBranch to detect the baseline push
+      actions: write        # dispatch the follow-up run
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const headSha = context.payload.pull_request.head.sha;
+            const { data: branch } = await github.rest.repos.getBranch({
+              ...context.repo,
+              branch: context.payload.pull_request.head.ref,
+            });
+            if (branch.commit.sha === headSha) {
+              core.info("no baseline commit — head unchanged");
+              return;
+            }
+            core.info(`baseline commit landed (${branch.commit.sha}) — dispatching`);
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: "ci.yml",
+              ref: context.payload.pull_request.head.ref,
+            });
