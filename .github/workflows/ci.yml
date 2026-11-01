@@ -229,15 +229,20 @@ jobs:
         continue-on-error: true
         run: |
           head_msg="$(git log -1 --format=%s)"
-          if [[ "$head_msg" == chore\(visual\)* ]]; then
-            echo "mode=compare" >> "$GITHUB_OUTPUT"
-            pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --project=chromium --project=mobile-safari
-          else
-            pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
-            if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
-              echo "changed=1" >> $GITHUB_OUTPUT
-            fi
-          fi
+          # POSIX case — this job's shell is `sh`, not bash ([[ ]] silently
+          # fails the condition and would loop the baseline commit).
+          case "$head_msg" in
+            chore\(visual\)*)
+              echo "mode=compare" >> "$GITHUB_OUTPUT"
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --project=chromium --project=mobile-safari
+              ;;
+            *)
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+              if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
+                echo "changed=1" >> $GITHUB_OUTPUT
+              fi
+              ;;
+          esac
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
@@ -312,7 +317,7 @@ jobs:
         run: tooling/scripts/ci-pages-index.sh
 
       - name: Comment on visual result (PR)
-        if: github.event_name == 'pull_request' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')
+        if: github.event_name == 'pull_request' && steps.visual.outputs.mode != 'compare' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')
         uses: actions/github-script@v8
         with:
           script: |
