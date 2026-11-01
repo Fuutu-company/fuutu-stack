@@ -13,10 +13,14 @@ if git diff --cached --quiet; then
   echo "Baselines unchanged — nothing to commit"
   exit 0
 fi
+# [skip ci] on both modes: a GITHUB_TOKEN push creates a pull_request check
+# suite that never executes and sits as "action_required" forever (skipped
+# workflow approval). The explicit workflow_dispatch in ci.yml provides the
+# real check conclusions for the baseline commit.
 if [ "$mode" = "push" ]; then
   git commit -m "chore(visual): update ${app} baselines [skip ci]"
 else
-  git commit -m "chore(visual): update ${app} baselines"
+  git commit -m "chore(visual): update ${app} baselines [skip ci]"
 fi
 
 # A sibling matrix leg may push its own baseline commit first — rebase + retry.
