@@ -36,6 +36,13 @@ export {
 export { getPlanIdForProductId } from "./config.server";
 export { createCustomerForUser } from "./customers";
 export {
+	type Entitlement,
+	type EntitlementScope,
+	getOrgEntitlement,
+	getUserEntitlement,
+	hasFeature,
+} from "./entitlements";
+export {
 	type CatalogFeature,
 	FEATURE_GROUPS,
 	type FeatureGroup,

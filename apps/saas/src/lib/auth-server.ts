@@ -1,6 +1,7 @@
 import { auth } from "@fuutu/auth";
 import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
-import { getOrganizationBySlug } from "@fuutu/db";
+import { config } from "@fuutu/config";
+import { countOrganizationsForUser, getOrganizationBySlug } from "@fuutu/db";
 import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -83,6 +84,34 @@ export async function requireOnboarded() {
 }
 
 /**
+ * Require authentication AND — when `features.organizationsMode === "forced"`
+ * — membership in at least one organization. A user with zero memberships is
+ * redirected to `/organizations` (the forced-mode landing where they can
+ * create an org or accept a pending invitation), unless the request already
+ * targets `/organizations` or `/onboarding`.
+ *
+ * No-op in "off" and "on" modes. The proxy pre-check is only an optimistic
+ * hint — this DB-backed check is the real gate.
+ */
+export async function requireOrg() {
+	const session = await requireAuth();
+	if (config.features.organizationsMode !== "forced") {
+		return session;
+	}
+	const orgCount = await countOrganizationsForUser(session.user.id);
+	if (orgCount === 0) {
+		const pathname = (await headers()).get("x-pathname") ?? "";
+		if (
+			!pathname.startsWith("/organizations") &&
+			!pathname.startsWith("/onboarding")
+		) {
+			redirect("/organizations");
+		}
+	}
+	return session;
+}
+
+/**
  * Require authentication AND membership in the organization identified by
  * `slug`. Use this in org-scoped layouts — oRPC procedures still enforce
  * org permissions server-side, but the layout guard keeps the page shell
@@ -108,6 +137,26 @@ export async function requireOrgMembership(slug: string) {
 	);
 	if (!isMember) {
 		redirect("/organizations");
+	}
+
+	// Forced mode: entering an org route implies org context — activate the
+	// org on the session so the proxy hint and active-org resolution work
+	// without requiring a manual switcher pick. "on" mode keeps the
+	// personal/org toggle unchanged (membership != active scope there).
+	if (
+		config.features.organizationsMode === "forced" &&
+		(session.session as { activeOrganizationId?: string | null })
+			.activeOrganizationId !== org.id
+	) {
+		try {
+			await auth.api.setActiveOrganization({
+				headers: await headers(),
+				body: { organizationId: org.id },
+			});
+		} catch {
+			// Membership is already proven — a failed active-org update
+			// must not block the route.
+		}
 	}
 
 	return { session, org };

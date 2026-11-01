@@ -1,5 +1,5 @@
 import { getUserById } from "@fuutu/db";
-import { isValidLocale, type Locale } from "@fuutu/i18n";
+import { isKnownLocale } from "@fuutu/i18n";
 import { createLogger } from "@fuutu/logs";
 import { sendEmail } from "@fuutu/mail";
 import type { NotificationChannelHandler } from "../types";
@@ -18,8 +18,11 @@ export const emailChannel: NotificationChannelHandler = {
 	async send(userId, type, title, body, data) {
 		let email = typeof data?.email === "string" ? data.email : undefined;
 		let name = typeof data?.name === "string" ? data.name : undefined;
-		let locale: Locale | undefined =
-			typeof data?.locale === "string" && isValidLocale(data.locale)
+		// Stored user-supplied locale tags are sanitized with isKnownLocale:
+		// dormant-but-real locales (bundles wired, not routable) are kept,
+		// garbage tags are dropped.
+		let locale: string | undefined =
+			typeof data?.locale === "string" && isKnownLocale(data.locale)
 				? data.locale
 				: undefined;
 
@@ -27,7 +30,7 @@ export const emailChannel: NotificationChannelHandler = {
 			const user = await getUserById(userId);
 			email ??= user?.email;
 			name ??= user?.name;
-			if (!locale && user?.locale && isValidLocale(user.locale)) {
+			if (!locale && user?.locale && isKnownLocale(user.locale)) {
 				locale = user.locale;
 			}
 		}

@@ -10,6 +10,7 @@
 		"col": {
 			"name": "Name",
 			"prefix": "Key",
+			"scopes": "Scopes",
 			"lastUsed": "Last used",
 			"createdAt": "Created",
 			"status": "Status",
@@ -28,7 +29,18 @@
 			"namePlaceholder": "Production server",
 			"expiryLabel": "Expiry date (optional)",
 			"expiryPlaceholder": "Pick a date",
+			"typeLabel": "Key type",
+			"types": {
+				"personal": "Personal",
+				"org": "Organization (full credential)"
+			},
 			"submit": "Create key"
+		},
+		"scopes": {
+			"personal": "Personal",
+			"full": "Full",
+			"mcp": "MCP",
+			"versioning": "Versioning"
 		},
 		"createdDialog": {
 			"title": "Your new API key",

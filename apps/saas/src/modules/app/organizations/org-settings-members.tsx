@@ -20,7 +20,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@fuutu/ui";
-import { Mail, UserMinus } from "lucide-react";
+import { Mail, Sparkles, UserMinus } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { planGateMessage } from "@/lib/api-error";
@@ -52,7 +53,17 @@ type FullOrg = {
 	invitations?: Invitation[];
 };
 
-export function OrgSettingsMembers({ slug }: { slug: string }) {
+export function OrgSettingsMembers({
+	slug,
+	seatsTotal,
+	upgradeUrl,
+}: {
+	slug: string;
+	/** Numeric seat cap from the org's plan; null when unbounded. */
+	seatsTotal: number | null;
+	/** Where the upgrade CTA points (in-app billing settings). */
+	upgradeUrl: string;
+}) {
 	const t = useTranslations();
 	const { data: session } = authClient.useSession();
 	const [org, setOrg] = useState<FullOrg | null>(null);
@@ -75,6 +86,13 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 				PERMISSIONS.INVITE_MEMBER,
 			)
 		: false;
+
+	// Pending invitations reserve seats — they count toward the cap,
+	// mirroring assertInviteSeatAvailable on the server side.
+	const seatsUsed =
+		(org?.members?.length ?? 0) +
+		(org?.invitations?.filter((i) => i.status === "pending").length ?? 0);
+	const atSeatLimit = seatsTotal !== null && seatsUsed >= seatsTotal;
 
 	const roleLabel: Record<string, string> = {
 		owner: t("organizations.settings.roleOwner"),
@@ -115,7 +133,9 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 			await load();
 		} catch (e) {
 			log.error("inviteMember failed", { err: e });
-			setInviteError(planGateMessage(e, t, "organizations.settings.failed"));
+			if (!atSeatLimit) {
+				setInviteError(planGateMessage(e, t, "organizations.settings.failed"));
+			}
 		} finally {
 			setInviting(false);
 		}
@@ -177,7 +197,27 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 
 			<Card>
 				<CardContent className="space-y-6 p-6 md:p-8">
-					{canManageMembers && (
+					{canManageMembers && atSeatLimit && (
+						<div className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+							<div>
+								<p className="font-medium text-sm">
+									{t("organizations.settings.seatLimitReached", {
+										seats: seatsTotal ?? 0,
+									})}
+								</p>
+								<p className="text-muted-foreground text-xs">
+									{t("organizations.settings.seatLimitHint")}
+								</p>
+							</div>
+							<Button asChild size="sm">
+								<Link href={upgradeUrl}>
+									<Sparkles className="size-4" />
+									{t("organizations.settings.seatLimitCta")}
+								</Link>
+							</Button>
+						</div>
+					)}
+					{canManageMembers && !atSeatLimit && (
 						<form onSubmit={invite} className="flex flex-col gap-3 sm:flex-row">
 							<Input
 								type="email"

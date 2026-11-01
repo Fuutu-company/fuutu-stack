@@ -5,6 +5,9 @@
 		".": {
 			"default": "./src/index.ts"
 		},
+		"./api-key-scopes": {
+			"default": "./src/api-key-scopes.ts"
+		},
 		"./config": {
 			"default": "./src/config.ts"
 		}

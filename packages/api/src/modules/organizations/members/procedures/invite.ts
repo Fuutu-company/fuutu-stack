@@ -41,14 +41,33 @@ export const inviteMember = authProcedure({
 				message: "Cannot invite a member with a higher role than your own",
 			});
 		}
-		const invitation = await auth.api.createInvitation({
-			body: {
-				email: input.email,
-				role: input.role,
-				organizationId: input.organizationId,
-			},
-			headers: context.headers,
-		});
+		let invitation: Awaited<ReturnType<typeof auth.api.createInvitation>>;
+		try {
+			invitation = await auth.api.createInvitation({
+				body: {
+					email: input.email,
+					role: input.role,
+					organizationId: input.organizationId,
+				},
+				headers: context.headers,
+			});
+		} catch (e) {
+			// The seat-limit organizationHook throws a Better-Auth APIError
+			// (HTTP 402) when the org is at its membersPerOrg cap — APIError
+			// bodies don't survive oRPC (flatten to 500), so re-map to a
+			// FORBIDDEN with a stable message the client planGateMessage maps.
+			if (
+				e instanceof Error &&
+				e.name === "APIError" &&
+				"statusCode" in e &&
+				(e as { statusCode: number }).statusCode === 402
+			) {
+				throw new ORPCError("FORBIDDEN", {
+					message: "Organization seat limit reached",
+				});
+			}
+			throw e;
+		}
 		try {
 			await dispatchEvent({
 				event: "member.invited",

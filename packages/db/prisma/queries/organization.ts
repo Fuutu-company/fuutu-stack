@@ -68,5 +68,39 @@ export const findPendingInvitationById = (id: string, email: string) =>
 export const countOrganizationMembers = (organizationId: string) =>
 	db.member.count({ where: { organizationId } });
 
+/**
+ * Pending, unexpired invitations for an org — seat-limit checks count
+ * these as reserved seats (same filter shape as findPendingInvitation).
+ */
+export const countPendingInvitations = (organizationId: string) =>
+	db.invitation.count({
+		where: {
+			organizationId,
+			status: "pending",
+			expiresAt: { gt: new Date() },
+		},
+	});
+
 export const countOrganizationsForUser = (userId: string) =>
 	db.organization.count({ where: { members: { some: { userId } } } });
+
+/**
+ * Pending invitations addressed to an email — the no-org landing/onboarding
+ * surfaces list these so invitees can accept without any membership yet.
+ * Better Auth's list-user-invitations endpoint 403s for org-less users,
+ * so this is queried server-side and passed down as props.
+ */
+export const listPendingInvitationsForUser = (email: string) =>
+	db.invitation.findMany({
+		where: {
+			email: { equals: email, mode: "insensitive" },
+			status: "pending",
+			expiresAt: { gt: new Date() },
+		},
+		select: {
+			id: true,
+			role: true,
+			organization: { select: { name: true, slug: true } },
+		},
+		orderBy: { createdAt: "desc" },
+	});

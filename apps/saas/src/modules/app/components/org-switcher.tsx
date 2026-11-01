@@ -1,6 +1,8 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { authConfig } from "@fuutu/auth/config";
+import { config } from "@fuutu/config";
 import {
 	Badge,
 	DropdownMenu,
@@ -46,6 +48,19 @@ export function OrgSwitcher() {
 	const { data: organizations, isPending: orgsLoading } =
 		authClient.useListOrganizations();
 	const { data: activeOrg } = authClient.useActiveOrganization();
+	const { data: session } = authClient.useSession();
+
+	// Org creation gate — mirrors the server-side Better Auth predicate so
+	// non-eligible users never see a create CTA (they can still reach
+	// /organizations to accept pending invitations).
+	const creation = authConfig.organizations.allowUserToCreateOrganization;
+	const canCreateOrg =
+		creation === "all" ||
+		(creation === "admin" &&
+			(session?.user as { role?: string } | undefined)?.role === "admin");
+
+	// Forced mode: no personal scope — users always operate inside an org.
+	const forcedOrgs = config.features.organizationsMode === "forced";
 
 	// Better Auth client returns untyped organization data — cast to our typed Org
 	const orgs = (organizations ?? []) as Org[];
@@ -65,6 +80,27 @@ export function OrgSwitcher() {
 	}
 
 	if (orgs.length === 0) {
+		return (
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<SidebarMenuButton size="lg" asChild>
+						<Link href="/organizations">
+							<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+								<Building2 className="size-4" />
+							</div>
+							<div className="grid flex-1 text-left text-sm leading-tight">
+								<span className="truncate font-semibold">
+									{t("navigation.organizations")}
+								</span>
+							</div>
+						</Link>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+			</SidebarMenu>
+		);
+	}
+
+	if (orgs.length === 0 && canCreateOrg) {
 		return (
 			<SidebarMenu>
 				<SidebarMenuItem>
@@ -140,18 +176,25 @@ export function OrgSwitcher() {
 						side={isMobile ? "bottom" : "right"}
 						sideOffset={4}
 					>
-						<DropdownMenuLabel className="text-muted-foreground text-xs">
-							{t("navigation.personalAccount")}
-						</DropdownMenuLabel>
-						<DropdownMenuItem onClick={selectPersonal} className="gap-2 p-2">
-							<div className="flex size-6 items-center justify-center rounded-sm border">
-								<User className="size-4 shrink-0" />
-							</div>
-							<span className="truncate">
-								{t("navigation.personalAccount")}
-							</span>
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
+						{!forcedOrgs && (
+							<>
+								<DropdownMenuLabel className="text-muted-foreground text-xs">
+									{t("navigation.personalAccount")}
+								</DropdownMenuLabel>
+								<DropdownMenuItem
+									onClick={selectPersonal}
+									className="gap-2 p-2"
+								>
+									<div className="flex size-6 items-center justify-center rounded-sm border">
+										<User className="size-4 shrink-0" />
+									</div>
+									<span className="truncate">
+										{t("navigation.personalAccount")}
+									</span>
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+							</>
+						)}
 						<DropdownMenuLabel className="text-muted-foreground text-xs">
 							{t("navigation.organizations")}
 						</DropdownMenuLabel>
@@ -181,16 +224,18 @@ export function OrgSwitcher() {
 							</DropdownMenuItem>
 						))}
 						<DropdownMenuSeparator />
-						<DropdownMenuItem className="gap-2 p-2" asChild>
-							<Link href="/organizations">
-								<div className="flex size-6 items-center justify-center rounded-md border bg-background">
-									<Plus className="size-4" />
-								</div>
-								<div className="font-medium text-muted-foreground">
-									{t("navigation.createOrganization")}
-								</div>
-							</Link>
-						</DropdownMenuItem>
+						{canCreateOrg && (
+							<DropdownMenuItem className="gap-2 p-2" asChild>
+								<Link href="/organizations">
+									<div className="flex size-6 items-center justify-center rounded-md border bg-background">
+										<Plus className="size-4" />
+									</div>
+									<div className="font-medium text-muted-foreground">
+										{t("navigation.createOrganization")}
+									</div>
+								</Link>
+							</DropdownMenuItem>
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>

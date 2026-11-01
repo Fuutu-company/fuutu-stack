@@ -1,15 +1,21 @@
 import deepmerge from "deepmerge";
 import { i18nConfig } from "../config";
 import type { Locale, Messages } from "../types";
-import { isValidLocale } from "./locale-utils";
 
 export type AppName = "marketing" | "saas" | "docs";
 type Namespace = "common" | AppName;
 type NamespaceLoader = () => Promise<Record<string, unknown>>;
 
 // Keyed by `Locale` — adding a locale to i18nConfig.locales without a
-// matching entry here fails type-checking.
-const namespaceLoaders: Record<Locale, Record<Namespace, NamespaceLoader>> = {
+// matching entry here fails type-checking. The `Partial<Record<string, …>>`
+// arm additionally permits "dormant" locales: bundles wired into the loader
+// map without being a configured (routable) locale. Dormant locales resolve
+// via `isKnownLocale` / `importLocale` but stay invalid for routing.
+export const namespaceLoaders: Record<
+	Locale,
+	Record<Namespace, NamespaceLoader>
+> &
+	Partial<Record<string, Record<Namespace, NamespaceLoader>>> = {
 	en: {
 		common: async () =>
 			(await import("../translations/en/common/index")).default,
@@ -28,8 +34,17 @@ const namespaceLoaders: Record<Locale, Record<Namespace, NamespaceLoader>> = {
 	},
 };
 
+/**
+ * True when `locale` has translation bundles registered — configured locales
+ * plus dormant ones. Use this (not `isValidLocale`) to sanitize stored
+ * user-supplied locale tags: dormant-but-real locales survive while garbage
+ * tags are still rejected. Routing validity stays `isValidLocale`.
+ */
+export const isKnownLocale = (locale: string): boolean =>
+	Object.hasOwn(namespaceLoaders, locale);
+
 const loadNamespace = async (
-	locale: Locale,
+	locale: string,
 	app: Namespace,
 ): Promise<Record<string, unknown>> => {
 	const loaders =
@@ -43,7 +58,9 @@ export const importLocale = async (
 	locale: string,
 	app?: AppName,
 ): Promise<Messages> => {
-	const effectiveLocale: Locale = isValidLocale(locale)
+	// Bundles exist → load them; routing validity is unrelated to message
+	// loading, so dormant locales resolve here too.
+	const effectiveLocale: string = isKnownLocale(locale)
 		? locale
 		: i18nConfig.defaultLocale;
 
@@ -131,14 +148,15 @@ export const getMessagesForLocale = async (
 	app?: AppName,
 ): Promise<Messages> => {
 	// Load order: lowest priority first so the requested locale merges last.
-	// Unconfigured locales (e.g. "fr") resolve to the default bundle inside
-	// importLocale — dedupe on the resolved locale so each bundle is
-	// imported exactly once.
+	// Locales without registered bundles (e.g. "fr") resolve to the default
+	// bundle inside importLocale — dedupe on the resolved locale so each
+	// bundle is imported exactly once. Dormant locales are known and keep
+	// their own bundle in the chain.
 	const loadOrder = [
 		...new Set(
 			getFallbackChain(locale)
 				.reverse()
-				.map((loc) => (isValidLocale(loc) ? loc : i18nConfig.defaultLocale)),
+				.map((loc) => (isKnownLocale(loc) ? loc : i18nConfig.defaultLocale)),
 		),
 	];
 

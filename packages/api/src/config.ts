@@ -1,4 +1,5 @@
 import { env } from "@fuutu/env/saas";
+import { API_KEY_SCOPES } from "./api-key-scopes";
 
 /**
  * API configuration — owned by @fuutu/api.
@@ -80,6 +81,20 @@ export const apiConfig = {
 			},
 		},
 	},
+	/**
+	 * Registered API-key scope vocabulary. Org API keys may carry one or
+	 * more of these scopes; `requireApiKey(headers, scope)` only admits
+	 * keys that list the requested scope. A key with an empty `scopes`
+	 * array is an unrestricted full credential for its owner scope.
+	 */
+	apiKeyScopes: API_KEY_SCOPES,
+	/**
+	 * Maps an API-key scope to a FEATURE_CATALOG flat feature id
+	 * (e.g. `{ versioning: "api_webhooks" }`). `requireApiKey` responds
+	 * 402 upgrade_required when the org's entitlement lacks the mapped
+	 * feature. Empty = no feature gates.
+	 */
+	apiKeyScopeFeatures: {} as Record<string, string>,
 } as const;
 
 export type ApiConfig = typeof apiConfig;

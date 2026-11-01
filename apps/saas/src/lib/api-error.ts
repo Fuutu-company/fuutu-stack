@@ -13,7 +13,10 @@ export function planGateMessage(
 	fallbackKey: Parameters<ReturnType<typeof useTranslations>>[0],
 ): string {
 	const message = err instanceof Error ? err.message : "";
-	if (message.includes("Limit exceeded")) {
+	if (
+		message.includes("Limit exceeded") ||
+		message.includes("seat limit reached")
+	) {
 		return t("common.errors.planLimitReached");
 	}
 	if (

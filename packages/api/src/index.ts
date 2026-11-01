@@ -2,6 +2,7 @@ export type { App } from "./app";
 export { app } from "./app";
 export type { Context } from "./context";
 export { createContext } from "./context";
+export { requireApiKey } from "./modules/api-keys/require-api-key";
 export { openApiHandler, rpcHandler } from "./orpc/handler";
 export { createRateLimitMiddleware } from "./orpc/middleware/rate-limit";
 export {
