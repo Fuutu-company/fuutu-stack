@@ -2,14 +2,14 @@
   "app": "saas",
   "branch": "develop",
   "pr": null,
-  "sha": "7e878be",
-  "generatedAt": "2026-11-01T12:59:48.005Z",
+  "sha": "d15b01f",
+  "generatedAt": "2026-11-01T22:40:22.467Z",
   "threshold": 0.005,
   "total": 55,
-  "changed": 1,
+  "changed": 2,
   "added": 0,
   "removed": 0,
-  "unchanged": 54,
+  "unchanged": 53,
   "files": [
     {
       "file": "admin--admin-chromium-linux.png",
@@ -40,9 +40,10 @@
       "locale": null,
       "viewport": "desktop",
       "project": "chromium",
-      "status": "unchanged",
-      "diffPx": null,
-      "diffRatio": null
+      "status": "changed",
+      "diffPx": 9979,
+      "diffRatio": 0.01082790798611111,
+      "withinTolerance": false
     },
     {
       "file": "admin--audit-logs-mobile-safari-linux.png",
