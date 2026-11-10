@@ -221,13 +221,13 @@ pnpm test:e2e              # Playwright (saas + marketing)
 
 ## License
 
-**Free for teams up to 10 employees or $250k annual revenue.** Once you exceed both thresholds, you need an Enterprise License.
+**Free for teams with ≤ 10 employees and ≤ $250k annual revenue.** Once you exceed either threshold, you need an Enterprise License.
 
 | Tier | Price | Who |
 |---|---|---|
-| **OSS** | Free | ≤ 10 employees OR ≤ $250k revenue |
+| **OSS** | Free | ≤ 10 employees AND ≤ $250k revenue |
 | **MCP Subscription** | Monthly | Anyone who wants MCP + versioning API |
-| **Enterprise** | Yearly | Above both OSS thresholds |
+| **Enterprise** | Yearly | Above either OSS threshold |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
 
