@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/readme/features.svg" alt="Fuutu Stack — enterprise features, autonomous AI workflow, agent harness, and tech stack" width="100%" />
+  <img src="./assets/readme/features.svg" alt="Fuutu Stack — enterprise features, AI-ready agent setup, and tech stack" width="100%" />
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@ pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 
 A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.js 16, Hono, oRPC, Better Auth, Prisma, TailwindCSS v4. Every domain (mail, payments, storage, analytics, AI, search) is behind a provider interface with one active implementation and skeletons (stubs that throw until implemented) for the rest. Swap Plunk for Resend, Creem for Stripe, S3 for Cloudflare R2 — without touching business logic.
 
-**AI-native**: built-in MCP (Model Context Protocol) integration so LLM agents can discover and operate your project. AI provider-swappable (OpenRouter / Google / OpenAI / Anthropic / Noop).
+**AI-ready**: ships an `AGENTS.md`, Claude Code config and workflow skills so coding agents work with the kit's conventions from the first prompt, plus an MCP server foundation for your own app. AI provider-swappable (OpenRouter / Google / OpenAI / Anthropic / Noop).
 
 ---
 
@@ -86,8 +86,8 @@ Every domain behind an interface — swap providers without touching business lo
 ### AI-Native
 - **AI provider-swappable** — OpenRouter / Google / OpenAI / Anthropic / Noop
 - **Chat module** — conversations, messages, streaming
-- **MCP-ready** — Model Context Protocol integration for LLM agents
-- **AI agent harness** via Fuutu MCP (see Developer Experience below)
+- **MCP server foundation** — `/api/mcp` with public/authenticated tools, API-key auth, rate limiting (`@fuutu/mcp`)
+- **AI agent setup** — `AGENTS.md`, Claude Code config, workflow skills (see AI-ready below)
 
 ### App Modules (SaaS)
 - **Dashboard** — overview, activity feed
@@ -103,7 +103,7 @@ Every domain behind an interface — swap providers without touching business lo
 ### Infrastructure
 - **Turborepo** + pnpm workspaces (version-catalog)
 - **Biome** — format + lint (replaces ESLint + Prettier)
-- **Vitest** — unit + integration tests (854+ passing, 93% coverage)
+- **Vitest** — 1,900+ unit + integration tests
 - **Playwright** — E2E tests (saas + marketing)
 - **Telemetry** — build-time + runtime, non-blocking
 - **License compliance** — 5 fingerprint emission points, kit integrity
@@ -154,52 +154,50 @@ Detailed architecture: **[fuutustack.com/docs/architecture](https://fuutustack.c
 
 ---
 
-## MCP Integration
+## Name & version — kit vs. your app
 
-Fuutu publishes a separate MCP (Model Context Protocol) server that lets LLM agents — Claude Desktop, Cursor, Windsurf — discover Fuutu-Stack projects and call managed tools against them.
+Two independent identities. Never mix them up.
 
-This repository contains the **integration point** for that server. No MCP runtime is bundled. To enable:
+| | **Your app** | **The kit** (Fuutu's) |
+|---|---|---|
+| What | The product you build on the kit | The Fuutu Stack release you are based on |
+| Name | `config.app.name` in `packages/config/index.ts` — titles, manifest, auth/onboarding copy, 2FA issuer, passkey RP name, API title | `KIT_NAME` (`Fuutu-Stack`) |
+| Version source | root `package.json` → `"version"` (starts at `0.0.0`) | `KIT_VERSION` in `packages/config/index.ts` |
+| Runtime | `APP_VERSION` from `@fuutu/config/app-version` · `/api/version` → `app.version` · OpenAPI `info.version` | `KIT_VERSION` · `/api/version` → `version` · `X-Framework` header · `<meta name="generator">` |
+| Who changes it | You — `pnpm version patch\|minor\|major` or `.github/workflows/version.yml` | Only Fuutu. It changes when you **merge a kit update** — never edit it by hand |
+| Git tags | `vX.Y.Z` | `kit-vX.Y.Z` |
 
-1. Copy `fuutu.config.example.ts` to `fuutu.config.ts` in the repo root
-2. Fill in `projectId` (issued at [fuutustack.com](https://fuutustack.com))
-3. Point your MCP-aware editor at the Fuutu MCP server
+Why `KIT_NAME` / `KIT_VERSION` are read-only: the Fuutu MCP serves docs, rules and skills matched to it, support identifies your base release by it, and it is part of the kit fingerprint (LICENSE.md §6(5), §7). A wrong value means wrong AI guidance and unactionable bug reports.
 
-`fuutu.config.ts` is gitignored by default — keep it local unless you want every developer to share the same `projectId`.
+Automated app releases: `.github/workflows/version.yml` computes the next semver from your conventional commits (`feat` → minor, `fix`/`perf` → patch, `!`/`BREAKING CHANGE` → major) via the Fuutu versioning API and tags `vX.Y.Z`. Merged kit updates count as a single merge commit — upstream commits never bump your app version.
 
 ---
 
-## Developer Experience — Extension + MCP
+## Deployment
 
-### VS Code Extension
+Docker (per-app `Dockerfile`s + `docker-compose.deploy.yml`) and Coolify (Dockerfile or Railpack). See **[DEPLOY.md](./DEPLOY.md)**.
 
-**"Fuutu Stack Companion"** — available in the VS Code Marketplace. Works in VS Code and Cursor.
+---
 
-- **Project Health** — port monitor, kill ports, service status at a glance
-- **Commands Panel** — run any pnpm script with one click
-- **Docs & Wiki** — architecture, rules, and guides in-sidebar
-- **13 commands** — dev, build, check, check-types, db:studio, kill port, open config…
-- **Infisical support** — prefix commands with `infisical run --` for secret injection
+## AI-ready
 
-### Fuutu MCP
+### In the repo — free, works without any subscription
 
-The AI agent harness — skills, subagents, and coding rules — is delivered via the **Fuutu MCP server**, not bundled in this repo. Point your MCP-aware editor (Cursor, Devin, Windsurf, VS Code) at the Fuutu MCP server and the full harness activates. The MCP exposes **tool calls** — deterministic functions the LLM can invoke (scaffold, swap provider, check compliance) instead of guessing code from context.
+| What | Where |
+|---|---|
+| Agent instructions (read by Claude Code, Cursor, Codex, Copilot, Windsurf, …) | `AGENTS.md` (+ `CLAUDE.md` → `@AGENTS.md`) |
+| Workflow skills — brainstorming, writing-plans, TDD, systematic-debugging, verification, browser-verification, commit-proposal | `.claude/skills/` (mirrored at `.agents/skills/`) |
+| Kit skill stubs — add entity, add API procedure, swap provider, connect payments, code review — each with a no-MCP fallback | `.claude/skills/fuutu-*` |
+| Skill catalog | `fuutu.skills.json` |
+| Claude Code project config (Fuutu MCP server, permissions) | `.mcp.json`, `.claude/settings.json` |
 
-| Layer | Count | What it does |
-|---|---|---|
-| **Skills** | 30 | TDD, brainstorming, systematic-debugging, browser-verification, self-learning, commit-proposal, review… — auto-invoked based on task context |
-| **Subagents** | 5 | Scan/read, code/TDD, run/verify, cross-reference, architecture — cost-tiered, parallel dispatch |
-| **Rules** | 21 | global, auth, backend, frontend, ui, testing, security, i18n, rbac, logging, license, review… — enforced, not suggestions |
-| **Multi-host** | 4 editors | Cursor · Devin · Windsurf · VS Code |
+### MCP server for your own app
 
-Beyond the agent harness, the MCP server also provides:
+`@fuutu/mcp` (official MCP TypeScript SDK v2) is mounted at `/api/mcp`. Define tools with `defineMcpTool` and mark each `public`, `authenticated` or a custom rule (role, scope, org). Callers authenticate with an organization API key carrying the `mcp` scope; anonymous callers only see public tools. Two example tools ship: `app_info` (public) and `whoami` (authenticated). Configure it under `apiConfig.mcp` (`packages/api/src/config.ts`).
 
-- **Project Scaffolding** — "add a new package", "create a route with auth guard", "scaffold a new module" — generates code that follows Fuutu conventions by default
-- **Provider Swaps** — "swap Plunk for Resend", "switch Creem to Stripe" — generates the active implementation from the provider interface
-- **Versioning API** — Kit updates, breaking-change alerts, auto-migration suggestions when a new Fuutu Stack version drops
-- **Compliance Check** — verifies all 5 fingerprint emission points, license validity, telemetry setup
-- **Smart Debugging** — send errors to the MCP, it knows the Fuutu codebase structure and can pinpoint root causes
+### Fuutu MCP — subscription
 
-**Default workflow:** `brainstorm → plan → implement (TDD) → verify → browser-check → commit`. Subagents are dispatched in parallel, each at the cheapest capable cost tier.
+Connects your coding agent to Fuutu's MCP server (already configured in `.mcp.json` — set `FUUTU_MCP_API_KEY`). It serves docs, per-domain rules and the full kit skills **matched to your `KIT_VERSION`**, plus the versioning API used by `.github/workflows/version.yml`. Without a key, everything in the repo keeps working.
 
 ---
 

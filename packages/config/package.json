@@ -7,6 +7,9 @@
 		".": {
 			"default": "./index.ts"
 		},
+		"./app-version": {
+			"default": "./app-version.ts"
+		},
 		"./theme.css": {
 			"style": "./theme.css",
 			"default": "./theme.css"

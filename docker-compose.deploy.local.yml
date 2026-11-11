@@ -1,0 +1,35 @@
+# Local rehearsal override — runs the deploy stack next to `pnpm dev`
+# (ports 3000/3001/4000/5432 stay free):
+#
+#   docker compose -f docker-compose.deploy.yml -f docker-compose.deploy.local.yml up -d --build
+#
+# NEXT_PUBLIC_* is baked at build time, so the remapped URLs are build args.
+x-public-urls: &public-urls
+  NEXT_PUBLIC_MARKETING_URL: http://localhost:3101
+  NEXT_PUBLIC_SAAS_URL: http://localhost:3100
+  NEXT_PUBLIC_DOCS_URL: http://localhost:4100
+
+services:
+  postgres:
+    ports:
+      - "5444:5432"
+  web-marketing:
+    build:
+      args: *public-urls
+    ports: !override
+      - "3101:3001"
+  web-docs:
+    build:
+      args: *public-urls
+    ports: !override
+      - "4100:4000"
+  app:
+    build:
+      args:
+        NEXT_PUBLIC_MARKETING_URL: http://localhost:3101
+        NEXT_PUBLIC_SAAS_URL: http://localhost:3100
+    environment:
+      BETTER_AUTH_URL: http://localhost:3100
+      CORS_ORIGIN: http://localhost:3101
+    ports: !override
+      - "3100:3000"

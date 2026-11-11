@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -26,13 +27,13 @@ export async function generateMetadata({
 	}
 
 	return {
-		title: t("metaTitle"),
+		title: t("metaTitle", { appName: config.app.name }),
 		description: t("metaDescription"),
 		alternates: {
 			languages,
 		},
 		openGraph: {
-			title: t("metaTitle"),
+			title: t("metaTitle", { appName: config.app.name }),
 			description: t("metaDescription"),
 			locale,
 		},
@@ -48,13 +49,13 @@ export default async function HomePage({ params }: HomePageProps) {
 		<HomeLayout
 			{...baseOptions()}
 			nav={{
-				title: t("title"),
+				title: t("title", { appName: config.app.name }),
 				children: <LocaleSwitcher />,
 			}}
 		>
 			<div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
 				<h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
-					{t("title")}
+					{t("title", { appName: config.app.name })}
 				</h1>
 				<p className="mb-2 text-fd-muted-foreground text-lg">{t("subtitle")}</p>
 				<p className="mb-8 max-w-2xl text-fd-muted-foreground">

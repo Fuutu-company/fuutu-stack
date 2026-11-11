@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { getPost } from "@fuutu/content";
 import { ImageResponse } from "next/og";
 import { getTranslations } from "next-intl/server";
@@ -14,19 +15,17 @@ export async function generateImageMetadata({ params }: OgImageProps) {
 	// Build-time collection calls this once with empty params; the real
 	// per-post call happens at request time.
 	if (!slug) return [];
-	const tApp = await getTranslations({ locale, namespace: "app" });
 	const t = await getTranslations({ locale, namespace: "blog" });
-	return [{ id: slug, alt: `${tApp("brand")} — ${t("title")}` }];
+	return [{ id: slug, alt: `${config.app.name} — ${t("title")}` }];
 }
 
 export default async function BlogOgImage({ params }: OgImageProps) {
 	const { locale, slug } = await params;
-	const tApp = await getTranslations({ locale, namespace: "app" });
 	const t = await getTranslations({ locale, namespace: "blog" });
 	const post = getPost(slug);
 	// Drafts must not leak through OG tags — same gate as the page route.
 	const visiblePost = post && !post.frontmatter.draft ? post : null;
-	const title = visiblePost?.frontmatter.title ?? tApp("brand");
+	const title = visiblePost?.frontmatter.title ?? config.app.name;
 	const description = visiblePost?.frontmatter.description ?? "";
 
 	return new ImageResponse(
@@ -52,7 +51,7 @@ export default async function BlogOgImage({ params }: OgImageProps) {
 					display: "flex",
 				}}
 			>
-				{tApp("brand")} · {t("title")}
+				{config.app.name} · {t("title")}
 			</div>
 			<div
 				style={{

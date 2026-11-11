@@ -1,8 +1,7 @@
 {
 	"app": {
-		"brand": "Fuutu Stack",
 		"tagline": "Starter Stack",
-		"description": "Fuutu Stack - Modern SaaS Starter",
+		"description": "{appName} - Modern SaaS Starter",
 		"groupApplication": "Application",
 		"groupAdministration": "Administration"
 	}

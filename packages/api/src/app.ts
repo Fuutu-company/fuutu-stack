@@ -1,11 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import { auth } from "@fuutu/auth";
 import {
+	config,
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 	KIT_NAME,
 	KIT_VERSION,
 } from "@fuutu/config";
+import { APP_VERSION } from "@fuutu/config/app-version";
 import { runAllJobs, runJob } from "@fuutu/cron";
 import { env } from "@fuutu/env/saas";
 import { checkLicense, getLicenseMode } from "@fuutu/license";
@@ -15,7 +17,10 @@ import { pingTelemetry } from "@fuutu/telemetry";
 import { Hono, type Context as HonoContext } from "hono";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+import { apiConfig } from "./config";
 import { createContext } from "./context";
+import { handleMcpRequest } from "./mcp";
+import { isOriginAllowed } from "./origin-guard";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
 
 const log = createLogger({ scope: "api" });
@@ -94,7 +99,7 @@ export const app = new Hono<{
 	)
 	// CSRF guard for mutating requests — defense in depth on top of
 	// SameSite=Lax cookies. Browsers always send `Origin` on cross-site
-	// posts; when present it must match this host or the configured
+	// posts; when present it must match this app (BETTER_AUTH_URL) or the configured
 	// CORS_ORIGIN. Requests without an Origin (server-to-server webhooks,
 	// cron triggers, API-key clients) carry no ambient cookies and pass.
 	.use("*", async (c, next) => {
@@ -106,16 +111,12 @@ export const app = new Hono<{
 		if (!origin) {
 			return next();
 		}
-		try {
-			const originHost = new URL(origin).host;
-			const allowed = new Set([new URL(c.req.url).host]);
-			if (env.CORS_ORIGIN) {
-				allowed.add(new URL(env.CORS_ORIGIN).host);
-			}
-			if (!allowed.has(originHost)) {
-				return c.json({ error: "forbidden_origin" }, 403);
-			}
-		} catch {
+		const allowed = isOriginAllowed(origin, {
+			requestUrl: c.req.url,
+			appUrl: env.BETTER_AUTH_URL,
+			corsOrigin: env.CORS_ORIGIN,
+		});
+		if (!allowed) {
 			return c.json({ error: "forbidden_origin" }, 403);
 		}
 		return next();
@@ -129,6 +130,7 @@ export const app = new Hono<{
 			// License-mode reporting surface (LICENSE.md §6(5)) — reads the
 			// cache warmed by the boot-time checkLicense(), never blocks.
 			licenseMode: getLicenseMode(),
+			app: { name: config.app.name, version: APP_VERSION },
 		}),
 	)
 	// Mounted **before** createContext middleware: payment providers sign
@@ -137,6 +139,11 @@ export const app = new Hono<{
 	// line or signature verification will break.
 	// BYPASS: provider HMAC signature over raw body — mounted before contextMiddleware, do not move
 	.all("/webhooks/payments", (c) => handlePaymentsWebhook(c.req.raw))
+	// MCP server — authenticates per request via org API key (src/mcp/),
+	// so it is mounted before createContext like the other machine routes.
+	.all("/mcp", (c) =>
+		apiConfig.mcp.enabled ? handleMcpRequest(c.req.raw) : c.notFound(),
+	)
 	// Cron trigger — mounted before createContext: external schedulers
 	// (Vercel Cron, cron-job.org, GitHub Actions) authenticate via
 	// `Authorization: Bearer ${CRON_SECRET}`, not a session cookie.

@@ -1,5 +1,6 @@
 "use client";
 
+import { config } from "@fuutu/config";
 import { BrandLogo, Button } from "@fuutu/ui";
 import { LocaleSwitcher } from "@shared/components";
 import type { LucideIcon } from "lucide-react";
@@ -436,11 +437,11 @@ export function MarketingNavbar() {
 					<Link href="/" className="flex shrink-0 items-center gap-2.5">
 						<BrandLogo
 							size="xl"
-							alt={t("app.brand")}
+							alt={config.app.name}
 							className="size-9 dark:invert"
 						/>
 						<span className="font-semibold text-foreground text-sm tracking-tight">
-							{t("app.brand")}
+							{config.app.name}
 						</span>
 					</Link>
 

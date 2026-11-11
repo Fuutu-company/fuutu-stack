@@ -1,12 +1,13 @@
+import { config } from "@fuutu/config";
 import type { MetadataRoute } from "next";
 import { getTranslations } from "next-intl/server";
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
 	const t = await getTranslations("app");
 	return {
-		name: t("brand"),
-		short_name: t("brand"),
-		description: t("description"),
+		name: config.app.name,
+		short_name: config.app.name,
+		description: t("description", { appName: config.app.name }),
 		start_url: "/",
 		display: "standalone",
 		background_color: "#ffffff",

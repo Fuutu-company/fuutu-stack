@@ -95,6 +95,19 @@ export const apiConfig = {
 	 * feature. Empty = no feature gates.
 	 */
 	apiKeyScopeFeatures: {} as Record<string, string>,
+	/**
+	 * MCP server at `/api/mcp` (tools in `src/mcp/`). Callers authenticate
+	 * with an organization API key carrying the `mcp` scope.
+	 * - `auth: "optional"`: anonymous callers see only `access: "public"` tools
+	 * - `auth: "required"`: anonymous callers get 401
+	 */
+	mcp: {
+		enabled: true,
+		auth: "optional" as "optional" | "required",
+		/** Always-loaded guidance for connected agents (keep < 4 KB). */
+		instructions: undefined as string | undefined,
+		rateLimit: { maxRequests: 120, windowMs: 60 * 1000 },
+	},
 } as const;
 
 export type ApiConfig = typeof apiConfig;

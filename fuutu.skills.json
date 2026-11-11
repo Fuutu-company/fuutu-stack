@@ -1,0 +1,41 @@
+{
+	"$comment": "Agent skills shipped with the kit. source=repo: full skill in .claude/skills/<name>/. source=mcp: stub in .claude/skills/<name>/ — the full, version-matched skill is served by the Fuutu MCP server (skills_get). Your own skills may live in .claude/skills/ without an entry here.",
+	"skills": [
+		{ "name": "brainstorming", "source": "repo", "category": "workflow" },
+		{ "name": "writing-plans", "source": "repo", "category": "workflow" },
+		{
+			"name": "test-driven-development",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "systematic-debugging",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "verification-before-completion",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "browser-verification",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{ "name": "commit-proposal", "source": "repo", "category": "workflow" },
+		{ "name": "fuutu-add-entity", "source": "mcp", "category": "blueprint" },
+		{ "name": "fuutu-add-procedure", "source": "mcp", "category": "blueprint" },
+		{
+			"name": "fuutu-swap-provider",
+			"source": "mcp",
+			"category": "integration"
+		},
+		{
+			"name": "fuutu-connect-payments",
+			"source": "mcp",
+			"category": "integration"
+		},
+		{ "name": "fuutu-code-review", "source": "mcp", "category": "workflow" }
+	]
+}

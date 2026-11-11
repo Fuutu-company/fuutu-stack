@@ -82,6 +82,14 @@ test.describe("API health", () => {
 		expect(body.name).toBe("Fuutu-Stack");
 		expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
 	});
+
+	test("/api/version reports the app version separately from the kit", async ({
+		request,
+	}) => {
+		const res = await request.get("/api/version");
+		const body = (await res.json()) as { app?: { version?: string } };
+		expect(body.app?.version).toMatch(/^\d+\.\d+\.\d+/);
+	});
 });
 
 test.describe("security headers + kit fingerprint", () => {

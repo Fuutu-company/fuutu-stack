@@ -25,8 +25,12 @@ build
 *~
 .DS_Store
 
-# AI agent tooling (served via MCP, never in repo)
-.claude
+# AI agent tooling — shared Claude Code config + skills are committed;
+# personal settings and local overlays are not.
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+CLAUDE.local.md
 .fuutu/*
 # Exception: visual regression baselines ARE committed (linux CI snapshots)
 !.fuutu/visual-baselines/
@@ -78,7 +82,6 @@ temp
 *.next
 
 # Fuutu MCP local config (T-083)
-fuutu.config.ts
 
 # shadcn staging area
 .shadcn-staging/

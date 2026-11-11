@@ -30,21 +30,21 @@
     <text x="170" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">packages</text>
 
     <rect x="310" y="150" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="440" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">93%</text>
-    <text x="440" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">test coverage</text>
+    <text x="440" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">6</text>
+    <text x="440" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">swappable provider domains</text>
 
     <rect x="580" y="150" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="710" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">854</text>
+    <text x="710" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">1,900+</text>
     <text x="710" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">tests passing</text>
 
     <!-- Row 2 -->
     <rect x="40" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="170" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">10+</text>
-    <text x="170" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">AI agents parallel</text>
+    <text x="170" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">MCP</text>
+    <text x="170" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">server built in</text>
 
     <rect x="310" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="440" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">4</text>
-    <text x="440" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">production apps</text>
+    <text x="440" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">3</text>
+    <text x="440" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">deployable apps</text>
 
     <rect x="580" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
     <text x="710" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">0</text>

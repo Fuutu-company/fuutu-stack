@@ -56,11 +56,11 @@ export function AppSidebar() {
 				<Link href="/dashboard" className="flex items-center gap-2.5 px-2 py-2">
 					<BrandLogo
 						size="md"
-						alt={t("app.brand")}
+						alt={config.app.name}
 						className="size-7 dark:invert"
 					/>
 					<span className="font-semibold text-foreground text-sm tracking-tight group-data-[collapsible=icon]:hidden">
-						{t("app.brand")}
+						{config.app.name}
 					</span>
 				</Link>
 

@@ -26,6 +26,7 @@
 		"@fuutu/env": "workspace:*",
 		"@fuutu/license": "workspace:*",
 		"@fuutu/logs": "workspace:*",
+		"@fuutu/mcp": "workspace:*",
 		"@fuutu/payments": "workspace:*",
 		"@fuutu/rbac": "workspace:*",
 		"@fuutu/search": "workspace:*",

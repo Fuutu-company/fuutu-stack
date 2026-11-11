@@ -1,5 +1,5 @@
 import "./global.css";
-import { KIT_GENERATOR_META } from "@fuutu/config";
+import { config, KIT_GENERATOR_META } from "@fuutu/config";
 import type { Locale } from "@fuutu/i18n";
 import { getDirection } from "@fuutu/i18n";
 import { getBaseUrl } from "@fuutu/utils";
@@ -23,7 +23,7 @@ export const metadata = {
 	},
 	openGraph: {
 		type: "website",
-		siteName: "Fuutu Stack Docs",
+		siteName: `${config.app.name} Docs`,
 		images: [{ url: "/og-image.png", width: 1200, height: 630 }],
 	},
 	twitter: {

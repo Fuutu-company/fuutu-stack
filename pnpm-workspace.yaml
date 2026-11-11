@@ -11,6 +11,8 @@ catalog:
   deepmerge: ^4.3.1
   "@types/node": ^26.6.3
   "@t3-oss/env-nextjs": ^0.13.11
+  # MCP — pinned exactly: the v2 SDK ships minors every few weeks
+  "@modelcontextprotocol/server": 2.4.0
   # Next.js / React
   next: ^16.4.2
   react: ^19.3.0

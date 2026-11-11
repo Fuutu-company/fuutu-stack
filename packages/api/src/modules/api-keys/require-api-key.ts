@@ -1,10 +1,8 @@
 import { verifyApiKeyWithOwner } from "@fuutu/db";
-import { env } from "@fuutu/env/saas";
-import { getOrgEntitlement } from "@fuutu/payments";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { apiConfig } from "../../config";
 import { API_KEY_HEADER } from "../../context";
+import { findMissingScopeFeature } from "./scope-feature";
 
 const jsonResponse = (status: number, body: Record<string, unknown>) =>
 	new Response(JSON.stringify(body), {
@@ -64,19 +62,9 @@ export const requireApiKey = async (
 		throw httpError(401, { error: "invalid_api_key" });
 	}
 
-	const feature = apiConfig.apiKeyScopeFeatures[scope];
-	if (feature) {
-		const entitlement = await getOrgEntitlement(apiKey.organizationId);
-		if (!entitlement.features.includes(feature)) {
-			const upgradeUrl = env.NEXT_PUBLIC_MARKETING_URL
-				? `${env.NEXT_PUBLIC_MARKETING_URL}/pricing`
-				: "/pricing";
-			throw httpError(402, {
-				error: "upgrade_required",
-				feature,
-				upgradeUrl,
-			});
-		}
+	const missing = await findMissingScopeFeature(apiKey.organizationId, scope);
+	if (missing) {
+		throw httpError(402, { error: "upgrade_required", ...missing });
 	}
 
 	return { orgId: apiKey.organizationId, keyId: apiKey.id };

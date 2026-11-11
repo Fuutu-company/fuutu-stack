@@ -1,0 +1,12 @@
+{
+	"mcpServers": {
+		"fuutu": {
+			"type": "http",
+			"url": "https://app.fuutustack.com/api/mcp",
+			"headers": {
+				"Authorization": "Bearer ${FUUTU_MCP_API_KEY:-}",
+				"X-Fuutu-Kit-Version": "1.0.0"
+			}
+		}
+	}
+}

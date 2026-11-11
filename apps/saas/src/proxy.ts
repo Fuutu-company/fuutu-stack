@@ -54,6 +54,10 @@ const PUBLIC_PREFIXES = [
 	// `Authorization: Bearer ${CRON_SECRET}` (shared secret), not a session
 	// cookie. The Hono route returns 501 when the secret is unset.
 	"/api/cron",
+	// reason: MCP endpoint — clients authenticate per request with an org
+	// API key (`Authorization: Bearer`, `mcp` scope) verified by
+	// resolveMcpPrincipal; anonymous callers only reach `public` tools.
+	"/api/mcp",
 	"/auth",
 	"/image-proxy",
 ] as const;

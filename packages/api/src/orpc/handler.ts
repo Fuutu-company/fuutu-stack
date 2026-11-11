@@ -1,4 +1,5 @@
-import { config, KIT_VERSION } from "@fuutu/config";
+import { config } from "@fuutu/config";
+import { APP_VERSION } from "@fuutu/config/app-version";
 import { createLogger } from "@fuutu/logs";
 import { withEvlog } from "@fuutu/logs/orpc";
 import type { OpenAPI } from "@orpc/openapi";
@@ -36,7 +37,7 @@ export const openApiHandler = withEvlog(
 					return {
 						info: {
 							title: `${config.app.name} API`,
-							version: KIT_VERSION,
+							version: APP_VERSION,
 							description: "Type-safe API built with oRPC",
 						},
 						servers: [{ url: "/api" }],

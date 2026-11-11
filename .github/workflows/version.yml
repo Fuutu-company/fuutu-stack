@@ -1,18 +1,24 @@
 name: Version
 run-name: ${{ vars.FUUTU_VERSIONING_ENABLED == 'true' && 'Version' || 'Versioning disabled — set FUUTU_VERSIONING_ENABLED=true' }}
 
-# Automated kit versioning — requires a Fuutu versioning API key
-# (MCP Subscription / Enterprise). Disabled by default; enable by setting
-# the repository variable FUUTU_VERSIONING_ENABLED=true, plus:
+# Automated semantic versioning of YOUR APP — requires a Fuutu versioning
+# API key (MCP Subscription / Enterprise). Disabled by default; enable by
+# setting the repository variable FUUTU_VERSIONING_ENABLED=true, plus:
 #   variable FUUTU_VERSIONING_API_URL  — e.g. https://app.fuutustack.com
 #   secret   FUUTU_VERSIONING_API_KEY  — org key with `versioning` scope
 # (Settings → Secrets and variables → Actions).
 #
 # On every push to main the conventional-commit subjects since the last
 # git tag are sent to POST <FUUTU_VERSIONING_API_URL>/api/versioning/next;
-# the returned nextVersion is written to KIT_VERSION (packages/config +
-# packages/telemetry ping copy) and every workspace package.json tracking
-# the kit version, then committed and tagged by the bot.
+# the returned nextVersion is written to the root package.json `version`
+# (= APP_VERSION), then committed and tagged by the bot.
+#
+# Two version lines exist — see docs "Versioning":
+#   APP_VERSION  root package.json  → yours, bumped here
+#   KIT_VERSION  packages/config    → Fuutu's, changes only when you merge
+#                                     a kit update. Never edit it.
+# Only the upstream kit repository (Fuutu-company/fuutu-stack) bumps
+# KIT_VERSION with this workflow.
 
 on:
   push:
@@ -63,16 +69,41 @@ jobs:
         with:
           db-generate: "false"
 
+      - name: Select version target
+        id: target
+        run: |
+          if [ "${{ github.repository }}" = "Fuutu-company/fuutu-stack" ]; then
+            echo "kind=kit" >> "$GITHUB_OUTPUT"
+            echo "tag=kit-v" >> "$GITHUB_OUTPUT"
+            CURRENT=$(node -p "require('fs').readFileSync('packages/config/index.ts','utf8').match(/KIT_VERSION = \"([^\"]+)\"/)[1]")
+          else
+            echo "kind=app" >> "$GITHUB_OUTPUT"
+            echo "tag=v" >> "$GITHUB_OUTPUT"
+            CURRENT=$(node -p "require('./package.json').version")
+          fi
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+
       - name: Collect commits since last tag
         id: commits
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
         run: |
-          LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          # Kit releases are tagged kit-vX.Y.Z, app releases vX.Y.Z — buyers
+          # clone the kit's tags, so the two lines must never collide.
+          LAST_TAG="$(git describe --tags --abbrev=0 --match "${TAG}[0-9]*" 2>/dev/null || true)"
+          # First app release: start after the kit release you cloned instead
+          # of scanning the whole kit history.
+          if [ -z "$LAST_TAG" ] && [ "$TAG" = "v" ]; then
+            LAST_TAG="$(git describe --tags --abbrev=0 --match "kit-v[0-9]*" 2>/dev/null || true)"
+          fi
           if [ -n "$LAST_TAG" ] && [ "$(git rev-parse "$LAST_TAG^{commit}")" = "$(git rev-parse HEAD)" ]; then
             echo "::notice::HEAD is already tagged $LAST_TAG — nothing to version."
             echo "skip=1" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git log --pretty=%s ${LAST_TAG:+$LAST_TAG..}HEAD | jq -R . | jq -s . > commits.json
+          # --first-parent: a merged kit update counts as one merge commit,
+          # its upstream feat:/fix: subjects never bump the app version.
+          git log --first-parent --pretty=%s ${LAST_TAG:+$LAST_TAG..}HEAD | jq -R . | jq -s . > commits.json
           if [ "$(jq length commits.json)" -eq 0 ]; then
             echo "::notice::No commits since last tag — nothing to version."
             echo "skip=1" >> "$GITHUB_OUTPUT"
@@ -84,9 +115,8 @@ jobs:
         env:
           API_URL: ${{ vars.FUUTU_VERSIONING_API_URL }}
           API_KEY: ${{ secrets.FUUTU_VERSIONING_API_KEY }}
+          CURRENT: ${{ steps.target.outputs.current }}
         run: |
-          CURRENT=$(node -p "require('fs').readFileSync('packages/config/index.ts','utf8').match(/KIT_VERSION = \"([^\"]+)\"/)[1]")
-          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
           jq -n --arg v "$CURRENT" --slurpfile c commits.json \
             '{framework:"fuutu-stack", currentVersion:$v, commits:$c[0]}' > body.json
           curl --fail-with-body -sS -X POST "$API_URL/api/versioning/next" \
@@ -94,37 +124,43 @@ jobs:
             -H "Content-Type: application/json" \
             -d @body.json -o response.json
           NEXT=$(jq -r '.nextVersion // empty' response.json)
+          if [ -z "$NEXT" ] || [ "$NEXT" = "$CURRENT" ]; then
+            echo "::notice::No releasable commits (docs/chore/…) — version stays $CURRENT."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
           echo "next=$NEXT" >> "$GITHUB_OUTPUT"
           jq '{bump, nextVersion, rationale}' response.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Write version, commit and tag
-        if: steps.commits.outputs.skip != '1'
+        if: steps.commits.outputs.skip != '1' && steps.api.outputs.skip != '1'
         env:
-          CURRENT: ${{ steps.api.outputs.current }}
+          KIND: ${{ steps.target.outputs.kind }}
+          TAG: ${{ steps.target.outputs.tag }}
+          CURRENT: ${{ steps.target.outputs.current }}
           NEXT: ${{ steps.api.outputs.next }}
         run: |
-          # KIT_VERSION — fingerprint source of truth + the telemetry ping
-          # copy, which must stay in sync on every release.
-          sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/config/index.ts
-          sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/telemetry/bin/ping.mjs
-          # Workspace package.json files tracking the kit version (apps/*).
-          # Unpublished packages stay at 0.0.0 per the release convention.
-          node -e '
-            const fs = require("fs");
-            const { execSync } = require("child_process");
-            const files = execSync("git ls-files \"**/package.json\"").toString().trim().split("\n");
-            for (const f of files) {
-              const pkg = JSON.parse(fs.readFileSync(f, "utf8"));
-              if (pkg.version === process.env.CURRENT) {
-                pkg.version = process.env.NEXT;
-                fs.writeFileSync(f, JSON.stringify(pkg, null, "\t") + "\n");
-              }
-            }
-          '
+          if [ "$KIND" = "kit" ]; then
+            # Kit release (upstream repo only): fingerprint source of truth +
+            # the telemetry ping + .mcp.json copies, which must stay in sync.
+            sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/config/index.ts
+            sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/telemetry/bin/ping.mjs
+            sed -i "s/\"X-Fuutu-Kit-Version\": \"$CURRENT\"/\"X-Fuutu-Kit-Version\": \"$NEXT\"/" .mcp.json
+            TITLE="Fuutu Stack v$NEXT"
+          else
+            # App release: root package.json is the single APP_VERSION source.
+            node -e '
+              const fs = require("fs");
+              const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+              pkg.version = process.env.NEXT;
+              fs.writeFileSync("package.json", JSON.stringify(pkg, null, "\t") + "\n");
+            '
+            TITLE="v$NEXT"
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -u # tracked modifications only — temp JSON files stay untracked
-          git commit -m "chore(release): v$NEXT"
-          git tag -a "v$NEXT" -m "Fuutu Stack v$NEXT"
+          git commit -m "chore(release): $TAG$NEXT"
+          git tag -a "$TAG$NEXT" -m "$TITLE"
           git push --follow-tags

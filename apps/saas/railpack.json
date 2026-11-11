@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schema.railpack.com",
+	"packages": { "node": "24" },
+	"steps": {
+		"build": {
+			"commands": [
+				"DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm --filter @fuutu/db exec prisma generate",
+				"node packages/telemetry/bin/ping.mjs || true",
+				"SKIP_ENV_VALIDATION=1 pnpm --filter @fuutu/saas build",
+				"cp -r apps/saas/.next/static apps/saas/.next/standalone/apps/saas/.next/static",
+				"cp -r apps/saas/public apps/saas/.next/standalone/apps/saas/public"
+			]
+		}
+	},
+	"deploy": {
+		"inputs": [
+			{
+				"step": "packages:mise",
+				"include": [
+					"/mise/shims",
+					"/mise/installs",
+					"/usr/local/bin/mise",
+					"/etc/mise/config.toml",
+					"/root/.local/state/mise"
+				]
+			},
+			{ "step": "build", "include": ["apps/saas/.next/standalone"] }
+		],
+		"startCommand": "node apps/saas/.next/standalone/apps/saas/server.js",
+		"variables": {
+			"HOSTNAME": "0.0.0.0",
+			"PORT": "3000",
+			"NODE_ENV": "production"
+		}
+	}
+}

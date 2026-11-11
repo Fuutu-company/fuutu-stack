@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { BrandLogo } from "@fuutu/ui";
 import { useTranslations } from "next-intl";
 import { urls } from "@/lib/urls";
@@ -51,7 +52,7 @@ export function MarketingFooter() {
 					<div className="md:col-span-1">
 						<div className="mb-4 flex items-center gap-2">
 							<BrandLogo size="md" className="dark:invert" />
-							<h3 className="font-semibold">{t("app.brand")}</h3>
+							<h3 className="font-semibold">{config.app.name}</h3>
 						</div>
 						<p className="text-muted-foreground text-sm">
 							{t("footer.tagline")}
@@ -89,7 +90,7 @@ export function MarketingFooter() {
 					))}
 				</div>
 				<div className="mt-8 border-t pt-8 text-center text-muted-foreground text-sm">
-					© {new Date().getFullYear()} {t("app.brand")}. {t("footer.rights")}
+					© {new Date().getFullYear()} {config.app.name}. {t("footer.rights")}
 				</div>
 			</div>
 		</footer>

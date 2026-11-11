@@ -1,6 +1,6 @@
 {
 	"onboarding": {
-		"title": "Willkommen bei Fuutu Stack",
+		"title": "Willkommen bei {appName}",
 		"description": "Lass uns dein Konto in wenigen Schritten einrichten.",
 		"step": "Schritt {current} von {total}",
 		"profile": {

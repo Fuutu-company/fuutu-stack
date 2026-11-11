@@ -2,6 +2,7 @@
 
 import { authClient } from "@fuutu/auth/client";
 import { getSafeRedirect } from "@fuutu/auth/redirect";
+import { config } from "@fuutu/config";
 import { env } from "@fuutu/env/saas";
 import {
 	AuthCard,
@@ -134,7 +135,7 @@ export function AuthSignIn({
 	return (
 		<AuthCard
 			title={t("signInForm.welcome")}
-			description={t("signInForm.subtitle")}
+			description={t("signInForm.subtitle", { appName: config.app.name })}
 			className={className}
 			footer={
 				<>

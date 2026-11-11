@@ -1,0 +1,99 @@
+# Reference deployment matching the Coolify topology in DEPLOY.md.
+# Single-file alternative for a plain Docker host / local rehearsal:
+#
+#   docker compose -f docker-compose.deploy.yml up -d --build
+#
+# Coolify itself does not consume this file — services there are created
+# individually from the same Dockerfiles.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fuutu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: fuutu-stack
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuutu -d fuutu-stack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web-marketing:
+    build:
+      context: .
+      dockerfile: apps/marketing/Dockerfile
+      args:
+        NEXT_PUBLIC_MARKETING_URL: ${NEXT_PUBLIC_MARKETING_URL:-http://localhost:3001}
+        NEXT_PUBLIC_SAAS_URL: ${NEXT_PUBLIC_SAAS_URL:-http://localhost:3000}
+        NEXT_PUBLIC_DOCS_URL: ${NEXT_PUBLIC_DOCS_URL:-http://localhost:4000}
+        NEXT_PUBLIC_ANALYTICS_PROVIDER: ${NEXT_PUBLIC_ANALYTICS_PROVIDER:-noop}
+        NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: ${NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN:-}
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
+        NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+
+  web-docs:
+    build:
+      context: .
+      dockerfile: apps/docs/Dockerfile
+      args:
+        NEXT_PUBLIC_MARKETING_URL: ${NEXT_PUBLIC_MARKETING_URL:-http://localhost:3001}
+        NEXT_PUBLIC_SAAS_URL: ${NEXT_PUBLIC_SAAS_URL:-http://localhost:3000}
+        NEXT_PUBLIC_DOCS_URL: ${NEXT_PUBLIC_DOCS_URL:-http://localhost:4000}
+        NEXT_PUBLIC_ANALYTICS_PROVIDER: ${NEXT_PUBLIC_ANALYTICS_PROVIDER:-noop}
+        NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: ${NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN:-}
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
+        NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+
+  app:
+    build:
+      context: .
+      dockerfile: apps/saas/Dockerfile
+      args:
+        NEXT_PUBLIC_MARKETING_URL: ${NEXT_PUBLIC_MARKETING_URL:-http://localhost:3001}
+        NEXT_PUBLIC_SAAS_URL: ${NEXT_PUBLIC_SAAS_URL:-http://localhost:3000}
+        NEXT_PUBLIC_ANALYTICS_PROVIDER: ${NEXT_PUBLIC_ANALYTICS_PROVIDER:-noop}
+        NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: ${NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN:-}
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
+        NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://fuutu:${POSTGRES_PASSWORD}@postgres:5432/fuutu-stack
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?openssl rand -base64 32}
+      BETTER_AUTH_URL: ${NEXT_PUBLIC_SAAS_URL:-http://localhost:3000}
+      CORS_ORIGIN: ${NEXT_PUBLIC_MARKETING_URL:-http://localhost:3001}
+      PAYMENTS_PROVIDER: ${PAYMENTS_PROVIDER:-noop}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      LOG_AUDIT_SINK: ${LOG_AUDIT_SINK:-db}
+      FUUTU_LICENSE_KEY: ${FUUTU_LICENSE_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  # One-shot migration runner — `migrator` stage of the app Dockerfile.
+  #   docker compose -f docker-compose.deploy.yml run --rm migrate
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/saas/Dockerfile
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://fuutu:${POSTGRES_PASSWORD}@postgres:5432/fuutu-stack
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["migrate"]
+
+volumes:
+  pgdata:

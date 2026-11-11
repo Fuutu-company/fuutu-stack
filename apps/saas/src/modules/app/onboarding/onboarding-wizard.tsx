@@ -126,7 +126,9 @@ export function OnboardingWizard({
 	return (
 		<div className="mx-auto flex w-full max-w-lg flex-col gap-6">
 			<div className="space-y-3 text-center">
-				<h1 className="font-semibold text-3xl tracking-tight">{t("title")}</h1>
+				<h1 className="font-semibold text-3xl tracking-tight">
+					{t("title", { appName: config.app.name })}
+				</h1>
 				<p className="text-muted-foreground">{t("description")}</p>
 			</div>
 			<Progress value={progress} />

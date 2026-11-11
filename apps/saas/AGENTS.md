@@ -10,4 +10,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Fuutu MCP
 
-When a Fuutu MCP key is configured, call the MCP tools (`docs.search` / `docs.get` / `rules.get`) for current framework details instead of guessing — see root `AGENTS.md` → "§ Fuutu MCP".
+If the `fuutu` MCP server is connected, call `docs_search` / `rules_get` for framework details instead of guessing — see root `AGENTS.md` §2.
