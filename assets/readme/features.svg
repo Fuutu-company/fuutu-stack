@@ -195,8 +195,8 @@
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400" fill="#F7F8F8">
     <text x="56" y="1330">· AGENTS.md + CLAUDE.md — any agent</text>
-    <text x="56" y="1354">· 7 workflow skills — TDD, debugging…</text>
-    <text x="56" y="1378">· 5 kit skill stubs — entity, API…</text>
+    <text x="56" y="1354">· 9 workflow skills — TDD, debugging…</text>
+    <text x="56" y="1378">· 5 kit skills — entity, API, payments…</text>
     <text x="56" y="1402">· .mcp.json — Claude Code ready</text>
     <text x="56" y="1426">· MCP server for your own app</text>
   </g>

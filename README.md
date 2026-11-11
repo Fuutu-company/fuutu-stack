@@ -169,7 +169,7 @@ Two independent identities. Never mix them up.
 
 Why `KIT_NAME` / `KIT_VERSION` are read-only: the Fuutu MCP serves docs, rules and skills matched to it, support identifies your base release by it, and it is part of the kit fingerprint (LICENSE.md §6(5), §7). A wrong value means wrong AI guidance and unactionable bug reports.
 
-Automated app releases: `.github/workflows/version.yml` computes the next semver from your conventional commits (`feat` → minor, `fix`/`perf` → patch, `!`/`BREAKING CHANGE` → major) via the Fuutu versioning API and tags `vX.Y.Z`. Merged kit updates count as a single merge commit — upstream commits never bump your app version.
+Automated app releases: `.github/workflows/version.yml` computes the next semver from your conventional commits (`feat` → minor, `fix`/`perf` → patch, `!`/`BREAKING CHANGE` → major) via the Fuutu versioning API and tags `vX.Y.Z`. Merge strategy doesn't matter (merge, squash, rebase) — only commit messages count. Commits that arrive with a kit update are excluded, so kit changes never bump your app version.
 
 ---
 
@@ -186,8 +186,8 @@ Docker (per-app `Dockerfile`s + `docker-compose.deploy.yml`) and Coolify (Docker
 | What | Where |
 |---|---|
 | Agent instructions (read by Claude Code, Cursor, Codex, Copilot, Windsurf, …) | `AGENTS.md` (+ `CLAUDE.md` → `@AGENTS.md`) |
-| Workflow skills — brainstorming, writing-plans, TDD, systematic-debugging, verification, browser-verification, commit-proposal | `.claude/skills/` (mirrored at `.agents/skills/`) |
-| Kit skill stubs — add entity, add API procedure, swap provider, connect payments, code review — each with a no-MCP fallback | `.claude/skills/fuutu-*` |
+| 9 workflow skills — `brainstorm-feature`, `plan-implementation`, `execute-plan`, `write-tests-first`, `debug-root-cause`, `verify-before-done`, `check-in-browser`, `propose-commit` (versioning-aware), `handle-review-feedback` | `.claude/skills/` (mirrored at `.agents/skills/`) |
+| 5 kit skills — `add-entity`, `add-api-endpoint`, `swap-provider`, `connect-payments`, `review-code` — minimal path in the repo, full version-matched version via Fuutu MCP | `.claude/skills/` |
 | Skill catalog | `fuutu.skills.json` |
 | Claude Code project config (Fuutu MCP server, permissions) | `.mcp.json`, `.claude/settings.json` |
 

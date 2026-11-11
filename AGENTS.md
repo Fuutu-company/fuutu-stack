@@ -103,12 +103,13 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 
 | Situation | Skill |
 |---|---|
-| New feature / behavior change | `brainstorming` → `writing-plans` |
-| Implementing code or a fix | `test-driven-development` |
-| Bug, failing test, odd behavior | `systematic-debugging` |
-| About to claim done | `verification-before-completion` (+ `browser-verification` for UI) |
-| Work verified, changes exist | `commit-proposal` — never commit/push without approval |
-| New entity / endpoint / provider / payments / review | `fuutu-add-entity` · `fuutu-add-procedure` · `fuutu-swap-provider` · `fuutu-connect-payments` · `fuutu-code-review` (full versions via Fuutu MCP) |
+| New feature / behavior change | `brainstorm-feature` → `plan-implementation` → `execute-plan` |
+| Implementing code or a fix | `write-tests-first` |
+| Bug, failing test, odd behavior | `debug-root-cause` |
+| About to claim done | `verify-before-done` (+ `check-in-browser` for UI) |
+| Review comments received | `handle-review-feedback` |
+| Work verified, changes exist | `propose-commit` — conventional messages drive the app version; never commit/push without approval |
+| New entity / API endpoint / provider swap / payments / code review | `add-entity` · `add-api-endpoint` · `swap-provider` · `connect-payments` · `review-code` (full versions via Fuutu MCP) |
 
 ## 11 · Boundaries
 

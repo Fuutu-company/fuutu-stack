@@ -13,6 +13,9 @@ run-name: ${{ vars.FUUTU_VERSIONING_ENABLED == 'true' && 'Version' || 'Versionin
 # the returned nextVersion is written to the root package.json `version`
 # (= APP_VERSION), then committed and tagged by the bot.
 #
+# Merge strategy does not matter: merge, squash or rebase — only the
+# commit messages count. Commits from merged kit updates are excluded.
+#
 # Two version lines exist — see docs "Versioning":
 #   APP_VERSION  root package.json  → yours, bumped here
 #   KIT_VERSION  packages/config    → Fuutu's, changes only when you merge
@@ -87,23 +90,34 @@ jobs:
         id: commits
         env:
           TAG: ${{ steps.target.outputs.tag }}
+          # Public kit repo — its commits are Fuutu's, never your app's.
+          KIT_REPO: https://github.com/Fuutu-company/fuutu-stack.git
         run: |
+          # App releases: every commit counts (merge, squash or rebase —
+          # only the message matters) EXCEPT commits that came from a kit
+          # update. Those are excluded by subtracting the kit's history.
+          EXCLUDE=""
+          if [ "$TAG" = "v" ]; then
+            if git fetch --quiet --no-tags "$KIT_REPO" "+refs/heads/main:refs/fuutu-kit/main"; then
+              EXCLUDE="refs/fuutu-kit/main"
+            else
+              echo "::warning::Could not fetch the kit history — kit commits may count towards the app version."
+            fi
+          fi
           # Kit releases are tagged kit-vX.Y.Z, app releases vX.Y.Z — buyers
           # clone the kit's tags, so the two lines must never collide.
           LAST_TAG="$(git describe --tags --abbrev=0 --match "${TAG}[0-9]*" 2>/dev/null || true)"
-          # First app release: start after the kit release you cloned instead
-          # of scanning the whole kit history.
-          if [ -z "$LAST_TAG" ] && [ "$TAG" = "v" ]; then
-            LAST_TAG="$(git describe --tags --abbrev=0 --match "kit-v[0-9]*" 2>/dev/null || true)"
-          fi
           if [ -n "$LAST_TAG" ] && [ "$(git rev-parse "$LAST_TAG^{commit}")" = "$(git rev-parse HEAD)" ]; then
             echo "::notice::HEAD is already tagged $LAST_TAG — nothing to version."
             echo "skip=1" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # --first-parent: a merged kit update counts as one merge commit,
-          # its upstream feat:/fix: subjects never bump the app version.
-          git log --first-parent --pretty=%s ${LAST_TAG:+$LAST_TAG..}HEAD | jq -R . | jq -s . > commits.json
+          # Per commit we send the subject plus any `BREAKING CHANGE:` footer
+          # lines (API limits: 2000 chars per commit, 500 commits).
+          git log --format='%B%x1e' ${LAST_TAG:+$LAST_TAG..}HEAD ${EXCLUDE:+--not $EXCLUDE} \
+            | jq -Rs 'split("\u001e") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))
+                | map(split("\n") as $l | ([$l[0]] + [$l[] | select(test("^BREAKING[ -]CHANGE:"))]) | join("\n") | .[0:2000])
+                | .[0:500]' > commits.json
           if [ "$(jq length commits.json)" -eq 0 ]; then
             echo "::notice::No commits since last tag — nothing to version."
             echo "skip=1" >> "$GITHUB_OUTPUT"
