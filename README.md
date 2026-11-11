@@ -190,6 +190,9 @@ Docker (per-app `Dockerfile`s + `docker-compose.deploy.yml`) and Coolify (Docker
 | 5 kit skills — `add-entity`, `add-api-endpoint`, `swap-provider`, `connect-payments`, `review-code` — minimal path in the repo, full version-matched version via Fuutu MCP | `.claude/skills/` |
 | Skill catalog | `fuutu.skills.json` |
 | Claude Code project config (Fuutu MCP server, permissions) | `.mcp.json`, `.claude/settings.json` |
+| Team of 8 agents (scout, architect, builder, senior-builder, reviewer, qa, security, scribe) on cost tiers; the main session leads via `delegate-tasks` | `.claude/agents/` |
+| MCP servers: Fuutu, Better Auth, Next.js DevTools, shadcn, Playwright | `.mcp.json` |
+| Setup guide for any other agent (Cursor, Copilot, Codex, OpenCode, …) + upgrade migration | `AI-SETUP.md` |
 
 ### MCP server for your own app
 

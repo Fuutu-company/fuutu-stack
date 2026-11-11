@@ -103,6 +103,7 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 
 | Situation | Skill |
 |---|---|
+| Request bigger than a small edit (main session) | `delegate-tasks` |
 | New feature / behavior change | `brainstorm-feature` → `plan-implementation` → `execute-plan` |
 | Implementing code or a fix | `write-tests-first` |
 | Bug, failing test, odd behavior | `debug-root-cause` |
@@ -110,6 +111,23 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 | Review comments received | `handle-review-feedback` |
 | Work verified, changes exist | `propose-commit` — conventional messages drive the app version; never commit/push without approval |
 | New entity / API endpoint / provider swap / payments / code review | `add-entity` · `add-api-endpoint` · `swap-provider` · `connect-payments` · `review-code` (full versions via Fuutu MCP) |
+
+### Team (Claude Code)
+
+The main session is the **lead**: it talks to the user, plans, routes and verifies (`delegate-tasks`). Small work (≤ ~3 files, obvious change) it does itself. Team agents in `.claude/agents/`:
+
+| Agent | Use for | Tier → Claude model |
+|---|---|---|
+| `scout` | finding code, patterns, usages (read-only, parallel) | fast → haiku |
+| `architect` | design → plan; schema, auth, payments, cross-package decisions | strong → opus |
+| `builder` | one low-risk task from the plan | balanced → sonnet |
+| `senior-builder` | high-risk task (auth, payments, webhooks, RBAC, migrations, secrets) or after two failures | strong → opus |
+| `reviewer` | after every task + final diff (read-only) | balanced → sonnet |
+| `qa` | all gates, E2E, browser check | balanced → sonnet |
+| `security` | diffs touching auth, permissions, payments, webhooks, keys, MCP, env (read-only) | strong → opus |
+| `scribe` | docs, changelog, translations, commit draft | fast → haiku |
+
+One writer at a time; only the lead spawns agents; every brief is self-contained. Other tools: see `AI-SETUP.md`.
 
 ## 11 · Boundaries
 

@@ -30,6 +30,7 @@ build
 .claude/*
 !.claude/settings.json
 !.claude/skills/
+!.claude/agents/
 CLAUDE.local.md
 .fuutu/*
 # Exception: visual regression baselines ARE committed (linux CI snapshots)
