@@ -77,6 +77,13 @@ function mapStripeStatusToPurchaseStatus(
  * a provider invoice id there is no dedup key and every redelivery would
  * create a row.
  */
+/** Purchased units — a positive integer or nothing (same rule as Creem/Polar). */
+function toUnits(value: number | null | undefined): number | undefined {
+	return typeof value === "number" && Number.isInteger(value) && value > 0
+		? value
+		: undefined;
+}
+
 function toProviderInvoice(
 	invoice: Stripe.Invoice,
 	amountCents: number | null | undefined,
@@ -147,6 +154,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 							? session.customer
 							: session.customer?.id,
 					productId,
+					units: toUnits(lineItems.data[0]?.quantity),
 					metadata: session.metadata ?? undefined,
 				},
 			];
@@ -161,6 +169,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 					subscriptionId: subscription.id,
 					customerId: subscription.customer as string,
 					productId: subscription.items.data[0]?.price.id,
+					units: toUnits(subscription.items.data[0]?.quantity),
 					status: mapStripeStatusToPurchaseStatus(subscription.status),
 					currentPeriodEnd: subscription.items.data[0]?.current_period_end
 						? new Date(subscription.items.data[0].current_period_end * 1000)
@@ -179,6 +188,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 					subscriptionId: subscription.id,
 					customerId: subscription.customer as string,
 					productId: subscription.items.data[0]?.price.id,
+					units: toUnits(subscription.items.data[0]?.quantity),
 					status: mapStripeStatusToPurchaseStatus(subscription.status),
 					currentPeriodEnd: subscription.items.data[0]?.current_period_end
 						? new Date(subscription.items.data[0].current_period_end * 1000)

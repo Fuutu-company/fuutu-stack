@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @fuutu/db — we're testing the sync logic, not DB writes
 const mockCreatePurchase = vi.fn();
@@ -70,6 +70,7 @@ vi.mock("@fuutu/env/saas", () => ({
 }));
 
 const { processWebhookEvents } = await import("../sync");
+const { onPurchaseChanged } = await import("../extensions");
 
 import type { ProviderEvent } from "../types";
 
@@ -1163,5 +1164,216 @@ describe("processWebhookEvents", () => {
 				makeSubscriptionEvent({ productId: "test-pro-price" }),
 			]),
 		).rejects.toThrow("1 webhook event(s) failed");
+	});
+});
+
+describe("processWebhookEvents — purchased units", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockGetCreditBalance.mockReset().mockResolvedValue(null);
+	});
+
+	it("persists units as quantity on a new subscription purchase", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue(null);
+		mockGetPurchasesByOrganizationId.mockResolvedValue([]);
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ units: 4 }),
+		]);
+
+		expect(mockCreatePurchase).toHaveBeenCalledWith(
+			expect.objectContaining({ subscriptionId: "sub_123", quantity: 4 }),
+		);
+	});
+
+	it("persists units as quantity on a one-time purchase", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_1" });
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_units",
+				productId: "prod_456",
+				units: 3,
+				metadata: { user_id: "user_123" },
+			},
+		]);
+
+		expect(mockCreatePurchase).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "ONE_TIME", quantity: 3 }),
+		);
+	});
+
+	it("updates quantity when an existing subscription reports new units", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+			organizationId: "org_123",
+			userId: null,
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.updated", units: 9 }),
+		]);
+
+		expect(mockUpdatePurchase).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "purchase_1", quantity: 9 }),
+		);
+	});
+
+	it("updates quantity even while a protected status is kept", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "SCHEDULED_CANCEL",
+			organizationId: "org_123",
+			userId: null,
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.renewed", units: 2 }),
+		]);
+
+		const call = mockUpdatePurchase.mock.calls[0]?.[0];
+		expect(call).toMatchObject({ id: "purchase_1", quantity: 2 });
+		expect(call.status).toBeUndefined();
+	});
+
+	it("leaves quantity untouched when the event reports no units", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+			organizationId: "org_123",
+			userId: null,
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.updated" }),
+		]);
+
+		expect(mockUpdatePurchase.mock.calls[0]?.[0]).not.toHaveProperty(
+			"quantity",
+		);
+	});
+});
+
+describe("processWebhookEvents — onPurchaseChanged", () => {
+	const handler = vi.fn();
+	let unsubscribe: () => void = () => {};
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockGetCreditBalance.mockReset().mockResolvedValue(null);
+		handler.mockReset();
+		unsubscribe = onPurchaseChanged(handler);
+	});
+
+	afterEach(() => {
+		unsubscribe();
+	});
+
+	it("notifies the org owner after a new subscription purchase is written", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue(null);
+		mockGetPurchasesByOrganizationId.mockResolvedValue([]);
+
+		await processWebhookEvents(PROVIDER_ID, [makeSubscriptionEvent()]);
+
+		expect(mockCreatePurchase).toHaveBeenCalled();
+		expect(handler).toHaveBeenCalledExactlyOnceWith({
+			organizationId: "org_123",
+		});
+	});
+
+	it("notifies the stored owner after an existing purchase is updated", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+			organizationId: "org_stored",
+			userId: null,
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.canceled", metadata: {} }),
+		]);
+
+		expect(handler).toHaveBeenCalledExactlyOnceWith({
+			organizationId: "org_stored",
+		});
+	});
+
+	it("notifies the user owner after a one-time purchase is written", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_1" });
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_hook",
+				productId: "prod_456",
+				metadata: { user_id: "user_123" },
+			},
+		]);
+
+		expect(handler).toHaveBeenCalledExactlyOnceWith({ userId: "user_123" });
+	});
+
+	it("re-notifies on a deduplicated one-time redelivery so a failed handler converges", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue({
+			id: "purchase_1",
+			userId: "user_123",
+			organizationId: null,
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_hook",
+				productId: "prod_456",
+				metadata: { user_id: "user_123" },
+			},
+		]);
+
+		expect(mockCreatePurchase).not.toHaveBeenCalled();
+		expect(handler).toHaveBeenCalledExactlyOnceWith({ userId: "user_123" });
+	});
+
+	it("does not notify when no purchase was written", async () => {
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ subscriptionId: undefined }),
+		]);
+
+		expect(handler).not.toHaveBeenCalled();
+	});
+
+	it("propagates a handler failure so the provider retries", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+			organizationId: "org_123",
+			userId: null,
+		});
+		handler.mockRejectedValueOnce(new Error("store down"));
+
+		await expect(
+			processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({ type: "subscription.updated" }),
+			]),
+		).rejects.toThrow("1 webhook event(s) failed");
+	});
+
+	it("stops notifying after unsubscribe", async () => {
+		unsubscribe();
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+			organizationId: "org_123",
+			userId: null,
+		});
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.updated" }),
+		]);
+
+		expect(handler).not.toHaveBeenCalled();
 	});
 });

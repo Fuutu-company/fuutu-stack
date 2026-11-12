@@ -76,3 +76,12 @@ export type McpPromptDefinition<
 export type AnyMcpTool = McpToolDefinition<any, any>;
 // biome-ignore lint/suspicious/noExplicitAny: see AnyMcpTool.
 export type AnyMcpPrompt = McpPromptDefinition<any, any>;
+
+/** One tool invocation, as seen by `createMcpEndpoint({ wrapTool })`. */
+export type McpToolCall = {
+	tool: AnyMcpTool;
+	/** Validated tool input. */
+	input: unknown;
+	principal: McpPrincipal;
+	request: Request;
+};

@@ -1,5 +1,5 @@
 import { env } from "@fuutu/env/saas";
-import { API_KEY_SCOPES } from "./api-key-scopes";
+import { API_KEY_ADMIN_SCOPES, API_KEY_SCOPES } from "./api-key-scopes";
 
 /**
  * API configuration — owned by @fuutu/api.
@@ -10,11 +10,13 @@ import { API_KEY_SCOPES } from "./api-key-scopes";
 export const apiConfig = {
 	rateLimit: {
 		enabled: !env.FUUTU_DISABLE_RATE_LIMIT,
-		// Set true behind a trusted reverse proxy (Traefik in Coolify, nginx,
-		// a load balancer) so anonymous callers are limited per IP. Without
-		// one, client-supplied X-Forwarded-For would let callers rotate keys
-		// at will — so anonymous traffic shares one bucket.
-		trustProxyHeaders: false,
+		// `TRUST_PROXY_HEADERS=1` behind a trusted reverse proxy (Traefik in
+		// Coolify, nginx, a load balancer) so anonymous callers are limited
+		// per IP. Without one, client-supplied X-Forwarded-For would let
+		// callers rotate keys at will — so anonymous traffic shares one bucket.
+		// `=== true`: an unvalidated raw string (SKIP_ENV_VALIDATION) never
+		// turns trust on.
+		trustProxyHeaders: env.TRUST_PROXY_HEADERS === true,
 		defaults: {
 			maxRequests: 100,
 			windowMs: 60 * 1000, // 1 minute
@@ -88,8 +90,17 @@ export const apiConfig = {
 	 * keys that list the requested scope, and the oRPC/REST API only admits
 	 * scoped keys that list `api`. A key with an empty `scopes` array is an
 	 * unrestricted full credential for its owner scope on oRPC/REST.
+	 *
+	 * Edit the list in `./api-key-scopes.ts` — kept there so client
+	 * components can import it without this file's server-only deps.
 	 */
 	apiKeyScopes: API_KEY_SCOPES,
+	/**
+	 * Scopes only system admins may grant (default none — edit in
+	 * `./api-key-scopes.ts`). Others get FORBIDDEN on create; a key with
+	 * one stops working once its owner is no longer a system admin.
+	 */
+	apiKeyAdminScopes: API_KEY_ADMIN_SCOPES,
 	/**
 	 * Maps an API-key scope to a FEATURE_CATALOG flat feature id
 	 * (e.g. `{ versioning: "api_webhooks" }`). `requireApiKey` responds

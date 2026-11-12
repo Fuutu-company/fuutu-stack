@@ -36,7 +36,7 @@
 			"removeMember": "Remove",
 			"pendingInvitations": "Pending invitations",
 			"cancelInvite": "Cancel invite",
-			"seatLimitReached": "Seat limit reached ({seats} seats)",
+			"seatLimitReached": "Seat limit reached ({seats, plural, one {# seat} other {# seats}})",
 			"seatLimitHint": "Remove a member or cancel a pending invitation to free a seat, or upgrade your plan.",
 			"seatLimitCta": "Upgrade plan",
 			"danger": "Danger zone",

@@ -4,6 +4,7 @@ import { resolveMcpPrincipal } from "../mcp/principal";
 vi.mock("@fuutu/db", () => ({
 	API_KEY_PREFIX: "futu_sk_",
 	verifyApiKeyWithOwner: vi.fn(),
+	getOrganizationMemberRole: vi.fn(),
 	getOrganizationWithMembers: vi.fn(),
 	getUserById: vi.fn(),
 }));
@@ -31,8 +32,12 @@ vi.mock("../config", () => ({
 	},
 }));
 
-const { verifyApiKeyWithOwner, getOrganizationWithMembers, getUserById } =
-	await import("@fuutu/db");
+const {
+	verifyApiKeyWithOwner,
+	getOrganizationMemberRole,
+	getOrganizationWithMembers,
+	getUserById,
+} = await import("@fuutu/db");
 const { apiConfig } = await import("../config");
 const { mcpOAuth, verifyMcpAccessToken } = await import(
 	"@fuutu/auth/mcp-oauth"
@@ -55,9 +60,7 @@ describe("resolveMcpPrincipal", () => {
 		vi.mocked(verifyMcpAccessToken).mockReset();
 		vi.mocked(getUserById).mockReset();
 		(mcpOAuth as { active: boolean }).active = true;
-		vi.mocked(getOrganizationWithMembers).mockResolvedValue({
-			members: [{ userId: "user-1", role: "admin" }],
-		} as never);
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue("admin");
 		(apiConfig.apiKeyScopeFeatures as Record<string, string>) = {};
 	});
 
@@ -93,6 +96,15 @@ describe("resolveMcpPrincipal", () => {
 		expect(
 			((await resolveMcpPrincipal(request("futu_sk_x"))) as Response).status,
 		).toBe(401);
+	});
+
+	it("rejects keys whose owner is no longer a member of the key's org", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(ORG_KEY as never);
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue(null);
+		expect(
+			((await resolveMcpPrincipal(request("futu_sk_x"))) as Response).status,
+		).toBe(401);
+		expect(getOrganizationMemberRole).toHaveBeenCalledWith("org-1", "user-1");
 	});
 
 	it("resolves user, org, org role and scopes for a valid key", async () => {

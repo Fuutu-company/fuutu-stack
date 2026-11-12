@@ -105,7 +105,7 @@ export function permissionProcedure(permission: KnownPermission) {
  * and org actions — the input determines which permission is authoritative.
  *
  * The middleware attaches resolved data to context:
- * `user`, `systemRole`, `org`, `orgRole`, `membership`, `planId`, `planTier`.
+ * `user`, `systemRole`, `org`, `orgRole`, `membership`, `entitlement`, `planId`, `planTier`.
  *
  * @example
  * // Auth only
@@ -132,7 +132,7 @@ export function permissionProcedure(permission: KnownPermission) {
  * // Org + plan + limit (feature-gated org resource)
  * export const createWebhook = authProcedure({
  *   org: { permission: PERMISSIONS.WEBHOOK.CREATE },
- *   plan: "pro",
+ *   plan: FEATURE_CATALOG.api.webhooks.tier,
  *   limit: { key: "webhooks", count: async (ctx) => countWebhooks(ctx.org?.id ?? "") },
  * })
  *   .handler(...)

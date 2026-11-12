@@ -4,6 +4,7 @@ export {
 	getDateFormat,
 	getDirection,
 	getLocaleConfig,
+	hasMultipleLocales,
 	isValidLocale,
 } from "./lib/locale-utils";
 export type { AppName, FallbackChainConfig } from "./lib/messages";

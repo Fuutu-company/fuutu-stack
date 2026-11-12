@@ -10,6 +10,8 @@
 		"includes": [
 			"**",
 			"!**/.next",
+			"!**/.fuutu/browser",
+			"!**/.fuutu/session",
 			"!**/dist",
 			"!**/out",
 			"!**/.turbo",

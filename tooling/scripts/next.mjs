@@ -16,6 +16,7 @@ import {
 	describeProject,
 	ensureSlot,
 	findRoot,
+	isE2eResetTarget,
 	readProject,
 	slotEnv,
 } from "../ports/index.mjs";
@@ -63,7 +64,44 @@ const next = (args) =>
 		env,
 	}).status ?? 1;
 
+/**
+ * Fresh E2E database per run (like CI): drop, migrate, seed — all through
+ * Prisma commands. Only for a local database; a remote one is never touched.
+ */
+function resetE2eDatabase() {
+	const url = env.DATABASE_URL;
+	// Only ever this slot's local `<database>-e2e` — never a remote, the dev
+	// one or another project's.
+	if (!isE2eResetTarget(url, project)) return 0;
+	const maintenance = new URL(url);
+	const name = decodeURIComponent(maintenance.pathname.slice(1));
+	if (Buffer.byteLength(name) > 63) {
+		process.stderr.write(
+			`E2E database name "${name}" exceeds Postgres' 63-byte limit — shorten DATABASE_URL's database name.\n`,
+		);
+		return 1;
+	}
+	maintenance.pathname = "/postgres";
+	const db = (args, { extra = {}, input } = {}) =>
+		spawnSync("pnpm", ["--filter", "@fuutu/db", ...args], {
+			cwd: root,
+			stdio: input ? ["pipe", "inherit", "inherit"] : "inherit",
+			input,
+			env: { ...env, ...extra },
+		}).status ?? 1;
+	const dropped = db(["exec", "prisma", "db", "execute", "--stdin"], {
+		extra: { DATABASE_URL: maintenance.toString() },
+		input: `DROP DATABASE IF EXISTS "${name.replaceAll('"', '""')}" WITH (FORCE);`,
+	});
+	if (dropped !== 0) return dropped;
+	const migrated = db(["exec", "prisma", "migrate", "deploy"]);
+	if (migrated !== 0) return migrated;
+	return db(["run", "db:seed"], { extra: { NODE_ENV: "development" } });
+}
+
 if (e2e) {
+	const reset = resetE2eDatabase();
+	if (reset !== 0) process.exit(reset);
 	const built = next(["build", ...rest]);
 	if (built !== 0) process.exit(built);
 	process.exit(next(["start", "--port", String(port)]));

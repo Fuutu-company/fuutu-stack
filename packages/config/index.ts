@@ -69,6 +69,10 @@ export const config = {
 			email: "hello@fuutustack.com",
 			github: "github.com/Fuutu-company/fuutu-stack",
 			githubUrl: "https://github.com/Fuutu-company/fuutu-stack",
+			/** Optional support inbox shown to users — unset = not shown. */
+			supportEmail: undefined as string | undefined,
+			/** Optional community/support Discord invite URL — unset = not shown. */
+			discordUrl: undefined as string | undefined,
 		},
 		/**
 		 * Domains that ship with a swappable provider interface — one

@@ -7,7 +7,6 @@ import {
 	API_KEY_PREFIX,
 	getOrganizationWithMembers,
 	getUserById,
-	verifyApiKeyWithOwner,
 } from "@fuutu/db";
 import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
@@ -16,6 +15,7 @@ import { z } from "zod";
 import { apiConfig } from "../config";
 import { API_KEY_HEADER } from "../context";
 import { findMissingScopeFeature } from "../modules/api-keys/scope-feature";
+import { verifyApiKeyCredential } from "../modules/api-keys/verify-credential";
 
 /** API-key scope that unlocks the MCP endpoint (see `API_KEY_SCOPES`). */
 export const MCP_SCOPE = "mcp";
@@ -53,7 +53,8 @@ const accessTokenClaimsSchema = z.object({
  * unusable credential → 401, never a silent downgrade.
  *
  * - Org API key (`futu_sk_…` bearer or `x-api-key`) carrying the `mcp`
- *   scope — same rules as `requireApiKey`.
+ *   scope — same rules as `requireApiKey` (owner not banned, still a member
+ *   of the key's org, still a system admin for admin-scoped keys).
  * - Any other bearer, when MCP OAuth is active (`mcpOAuth.active`) → OAuth access
  *   token issued by Better Auth for this MCP resource.
  */
@@ -68,12 +69,14 @@ export async function resolveMcpPrincipal(
 	const rawKey = bearer ?? extractBearerToken(request.headers, API_KEY_HEADER);
 	if (!rawKey) return { kind: "anonymous" };
 
-	const verified = await verifyApiKeyWithOwner(rawKey);
+	// Owner ban, org membership and admin-scope role are re-checked on
+	// every request (verifyApiKeyCredential) — fail closed.
+	const verified = await verifyApiKeyCredential(rawKey);
 	if (!verified) return json(401, { error: "invalid_api_key" });
-	const { apiKey, user } = verified;
+	const { apiKey, user, orgRole } = verified;
 	if (
 		!apiKey.organizationId ||
-		user.banned ||
+		orgRole === null ||
 		!apiKey.scopes.includes(MCP_SCOPE)
 	) {
 		return json(401, { error: "invalid_api_key" });
@@ -87,19 +90,13 @@ export async function resolveMcpPrincipal(
 		return json(402, { error: "upgrade_required", ...missing });
 	}
 
-	const org = await getOrganizationWithMembers(apiKey.organizationId);
-	const member = org?.members.find((m) => m.userId === user.id);
-	if (!member) {
-		return json(401, { error: "invalid_api_key" });
-	}
-
 	return {
 		kind: "user",
 		via: "api-key",
 		credentialId: apiKey.id,
 		userId: user.id,
 		organizationId: apiKey.organizationId,
-		orgRole: member.role,
+		orgRole,
 		systemRole: user.role ?? null,
 		scopes: apiKey.scopes,
 	};

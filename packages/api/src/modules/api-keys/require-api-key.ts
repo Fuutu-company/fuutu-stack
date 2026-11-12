@@ -1,8 +1,8 @@
-import { verifyApiKeyWithOwner } from "@fuutu/db";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { API_KEY_HEADER } from "../../context";
 import { findMissingScopeFeature } from "./scope-feature";
+import { verifyApiKeyCredential } from "./verify-credential";
 
 const jsonResponse = (status: number, body: Record<string, unknown>) =>
 	new Response(JSON.stringify(body), {
@@ -40,7 +40,9 @@ const extractApiKey = (headers: Headers): string | null => {
  * Throws HTTPException:
  *  - 401 { error: "missing_api_key" }   — no credential presented
  *  - 401 { error: "invalid_api_key" }   — unknown/revoked/expired key,
- *    user-scoped key, banned owner, or key lacking the scope
+ *    user-scoped key, banned owner, owner no longer a member of the key's
+ *    org, admin-scoped key of a former system admin, or key lacking the
+ *    scope (see verifyApiKeyCredential)
  *  - 402 { error: "upgrade_required" }  — scope is feature-gated and the
  *    org's entitlement lacks the mapped feature
  */
@@ -53,9 +55,9 @@ export const requireApiKey = async (
 		throw httpError(401, { error: "missing_api_key" });
 	}
 
-	const verified = await verifyApiKeyWithOwner(rawKey);
+	const verified = await verifyApiKeyCredential(rawKey);
 	const apiKey = verified?.apiKey;
-	if (!apiKey?.organizationId || verified?.user.banned) {
+	if (!apiKey?.organizationId) {
 		throw httpError(401, { error: "invalid_api_key" });
 	}
 	if (!apiKey.scopes.includes(scope)) {

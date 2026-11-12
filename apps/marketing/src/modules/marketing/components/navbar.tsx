@@ -3,59 +3,28 @@
 import { config } from "@fuutu/config";
 import { BrandLogo, Button } from "@fuutu/ui";
 import { LocaleSwitcher } from "@shared/components";
-import type { LucideIcon } from "lucide-react";
-import {
-	BookOpen,
-	ChevronDown,
-	Menu,
-	Moon,
-	Rss,
-	Sun,
-	Terminal,
-	X,
-} from "lucide-react";
+import { ChevronDown, Menu, Moon, Sun, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import type { ComponentType } from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { defaultLocale } from "@/i18n/config";
+import {
+	NAV_DROPDOWNS,
+	NAV_ITEMS,
+	type NavDropdownItem,
+} from "@/lib/site-links";
 import { urls } from "@/lib/urls";
 import { handleHashClick } from "@/lib/utils";
 import { Link, usePathname, useRouter } from "@/navigation";
 
-type IconType = LucideIcon | ComponentType<{ className?: string }>;
+type DropdownItem = NavDropdownItem;
 
-type DropdownItem = {
-	key: string;
-	href: string;
-	external?: boolean;
-	hash?: boolean;
-	icon: IconType;
-};
+// Navbar links live in `@/lib/site-links` — edit them there.
+const DROPDOWN_GROUPS: Record<string, DropdownItem[]> = Object.fromEntries(
+	NAV_DROPDOWNS.map((group) => [group.key, group.items]),
+);
 
-type NavItem = {
-	key: string;
-	href: string;
-	external?: boolean;
-	hash?: boolean;
-	badgeKey?: string;
-};
-
-const DROPDOWN_GROUPS: Record<string, DropdownItem[]> = {
-	resources: [
-		{ key: "blog", href: "/blog", icon: Rss },
-		{ key: "changelog", href: "/changelog", icon: Terminal },
-		{ key: "docs", href: urls.docs, external: true, icon: BookOpen },
-	],
-};
-
-const DROPDOWN_ORDER = ["resources"] as const;
-
-const NAV_ITEMS: NavItem[] = [
-	{ key: "home", href: "/" },
-	{ key: "features", href: "/#features", hash: true },
-	{ key: "pricing", href: "/pricing" },
-];
+const DROPDOWN_ORDER = NAV_DROPDOWNS.map((group) => group.key);
 
 function isActive(pathname: string, href: string, hash?: string): boolean {
 	if (href === "/") return pathname === "/" && !hash;

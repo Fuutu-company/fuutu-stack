@@ -399,6 +399,58 @@ describe("organizations.members.invite", () => {
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
 	});
 
+	it("surfaces the seat-limit hook as a typed PAYMENT_REQUIRED error", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(auth.api.createInvitation).mockRejectedValue(
+			Object.assign(new Error("Organization seat limit reached"), {
+				name: "APIError",
+				status: "PAYMENT_REQUIRED",
+				statusCode: 402,
+				body: {
+					message: "Organization seat limit reached",
+					seatsTotal: 5,
+					upgradeUrl: "/organizations/acme/settings/billing",
+				},
+			}),
+		);
+
+		await expect(
+			call(
+				organizationsRouter.members.invite,
+				{ organizationId: "org-1", email: "new@fuutu.local", role: "member" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({
+			code: "PAYMENT_REQUIRED",
+			status: 402,
+			data: {
+				seatsTotal: 5,
+				upgradeUrl: "/organizations/acme/settings/billing",
+			},
+		});
+	});
+
+	it("leaves the seat cap to the entitlement-based hook (no LIMITS pre-count)", async () => {
+		const { countOrganizationMembers } = await import("@fuutu/db");
+		vi.mocked(countOrganizationMembers).mockResolvedValue(999);
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(auth.api.createInvitation).mockResolvedValue({
+			id: "inv-1",
+		} as never);
+
+		await expect(
+			call(
+				organizationsRouter.members.invite,
+				{ organizationId: "org-1", email: "new@fuutu.local", role: "member" },
+				{ context: authenticatedContext },
+			),
+		).resolves.toMatchObject({ id: "inv-1" });
+	});
+
 	it("rejects invalid email", async () => {
 		await expect(
 			call(

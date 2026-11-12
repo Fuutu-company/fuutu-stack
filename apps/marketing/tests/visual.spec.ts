@@ -1,8 +1,9 @@
 import { expect, scrollThroughPage, test } from "./fixtures";
+import { DEFAULT_LOCALE, LOCALES, OTHER_LOCALES } from "./locales";
 
 /**
  * Visual regression tests for the marketing site.
- * Covers all pages in EN + DE at desktop, tablet, and mobile viewports.
+ * Covers all pages in every enabled locale at desktop, tablet, and mobile viewports.
  *
  * Each viewport is shot by exactly one project class — desktop and tablet
  * on desktop-class projects (chromium/firefox/webkit), mobile on mobile
@@ -40,32 +41,27 @@ const VIEWPORTS = [
 ] as const;
 
 test.describe("visual regression — marketing pages", () => {
-	// ── Desktop: EN + DE ──────────────────────────────────────────────
+	// ── Desktop: every enabled locale ─────────────────────────────────
 
-	for (const { path, name } of PAGES) {
-		test(`en ${name} desktop matches baseline`, async ({ page, isMobile }) => {
-			test.skip(isMobile, "desktop baselines are shot by desktop projects");
-			await page.goto(`/en${path}`);
-			await page.waitForLoadState("domcontentloaded");
-			await scrollThroughPage(page);
-			await expect(page).toHaveScreenshot(`${name}-en-desktop.png`, {
-				fullPage: true,
+	for (const locale of LOCALES) {
+		for (const { path, name } of PAGES) {
+			test(`${locale} ${name} desktop matches baseline`, async ({
+				page,
+				isMobile,
+			}) => {
+				test.skip(isMobile, "desktop baselines are shot by desktop projects");
+				await page.goto(`/${locale}${path}`);
+				await page.waitForLoadState("domcontentloaded");
+				await scrollThroughPage(page);
+				await expect(page).toHaveScreenshot(`${name}-${locale}-desktop.png`, {
+					fullPage: true,
+				});
 			});
-		});
-
-		test(`de ${name} desktop matches baseline`, async ({ page, isMobile }) => {
-			test.skip(isMobile, "desktop baselines are shot by desktop projects");
-			await page.goto(`/de${path}`);
-			await page.waitForLoadState("domcontentloaded");
-			await scrollThroughPage(page);
-			await expect(page).toHaveScreenshot(`${name}-de-desktop.png`, {
-				fullPage: true,
-			});
-		});
+		}
 	}
 
-	// ── Tablet + Mobile: key pages, EN only ───────────────────────────
-	// (Reduces snapshot count; DE layout is identical to EN.)
+	// ── Tablet + Mobile: key pages, default locale only ───────────────────────────
+	// (Reduces snapshot count; other locales share the layout.)
 
 	const KEY_PAGES = [
 		{ path: "", name: "marketing--landing" },
@@ -78,7 +74,7 @@ test.describe("visual regression — marketing pages", () => {
 		if (viewport.label === "desktop") continue;
 
 		for (const { path, name } of KEY_PAGES) {
-			test(`en ${name} ${viewport.label} matches baseline`, async ({
+			test(`${DEFAULT_LOCALE} ${name} ${viewport.label} matches baseline`, async ({
 				page,
 				isMobile,
 			}) => {
@@ -92,11 +88,11 @@ test.describe("visual regression — marketing pages", () => {
 					width: viewport.width,
 					height: viewport.height,
 				});
-				await page.goto(`/en${path}`);
+				await page.goto(`/${DEFAULT_LOCALE}${path}`);
 				await page.waitForLoadState("domcontentloaded");
 				await scrollThroughPage(page);
 				await expect(page).toHaveScreenshot(
-					`${name}-en-${viewport.label}.png`,
+					`${name}-${DEFAULT_LOCALE}-${viewport.label}.png`,
 					{ fullPage: true },
 				);
 			});
@@ -110,7 +106,11 @@ test.describe("visual regression — components", () => {
 		isMobile,
 	}) => {
 		test.skip(isMobile, "Desktop navbar switcher is hidden on mobile");
-		await page.goto("/en");
+		test.skip(
+			OTHER_LOCALES.length === 0,
+			"switcher is hidden with a single enabled locale",
+		);
+		await page.goto(`/${DEFAULT_LOCALE}`);
 		await page.waitForLoadState("domcontentloaded");
 		await page
 			.getByRole("button", { name: /switch language/i })
@@ -124,7 +124,7 @@ test.describe("visual regression — components", () => {
 	test("mobile nav menu matches baseline", async ({ page, isMobile }) => {
 		test.skip(!isMobile, "mobile nav baselines are shot by mobile projects");
 		await page.setViewportSize({ width: 375, height: 812 });
-		await page.goto("/en");
+		await page.goto(`/${DEFAULT_LOCALE}`);
 		await page.waitForLoadState("domcontentloaded");
 		const toggle = page.getByRole("button", { name: /toggle menu/i });
 		await toggle.click();

@@ -13,6 +13,7 @@ import {
 	resolvePaymentProviderById,
 	updateSeatsInOrganizationSubscription,
 } from "@fuutu/payments";
+import { paymentsConfig } from "@fuutu/payments/config";
 
 const log = createLogger({ scope: "auth:payments-sync" });
 
@@ -20,11 +21,13 @@ type UserPurchase = Awaited<ReturnType<typeof getPurchasesByUserId>>[number];
 
 /**
  * Recomputes the current member count of the org and syncs it with the
- * payment provider. No-op when the org has no active subscription.
+ * payment provider. No-op when the org has no active subscription or
+ * `paymentsConfig.seatSync` is "none".
  */
 export async function syncSeatsForOrganization(
 	organizationId: string,
 ): Promise<void> {
+	if (paymentsConfig.seatSync === "none") return;
 	try {
 		const seats = await countOrganizationMembers(organizationId);
 		await updateSeatsInOrganizationSubscription(organizationId, seats);

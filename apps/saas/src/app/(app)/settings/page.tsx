@@ -1,8 +1,8 @@
 import { ProfileForm } from "@app/settings";
 import { authConfig } from "@fuutu/auth/config";
 import { mcpOAuth } from "@fuutu/auth/mcp-oauth";
-import { env } from "@fuutu/env/saas";
 import { paymentsConfig } from "@fuutu/payments/config";
+import { getPlanPriceIds } from "@fuutu/payments/config.server";
 import {
 	Button,
 	Card,
@@ -137,14 +137,7 @@ export default async function SettingsPage({
 								</Button>
 							</CardContent>
 						</Card>
-						<UserSettingsBilling
-							priceIds={{
-								pro: {
-									monthly: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
-									yearly: env.PAYMENTS_PRO_YEARLY_PRICE_ID ?? undefined,
-								},
-							}}
-						/>
+						<UserSettingsBilling priceIds={getPlanPriceIds()} />
 					</TabsContent>
 				)}
 				{showCreditsTab && (

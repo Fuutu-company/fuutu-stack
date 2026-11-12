@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { paymentsConfig } from "@fuutu/payments/config";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	cancelActiveSubscriptionsForUser,
 	syncSeatsForOrganization,
@@ -62,6 +63,21 @@ describe("syncSeatsForOrganization()", () => {
 			"org-1",
 			3,
 		);
+	});
+
+	describe('with paymentsConfig.seatSync = "none"', () => {
+		afterEach(() => {
+			paymentsConfig.seatSync = "members";
+		});
+
+		it("leaves the provider seat quantity alone", async () => {
+			paymentsConfig.seatSync = "none";
+
+			await syncSeatsForOrganization("org-1");
+
+			expect(countOrganizationMembers).not.toHaveBeenCalled();
+			expect(updateSeatsInOrganizationSubscription).not.toHaveBeenCalled();
+		});
 	});
 
 	it("swallows provider failures and logs them", async () => {

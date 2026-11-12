@@ -43,6 +43,10 @@ import {
 	revokeOAuthTokensAfterAccountChange,
 	revokeOAuthTokensBeforeConsentDelete,
 } from "./hooks/mcp-oauth-revocation";
+import {
+	revokeApiKeysAfterLeave,
+	revokeApiKeysOfRemovedMember,
+} from "./hooks/member-api-keys";
 import { assertPasswordPolicy } from "./hooks/password-policy";
 import {
 	cancelActiveSubscriptionsForOrganization,
@@ -230,6 +234,12 @@ const authOptions = {
 			}
 		}),
 		after: createAuthMiddleware(async (ctx) => {
+			await revokeApiKeysAfterLeave({
+				path: ctx.path,
+				returned: ctx.context.returned,
+				body: ctx.body,
+				userId: ctx.context.session?.user.id,
+			});
 			if (!mcpOAuth.active) return;
 			if (ctx.path === "/oauth2/authorize") {
 				const replacement = await getUnverifiedErrorRedirect({
@@ -532,6 +542,9 @@ const authOptions = {
 									member.userId,
 									invitation.organizationId,
 								);
+							},
+							beforeRemoveMember: async ({ member }) => {
+								await revokeApiKeysOfRemovedMember(member);
 							},
 							afterRemoveMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);

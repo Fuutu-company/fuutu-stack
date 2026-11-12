@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { defineMcpPrompt, defineMcpTool } from "../define";
 import { createMcpEndpoint } from "../endpoint";
+import { McpToolError } from "../errors";
 import type { McpPrincipal } from "../types";
 import { readRpc, rpcRequest } from "./helpers";
 
@@ -199,5 +200,125 @@ describe("createMcpEndpoint", () => {
 			),
 		);
 		expect(body.result?.isError ?? body.error).toBeTruthy();
+	});
+});
+
+describe("createMcpEndpoint — wrapTool hook", () => {
+	const callWhoami = (handle: (req: Request) => Promise<Response>) =>
+		handle(rpcRequest("tools/call", { name: "whoami", arguments: {} })).then(
+			readRpc,
+		);
+
+	it("runs around every tool call with the tool, input and principal", async () => {
+		const calls: { tool: string; input: unknown; userId?: string }[] = [];
+		const handle = createMcpEndpoint({
+			name: "test",
+			version: "0.0.0",
+			auth: "optional",
+			tools,
+			resolvePrincipal: async () => user,
+			wrapTool: async (call, next) => {
+				calls.push({
+					tool: call.tool.name,
+					input: call.input,
+					userId:
+						call.principal.kind === "user" ? call.principal.userId : undefined,
+				});
+				return next();
+			},
+		});
+		const body = await callWhoami(handle);
+		expect(JSON.stringify(body.result)).toContain("user_1");
+		expect(calls).toEqual([{ tool: "whoami", input: {}, userId: "user_1" }]);
+	});
+
+	it("can deny a call with a caller-safe message (quota) without running the tool", async () => {
+		let ran = false;
+		const handle = createMcpEndpoint({
+			name: "test",
+			version: "0.0.0",
+			auth: "optional",
+			tools: [
+				defineMcpTool({
+					name: "counted",
+					description: "Counted tool",
+					access: "authenticated",
+					input: z.object({}),
+					handler: async () => {
+						ran = true;
+						return "ok";
+					},
+				}),
+			],
+			resolvePrincipal: async () => user,
+			wrapTool: async () => {
+				throw new McpToolError("Quota exceeded");
+			},
+		});
+		const body = await readRpc(
+			await handle(
+				rpcRequest("tools/call", { name: "counted", arguments: {} }),
+			),
+		);
+		expect(ran).toBe(false);
+		expect(body.result?.isError).toBe(true);
+		expect(JSON.stringify(body.result)).toContain("Quota exceeded");
+	});
+
+	it("sees the tool result and the tool's errors (auditing)", async () => {
+		const outcomes: string[] = [];
+		const handle = createMcpEndpoint({
+			name: "test",
+			version: "0.0.0",
+			auth: "optional",
+			tools: [
+				...tools,
+				defineMcpTool({
+					name: "broken",
+					description: "Always fails",
+					access: "authenticated",
+					input: z.object({}),
+					handler: async () => {
+						throw new McpToolError("Nope");
+					},
+				}),
+			],
+			resolvePrincipal: async () => user,
+			wrapTool: async (call, next) => {
+				try {
+					const result = await next();
+					outcomes.push(`${call.tool.name}:ok:${JSON.stringify(result)}`);
+					return result;
+				} catch (error) {
+					outcomes.push(`${call.tool.name}:error`);
+					throw error;
+				}
+			},
+		});
+		await callWhoami(handle);
+		const broken = await readRpc(
+			await handle(rpcRequest("tools/call", { name: "broken", arguments: {} })),
+		);
+		expect(outcomes).toEqual(['whoami:ok:{"userId":"user_1"}', "broken:error"]);
+		expect(JSON.stringify(broken.result)).toContain("Nope");
+	});
+
+	it("reports unexpected hook errors as an internal error via onError", async () => {
+		const errors: unknown[] = [];
+		const handle = createMcpEndpoint({
+			name: "test",
+			version: "0.0.0",
+			auth: "optional",
+			tools,
+			resolvePrincipal: async () => user,
+			wrapTool: async () => {
+				throw new Error("db down: secret detail");
+			},
+			onError: (error) => errors.push(error),
+		});
+		const body = await callWhoami(handle);
+		expect(JSON.stringify(body.result)).toContain("Internal error");
+		expect(JSON.stringify(body.result)).not.toContain("secret detail");
+		expect(errors).toHaveLength(1);
 	});
 });

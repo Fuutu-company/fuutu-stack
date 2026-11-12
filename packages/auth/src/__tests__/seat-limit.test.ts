@@ -1,18 +1,14 @@
+import { paymentsConfig } from "@fuutu/payments/config";
 import { APIError } from "better-auth/api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	assertInviteSeatAvailable,
 	assertSeatAvailable,
 } from "../hooks/seat-limit";
 
-const mockEnv = vi.hoisted(() => ({
-	env: {
-		NEXT_PUBLIC_MARKETING_URL: "https://marketing.test" as string | undefined,
-	},
-}));
-
 const countOrganizationMembers = vi.fn();
 const countPendingInvitations = vi.fn();
+const getOrganizationById = vi.fn();
 const getOrgEntitlement = vi.fn();
 
 vi.mock("@fuutu/db", () => ({
@@ -20,28 +16,34 @@ vi.mock("@fuutu/db", () => ({
 		countOrganizationMembers(...args),
 	countPendingInvitations: (...args: unknown[]) =>
 		countPendingInvitations(...args),
+	getOrganizationById: (...args: unknown[]) => getOrganizationById(...args),
 }));
 
 vi.mock("@fuutu/payments", () => ({
 	getOrgEntitlement: (...args: unknown[]) => getOrgEntitlement(...args),
 }));
 
-vi.mock("@fuutu/env/saas", () => mockEnv);
-
-const entitlement = (membersPerOrg: number | "unlimited" | false) => ({
+// Limits deliberately disagree with seatsTotal — the gate must read
+// the entitlement's seatsTotal, never recompute from LIMITS.
+const entitlement = (seatsTotal: number | null) => ({
 	scope: "organization",
 	ownerId: "org-1",
 	planId: "free",
 	tier: "free",
 	features: [],
-	limits: { membersPerOrg },
+	limits: { membersPerOrg: 1 },
+	seatsTotal,
+});
+
+afterEach(() => {
+	paymentsConfig.seatUpgradeUrl = undefined;
 });
 
 describe("assertSeatAvailable()", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockEnv.env.NEXT_PUBLIC_MARKETING_URL = "https://marketing.test";
 		getOrgEntitlement.mockResolvedValue(entitlement(5));
+		getOrganizationById.mockResolvedValue({ id: "org-1", slug: "acme" });
 		countOrganizationMembers.mockResolvedValue(2);
 	});
 
@@ -60,29 +62,37 @@ describe("assertSeatAvailable()", () => {
 		expect((err as APIError).body).toMatchObject({
 			message: "Organization seat limit reached",
 			seatsTotal: 5,
-			upgradeUrl: "https://marketing.test/pricing",
+			upgradeUrl: "/organizations/acme/settings/billing",
 		});
 	});
 
-	it("falls back to /pricing when NEXT_PUBLIC_MARKETING_URL is unset", async () => {
-		mockEnv.env.NEXT_PUBLIC_MARKETING_URL = undefined;
+	it("links the 402 to paymentsConfig.seatUpgradeUrl when configured", async () => {
+		paymentsConfig.seatUpgradeUrl = (slug) => `https://shop.test/seats/${slug}`;
 		countOrganizationMembers.mockResolvedValue(5);
 
 		const err = await assertSeatAvailable("org-1").catch((e) => e);
 		expect((err as APIError).body).toMatchObject({
-			upgradeUrl: "/pricing",
+			upgradeUrl: "https://shop.test/seats/acme",
 		});
+		expect(getOrganizationById).toHaveBeenCalledWith("org-1");
 	});
 
-	it('always resolves when the plan is "unlimited"', async () => {
-		getOrgEntitlement.mockResolvedValue(entitlement("unlimited"));
+	it("reads the cap from Entitlement.seatsTotal, not LIMITS", async () => {
+		getOrgEntitlement.mockResolvedValue(entitlement(10));
+		countOrganizationMembers.mockResolvedValue(7);
+
+		await expect(assertSeatAvailable("org-1")).resolves.toBeUndefined();
+	});
+
+	it("always resolves when seatsTotal is null (unlimited)", async () => {
+		getOrgEntitlement.mockResolvedValue(entitlement(null));
 		countOrganizationMembers.mockResolvedValue(999);
 
 		await expect(assertSeatAvailable("org-1")).resolves.toBeUndefined();
 	});
 
-	it("treats a false limit as 0 seats and always rejects", async () => {
-		getOrgEntitlement.mockResolvedValue(entitlement(false));
+	it("rejects every add when seatsTotal is 0", async () => {
+		getOrgEntitlement.mockResolvedValue(entitlement(0));
 		countOrganizationMembers.mockResolvedValue(0);
 
 		const err = await assertSeatAvailable("org-1").catch((e) => e);
@@ -94,8 +104,8 @@ describe("assertSeatAvailable()", () => {
 describe("assertInviteSeatAvailable()", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockEnv.env.NEXT_PUBLIC_MARKETING_URL = "https://marketing.test";
 		getOrgEntitlement.mockResolvedValue(entitlement(5));
+		getOrganizationById.mockResolvedValue({ id: "org-1", slug: "acme" });
 		countOrganizationMembers.mockResolvedValue(3);
 		countPendingInvitations.mockResolvedValue(1);
 	});
@@ -113,8 +123,8 @@ describe("assertInviteSeatAvailable()", () => {
 		expect((err as APIError).statusCode).toBe(402);
 	});
 
-	it('resolves on "unlimited" regardless of pending count', async () => {
-		getOrgEntitlement.mockResolvedValue(entitlement("unlimited"));
+	it("resolves on unlimited (null) seats regardless of pending count", async () => {
+		getOrgEntitlement.mockResolvedValue(entitlement(null));
 		countPendingInvitations.mockResolvedValue(999);
 
 		await expect(assertInviteSeatAvailable("org-1")).resolves.toBeUndefined();

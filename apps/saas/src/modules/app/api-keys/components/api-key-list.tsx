@@ -8,7 +8,10 @@ import { KeyRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { orpc } from "@/utils/orpc";
-import { ApiKeyCreateDialog } from "./api-key-create-dialog";
+import {
+	ApiKeyCreateDialog,
+	type ApiKeyOrgOption,
+} from "./api-key-create-dialog";
 import { ApiKeyCreatedDialog } from "./api-key-created-dialog";
 import { ApiKeyRevokeDialog } from "./api-key-revoke-dialog";
 
@@ -47,9 +50,14 @@ function getKeyStatus(key: ApiKey): "active" | "revoked" | "expired" {
 export function ApiKeyList({
 	slug,
 	organizationId,
+	orgs = [],
+	isSystemAdmin = false,
 }: {
 	slug?: string;
 	organizationId?: string;
+	/** User settings: orgs the user may create keys for (org picker). */
+	orgs?: readonly ApiKeyOrgOption[];
+	isSystemAdmin?: boolean;
 }) {
 	const t = useTranslations("apiKeys");
 	const locale = useLocale();
@@ -84,6 +92,12 @@ export function ApiKeyList({
 
 	const items = query.data?.items ?? [];
 
+	const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
+
+	function scopeLabel(scope: string): string {
+		return t.has(`scopes.${scope}`) ? t(`scopes.${scope}`) : scope;
+	}
+
 	function formatDate(date: Date | null): string {
 		if (!date) return t("neverUsed");
 		return date.toLocaleDateString(locale);
@@ -100,6 +114,8 @@ export function ApiKeyList({
 				</div>
 				<ApiKeyCreateDialog
 					organizationId={effectiveOrgId}
+					orgs={orgs}
+					isSystemAdmin={isSystemAdmin}
 					onCreated={(key) => setCreatedKey(key)}
 				/>
 			</div>
@@ -118,6 +134,8 @@ export function ApiKeyList({
 						</p>
 						<ApiKeyCreateDialog
 							organizationId={effectiveOrgId}
+							orgs={orgs}
+							isSystemAdmin={isSystemAdmin}
 							onCreated={(key) => setCreatedKey(key)}
 						/>
 					</CardContent>
@@ -145,7 +163,16 @@ export function ApiKeyList({
 										const status = getKeyStatus(key);
 										return (
 											<tr key={key.id}>
-												<td className="p-3 font-medium">{key.name}</td>
+												<td className="p-3 font-medium">
+													{key.name}
+													{!effectiveOrgId &&
+														key.organizationId &&
+														orgNames.has(key.organizationId) && (
+															<span className="block font-normal text-muted-foreground text-xs">
+																{orgNames.get(key.organizationId)}
+															</span>
+														)}
+												</td>
 												<td className="p-3 font-mono text-muted-foreground text-xs">
 													{key.prefix}
 												</td>
@@ -160,7 +187,7 @@ export function ApiKeyList({
 														) : (
 															key.scopes.map((scope) => (
 																<Badge key={scope} variant="secondary">
-																	{t(`scopes.${scope}`)}
+																	{scopeLabel(scope)}
 																</Badge>
 															))
 														)}

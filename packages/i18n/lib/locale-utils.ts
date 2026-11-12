@@ -21,6 +21,9 @@ export const getAllLocales = (): Locale[] => {
 	return Object.keys(i18nConfig.locales) as Locale[];
 };
 
+/** False when only one locale is enabled — language switchers hide themselves. */
+export const hasMultipleLocales = (): boolean => getAllLocales().length > 1;
+
 export const isValidLocale = (locale: string): locale is Locale => {
 	return Object.hasOwn(i18nConfig.locales, locale);
 };

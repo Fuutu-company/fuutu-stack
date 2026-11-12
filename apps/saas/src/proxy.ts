@@ -8,6 +8,7 @@ import {
 } from "@fuutu/config";
 import { env } from "@fuutu/env/saas";
 import { type NextRequest, NextResponse } from "next/server";
+import { APP_PUBLIC_PREFIXES } from "./proxy-public";
 
 /**
  * Stamp the kit fingerprint on every NextResponse the proxy returns.
@@ -70,7 +71,9 @@ const PUBLIC_PREFIXES = [
 	"/.well-known",
 	"/auth",
 	"/image-proxy",
-] as const;
+	// reason: app-owned prefixes — each documented in proxy-public.ts
+	...APP_PUBLIC_PREFIXES,
+];
 const AUTH_PREFIX = "/auth";
 
 function isPublic(pathname: string): boolean {

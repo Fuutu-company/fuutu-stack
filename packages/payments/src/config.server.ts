@@ -58,6 +58,24 @@ export function getPlanPriceId(
 	return typeof value === "string" ? value : undefined;
 }
 
+/** Provider-side price IDs of a plan, keyed by billing interval. */
+export type PlanPriceIds = { monthly?: string; yearly?: string };
+
+/**
+ * Price IDs of every plan that has at least one configured (env-set) ID —
+ * what the billing pages pass to their client components. Plans come from
+ * `PLANS[].priceIdEnvVars`, so a new plan needs no page change.
+ */
+export function getPlanPriceIds(): Partial<Record<PlanId, PlanPriceIds>> {
+	const result: Partial<Record<PlanId, PlanPriceIds>> = {};
+	for (const planId of PLAN_IDS) {
+		const monthly = getPlanPriceId(planId, "month");
+		const yearly = getPlanPriceId(planId, "year");
+		if (monthly || yearly) result[planId] = { monthly, yearly };
+	}
+	return result;
+}
+
 /**
  * Provider-side price/product IDs of every `billingType: "one_time"` plan
  * (all intervals, unset env vars skipped). An active one-time purchase of

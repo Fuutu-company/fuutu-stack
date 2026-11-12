@@ -402,11 +402,53 @@ export async function releaseSlot(path) {
 
 // ── environment ─────────────────────────────────────────────────────────
 
-const isLocal = (value) =>
-	!value ||
-	/^(https?|postgres(ql)?):\/\/([^@/]*@)?(localhost|127\.0\.0\.1)([:/]|$)/.test(
-		value,
+const LOCAL_PROTOCOLS = new Set([
+	"http:",
+	"https:",
+	"postgres:",
+	"postgresql:",
+]);
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+/** Parsed URL, or null when the value is not one. */
+function parseUrl(value) {
+	try {
+		return new URL(value);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Unset → local (the slot defaults apply). Otherwise only a parsable
+ * http(s)/postgres URL whose parsed host is exactly localhost, 127.0.0.1
+ * or ::1 — a username like `localhost:5432@remote` never counts.
+ */
+export function isLocal(value) {
+	if (!value) return true;
+	const url = parseUrl(value);
+	return (
+		url !== null &&
+		LOCAL_PROTOCOLS.has(url.protocol) &&
+		LOCAL_HOSTS.has(url.hostname.toLowerCase())
 	);
+}
+
+/**
+ * The E2E reset drops this database — only ever the slot's own local
+ * `<database>-e2e`, never a remote, the dev one or another project's.
+ */
+export function isE2eResetTarget(value, project) {
+	if (!value || !isLocal(value)) return false;
+	const url = parseUrl(value);
+	try {
+		return (
+			decodeURIComponent(url.pathname.slice(1)) === `${project.database}-e2e`
+		);
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Env for an app process of this project. Local URLs (unset or pointing at
@@ -432,7 +474,9 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
 	}
 	if (env.DATABASE_URL && isLocal(env.DATABASE_URL)) {
 		const url = new URL(env.DATABASE_URL);
-		url.pathname = `/${project.database}`;
+		// E2E servers get their own database (reset per run by next.mjs) —
+		// tests never write into the dev session's data.
+		url.pathname = `/${project.database}${e2e ? "-e2e" : ""}`;
 		out.DATABASE_URL = url.toString();
 	}
 	if (project.storageBucketPrefix && isLocal(env.S3_ENDPOINT)) {

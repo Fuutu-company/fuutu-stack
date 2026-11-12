@@ -225,6 +225,66 @@ describe("slot environment", () => {
 		expect(env.DATABASE_URL).toBeUndefined();
 	});
 
+	it("treats only localhost / 127.0.0.1 as local (guards the E2E database reset)", () => {
+		expect(lib.isLocal("postgresql://u:p@localhost:5432/acme-e2e")).toBe(true);
+		expect(lib.isLocal("postgresql://u:p@127.0.0.1:5432/acme-e2e")).toBe(true);
+		expect(lib.isLocal("postgresql://u:p@db.example.com:5432/acme-e2e")).toBe(
+			false,
+		);
+		expect(lib.isLocal("postgresql://u:p@postgres:5432/acme-e2e")).toBe(false);
+		expect(
+			lib.isLocal("postgresql://u:p@localhost.evil.com:5432/acme-e2e"),
+		).toBe(false);
+	});
+
+	it("judges the parsed host, not a username that looks like one", () => {
+		expect(
+			lib.isLocal("postgresql://localhost:5432@db.prod.example.com/app"),
+		).toBe(false);
+		expect(lib.isLocal("http://localhost@evil.example.com/")).toBe(false);
+		expect(lib.isLocal("http://127.0.0.1.evil.example.com/")).toBe(false);
+		expect(lib.isLocal("postgresql://u:p@[::1]:5432/acme-e2e")).toBe(true);
+		expect(lib.isLocal("http://[::1]:3000")).toBe(true);
+		expect(lib.isLocal("http://LOCALHOST:3000")).toBe(true);
+		expect(lib.isLocal("not a url")).toBe(false);
+		expect(lib.isLocal("localhost:5432")).toBe(false);
+		expect(lib.isLocal(undefined)).toBe(true);
+		expect(lib.isLocal("")).toBe(true);
+	});
+
+	it("resets only the slot's own local <database>-e2e", async () => {
+		const p = await lib.ensureSlot(project("a"), { busy: idle });
+		const target = `postgresql://u:p@localhost:5432/${p.database}-e2e`;
+		expect(lib.isE2eResetTarget(target, p)).toBe(true);
+		expect(
+			lib.isE2eResetTarget(`postgresql://u:p@[::1]:5432/${p.database}-e2e`, p),
+		).toBe(true);
+		expect(
+			lib.isE2eResetTarget(`postgresql://u:p@localhost:5432/${p.database}`, p),
+		).toBe(false);
+		expect(
+			lib.isE2eResetTarget("postgresql://u:p@localhost:5432/other-e2e", p),
+		).toBe(false);
+		expect(
+			lib.isE2eResetTarget(
+				`postgresql://localhost:5432@db.prod.example.com/${p.database}-e2e`,
+				p,
+			),
+		).toBe(false);
+		expect(lib.isE2eResetTarget(undefined, p)).toBe(false);
+		expect(lib.isE2eResetTarget("", p)).toBe(false);
+	});
+
+	it("gives E2E servers their own database, never the dev session's", async () => {
+		const p = await lib.ensureSlot(project("a"), { busy: idle });
+		const env = lib.slotEnv(
+			p,
+			{ DATABASE_URL: "postgresql://u:p@localhost:5432/acme" },
+			{ e2e: true },
+		);
+		expect(env.DATABASE_URL).toBe("postgresql://u:p@localhost:5432/acme-e2e");
+	});
+
 	it("uses the E2E ports for E2E servers", async () => {
 		const p = await lib.ensureSlot(project("a"), { busy: idle });
 		expect(lib.slotEnv(p, {}, { e2e: true }).BETTER_AUTH_URL).toBe(

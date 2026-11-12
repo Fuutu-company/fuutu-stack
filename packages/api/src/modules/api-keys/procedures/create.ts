@@ -3,18 +3,19 @@ import {
 	countOrgApiKeys,
 	createApiKeyWithinLimit,
 } from "@fuutu/db";
-import { getPlanLimit } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { apiConfig } from "../../../config";
+import { entitledLimit } from "../../../orpc/middleware/authorize";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
 
 const createApiKeySchema = z.object({
 	name: z.string().min(1).max(100),
 	organizationId: z.string().optional(),
-	scopes: z.array(z.string()).max(10).optional(),
+	// Only org keys accept scopes; omitted/empty = unrestricted org credential.
+	scopes: z.array(z.enum(apiConfig.apiKeyScopes)).max(10).optional(),
 	expiresAt: z.coerce.date().optional(),
 });
 
@@ -50,20 +51,20 @@ export const createApiKeyProcedure = authProcedure({
 					message: "Scopes are only supported on organization API keys",
 				});
 			}
-			const unknown = input.scopes.filter(
-				(scope) =>
-					!(apiConfig.apiKeyScopes as readonly string[]).includes(scope),
+			const needsSystemAdmin = input.scopes.some((scope) =>
+				apiConfig.apiKeyAdminScopes.includes(scope),
 			);
-			if (unknown.length > 0) {
-				throw new ORPCError("BAD_REQUEST", {
-					message: "Unknown API key scope",
+			if (needsSystemAdmin && context.systemRole !== "admin") {
+				throw new ORPCError("FORBIDDEN", {
+					message: "Only system admins can grant this scope",
 				});
 			}
 		}
+		const scopes = input.scopes ? [...new Set(input.scopes)] : undefined;
 		// Race-safe re-check: the `limit` option above is a friendly
 		// pre-flight — the count+insert inside createApiKeyWithinLimit runs
 		// in a Serializable transaction so concurrent creates cannot both pass.
-		const limitValue = getPlanLimit(context.planId ?? "free", "apiKeys");
+		const limitValue = entitledLimit(context, "apiKeys");
 		// `false` (feature not available on plan) must not collapse to
 		// unlimited — map it to a zero cap so the create always refuses.
 		const max =
@@ -73,7 +74,7 @@ export const createApiKeyProcedure = authProcedure({
 			name: input.name,
 			organizationId: input.organizationId ?? null,
 			expiresAt: input.expiresAt ?? null,
-			...(input.scopes ? { scopes: input.scopes } : {}),
+			...(scopes ? { scopes } : {}),
 			max,
 		});
 		if (!result) {

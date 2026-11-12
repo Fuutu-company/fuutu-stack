@@ -87,6 +87,44 @@ export const isOrganizationMember = async (
 ): Promise<boolean> =>
 	(await db.member.count({ where: { userId, organizationId } })) > 0;
 
+/**
+ * The user's member role in an org, or `null` when they are not a member —
+ * API-key verification re-checks this on every request so a removed
+ * member's org keys stop working immediately.
+ */
+export const getOrganizationMemberRole = async (
+	organizationId: string,
+	userId: string,
+): Promise<string | null> => {
+	const member = await db.member.findFirst({
+		where: { organizationId, userId },
+		select: { role: true },
+	});
+	return member?.role ?? null;
+};
+
+export type UserMembership = {
+	id: string;
+	name: string;
+	slug: string;
+	role: string;
+};
+
+/** Every org the user belongs to, with their member role in it. */
+export const listMembershipsForUser = async (
+	userId: string,
+): Promise<UserMembership[]> => {
+	const members = await db.member.findMany({
+		where: { userId },
+		orderBy: { createdAt: "asc" },
+		select: {
+			role: true,
+			organization: { select: { id: true, name: true, slug: true } },
+		},
+	});
+	return members.map(({ role, organization }) => ({ ...organization, role }));
+};
+
 export const countOrganizationsForUser = (userId: string) =>
 	db.organization.count({ where: { members: { some: { userId } } } });
 

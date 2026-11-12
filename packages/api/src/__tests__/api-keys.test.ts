@@ -172,7 +172,8 @@ describe("apiKeys.create", () => {
 				{
 					name: "Scoped Key",
 					organizationId: "org-1",
-					scopes: ["bogus-scope"],
+					// Not in the vocabulary — the input type rejects it too.
+					scopes: ["bogus-scope"] as never,
 				},
 				{ context: authenticatedContext },
 			),

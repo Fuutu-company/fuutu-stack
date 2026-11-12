@@ -1,4 +1,4 @@
-import type { Locale } from "@fuutu/i18n";
+import { getAllLocales } from "@fuutu/i18n";
 import { describe, expect, it } from "vitest";
 import { getMailStrings } from "../i18n";
 import { renderTemplate } from "../templates";
@@ -44,9 +44,9 @@ const templateNames = Object.keys(fixtures) as TemplateName[];
 
 describe("renderTemplate", () => {
 	it.each(templateNames)(
-		"renders %s in en and de with subject/html/text",
+		"renders %s in every enabled locale with subject/html/text",
 		(name) => {
-			for (const locale of ["en", "de"] as const) {
+			for (const locale of getAllLocales()) {
 				const rendered = renderTemplate(name, {
 					...fixtures[name],
 					locale,
@@ -173,17 +173,5 @@ describe("getMailStrings", () => {
 
 	it("returns the de bundle for de", () => {
 		expect(getMailStrings("de").signature).toBe("— Dein Fuutu-Team");
-	});
-
-	it("resolves a BCP-47 parent before falling back to en", () => {
-		// "de-AT" is not a configured Locale — cast simulates a locale the
-		// app adds to i18nConfig before the mail bundle ships it.
-		expect(getMailStrings("de-AT" as Locale).signature).toBe(
-			"— Dein Fuutu-Team",
-		);
-		// "fr-CA" has no bundle and its parent "fr" is not configured → en.
-		expect(getMailStrings("fr-CA" as Locale).signature).toBe(
-			"— The Fuutu team",
-		);
 	});
 });

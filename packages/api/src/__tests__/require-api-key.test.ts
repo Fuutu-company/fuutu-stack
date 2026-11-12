@@ -4,6 +4,7 @@ import { requireApiKey } from "../modules/api-keys/require-api-key";
 
 vi.mock("@fuutu/db", () => ({
 	verifyApiKeyWithOwner: vi.fn(),
+	getOrganizationMemberRole: vi.fn(),
 }));
 
 vi.mock("@fuutu/payments", () => ({
@@ -34,7 +35,9 @@ vi.mock("../config", () => ({
 	},
 }));
 
-const { verifyApiKeyWithOwner } = await import("@fuutu/db");
+const { verifyApiKeyWithOwner, getOrganizationMemberRole } = await import(
+	"@fuutu/db"
+);
 const { getOrgEntitlement } = await import("@fuutu/payments");
 
 const ORG_KEY = {
@@ -69,6 +72,7 @@ describe("requireApiKey", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(ORG_KEY as never);
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue("member");
 		vi.mocked(getOrgEntitlement).mockResolvedValue({
 			features: ["api_versioning"],
 		} as never);
@@ -145,6 +149,16 @@ describe("requireApiKey", () => {
 				error: "invalid_api_key",
 			},
 		);
+	});
+
+	it("throws 401 invalid_api_key when the key owner left the org", async () => {
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue(null);
+		await expectHttpError(
+			requireApiKey(bearerHeaders("futu_sk_x"), "mcp"),
+			401,
+			{ error: "invalid_api_key" },
+		);
+		expect(getOrganizationMemberRole).toHaveBeenCalledWith("org-1", "user-1");
 	});
 
 	it("throws 402 upgrade_required when the org lacks the gated feature", async () => {

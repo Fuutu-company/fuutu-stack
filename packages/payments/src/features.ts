@@ -8,8 +8,10 @@ import {
 	type FeatureEntry,
 	LIMITS,
 	type LimitValue,
+	PLANS,
 	type PlanId,
 	type PlanTier,
+	TIER_ORDER,
 } from "./config";
 
 export type { FeatureEntry, LimitValue, PlanTier };
@@ -53,12 +55,10 @@ const FLAT_CATALOG = toFlatCatalog();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const TIER_ORDER: PlanTier[] = ["free", "pro", "enterprise"];
-
 export function planIdToTier(planId: PlanId): PlanTier {
-	if (planId === "enterprise") return "enterprise";
-	if (planId === "pro") return "pro";
-	return "free";
+	// Plans without a declared tier count as "free" — same as before tiers
+	// were declared on the plan, so existing custom plans keep working.
+	return (PLANS[planId] as { tier?: PlanTier } | undefined)?.tier ?? "free";
 }
 
 export function getFeaturesForTier(tier: PlanTier): CatalogFeature[] {

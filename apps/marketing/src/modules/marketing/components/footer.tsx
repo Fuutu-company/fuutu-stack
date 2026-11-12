@@ -1,49 +1,11 @@
 import { config } from "@fuutu/config";
 import { BrandLogo } from "@fuutu/ui";
 import { useTranslations } from "next-intl";
-import { urls } from "@/lib/urls";
+import { FOOTER_COLUMNS } from "@/lib/site-links";
 import { Link } from "@/navigation";
-
-const COLUMNS = [
-	{
-		titleKey: "product",
-		links: [
-			{ href: "/#features", labelKey: "features" },
-			{ href: "/pricing", labelKey: "pricing" },
-			{ href: "/changelog", labelKey: "changelog" },
-		],
-	},
-	{
-		titleKey: "resources",
-		links: [
-			{ href: urls.docs, labelKey: "docs", external: true },
-			{ href: "/blog", labelKey: "blog" },
-		],
-	},
-	{
-		titleKey: "companyAndLegal",
-		links: [
-			{ href: "/contact", labelKey: "contact" },
-			{ href: "/legal/privacy", labelKey: "privacy" },
-			{ href: "/legal/terms", labelKey: "terms" },
-			{ href: "/legal/imprint", labelKey: "imprint" },
-		],
-	},
-] as const;
-
-const NAV_LABEL_KEYS = new Set([
-	"features",
-	"pricing",
-	"docs",
-	"blog",
-	"changelog",
-]);
 
 export function MarketingFooter() {
 	const t = useTranslations();
-
-	const labelFor = (key: string) =>
-		NAV_LABEL_KEYS.has(key) ? t(`nav.${key}`) : t(`footer.${key}`);
 
 	return (
 		<footer className="border-t">
@@ -58,7 +20,7 @@ export function MarketingFooter() {
 							{t("footer.tagline")}
 						</p>
 					</div>
-					{COLUMNS.map((column) => (
+					{FOOTER_COLUMNS.map((column) => (
 						<div key={column.titleKey}>
 							<h4 className="mb-4 font-semibold text-sm">
 								{t(`footer.${column.titleKey}`)}
@@ -66,21 +28,21 @@ export function MarketingFooter() {
 							<ul className="space-y-2 text-sm">
 								{column.links.map((link) => (
 									<li key={link.href}>
-										{"external" in link && link.external ? (
+										{link.external ? (
 											<a
 												href={link.href}
 												target="_blank"
 												rel="noopener noreferrer"
 												className="text-muted-foreground transition-colors hover:text-foreground"
 											>
-												{labelFor(link.labelKey)}
+												{t(link.labelKey)}
 											</a>
 										) : (
 											<Link
 												href={link.href}
 												className="text-muted-foreground transition-colors hover:text-foreground"
 											>
-												{labelFor(link.labelKey)}
+												{t(link.labelKey)}
 											</Link>
 										)}
 									</li>

@@ -115,15 +115,56 @@ test.describe("organization settings — invite & members", () => {
 			timeout: 10_000,
 		});
 
-		// "Cancel invite" button appears next to the pending invitation
+		// "Cancel invite" on THIS invitation's row — other pending invites
+		// (from earlier runs) may be listed above it.
 		const cancelButton = page
-			.getByRole("button", { name: /cancel invite/i })
-			.first();
+			.getByRole("listitem")
+			.filter({ hasText: inviteEmail })
+			.getByRole("button", { name: /cancel invite/i });
 		await expect(cancelButton).toBeVisible({ timeout: 10_000 });
 		await cancelButton.click();
 		await expect(page.getByText(inviteEmail)).not.toBeVisible({
 			timeout: 10_000,
 		});
+	});
+
+	test("a seat-limit rejection shows the seat cap and the upgrade link", async ({
+		page,
+	}) => {
+		// Replay the server's typed PAYMENT_REQUIRED error (wire shape pinned
+		// by packages/api seat-limit-wire.test.ts) — the UI must not
+		// pre-count seats, it reacts to the server's answer.
+		await page.route("**/api/rpc/organizations/members/invite", (route) =>
+			route.fulfill({
+				status: 402,
+				contentType: "application/json",
+				body: JSON.stringify({
+					json: {
+						defined: false,
+						code: "PAYMENT_REQUIRED",
+						status: 402,
+						message: "Organization seat limit reached",
+						data: {
+							seatsTotal: 3,
+							upgradeUrl: "/organizations/acme/settings/billing",
+						},
+					},
+				}),
+			}),
+		);
+
+		await page.goto("/organizations/acme/settings/members");
+		const emailInput = page.getByPlaceholder(/teammate@company\.com/i);
+		await expect(emailInput).toBeVisible({ timeout: 10_000 });
+		await emailInput.fill(`qa-seat-${Date.now()}@fuutu.local`);
+		await page.getByRole("button", { name: /^invite$/i }).click();
+
+		await expect(page.getByText(/seat limit reached \(3 seats\)/i)).toBeVisible(
+			{ timeout: 10_000 },
+		);
+		await expect(
+			page.getByRole("link", { name: /upgrade plan/i }),
+		).toHaveAttribute("href", "/organizations/acme/settings/billing");
 	});
 });
 

@@ -53,6 +53,12 @@ export interface ProviderEvent {
 	/** Normalized status to write directly to the Purchase row. */
 	status?: PurchaseStatusLiteral;
 	currentPeriodEnd?: Date;
+	/**
+	 * Purchased unit/seat count (Creem `units`, Stripe item `quantity`,
+	 * Polar `seats`). Persisted to `Purchase.quantity`; absent → the
+	 * stored quantity is left unchanged (new rows default to 1).
+	 */
+	units?: number;
 	/** Contains user_id / organization_id (passed through checkout metadata). */
 	metadata?: Record<string, unknown>;
 	/**

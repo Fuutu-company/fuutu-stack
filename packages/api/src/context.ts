@@ -1,7 +1,8 @@
 import { auth } from "@fuutu/auth";
-import { API_KEY_PREFIX, verifyApiKeyWithOwner } from "@fuutu/db";
+import { API_KEY_PREFIX } from "@fuutu/db";
 import type { Context as HonoContext } from "hono";
 import { API_SCOPE } from "./api-key-scopes";
+import { verifyApiKeyCredential } from "./modules/api-keys/verify-credential";
 
 export type CreateContextOptions = {
 	context: HonoContext;
@@ -68,12 +69,10 @@ export async function createContext({ context }: CreateContextOptions) {
 	if (!session) {
 		const rawKey = extractApiKey(headers);
 		if (rawKey) {
-			const verified = await verifyApiKeyWithOwner(rawKey);
-			if (
-				verified &&
-				!verified.user.banned &&
-				isAllowedOnApi(verified.apiKey.scopes)
-			) {
+			// Owner ban, org membership and admin-scope role are re-checked
+			// on every request (verifyApiKeyCredential) — fail closed.
+			const verified = await verifyApiKeyCredential(rawKey);
+			if (verified && isAllowedOnApi(verified.apiKey.scopes)) {
 				session = toApiKeySession(asSessionUser(verified.user));
 				apiKey = {
 					id: verified.apiKey.id,

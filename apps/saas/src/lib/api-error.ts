@@ -1,4 +1,23 @@
+import { ORPCError } from "@orpc/client";
 import type { useTranslations } from "next-intl";
+
+export type SeatLimit = { seatsTotal: number; upgradeUrl: string };
+
+/**
+ * The org's seat cap when `err` is the API's typed seat-limit error
+ * (`PAYMENT_REQUIRED`, data `{ seatsTotal, upgradeUrl }`), else null.
+ */
+export function seatLimitFromError(err: unknown): SeatLimit | null {
+	if (!(err instanceof ORPCError) || err.code !== "PAYMENT_REQUIRED") {
+		return null;
+	}
+	const data: unknown = err.data;
+	if (typeof data !== "object" || data === null) return null;
+	const { seatsTotal, upgradeUrl } = data as Record<string, unknown>;
+	return typeof seatsTotal === "number" && typeof upgradeUrl === "string"
+		? { seatsTotal, upgradeUrl }
+		: null;
+}
 
 /**
  * Map an API error to a localized message. The API's authorize middleware
@@ -13,10 +32,7 @@ export function planGateMessage(
 	fallbackKey: Parameters<ReturnType<typeof useTranslations>>[0],
 ): string {
 	const message = err instanceof Error ? err.message : "";
-	if (
-		message.includes("Limit exceeded") ||
-		message.includes("seat limit reached")
-	) {
+	if (message.includes("Limit exceeded")) {
 		return t("common.errors.planLimitReached");
 	}
 	if (

@@ -694,6 +694,42 @@ describe("polar provider — SDK validation errors", () => {
 	});
 });
 
+describe("polar provider — purchased units", () => {
+	it("reads seats from a subscription payload", async () => {
+		const events = await parsePayload({
+			type: "subscription.updated",
+			data: {
+				id: "sub_1",
+				status: "active",
+				productId: "prod_1",
+				seats: 6,
+			},
+		});
+		expect(events[0]?.units).toBe(6);
+	});
+
+	it("reads seats from a seat-based one-time order", async () => {
+		const events = await parsePayload({
+			type: "order.paid",
+			data: {
+				id: "order_1",
+				billingReason: "purchase",
+				productId: "prod_1",
+				seats: 3,
+			},
+		});
+		expect(events[0]).toMatchObject({ type: "one_time.purchased", units: 3 });
+	});
+
+	it("leaves units undefined for a non-seat subscription (seats null)", async () => {
+		const events = await parsePayload({
+			type: "subscription.updated",
+			data: { id: "sub_1", status: "active", productId: "prod_1", seats: null },
+		});
+		expect(events[0]?.units).toBeUndefined();
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("polar", () => polarPaymentProvider, {
 	behavior: "shape",

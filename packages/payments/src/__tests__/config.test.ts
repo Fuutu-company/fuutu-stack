@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
 	FEATURE_CATALOG,
 	type FeatureEntry,
+	getSeatUpgradeUrl,
 	isPaymentsEnabled,
 	LIMITS,
 	PLAN_IDS,
@@ -215,5 +216,22 @@ describe("catalog integrity", () => {
 				}
 			}
 		}
+	});
+});
+
+describe("getSeatUpgradeUrl()", () => {
+	afterEach(() => {
+		paymentsConfig.seatUpgradeUrl = undefined;
+	});
+
+	it("defaults to the org's in-app billing page", () => {
+		expect(getSeatUpgradeUrl("acme")).toBe(
+			"/organizations/acme/settings/billing",
+		);
+	});
+
+	it("uses paymentsConfig.seatUpgradeUrl when configured", () => {
+		paymentsConfig.seatUpgradeUrl = (slug) => `https://shop.test/${slug}`;
+		expect(getSeatUpgradeUrl("acme")).toBe("https://shop.test/acme");
 	});
 });

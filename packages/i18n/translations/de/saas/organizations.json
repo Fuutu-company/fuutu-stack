@@ -36,7 +36,7 @@
 			"removeMember": "Entfernen",
 			"pendingInvitations": "Offene Einladungen",
 			"cancelInvite": "Einladung zurückziehen",
-			"seatLimitReached": "Sitzplatzlimit erreicht ({seats} Plätze)",
+			"seatLimitReached": "Sitzplatzlimit erreicht ({seats, plural, one {# Platz} other {# Plätze}})",
 			"seatLimitHint": "Entferne ein Mitglied oder ziehe eine offene Einladung zurück, um einen Platz freizugeben, oder upgrade deinen Plan.",
 			"seatLimitCta": "Plan upgraden",
 			"danger": "Gefahrenzone",

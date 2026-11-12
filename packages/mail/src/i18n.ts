@@ -193,7 +193,11 @@ const de: MailStrings = {
 	},
 };
 
-const bundles: Record<Locale, MailStrings> = { en, de };
+// `Record<Locale, …>` keeps a bundle mandatory for every enabled locale; the
+// `Partial` intersection lets dormant bundles (e.g. `de` after it is removed
+// from i18nConfig.locales) stay wired so re-enabling is config-only.
+const bundles: Record<Locale, MailStrings> &
+	Partial<Record<string, MailStrings>> = { en, de };
 
 /**
  * Resolve the mail string bundle for a given locale via the shared i18n
@@ -203,9 +207,8 @@ const bundles: Record<Locale, MailStrings> = { en, de };
  * locale that has a mail bundle.
  */
 export function getMailStrings(locale?: string): MailStrings {
-	const bundlesByCode: Partial<Record<string, MailStrings>> = bundles;
 	for (const loc of getFallbackChain(locale ?? i18nConfig.defaultLocale)) {
-		const bundle = bundlesByCode[loc];
+		const bundle = Object.hasOwn(bundles, loc) ? bundles[loc] : undefined;
 		if (bundle) return bundle;
 	}
 	return en;

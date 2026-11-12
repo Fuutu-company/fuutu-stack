@@ -169,6 +169,7 @@ export type UpdatePurchaseInput = {
 	productId?: string | null;
 	currentPeriodEnd?: Date | null;
 	customerId?: string | null;
+	quantity?: number;
 	userId?: string | null;
 	organizationId?: string | null;
 	metadata?: unknown;
@@ -188,6 +189,7 @@ export const updatePurchase = (
 				currentPeriodEnd: input.currentPeriodEnd,
 			}),
 			...(input.customerId !== undefined && { customerId: input.customerId }),
+			...(input.quantity !== undefined && { quantity: input.quantity }),
 			...(input.userId !== undefined && { userId: input.userId }),
 			...(input.organizationId !== undefined && {
 				organizationId: input.organizationId,

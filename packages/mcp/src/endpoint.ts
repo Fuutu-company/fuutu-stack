@@ -9,6 +9,7 @@ import type {
 	AnyMcpPrompt,
 	AnyMcpTool,
 	McpPrincipal,
+	McpToolCall,
 	McpUserPrincipal,
 } from "./types";
 
@@ -39,6 +40,17 @@ export type McpEndpointOptions = {
 	 * (401/402/429 …) to stop the request — e.g. for an invalid key.
 	 */
 	resolvePrincipal: (request: Request) => Promise<McpPrincipal | Response>;
+	/**
+	 * Optional middleware around every tool call — quotas, auditing, metering
+	 * without forking the endpoint. Runs after access checks and input
+	 * validation; call `next()` to run the tool and return (or transform)
+	 * its result. Throw `McpToolError` to deny with a caller-safe message;
+	 * any other error is reported via `onError` as "Internal error".
+	 */
+	wrapTool?: (
+		call: McpToolCall,
+		next: () => Promise<unknown>,
+	) => Promise<unknown>;
 	/** Receives unexpected errors (internal details never reach the client). */
 	onError?: (error: unknown, meta: { tool?: string; prompt?: string }) => void;
 };
@@ -123,9 +135,12 @@ export function createMcpEndpoint(options: McpEndpointOptions) {
 						annotations: tool.annotations,
 					},
 					async (input: unknown) => {
+						const run = () => tool.handler(input, { principal, request });
 						try {
 							return toToolResult(
-								await tool.handler(input, { principal, request }),
+								await (options.wrapTool
+									? options.wrapTool({ tool, input, principal, request }, run)
+									: run()),
 							);
 						} catch (error) {
 							if (error instanceof McpToolError) {

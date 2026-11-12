@@ -20,6 +20,7 @@ import { HTTPException } from "hono/http-exception";
 import { apiConfig } from "./config";
 import { createContext } from "./context";
 import { CORS_ALLOW_HEADERS } from "./cors";
+import { mountCustomRoutes } from "./custom-routes";
 import { handleMcpRequest } from "./mcp";
 import { isOriginAllowed } from "./origin-guard";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
@@ -58,7 +59,7 @@ void checkLicense();
 // telemetry endpoint with kit identity and license fingerprint.
 void pingTelemetry();
 
-export const app = new Hono<{
+const base = new Hono<{
 	Variables: { evlogWideEvent: boolean };
 }>()
 	.basePath("/api")
@@ -178,7 +179,13 @@ export const app = new Hono<{
 	// connection. The Scalar UI and spec are public — procedure-level auth still
 	// applies to actual API endpoints.
 	.get("/docs", docsHandler)
-	.get("/spec.json", docsHandler)
+	.get("/spec.json", docsHandler);
+
+// App-owned routes (src/custom-routes.ts) — like the machine routes above,
+// mounted before createContext; they authenticate themselves.
+mountCustomRoutes(base);
+
+export const app = base
 	.use("*", async (c, next) => {
 		const context = await createContext({ context: c });
 		// Every request reaching this point goes through a withEvlog-wrapped

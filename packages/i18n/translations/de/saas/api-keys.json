@@ -34,6 +34,9 @@
 				"personal": "Persönlich",
 				"org": "Organisation (voller Zugriff)"
 			},
+			"orgLabel": "Organisation",
+			"orgPlaceholder": "Organisation auswählen",
+			"orgKeyHint": "Organisationsschlüssel handeln mit deiner Rolle in dieser Organisation und funktionieren nicht mehr, wenn du sie verlässt.",
 			"submit": "Schlüssel erstellen"
 		},
 		"scopes": {

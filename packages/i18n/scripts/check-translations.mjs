@@ -2,7 +2,9 @@
 /**
  * Translation completeness checker.
  *
- * 1. Verifies every locale dir under translations/ contains every key.
+ * 1. Verifies every ENABLED locale (`i18nConfig.locales` in config.ts) contains
+ *    every key. Folders under translations/ that are not enabled are dormant:
+ *    reported as info, never checked, never an error.
  * 2. Warns about keys in translation files that are never referenced in source code.
  * 3. Cross-checks FEATURE_CATALOG IDs against payments.features translation keys.
  * 4. Cross-checks CREDIT_METERS keys + CREDIT_TOPUPS ids against credits.* keys
@@ -14,6 +16,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseConfiguredLocales, partitionLocaleDirs } from "./locales.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../../..");
@@ -154,13 +157,41 @@ function extractUsedKeys() {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-const locales = readdirSync(translationsDir)
+const translationDirs = readdirSync(translationsDir)
 	.filter(
 		(entry) =>
 			!entry.startsWith(".") &&
 			statSync(join(translationsDir, entry)).isDirectory(),
 	)
 	.sort();
+
+const configuredLocales = parseConfiguredLocales(
+	readFileSync(resolve(__dirname, "../config.ts"), "utf-8"),
+);
+if (configuredLocales === null) {
+	console.error(
+		"\n❌ Could not read i18nConfig.locales from packages/i18n/config.ts",
+	);
+	process.exit(1);
+}
+
+const {
+	enabled: locales,
+	dormant: dormantLocales,
+	missing: missingLocales,
+} = partitionLocaleDirs(translationDirs, configuredLocales);
+
+for (const locale of missingLocales) {
+	hasErrors = true;
+	console.error(
+		`\n❌ Enabled locale "${locale}" has no translations/${locale}/ directory`,
+	);
+}
+if (dormantLocales.length > 0) {
+	console.log(
+		`ℹ️  Dormant locales (in translations/, not enabled in i18nConfig.locales) — not checked: ${dormantLocales.join(", ")}`,
+	);
+}
 const localeKeys = new Map(locales.map((l) => [l, loadLocaleKeys(l)]));
 
 // Union of all keys across locales — every locale must contain every key.
@@ -581,7 +612,7 @@ if (hasErrors) {
 	console.error("\n❌ Translation check failed!");
 	process.exit(1);
 } else {
-	console.log("\n✅ All translation keys are present in all locales.");
+	console.log("\n✅ All translation keys are present in all enabled locales.");
 	if (unused.length > 0) {
 		console.log("⚠️  Unused keys detected — consider removing them.");
 	}

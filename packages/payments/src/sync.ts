@@ -46,6 +46,7 @@ import {
 	getOneTimePlanPriceIds,
 	getPlanIdForProductId,
 } from "./config.server";
+import { notifyPurchaseChanged } from "./extensions";
 import { resolvePaymentProviderById } from "./resolve";
 import type {
 	ProviderEvent,
@@ -262,6 +263,7 @@ async function processSingleEvent(
 				resolvedOrganizationId,
 			);
 		}
+		await notifyPurchaseChanged(resolvedUserId, resolvedOrganizationId);
 		return;
 	}
 
@@ -311,6 +313,7 @@ async function handleOneTimePurchase(
 				userId,
 				organizationId,
 			);
+			await notifyStoredPurchaseOwner(existing, userId, organizationId);
 			return;
 		}
 	}
@@ -333,6 +336,7 @@ async function handleOneTimePurchase(
 			priceId: event.productId,
 			productId: event.productId,
 			customerId: event.customerId ?? null,
+			quantity: event.units,
 			userId,
 			organizationId,
 			currentPeriodEnd: event.currentPeriodEnd ?? null,
@@ -359,6 +363,7 @@ async function handleOneTimePurchase(
 					userId,
 					organizationId,
 				);
+				await notifyStoredPurchaseOwner(winner, userId, organizationId);
 				return;
 			}
 			// Not the dedup race — a violation on another constraint, or no
@@ -374,15 +379,19 @@ async function handleOneTimePurchase(
 		organizationId,
 	});
 
-	// Grant top-up credits if this product is a credit package. Failures
-	// propagate — dedup above makes the provider's retry safe.
-	await grantTopUpCreditsForPurchase(event, userId, organizationId, purchaseId);
-
+	// Emit with the row, before anything that can throw: a retry takes the
+	// dedup path above, which never emits — invoice.paid would be lost.
 	await emitWebhookEvent("invoice.paid", userId, organizationId, {
 		purchaseId,
 		productId: event.productId,
 		provider: providerId,
 	});
+
+	// Grant top-up credits if this product is a credit package. Failures
+	// propagate — dedup above makes the provider's retry safe.
+	await grantTopUpCreditsForPurchase(event, userId, organizationId, purchaseId);
+
+	await notifyPurchaseChanged(userId, organizationId);
 }
 
 async function createNewSubscriptionPurchase(
@@ -422,10 +431,20 @@ async function createNewSubscriptionPurchase(
 		productId: event.productId,
 		subscriptionId: event.subscriptionId,
 		customerId: event.customerId ?? null,
+		quantity: event.units,
 		userId,
 		organizationId,
 		currentPeriodEnd: event.currentPeriodEnd ?? null,
 		metadata: event.metadata,
+	});
+
+	// Emit with the row, before anything that can throw: a retry takes the
+	// existing-purchase path, which never emits subscription.created.
+	await emitWebhookEvent("subscription.created", userId, organizationId, {
+		subscriptionId: event.subscriptionId,
+		productId: event.productId,
+		status,
+		provider: providerId,
 	});
 
 	// Save the provider customer ID on the org or user so the portal
@@ -452,12 +471,7 @@ async function createNewSubscriptionPurchase(
 	// grant against the already-created purchase.
 	await grantCreditsForSubscription(event, userId, organizationId);
 
-	await emitWebhookEvent("subscription.created", userId, organizationId, {
-		subscriptionId: event.subscriptionId,
-		productId: event.productId,
-		status,
-		provider: providerId,
-	});
+	await notifyPurchaseChanged(userId, organizationId);
 }
 
 /**
@@ -543,6 +557,7 @@ async function updateExistingPurchase(
 				currentPeriodEnd: event.currentPeriodEnd,
 			}),
 			...(event.productId !== undefined && { priceId: event.productId }),
+			...(event.units !== undefined && { quantity: event.units }),
 		});
 		return;
 	}
@@ -556,6 +571,7 @@ async function updateExistingPurchase(
 		}),
 		...(event.productId !== undefined && { priceId: event.productId }),
 		...(event.customerId !== undefined && { customerId: event.customerId }),
+		...(event.units !== undefined && { quantity: event.units }),
 	});
 	log.info("updated purchase", { purchaseId, status: resolvedStatus });
 
@@ -861,6 +877,21 @@ async function resetCreditsOnRenewal(
 const TopupMetadataSchema = z.object({
 	topup_id: z.string().min(1),
 });
+
+/**
+ * Notify purchase-changed handlers for an already-stored purchase — the
+ * stored owner is authoritative, same resolution as the top-up re-grant.
+ */
+async function notifyStoredPurchaseOwner(
+	purchase: { userId: string | null; organizationId: string | null },
+	userId: string | null,
+	organizationId: string | null,
+): Promise<void> {
+	await notifyPurchaseChanged(
+		purchase.userId ?? (purchase.organizationId ? null : userId),
+		purchase.organizationId ?? (purchase.userId ? null : organizationId),
+	);
+}
 
 /**
  * Re-attempt the top-up grant against an already-stored purchase

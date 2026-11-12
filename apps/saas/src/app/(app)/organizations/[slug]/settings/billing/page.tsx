@@ -4,6 +4,7 @@ import {
 	type PaymentProviderId,
 	paymentsConfig,
 } from "@fuutu/payments/config";
+import { getPlanPriceIds } from "@fuutu/payments/config.server";
 import { redirect } from "next/navigation";
 import { OrgSettingsBilling } from "@/modules/app/organizations/org-settings-billing";
 
@@ -36,12 +37,7 @@ export default async function BillingPage({ params }: Props) {
 			<OrgSettingsBilling
 				slug={slug}
 				paymentsEnabled={paymentsEnabled}
-				productIds={{
-					pro: {
-						monthly: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
-						yearly: env.PAYMENTS_PRO_YEARLY_PRICE_ID ?? undefined,
-					},
-				}}
+				productIds={getPlanPriceIds()}
 			/>
 		</div>
 	);

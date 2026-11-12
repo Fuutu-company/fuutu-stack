@@ -1,5 +1,12 @@
-import deHome from "../../../packages/i18n/translations/de/marketing/home.json";
 import { expect, test } from "./fixtures";
+import {
+	DEFAULT_LOCALE,
+	LOCALES,
+	localeLabel,
+	localePrefix,
+	OTHER_LOCALES,
+	readHomeMessages,
+} from "./locales";
 
 /**
  * Smoke tests for the marketing site.
@@ -8,7 +15,6 @@ import { expect, test } from "./fixtures";
  * so downstream kit users don't get false failures after customizing content.
  */
 
-const LOCALES = ["en", "de"] as const;
 const PAGES = [
 	{ path: "", name: "home" },
 	{ path: "/pricing", name: "pricing" },
@@ -22,9 +28,9 @@ const PAGES = [
 
 // ── Page load: both locales ─────────────────────────────────────────────
 
-test.describe("page loads — all pages, both locales", () => {
+test.describe("page loads — all pages, every enabled locale", () => {
 	for (const locale of LOCALES) {
-		const prefix = locale === "en" ? "" : "/de";
+		const prefix = localePrefix(locale);
 
 		for (const { path, name } of PAGES) {
 			test(`${locale}: /${name} returns 200`, async ({ page }) => {
@@ -45,43 +51,42 @@ test.describe("default locale routing", () => {
 		await expect(page).toHaveURL(/\/$/);
 	});
 
-	test("/de keeps the locale prefix", async ({ page }) => {
-		const res = await page.goto("/de");
-		expect(res?.status()).toBeLessThan(400);
-		await expect(page).toHaveURL(/\/de\/?$/);
-	});
+	for (const locale of OTHER_LOCALES) {
+		test(`/${locale} keeps the locale prefix`, async ({ page }) => {
+			const res = await page.goto(`/${locale}`);
+			expect(res?.status()).toBeLessThan(400);
+			await expect(page).toHaveURL(new RegExp(`/${locale}/?$`));
+		});
+	}
 });
 
 // ── Key content visibility ──────────────────────────────────────────────
 
 test.describe("key content visible", () => {
-	test("/en/pricing renders pricing tiers", async ({ page }) => {
-		await page.goto("/en/pricing");
-		await expect(
-			page.getByRole("heading", { name: /free|pro|enterprise/i }).first(),
-		).toBeVisible();
-	});
+	for (const locale of LOCALES) {
+		test(`/${locale}/pricing renders pricing tiers`, async ({ page }) => {
+			await page.goto(`/${locale}/pricing`);
+			await expect(
+				page.getByRole("heading", { name: /free|pro|enterprise/i }).first(),
+			).toBeVisible();
+		});
+	}
 
-	test("/de/pricing renders pricing tiers", async ({ page }) => {
-		await page.goto("/de/pricing");
-		await expect(
-			page.getByRole("heading", { name: /free|pro|enterprise/i }).first(),
-		).toBeVisible();
-	});
-
-	test("/en/blog renders post list or empty state", async ({ page }) => {
-		await page.goto("/en/blog");
+	test(`/${DEFAULT_LOCALE}/blog renders post list or empty state`, async ({
+		page,
+	}) => {
+		await page.goto(`/${DEFAULT_LOCALE}/blog`);
 		const headings = page.getByRole("heading", { level: 1 });
 		await expect(headings.first()).toBeVisible();
 	});
 
-	test("/en/changelog renders", async ({ page }) => {
-		await page.goto("/en/changelog");
+	test(`/${DEFAULT_LOCALE}/changelog renders`, async ({ page }) => {
+		await page.goto(`/${DEFAULT_LOCALE}/changelog`);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 	});
 
-	test("/en/contact renders contact info", async ({ page }) => {
-		await page.goto("/en/contact");
+	test(`/${DEFAULT_LOCALE}/contact renders contact info`, async ({ page }) => {
+		await page.goto(`/${DEFAULT_LOCALE}/contact`);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 		await expect(page.locator("a[href^='mailto:']").first()).toBeVisible();
 	});
@@ -120,26 +125,40 @@ test.describe("navigation", () => {
 		await expect(page).toHaveURL(/\/pricing/);
 	});
 
-	test("locale switcher toggles to German", async ({ page }) => {
+	test("locale switcher is hidden when only one locale is enabled", async ({
+		page,
+	}) => {
+		test.skip(OTHER_LOCALES.length > 0, "multiple locales are enabled");
 		await page.goto("/");
-
-		// The locale button has aria-label "Switch language" and shows the current locale
-		const localeButton = page
-			.getByRole("button", { name: /switch language/i })
-			.first();
-		await expect(localeButton).toBeVisible();
-		await localeButton.click();
-
-		// Dropdown opens with locale options — click "Deutsch"
-		const deutschItem = page.getByRole("menuitem", { name: /deutsch/i });
-		await expect(deutschItem).toBeVisible();
-		await deutschItem.click();
-		await page.waitForLoadState("domcontentloaded");
-		await expect(page).toHaveURL(/\/de/);
+		await expect(
+			page.getByRole("button", { name: /switch language/i }),
+		).toHaveCount(0);
 	});
 
+	for (const locale of OTHER_LOCALES) {
+		test(`locale switcher toggles to ${locale}`, async ({ page }) => {
+			await page.goto("/");
+
+			// The locale button has aria-label "Switch language" and shows the current locale
+			const localeButton = page
+				.getByRole("button", { name: /switch language/i })
+				.first();
+			await expect(localeButton).toBeVisible();
+			await localeButton.click();
+
+			// Dropdown opens with one item per enabled locale — pick it by its label
+			const item = page.getByRole("menuitem", {
+				name: new RegExp(localeLabel(locale), "i"),
+			});
+			await expect(item).toBeVisible();
+			await item.click();
+			await page.waitForLoadState("domcontentloaded");
+			await expect(page).toHaveURL(new RegExp(`/${locale}`));
+		});
+	}
+
 	test("404 page renders for unknown route", async ({ page }) => {
-		const res = await page.goto("/en/this-page-does-not-exist");
+		const res = await page.goto(`/${DEFAULT_LOCALE}/this-page-does-not-exist`);
 		expect(res?.status()).toBe(404);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 	});
@@ -167,7 +186,7 @@ test.describe("responsive — mobile viewport", () => {
 		page,
 	}) => {
 		await page.setViewportSize({ width: 375, height: 812 });
-		await page.goto("/en/pricing");
+		await page.goto(`/${DEFAULT_LOCALE}/pricing`);
 		await page.waitForLoadState("domcontentloaded");
 		const scrollWidth = await page.evaluate(
 			() => document.documentElement.scrollWidth,
@@ -232,7 +251,7 @@ test.describe("SEO endpoints", () => {
 test.describe("page metadata", () => {
 	for (const { path, name } of PAGES) {
 		test(`${name} page has title and description meta`, async ({ request }) => {
-			const res = await request.get(`/en${path}`);
+			const res = await request.get(`/${DEFAULT_LOCALE}${path}`);
 			expect(res.status()).toBeLessThan(400);
 			const html = await res.text();
 			expect(html).toMatch(/<title[^>]*>[^<]+<\/title>/i);
@@ -245,25 +264,30 @@ test.describe("page metadata", () => {
 
 test.describe("audit regressions", () => {
 	test("pricing pages render no dead video demo buttons", async ({ page }) => {
-		for (const path of ["/pricing", "/de/pricing"]) {
+		for (const path of LOCALES.map((l) => `${localePrefix(l)}/pricing`)) {
 			await page.goto(path);
 			await expect(page.locator("svg.lucide-play")).toHaveCount(0);
 		}
 	});
 
-	test("de home logo-rail tooltips render German copy", async ({ page }) => {
-		const expected = deHome.home.hero.stack.nextjs.description;
-		await page.goto("/de");
-		await page.locator("img[alt='Next.js']").first().hover();
-		await expect(page.getByText(expected)).toBeVisible();
-	});
+	for (const locale of OTHER_LOCALES) {
+		test(`${locale} home logo-rail tooltips render localized copy`, async ({
+			page,
+		}) => {
+			const expected =
+				readHomeMessages(locale).home.hero.stack.nextjs.description;
+			await page.goto(`/${locale}`);
+			await page.locator("img[alt='Next.js']").first().hover();
+			await expect(page.getByText(expected)).toBeVisible();
+		});
+	}
 });
 
 // ── Security headers + kit fingerprint ──────────────────────────────────
 
 test.describe("security headers + kit fingerprint", () => {
 	test("X-Framework + security headers on landing", async ({ request }) => {
-		const res = await request.get("/en");
+		const res = await request.get(`/${DEFAULT_LOCALE}`);
 		const h = res.headers();
 		expect(h["x-framework"]).toMatch(/^Fuutu-Stack\//);
 		expect(h["x-frame-options"]).toBe("DENY");
@@ -271,10 +295,12 @@ test.describe("security headers + kit fingerprint", () => {
 		expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
 	});
 
-	test("security headers on /de", async ({ request }) => {
-		const res = await request.get("/de");
-		const h = res.headers();
-		expect(h["x-frame-options"]).toBe("DENY");
-		expect(h["x-content-type-options"]).toBe("nosniff");
-	});
+	for (const locale of OTHER_LOCALES) {
+		test(`security headers on /${locale}`, async ({ request }) => {
+			const res = await request.get(`/${locale}`);
+			const h = res.headers();
+			expect(h["x-frame-options"]).toBe("DENY");
+			expect(h["x-content-type-options"]).toBe("nosniff");
+		});
+	}
 });

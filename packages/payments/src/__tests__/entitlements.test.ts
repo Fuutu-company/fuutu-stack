@@ -53,6 +53,7 @@ vi.mock("@fuutu/env/saas", () => ({
 const { getOrgEntitlement, getUserEntitlement, hasFeature } = await import(
 	"../entitlements"
 );
+const { registerEntitlementResolver } = await import("../extensions");
 const { LIMITS } = await import("../config");
 
 const PRO_PURCHASE = {
@@ -200,5 +201,116 @@ describe("hasFeature", () => {
 
 	it("returns false when no owner is given", async () => {
 		await expect(hasFeature({}, "api_keys")).resolves.toBe(false);
+	});
+});
+
+describe("Entitlement.seatsTotal", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("is the plan's numeric membersPerOrg cap", async () => {
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue(PRO_PURCHASE);
+		expect((await getOrgEntitlement("org_1")).seatsTotal).toBe(50);
+	});
+
+	it("is the free plan's cap when the org has no purchase", async () => {
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue(null);
+		expect((await getOrgEntitlement("org_1")).seatsTotal).toBe(5);
+	});
+
+	it("is set on user-scoped entitlements too", async () => {
+		mockGetActiveSubscriptionForUser.mockResolvedValue(null);
+		expect((await getUserEntitlement("user_1")).seatsTotal).toBe(5);
+	});
+});
+
+describe("registerEntitlementResolver", () => {
+	const custom = {
+		scope: "organization" as const,
+		ownerId: "org_1",
+		planId: "free" as const,
+		tier: "free" as const,
+		features: ["custom_feature"],
+		limits: LIMITS.free,
+		seatsTotal: 12,
+	};
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		registerEntitlementResolver(null);
+	});
+
+	it("replaces the default org computation when an org resolver is registered", async () => {
+		const org = vi.fn().mockResolvedValue(custom);
+		registerEntitlementResolver({ org });
+
+		const entitlement = await getOrgEntitlement("org_1");
+
+		expect(entitlement.seatsTotal).toBe(12);
+		expect(org).toHaveBeenCalledWith("org_1", expect.any(Function));
+		expect(mockGetActiveSubscriptionForOrganization).not.toHaveBeenCalled();
+	});
+
+	it("hands the resolver the default computation to build on", async () => {
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue(PRO_PURCHASE);
+		registerEntitlementResolver({
+			org: async (_id, defaults) => ({
+				...(await defaults()),
+				seatsTotal: 99,
+			}),
+		});
+
+		const entitlement = await getOrgEntitlement("org_1");
+
+		expect(entitlement).toMatchObject({ planId: "pro", seatsTotal: 99 });
+	});
+
+	it("routes hasFeature and the active-org user path through the org resolver", async () => {
+		registerEntitlementResolver({ org: async () => custom });
+
+		await expect(
+			hasFeature({ organizationId: "org_1" }, "custom_feature"),
+		).resolves.toBe(true);
+		await expect(
+			getUserEntitlement("user_1", { activeOrganizationId: "org_1" }),
+		).resolves.toMatchObject({ seatsTotal: 12 });
+	});
+
+	it("replaces the personal computation when a user resolver is registered", async () => {
+		const user = vi.fn().mockResolvedValue({
+			...custom,
+			scope: "user",
+			ownerId: "user_1",
+		});
+		registerEntitlementResolver({ user });
+
+		await expect(getUserEntitlement("user_1")).resolves.toMatchObject({
+			scope: "user",
+			features: ["custom_feature"],
+		});
+		expect(user).toHaveBeenCalledWith("user_1", expect.any(Function));
+		expect(mockGetActiveSubscriptionForUser).not.toHaveBeenCalled();
+	});
+
+	it("keeps the default for the scope a resolver does not cover", async () => {
+		mockGetActiveSubscriptionForUser.mockResolvedValue(null);
+		registerEntitlementResolver({ org: async () => custom });
+
+		await expect(getUserEntitlement("user_1")).resolves.toMatchObject({
+			scope: "user",
+			planId: "free",
+		});
+	});
+
+	it("restores the default computation when unregistered", async () => {
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue(null);
+		registerEntitlementResolver({ org: async () => custom });
+		registerEntitlementResolver(null);
+
+		await expect(getOrgEntitlement("org_1")).resolves.toMatchObject({
+			features: expect.not.arrayContaining(["custom_feature"]),
+			seatsTotal: 5,
+		});
 	});
 });

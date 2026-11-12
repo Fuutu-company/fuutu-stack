@@ -10,6 +10,7 @@ export type {
 	McpPrincipal,
 	McpPromptDefinition,
 	McpToolAnnotations,
+	McpToolCall,
 	McpToolDefinition,
 	McpUserPrincipal,
 } from "./types";

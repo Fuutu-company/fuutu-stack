@@ -34,6 +34,9 @@
 				"personal": "Personal",
 				"org": "Organization (full credential)"
 			},
+			"orgLabel": "Organization",
+			"orgPlaceholder": "Select an organization",
+			"orgKeyHint": "Organization keys act with your role in that organization and stop working if you leave it.",
 			"submit": "Create key"
 		},
 		"scopes": {

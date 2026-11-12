@@ -181,3 +181,19 @@ export const deleteApiKey = async (id: string, owner: ApiKeyOwner) => {
 	if (!owned) return null;
 	return db.apiKey.delete({ where: { id } });
 };
+
+/**
+ * Revoke every live key a user holds for an organization — run when the
+ * user stops being a member, so the keys cannot come back on a rejoin.
+ * Returns the number of keys revoked.
+ */
+export const revokeOrgApiKeysForUser = async (
+	organizationId: string,
+	userId: string,
+) => {
+	const { count } = await db.apiKey.updateMany({
+		where: { organizationId, userId, revokedAt: null },
+		data: { revokedAt: new Date() },
+	});
+	return count;
+};

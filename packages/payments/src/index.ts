@@ -18,6 +18,7 @@ export {
 	type CreditTopupPackage,
 	FEATURE_CATALOG,
 	type FeatureEntry,
+	getSeatUpgradeUrl,
 	isPaymentsEnabled,
 	LIMITS,
 	type LimitValue,
@@ -31,7 +32,9 @@ export {
 	type PlanLimits,
 	type PlanTier,
 	paymentsConfig,
+	type SeatSyncMode,
 	setPaymentProvider,
+	TIER_ORDER,
 } from "./config";
 export { getPlanIdForProductId } from "./config.server";
 export { createCustomerForUser } from "./customers";
@@ -42,6 +45,13 @@ export {
 	getUserEntitlement,
 	hasFeature,
 } from "./entitlements";
+export {
+	type EntitlementResolver,
+	type EntitlementResolverFn,
+	onPurchaseChanged,
+	type PurchaseChangedHandler,
+	registerEntitlementResolver,
+} from "./extensions";
 export {
 	type CatalogFeature,
 	FEATURE_GROUPS,

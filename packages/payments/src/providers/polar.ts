@@ -58,6 +58,9 @@ const PolarEventDataSchema = z
 				currentPeriodEnd: z.union([z.date(), z.string()]).nullish(),
 			})
 			.nullish(),
+		// Seat count on seat-based subscriptions / one-time orders; null
+		// for non-seat products.
+		seats: z.number().nullish(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
 	})
 	.optional();
@@ -368,6 +371,10 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 			// Order.productId can be null — the product then lives on the
 			// nested product object (OrderProduct.id).
 			productId: data?.productId ?? data?.product?.id ?? undefined,
+			units:
+				data?.seats && Number.isInteger(data.seats) && data.seats > 0
+					? data.seats
+					: undefined,
 		};
 
 		if (isSubscriptionPayload) {

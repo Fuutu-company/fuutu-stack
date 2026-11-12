@@ -68,3 +68,10 @@ export function slotEnv(
 	env?: Record<string, string | undefined>,
 	opts?: { e2e?: boolean },
 ): Record<string, string>;
+/** True for unset values and URLs whose parsed host is localhost / 127.0.0.1 / ::1. */
+export function isLocal(value: string | undefined): boolean;
+/** True only for a local URL naming exactly `${project.database}-e2e`. */
+export function isE2eResetTarget(
+	value: string | undefined,
+	project: Pick<Project, "database">,
+): boolean;

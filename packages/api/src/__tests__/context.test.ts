@@ -12,10 +12,13 @@ vi.mock("@fuutu/auth", () => ({
 vi.mock("@fuutu/db", () => ({
 	API_KEY_PREFIX: "futu_sk_",
 	verifyApiKeyWithOwner: vi.fn(),
+	getOrganizationMemberRole: vi.fn(),
 }));
 
 const { auth } = await import("@fuutu/auth");
-const { verifyApiKeyWithOwner } = await import("@fuutu/db");
+const { verifyApiKeyWithOwner, getOrganizationMemberRole } = await import(
+	"@fuutu/db"
+);
 const { createContext } = await import("../context");
 const { protectedProcedure } = await import("../orpc/procedures");
 const { call, ORPCError } = await import("@orpc/server");
@@ -28,6 +31,7 @@ const fakeHonoContext = (headers: Headers) =>
 describe("createContext — x-api-key path", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue("member");
 	});
 
 	it("ignores the api-key header when a session is present", async () => {
@@ -101,6 +105,23 @@ describe("createContext — x-api-key path", () => {
 		});
 
 		expect(ctx.apiKey).toEqual({ id: "key-2", organizationId: "org-7" });
+	});
+
+	it("rejects org keys whose owner is no longer a member of the org", async () => {
+		vi.mocked(auth.api.getSession).mockResolvedValue(null);
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			apiKey: { id: "key-2", organizationId: "org-7", scopes: [] },
+			user: { id: "user-9", banned: false },
+		} as never);
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue(null);
+
+		const ctx = await createContext({
+			context: fakeHonoContext(new Headers({ "x-api-key": "futu_sk_org" })),
+		});
+
+		expect(getOrganizationMemberRole).toHaveBeenCalledWith("org-7", "user-9");
+		expect(ctx.session).toBeNull();
+		expect(ctx.apiKey).toBeNull();
 	});
 });
 

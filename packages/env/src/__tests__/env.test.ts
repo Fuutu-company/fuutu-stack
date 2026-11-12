@@ -204,6 +204,27 @@ describe("@fuutu/env/saas", () => {
 		}
 	});
 
+	it("TRUST_PROXY_HEADERS defaults to false and accepts only explicit flags", async () => {
+		setRequiredSaasEnv();
+		delete process.env.TRUST_PROXY_HEADERS;
+		let mod = await import("../saas");
+		expect(mod.env.TRUST_PROXY_HEADERS).toBe(false);
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+		process.env.TRUST_PROXY_HEADERS = "1";
+		mod = await import("../saas");
+		expect(mod.env.TRUST_PROXY_HEADERS).toBe(true);
+
+		for (const value of ["on", "yes"]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.TRUST_PROXY_HEADERS = value;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+		delete process.env.TRUST_PROXY_HEADERS;
+	});
+
 	it("accepts noop and custom PAYMENTS_PROVIDER values", async () => {
 		for (const provider of ["polar", "stripe", "creem", "noop", "custom"]) {
 			vi.resetModules();
