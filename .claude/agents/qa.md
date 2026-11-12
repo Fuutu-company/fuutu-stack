@@ -15,7 +15,7 @@ Run, in order, and record the real output:
 3. `pnpm test`
 4. `pnpm check-translations`
 5. E2E for touched flows: `pnpm test:e2e:saas` / `pnpm test:e2e:marketing` (or the specific spec files)
-6. UI touched → `check-in-browser` on every affected route and locale; console must have zero errors and warnings.
+6. UI touched → `check-in-browser` on every affected route and locale, in your own `[qa]` tab of the session browser; console must have zero errors and warnings. Never stop the apps or the browser.
 
 Report:
 ```

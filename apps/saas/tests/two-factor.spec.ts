@@ -118,8 +118,29 @@ test.describe("two-factor end to end", () => {
 
 		await page.getByLabel(/full name/i).fill("QA Two Factor");
 		await page.getByRole("button", { name: /continue/i }).click();
-		await page.getByRole("button", { name: /skip for now/i }).click();
-		await page.getByRole("button", { name: /go to dashboard/i }).click();
+		// Click through the optional onboarding steps until the dashboard —
+		// how many there are, and how the last one is labeled, differs per app.
+		const done = page.getByRole("button", { name: /go to dashboard/i });
+		const skip = page.getByRole("button", { name: /skip for now/i });
+		const next = page
+			.getByRole("button", { name: /continue/i })
+			.and(page.locator(":enabled"));
+		const stepHeading = page.getByRole("heading", { level: 2 }).first();
+		const onDashboard = () => /\/dashboard/.test(page.url());
+		for (let step = 0; step < 6 && !onDashboard(); step++) {
+			await expect(done.or(skip).or(next).first()).toBeVisible();
+			const before = await stepHeading.textContent();
+			if (await done.isVisible()) await done.click();
+			else if (await skip.isVisible()) await skip.click();
+			else await next.click();
+			await expect
+				.poll(
+					async () =>
+						onDashboard() ||
+						(await stepHeading.textContent().catch(() => null)) !== before,
+				)
+				.toBe(true);
+		}
 		await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
 
 		// Enable: password → setup key + backup codes → authenticator code.

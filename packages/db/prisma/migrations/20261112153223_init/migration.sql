@@ -25,6 +25,7 @@ CREATE TABLE "app"."purchase" (
     "userId" TEXT,
     "organizationId" TEXT,
     "metadata" JSONB,
+    "checkoutEventId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -53,6 +54,7 @@ CREATE TABLE "app"."api_key" (
     "name" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "organizationId" TEXT,
+    "scopes" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "lastUsedAt" TIMESTAMP(3),
     "expiresAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -241,6 +243,7 @@ CREATE TABLE "auth"."user" (
     "twoFactorEnabled" BOOLEAN DEFAULT false,
     "onboardingComplete" BOOLEAN NOT NULL DEFAULT false,
     "username" TEXT,
+    "displayUsername" TEXT,
     "paymentsCustomerId" TEXT,
     "lastActiveOrganizationId" TEXT,
     "userCreatedEventSent" BOOLEAN NOT NULL DEFAULT false,
@@ -367,8 +370,165 @@ CREATE TABLE "auth"."two_factor" (
     "backupCodes" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "verified" BOOLEAN NOT NULL DEFAULT true,
+    "failedVerificationCount" INTEGER DEFAULT 0,
+    "lockedUntil" TIMESTAMP(3),
 
     CONSTRAINT "two_factor_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."jwks" (
+    "id" TEXT NOT NULL,
+    "publicKey" TEXT NOT NULL,
+    "privateKey" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "expiresAt" TIMESTAMP(3),
+    "alg" TEXT,
+    "crv" TEXT,
+
+    CONSTRAINT "jwks_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."oauth_client" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "clientSecret" TEXT,
+    "clientDiscoveryId" TEXT,
+    "disabled" BOOLEAN DEFAULT false,
+    "skipConsent" BOOLEAN,
+    "enableEndSession" BOOLEAN,
+    "subjectType" TEXT,
+    "scopes" TEXT[],
+    "clientCredentialsScopes" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "userId" TEXT,
+    "createdAt" TIMESTAMP(3),
+    "updatedAt" TIMESTAMP(3),
+    "name" TEXT,
+    "uri" TEXT,
+    "icon" TEXT,
+    "contacts" TEXT[],
+    "tos" TEXT,
+    "policy" TEXT,
+    "softwareId" TEXT,
+    "softwareVersion" TEXT,
+    "softwareStatement" TEXT,
+    "redirectUris" TEXT[],
+    "postLogoutRedirectUris" TEXT[],
+    "backchannelLogoutUri" TEXT,
+    "backchannelLogoutSessionRequired" BOOLEAN,
+    "tokenEndpointAuthMethod" TEXT,
+    "applicationType" TEXT,
+    "jwks" TEXT,
+    "jwksUri" TEXT,
+    "grantTypes" TEXT[],
+    "responseTypes" TEXT[],
+    "requirePKCE" BOOLEAN,
+    "dpopBoundAccessTokens" BOOLEAN DEFAULT false,
+    "referenceId" TEXT,
+    "metadata" TEXT,
+
+    CONSTRAINT "oauth_client_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."oauth_resource" (
+    "id" TEXT NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "accessTokenTtl" INTEGER,
+    "refreshTokenTtl" INTEGER,
+    "signingAlgorithm" TEXT,
+    "signingKeyId" TEXT,
+    "allowedScopes" TEXT[],
+    "customClaims" TEXT,
+    "dpopBoundAccessTokensRequired" BOOLEAN DEFAULT false,
+    "disabled" BOOLEAN DEFAULT false,
+    "createdAt" TIMESTAMP(3),
+    "updatedAt" TIMESTAMP(3),
+    "policyVersion" INTEGER DEFAULT 1,
+    "metadata" TEXT,
+
+    CONSTRAINT "oauth_resource_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."oauth_client_resource" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "metadata" TEXT,
+    "createdAt" TIMESTAMP(3),
+
+    CONSTRAINT "oauth_client_resource_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."oauth_refresh_token" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "sessionId" TEXT,
+    "userId" TEXT NOT NULL,
+    "referenceId" TEXT,
+    "authorizationCodeId" TEXT,
+    "resources" TEXT[],
+    "requestedUserInfoClaims" TEXT[],
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "revoked" TIMESTAMP(3),
+    "rotatedAt" TIMESTAMP(3),
+    "rotationReplayResponse" TEXT,
+    "rotationReplayExpiresAt" TIMESTAMP(3),
+    "authTime" TIMESTAMP(3),
+    "confirmation" TEXT,
+    "scopes" TEXT[],
+
+    CONSTRAINT "oauth_refresh_token_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."oauth_access_token" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "sessionId" TEXT,
+    "userId" TEXT,
+    "referenceId" TEXT,
+    "authorizationCodeId" TEXT,
+    "resources" TEXT[],
+    "requestedUserInfoClaims" TEXT[],
+    "refreshId" TEXT,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "revoked" TIMESTAMP(3),
+    "confirmation" TEXT,
+    "scopes" TEXT[],
+
+    CONSTRAINT "oauth_access_token_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."oauth_consent" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "userId" TEXT,
+    "referenceId" TEXT,
+    "resources" TEXT[],
+    "requestedUserInfoClaims" TEXT[],
+    "scopes" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "oauth_consent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "auth"."oauth_client_assertion" (
+    "id" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "oauth_client_assertion_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -382,6 +542,9 @@ CREATE INDEX "purchase_status_idx" ON "app"."purchase"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "purchase_provider_subscriptionId_key" ON "app"."purchase"("provider", "subscriptionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "purchase_provider_checkoutEventId_key" ON "app"."purchase"("provider", "checkoutEventId") WHERE ("checkoutEventId" IS NOT NULL);
 
 -- CreateIndex
 CREATE INDEX "audit_log_userId_idx" ON "app"."audit_log"("userId");
@@ -405,6 +568,9 @@ CREATE INDEX "api_key_userId_idx" ON "app"."api_key"("userId");
 CREATE INDEX "api_key_organizationId_idx" ON "app"."api_key"("organizationId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "invoice_providerInvoiceId_key" ON "app"."invoice"("providerInvoiceId");
+
+-- CreateIndex
 CREATE INDEX "invoice_organizationId_idx" ON "app"."invoice"("organizationId");
 
 -- CreateIndex
@@ -412,9 +578,6 @@ CREATE INDEX "invoice_userId_idx" ON "app"."invoice"("userId");
 
 -- CreateIndex
 CREATE INDEX "invoice_status_idx" ON "app"."invoice"("status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "invoice_providerInvoiceId_key" ON "app"."invoice"("providerInvoiceId");
 
 -- CreateIndex
 CREATE INDEX "webhook_organizationId_idx" ON "app"."webhook"("organizationId");
@@ -468,6 +631,12 @@ CREATE INDEX "credit_balance_meterKey_idx" ON "app"."credit_balance"("meterKey")
 CREATE UNIQUE INDEX "credit_balance_userId_organizationId_meterKey_key" ON "app"."credit_balance"("userId", "organizationId", "meterKey");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "credit_balance_user_meter_key" ON "app"."credit_balance"("userId", "meterKey") WHERE ("userId" IS NOT NULL);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "credit_balance_organization_meter_key" ON "app"."credit_balance"("organizationId", "meterKey") WHERE ("organizationId" IS NOT NULL);
+
+-- CreateIndex
 CREATE INDEX "credit_package_userId_idx" ON "app"."credit_package"("userId");
 
 -- CreateIndex
@@ -478,6 +647,9 @@ CREATE INDEX "credit_package_meterKey_idx" ON "app"."credit_package"("meterKey")
 
 -- CreateIndex
 CREATE INDEX "credit_package_expiresAt_idx" ON "app"."credit_package"("expiresAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "credit_package_purchaseId_key" ON "app"."credit_package"("purchaseId") WHERE ("purchaseId" IS NOT NULL);
 
 -- CreateIndex
 CREATE INDEX "credit_event_userId_idx" ON "app"."credit_event"("userId");
@@ -493,6 +665,12 @@ CREATE INDEX "credit_event_packageId_idx" ON "app"."credit_event"("packageId");
 
 -- CreateIndex
 CREATE INDEX "credit_event_createdAt_idx" ON "app"."credit_event"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "credit_event_user_idempotency_key" ON "app"."credit_event"("userId", "meterKey", "idempotencyKey") WHERE ("userId" IS NOT NULL AND "idempotencyKey" IS NOT NULL);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "credit_event_organization_idempotency_key" ON "app"."credit_event"("organizationId", "meterKey", "idempotencyKey") WHERE ("organizationId" IS NOT NULL AND "idempotencyKey" IS NOT NULL);
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_username_key" ON "auth"."user"("username");
@@ -535,6 +713,63 @@ CREATE UNIQUE INDEX "rate_limit_key_key" ON "auth"."rate_limit"("key");
 
 -- CreateIndex
 CREATE INDEX "two_factor_userId_idx" ON "auth"."two_factor"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "oauth_client_clientId_key" ON "auth"."oauth_client"("clientId");
+
+-- CreateIndex
+CREATE INDEX "oauth_client_userId_idx" ON "auth"."oauth_client"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "oauth_resource_identifier_key" ON "auth"."oauth_resource"("identifier");
+
+-- CreateIndex
+CREATE INDEX "oauth_client_resource_clientId_idx" ON "auth"."oauth_client_resource"("clientId");
+
+-- CreateIndex
+CREATE INDEX "oauth_client_resource_resourceId_idx" ON "auth"."oauth_client_resource"("resourceId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "oauth_client_resource_clientId_resourceId_key" ON "auth"."oauth_client_resource"("clientId", "resourceId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "oauth_refresh_token_token_key" ON "auth"."oauth_refresh_token"("token");
+
+-- CreateIndex
+CREATE INDEX "oauth_refresh_token_clientId_idx" ON "auth"."oauth_refresh_token"("clientId");
+
+-- CreateIndex
+CREATE INDEX "oauth_refresh_token_sessionId_idx" ON "auth"."oauth_refresh_token"("sessionId");
+
+-- CreateIndex
+CREATE INDEX "oauth_refresh_token_userId_idx" ON "auth"."oauth_refresh_token"("userId");
+
+-- CreateIndex
+CREATE INDEX "oauth_refresh_token_authorizationCodeId_idx" ON "auth"."oauth_refresh_token"("authorizationCodeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "oauth_access_token_token_key" ON "auth"."oauth_access_token"("token");
+
+-- CreateIndex
+CREATE INDEX "oauth_access_token_clientId_idx" ON "auth"."oauth_access_token"("clientId");
+
+-- CreateIndex
+CREATE INDEX "oauth_access_token_sessionId_idx" ON "auth"."oauth_access_token"("sessionId");
+
+-- CreateIndex
+CREATE INDEX "oauth_access_token_userId_idx" ON "auth"."oauth_access_token"("userId");
+
+-- CreateIndex
+CREATE INDEX "oauth_access_token_authorizationCodeId_idx" ON "auth"."oauth_access_token"("authorizationCodeId");
+
+-- CreateIndex
+CREATE INDEX "oauth_access_token_refreshId_idx" ON "auth"."oauth_access_token"("refreshId");
+
+-- CreateIndex
+CREATE INDEX "oauth_consent_clientId_idx" ON "auth"."oauth_consent"("clientId");
+
+-- CreateIndex
+CREATE INDEX "oauth_consent_userId_idx" ON "auth"."oauth_consent"("userId");
 
 -- AddForeignKey
 ALTER TABLE "app"."purchase" ADD CONSTRAINT "purchase_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -629,63 +864,38 @@ ALTER TABLE "auth"."passkey" ADD CONSTRAINT "passkey_userId_fkey" FOREIGN KEY ("
 -- AddForeignKey
 ALTER TABLE "auth"."two_factor" ADD CONSTRAINT "two_factor_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_client" ADD CONSTRAINT "oauth_client_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Custom constraints — not expressible in the .prisma schema
--- (carried over verbatim from the pre-squash migrations
--- 20260925114500_credit_owner_constraints and
--- 20261012120000_credit_event_idempotency; do not mirror in schema)
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_client_resource" ADD CONSTRAINT "oauth_client_resource_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "auth"."oauth_client"("clientId") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Polymorphic owner invariant: exactly one of "userId"/"organizationId"
--- must be set on owner-scoped tables. Prisma cannot express CHECK
--- constraints or partial unique indexes.
-ALTER TABLE "app"."credit_balance"
-    ADD CONSTRAINT "credit_balance_owner_xor"
-    CHECK (("userId" IS NULL) <> ("organizationId" IS NULL));
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_client_resource" ADD CONSTRAINT "oauth_client_resource_resourceId_fkey" FOREIGN KEY ("resourceId") REFERENCES "auth"."oauth_resource"("identifier") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "app"."credit_package"
-    ADD CONSTRAINT "credit_package_owner_xor"
-    CHECK (("userId" IS NULL) <> ("organizationId" IS NULL));
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_refresh_token" ADD CONSTRAINT "oauth_refresh_token_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "auth"."oauth_client"("clientId") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "app"."purchase"
-    ADD CONSTRAINT "purchase_owner_xor"
-    CHECK (("userId" IS NULL) <> ("organizationId" IS NULL));
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_refresh_token" ADD CONSTRAINT "oauth_refresh_token_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "auth"."session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Per-owner uniqueness on credit_balance. The schema's
--- @@unique([userId, organizationId, meterKey]) is void when one owner is
--- NULL (Postgres treats NULLs as distinct) — these partial indexes give
--- the real "one balance per owner+meter" guarantee the find-then-create
--- paths rely on.
-CREATE UNIQUE INDEX "credit_balance_user_meter_key"
-    ON "app"."credit_balance" ("userId", "meterKey")
-    WHERE "userId" IS NOT NULL;
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_refresh_token" ADD CONSTRAINT "oauth_refresh_token_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-CREATE UNIQUE INDEX "credit_balance_organization_meter_key"
-    ON "app"."credit_balance" ("organizationId", "meterKey")
-    WHERE "organizationId" IS NOT NULL;
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_access_token" ADD CONSTRAINT "oauth_access_token_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "auth"."oauth_client"("clientId") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- One credit package per purchase — makes top-up credit grants
--- idempotent under webhook redelivery.
-CREATE UNIQUE INDEX "credit_package_purchaseId_key"
-    ON "app"."credit_package" ("purchaseId")
-    WHERE "purchaseId" IS NOT NULL;
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_access_token" ADD CONSTRAINT "oauth_access_token_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "auth"."session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Idempotency marker for one-time checkouts: webhook sync stores the
--- provider event id in purchase.metadata->>'checkoutEventId'; this
--- expression index makes a redelivered checkout.completed a no-op.
-CREATE UNIQUE INDEX "purchase_provider_checkoutEventId_key"
-    ON "app"."purchase" ("provider", (("metadata" ->> 'checkoutEventId')))
-    WHERE ("metadata" ->> 'checkoutEventId') IS NOT NULL;
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_access_token" ADD CONSTRAINT "oauth_access_token_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Consume idempotency on credit_event: one consume per idempotency key
--- per owner+meter — a redelivered consume request replays the original
--- result instead of debiting again. Two partial indexes because the
--- owner XOR CHECK leaves the other owner column NULL. Only the first
--- event of a consume carries the key, so multi-event consumes do not
--- self-violate.
-CREATE UNIQUE INDEX "credit_event_user_idempotency_key"
-    ON "app"."credit_event" ("userId", "meterKey", "idempotencyKey")
-    WHERE "userId" IS NOT NULL AND "idempotencyKey" IS NOT NULL;
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_access_token" ADD CONSTRAINT "oauth_access_token_refreshId_fkey" FOREIGN KEY ("refreshId") REFERENCES "auth"."oauth_refresh_token"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-CREATE UNIQUE INDEX "credit_event_organization_idempotency_key"
-    ON "app"."credit_event" ("organizationId", "meterKey", "idempotencyKey")
-    WHERE "organizationId" IS NOT NULL AND "idempotencyKey" IS NOT NULL;
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_consent" ADD CONSTRAINT "oauth_consent_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "auth"."oauth_client"("clientId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "auth"."oauth_consent" ADD CONSTRAINT "oauth_consent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "auth"."user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

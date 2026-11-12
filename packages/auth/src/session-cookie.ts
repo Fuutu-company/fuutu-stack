@@ -9,8 +9,15 @@ import { getSessionCookie } from "better-auth/cookies";
  * Edge/proxy-safe: no DB, no auth server import. Not a security boundary;
  * layouts verify the session (`requireAuth()`).
  */
-export function hasSessionCookie(request: Request | Headers): boolean {
-	return getSessionCookie(request) !== null;
+export function hasSessionCookie(
+	request: Request | Headers,
+	/** `FUUTU_AUTH_COOKIE_PREFIX` — set per project by the port slot (local dev). */
+	cookiePrefix?: string,
+): boolean {
+	return (
+		getSessionCookie(request, cookiePrefix ? { cookiePrefix } : undefined) !==
+		null
+	);
 }
 
 // Mirrors API_KEY_PREFIX in @fuutu/db — duplicated so this stays proxy-safe

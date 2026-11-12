@@ -40,6 +40,7 @@ describe("generated files guard", () => {
 		["Edit", { file_path: "/r/packages/db/prisma/generated/client.ts" }],
 		["Edit", { file_path: "/r/pnpm-lock.yaml" }],
 		["Write", { file_path: "/r/apps/saas/next-env.d.ts" }],
+		["Edit", { file_path: "/r/.fuutu/project.json" }],
 		["Bash", { command: `echo x > ${MIGRATION}` }],
 		["Bash", { command: `cat > ${MIGRATION} <<'EOF'\nCREATE TABLE x();\nEOF` }],
 		["Bash", { command: "sed -i '' s/a/b/ packages/db/prisma/zod/index.ts" }],

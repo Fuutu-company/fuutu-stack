@@ -28,21 +28,21 @@ model User {
   // flipped by claimUserCreatedEvent() on first membership.
   userCreatedEventSent     Boolean   @default(false)
 
-  sessions      Session[]
-  accounts      Account[]
-  members       Member[]
-  invitations   Invitation[]
-  passkeys      Passkey[]
-  twoFactors    TwoFactor[]
-  purchases        Purchase[]
-  auditLogs        AuditLog[]
-  apiKeys          ApiKey[]
-  invoices         Invoice[]
-  notifications    Notification[]
-  chatConversations ChatConversation[]
-  creditBalances   CreditBalance[]
-  creditPackages   CreditPackage[]
-  creditEvents     CreditEvent[]
+  sessions           Session[]
+  accounts           Account[]
+  members            Member[]
+  invitations        Invitation[]
+  passkeys           Passkey[]
+  twoFactors         TwoFactor[]
+  purchases          Purchase[]
+  auditLogs          AuditLog[]
+  apiKeys            ApiKey[]
+  invoices           Invoice[]
+  notifications      Notification[]
+  chatConversations  ChatConversation[]
+  creditBalances     CreditBalance[]
+  creditPackages     CreditPackage[]
+  creditEvents       CreditEvent[]
   oauthClients       OauthClient[]
   oauthRefreshTokens OauthRefreshToken[]
   oauthAccessTokens  OauthAccessToken[]
@@ -119,18 +119,18 @@ model Organization {
   // Fuutu custom fields
   paymentsCustomerId String?
 
-  members     Member[]
-  invitations Invitation[]
-  purchases   Purchase[]
-  apiKeys     ApiKey[]
-  invoices    Invoice[]
-  webhooks    Webhook[]
+  members           Member[]
+  invitations       Invitation[]
+  purchases         Purchase[]
+  apiKeys           ApiKey[]
+  invoices          Invoice[]
+  webhooks          Webhook[]
   chatConversations ChatConversation[]
-  contacts    Contact[]
-  creditBalances   CreditBalance[]
-  creditPackages   CreditPackage[]
-  creditEvents     CreditEvent[]
-  auditLogs        AuditLog[]
+  contacts          Contact[]
+  creditBalances    CreditBalance[]
+  creditPackages    CreditPackage[]
+  creditEvents      CreditEvent[]
+  auditLogs         AuditLog[]
 
   @@unique([slug])
   @@map("organization")
@@ -204,14 +204,14 @@ model RateLimit {
 
 // Better-Auth twoFactor plugin
 model TwoFactor {
-  id          String  @id
-  secret      String
-  backupCodes String
-  userId      String
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String    @id
+  secret                  String
+  backupCodes             String
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Added in better-auth 1.6: gate sign-in on verified TOTP enrollment.
   // Default true keeps legacy rows signed-in-capable.
-  verified    Boolean @default(true)
+  verified                Boolean   @default(true)
   // better-auth 1.7 TOTP lockout fields (required by plugin schema check).
   failedVerificationCount Int?      @default(0)
   lockedUntil             DateTime?

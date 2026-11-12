@@ -18,6 +18,19 @@ describe("hasSessionCookie", () => {
 		).toBe(true);
 	});
 
+	it("reads a project-specific cookie prefix (several projects on localhost)", () => {
+		const headers = withCookie(
+			"better-auth.session_token=other; better-auth-s1.session_token=mine",
+		);
+		expect(hasSessionCookie(headers, "better-auth-s1")).toBe(true);
+		expect(
+			hasSessionCookie(
+				withCookie("better-auth.session_token=x"),
+				"better-auth-s1",
+			),
+		).toBe(false);
+	});
+
 	it("is false without a session cookie", () => {
 		expect(hasSessionCookie(withCookie())).toBe(false);
 		expect(hasSessionCookie(withCookie("theme=dark"))).toBe(false);

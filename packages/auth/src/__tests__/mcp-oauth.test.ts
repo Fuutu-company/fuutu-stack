@@ -9,6 +9,7 @@ vi.mock("better-auth/oauth2", () => ({
 }));
 
 const { verifyBearerToken } = await import("better-auth/oauth2");
+const { authConfig } = await import("../config");
 const { canServeMcpOAuth, getMcpOAuthUrls, mcpOAuth, verifyMcpAccessToken } =
 	await import("../mcp-oauth");
 
@@ -24,8 +25,9 @@ describe("canServeMcpOAuth", () => {
 		expect(canServeMcpOAuth(url)).toBe(expected);
 	});
 
-	it("is active for an https app URL when enabled", () => {
-		expect(mcpOAuth.active).toBe(true);
+	it("follows authConfig.mcpOAuth.enabled for an https app URL", () => {
+		// Config-independent: your app may switch MCP OAuth off.
+		expect(mcpOAuth.active).toBe(authConfig.mcpOAuth.enabled);
 	});
 });
 

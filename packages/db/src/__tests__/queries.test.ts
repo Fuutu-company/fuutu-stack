@@ -222,9 +222,9 @@ describe("DB query functions - smoke tests", () => {
 			);
 		});
 
-		it("filters via metadata ->> 'checkoutEventId' so the partial unique index is used", async () => {
+		it("looks the purchase up by provider + checkoutEventId (partial unique index)", async () => {
 			const row = { id: "pur_1", provider: "creem" };
-			vi.mocked(db.$queryRaw).mockResolvedValueOnce([row] as never);
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(row as never);
 
 			const found = await purchaseQueries.getPurchaseByCheckoutEventId(
 				"creem",
@@ -232,16 +232,13 @@ describe("DB query functions - smoke tests", () => {
 			);
 
 			expect(found).toEqual(row);
-			const [strings, ...values] = vi.mocked(db.$queryRaw).mock
-				.calls[0] as unknown as [TemplateStringsArray, ...string[]];
-			const sql = strings.join("");
-			expect(sql).toContain("->> 'checkoutEventId'");
-			expect(sql).not.toContain("#>");
-			expect(values).toEqual(["creem", "evt_123"]);
+			expect(db.purchase.findFirst).toHaveBeenCalledWith({
+				where: { provider: "creem", checkoutEventId: "evt_123" },
+			});
 		});
 
 		it("returns null when no purchase matches the event id", async () => {
-			vi.mocked(db.$queryRaw).mockResolvedValueOnce([] as never);
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
 			expect(
 				await purchaseQueries.getPurchaseByCheckoutEventId("creem", "evt_x"),
 			).toBeNull();

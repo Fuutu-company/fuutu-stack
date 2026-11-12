@@ -38,11 +38,23 @@ vi.mock("@fuutu/logs", () => ({
 	}),
 }));
 
-// Price → plan map: "pro" is seat-based in PLANS, "enterprise" is not.
-vi.mock("../config.server", () => ({
-	getPlanIdForProductId: (productId: string) =>
-		({ "price-pro": "pro", "price-flat": "enterprise" })[productId],
-}));
+// Price → plan map, catalog-agnostic: "price-pro" is the first seat-based
+// plan in PLANS, "price-flat" the first paid plan without seat pricing.
+vi.mock("../config.server", async () => {
+	const { PLANS } = await import("../config");
+	const entries = Object.entries(PLANS) as [
+		string,
+		{ seatBased?: boolean; billingType: string },
+	][];
+	const seat = entries.find(([, p]) => p.seatBased)?.[0];
+	const flat = entries.find(
+		([, p]) => p.billingType !== "free" && !p.seatBased,
+	)?.[0];
+	return {
+		getPlanIdForProductId: (productId: string) =>
+			({ "price-pro": seat, "price-flat": flat })[productId],
+	};
+});
 
 const mockSetSubscriptionSeats = vi.fn();
 const mockCancelSubscription = vi.fn();

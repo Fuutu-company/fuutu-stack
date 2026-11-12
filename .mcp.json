@@ -21,12 +21,8 @@
 			"args": ["dlx", "shadcn@4.21.4", "mcp"]
 		},
 		"playwright": {
-			"command": "pnpm",
-			"args": [
-				"dlx",
-				"@playwright/mcp@0.0.84",
-				"--output-dir=.playwright-mcp-artifacts"
-			]
+			"command": "node",
+			"args": ["tooling/scripts/playwright-mcp.mjs"]
 		}
 	}
 }

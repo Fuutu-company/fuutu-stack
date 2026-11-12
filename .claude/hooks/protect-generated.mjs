@@ -20,6 +20,11 @@ export const GENERATED = [
 		command: "pnpm db:generate",
 	},
 	{
+		pattern: /(^|[\s/"'=])\.fuutu\/project\.json(?=$|[\s"';&|])/,
+		label: "the port-slot project file",
+		command: "pnpm ports set <slot> / pnpm ports reassign",
+	},
+	{
 		pattern: /(^|[\s/"'=])pnpm-lock\.yaml(?=$|[\s"';&|])/,
 		label: "the lockfile",
 		command: "pnpm add / pnpm remove / pnpm install",

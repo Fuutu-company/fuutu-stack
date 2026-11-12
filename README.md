@@ -22,7 +22,7 @@ cp .env.example .env
 pnpm db:start        # Postgres 16 + MinIO via docker-compose (local dev only)
 pnpm db:migrate      # apply migrations — includes raw-SQL constraints (db:push skips those)
 pnpm db:seed         # optional: seed admin@fuutu.local / DevPassword!2345
-pnpm dev             # saas :3000 · marketing :3001 · docs :4000
+pnpm dev             # saas :3000 · marketing :3001 · docs :4000 (port slot 0 — see `pnpm ports`)
 ```
 
 ---
@@ -208,6 +208,21 @@ Connects your coding agent to Fuutu's MCP server (already configured in `.mcp.js
 Without the server, everything in the repo keeps working.
 
 ---
+
+## Many projects, worktrees and agents side by side
+
+Every Fuutu Stack project — and every git worktree of one — gets its own **port slot** on your machine, assigned on the first `pnpm dev` and kept for good:
+
+| | Slot 0 (first project) | Slot 1 | … up to ~200 slots |
+|---|---|---|---|
+| SaaS / Marketing | 3000 / 3001 | 3100 / 3101 | apps range keeps room for more apps (mobile, desktop, …) |
+| Docs / Mail preview | 4000 / 4003 | 4100 / 4103 | separate docs/tools range |
+| Local DB, storage buckets | `your-db` | `your-db-s1`, `s1-…` | created, migrated and seeded automatically |
+| Login cookie, session browser | own per slot | own per slot | stay signed in to every project at once |
+
+Two projects never meet — running or not — because slots live in a machine-wide registry (`~/.fuutu/projects.json`). An AI agent in its own worktree gets its own apps, database and browser and cannot disturb yours. `pnpm ports` shows everything; `pnpm ports set <slot>` / `reassign` / `release` change it. Once a team needs identical local URLs (OAuth callbacks, payment webhooks), `pnpm ports pin` commits a **preferred slot** to `package.json`: every clone takes it wherever it is free, and says clearly when another project holds it. Deployments are unaffected: containers keep their fixed ports.
+
+`pnpm dev:session` keeps the apps and one visible browser running for the whole coding session, so you can watch your agents work.
 
 ## Scripts
 

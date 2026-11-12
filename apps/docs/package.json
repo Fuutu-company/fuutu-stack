@@ -4,8 +4,8 @@
 	"private": true,
 	"scripts": {
 		"build": "next build",
-		"dev": "next dev --port=4000",
-		"start": "next start --port=4000",
+		"dev": "node ../../tooling/scripts/next.mjs dev docs",
+		"start": "node ../../tooling/scripts/next.mjs start docs",
 		"check-types": "fumadocs-mdx && next typegen && tsc --noEmit",
 		"postinstall": "fumadocs-mdx"
 	},

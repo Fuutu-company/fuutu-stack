@@ -211,7 +211,7 @@ async function processSingleEvent(
 		// The stored owner is authoritative — renewal/invoice events often
 		// carry no user_id metadata, so fall back to the purchase row.
 		// Divergent metadata of the other owner type must never merge in:
-		// credit rows have an owner XOR constraint, so an org-owned
+		// credit rows enforce a single owner (assertSingleOwner), so an org-owned
 		// purchase keeps userId null (and vice versa).
 		const resolvedUserId =
 			existing.userId ?? (existing.organizationId ? null : userId);
@@ -291,9 +291,9 @@ async function handleOneTimePurchase(
 		return;
 	}
 
-	// Idempotency: the provider event id is stored as
-	// metadata.checkoutEventId and backed by a partial unique index on
-	// (provider, metadata->>'checkoutEventId') — a redelivered
+	// Idempotency: the provider event id is stored in
+	// purchase.checkoutEventId, backed by a partial unique index on
+	// (provider, checkoutEventId) — a redelivered
 	// checkout.completed must not create a second Purchase. The dedup
 	// lookup runs BEFORE the owner-metadata check: the stored row
 	// supplies the owner when a redelivery carries none.
@@ -316,7 +316,7 @@ async function handleOneTimePurchase(
 	}
 
 	if (!userId && !organizationId) {
-		// An ownerless purchase is rejected by the DB XOR constraint and
+		// An ownerless purchase is rejected by assertSingleOwner and
 		// useless downstream — skip instead of retrying a poisoned event.
 		log.error("checkout.completed without owner metadata, skipping", {
 			productId: event.productId,
@@ -336,9 +336,8 @@ async function handleOneTimePurchase(
 			userId,
 			organizationId,
 			currentPeriodEnd: event.currentPeriodEnd ?? null,
-			metadata: eventId
-				? { ...(event.metadata ?? {}), checkoutEventId: eventId }
-				: event.metadata,
+			metadata: event.metadata,
+			checkoutEventId: eventId,
 		});
 		purchaseId = purchase.id;
 	} catch (err) {

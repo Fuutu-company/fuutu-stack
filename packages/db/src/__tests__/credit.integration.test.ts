@@ -6,9 +6,8 @@ import {
 	grantRecurringCreditsTx,
 } from "../../prisma/queries/credit-balance";
 
-// Requires a migrated database (migrate deploy, not db:push) — the
-// concurrency and XOR assertions rely on the raw-SQL partial unique
-// indexes and CHECK constraints from prisma/migrations/.
+// Requires a migrated database — the concurrency assertions rely on the
+// partial unique indexes declared in the Prisma schema.
 // process.env.RUN_DB_TESTS is a deliberate test-flag exception to the
 // no-process.env rule.
 describe.skipIf(!process.env.RUN_DB_TESTS)(
@@ -160,26 +159,30 @@ describe.skipIf(!process.env.RUN_DB_TESTS)(
 			expect(keyedEvents).toHaveLength(1);
 		});
 
-		it("rejects credit_balance rows violating the owner XOR CHECK", async () => {
+		it("rejects credit writes with two owners or none (owner invariant)", async () => {
 			await expect(
-				db.creditBalance.create({
-					data: {
-						userId,
-						organizationId,
-						meterKey,
-						recurringPeriodEnd: new Date(),
-					},
+				grantRecurringCreditsTx({
+					userId,
+					organizationId,
+					meterKey,
+					amount: 10,
+					periodEnd: new Date(),
 				}),
-			).rejects.toThrow();
+			).rejects.toThrow(/exactly one of userId/);
 
 			await expect(
-				db.creditBalance.create({
-					data: {
-						meterKey,
-						recurringPeriodEnd: new Date(),
-					},
+				grantRecurringCreditsTx({
+					meterKey,
+					amount: 10,
+					periodEnd: new Date(),
 				}),
-			).rejects.toThrow();
+			).rejects.toThrow(/exactly one of userId/);
+
+			expect(
+				await db.creditBalance.count({
+					where: { meterKey, userId, organizationId },
+				}),
+			).toBe(0);
 		});
 	},
 );

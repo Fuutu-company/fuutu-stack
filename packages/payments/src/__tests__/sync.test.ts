@@ -370,7 +370,7 @@ describe("processWebhookEvents", () => {
 		expect(mockCreatePurchase).not.toHaveBeenCalled();
 	});
 
-	it("stores checkoutEventId in purchase metadata for dedup", async () => {
+	it("stores the checkout event id in purchase.checkoutEventId for dedup", async () => {
 		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
 		mockCreatePurchase.mockResolvedValue({ id: "purchase_1" });
 
@@ -385,7 +385,7 @@ describe("processWebhookEvents", () => {
 
 		expect(mockCreatePurchase).toHaveBeenCalledWith(
 			expect.objectContaining({
-				metadata: expect.objectContaining({ checkoutEventId: "evt_1" }),
+				checkoutEventId: "evt_1",
 			}),
 		);
 	});

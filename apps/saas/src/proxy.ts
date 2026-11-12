@@ -6,6 +6,7 @@ import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
+import { env } from "@fuutu/env/saas";
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
@@ -90,7 +91,7 @@ export async function proxy(req: NextRequest) {
 	}
 
 	// Matches `__Secure-better-auth.session_token` (https) and the plain name.
-	const hasSession = hasSessionCookie(req);
+	const hasSession = hasSessionCookie(req, env.FUUTU_AUTH_COOKIE_PREFIX);
 
 	// API-key requests carry no session cookie — they authenticate in the oRPC
 	// context via `x-api-key` or `Authorization: Bearer futu_sk_…` (verifyApiKey → owner session, org pinning

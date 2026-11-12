@@ -44,14 +44,16 @@ Node ≥ 20 · pnpm · Turborepo · TypeScript strict, ESM · Next.js 16 (App Ro
 ## 4 · Workspace
 
 ```
-apps/saas        :3000  authed app + API (Hono/oRPC, MCP at /api/mcp)
-apps/marketing   :3001  public site, locale-prefixed URLs
-apps/docs        :4000  docs site for YOUR product (Fumadocs)
-apps/mail-preview:3003  mail template preview (dev only)
+apps/saas        :3000* authed app + API (Hono/oRPC, MCP at /api/mcp)
+apps/marketing   :3001* public site, locale-prefixed URLs
+apps/docs        :4000* docs site for YOUR product (Fumadocs)
+apps/mail-preview:4003* mail template preview (dev only)
 packages/*              domain logic — config, env, db, auth, api, ui, i18n, mail, payments,
                         credits, storage, analytics, rbac, logs, notifications, cron, search,
                         utils, content, license, telemetry, webhooks, mcp, ai, test-utils
 ```
+
+\* Slot 0. Every project and git worktree on a machine gets its own **port slot** (ports, local DB, buckets, login cookie, session browser) — `pnpm ports` shows them, `.fuutu/project.json` holds them; a team pins one with `pnpm ports pin` (`fuutu.preferredSlot` in `package.json`). Never hard-code a port: apps start through `tooling/scripts/next.mjs`, URLs follow the slot.
 
 ## 5 · Commands
 
@@ -65,6 +67,8 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 ```
 
 `pnpm check && pnpm check-types && pnpm test` must be green before every commit.
+
+**Live session:** `pnpm dev:session` keeps DB, all three apps and one visible browser (Chromium on the slot's browser port, SaaS tab signed in as `admin@fuutu.local`) running for the whole coding session; Claude Code starts it via the `SessionStart` hook (opt out: `FUUTU_DEV_SESSION=0`). Agents drive that browser through the Playwright MCP, work in their own role-prefixed tabs (`[qa] …`) and never stop the apps or the browser — the developer watches and reviews. Details: `check-in-browser` skill.
 
 ## 6 · Code patterns
 

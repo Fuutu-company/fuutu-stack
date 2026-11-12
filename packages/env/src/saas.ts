@@ -129,6 +129,12 @@ export const env = createEnv({
 		FUUTU_TELEMETRY_ENDPOINT: z.url().optional(),
 		FUUTU_TELEMETRY_DISABLED: z.stringbool().optional(),
 		FUUTU_DISABLE_RATE_LIMIT: strictFlag().optional(),
+		// Auth cookie prefix — set per project by the port slot (local dev),
+		// so several projects on localhost don't share one login cookie.
+		FUUTU_AUTH_COOKIE_PREFIX: z
+			.string()
+			.regex(/^[a-z0-9-]+$/)
+			.optional(),
 		// Explicit opt-in for outbound-webhook SSRF relaxation (http: +
 		// private/loopback targets). Needed for local receivers in dev —
 		// must NEVER be set in production.
@@ -223,6 +229,7 @@ export const env = createEnv({
 		FUUTU_TELEMETRY_ENDPOINT: process.env.FUUTU_TELEMETRY_ENDPOINT,
 		FUUTU_TELEMETRY_DISABLED: process.env.FUUTU_TELEMETRY_DISABLED,
 		FUUTU_DISABLE_RATE_LIMIT: process.env.FUUTU_DISABLE_RATE_LIMIT,
+		FUUTU_AUTH_COOKIE_PREFIX: process.env.FUUTU_AUTH_COOKIE_PREFIX,
 		WEBHOOK_ALLOW_PRIVATE_URLS: process.env.WEBHOOK_ALLOW_PRIVATE_URLS,
 	},
 	emptyStringAsUndefined: true,

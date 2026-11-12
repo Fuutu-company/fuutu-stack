@@ -56,7 +56,7 @@ export type TransactionIsolationLevel = z.infer<typeof TransactionIsolationLevel
 
 // File: PurchaseScalarFieldEnum.schema.ts
 
-export const PurchaseScalarFieldEnumSchema = z.enum(['id', 'type', 'status', 'provider', 'priceId', 'productId', 'subscriptionId', 'customerId', 'quantity', 'currentPeriodEnd', 'userId', 'organizationId', 'metadata', 'createdAt', 'updatedAt'])
+export const PurchaseScalarFieldEnumSchema = z.enum(['id', 'type', 'status', 'provider', 'priceId', 'productId', 'subscriptionId', 'customerId', 'quantity', 'currentPeriodEnd', 'userId', 'organizationId', 'metadata', 'checkoutEventId', 'createdAt', 'updatedAt'])
 
 export type PurchaseScalarFieldEnum = z.infer<typeof PurchaseScalarFieldEnumSchema>;
 
@@ -313,6 +313,7 @@ const purchasewhereinputSchema = z.object({
   userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   metadata: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
+  checkoutEventId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
@@ -338,6 +339,7 @@ const __makeSchema_PurchaseOrderByWithRelationInput_schema = () => z.object({
   userId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   organizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  checkoutEventId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
@@ -351,7 +353,8 @@ export const PurchaseOrderByWithRelationInputObjectZodSchema = __makeSchema_Purc
 // File: PurchaseWhereUniqueInput.schema.ts
 const __makeSchema_PurchaseWhereUniqueInput_schema = () => z.object({
   id: z.string().optional(),
-  provider_subscriptionId: z.lazy(() => PurchaseProviderSubscriptionIdCompoundUniqueInputObjectSchema).optional()
+  provider_subscriptionId: z.lazy(() => PurchaseProviderSubscriptionIdCompoundUniqueInputObjectSchema).optional(),
+  provider_checkoutEventId: z.lazy(() => PurchaseProviderCheckoutEventIdCompoundUniqueInputObjectSchema).optional()
 }).strict();
 export const PurchaseWhereUniqueInputObjectSchema: z.ZodType<Prisma.PurchaseWhereUniqueInput> = __makeSchema_PurchaseWhereUniqueInput_schema() as unknown as z.ZodType<Prisma.PurchaseWhereUniqueInput>;
 export const PurchaseWhereUniqueInputObjectZodSchema = __makeSchema_PurchaseWhereUniqueInput_schema();
@@ -372,6 +375,7 @@ const __makeSchema_PurchaseOrderByWithAggregationInput_schema = () => z.object({
   userId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   organizationId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  checkoutEventId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   _count: z.lazy(() => PurchaseCountOrderByAggregateInputObjectSchema).optional(),
@@ -403,6 +407,7 @@ const purchasescalarwherewithaggregatesinputSchema = z.object({
   userId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   organizationId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   metadata: z.lazy(() => JsonNullableWithAggregatesFilterObjectSchema).optional(),
+  checkoutEventId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
@@ -1322,7 +1327,9 @@ export const CreditBalanceOrderByWithRelationInputObjectZodSchema = __makeSchema
 // File: CreditBalanceWhereUniqueInput.schema.ts
 const __makeSchema_CreditBalanceWhereUniqueInput_schema = () => z.object({
   id: z.string().optional(),
-  userId_organizationId_meterKey: z.lazy(() => CreditBalanceUserIdOrganizationIdMeterKeyCompoundUniqueInputObjectSchema).optional()
+  userId_organizationId_meterKey: z.lazy(() => CreditBalanceUserIdOrganizationIdMeterKeyCompoundUniqueInputObjectSchema).optional(),
+  userId_meterKey: z.lazy(() => CreditBalanceUserIdMeterKeyCompoundUniqueInputObjectSchema).optional(),
+  organizationId_meterKey: z.lazy(() => CreditBalanceOrganizationIdMeterKeyCompoundUniqueInputObjectSchema).optional()
 }).strict();
 export const CreditBalanceWhereUniqueInputObjectSchema: z.ZodType<Prisma.CreditBalanceWhereUniqueInput> = __makeSchema_CreditBalanceWhereUniqueInput_schema() as unknown as z.ZodType<Prisma.CreditBalanceWhereUniqueInput>;
 export const CreditBalanceWhereUniqueInputObjectZodSchema = __makeSchema_CreditBalanceWhereUniqueInput_schema();
@@ -1417,7 +1424,8 @@ export const CreditPackageOrderByWithRelationInputObjectZodSchema = __makeSchema
 
 // File: CreditPackageWhereUniqueInput.schema.ts
 const __makeSchema_CreditPackageWhereUniqueInput_schema = () => z.object({
-  id: z.string().optional()
+  id: z.string().optional(),
+  purchaseId: z.string().optional()
 }).strict();
 export const CreditPackageWhereUniqueInputObjectSchema: z.ZodType<Prisma.CreditPackageWhereUniqueInput> = __makeSchema_CreditPackageWhereUniqueInput_schema() as unknown as z.ZodType<Prisma.CreditPackageWhereUniqueInput>;
 export const CreditPackageWhereUniqueInputObjectZodSchema = __makeSchema_CreditPackageWhereUniqueInput_schema();
@@ -1514,7 +1522,9 @@ export const CreditEventOrderByWithRelationInputObjectZodSchema = __makeSchema_C
 
 // File: CreditEventWhereUniqueInput.schema.ts
 const __makeSchema_CreditEventWhereUniqueInput_schema = () => z.object({
-  id: z.string().optional()
+  id: z.string().optional(),
+  userId_meterKey_idempotencyKey: z.lazy(() => CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInputObjectSchema).optional(),
+  organizationId_meterKey_idempotencyKey: z.lazy(() => CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInputObjectSchema).optional()
 }).strict();
 export const CreditEventWhereUniqueInputObjectSchema: z.ZodType<Prisma.CreditEventWhereUniqueInput> = __makeSchema_CreditEventWhereUniqueInput_schema() as unknown as z.ZodType<Prisma.CreditEventWhereUniqueInput>;
 export const CreditEventWhereUniqueInputObjectZodSchema = __makeSchema_CreditEventWhereUniqueInput_schema();
@@ -3348,6 +3358,7 @@ const __makeSchema_PurchaseCreateInput_schema = () => z.object({
   quantity: z.number().int().optional(),
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
   organization: z.lazy(() => OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
@@ -3372,6 +3383,7 @@ const __makeSchema_PurchaseUncheckedCreateInput_schema = () => z.object({
   userId: z.string().optional().nullable(),
   organizationId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
 }).strict();
@@ -3392,6 +3404,7 @@ const __makeSchema_PurchaseUpdateInput_schema = () => z.object({
   quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
@@ -3417,6 +3430,7 @@ const __makeSchema_PurchaseUncheckedUpdateInput_schema = () => z.object({
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
@@ -3440,6 +3454,7 @@ const __makeSchema_PurchaseCreateManyInput_schema = () => z.object({
   userId: z.string().optional().nullable(),
   organizationId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional()
 }).strict();
@@ -3460,6 +3475,7 @@ const __makeSchema_PurchaseUpdateManyMutationInput_schema = () => z.object({
   quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
@@ -3482,6 +3498,7 @@ const __makeSchema_PurchaseUncheckedUpdateManyInput_schema = () => z.object({
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
@@ -7551,6 +7568,15 @@ export const PurchaseProviderSubscriptionIdCompoundUniqueInputObjectSchema: z.Zo
 export const PurchaseProviderSubscriptionIdCompoundUniqueInputObjectZodSchema = __makeSchema_PurchaseProviderSubscriptionIdCompoundUniqueInput_schema();
 
 
+// File: PurchaseProviderCheckoutEventIdCompoundUniqueInput.schema.ts
+const __makeSchema_PurchaseProviderCheckoutEventIdCompoundUniqueInput_schema = () => z.object({
+  provider: z.string(),
+  checkoutEventId: z.string()
+}).strict();
+export const PurchaseProviderCheckoutEventIdCompoundUniqueInputObjectSchema: z.ZodType<Prisma.PurchaseProviderCheckoutEventIdCompoundUniqueInput> = __makeSchema_PurchaseProviderCheckoutEventIdCompoundUniqueInput_schema() as unknown as z.ZodType<Prisma.PurchaseProviderCheckoutEventIdCompoundUniqueInput>;
+export const PurchaseProviderCheckoutEventIdCompoundUniqueInputObjectZodSchema = __makeSchema_PurchaseProviderCheckoutEventIdCompoundUniqueInput_schema();
+
+
 // File: PurchaseCountOrderByAggregateInput.schema.ts
 const __makeSchema_PurchaseCountOrderByAggregateInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -7566,6 +7592,7 @@ const __makeSchema_PurchaseCountOrderByAggregateInput_schema = () => z.object({
   userId: SortOrderSchema.optional(),
   organizationId: SortOrderSchema.optional(),
   metadata: SortOrderSchema.optional(),
+  checkoutEventId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()
 }).strict();
@@ -7595,6 +7622,7 @@ const __makeSchema_PurchaseMaxOrderByAggregateInput_schema = () => z.object({
   currentPeriodEnd: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   organizationId: SortOrderSchema.optional(),
+  checkoutEventId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()
 }).strict();
@@ -7616,6 +7644,7 @@ const __makeSchema_PurchaseMinOrderByAggregateInput_schema = () => z.object({
   currentPeriodEnd: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   organizationId: SortOrderSchema.optional(),
+  checkoutEventId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()
 }).strict();
@@ -8635,6 +8664,24 @@ export const CreditBalanceUserIdOrganizationIdMeterKeyCompoundUniqueInputObjectS
 export const CreditBalanceUserIdOrganizationIdMeterKeyCompoundUniqueInputObjectZodSchema = __makeSchema_CreditBalanceUserIdOrganizationIdMeterKeyCompoundUniqueInput_schema();
 
 
+// File: CreditBalanceUserIdMeterKeyCompoundUniqueInput.schema.ts
+const __makeSchema_CreditBalanceUserIdMeterKeyCompoundUniqueInput_schema = () => z.object({
+  userId: z.string(),
+  meterKey: z.string()
+}).strict();
+export const CreditBalanceUserIdMeterKeyCompoundUniqueInputObjectSchema: z.ZodType<Prisma.CreditBalanceUserIdMeterKeyCompoundUniqueInput> = __makeSchema_CreditBalanceUserIdMeterKeyCompoundUniqueInput_schema() as unknown as z.ZodType<Prisma.CreditBalanceUserIdMeterKeyCompoundUniqueInput>;
+export const CreditBalanceUserIdMeterKeyCompoundUniqueInputObjectZodSchema = __makeSchema_CreditBalanceUserIdMeterKeyCompoundUniqueInput_schema();
+
+
+// File: CreditBalanceOrganizationIdMeterKeyCompoundUniqueInput.schema.ts
+const __makeSchema_CreditBalanceOrganizationIdMeterKeyCompoundUniqueInput_schema = () => z.object({
+  organizationId: z.string(),
+  meterKey: z.string()
+}).strict();
+export const CreditBalanceOrganizationIdMeterKeyCompoundUniqueInputObjectSchema: z.ZodType<Prisma.CreditBalanceOrganizationIdMeterKeyCompoundUniqueInput> = __makeSchema_CreditBalanceOrganizationIdMeterKeyCompoundUniqueInput_schema() as unknown as z.ZodType<Prisma.CreditBalanceOrganizationIdMeterKeyCompoundUniqueInput>;
+export const CreditBalanceOrganizationIdMeterKeyCompoundUniqueInputObjectZodSchema = __makeSchema_CreditBalanceOrganizationIdMeterKeyCompoundUniqueInput_schema();
+
+
 // File: CreditBalanceCountOrderByAggregateInput.schema.ts
 const __makeSchema_CreditBalanceCountOrderByAggregateInput_schema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -8806,6 +8853,26 @@ const __makeSchema_CreditPackageNullableScalarRelationFilter_schema = () => z.ob
 }).strict();
 export const CreditPackageNullableScalarRelationFilterObjectSchema: z.ZodType<Prisma.CreditPackageNullableScalarRelationFilter> = __makeSchema_CreditPackageNullableScalarRelationFilter_schema() as unknown as z.ZodType<Prisma.CreditPackageNullableScalarRelationFilter>;
 export const CreditPackageNullableScalarRelationFilterObjectZodSchema = __makeSchema_CreditPackageNullableScalarRelationFilter_schema();
+
+
+// File: CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInput.schema.ts
+const __makeSchema_CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInput_schema = () => z.object({
+  userId: z.string(),
+  meterKey: z.string(),
+  idempotencyKey: z.string()
+}).strict();
+export const CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInputObjectSchema: z.ZodType<Prisma.CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInput> = __makeSchema_CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInput_schema() as unknown as z.ZodType<Prisma.CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInput>;
+export const CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInputObjectZodSchema = __makeSchema_CreditEventUserIdMeterKeyIdempotencyKeyCompoundUniqueInput_schema();
+
+
+// File: CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInput.schema.ts
+const __makeSchema_CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInput_schema = () => z.object({
+  organizationId: z.string(),
+  meterKey: z.string(),
+  idempotencyKey: z.string()
+}).strict();
+export const CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInputObjectSchema: z.ZodType<Prisma.CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInput> = __makeSchema_CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInput_schema() as unknown as z.ZodType<Prisma.CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInput>;
+export const CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInputObjectZodSchema = __makeSchema_CreditEventOrganizationIdMeterKeyIdempotencyKeyCompoundUniqueInput_schema();
 
 
 // File: CreditEventCountOrderByAggregateInput.schema.ts
@@ -17992,6 +18059,7 @@ const __makeSchema_PurchaseCreateWithoutCreditPackagesInput_schema = () => z.obj
   quantity: z.number().int().optional(),
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
@@ -18016,6 +18084,7 @@ const __makeSchema_PurchaseUncheckedCreateWithoutCreditPackagesInput_schema = ()
   userId: z.string().optional().nullable(),
   organizationId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional()
 }).strict();
@@ -18292,6 +18361,7 @@ const __makeSchema_PurchaseUpdateWithoutCreditPackagesInput_schema = () => z.obj
   quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
@@ -18316,6 +18386,7 @@ const __makeSchema_PurchaseUncheckedUpdateWithoutCreditPackagesInput_schema = ()
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
@@ -19106,6 +19177,7 @@ const __makeSchema_PurchaseCreateWithoutUserInput_schema = () => z.object({
   quantity: z.number().int().optional(),
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   organization: z.lazy(() => OrganizationCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
@@ -19129,6 +19201,7 @@ const __makeSchema_PurchaseUncheckedCreateWithoutUserInput_schema = () => z.obje
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   organizationId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
@@ -20188,6 +20261,7 @@ const purchasescalarwhereinputSchema = z.object({
   userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   organizationId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   metadata: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
+  checkoutEventId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
@@ -21473,6 +21547,7 @@ const __makeSchema_PurchaseCreateWithoutOrganizationInput_schema = () => z.objec
   quantity: z.number().int().optional(),
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutPurchasesInputObjectSchema).optional(),
@@ -21496,6 +21571,7 @@ const __makeSchema_PurchaseUncheckedCreateWithoutOrganizationInput_schema = () =
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   userId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedCreateNestedManyWithoutPurchaseInputObjectSchema).optional()
@@ -26392,6 +26468,7 @@ const __makeSchema_PurchaseCreateManyUserInput_schema = () => z.object({
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   organizationId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional()
 }).strict();
@@ -26920,6 +26997,7 @@ const __makeSchema_PurchaseUpdateWithoutUserInput_schema = () => z.object({
   quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   organization: z.lazy(() => OrganizationUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
@@ -26943,6 +27021,7 @@ const __makeSchema_PurchaseUncheckedUpdateWithoutUserInput_schema = () => z.obje
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
@@ -26965,6 +27044,7 @@ const __makeSchema_PurchaseUncheckedUpdateManyWithoutUserInput_schema = () => z.
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   organizationId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
@@ -27909,6 +27989,7 @@ const __makeSchema_PurchaseCreateManyOrganizationInput_schema = () => z.object({
   currentPeriodEnd: z.coerce.date().optional().nullable(),
   userId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional()
 }).strict();
@@ -28152,6 +28233,7 @@ const __makeSchema_PurchaseUpdateWithoutOrganizationInput_schema = () => z.objec
   quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   user: z.lazy(() => UserUpdateOneWithoutPurchasesNestedInputObjectSchema).optional(),
@@ -28175,6 +28257,7 @@ const __makeSchema_PurchaseUncheckedUpdateWithoutOrganizationInput_schema = () =
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   creditPackages: z.lazy(() => CreditPackageUncheckedUpdateManyWithoutPurchaseNestedInputObjectSchema).optional()
@@ -28197,6 +28280,7 @@ const __makeSchema_PurchaseUncheckedUpdateManyWithoutOrganizationInput_schema = 
   currentPeriodEnd: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  checkoutEventId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
@@ -29083,6 +29167,7 @@ const __makeSchema_PurchaseCountAggregateInput_schema = () => z.object({
   userId: z.literal(true).optional(),
   organizationId: z.literal(true).optional(),
   metadata: z.literal(true).optional(),
+  checkoutEventId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   _all: z.literal(true).optional()
@@ -29121,6 +29206,7 @@ const __makeSchema_PurchaseMinAggregateInput_schema = () => z.object({
   currentPeriodEnd: z.literal(true).optional(),
   userId: z.literal(true).optional(),
   organizationId: z.literal(true).optional(),
+  checkoutEventId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional()
 }).strict();
@@ -29142,6 +29228,7 @@ const __makeSchema_PurchaseMaxAggregateInput_schema = () => z.object({
   currentPeriodEnd: z.literal(true).optional(),
   userId: z.literal(true).optional(),
   organizationId: z.literal(true).optional(),
+  checkoutEventId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional()
 }).strict();
@@ -31436,6 +31523,7 @@ const __makeSchema_PurchaseSelect_schema = () => z.object({
   organizationId: z.boolean().optional(),
   organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
   metadata: z.boolean().optional(),
+  checkoutEventId: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
@@ -32668,6 +32756,7 @@ export const PurchaseFindFirstSelectSchema__findFirstPurchase_schema: z.ZodType<
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
+    checkoutEventId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
@@ -32690,6 +32779,7 @@ export const PurchaseFindFirstSelectZodSchema__findFirstPurchase_schema = z.obje
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
+    checkoutEventId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
@@ -32721,6 +32811,7 @@ export const PurchaseFindFirstOrThrowSelectSchema__findFirstOrThrowPurchase_sche
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
+    checkoutEventId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
@@ -32743,6 +32834,7 @@ export const PurchaseFindFirstOrThrowSelectZodSchema__findFirstOrThrowPurchase_s
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
+    checkoutEventId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
@@ -32774,6 +32866,7 @@ export const PurchaseFindManySelectSchema__findManyPurchase_schema: z.ZodType<Pr
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
+    checkoutEventId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
@@ -32796,6 +32889,7 @@ export const PurchaseFindManySelectZodSchema__findManyPurchase_schema = z.object
     organizationId: z.boolean().optional(),
     organization: z.union([z.boolean(), z.lazy(() => OrganizationArgsObjectSchema)]).optional(),
     metadata: z.boolean().optional(),
+    checkoutEventId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     creditPackages: z.union([z.boolean(), z.lazy(() => CreditPackageFindManySchema)]).optional(),
@@ -39326,6 +39420,7 @@ export const PurchaseSchema = z.object({
   userId: z.string().nullish(),
   organizationId: z.string().nullish(),
   metadata: z.unknown().refine((val) => { const getDepth = (obj: unknown, depth: number = 0): number => { if (depth > 10) return depth; if (obj === null || typeof obj !== 'object') return depth; const values = Object.values(obj as Record<string, unknown>); if (values.length === 0) return depth; return Math.max(...values.map(v => getDepth(v, depth + 1))); }; return getDepth(val) <= 10; }, "JSON nesting depth exceeds maximum of 10").nullish(),
+  checkoutEventId: z.string().nullish(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

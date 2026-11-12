@@ -342,6 +342,11 @@ const authOptions = {
 	},
 
 	advanced: {
+		// Per-project cookie name in local dev (port slots) — unset in
+		// production, where Better Auth's default `better-auth` applies.
+		...(env.FUUTU_AUTH_COOKIE_PREFIX
+			? { cookiePrefix: env.FUUTU_AUTH_COOKIE_PREFIX }
+			: {}),
 		// Rate limits (incl. open MCP client registration) key on the client
 		// IP from `advanced.ipAddress.ipAddressHeaders` (default:
 		// x-forwarded-for). Behind a reverse proxy / load balancer, set it to
