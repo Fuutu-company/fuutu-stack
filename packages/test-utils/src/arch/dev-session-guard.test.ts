@@ -19,9 +19,12 @@ describe("dev session guard", () => {
 			args: ["tooling/scripts/playwright-mcp.mjs"],
 		});
 		const wrapper = read("tooling", "scripts", "playwright-mcp.mjs");
-		expect(wrapper).toContain(
-			"--cdp-endpoint=http://127.0.0.1:${project.ports.browser}",
-		);
+		// Literal source text of the wrapper's template string.
+		const endpoint = [
+			"--cdp-endpoint=http://127.0.0.1:$",
+			"{project.ports.browser}",
+		];
+		expect(wrapper).toContain(endpoint.join(""));
 	});
 
 	it("the session browser listens on the slot's browser port", () => {
