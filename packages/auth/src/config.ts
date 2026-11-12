@@ -99,6 +99,8 @@ export const authConfig = {
 		afterSignOut: "/auth/sign-in",
 		afterSignUp: "/onboarding",
 		afterEmailVerification: "/dashboard",
+		/** Auth and OAuth errors (Better Auth `onAPIError.errorURL`). */
+		error: "/auth/error",
 	},
 } as const;
 

@@ -394,7 +394,10 @@ test.describe("MCP OAuth — unverified clients", () => {
 				...extra,
 			}).toString();
 			await page.goto(url.toString());
-			await expect(page).toHaveURL(/\/api\/auth\/error\?error=/);
+			await expect(page).toHaveURL(/\/auth\/error\?error=/);
+			await expect(
+				page.getByRole("heading", { name: "Something went wrong" }),
+			).toBeVisible();
 		}
 		expect(reachedClient).toBe(false);
 	});

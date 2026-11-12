@@ -108,6 +108,13 @@ const authOptions = {
 	secret: env.BETTER_AUTH_SECRET,
 	trustedOrigins: [env.CORS_ORIGIN],
 
+	// Without this, production builds redirect auth errors to `/?error=…`
+	// and the app root forwards signed-in users to the dashboard — the
+	// error vanishes. The app page shows it (MCP OAuth guards use it too).
+	onAPIError: {
+		errorURL: `${saasBaseUrl}${authConfig.redirects.error}`,
+	},
+
 	// The JWT plugin's session-to-JWT route would mint tokens signed with
 	// the same key as MCP access tokens — disabled per the oauth-provider docs.
 	...(mcpOAuth.active ? { disabledPaths: ["/token"] } : {}),
