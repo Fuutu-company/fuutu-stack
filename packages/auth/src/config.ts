@@ -88,6 +88,12 @@ export const authConfig = {
 		//            only (orgs provisioned externally, e.g. seed/admin API).
 		allowUserToCreateOrganization: "all" as "all" | "admin" | "none",
 	},
+	// OAuth 2.1 sign-in for MCP clients (Claude.ai, ChatGPT, Claude Code,
+	// Cursor, VS Code) — Better Auth acts as the authorization server for
+	// `/api/mcp`. `false` registers no OAuth plugins (API keys only).
+	mcpOAuth: {
+		enabled: true,
+	},
 	redirects: {
 		afterSignIn: "/dashboard",
 		afterSignOut: "/auth/sign-in",

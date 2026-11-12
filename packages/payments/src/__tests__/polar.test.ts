@@ -10,6 +10,10 @@ const customerSessionsCreate = vi.fn().mockResolvedValue({
 });
 const subscriptionsRevoke = vi.fn().mockResolvedValue(undefined);
 const subscriptionsUpdate = vi.fn().mockResolvedValue(undefined);
+const subscriptionsGet = vi.fn().mockResolvedValue({
+	id: "sub_fetched",
+	currentPeriodEnd: new Date("2026-06-30T00:00:00.000Z"),
+});
 const customersCreate = vi.fn().mockResolvedValue({ id: "cust_polar_123" });
 
 vi.mock("@polar-sh/sdk", () => ({
@@ -19,6 +23,7 @@ vi.mock("@polar-sh/sdk", () => ({
 		subscriptions = {
 			revoke: subscriptionsRevoke,
 			update: subscriptionsUpdate,
+			get: subscriptionsGet,
 		};
 		customers = { create: customersCreate };
 	},
@@ -110,6 +115,29 @@ describe("polar provider — SDK integration", () => {
 		});
 		const params = checkoutsCreate.mock.calls[0]?.[0];
 		expect(params.seats).toBe(4);
+	});
+
+	it("createCheckoutLink passes trialDays as a day-interval trial", async () => {
+		checkoutsCreate.mockClear();
+		await polarPaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+			trialDays: 14,
+		});
+		const params = checkoutsCreate.mock.calls[0]?.[0];
+		expect(params.trialInterval).toBe("day");
+		expect(params.trialIntervalCount).toBe(14);
+	});
+
+	it("createCheckoutLink leaves the product's trial config alone without trialDays", async () => {
+		checkoutsCreate.mockClear();
+		await polarPaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+		});
+		const params = checkoutsCreate.mock.calls[0]?.[0];
+		expect(params).not.toHaveProperty("trialInterval");
+		expect(params).not.toHaveProperty("trialIntervalCount");
 	});
 
 	it("createCheckoutLink throws WebhookConfigError when no success URL is available", async () => {
@@ -331,6 +359,47 @@ describe("polar provider — event mapping", () => {
 			subscriptionId: "sub_9",
 			customerId: "cust_1",
 		});
+	});
+
+	it("carries the renewed period end from the order's subscription on a subscription_cycle order", async () => {
+		subscriptionsGet.mockClear();
+		const periodEnd = new Date("2026-12-31T00:00:00.000Z");
+		const events = await parsePayload({
+			type: "order.paid",
+			data: {
+				id: "ord_1",
+				billingReason: "subscription_cycle",
+				subscriptionId: "sub_9",
+				checkoutId: null,
+				customerId: "cust_1",
+				productId: "prod_1",
+				subscription: { id: "sub_9", currentPeriodEnd: periodEnd },
+			},
+		});
+		expect(events[0]?.currentPeriodEnd).toEqual(periodEnd);
+		expect(subscriptionsGet).not.toHaveBeenCalled();
+	});
+
+	it("fetches the subscription for the period end when the renewal order embeds none", async () => {
+		const periodEnd = new Date("2027-01-31T00:00:00.000Z");
+		subscriptionsGet.mockReset().mockResolvedValue({
+			id: "sub_9",
+			currentPeriodEnd: periodEnd,
+		});
+		const events = await parsePayload({
+			type: "order.paid",
+			data: {
+				id: "ord_1",
+				billingReason: "subscription_cycle",
+				subscriptionId: "sub_9",
+				checkoutId: null,
+				customerId: "cust_1",
+				productId: "prod_1",
+				subscription: null,
+			},
+		});
+		expect(subscriptionsGet).toHaveBeenCalledWith({ id: "sub_9" });
+		expect(events[0]?.currentPeriodEnd).toEqual(periodEnd);
 	});
 
 	it("maps order.paid with billingReason purchase to one_time.purchased when no checkout produced it", async () => {
@@ -623,4 +692,9 @@ describe("polar provider — SDK validation errors", () => {
 			"Malformed webhook payload",
 		);
 	});
+});
+
+const { testPaymentProviderContract } = await import("./provider-contract");
+testPaymentProviderContract("polar", () => polarPaymentProvider, {
+	behavior: "shape",
 });

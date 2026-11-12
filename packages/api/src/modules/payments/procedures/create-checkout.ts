@@ -1,5 +1,5 @@
 import { resolvePaymentProvider } from "@fuutu/payments";
-import { PLAN_IDS, PLANS } from "@fuutu/payments/config";
+import { PLAN_IDS, PLANS, type Plan } from "@fuutu/payments/config";
 import { getPlanPriceId } from "@fuutu/payments/config.server";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
@@ -30,7 +30,9 @@ export const createCheckout = authProcedure({
 	})
 	.input(checkoutSchema)
 	.handler(async ({ input, context }) => {
-		const plan = PLANS[input.planId];
+		// Widened to `Plan`: the `as const` catalog narrows to the shipped
+		// plans, but a kit user may add one-time plans.
+		const plan: Plan = PLANS[input.planId];
 		if (plan.billingType === "free" || plan.billingType === "custom") {
 			throw new ORPCError("BAD_REQUEST", {
 				message: "This plan is not available for checkout",
@@ -49,6 +51,10 @@ export const createCheckout = authProcedure({
 				message: "Checkout is not configured for this plan",
 			});
 		}
+		// One-time plans are a single charge (lifetime access); trials only
+		// apply to subscriptions.
+		const isOneTime = plan.billingType === "one_time";
+		const trialDays = plan.trialDays;
 		try {
 			const provider = resolvePaymentProvider();
 			// seats is used for seat-based plans (quantity on Stripe, units on Creem)
@@ -62,6 +68,11 @@ export const createCheckout = authProcedure({
 				// Session email, not client input — providers pre-fill the
 				// checkout form with it.
 				customerEmail: context.user.email,
+				...(isOneTime
+					? { metadata: { mode: "payment" } }
+					: trialDays
+						? { trialDays }
+						: {}),
 			});
 		} catch (err) {
 			throwIfPaymentsDisabled(err);

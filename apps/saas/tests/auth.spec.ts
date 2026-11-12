@@ -56,4 +56,39 @@ test.describe("auth flows", () => {
 		const response = await page.goto("/auth/forgot-password");
 		expect(response?.status()).toBeLessThan(400);
 	});
+
+	// A provider without credentials (or disabled in authConfig) is not
+	// registered by the server — its button must not render. Asserted against
+	// the live server instead of the env, so it holds in any environment.
+	for (const [provider, label] of [
+		["google", "Sign in with Google"],
+		["github", "Sign in with GitHub"],
+	] as const) {
+		test(`${provider} button renders exactly when the server registers ${provider}`, async ({
+			page,
+		}) => {
+			await page.goto("/auth/sign-in");
+			await expect(
+				page.getByRole("button", { name: "Sign in", exact: true }),
+			).toBeVisible();
+
+			const status = await page.evaluate(async (id) => {
+				const res = await fetch("/api/auth/sign-in/social", {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({
+						provider: id,
+						callbackURL: "/dashboard",
+						disableRedirect: true,
+					}),
+				});
+				return res.status;
+			}, provider);
+			const registered = status !== 404;
+
+			await expect(page.getByRole("button", { name: label })).toHaveCount(
+				registered ? 1 : 0,
+			);
+		});
+	}
 });

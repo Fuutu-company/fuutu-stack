@@ -2,11 +2,13 @@ import { createLogger } from "@fuutu/logs";
 import { parseCronExpression } from "../schedule";
 import type { CronJob } from "../types";
 import { auditLogCleanupJob } from "./audit-log-cleanup";
+import { oauthClientCleanupJob } from "./oauth-client-cleanup";
 import { subscriptionReminderJob } from "./subscription-reminder";
 import { telemetryPingJob } from "./telemetry-ping";
 import { webhookRetryJob } from "./webhook-retry";
 
 export { auditLogCleanupJob } from "./audit-log-cleanup";
+export { oauthClientCleanupJob } from "./oauth-client-cleanup";
 export { subscriptionReminderJob } from "./subscription-reminder";
 export { telemetryPingJob } from "./telemetry-ping";
 export { webhookRetryJob } from "./webhook-retry";
@@ -19,6 +21,7 @@ export const allJobs: CronJob[] = [
 	auditLogCleanupJob,
 	subscriptionReminderJob,
 	telemetryPingJob,
+	oauthClientCleanupJob,
 ];
 
 /**

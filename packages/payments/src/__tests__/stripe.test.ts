@@ -148,6 +148,40 @@ describe("stripe provider — SDK integration", () => {
 		});
 	});
 
+	it("createCheckoutLink passes trialDays as subscription_data.trial_period_days", async () => {
+		checkoutCreate.mockClear();
+		await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+			trialDays: 14,
+		});
+		const params = checkoutCreate.mock.calls[0]?.[0];
+		expect(params.subscription_data?.trial_period_days).toBe(14);
+	});
+
+	it("createCheckoutLink sets no trial when trialDays is absent", async () => {
+		checkoutCreate.mockClear();
+		await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+		});
+		const params = checkoutCreate.mock.calls[0]?.[0];
+		expect(params.subscription_data).not.toHaveProperty("trial_period_days");
+	});
+
+	it("createCheckoutLink ignores trialDays in payment mode", async () => {
+		checkoutCreate.mockClear();
+		await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+			trialDays: 14,
+			metadata: { mode: "payment" },
+		});
+		const params = checkoutCreate.mock.calls[0]?.[0];
+		expect(params.mode).toBe("payment");
+		expect(params.subscription_data).toBeUndefined();
+	});
+
 	it("createCheckoutLink keeps owner metadata authoritative over input.metadata", async () => {
 		checkoutCreate.mockClear();
 		await stripePaymentProvider.createCheckoutLink({
@@ -475,4 +509,9 @@ describe("stripe provider — SDK integration", () => {
 		expect(subscriptionsRetrieve).toHaveBeenCalledOnce();
 		expect(subscriptionsUpdate).toHaveBeenCalledOnce();
 	});
+});
+
+const { testPaymentProviderContract } = await import("./provider-contract");
+testPaymentProviderContract("stripe", () => stripePaymentProvider, {
+	behavior: "shape",
 });

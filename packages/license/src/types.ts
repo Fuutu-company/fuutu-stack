@@ -3,10 +3,10 @@
  *
  *   - `"oss"`         — no license key configured. Free use under the
  *                       Eligibility Thresholds in LICENSE.md §3.
- *   - `"mcp"`         — a paid **MCP Subscription** key. Grants access to
+ *   - `"mcp"`         — a paid **MCP Plus** key. Grants access to
  *                       both Fuutu agent surfaces:
  *                         * MCP for editors at
- *                           `app.fuutustack.com/api/mcp/sse`,
+ *                           `app.fuutustack.com/api/mcp`,
  *                         * Better-Auth Agent-Auth for custom agents at
  *                           `app.fuutustack.com/.well-known/agent-configuration`.
  *                       Also grants the versioning API. Does **not** lift the

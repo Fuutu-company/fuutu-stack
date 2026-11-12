@@ -10,7 +10,7 @@ import { countOrganizationMembers, getPurchasesByUserId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import {
 	cancelAllSubscriptionsForOrganization,
-	resolvePaymentProvider,
+	resolvePaymentProviderById,
 	updateSeatsInOrganizationSubscription,
 } from "@fuutu/payments";
 
@@ -50,9 +50,9 @@ export async function cancelActiveSubscriptionsForUser(
 		return;
 	}
 
-	const provider = resolvePaymentProvider();
-	// `allSettled` so a single provider failure does not leave the rest
-	// of the user's subscriptions dangling when the account is deleted.
+	// Each subscription is cancelled through the provider it was created
+	// with — never through whichever provider is active now. `allSettled` so
+	// a single provider failure does not leave the rest dangling.
 	const results = await Promise.allSettled(
 		purchases
 			.filter(
@@ -61,7 +61,21 @@ export async function cancelActiveSubscriptionsForUser(
 					p.subscriptionId != null &&
 					(p.status === "ACTIVE" || p.status === "TRIALING"),
 			)
-			.map((p) => provider.cancelSubscription(p.subscriptionId)),
+			.map((p) => {
+				const provider = resolvePaymentProviderById(p.provider);
+				if (!provider) {
+					log.warn(
+						"cancelActiveSubscriptionsForUser: unknown provider, cancel it manually",
+						{
+							userId,
+							provider: p.provider,
+							subscriptionId: p.subscriptionId,
+						},
+					);
+					return Promise.resolve();
+				}
+				return provider.cancelSubscription(p.subscriptionId);
+			}),
 	);
 	for (const r of results) {
 		if (r.status === "rejected") {

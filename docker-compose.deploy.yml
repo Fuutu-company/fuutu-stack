@@ -1,4 +1,4 @@
-# Reference deployment matching the Coolify topology in DEPLOY.md.
+# Reference deployment matching the Coolify topology in https://docs.fuutustack.com/docs/deployment
 # Single-file alternative for a plain Docker host / local rehearsal:
 #
 #   docker compose -f docker-compose.deploy.yml up -d --build

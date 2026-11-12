@@ -8,7 +8,7 @@ metadata:
 
 # Review code
 
-The full, version-matched review checklist is served by the **Fuutu MCP** server.
+The full, version-matched review checklist is served by the **Fuutu MCP** server (MCP Plus).
 
-1. If the `fuutu` MCP server is connected, call `skills_get` with `{ "name": "review-code" }` and follow the returned instructions.
+1. If the `fuutu` MCP server is connected, call `skills_get` with `{ "name": "review-code" }` and follow the returned instructions. Without an MCP Plus key it returns an upgrade notice — then continue with step 2.
 2. Otherwise review the diff (`git diff <base>...HEAD`) against `AGENTS.md` — package boundaries, env access, auth guards, org scoping (IDOR), rate limits, translations, tests — and report findings as critical / important / minor with `file:line`. Prefer a fresh agent context for the review.

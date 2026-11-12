@@ -133,7 +133,23 @@ describe("createMcpEndpoint", () => {
 			"required",
 		)(rpcRequest("tools/list"));
 		expect(res.status).toBe(401);
-		expect(res.headers.get("www-authenticate")).toMatch(/^Bearer/);
+		expect(res.headers.get("www-authenticate")).toBe('Bearer realm="mcp"');
+	});
+
+	it("sends the configured challenge on 401 (OAuth discovery hint)", async () => {
+		const challenge =
+			'Bearer resource_metadata="https://app.example.com/.well-known/oauth-protected-resource/api/mcp"';
+		const handle = createMcpEndpoint({
+			name: "test",
+			version: "0.0.0",
+			auth: "required",
+			challenge,
+			tools,
+			resolvePrincipal: async () => ({ kind: "anonymous" }),
+		});
+		const res = await handle(rpcRequest("tools/list"));
+		expect(res.status).toBe(401);
+		expect(res.headers.get("www-authenticate")).toBe(challenge);
 	});
 
 	it("returns the resolver's error response unchanged", async () => {

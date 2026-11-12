@@ -23,6 +23,13 @@ export type McpEndpointOptions = {
 	 * client's auth flow).
 	 */
 	auth: "optional" | "required";
+	/**
+	 * `WWW-Authenticate` value of the 401 sent to anonymous callers when
+	 * `auth` is `required`, e.g. an RFC 9728
+	 * `Bearer resource_metadata="…"` pointer that starts the client's OAuth
+	 * flow. Defaults to `Bearer realm="mcp"`.
+	 */
+	challenge?: string;
 	tools: readonly AnyMcpTool[];
 	prompts?: readonly AnyMcpPrompt[];
 	/** Always-loaded server instructions (keep < 4 KB). */
@@ -38,7 +45,9 @@ export type McpEndpointOptions = {
 
 const PRINCIPAL_KEY = "fuutuPrincipal";
 
-const unauthorized = () =>
+const DEFAULT_CHALLENGE = 'Bearer realm="mcp"';
+
+const unauthorized = (challenge: string) =>
 	new Response(
 		JSON.stringify({
 			jsonrpc: "2.0",
@@ -49,7 +58,7 @@ const unauthorized = () =>
 			status: 401,
 			headers: {
 				"content-type": "application/json",
-				"www-authenticate": 'Bearer realm="mcp"',
+				"www-authenticate": challenge,
 			},
 		},
 	);
@@ -171,7 +180,7 @@ export function createMcpEndpoint(options: McpEndpointOptions) {
 		const resolved = await options.resolvePrincipal(request);
 		if (resolved instanceof Response) return resolved;
 		if (options.auth === "required" && resolved.kind === "anonymous") {
-			return unauthorized();
+			return unauthorized(options.challenge ?? DEFAULT_CHALLENGE);
 		}
 		const authInfo: AuthInfo | undefined =
 			resolved.kind === "user"

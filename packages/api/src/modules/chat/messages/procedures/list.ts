@@ -6,8 +6,8 @@ import { permissionProcedure } from "../../../../orpc/procedures";
 import { conversationIdSchema } from "../../shared";
 
 const listMessagesSchema = conversationIdSchema.extend({
-	page: z.number().int().min(1).default(1),
-	limit: z.number().int().min(1).max(100).default(50),
+	page: z.coerce.number().int().min(1).default(1),
+	limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 export const listMessagesProcedure = permissionProcedure(PERMISSIONS.CHAT.VIEW)

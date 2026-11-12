@@ -191,11 +191,11 @@
     In the repo (free)
   </text>
   <text x="56" y="1302" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#6B6F76">
-    Works without any subscription
+    Works without any key
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400" fill="#F7F8F8">
     <text x="56" y="1330">· AGENTS.md + CLAUDE.md — any agent</text>
-    <text x="56" y="1354">· 9 workflow skills — TDD, debugging…</text>
+    <text x="56" y="1354">· 10 workflow skills — TDD, debugging…</text>
     <text x="56" y="1378">· 5 kit skills — entity, API, payments…</text>
     <text x="56" y="1402">· .mcp.json — Claude Code ready</text>
     <text x="56" y="1426">· MCP server for your own app</text>
@@ -207,20 +207,20 @@
   <!-- Column 2: Fuutu MCP -->
   <rect x="450" y="1255" width="390" height="210" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
   <text x="466" y="1282" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#F7F8F8">
-    Fuutu MCP
+    Fuutu MCP — free + Plus
   </text>
   <text x="466" y="1302" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#6B6F76">
     Version-matched to your kit release
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400" fill="#F7F8F8">
-    <text x="466" y="1330">· Docs search — matched to KIT_VERSION</text>
-    <text x="466" y="1354">· Rules per domain — auth, payments…</text>
-    <text x="466" y="1378">· Full skills — entity, API, providers…</text>
-    <text x="466" y="1402">· Changelog + upgrade guidance</text>
-    <text x="466" y="1426">· Versioning API — app releases</text>
+    <text x="466" y="1330">· Free: docs search, changelog, updates</text>
+    <text x="466" y="1354">· Plus: rules per domain — auth, payments…</text>
+    <text x="466" y="1378">· Plus: full skills — entity, API…</text>
+    <text x="466" y="1402">· Plus: per-user limits, no shared quota</text>
+    <text x="466" y="1426">· Plus: versioning API — app releases</text>
   </g>
   <text x="466" y="1455" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#3B82F6">
-    → API key · any MCP client
+    → any MCP client · Plus via API key
   </text>
 
   <!-- ===== TECH STACK BADGES ===== -->

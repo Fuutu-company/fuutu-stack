@@ -10,9 +10,10 @@ import { API_KEY_SCOPES } from "./api-key-scopes";
 export const apiConfig = {
 	rateLimit: {
 		enabled: !env.FUUTU_DISABLE_RATE_LIMIT,
-		// Only set true behind a trusted proxy that overwrites
-		// X-Forwarded-For / X-Real-IP — otherwise client-supplied headers
-		// let anonymous callers rotate rate-limit keys at will.
+		// Set true behind a trusted reverse proxy (Traefik in Coolify, nginx,
+		// a load balancer) so anonymous callers are limited per IP. Without
+		// one, client-supplied X-Forwarded-For would let callers rotate keys
+		// at will — so anonymous traffic shares one bucket.
 		trustProxyHeaders: false,
 		defaults: {
 			maxRequests: 100,
@@ -84,8 +85,9 @@ export const apiConfig = {
 	/**
 	 * Registered API-key scope vocabulary. Org API keys may carry one or
 	 * more of these scopes; `requireApiKey(headers, scope)` only admits
-	 * keys that list the requested scope. A key with an empty `scopes`
-	 * array is an unrestricted full credential for its owner scope.
+	 * keys that list the requested scope, and the oRPC/REST API only admits
+	 * scoped keys that list `api`. A key with an empty `scopes` array is an
+	 * unrestricted full credential for its owner scope on oRPC/REST.
 	 */
 	apiKeyScopes: API_KEY_SCOPES,
 	/**
@@ -97,16 +99,25 @@ export const apiConfig = {
 	apiKeyScopeFeatures: {} as Record<string, string>,
 	/**
 	 * MCP server at `/api/mcp` (tools in `src/mcp/`). Callers authenticate
-	 * with an organization API key carrying the `mcp` scope.
+	 * with an organization API key carrying the `mcp` scope, or — with
+	 * `authConfig.mcpOAuth` enabled — an OAuth access token from Better Auth.
 	 * - `auth: "optional"`: anonymous callers see only `access: "public"` tools
 	 * - `auth: "required"`: anonymous callers get 401
+	 *
+	 * MCP clients only start the OAuth flow after a 401, so hosted clients
+	 * (Claude.ai, ChatGPT) that should sign users in need `auth: "required"`;
+	 * with `"optional"` they connect anonymously and see public tools only.
 	 */
 	mcp: {
 		enabled: true,
 		auth: "optional" as "optional" | "required",
 		/** Always-loaded guidance for connected agents (keep < 4 KB). */
 		instructions: undefined as string | undefined,
-		rateLimit: { maxRequests: 120, windowMs: 60 * 1000 },
+		/** Per client IP (anonymous) / per credential (API key, OAuth token). */
+		rateLimit: {
+			anonymous: { maxRequests: 30, windowMs: 60 * 1000 },
+			authenticated: { maxRequests: 300, windowMs: 60 * 1000 },
+		},
 	},
 } as const;
 

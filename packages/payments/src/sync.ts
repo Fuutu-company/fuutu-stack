@@ -22,6 +22,7 @@ import {
 } from "@fuutu/credits";
 import {
 	createPurchase,
+	getActiveOneTimePlanPurchase,
 	getActiveSubscriptionForOrganization,
 	getActiveSubscriptionForUser,
 	getCreditBalance,
@@ -30,6 +31,7 @@ import {
 	getPurchasesByOrganizationId,
 	getPurchasesByUserId,
 	isUniqueViolation,
+	type PurchaseOwner,
 	setOrganizationPaymentsCustomerId,
 	setPaymentsCustomerId,
 	updatePurchase,
@@ -39,8 +41,12 @@ import { createLogger } from "@fuutu/logs";
 import { dispatchEvent, type WebhookEventType } from "@fuutu/webhooks";
 import { z } from "zod";
 import { CREDIT_TOPUPS, CREDITS, type PlanId } from "./config";
-import { getPlanIdForProductId } from "./config.server";
-import { resolvePaymentProvider } from "./resolve";
+import {
+	getCreditTopupPriceId,
+	getOneTimePlanPriceIds,
+	getPlanIdForProductId,
+} from "./config.server";
+import { resolvePaymentProviderById } from "./resolve";
 import type {
 	ProviderEvent,
 	ProviderEventType,
@@ -586,8 +592,6 @@ async function cancelOldSubscriptionsForOwner(
 			? await getPurchasesByUserId(userId)
 			: [];
 
-	const provider = resolvePaymentProvider();
-
 	for (const old of ownerPurchases) {
 		if (
 			old.type === "SUBSCRIPTION" &&
@@ -595,25 +599,40 @@ async function cancelOldSubscriptionsForOwner(
 			old.subscriptionId !== newSubscriptionId &&
 			ACTIVE_STATUSES.includes(old.status as PurchaseStatusLiteral)
 		) {
-			try {
-				// Cancel at the provider first — otherwise the customer
-				// keeps getting billed for the old subscription.
-				await provider.cancelSubscription(old.subscriptionId);
-				log.info("canceled old subscription at provider", {
-					oldSubscriptionId: old.subscriptionId,
-					newSubscriptionId,
-					provider: provider.id,
-				});
-			} catch (err) {
-				// Provider cancel failed (already canceled, network error,
-				// wrong provider for this subscription, etc.) — log but
-				// continue to mark the DB as canceled so the user sees the
-				// correct state.
-				log.error("failed to cancel old subscription at provider", {
-					oldSubscriptionId: old.subscriptionId,
-					provider: provider.id,
-					err: String(err),
-				});
+			// Cancel through the provider that owns the old subscription —
+			// after a provider switch it is not the active one, and sending
+			// its id to the new provider cancels nothing (or the wrong sub).
+			const provider = resolvePaymentProviderById(old.provider);
+			if (!provider) {
+				log.warn(
+					"old subscription's provider is not available — cancel it manually at that provider",
+					{
+						oldSubscriptionId: old.subscriptionId,
+						subscriptionProvider: old.provider,
+						newSubscriptionId,
+					},
+				);
+			} else {
+				try {
+					// Cancel at the provider first — otherwise the customer
+					// keeps getting billed for the old subscription.
+					await provider.cancelSubscription(old.subscriptionId);
+					log.info("canceled old subscription at provider", {
+						oldSubscriptionId: old.subscriptionId,
+						newSubscriptionId,
+						provider: provider.id,
+					});
+				} catch (err) {
+					// Provider cancel failed (already canceled, network error,
+					// missing credentials for a former provider, etc.) — log but
+					// continue to mark the DB as canceled so the user sees the
+					// correct state.
+					log.error("failed to cancel old subscription at provider", {
+						oldSubscriptionId: old.subscriptionId,
+						provider: provider.id,
+						err: String(err),
+					});
+				}
 			}
 
 			try {
@@ -635,7 +654,7 @@ async function cancelOldSubscriptionsForOwner(
 					{
 						oldSubscriptionId: old.subscriptionId,
 						newSubscriptionId,
-						provider: provider.id,
+						provider: old.provider,
 						err: String(err),
 					},
 				);
@@ -711,21 +730,32 @@ async function emitWebhookEvent(
 }
 
 /**
- * Get the active subscription's plan ID for a user or organization.
- * Returns null if no active subscription exists.
+ * Get the product/price ID of the active plan purchase for a user or
+ * organization: the access-gating subscription first, else an ACTIVE
+ * one-time purchase of a `billingType: "one_time"` plan (lifetime).
+ * Returns null if neither exists.
  */
 export async function getActivePlanId(
 	userId?: string | null,
 	organizationId?: string | null,
 ): Promise<string | null> {
-	const purchase = organizationId
-		? await getActiveSubscriptionForOrganization(organizationId)
+	const owner: PurchaseOwner | null = organizationId
+		? { organizationId }
 		: userId
-			? await getActiveSubscriptionForUser(userId)
+			? { userId }
 			: null;
+	if (!owner) return null;
 
-	if (!purchase) return null;
-	return purchase.productId ?? purchase.priceId;
+	const subscription =
+		"organizationId" in owner
+			? await getActiveSubscriptionForOrganization(owner.organizationId)
+			: await getActiveSubscriptionForUser(owner.userId);
+	if (subscription) return subscription.productId ?? subscription.priceId;
+
+	const oneTimePriceIds = getOneTimePlanPriceIds();
+	if (oneTimePriceIds.length === 0) return null;
+	const lifetime = await getActiveOneTimePlanPurchase(owner, oneTimePriceIds);
+	return lifetime ? (lifetime.productId ?? lifetime.priceId) : null;
 }
 
 /**
@@ -871,7 +901,8 @@ async function grantTopUpCreditsForStoredPurchase(
  * Top-up detection relies on the `topup_id` echoed back in checkout
  * metadata. The grant amount and meter are re-derived from the
  * `CREDIT_TOPUPS` catalog — never from echoed metadata, which a forged
- * checkout could inflate. Unknown top-up ids are logged and skipped.
+ * checkout could inflate — and the paid product must match the package's
+ * configured price id. Unknown or mismatched top-ups are logged and skipped.
  */
 async function grantTopUpCreditsForPurchase(
 	event: ProviderEvent,
@@ -891,6 +922,19 @@ async function grantTopUpCreditsForPurchase(
 	if (!topup) {
 		log.error("one-time purchase references unknown topup_id, skipping grant", {
 			topupId: parsed.data.topup_id,
+			productId: event.productId,
+			purchaseId,
+		});
+		return;
+	}
+
+	// The paid product must be the one configured for this package —
+	// otherwise a cheap purchase echoing a bigger package's topup_id would
+	// be granted the bigger amount.
+	const expectedProductId = getCreditTopupPriceId(topup.id);
+	if (!expectedProductId || expectedProductId !== event.productId) {
+		log.error("top-up product does not match its package, skipping grant", {
+			topupId: topup.id,
 			productId: event.productId,
 			purchaseId,
 		});

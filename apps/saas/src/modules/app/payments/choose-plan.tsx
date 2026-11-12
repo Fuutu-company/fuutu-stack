@@ -1,5 +1,6 @@
 "use client";
 
+import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
 	type BillingInterval,
@@ -25,6 +26,8 @@ export function ChoosePlan() {
 	const [loading, setLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [seatCount, setSeatCount] = useState(1);
+	const { data: activeOrg, isPending: activeOrgPending } =
+		authClient.useActiveOrganization();
 
 	// Seat-based billing only makes sense on organization level.
 	// When billing is attached to "user", seat-based plans are billed as
@@ -36,6 +39,12 @@ export function ChoosePlan() {
 		!isOrgBilling && Object.values(PLANS).some((plan) => plan.seatBased);
 
 	async function checkout(planId: PlanId, interval?: BillingInterval) {
+		// Organization billing: the purchase belongs to the active org — a
+		// personal checkout would never unlock the org's plan.
+		if (isOrgBilling && !activeOrg) {
+			setError(t("choosePlan.noOrganization"));
+			return;
+		}
 		setLoading(planId);
 		setError(null);
 		try {
@@ -44,6 +53,7 @@ export function ChoosePlan() {
 			const result = await orpc.payments.checkout.create.call({
 				planId,
 				interval,
+				...(isOrgBilling && activeOrg ? { organizationId: activeOrg.id } : {}),
 				successUrl: "/dashboard",
 				cancelUrl: "/choose-plan",
 				seats,
@@ -74,7 +84,8 @@ export function ChoosePlan() {
 		t: resolve,
 		onCtaClick: checkout,
 		loadingId: loading,
-		allDisabled: loading !== null,
+		// Org billing needs the active org id — wait until it has loaded.
+		allDisabled: loading !== null || (isOrgBilling && activeOrgPending),
 		seatCountFor: (id) => (PLANS[id].seatBased ? seatCount : undefined),
 	});
 

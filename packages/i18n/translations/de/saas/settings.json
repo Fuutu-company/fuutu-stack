@@ -56,7 +56,19 @@
 			"backupCodes": "Backup-Codes",
 			"backupCodesHint": "Speichere sie sicher — jeder Code ist nur einmal nutzbar.",
 			"done": "Ich habe sie gespeichert",
-			"failed": "2FA-Einstellungen konnten nicht geändert werden."
+			"failed": "2FA-Einstellungen konnten nicht geändert werden.",
+			"secretLabel": "Setup-Schlüssel",
+			"copy": "Kopieren",
+			"copied": "Kopiert",
+			"verifyTitle": "Authenticator bestätigen",
+			"verifyDescription": "Gib den 6-stelligen Code ein, den deine App gerade anzeigt, um 2FA zu aktivieren.",
+			"codeLabel": "Authentifizierungscode",
+			"verify": "Bestätigen und aktivieren",
+			"verifying": "Wird bestätigt…",
+			"cancel": "Abbrechen",
+			"invalidCode": "Dieser Code ist ungültig. Prüfe deine Authenticator-App und versuche es erneut.",
+			"enabledNotice": "Die Zwei-Faktor-Authentifizierung ist aktiv. Bei jeder Anmeldung wird ein Code abgefragt.",
+			"disabledNotice": "Die Zwei-Faktor-Authentifizierung ist deaktiviert."
 		},
 		"passkeys": {
 			"title": "Passkeys",
@@ -77,6 +89,17 @@
 			"revokeAll": "Alle anderen Sitzungen beenden",
 			"none": "Keine aktiven Sitzungen.",
 			"failed": "Sitzung konnte nicht beendet werden."
+		},
+		"connectedApps": {
+			"title": "Verbundene Apps",
+			"description": "MCP-Clients, die du autorisiert hast, {appName}-Tools in deinem Namen zu nutzen. Widerrufen beendet ihren Zugriff und ihre Refresh-Tokens.",
+			"none": "Keine verbundenen Apps.",
+			"unknownApp": "Unbekannte App",
+			"unverified": "Nicht verifiziert",
+			"connectedOn": "Verbunden am {date}",
+			"scopes": "Zugriff: {scopes}",
+			"revoke": "Widerrufen",
+			"failed": "Zugriff konnte nicht widerrufen werden."
 		},
 		"danger": {
 			"title": "Konto löschen",

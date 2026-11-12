@@ -1,6 +1,7 @@
 import { auth } from "@fuutu/auth";
-import { verifyApiKeyWithOwner } from "@fuutu/db";
+import { API_KEY_PREFIX, verifyApiKeyWithOwner } from "@fuutu/db";
 import type { Context as HonoContext } from "hono";
+import { API_SCOPE } from "./api-key-scopes";
 
 export type CreateContextOptions = {
 	context: HonoContext;
@@ -36,16 +37,43 @@ const toApiKeySession = (
 const asSessionUser = (user: unknown): NonNullable<SessionResult>["user"] =>
 	user as NonNullable<SessionResult>["user"];
 
+const BEARER_PREFIX = "bearer ";
+
+/**
+ * The API-key credential of a request: `Authorization: Bearer futu_sk_…`
+ * (same precedence as requireApiKey / MCP), else `x-api-key`. Other bearer
+ * tokens are not API keys and are left to their own handlers.
+ */
+const extractApiKey = (headers: Headers): string | null => {
+	const authorization = headers.get("authorization");
+	if (authorization?.toLowerCase().startsWith(BEARER_PREFIX)) {
+		const token = authorization.slice(BEARER_PREFIX.length).trim();
+		if (token.startsWith(API_KEY_PREFIX)) return token;
+	}
+	return headers.get(API_KEY_HEADER);
+};
+
+/**
+ * A scoped key is only valid on the surfaces of its scopes — oRPC/REST
+ * needs `api`. Unscoped keys are full credentials (documented default).
+ */
+const isAllowedOnApi = (scopes: readonly string[]): boolean =>
+	scopes.length === 0 || scopes.includes(API_SCOPE);
+
 export async function createContext({ context }: CreateContextOptions) {
 	const headers = context.req.raw.headers as Headers;
 	let session = await auth.api.getSession({ headers });
 	let apiKey: ApiKeyAuth | null = null;
 
 	if (!session) {
-		const rawKey = headers.get(API_KEY_HEADER);
+		const rawKey = extractApiKey(headers);
 		if (rawKey) {
 			const verified = await verifyApiKeyWithOwner(rawKey);
-			if (verified && !verified.user.banned) {
+			if (
+				verified &&
+				!verified.user.banned &&
+				isAllowedOnApi(verified.apiKey.scopes)
+			) {
 				session = toApiKeySession(asSessionUser(verified.user));
 				apiKey = {
 					id: verified.apiKey.id,

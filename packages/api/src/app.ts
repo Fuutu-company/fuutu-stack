@@ -19,6 +19,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { apiConfig } from "./config";
 import { createContext } from "./context";
+import { CORS_ALLOW_HEADERS } from "./cors";
 import { handleMcpRequest } from "./mcp";
 import { isOriginAllowed } from "./origin-guard";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
@@ -93,7 +94,7 @@ export const app = new Hono<{
 		cors({
 			origin: env.CORS_ORIGIN,
 			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-			allowHeaders: ["Content-Type", "Authorization"],
+			allowHeaders: CORS_ALLOW_HEADERS,
 			credentials: true,
 		}),
 	)

@@ -44,6 +44,30 @@ export const getActiveSubscriptionForOrganization = (organizationId: string) =>
 		where: { organizationId, ...accessGatingWhere() },
 	});
 
+export type PurchaseOwner = { userId: string } | { organizationId: string };
+
+/**
+ * Lifetime access: an ACTIVE one-time purchase of a plan product
+ * (`billingType: "one_time"`). `productIds` are the plans' provider price
+ * ids — credit top-ups are one-time purchases too and must not count.
+ * Latest purchase first. No ids → no one-time plans configured → null.
+ */
+export const getActiveOneTimePlanPurchase = async (
+	owner: PurchaseOwner,
+	productIds: string[],
+): Promise<Purchase | null> => {
+	if (productIds.length === 0) return null;
+	return db.purchase.findFirst({
+		where: {
+			...owner,
+			type: "ONE_TIME",
+			status: "ACTIVE",
+			productId: { in: productIds },
+		},
+		orderBy: { createdAt: "desc" },
+	});
+};
+
 export const getPurchaseByProviderSubscriptionId = (
 	provider: string,
 	subscriptionId: string,

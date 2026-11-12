@@ -40,7 +40,7 @@ Check: `pnpm -F @fuutu/api test invoices` → passes; `pnpm check-types` → 0 e
 ```
 
 Kit checklist — include the tasks that apply:
-- DB: model in `packages/db/prisma/schema/`, migration, query functions in `packages/db/prisma/queries/`
+- DB: model in `packages/db/prisma/schema/`, migration generated with `pnpm --filter @fuutu/db db:migrate --name <change>` (never hand-written), query functions in `packages/db/prisma/queries/`
 - API: Zod input, `authProcedure` permission, rate limit on mutations, router registration
 - UI: module in `apps/saas/src/modules/`, no literal strings
 - i18n: keys in **every** locale under `packages/i18n/translations/<locale>/`

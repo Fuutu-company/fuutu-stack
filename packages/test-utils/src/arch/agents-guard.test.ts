@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
  *
  * - `tier` is the vendor-neutral source of truth (strong | balanced | fast);
  *   `model` must be the Claude model mapped to that tier — other tools
- *   translate the tier via AI-SETUP.md.
+ *   translate the tier via the docs page
+ *   docs.fuutustack.com/docs/coding-agents/other-tools.
  * - Preloaded `skills` must exist in `.claude/skills/`.
  * - Read-only roles must not be granted write tools.
  * - Every agent is listed in the AGENTS.md team table.

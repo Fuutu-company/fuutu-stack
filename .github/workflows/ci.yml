@@ -105,6 +105,14 @@ jobs:
       # migrations that `prisma db push` does not apply.
       - name: Apply DB migrations
         run: pnpm -F @fuutu/db exec prisma migrate deploy
+      # Generated files come from their command, never by hand: the applied
+      # migrations must produce exactly the Prisma schema (a schema change
+      # without `db:migrate`, or hand-written SQL that drifts, fails here),
+      # and the committed Zod schemas must equal a fresh `db:generate`.
+      - name: Migrations match the schema
+        run: pnpm -F @fuutu/db exec prisma migrate diff --from-config-datasource --to-schema prisma/schema --exit-code
+      - name: Generated files are up to date
+        run: git diff --exit-code -- packages/db/prisma/zod
       - run: pnpm check:ci
       - run: pnpm check-types
       - run: pnpm check-translations

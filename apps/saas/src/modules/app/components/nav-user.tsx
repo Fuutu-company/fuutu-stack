@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { authConfig } from "@fuutu/auth/config";
 import type { UserWithRole } from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
 import {
@@ -63,7 +64,7 @@ export function NavUser() {
 		await authClient.signOut({
 			fetchOptions: {
 				onSuccess: () => {
-					router.push("/auth/sign-in");
+					router.push(authConfig.redirects.afterSignOut);
 					router.refresh();
 				},
 			},

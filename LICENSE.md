@@ -29,8 +29,9 @@ out below. If you do not agree, you must not use the Software.
 The full terms in sections 2–14 are binding. This summary is provided for
 convenience and does **not** override the binding text.
 
-- **Three tiers.** OSS (free), **MCP Subscription** (paid monthly — adds
-  access to the Fuutu MCP server and the versioning API), and
+- **Three tiers.** OSS (free), **MCP Plus** (paid monthly — adds
+  authenticated access to the Fuutu MCP server's rules and skills and to
+  the versioning API; the public documentation tools are free), and
   **Enterprise License** (paid yearly — required above the Eligibility
   Thresholds, includes MCP). Current prices live at
   https://fuutustack.com/pricing.
@@ -76,9 +77,9 @@ binding text controls.
   Headcount **≤ 10**.
 - **"Fuutu"** — the legal entity publishing the Kit and holding the
   copyright and trademarks referenced in section 8.
-- **"MCP Subscription"** — the recurring paid subscription described in
+- **"MCP Plus"** — the recurring paid subscription described in
   section 4a, granting authenticated access to the Fuutu MCP server
-  (mounted under `app.fuutustack.com/api/mcp/sse`) and to the Fuutu
+  (mounted under `app.fuutustack.com/api/mcp`) and to the Fuutu
   versioning API.
 - **"Released Application"** — a Production Application (or any portion
   thereof) that the Licensee has published or made available to third
@@ -113,13 +114,13 @@ Derivative Work created under this section 3.
 
 ---
 
-## 4a. MCP Subscription (optional, paid)
+## 4a. MCP Plus (optional, paid)
 
 Independently of sections 3 and 4, the Licensee may purchase a recurring
-**MCP Subscription** to obtain authenticated access to:
+**MCP Plus** subscription to obtain authenticated access to:
 
-- the Fuutu MCP server (mounted under `app.fuutustack.com/api/mcp/sse`,
-  read-only and mutating tools);
+- the Fuutu MCP server (mounted under `app.fuutustack.com/api/mcp`),
+  including its rules and skills tools;
 - the Fuutu versioning API (semantic-version inference from commit logs);
 - such additional Fuutu-hosted developer services as Fuutu publishes from
   time to time at `https://fuutustack.com/pricing`.
@@ -129,13 +130,18 @@ price, subscription period and any volume terms are published at
 `https://fuutustack.com/pricing` and form part of this License by
 reference at the moment of purchase.
 
-The MCP Subscription is **not** a license to the Kit itself: it does
+MCP Plus is **not** a license to the Kit itself: it does
 not lift the Eligibility Thresholds in section 3, does not grant
 additional rights under section 5, and does not waive any restriction in
 section 6 or 6a. A subscriber who exceeds the Eligibility Thresholds
 still requires a Fuutu Enterprise License under section 4.
 
-A valid MCP Subscription is identified by an MCP API key issued by Fuutu;
+The public documentation tools of the Fuutu MCP server (documentation
+search and pages, changelog, update check) may be used without a key,
+subject to fair-use rate limits. They are provided as-is and Fuutu may
+change, limit or discontinue them at any time.
+
+A valid MCP Plus subscription is identified by an MCP API key issued by Fuutu;
 the Kit reports `licenseMode = "mcp"` once a valid key is verified. The
 Fuutu Enterprise License (section 4) **includes** MCP access at no
 additional cost.
@@ -363,7 +369,7 @@ POSSIBILITY OF SUCH DAMAGES. THE AGGREGATE LIABILITY OF FUUTU UNDER THIS
 LICENSE SHALL NOT EXCEED THE FEES PAID BY THE LICENSEE TO FUUTU IN THE
 TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE THOUSAND EUROS (EUR 1,000)
 IF NO FEES WERE PAID. For the avoidance of doubt, fees paid for an MCP
-Subscription (section 4a) count toward this cap only with respect to
+Plus (section 4a) count toward this cap only with respect to
 claims arising from the MCP services themselves; they do not increase
 the cap for claims arising from use of the Kit under sections 3 or 4.
 

@@ -14,7 +14,9 @@ export const test = base.extend({
 			// biome-ignore lint/suspicious/noDocumentCookie: addInitScript runs before DOMContentLoaded, Cookie Store API unavailable
 			document.cookie = "fuutu.consent.v1=granted; path=/; SameSite=Lax";
 			// Flag to hide React Query DevTools in E2E tests
-			(window as any).__PLAYWRIGHT_TEST__ = true;
+			(
+				window as Window & { __PLAYWRIGHT_TEST__?: boolean }
+			).__PLAYWRIGHT_TEST__ = true;
 			const style = document.createElement("style");
 			style.textContent =
 				".tsqd-parent-container { display: none !important; } .tsqd-parent-container * { pointer-events: none !important; }";

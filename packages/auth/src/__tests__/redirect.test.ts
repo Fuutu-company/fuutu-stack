@@ -1,5 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
-import { extractInvitationId, getSafeRedirect } from "../redirect";
+import {
+	extractInvitationId,
+	getEmailVerificationRedirect,
+	getSafeRedirect,
+} from "../redirect";
+
+// Distinct from afterSignIn ("/dashboard") so a wrong fallback is caught.
+vi.mock("../config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../config")>();
+	return {
+		authConfig: {
+			...actual.authConfig,
+			redirects: {
+				...actual.authConfig.redirects,
+				afterEmailVerification: "/verified",
+			},
+		},
+	};
+});
 
 vi.mock("@fuutu/env/public", () => ({
 	env: {
@@ -74,5 +92,24 @@ describe("extractInvitationId()", () => {
 			"https://app.example.com/auth/accept-invitation?id=inv_2",
 		);
 		expect(extractInvitationId(sanitized)).toBe("inv_2");
+	});
+});
+
+describe("getEmailVerificationRedirect()", () => {
+	it("falls back to afterEmailVerification when no target is given", () => {
+		expect(getEmailVerificationRedirect(null)).toBe("/verified");
+		expect(getEmailVerificationRedirect(undefined)).toBe("/verified");
+	});
+
+	it("keeps an explicit same-origin target (e.g. an invitation link)", () => {
+		expect(
+			getEmailVerificationRedirect("/auth/accept-invitation?id=inv_1"),
+		).toBe("/auth/accept-invitation?id=inv_1");
+	});
+
+	it("rejects external targets", () => {
+		expect(getEmailVerificationRedirect("https://evil.example.com")).toBe(
+			"/verified",
+		);
 	});
 });

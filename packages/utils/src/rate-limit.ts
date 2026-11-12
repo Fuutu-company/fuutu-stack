@@ -27,15 +27,24 @@ type MemoryRecord = { count: number; resetAt: number };
 
 /**
  * In-memory rate-limit store. Safe for single-node dev/prod.
- * Entries are cleaned lazily on access to avoid a background timer
- * and unbounded memory growth under churn.
+ * No background timer: once more than `sweepThreshold` keys are tracked
+ * (e.g. one per client IP), expired entries are swept on the next check —
+ * so key churn can't grow memory without bound.
  */
-export function createMemoryRateLimitStore(): RateLimitStore {
+export function createMemoryRateLimitStore(
+	options: { sweepThreshold?: number } = {},
+): RateLimitStore {
 	const records = new Map<string, MemoryRecord>();
+	const sweepThreshold = options.sweepThreshold ?? 10_000;
 
 	return {
 		async check(key, { maxRequests, windowMs }) {
 			const now = Date.now();
+			if (records.size > sweepThreshold) {
+				for (const [k, record] of records) {
+					if (record.resetAt <= now) records.delete(k);
+				}
+			}
 			const existing = records.get(key);
 
 			if (!existing || existing.resetAt <= now) {

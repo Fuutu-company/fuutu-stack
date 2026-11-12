@@ -14,6 +14,9 @@ vi.mock("../../prisma/client", () => ({
 		invitation: {
 			findUnique: vi.fn(),
 		},
+		member: {
+			count: vi.fn(),
+		},
 		apiKey: {
 			create: vi.fn(),
 			findMany: vi.fn(),
@@ -120,6 +123,23 @@ describe("DB query functions - smoke tests", () => {
 			expect(typeof organizationQueries.getInvitationOrganizationId).toBe(
 				"function",
 			);
+		});
+
+		it("isOrganizationMember scopes the lookup to user AND org", async () => {
+			vi.mocked(db.member.count).mockResolvedValueOnce(1);
+			await expect(
+				organizationQueries.isOrganizationMember("user-1", "org-1"),
+			).resolves.toBe(true);
+			expect(db.member.count).toHaveBeenCalledWith({
+				where: { userId: "user-1", organizationId: "org-1" },
+			});
+		});
+
+		it("isOrganizationMember is false without a membership row", async () => {
+			vi.mocked(db.member.count).mockResolvedValueOnce(0);
+			await expect(
+				organizationQueries.isOrganizationMember("user-1", "org-2"),
+			).resolves.toBe(false);
 		});
 	});
 
@@ -269,6 +289,55 @@ describe("DB query functions - smoke tests", () => {
 			};
 			expect(where.where.organizationId).toBe("org_1");
 			expect(where.where.OR).toHaveLength(2);
+		});
+
+		it("getActiveOneTimePlanPurchase finds an ACTIVE one-time purchase of a plan product", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce({
+				id: "p_lifetime",
+			} as never);
+
+			const found = await purchaseQueries.getActiveOneTimePlanPurchase(
+				{ userId: "user_1" },
+				["price_lifetime"],
+			);
+
+			expect(found).toEqual({ id: "p_lifetime" });
+			expect(db.purchase.findFirst).toHaveBeenLastCalledWith({
+				where: {
+					userId: "user_1",
+					type: "ONE_TIME",
+					status: "ACTIVE",
+					productId: { in: ["price_lifetime"] },
+				},
+				orderBy: { createdAt: "desc" },
+			});
+		});
+
+		it("getActiveOneTimePlanPurchase scopes to an organization owner", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
+
+			await purchaseQueries.getActiveOneTimePlanPurchase(
+				{ organizationId: "org_1" },
+				["price_lifetime"],
+			);
+
+			const args = vi.mocked(db.purchase.findFirst).mock.calls.at(-1)?.[0] as
+				| { where: Record<string, unknown> }
+				| undefined;
+			expect(args?.where.organizationId).toBe("org_1");
+			expect(args?.where).not.toHaveProperty("userId");
+		});
+
+		it("getActiveOneTimePlanPurchase skips the query when no plan product ids are given", async () => {
+			vi.mocked(db.purchase.findFirst).mockClear();
+
+			expect(
+				await purchaseQueries.getActiveOneTimePlanPurchase(
+					{ userId: "user_1" },
+					[],
+				),
+			).toBeNull();
+			expect(db.purchase.findFirst).not.toHaveBeenCalled();
 		});
 	});
 

@@ -90,6 +90,30 @@ describe("createMemoryRateLimitStore", () => {
 	});
 });
 
+describe("createMemoryRateLimitStore sweep", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_000_000);
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("keeps live buckets when sweeping expired ones (per-IP key churn)", async () => {
+		const store = createMemoryRateLimitStore({ sweepThreshold: 2 });
+		const short = { maxRequests: 1, windowMs: 1_000 };
+		const long = { maxRequests: 1, windowMs: 60_000 };
+		await store.check("live", long);
+		await store.check("old-1", short);
+		await store.check("old-2", short);
+		vi.advanceTimersByTime(2_000);
+		await store.check("new", short);
+		expect((await store.check("live", long)).allowed).toBe(false);
+		expect((await store.check("old-1", short)).allowed).toBe(true);
+	});
+});
+
 describe("createRedisRateLimitStore", () => {
 	it("fails loud on check so production never runs un-rate-limited", async () => {
 		const store = createRedisRateLimitStore({ url: "redis://localhost:6379" });

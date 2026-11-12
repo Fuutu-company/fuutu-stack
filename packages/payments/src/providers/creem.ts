@@ -182,7 +182,8 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 	async createCheckoutLink(input: CheckoutInput) {
 		// Note: Creem's checkout API does not accept a cancel_url parameter —
 		// `input.cancelUrl` is intentionally ignored; buyers use the hosted
-		// checkout page's back navigation.
+		// checkout page's back navigation. It has no trial parameter either —
+		// `input.trialDays` is ignored; configure the trial on the Creem product.
 		const response = await creemFetch("/checkouts", {
 			method: "POST",
 			body: JSON.stringify({

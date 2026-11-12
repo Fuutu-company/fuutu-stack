@@ -104,6 +104,13 @@ export interface CheckoutInput {
 	organizationId?: string;
 	/** Seat count for seat-based plans. */
 	seats?: number;
+	/**
+	 * Free-trial length for subscription checkouts (`PLANS[].trialDays`).
+	 * Stripe: `subscription_data.trial_period_days`; Polar: a day-interval
+	 * checkout trial; Creem: ignored — its checkout API has no trial
+	 * parameter, trials are configured on the Creem product.
+	 */
+	trialDays?: number;
 	successUrl?: string;
 	cancelUrl?: string;
 	customerEmail?: string;

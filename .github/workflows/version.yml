@@ -2,7 +2,7 @@ name: Version
 run-name: ${{ vars.FUUTU_VERSIONING_ENABLED == 'true' && 'Version' || 'Versioning disabled — set FUUTU_VERSIONING_ENABLED=true' }}
 
 # Automated semantic versioning of YOUR APP — requires a Fuutu versioning
-# API key (MCP Subscription / Enterprise). Disabled by default; enable by
+# API key (MCP Plus / Enterprise). Disabled by default; enable by
 # setting the repository variable FUUTU_VERSIONING_ENABLED=true, plus:
 #   variable FUUTU_VERSIONING_API_URL  — e.g. https://app.fuutustack.com
 #   secret   FUUTU_VERSIONING_API_KEY  — org key with `versioning` scope
@@ -46,7 +46,7 @@ jobs:
           {
             echo "## Fuutu Stack versioning is disabled"
             echo ""
-            echo "Automated releases require a **Fuutu versioning API key** (MCP Subscription / Enterprise)."
+            echo "Automated releases require a **Fuutu versioning API key** (MCP Plus / Enterprise)."
             echo ""
             echo "**To enable versioning on this repository:**"
             echo "1. Create the variable \`FUUTU_VERSIONING_ENABLED\` = \`true\`"

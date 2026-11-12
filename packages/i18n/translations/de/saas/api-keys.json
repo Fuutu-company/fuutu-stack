@@ -40,7 +40,8 @@
 			"personal": "Persönlich",
 			"full": "Vollzugriff",
 			"mcp": "MCP",
-			"versioning": "Versionierung"
+			"versioning": "Versionierung",
+			"api": "API"
 		},
 		"createdDialog": {
 			"title": "Dein neuer API-Schlüssel",

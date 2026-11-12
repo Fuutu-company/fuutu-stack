@@ -403,7 +403,7 @@ describe("processWebhookEvents", () => {
 			{
 				type: "checkout.completed",
 				eventId: "evt_dup",
-				productId: "prod_topup",
+				productId: "test-100k",
 				metadata: {
 					user_id: "forged_user",
 					topup_id: "ai_tokens_100k",
@@ -432,7 +432,7 @@ describe("processWebhookEvents", () => {
 			{
 				type: "checkout.completed",
 				eventId: "evt_dup",
-				productId: "prod_topup",
+				productId: "test-100k",
 				metadata: { topup_id: "ai_tokens_100k" },
 			},
 		]);
@@ -465,7 +465,7 @@ describe("processWebhookEvents", () => {
 			{
 				type: "checkout.completed",
 				eventId: "evt_race",
-				productId: "prod_topup",
+				productId: "test-100k",
 				metadata: {
 					user_id: "forged_user",
 					topup_id: "ai_tokens_100k",
@@ -494,7 +494,7 @@ describe("processWebhookEvents", () => {
 				{
 					type: "checkout.completed",
 					eventId: "evt_orphan",
-					productId: "prod_topup",
+					productId: "test-100k",
 					metadata: {
 						user_id: "user_1",
 						topup_id: "ai_tokens_100k",
@@ -516,7 +516,7 @@ describe("processWebhookEvents", () => {
 			processWebhookEvents(PROVIDER_ID, [
 				{
 					type: "checkout.completed",
-					productId: "prod_topup",
+					productId: "test-100k",
 					metadata: {
 						user_id: "user_1",
 						topup_id: "ai_tokens_100k",
@@ -536,7 +536,7 @@ describe("processWebhookEvents", () => {
 			{
 				type: "checkout.completed",
 				eventId: "evt_dup",
-				productId: "prod_topup",
+				productId: "test-100k",
 				metadata: {
 					user_id: "user_123",
 					topup_id: "ai_tokens_100k",
@@ -813,7 +813,7 @@ describe("processWebhookEvents", () => {
 			{
 				type: "checkout.completed",
 				eventId: "evt_topup",
-				productId: "prod_topup",
+				productId: "test-500k",
 				metadata: {
 					user_id: "user_123",
 					topup_id: "ai_tokens_500k",
@@ -832,6 +832,24 @@ describe("processWebhookEvents", () => {
 				userId: "user_123",
 			}),
 		);
+	});
+
+	it("skips the credit grant when the paid product does not match the top-up package", async () => {
+		mockGetPurchaseByCheckoutEventId.mockResolvedValue(null);
+		mockCreatePurchase.mockResolvedValue({ id: "purchase_swap" });
+
+		await processWebhookEvents(PROVIDER_ID, [
+			{
+				type: "checkout.completed",
+				eventId: "evt_swap",
+				// paid for the 100k package …
+				productId: "test-100k",
+				// … but claims the 500k package
+				metadata: { user_id: "user_123", topup_id: "ai_tokens_500k" },
+			},
+		]);
+
+		expect(mockGrantTopUpCredits).not.toHaveBeenCalled();
 	});
 
 	it("skips the credit grant when topup_id is not in CREDIT_TOPUPS", async () => {
@@ -1117,7 +1135,7 @@ describe("processWebhookEvents", () => {
 		const topupEvent: ProviderEvent = {
 			type: "checkout.completed",
 			eventId: "evt_dup",
-			productId: "prod_topup",
+			productId: "test-100k",
 			metadata: { user_id: "user_123", topup_id: "ai_tokens_100k" },
 		};
 		await processWebhookEvents(PROVIDER_ID, [topupEvent]);

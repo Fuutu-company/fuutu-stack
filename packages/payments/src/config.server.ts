@@ -59,6 +59,25 @@ export function getPlanPriceId(
 }
 
 /**
+ * Provider-side price/product IDs of every `billingType: "one_time"` plan
+ * (all intervals, unset env vars skipped). An active one-time purchase of
+ * one of these grants its plan for life — see `getActivePlanId`.
+ */
+export function getOneTimePlanPriceIds(): string[] {
+	const ids: string[] = [];
+	for (const planId of PLAN_IDS) {
+		const plan = plans[planId];
+		if (plan.billingType !== "one_time") continue;
+		for (const key of Object.values(plan.priceIdEnvVars ?? {})) {
+			if (!isEnvKey(key)) continue;
+			const value = env[key];
+			if (typeof value === "string" && value) ids.push(value);
+		}
+	}
+	return ids;
+}
+
+/**
  * Resolve the provider-side price ID for a credit top-up package.
  * The env var name is declared per package in `CREDIT_TOPUPS[].priceIdEnvVar`
  * and read from the validated env object — only callable server-side.

@@ -373,3 +373,8 @@ describe("creem provider — SDK integration", () => {
 		expect(mockFetch).toHaveBeenCalledTimes(2);
 	});
 });
+
+const { testPaymentProviderContract } = await import("./provider-contract");
+testPaymentProviderContract("creem", () => creemPaymentProvider, {
+	behavior: "shape",
+});

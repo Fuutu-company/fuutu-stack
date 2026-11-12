@@ -5,6 +5,7 @@ import {
 	type RateLimitStore,
 } from "@fuutu/utils/rate-limit";
 import { ORPCError } from "@orpc/server";
+import { getClientIp } from "../../client-ip";
 import { apiConfig } from "../../config";
 import type { Context } from "../../context";
 
@@ -79,19 +80,16 @@ export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
 			windowMs = options.windowMs ?? apiConfig.rateLimit.defaults.windowMs;
 		}
 
-		// Generate rate limit key
-		// Forwarding headers are client-supplied unless a trusted proxy
-		// overwrites them (apiConfig.rateLimit.trustProxyHeaders) — untrusted
-		// values would let anonymous callers rotate keys, so default to a
-		// single shared bucket.
-		const key = options.keyGenerator
+		// Anonymous callers key on the client IP behind a trusted proxy,
+		// otherwise one shared bucket (see getClientIp).
+		const caller = options.keyGenerator
 			? options.keyGenerator(context)
 			: (context.session?.user?.id ??
-				(apiConfig.rateLimit.trustProxyHeaders
-					? (context.headers.get("x-forwarded-for") ??
-						context.headers.get("x-real-ip") ??
-						"anonymous")
-					: "anonymous"));
+				getClientIp(context.headers) ??
+				"anonymous");
+		// One budget per endpoint and caller — a busy endpoint must not
+		// exhaust every other endpoint's limit for the same user.
+		const key = `${options.endpoint ?? "default"}:${caller}`;
 
 		const store = options.store ?? configuredStore;
 		const result = await store.check(key, { maxRequests, windowMs });

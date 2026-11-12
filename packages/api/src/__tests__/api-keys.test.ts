@@ -143,6 +143,18 @@ describe("apiKeys.create", () => {
 		});
 	});
 
+	it("accepts the api scope on an org key", async () => {
+		await call(
+			apiKeysRouter.create,
+			{ name: "API Key", organizationId: "org-1", scopes: ["api"] },
+			{ context: authenticatedContext },
+		);
+
+		expect(createApiKeyWithinLimit).toHaveBeenCalledWith(
+			expect.objectContaining({ scopes: ["api"] }),
+		);
+	});
+
 	it("rejects scopes on a personal key (scopes are an org-key concept)", async () => {
 		await expect(
 			call(
@@ -369,6 +381,32 @@ describe("apiKeys.revoke", () => {
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
+	});
+});
+
+describe("api key ids", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	// ApiKey.id is @default(cuid()) — revoke/delete must accept it.
+	const CUID = "cmwcs8x2k0001qz8h4f3a9b7d";
+
+	it.each([
+		["revoke", "revokeApiKey"],
+		["delete", "deleteApiKey"],
+	] as const)("%s accepts a cuid key id", async (route, query) => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: CUID,
+			userId: "user-1",
+			organizationId: null,
+		} as never);
+		const mocks = { revokeApiKey, deleteApiKey };
+		vi.mocked(mocks[query]).mockResolvedValue({ id: CUID } as never);
+		await call(
+			apiKeysRouter[route],
+			{ id: CUID },
+			{ context: authenticatedContext },
+		);
+		expect(mocks[query]).toHaveBeenCalledWith(CUID, { userId: "user-1" });
 	});
 });
 

@@ -36,6 +36,31 @@ vi.mock("@fuutu/env/saas", async (importOriginal) => {
 	};
 });
 
+// Per-test overrides on PLANS.pro (e.g. billingType) — the kit catalog
+// ships no one-time plan to exercise.
+const proPlanOverrides = vi.hoisted(
+	(): { current: Record<string, unknown> } => ({ current: {} }),
+);
+
+vi.mock("@fuutu/payments/config", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@fuutu/payments/config")>();
+	return {
+		...actual,
+		PLANS: {
+			...actual.PLANS,
+			pro: new Proxy(actual.PLANS.pro, {
+				get(target, prop, receiver) {
+					if (typeof prop === "string" && prop in proPlanOverrides.current) {
+						return proPlanOverrides.current[prop];
+					}
+					return Reflect.get(target, prop, receiver);
+				},
+			}),
+		},
+	};
+});
+
 vi.mock("@fuutu/payments", () => ({
 	resolvePaymentProvider: vi.fn(),
 	isPaymentsEnabled: vi.fn().mockReturnValue(true),
@@ -144,6 +169,7 @@ describe("payments.plans.list", () => {
 describe("payments.checkout.create", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		proPlanOverrides.current = {};
 		envOverrides.PAYMENTS_PRO_PRICE_ID = "price-pro-monthly";
 		envOverrides.PAYMENTS_PRO_YEARLY_PRICE_ID = "price-pro-yearly";
 	});
@@ -167,8 +193,47 @@ describe("payments.checkout.create", () => {
 			successUrl: undefined,
 			cancelUrl: undefined,
 			customerEmail: "test@fuutu.local",
+			trialDays: 14,
 		});
 		expect(result).toEqual({ url: "https://checkout.example.com" });
+	});
+
+	it("sends no trial when the plan declares none", async () => {
+		proPlanOverrides.current = { trialDays: undefined };
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockResolvedValue({
+			url: "https://checkout.example.com",
+		});
+
+		await call(
+			paymentsRouter.checkout.create,
+			{ planId: "pro" },
+			{ context: authenticatedContext },
+		);
+
+		const input = mockProvider.createCheckoutLink.mock.calls[0]?.[0];
+		expect(input?.trialDays).toBeUndefined();
+	});
+
+	it("checks out a one-time plan in payment mode without a trial", async () => {
+		proPlanOverrides.current = { billingType: "one_time" };
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockResolvedValue({
+			url: "https://checkout.example.com",
+		});
+
+		await call(
+			paymentsRouter.checkout.create,
+			{ planId: "pro" },
+			{ context: authenticatedContext },
+		);
+
+		const input = mockProvider.createCheckoutLink.mock.calls[0]?.[0];
+		expect(input).toMatchObject({
+			priceId: "price-pro-monthly",
+			metadata: { mode: "payment" },
+		});
+		expect(input?.trialDays).toBeUndefined();
 	});
 
 	it("uses the yearly price ID when interval is year", async () => {
@@ -190,6 +255,7 @@ describe("payments.checkout.create", () => {
 			successUrl: undefined,
 			cancelUrl: undefined,
 			customerEmail: "test@fuutu.local",
+			trialDays: 14,
 		});
 	});
 
@@ -295,6 +361,7 @@ describe("payments.checkout.create", () => {
 			successUrl: "http://localhost:3000/success",
 			cancelUrl: "http://localhost:3000/cancel",
 			customerEmail: "test@fuutu.local",
+			trialDays: 14,
 		});
 	});
 
@@ -317,6 +384,7 @@ describe("payments.checkout.create", () => {
 			successUrl: "http://localhost:3000/",
 			cancelUrl: undefined,
 			customerEmail: "test@fuutu.local",
+			trialDays: 14,
 		});
 	});
 

@@ -8,9 +8,9 @@ metadata:
 
 # Swap or add a provider
 
-The full, provider-specific guide is served by the **Fuutu MCP** server.
+The full, provider-specific guide is served by the **Fuutu MCP** server (MCP Plus).
 
-1. If the `fuutu` MCP server is connected, call `skills_get` with `{ "name": "swap-provider" }` and follow the returned instructions.
+1. If the `fuutu` MCP server is connected, call `skills_get` with `{ "name": "swap-provider" }` and follow the returned instructions. Without an MCP Plus key it returns an upgrade notice — then continue with step 2.
 2. Otherwise follow the minimal path below.
 
 ## Minimal path (without MCP)

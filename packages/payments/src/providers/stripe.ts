@@ -296,7 +296,10 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		// For subscriptions, also set metadata on the subscription itself
 		// so webhook events carry user_id / organization_id.
 		if (mode === "subscription") {
-			sessionParams.subscription_data = { metadata };
+			sessionParams.subscription_data = {
+				metadata,
+				...(input.trialDays ? { trial_period_days: input.trialDays } : {}),
+			};
 		}
 		const session = await client.checkout.sessions.create(sessionParams);
 		if (!session.url) {

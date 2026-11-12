@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # apps/marketing — public marketing site
 # Build context MUST be the repo root (turbo prune produces a minimal
-# workspace). See DEPLOY.md for the full Coolify/Railpack setup.
+# workspace). Full Coolify/Railpack setup: https://docs.fuutustack.com/docs/deployment
 
 FROM node:24-alpine AS base
 ENV PNPM_HOME=/pnpm

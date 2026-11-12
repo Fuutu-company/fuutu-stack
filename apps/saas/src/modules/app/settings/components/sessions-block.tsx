@@ -103,14 +103,14 @@ export function SessionsBlock() {
 										<Icon className="size-4 text-muted-foreground" />
 									</div>
 									<div className="space-y-0.5">
-										<p className="flex items-center gap-2 font-medium text-sm">
+										<div className="flex items-center gap-2 font-medium text-sm">
 											<span className="line-clamp-1">{ua || "—"}</span>
 											{isCurrent && (
 												<Badge variant="secondary">
 													{t("settings.sessions.current")}
 												</Badge>
 											)}
-										</p>
+										</div>
 										<p className="text-muted-foreground text-xs">
 											{s.ipAddress ?? "—"} ·{" "}
 											{new Date(s.createdAt).toLocaleDateString()}

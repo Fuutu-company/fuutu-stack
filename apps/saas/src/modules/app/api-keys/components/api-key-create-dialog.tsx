@@ -134,11 +134,13 @@ export function ApiKeyCreateDialog({
 										{t("createDialog.types.org")}
 									</SelectItem>
 								)}
-								{API_KEY_SCOPES.map((scope) => (
-									<SelectItem key={scope} value={scope}>
-										{t(`scopes.${scope}`)}
-									</SelectItem>
-								))}
+								{/* Scopes are an org-key concept — the API rejects them on personal keys. */}
+								{organizationId &&
+									API_KEY_SCOPES.map((scope) => (
+										<SelectItem key={scope} value={scope}>
+											{t(`scopes.${scope}`)}
+										</SelectItem>
+									))}
 							</SelectContent>
 						</Select>
 					</Field>

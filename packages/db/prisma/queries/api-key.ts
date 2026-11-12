@@ -3,13 +3,14 @@ import { sha256 } from "@fuutu/utils/hash";
 import { db } from "../client";
 import { withSerializationRetry } from "./transaction";
 
-const KEY_PREFIX = "futu_sk_";
+/** Prefix of every org API key (`futu_sk_…`). */
+export const API_KEY_PREFIX = "futu_sk_";
 const PREFIX_VISIBLE_LEN = 12;
 
 /** Generate a random API key: `futu_sk_<random>`. */
 function generateKey(): string {
 	const random = randomBytes(24).toString("base64url");
-	return `${KEY_PREFIX}${random}`;
+	return `${API_KEY_PREFIX}${random}`;
 }
 
 /** Build the visible prefix shown in the UI (e.g. `futu_sk_abc...`). */

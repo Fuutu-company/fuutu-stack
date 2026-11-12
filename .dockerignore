@@ -41,4 +41,3 @@ out
 *.bak
 *.bak[0-9]*
 docker-compose.deploy*.yml
-DEPLOY.md

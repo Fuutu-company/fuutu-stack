@@ -81,6 +81,12 @@ export const countPendingInvitations = (organizationId: string) =>
 		},
 	});
 
+export const isOrganizationMember = async (
+	userId: string,
+	organizationId: string,
+): Promise<boolean> =>
+	(await db.member.count({ where: { userId, organizationId } })) > 0;
+
 export const countOrganizationsForUser = (userId: string) =>
 	db.organization.count({ where: { members: { some: { userId } } } });
 

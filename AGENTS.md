@@ -29,10 +29,9 @@ Your app, built on **Fuutu Stack** — a TypeScript SaaS starter kit (pnpm + Tur
 
 ## 2 · Fuutu MCP (optional, recommended)
 
-If the `fuutu` MCP server is connected (see `.mcp.json`, key in `FUUTU_MCP_API_KEY`), use it before guessing:
-- `docs_search` / `docs_get` — kit docs matched to this repo's `KIT_VERSION`
-- `rules_get` — detailed rules for a domain (auth, payments, i18n, …)
-- `skills_get` — full instructions for skills marked `fuutu-source: mcp`
+If the `fuutu` MCP server is connected (see `.mcp.json`), use it before guessing:
+- free, no key: `docs_search` / `docs_get` — kit docs matched to this repo's `KIT_VERSION`; `changelog_get`, `version_check`
+- MCP Plus (key in `FUUTU_MCP_API_KEY`): `rules_get` — detailed rules per domain (auth, payments, i18n, …); `skills_get` — full instructions for skills marked `fuutu-source: mcp`
 
 Without it, everything still works: read the owning package's source and follow this file.
 
@@ -72,6 +71,7 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 - **TypeScript**: strict, no `any`, no `console.log` (use `createLogger({ scope })` from `@fuutu/logs`).
 - **Env**: only via `@fuutu/env/saas` | `/marketing` | `/docs` — never `process.env.*`. New vars: Zod schema + `.env.example`.
 - **DB**: only exported query functions from `@fuutu/db` (`packages/db/prisma/queries/`) — never the raw client outside `packages/db`.
+- **Generated files — only via their command, never by hand** (no creating, editing or deleting; reading is fine): migrations → edit `packages/db/prisma/schema/`, then `pnpm --filter @fuutu/db db:migrate --name <change>` (`--create-only` to review) · Prisma client + Zod (`prisma/generated`, `prisma/zod`) → `pnpm db:generate` · `pnpm-lock.yaml` → `pnpm add/remove/install` · shadcn components → `pnpm dlx shadcn@4.21.4 add` · `next-env.d.ts`, `.source/` → `pnpm check-types`. A migration needing custom SQL → stop and ask. Claude Code blocks hand edits (`.claude/hooks/protect-generated.mjs`); CI fails on schema/migration drift.
 - **API**: oRPC procedure with Zod input; `authProcedure({ systemPermission | org: { permission } })` from `packages/api/src/orpc/procedures.ts` for protected data; rate-limit every mutation; register in `packages/api/src/orpc/router.ts`.
 - **MCP tools**: `defineMcpTool` (`@fuutu/mcp`) with `access: "public" | "authenticated" | (principal) => boolean`; register in `packages/api/src/mcp/index.ts`.
 - **Auth guards**: server-side in layouts (`requireAuth()` / `requireOnboarded()` from `apps/saas/src/lib/auth-server.ts`); `proxy.ts` is an optimistic pre-check only.
@@ -127,12 +127,12 @@ The main session is the **lead**: it talks to the user, plans, routes and verifi
 | `security` | diffs touching auth, permissions, payments, webhooks, keys, MCP, env (read-only) | strong → opus |
 | `scribe` | docs, changelog, translations, commit draft | fast → haiku |
 
-One writer at a time; only the lead spawns agents; every brief is self-contained. Other tools: see `AI-SETUP.md`.
+One writer at a time; only the lead spawns agents; every brief is self-contained. Other tools: [docs.fuutustack.com/docs/coding-agents/other-tools](https://docs.fuutustack.com/docs/coding-agents/other-tools).
 
 ## 11 · Boundaries
 
 - **Ask first**: new runtime dependencies · DB schema changes beyond the task · `turbo.json`, `pnpm-workspace.yaml`, root scripts, `next.config.ts`, `biome.json` · breaking package exports.
-- **Never**: commit secrets or `.env` · edit generated files (`node_modules`, `.next`, `dist`, `.turbo`, Prisma output) · force-push `main` · touch §8.
+- **Never**: commit secrets or `.env` · hand-edit generated files (§6; also `node_modules`, `.next`, `dist`, `.turbo`) · force-push `main` · touch §8.
 
 Behave like a senior engineer: smallest correct change, verify APIs in code before using them, state open questions and follow-up risks explicitly.
 

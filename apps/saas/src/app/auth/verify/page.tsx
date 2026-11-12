@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { authConfig } from "@fuutu/auth/config";
 import { AuthCard, Button, Skeleton } from "@fuutu/ui";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -68,7 +69,9 @@ function VerifyContent() {
 				<div className="flex flex-col gap-4 text-center">
 					<p className="font-medium">{t("verify.ok")}</p>
 					<Button asChild className="w-full">
-						<Link href="/dashboard">{t("verify.continue")}</Link>
+						<Link href={authConfig.redirects.afterEmailVerification}>
+							{t("verify.continue")}
+						</Link>
 					</Button>
 				</div>
 			)}

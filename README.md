@@ -68,7 +68,7 @@ A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.j
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TailwindCSS v4** with OKLCH theme
 - **shadcn/ui** — framework-agnostic shared components (`@fuutu/ui`)
-- **next-intl 4** — `en` + `de`, 100% translation policy ([guide](https://fuutustack.com/docs/guides/i18n))
+- **next-intl 4** — `en` + `de`, 100% translation policy ([guide](https://docs.fuutustack.com/docs/i18n))
 - **MediaFrame** — locale-aware images, CSP-safe
 
 ### Provider-Swappable Architecture
@@ -150,7 +150,7 @@ fuutu-stack/
 │   └── scripts/          # repo tooling (assets-sync.mjs, dependency-report.mjs)
 ```
 
-Detailed architecture: **[fuutustack.com/docs/architecture](https://fuutustack.com/docs/architecture)**
+Detailed architecture: **[docs.fuutustack.com/docs/concepts/architecture](https://docs.fuutustack.com/docs/concepts/architecture)**
 
 ---
 
@@ -175,7 +175,7 @@ Automated app releases: `.github/workflows/version.yml` computes the next semver
 
 ## Deployment
 
-Docker (per-app `Dockerfile`s + `docker-compose.deploy.yml`) and Coolify (Dockerfile or Railpack). See **[DEPLOY.md](./DEPLOY.md)**.
+Docker (per-app `Dockerfile`s + `docker-compose.deploy.yml`) and Coolify (Dockerfile or Railpack). See the **[deployment docs](https://docs.fuutustack.com/docs/deployment)**.
 
 ---
 
@@ -186,21 +186,26 @@ Docker (per-app `Dockerfile`s + `docker-compose.deploy.yml`) and Coolify (Docker
 | What | Where |
 |---|---|
 | Agent instructions (read by Claude Code, Cursor, Codex, Copilot, Windsurf, …) | `AGENTS.md` (+ `CLAUDE.md` → `@AGENTS.md`) |
-| 9 workflow skills — `brainstorm-feature`, `plan-implementation`, `execute-plan`, `write-tests-first`, `debug-root-cause`, `verify-before-done`, `check-in-browser`, `propose-commit` (versioning-aware), `handle-review-feedback` | `.claude/skills/` (mirrored at `.agents/skills/`) |
+| 10 workflow skills — `delegate-tasks` (lead), `brainstorm-feature`, `plan-implementation`, `execute-plan`, `write-tests-first`, `debug-root-cause`, `verify-before-done`, `check-in-browser`, `propose-commit` (versioning-aware), `handle-review-feedback` | `.claude/skills/` (mirrored at `.agents/skills/`) |
 | 5 kit skills — `add-entity`, `add-api-endpoint`, `swap-provider`, `connect-payments`, `review-code` — minimal path in the repo, full version-matched version via Fuutu MCP | `.claude/skills/` |
 | Skill catalog | `fuutu.skills.json` |
-| Claude Code project config (Fuutu MCP server, permissions) | `.mcp.json`, `.claude/settings.json` |
+| Claude Code project config (Fuutu MCP server, permissions, hook that blocks hand edits of generated files) | `.mcp.json`, `.claude/settings.json`, `.claude/hooks/` |
 | Team of 8 agents (scout, architect, builder, senior-builder, reviewer, qa, security, scribe) on cost tiers; the main session leads via `delegate-tasks` | `.claude/agents/` |
 | MCP servers: Fuutu, Better Auth, Next.js DevTools, shadcn, Playwright | `.mcp.json` |
-| Setup guide for any other agent (Cursor, Copilot, Codex, OpenCode, …) + upgrade migration | `AI-SETUP.md` |
+| Setup guide for any other agent (Cursor, Copilot, Codex, OpenCode, …) + upgrade migration | [docs: Set up any AI agent](https://docs.fuutustack.com/docs/coding-agents/other-tools) |
 
 ### MCP server for your own app
 
 `@fuutu/mcp` (official MCP TypeScript SDK v2) is mounted at `/api/mcp`. Define tools with `defineMcpTool` and mark each `public`, `authenticated` or a custom rule (role, scope, org). Callers authenticate with an organization API key carrying the `mcp` scope; anonymous callers only see public tools. Two example tools ship: `app_info` (public) and `whoami` (authenticated). Configure it under `apiConfig.mcp` (`packages/api/src/config.ts`).
 
-### Fuutu MCP — subscription
+### Fuutu MCP — free + MCP Plus
 
-Connects your coding agent to Fuutu's MCP server (already configured in `.mcp.json` — set `FUUTU_MCP_API_KEY`). It serves docs, per-domain rules and the full kit skills **matched to your `KIT_VERSION`**, plus the versioning API used by `.github/workflows/version.yml`. Without a key, everything in the repo keeps working.
+Connects your coding agent to Fuutu's MCP server (already configured in `.mcp.json`).
+
+- **Free, no key** (rate-limited per IP): docs search, docs pages, changelog and update check — **matched to your `KIT_VERSION`**.
+- **MCP Plus** (set `FUUTU_MCP_API_KEY`, per-user limits): per-domain rules, the full kit skills, and the versioning API used by `.github/workflows/version.yml`. Included in Enterprise.
+
+Without the server, everything in the repo keeps working.
 
 ---
 
@@ -227,7 +232,7 @@ pnpm test:e2e              # Playwright (saas + marketing)
 | Tier | Price | Who |
 |---|---|---|
 | **OSS** | Free | ≤ 10 employees AND ≤ $250k revenue |
-| **MCP Subscription** | Monthly | Anyone who wants MCP + versioning API |
+| **MCP Plus** | Monthly | Anyone who wants MCP rules, full skills + versioning API |
 | **Enterprise** | Yearly | Above either OSS threshold |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
@@ -236,7 +241,7 @@ Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing
 
 ## Links
 
-- **Documentation**: [fuutustack.com/docs](https://fuutustack.com/docs)
+- **Documentation**: [docs.fuutustack.com](https://docs.fuutustack.com/docs)
 - **Pricing**: [fuutustack.com/pricing](https://fuutustack.com/pricing)
 - **Support**: [fuutustack.com](https://fuutustack.com)
 - **License**: [LICENSE.md](./LICENSE.md)

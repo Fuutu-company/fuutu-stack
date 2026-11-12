@@ -71,7 +71,7 @@ export { creemPaymentProvider } from "./providers/creem";
 export { polarPaymentProvider } from "./providers/polar";
 export { noopPaymentProvider } from "./providers/skeletons";
 export { stripePaymentProvider } from "./providers/stripe";
-export { resolvePaymentProvider } from "./resolve";
+export { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
 export {
 	cancelAllSubscriptionsForOrganization,
 	updateSeatsInOrganizationSubscription,

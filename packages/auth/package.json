@@ -17,16 +17,18 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@better-auth/mcp": "catalog:",
+		"@better-auth/oauth-provider": "catalog:",
+		"@better-auth/passkey": "catalog:",
 		"@fuutu/config": "workspace:*",
 		"@fuutu/db": "workspace:*",
+		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
 		"@fuutu/mail": "workspace:*",
 		"@fuutu/payments": "workspace:*",
 		"@fuutu/rbac": "workspace:*",
-		"@fuutu/env": "workspace:*",
 		"@fuutu/utils": "workspace:*",
 		"@fuutu/webhooks": "workspace:*",
-		"@better-auth/passkey": "catalog:",
 		"better-auth": "catalog:"
 	},
 	"devDependencies": {

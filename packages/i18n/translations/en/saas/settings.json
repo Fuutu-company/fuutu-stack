@@ -56,7 +56,19 @@
 			"backupCodes": "Backup codes",
 			"backupCodesHint": "Store these somewhere safe — each can be used once.",
 			"done": "I've saved them",
-			"failed": "Could not change 2FA settings."
+			"failed": "Could not change 2FA settings.",
+			"secretLabel": "Setup key",
+			"copy": "Copy",
+			"copied": "Copied",
+			"verifyTitle": "Confirm your authenticator",
+			"verifyDescription": "Enter the 6-digit code your app shows now to finish turning on 2FA.",
+			"codeLabel": "Authentication code",
+			"verify": "Verify and enable",
+			"verifying": "Verifying…",
+			"cancel": "Cancel",
+			"invalidCode": "That code is not valid. Check your authenticator app and try again.",
+			"enabledNotice": "Two-factor authentication is on. You will be asked for a code at every sign-in.",
+			"disabledNotice": "Two-factor authentication is off."
 		},
 		"passkeys": {
 			"title": "Passkeys",
@@ -77,6 +89,17 @@
 			"revokeAll": "Revoke all other sessions",
 			"none": "No active sessions.",
 			"failed": "Could not revoke session."
+		},
+		"connectedApps": {
+			"title": "Connected apps",
+			"description": "MCP clients you authorized to use {appName} tools as you. Revoking ends their access and refresh tokens.",
+			"none": "No connected apps.",
+			"unknownApp": "Unknown app",
+			"unverified": "Unverified",
+			"connectedOn": "Connected {date}",
+			"scopes": "Access: {scopes}",
+			"revoke": "Revoke",
+			"failed": "Could not revoke access."
 		},
 		"danger": {
 			"title": "Delete account",

@@ -7,15 +7,13 @@ import type {
 	PortalInput,
 } from "../types";
 
-describe("provider-contract", () => {
-	it("module loads", () => {
-		expect(true).toBe(true);
-	});
-});
-
 export interface PaymentProviderContractOptions {
-	/** Whether the provider methods resolve or throw. */
-	readonly behavior: "resolves" | "throws";
+	/**
+	 * "resolves" / "throws": exercise every method (skeletons, fakes).
+	 * "shape": structural contract only — for real providers whose network
+	 * behavior is covered by their own mocked SDK tests.
+	 */
+	readonly behavior: "resolves" | "throws" | "shape";
 	/** Substring expected in thrown error messages (skeletons). */
 	readonly throwsContains?: string;
 }
@@ -57,6 +55,19 @@ export function testPaymentProviderContract(
 			expect(typeof provider.createCustomer).toBe("function");
 		});
 
+		it("implements every PaymentProvider method", () => {
+			const provider = createProvider();
+			for (const method of [
+				"createCheckoutLink",
+				"createCustomerPortalLink",
+				"createCustomer",
+				"cancelSubscription",
+				"parseWebhook",
+			] as const) {
+				expect(typeof provider[method]).toBe("function");
+			}
+		});
+
 		if (options.behavior === "resolves") {
 			it("createCheckoutLink() returns { url }", async () => {
 				const provider = createProvider();
@@ -85,7 +96,7 @@ export function testPaymentProviderContract(
 					provider.cancelSubscription("sub_test"),
 				).resolves.toBeUndefined();
 			});
-		} else {
+		} else if (options.behavior === "throws") {
 			it("createCheckoutLink() throws", async () => {
 				const provider = createProvider();
 				await expect(

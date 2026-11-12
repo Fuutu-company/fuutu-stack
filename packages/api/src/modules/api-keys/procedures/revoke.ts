@@ -7,7 +7,7 @@ import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
 
 const apiKeyIdSchema = z.object({
-	id: z.string().uuid(),
+	id: z.string().min(1).max(64),
 });
 
 export const revokeApiKeyProcedure = permissionProcedure(

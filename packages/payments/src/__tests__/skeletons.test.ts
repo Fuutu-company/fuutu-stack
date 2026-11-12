@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { noopPaymentProvider } from "../providers/skeletons";
 import { PaymentsDisabledError } from "../types";
-import { testPaymentProviderContract } from "./provider-contract.test";
+import { testPaymentProviderContract } from "./provider-contract";
 
 testPaymentProviderContract("noop", () => noopPaymentProvider, {
 	behavior: "throws",

@@ -2,6 +2,7 @@ export { type CronConfig, cronConfig } from "./config";
 export {
 	allJobs,
 	auditLogCleanupJob,
+	oauthClientCleanupJob,
 	registerJob,
 	subscriptionReminderJob,
 	telemetryPingJob,

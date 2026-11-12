@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { authConfig } from "@fuutu/auth/config";
 import type { UserWithRole } from "@fuutu/auth/types";
 import { AuthCard } from "@fuutu/ui";
 import { headers } from "next/headers";
@@ -57,7 +58,7 @@ export default async function SuspendedPage() {
 						action={async () => {
 							"use server";
 							await auth.api.signOut({ headers: await headers() });
-							redirect("/auth/sign-in");
+							redirect(authConfig.redirects.afterSignOut);
 						}}
 					>
 						<button

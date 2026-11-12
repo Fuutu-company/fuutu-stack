@@ -1,4 +1,6 @@
 import { ProfileForm } from "@app/settings";
+import { authConfig } from "@fuutu/auth/config";
+import { mcpOAuth } from "@fuutu/auth/mcp-oauth";
 import { env } from "@fuutu/env/saas";
 import { paymentsConfig } from "@fuutu/payments/config";
 import {
@@ -15,6 +17,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { CreditBalanceView } from "@/modules/app/credits/credit-balance-view";
 import { ChangePasswordForm } from "@/modules/app/settings/components/change-password-form";
+import { ConnectedAppsBlock } from "@/modules/app/settings/components/connected-apps-block";
 import { DeleteAccountBlock } from "@/modules/app/settings/components/delete-account-block";
 import { EmailChangeForm } from "@/modules/app/settings/components/email-change-form";
 import { PasskeysBlock } from "@/modules/app/settings/components/passkeys-block";
@@ -82,18 +85,27 @@ export default async function SettingsPage({
 					<Card className="p-6 md:p-8">
 						<ChangePasswordForm />
 					</Card>
-					<Card className="p-6 md:p-8">
-						<TwoFactorBlock />
-					</Card>
-					<Card className="p-6 md:p-8">
-						<PasskeysBlock />
-					</Card>
+					{authConfig.features.twoFactor && (
+						<Card className="p-6 md:p-8">
+							<TwoFactorBlock />
+						</Card>
+					)}
+					{authConfig.features.passkeys && (
+						<Card className="p-6 md:p-8">
+							<PasskeysBlock />
+						</Card>
+					)}
 				</TabsContent>
 
-				<TabsContent value="sessions" className="mt-6">
+				<TabsContent value="sessions" className="mt-6 space-y-6">
 					<Card className="p-6 md:p-8">
 						<SessionsBlock />
 					</Card>
+					{mcpOAuth.active && (
+						<Card className="p-6 md:p-8">
+							<ConnectedAppsBlock />
+						</Card>
+					)}
 				</TabsContent>
 
 				<TabsContent value="danger" className="mt-6">

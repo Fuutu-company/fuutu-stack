@@ -2,7 +2,7 @@ export const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
 export type CrudAction = (typeof CRUD_ACTIONS)[number];
 
 // ─── Custom permissions (non-CRUD) ─────────────────────────────
-// Flat or nested. See wiki/guides/rbac.md for nested custom permission examples.
+// Flat or nested (e.g. `{ BILLING: { EXPORT: "export:billing" } }`).
 const CUSTOM_PERMISSIONS = {
 	USE_AI: "use:ai",
 	VIEW_ADMIN: "view:admin",

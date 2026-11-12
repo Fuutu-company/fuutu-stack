@@ -11,8 +11,8 @@ import { protectedProcedure } from "../../../../orpc/procedures";
 
 const invoicesListSchema = z.object({
 	organizationId: z.string().optional(),
-	page: z.number().int().min(1).default(1),
-	limit: z.number().int().min(1).max(100).default(50),
+	page: z.coerce.number().int().min(1).default(1),
+	limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 export const listInvoices = protectedProcedure
