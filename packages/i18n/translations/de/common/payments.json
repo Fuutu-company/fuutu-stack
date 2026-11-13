@@ -6,6 +6,7 @@
 			"unavailable": "Zahlung ist in dieser Umgebung nicht konfiguriert.",
 			"redirecting": "Weiterleiten…",
 			"error": "Checkout fehlgeschlagen",
+			"noOrganization": "Wähle zuerst eine Organisation aus – die Abrechnung ist an Organisationen gebunden.",
 			"popular": "Am beliebtesten",
 			"monthly": "Monatlich",
 			"yearly": "Jährlich",
@@ -91,6 +92,7 @@
 					"api_keys": "Unbegrenzte API-Schlüssel",
 					"api_webhooks": "Ausgehende Webhooks",
 					"infrastructure_storage": "50 GB Speicher",
+					"support_community": "Community-Support",
 					"support_email": "Priority-E-Mail-Support"
 				}
 			},

@@ -1,0 +1,75 @@
+name: Pages
+run-name: ${{ vars.FUUTU_PAGES_ENABLED == 'true' && 'Pages' || 'Pages disabled — set FUUTU_PAGES_ENABLED=true to enable' }}
+
+# Hosted visual reports: pr-<N>/<app>/ for PRs, <branch>/<app>/ for pushes.
+# Pages source "GitHub Actions" — no gh-pages branch, no report commits.
+# Each deploy restores the live site from the previous `github-pages`
+# artifact, adds this run's reports, prunes closed PRs and redeploys.
+# Called by ci.yml after e2e; the weekly run prunes and keeps the artifact
+# (90-day retention) alive. Setup: CONTRIBUTING.md → "Enabling CI", step 2.
+
+on:
+  workflow_call:
+  schedule:
+    - cron: "30 6 * * 1" # Mondays 06:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: vars.FUUTU_CI_ENABLED == 'true' && vars.FUUTU_PAGES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read # restore the previous site artifact
+      pull-requests: read # PR titles + pruning closed PRs
+      pages: write
+      id-token: write
+    # One deploy at a time — each builds on the site the previous one left.
+    # GitHub keeps one pending run per group: a third run arriving while one
+    # waits replaces it, and the replaced run's report appears with the next
+    # run of that PR/branch.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download this run's visual reports
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        continue-on-error: true # no report this run → prune + redeploy only
+        uses: actions/download-artifact@v8
+        with:
+          pattern: visual-report-*
+          path: reports
+
+      - name: Assemble site
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEST: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
+          WITH_REPORTS: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+        run: |
+          args=()
+          if [ "$WITH_REPORTS" = "true" ]; then
+            for d in reports/visual-report-*/; do
+              [ -d "$d" ] || continue
+              app="${d#reports/visual-report-}"
+              args+=(--add "$DEST/${app%/}=$d")
+            done
+          fi
+          node tooling/scripts/ci-pages-site.mjs --site _site "${args[@]}"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+          retention-days: 90
+
+      - id: deploy
+        uses: actions/deploy-pages@v5

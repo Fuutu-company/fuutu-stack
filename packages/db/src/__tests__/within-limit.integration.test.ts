@@ -39,7 +39,7 @@ describe.skipIf(!process.env.RUN_DB_TESTS)(
 				),
 			);
 
-			// Serialization losers retry up to 3 attempts and may still reject
+			// Serialization losers retry up to 5 attempts and may still reject
 			// under contention — the invariant is the committed row count.
 			const created = settled.filter(
 				(r) => r.status === "fulfilled" && r.value !== null,

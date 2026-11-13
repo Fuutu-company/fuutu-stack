@@ -5,7 +5,7 @@
  * Used by the `authorize()` middleware in @fuutu/api.
  */
 
-import { PLANS, type PlanId, type PlanTier } from "./config";
+import { PLANS, type PlanId, type PlanTier, TIER_ORDER } from "./config";
 import { getPlanIdForProductId } from "./config.server";
 import {
 	getLimit,
@@ -20,8 +20,6 @@ export type ResolvedPlan = {
 	tier: PlanTier;
 };
 
-const TIER_ORDER: PlanTier[] = ["free", "pro", "enterprise"];
-
 /**
  * Resolve the active plan for a user or organization.
  * Falls back to "free" when no active subscription exists.
@@ -34,9 +32,11 @@ export async function resolveActivePlan(
 	organizationId?: string | null,
 ): Promise<ResolvedPlan> {
 	const productId = await getActivePlanId(userId, organizationId);
-	if (!productId) return { planId: "free", tier: "free" };
+	if (!productId) return { planId: "free", tier: planIdToTier("free") };
 	const planId = getPlanIdForProductId(productId);
-	if (!planId || !(planId in PLANS)) return { planId: "free", tier: "free" };
+	if (!planId || !(planId in PLANS)) {
+		return { planId: "free", tier: planIdToTier("free") };
+	}
 	return { planId, tier: planIdToTier(planId) };
 }
 

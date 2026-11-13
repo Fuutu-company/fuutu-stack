@@ -5,6 +5,9 @@
 		".": {
 			"default": "./src/index.ts"
 		},
+		"./api-key-scopes": {
+			"default": "./src/api-key-scopes.ts"
+		},
 		"./config": {
 			"default": "./src/config.ts"
 		}
@@ -23,6 +26,7 @@
 		"@fuutu/env": "workspace:*",
 		"@fuutu/license": "workspace:*",
 		"@fuutu/logs": "workspace:*",
+		"@fuutu/mcp": "workspace:*",
 		"@fuutu/payments": "workspace:*",
 		"@fuutu/rbac": "workspace:*",
 		"@fuutu/search": "workspace:*",

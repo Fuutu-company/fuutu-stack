@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
+import { appDocs } from "@/app-docs";
 import { LLMCopyButton, ViewOptions } from "@/components/ai/page-actions";
 import { OpenAPIPage } from "@/components/openapi/api-page";
 import { defaultLocale, locales } from "@/i18n/config";
@@ -39,6 +40,7 @@ export default async function Page({ params }: PageProps) {
 	}
 
 	const MDX = page.data.body;
+	const { PageActions } = appDocs;
 	const gitConfig = {
 		user: "Fuutu-company",
 		repo: "fuutu-stack",
@@ -57,6 +59,13 @@ export default async function Page({ params }: PageProps) {
 					markdownUrl={`${page.url}.mdx`}
 					githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/apps/docs/content/docs/${page.path}`}
 				/>
+				{PageActions && (
+					<PageActions
+						url={page.url}
+						markdownUrl={`${page.url}.mdx`}
+						locale={locale}
+					/>
+				)}
 			</div>
 			<DocsBody>
 				<MDX

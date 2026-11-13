@@ -3,13 +3,14 @@ import { sha256 } from "@fuutu/utils/hash";
 import { db } from "../client";
 import { withSerializationRetry } from "./transaction";
 
-const KEY_PREFIX = "futu_sk_";
+/** Prefix of every org API key (`futu_sk_…`). */
+export const API_KEY_PREFIX = "futu_sk_";
 const PREFIX_VISIBLE_LEN = 12;
 
 /** Generate a random API key: `futu_sk_<random>`. */
 function generateKey(): string {
 	const random = randomBytes(24).toString("base64url");
-	return `${KEY_PREFIX}${random}`;
+	return `${API_KEY_PREFIX}${random}`;
 }
 
 /** Build the visible prefix shown in the UI (e.g. `futu_sk_abc...`). */
@@ -30,6 +31,7 @@ export const createApiKey = async (
 	name: string,
 	organizationId?: string | null,
 	expiresAt?: Date | null,
+	scopes: string[] = [],
 ): Promise<CreatedApiKey> => {
 	const key = generateKey();
 	const hashed = await sha256(key);
@@ -41,6 +43,7 @@ export const createApiKey = async (
 			userId,
 			organizationId: organizationId ?? null,
 			expiresAt: expiresAt ?? null,
+			scopes,
 		},
 	});
 	return { id: record.id, key, prefix: record.prefix };
@@ -59,9 +62,10 @@ export const createApiKeyWithinLimit = (params: {
 	name: string;
 	organizationId?: string | null;
 	expiresAt?: Date | null;
+	scopes?: string[];
 	max: number | null;
 }): Promise<CreatedApiKey | null> => {
-	const { userId, name, organizationId, expiresAt, max } = params;
+	const { userId, name, organizationId, expiresAt, scopes = [], max } = params;
 	return withSerializationRetry(() =>
 		db.$transaction(
 			async (tx) => {
@@ -82,6 +86,7 @@ export const createApiKeyWithinLimit = (params: {
 						userId,
 						organizationId: organizationId ?? null,
 						expiresAt: expiresAt ?? null,
+						scopes,
 					},
 				});
 				return { id: record.id, key, prefix: record.prefix };
@@ -98,7 +103,7 @@ export const listApiKeys = (
 	const { take = 50, skip = 0 } = opts;
 	return db.apiKey.findMany({
 		where: { userId, revokedAt: null },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 		omit: { key: true },
@@ -115,7 +120,7 @@ export const listOrgApiKeys = (
 	const { take = 50, skip = 0 } = opts;
 	return db.apiKey.findMany({
 		where: { organizationId, revokedAt: null },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 		omit: { key: true },
@@ -175,4 +180,20 @@ export const deleteApiKey = async (id: string, owner: ApiKeyOwner) => {
 	const owned = await db.apiKey.findFirst({ where: { id, ...owner } });
 	if (!owned) return null;
 	return db.apiKey.delete({ where: { id } });
+};
+
+/**
+ * Revoke every live key a user holds for an organization — run when the
+ * user stops being a member, so the keys cannot come back on a rejoin.
+ * Returns the number of keys revoked.
+ */
+export const revokeOrgApiKeysForUser = async (
+	organizationId: string,
+	userId: string,
+) => {
+	const { count } = await db.apiKey.updateMany({
+		where: { organizationId, userId, revokedAt: null },
+		data: { revokedAt: new Date() },
+	});
+	return count;
 };

@@ -92,6 +92,15 @@ describe("admin.auditLogs.list", () => {
 		});
 	});
 
+	it("accepts Better Auth user ids (not UUIDs) as the userId filter", async () => {
+		vi.mocked(listAuditLogs).mockResolvedValue([] as never);
+		vi.mocked(countAuditLogs).mockResolvedValue(0);
+		// Better Auth generates 32-char alphanumeric ids for signed-up users.
+		const userId = "Xq3k9TzP0aLmB7nVwR2sYcD5eF8gH1jK";
+		await call(listAuditLogsProcedure, { userId }, { context: adminContext });
+		expect(countAuditLogs).toHaveBeenCalledWith({ userId });
+	});
+
 	it("computes totalPages across multiple pages", async () => {
 		vi.mocked(listAuditLogs).mockResolvedValue(auditLogFixture as never);
 		vi.mocked(countAuditLogs).mockResolvedValue(120);
@@ -105,15 +114,14 @@ describe("admin.auditLogs.list", () => {
 		expect(result.totalPages).toBe(3);
 	});
 
-	it("rejects invalid userId (not a UUID)", async () => {
-		await expect(
-			call(
-				listAuditLogsProcedure,
-				{ userId: "not-a-uuid" },
-				{ context: adminContext },
-			),
-		).rejects.toBeDefined();
-	});
+	it.each(["", "x".repeat(65)])(
+		"rejects an invalid userId (%#: empty or over 64 chars)",
+		async (userId) => {
+			await expect(
+				call(listAuditLogsProcedure, { userId }, { context: adminContext }),
+			).rejects.toBeDefined();
+		},
+	);
 
 	it("rejects pageSize exceeding 200", async () => {
 		await expect(

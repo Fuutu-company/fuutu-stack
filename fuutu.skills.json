@@ -1,0 +1,80 @@
+{
+	"$comment": "Agent skills shipped with the kit. source=repo: full skill in .claude/skills/<name>/. source=mcp: stub in .claude/skills/<name>/ \u2014 the full, version-matched skill is served by the Fuutu MCP server (skills_get). Your own skills may live in .claude/skills/ without an entry here.",
+	"skills": [
+		{
+			"name": "delegate-tasks",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "brainstorm-feature",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "plan-implementation",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "execute-plan",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "write-tests-first",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "debug-root-cause",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "verify-before-done",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "check-in-browser",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "propose-commit",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "handle-review-feedback",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
+			"name": "add-entity",
+			"source": "mcp",
+			"category": "blueprint"
+		},
+		{
+			"name": "add-api-endpoint",
+			"source": "mcp",
+			"category": "blueprint"
+		},
+		{
+			"name": "swap-provider",
+			"source": "mcp",
+			"category": "integration"
+		},
+		{
+			"name": "connect-payments",
+			"source": "mcp",
+			"category": "integration"
+		},
+		{
+			"name": "review-code",
+			"source": "mcp",
+			"category": "workflow"
+		}
+	]
+}

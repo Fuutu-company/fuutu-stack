@@ -148,6 +148,40 @@ describe("stripe provider — SDK integration", () => {
 		});
 	});
 
+	it("createCheckoutLink passes trialDays as subscription_data.trial_period_days", async () => {
+		checkoutCreate.mockClear();
+		await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+			trialDays: 14,
+		});
+		const params = checkoutCreate.mock.calls[0]?.[0];
+		expect(params.subscription_data?.trial_period_days).toBe(14);
+	});
+
+	it("createCheckoutLink sets no trial when trialDays is absent", async () => {
+		checkoutCreate.mockClear();
+		await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+		});
+		const params = checkoutCreate.mock.calls[0]?.[0];
+		expect(params.subscription_data).not.toHaveProperty("trial_period_days");
+	});
+
+	it("createCheckoutLink ignores trialDays in payment mode", async () => {
+		checkoutCreate.mockClear();
+		await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+			trialDays: 14,
+			metadata: { mode: "payment" },
+		});
+		const params = checkoutCreate.mock.calls[0]?.[0];
+		expect(params.mode).toBe("payment");
+		expect(params.subscription_data).toBeUndefined();
+	});
+
 	it("createCheckoutLink keeps owner metadata authoritative over input.metadata", async () => {
 		checkoutCreate.mockClear();
 		await stripePaymentProvider.createCheckoutLink({
@@ -475,4 +509,121 @@ describe("stripe provider — SDK integration", () => {
 		expect(subscriptionsRetrieve).toHaveBeenCalledOnce();
 		expect(subscriptionsUpdate).toHaveBeenCalledOnce();
 	});
+});
+
+describe("stripe provider — purchased units", () => {
+	function parseEvent(event: unknown) {
+		webhooksConstructEventAsync.mockResolvedValueOnce(event as never);
+		return stripePaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "stripe-signature": "test" },
+				body: "{}",
+			}),
+		);
+	}
+
+	it.each([
+		["customer.subscription.created", "subscription.activated"],
+		["customer.subscription.updated", "subscription.updated"],
+	])("reads the subscription item quantity on %s", async (type, mapped) => {
+		const events = await parseEvent({
+			type,
+			id: "evt_1",
+			data: {
+				object: {
+					id: "sub_1",
+					customer: "cust_1",
+					status: "active",
+					metadata: {},
+					items: {
+						data: [
+							{
+								price: { id: "price_1" },
+								quantity: 7,
+								current_period_end: 1_700_000_000,
+							},
+						],
+					},
+				},
+			},
+		});
+		expect(events[0]).toMatchObject({ type: mapped, units: 7 });
+	});
+
+	it("reads the line item quantity on a one-time checkout", async () => {
+		listLineItems.mockResolvedValueOnce({
+			data: [{ price: { id: "price_topup" }, quantity: 2 }],
+		});
+		const events = await parseEvent({
+			type: "checkout.session.completed",
+			id: "evt_2",
+			data: {
+				object: {
+					id: "cs_1",
+					subscription: null,
+					customer: "cust_1",
+					metadata: { user_id: "user_1" },
+				},
+			},
+		});
+		expect(events[0]?.units).toBe(2);
+	});
+
+	it.each([[0], [-3], [1.5], [null]])(
+		"drops a non-positive-integer subscription quantity (%s)",
+		async (quantity) => {
+			const events = await parseEvent({
+				type: "customer.subscription.updated",
+				id: "evt_3",
+				data: {
+					object: {
+						id: "sub_1",
+						customer: "cust_1",
+						status: "active",
+						metadata: {},
+						items: {
+							data: [
+								{
+									price: { id: "price_1" },
+									quantity,
+									current_period_end: 1_700_000_000,
+								},
+							],
+						},
+					},
+				},
+			});
+			expect(events[0]?.type).toBe("subscription.updated");
+			expect(events[0]?.units).toBeUndefined();
+		},
+	);
+
+	it.each([[0], [-1], [2.5]])(
+		"drops a non-positive-integer line item quantity (%s)",
+		async (quantity) => {
+			listLineItems.mockResolvedValueOnce({
+				data: [{ price: { id: "price_topup" }, quantity }],
+			});
+			const events = await parseEvent({
+				type: "checkout.session.completed",
+				id: "evt_4",
+				data: {
+					object: {
+						id: "cs_1",
+						subscription: null,
+						customer: "cust_1",
+						metadata: { user_id: "user_1" },
+					},
+				},
+			});
+			expect(events[0]?.productId).toBe("price_topup");
+			expect(events[0]?.units).toBeUndefined();
+		},
+	);
+});
+
+const { testPaymentProviderContract } = await import("./provider-contract");
+testPaymentProviderContract("stripe", () => stripePaymentProvider, {
+	behavior: "shape",
 });

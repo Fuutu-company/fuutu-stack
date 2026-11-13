@@ -12,7 +12,7 @@ import { permissionProcedure } from "../../../orpc/procedures";
 const historySchema = z.object({
 	organizationId: z.string().min(1).optional(),
 	meterKey: z.string().min(1).max(100).optional(),
-	limit: z.number().int().min(1).max(100).default(50),
+	limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 export const getHistory = permissionProcedure(PERMISSIONS.CREDIT.VIEW)

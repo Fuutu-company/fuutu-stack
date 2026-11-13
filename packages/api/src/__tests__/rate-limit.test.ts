@@ -41,3 +41,56 @@ describe("rate-limit middleware boot validation", () => {
 		expect(typeof mod.createRateLimitMiddleware).toBe("function");
 	});
 });
+
+describe("rate-limit buckets", () => {
+	type Limit = { maxRequests: number; windowMs: number };
+	const recordingStore = () => {
+		const counts = new Map<string, number>();
+		return {
+			keys: counts,
+			async check(key: string, limit: Limit) {
+				const n = (counts.get(key) ?? 0) + 1;
+				counts.set(key, n);
+				return {
+					allowed: n <= limit.maxRequests,
+					remaining: Math.max(0, limit.maxRequests - n),
+					resetAt: Date.now() + limit.windowMs,
+				};
+			},
+		};
+	};
+	const context = {
+		session: { user: { id: "user-1" } },
+		headers: new Headers(),
+	} as never;
+	const next = async () => "ok";
+
+	it("gives each endpoint its own budget for the same user", async () => {
+		vi.resetModules();
+		vi.stubEnv("REDIS_URL", "");
+		const { createRateLimitMiddleware } = await import(MODULE_PATH);
+		const store = recordingStore();
+		const chat = createRateLimitMiddleware({
+			endpoint: "aiChat",
+			store,
+			maxRequests: 1,
+		});
+		const keys = createRateLimitMiddleware({
+			endpoint: "apiKeyMutation",
+			store,
+			maxRequests: 1,
+		});
+
+		await expect(chat({ context, next })).resolves.toBe("ok");
+		// a different endpoint must not be blocked by the chat call
+		await expect(keys({ context, next })).resolves.toBe("ok");
+		// the same endpoint is limited
+		await expect(chat({ context, next })).rejects.toThrow(
+			/Rate limit exceeded/,
+		);
+		expect([...store.keys.keys()].sort()).toEqual([
+			"aiChat:user-1",
+			"apiKeyMutation:user-1",
+		]);
+	});
+});

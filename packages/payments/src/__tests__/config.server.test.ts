@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("../config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 // Mock env with only SOME top-up price IDs set — exercises the isEnvKey
 // fallback for packages whose env var was never configured.
 vi.mock("@fuutu/env/saas", () => ({
@@ -13,8 +20,12 @@ vi.mock("@fuutu/env/saas", () => ({
 	},
 }));
 
-const { getPlanIdForProductId, getCreditTopupPriceId, getPlanPriceId } =
-	await import("../config.server");
+const {
+	getPlanIdForProductId,
+	getCreditTopupPriceId,
+	getPlanPriceId,
+	getPlanPriceIds,
+} = await import("../config.server");
 
 describe("getPlanIdForProductId()", () => {
 	it("maps the monthly price ID to its plan", () => {
@@ -44,6 +55,14 @@ describe("getPlanPriceId()", () => {
 		// must never fall through to another plan's price.
 		expect(getPlanPriceId("free", "month")).toBeUndefined();
 		expect(getPlanPriceId("enterprise", "month")).toBeUndefined();
+	});
+});
+
+describe("getPlanPriceIds()", () => {
+	it("maps every plan with configured price IDs to monthly/yearly", () => {
+		expect(getPlanPriceIds()).toEqual({
+			pro: { monthly: "price-pro-monthly", yearly: "price-pro-yearly" },
+		});
 	});
 });
 

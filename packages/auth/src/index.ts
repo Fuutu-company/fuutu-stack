@@ -1,6 +1,12 @@
+import { mcp } from "@better-auth/mcp";
+import { DEFAULT_OAUTH_SCOPES } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import { getUserByEmail, prismaAuditSink } from "@fuutu/db";
+import {
+	getUserByEmail,
+	prismaAuditSink,
+	revokeOAuthTokensForUser,
+} from "@fuutu/db";
 import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
 import { createLogger, logsConfig, setAuditSink } from "@fuutu/logs";
@@ -8,9 +14,10 @@ import { createCustomerForUser } from "@fuutu/payments";
 import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { createAuthMiddleware } from "better-auth/api";
+import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import {
 	admin,
+	jwt,
 	lastLoginMethod,
 	magicLink,
 	multiSession,
@@ -20,17 +27,42 @@ import {
 	username,
 } from "better-auth/plugins";
 import { authConfig } from "./config";
+import {
+	persistActiveOrganizationChange,
+	restoreActiveOrganization,
+} from "./hooks/active-organization";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
 import { assertInvitationForSignup } from "./hooks/invitation-only";
+import {
+	assertRegistrationWithinLimits,
+	getAuthorizeParams,
+	getPromptNoneBlockUrl,
+	getUnverifiedErrorRedirect,
+} from "./hooks/mcp-oauth-guards";
+import {
+	revokeOAuthTokensAfterAccountChange,
+	revokeOAuthTokensBeforeConsentDelete,
+} from "./hooks/mcp-oauth-revocation";
+import {
+	revokeApiKeysAfterLeave,
+	revokeApiKeysOfRemovedMember,
+} from "./hooks/member-api-keys";
 import { assertPasswordPolicy } from "./hooks/password-policy";
 import {
 	cancelActiveSubscriptionsForOrganization,
 	cancelActiveSubscriptionsForUser,
 	syncSeatsForOrganization,
 } from "./hooks/payments-sync";
+import {
+	assertInviteSeatAvailable,
+	assertSeatAvailable,
+} from "./hooks/seat-limit";
 import { assertSignupPolicy } from "./hooks/signup-policy";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
 import { sendEmail } from "./lib/email";
+import { MCP_ORG_CLAIM, mcpOAuth } from "./mcp-oauth";
+import { getSocialCredentials, isSocialProviderActive } from "./methods";
+import { mcpConnectedApps } from "./plugins/mcp-connected-apps";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
 // Postgres `AuditLog` table — but only when LOG_AUDIT_SINK=db (the default is
@@ -61,6 +93,17 @@ if (!env.NEXT_PUBLIC_SAAS_URL && env.NODE_ENV === "production") {
 	);
 }
 
+const socialCredentials = getSocialCredentials();
+
+/** Lifetime of MCP OAuth access tokens (JWT, not revocable). */
+const MCP_ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+
+/** Error page for OAuth errors that must not go back to the client. */
+const getErrorPageUrl = (context: {
+	baseURL: string;
+	options: { onAPIError?: { errorURL?: string } };
+}) => context.options.onAPIError?.errorURL || `${context.baseURL}/error`;
+
 const authOptions = {
 	database: prismaAdapter(db, {
 		provider: "postgresql",
@@ -68,6 +111,17 @@ const authOptions = {
 	baseURL: env.BETTER_AUTH_URL,
 	secret: env.BETTER_AUTH_SECRET,
 	trustedOrigins: [env.CORS_ORIGIN],
+
+	// Without this, production builds redirect auth errors to `/?error=…`
+	// and the app root forwards signed-in users to the dashboard — the
+	// error vanishes. The app page shows it (MCP OAuth guards use it too).
+	onAPIError: {
+		errorURL: `${saasBaseUrl}${authConfig.redirects.error}`,
+	},
+
+	// The JWT plugin's session-to-JWT route would mint tokens signed with
+	// the same key as MCP access tokens — disabled per the oauth-provider docs.
+	...(mcpOAuth.active ? { disabledPaths: ["/token"] } : {}),
 
 	// Rate limiting: Prevent brute-force attacks and email spam.
 	// Disabled when FUUTU_DISABLE_RATE_LIMIT is set (CI E2E).
@@ -120,7 +174,7 @@ const authOptions = {
 				newEmail,
 				url,
 			}: {
-				user: { email: string; name: string; locale?: "en" | "de" };
+				user: { email: string; name: string; locale?: string };
 				newEmail: string;
 				url: string;
 			}) => {
@@ -148,6 +202,63 @@ const authOptions = {
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
 			assertPasswordPolicy(ctx.path, ctx.body);
+			if (!mcpOAuth.active) return;
+
+			// MCP OAuth guards — see hooks/mcp-oauth-guards.ts.
+			if (ctx.path === "/oauth2/register") {
+				assertRegistrationWithinLimits(
+					ctx.body,
+					ctx.request?.headers.get("content-length"),
+				);
+			}
+			if (ctx.path === "/oauth2/authorize") {
+				const url = await getPromptNoneBlockUrl(
+					getAuthorizeParams(ctx.query, ctx.body),
+					getErrorPageUrl(ctx.context),
+				);
+				if (url) {
+					const fromFetch =
+						ctx.request?.headers.get("sec-fetch-mode") === "cors" ||
+						ctx.headers?.get("accept")?.includes("application/json");
+					if (fromFetch) return ctx.json({ redirect: true, url });
+					throw ctx.redirect(url);
+				}
+			}
+			if (ctx.path === "/oauth2/delete-consent") {
+				const session = await getSessionFromCtx(ctx);
+				await revokeOAuthTokensBeforeConsentDelete({
+					path: ctx.path,
+					body: ctx.body,
+					userId: session?.user.id,
+				});
+			}
+		}),
+		after: createAuthMiddleware(async (ctx) => {
+			await revokeApiKeysAfterLeave({
+				path: ctx.path,
+				returned: ctx.context.returned,
+				body: ctx.body,
+				userId: ctx.context.session?.user.id,
+			});
+			if (!mcpOAuth.active) return;
+			if (ctx.path === "/oauth2/authorize") {
+				const replacement = await getUnverifiedErrorRedirect({
+					returned: ctx.context.returned,
+					params: getAuthorizeParams(ctx.query, ctx.body),
+					appOrigin: new URL(ctx.context.baseURL).origin,
+					errorPageUrl: getErrorPageUrl(ctx.context),
+				});
+				if (replacement?.mode === "json") {
+					return ctx.json({ redirect: true, url: replacement.url });
+				}
+				if (replacement) throw ctx.redirect(replacement.url);
+				return;
+			}
+			await revokeOAuthTokensAfterAccountChange({
+				path: ctx.path,
+				returned: ctx.context.returned,
+				userId: ctx.context.session?.user.id,
+			});
 		}),
 	},
 
@@ -158,11 +269,16 @@ const authOptions = {
 		requireEmailVerification: authConfig.signup.requireEmailVerification,
 		minPasswordLength: authConfig.passwordPolicy.minLength,
 		maxPasswordLength: authConfig.passwordPolicy.maxLength,
+		// MCP refresh tokens outlive sessions — a reset (account recovery)
+		// must cut off connected OAuth clients too.
+		onPasswordReset: async ({ user }) => {
+			if (mcpOAuth.active) await revokeOAuthTokensForUser(user.id);
+		},
 		sendResetPassword: async ({
 			user,
 			url,
 		}: {
-			user: { email: string; name: string; locale?: "en" | "de" };
+			user: { email: string; name: string; locale?: string };
 			url: string;
 		}) => {
 			try {
@@ -193,7 +309,7 @@ const authOptions = {
 					data: {
 						name: user.name,
 						verificationUrl: url,
-						locale: (user as { locale?: "en" | "de" }).locale,
+						locale: (user as { locale?: string }).locale,
 					},
 				});
 			} catch (err) {
@@ -205,27 +321,23 @@ const authOptions = {
 	// Only register providers whose credentials are actually present.
 	// Better-Auth otherwise logs a WARN on every boot in dev environments
 	// where we intentionally skip OAuth wiring.
+	// Same predicate the sign-in UI uses (`getAuthMethods`), so a provider
+	// button is shown exactly when the provider is registered here.
 	socialProviders: {
-		...(authConfig.features.socialLogin &&
-		authConfig.socialProviders.google.enabled &&
-		env.GOOGLE_CLIENT_ID &&
-		env.GOOGLE_CLIENT_SECRET
+		...(isSocialProviderActive("google", socialCredentials.google)
 			? {
 					google: {
-						clientId: env.GOOGLE_CLIENT_ID,
-						clientSecret: env.GOOGLE_CLIENT_SECRET,
+						clientId: socialCredentials.google.clientId,
+						clientSecret: socialCredentials.google.clientSecret,
 						scope: [...authConfig.socialProviders.google.scopes],
 					},
 				}
 			: {}),
-		...(authConfig.features.socialLogin &&
-		authConfig.socialProviders.github.enabled &&
-		env.GITHUB_CLIENT_ID &&
-		env.GITHUB_CLIENT_SECRET
+		...(isSocialProviderActive("github", socialCredentials.github)
 			? {
 					github: {
-						clientId: env.GITHUB_CLIENT_ID,
-						clientSecret: env.GITHUB_CLIENT_SECRET,
+						clientId: socialCredentials.github.clientId,
+						clientSecret: socialCredentials.github.clientSecret,
 						scope: [...authConfig.socialProviders.github.scopes],
 					},
 				}
@@ -240,6 +352,17 @@ const authOptions = {
 	},
 
 	advanced: {
+		// Per-project cookie name in local dev (port slots) — unset in
+		// production, where Better Auth's default `better-auth` applies.
+		...(env.FUUTU_AUTH_COOKIE_PREFIX
+			? { cookiePrefix: env.FUUTU_AUTH_COOKIE_PREFIX }
+			: {}),
+		// Rate limits (incl. open MCP client registration) key on the client
+		// IP from `advanced.ipAddress.ipAddressHeaders` (default:
+		// x-forwarded-for). Behind a reverse proxy / load balancer, set it to
+		// the header your trusted proxy writes (e.g. ["cf-connecting-ip"]), or
+		// list the proxies in `trustedProxies` — otherwise clients can spoof
+		// their IP and dodge the limits. Default intentionally unchanged.
 		defaultCookieAttributes: {
 			sameSite: authConfig.cookies.sameSite,
 			// `secure` is intentionally NOT overridden — Better Auth derives it
@@ -285,7 +408,7 @@ const authOptions = {
 							data: {
 								name: user.name,
 								appUrl: saasBaseUrl,
-								locale: (user as { locale?: "en" | "de" }).locale,
+								locale: (user as { locale?: string }).locale,
 							},
 						});
 					} catch (err) {
@@ -302,6 +425,15 @@ const authOptions = {
 		},
 		session: {
 			create: {
+				// Start a new session in the org the user last worked in
+				// (`user.lastActiveOrganizationId`), if still a member.
+				before: async (session) => {
+					if (config.features.organizationsMode === "off") return;
+					const activeOrganizationId = await restoreActiveOrganization(session);
+					if (activeOrganizationId) {
+						return { data: { ...session, activeOrganizationId } };
+					}
+				},
 				after: async (session) => {
 					// Audit must never break sign-in.
 					try {
@@ -317,6 +449,16 @@ const authOptions = {
 					} catch (err) {
 						log.warn("session audit log failed", { err: String(err) });
 					}
+				},
+			},
+			// The org plugin switches orgs by writing `activeOrganizationId`
+			// to the current session — mirror it so the next sign-in restores it.
+			update: {
+				before: async (update, ctx) => {
+					await persistActiveOrganizationChange(
+						update,
+						ctx?.context.session?.user.id,
+					);
 				},
 			},
 		},
@@ -353,6 +495,11 @@ const authOptions = {
 		...(config.features.organizationsMode !== "off"
 			? [
 					organization({
+						allowUserToCreateOrganization:
+							authConfig.organizations.allowUserToCreateOrganization === "admin"
+								? (user) => (user as { role?: string }).role === "admin"
+								: authConfig.organizations.allowUserToCreateOrganization ===
+									"all",
 						async sendInvitationEmail({ email, id, organization, inviter }) {
 							const inviteUrl = `${saasBaseUrl}/auth/accept-invitation?id=${id}`;
 							try {
@@ -363,15 +510,25 @@ const authOptions = {
 										organizationName: organization.name,
 										inviteUrl,
 										inviterName: inviter.user.name,
-										locale: (inviter.user as { locale?: "en" | "de" }).locale,
+										locale: (inviter.user as { locale?: string }).locale,
 									},
 								});
 							} catch (err) {
 								log.error("invitation email failed", { err: String(err) });
 							}
 						},
-						// Sync seats with the payment provider on membership changes.
+						// Sync seats with the payment provider on membership changes;
+						// before* hooks enforce the plan's membersPerOrg seat cap.
 						organizationHooks: {
+							beforeAddMember: async ({ member }) => {
+								await assertSeatAvailable(member.organizationId);
+							},
+							beforeCreateInvitation: async ({ invitation }) => {
+								await assertInviteSeatAvailable(invitation.organizationId);
+							},
+							beforeAcceptInvitation: async ({ invitation }) => {
+								await assertSeatAvailable(invitation.organizationId);
+							},
 							afterAddMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);
 								await emitUserCreatedOnFirstMembership(
@@ -385,6 +542,9 @@ const authOptions = {
 									member.userId,
 									invitation.organizationId,
 								);
+							},
+							beforeRemoveMember: async ({ member }) => {
+								await revokeApiKeysOfRemovedMember(member);
 							},
 							afterRemoveMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);
@@ -409,6 +569,58 @@ const authOptions = {
 		// the user used last time — prevents accidental duplicate accounts.
 		lastLoginMethod(),
 
+		// OAuth 2.1 authorization server for MCP clients (`/api/mcp`).
+		// Discovery documents are served from the app root by
+		// apps/saas/src/app/.well-known/*; tokens are verified in
+		// @fuutu/api (resolveMcpPrincipal → verifyMcpAccessToken).
+		...(mcpOAuth.active
+			? [
+					jwt({
+						disableSettingJwtHeader: true,
+						jwt: { issuer: mcpOAuth.issuer },
+					}),
+					mcp({
+						loginPage: "/auth/sign-in",
+						consentPage: "/auth/consent",
+						resource: mcpOAuth.resource,
+						// Seeded resource row with explicit `allowedScopes` (= every
+						// provider scope, i.e. unrestricted): the default seed writes
+						// `null`, which Prisma rejects for list columns.
+						resources: [
+							{
+								identifier: mcpOAuth.resource,
+								name: `${config.app.name} MCP`,
+								allowedScopes: [...DEFAULT_OAUTH_SCOPES],
+							},
+						],
+						// Open RFC 7591 registration for public clients (Claude Code,
+						// Cursor, VS Code register themselves on first connect).
+						allowDynamicClientRegistration: true,
+						allowUnauthenticatedClientRegistration: true,
+						clientRegistrationDefaultApplicationType: "infer",
+						// Consent is stored per active organization; the org id
+						// rides along as `referenceId` into the access token.
+						// `shouldRedirect` never redirects — no extra selection step.
+						postLogin: {
+							page: "/auth/consent",
+							shouldRedirect: () => false,
+							consentReferenceId: ({ session }) =>
+								typeof session.activeOrganizationId === "string"
+									? session.activeOrganizationId
+									: undefined,
+						},
+						customAccessTokenClaims: ({ referenceId }) =>
+							referenceId ? { [MCP_ORG_CLAIM]: referenceId } : {},
+						// Access tokens are stateless JWTs — revoking a connected app
+						// or a password change only stops refreshes, so keep them
+						// short-lived (default 1 h).
+						accessTokenExpiresIn: MCP_ACCESS_TOKEN_TTL_SECONDS,
+					}),
+					// Settings → "Connected apps": list + revoke OAuth grants.
+					mcpConnectedApps(),
+				]
+			: []),
+
 		...(authConfig.features.magicLink
 			? [
 					magicLink({
@@ -421,8 +633,7 @@ const authOptions = {
 									template: "magic-link",
 									data: {
 										magicLinkUrl: url,
-										locale: (recipient as { locale?: "en" | "de" } | null)
-											?.locale,
+										locale: (recipient as { locale?: string } | null)?.locale,
 									},
 								});
 							} catch (err) {

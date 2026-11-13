@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
 import { z } from "zod";
 
-import ChangelogV010, {
-	frontmatter as changelogV010Frontmatter,
-} from "./changelog/v0-1-0";
+import ChangelogV010 from "./changelog/v0-1-0";
 import ChangelogV010De from "./changelog/v0-1-0.de";
+import { type ChangelogFrontmatter, changelogMeta } from "./changelog-meta";
+import { isoDate } from "./iso-date";
 import ImprintDe, {
 	frontmatter as imprintDeFrontmatter,
 } from "./legal/imprint.de";
@@ -50,12 +50,12 @@ export interface PostFrontmatter {
 	tags?: string[];
 }
 
-export interface ChangelogFrontmatter {
-	title: string;
-	publishedAt: string; // ISO date
-	version?: string;
-	description?: string;
-}
+export {
+	type ChangelogFrontmatter,
+	type ChangelogMeta,
+	changelogFrontmatterSchema,
+	changelogMeta,
+} from "./changelog-meta";
 
 export interface PostEntry {
 	slug: string;
@@ -82,10 +82,6 @@ export interface LegalDocument {
 	body: ComponentType;
 }
 
-const isoDate = z.string().refine((v) => !Number.isNaN(new Date(v).getTime()), {
-	message: "must be a parseable ISO date",
-});
-
 export const postFrontmatterSchema = z.object({
 	title: z.string().min(1),
 	description: z.string().optional(),
@@ -93,13 +89,6 @@ export const postFrontmatterSchema = z.object({
 	draft: z.boolean().optional(),
 	authors: z.array(z.string()).optional(),
 	tags: z.array(z.string()).optional(),
-});
-
-export const changelogFrontmatterSchema = z.object({
-	title: z.string().min(1),
-	publishedAt: isoDate,
-	version: z.string().optional(),
-	description: z.string().optional(),
 });
 
 export const legalDocumentFrontmatterSchema = z.object({
@@ -133,18 +122,20 @@ export const posts: readonly PostEntry[] = Object.freeze(
 	),
 );
 
+/** Changelog bodies per slug — frontmatter lives in `changelog/<slug>.meta.ts`. */
+const CHANGELOG_BODIES: Record<string, Record<string, ComponentType>> = {
+	"v0-1-0": { en: ChangelogV010, de: ChangelogV010De },
+};
+
+/** Newest first — order and frontmatter come from `changelogMeta`. */
 export const changelog: readonly ChangelogEntry[] = Object.freeze(
-	[
-		{
-			slug: "v0-1-0",
-			frontmatter: changelogFrontmatterSchema.parse(changelogV010Frontmatter),
-			bodies: { en: ChangelogV010, de: ChangelogV010De },
-		},
-	].sort(
-		(a, b) =>
-			new Date(b.frontmatter.publishedAt).getTime() -
-			new Date(a.frontmatter.publishedAt).getTime(),
-	),
+	changelogMeta.map(({ slug, frontmatter }) => {
+		const bodies = Object.hasOwn(CHANGELOG_BODIES, slug)
+			? CHANGELOG_BODIES[slug]
+			: undefined;
+		if (!bodies) throw new Error(`Changelog entry "${slug}" has no bodies`);
+		return { slug, frontmatter, bodies };
+	}),
 );
 
 const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {

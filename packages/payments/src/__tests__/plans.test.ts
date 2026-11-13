@@ -10,6 +10,13 @@ import {
 } from "../features";
 import { buildPricingTiers, type PlanTranslations } from "../plans";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("../config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 const ALL_PLAN_IDS: PlanId[] = ["free", "pro", "enterprise"];
 const ALL_LIMIT_KEYS: LimitKey[] = [
 	"organizations",

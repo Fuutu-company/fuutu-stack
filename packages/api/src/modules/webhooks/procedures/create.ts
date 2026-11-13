@@ -1,10 +1,11 @@
 import { countWebhooks, createWebhookWithinLimit } from "@fuutu/db";
-import { getPlanLimit } from "@fuutu/payments";
+import { FEATURE_CATALOG } from "@fuutu/payments/config";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { validateWebhookUrl } from "@fuutu/webhooks";
 import { WEBHOOK_EVENTS } from "@fuutu/webhooks/events";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { entitledLimit } from "../../../orpc/middleware/authorize";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
 
@@ -16,7 +17,7 @@ const createWebhookSchema = z.object({
 
 export const createWebhookProcedure = authProcedure({
 	org: { permission: PERMISSIONS.WEBHOOK.CREATE },
-	plan: "pro",
+	plan: FEATURE_CATALOG.api.webhooks.tier,
 	limit: {
 		key: "webhooks",
 		count: async (ctx) => countWebhooks(ctx.org?.id ?? ""),
@@ -29,7 +30,7 @@ export const createWebhookProcedure = authProcedure({
 		tags: ["Webhooks"],
 		summary: "Create webhook",
 		description:
-			"Creates a new webhook endpoint. The signing secret is returned only once. Requires a Pro plan.",
+			"Creates a new webhook endpoint. The signing secret is returned only once. Requires a plan that includes webhooks.",
 	})
 	.input(createWebhookSchema)
 	.handler(async ({ input, context }) => {
@@ -39,7 +40,7 @@ export const createWebhookProcedure = authProcedure({
 		}
 		// Race-safe re-check: the `limit` option above is a friendly
 		// pre-flight — count+insert run in a Serializable transaction.
-		const limitValue = getPlanLimit(context.planId ?? "free", "webhooks");
+		const limitValue = entitledLimit(context, "webhooks");
 		const max =
 			limitValue === false ? 0 : limitValue === "unlimited" ? null : limitValue;
 		const result = await createWebhookWithinLimit({

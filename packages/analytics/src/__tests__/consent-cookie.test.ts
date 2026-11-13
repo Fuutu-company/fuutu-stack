@@ -26,8 +26,8 @@ describe("buildConsentCookie", () => {
 	});
 
 	it("sets domain only when consentCookieDomain is explicitly configured", () => {
-		analyticsConfig.consentCookieDomain = ".fuutu.com";
-		expect(buildConsentCookie("denied")).toContain("domain=.fuutu.com");
+		analyticsConfig.consentCookieDomain = ".fuutustack.com";
+		expect(buildConsentCookie("denied")).toContain("domain=.fuutustack.com");
 	});
 
 	it("adds Secure only over https", () => {

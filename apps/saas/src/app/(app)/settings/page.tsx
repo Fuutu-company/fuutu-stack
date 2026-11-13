@@ -1,20 +1,17 @@
 import { ProfileForm } from "@app/settings";
-import { env } from "@fuutu/env/saas";
+import { renderSlot } from "@app/slots";
+import { authConfig } from "@fuutu/auth/config";
+import { mcpOAuth } from "@fuutu/auth/mcp-oauth";
 import { paymentsConfig } from "@fuutu/payments/config";
-import {
-	Button,
-	Card,
-	CardContent,
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
-} from "@fuutu/ui";
+import { getPlanPriceIds } from "@fuutu/payments/config.server";
+import { Button, Card, CardContent } from "@fuutu/ui";
 import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { appSlots } from "@/app-slots";
 import { CreditBalanceView } from "@/modules/app/credits/credit-balance-view";
 import { ChangePasswordForm } from "@/modules/app/settings/components/change-password-form";
+import { ConnectedAppsBlock } from "@/modules/app/settings/components/connected-apps-block";
 import { DeleteAccountBlock } from "@/modules/app/settings/components/delete-account-block";
 import { EmailChangeForm } from "@/modules/app/settings/components/email-change-form";
 import { PasskeysBlock } from "@/modules/app/settings/components/passkeys-block";
@@ -53,55 +50,55 @@ export default async function SettingsPage({
 		<div className="mx-auto max-w-4xl space-y-6">
 			<div>
 				<h1 className="font-bold text-3xl tracking-tight">{t("title")}</h1>
-				<p className="mt-2 text-muted-foreground">{t("account.title")}</p>
+				<p className="mt-2 text-muted-foreground">{t(`tabs.${activeTab}`)}</p>
 			</div>
-			<Tabs defaultValue={activeTab} className="w-full">
-				<TabsList>
-					<TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
-					<TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
-					<TabsTrigger value="sessions">{t("tabs.sessions")}</TabsTrigger>
-					<TabsTrigger value="danger">{t("tabs.danger")}</TabsTrigger>
-					{showBillingTab && (
-						<TabsTrigger value="billing">{t("tabs.billing")}</TabsTrigger>
-					)}
-					{showCreditsTab && (
-						<TabsTrigger value="credits">{t("tabs.credits")}</TabsTrigger>
-					)}
-				</TabsList>
+			<div className="space-y-6">
+				{activeTab === "profile" && (
+					<div className="space-y-6">
+						<Card className="p-6 md:p-8">
+							<ProfileForm />
+						</Card>
+						<Card className="p-6 md:p-8">
+							<EmailChangeForm />
+						</Card>
+					</div>
+				)}
 
-				<TabsContent value="profile" className="mt-6 space-y-6">
-					<Card className="p-6 md:p-8">
-						<ProfileForm />
-					</Card>
-					<Card className="p-6 md:p-8">
-						<EmailChangeForm />
-					</Card>
-				</TabsContent>
+				{activeTab === "security" && (
+					<div className="space-y-6">
+						<Card className="p-6 md:p-8">
+							<ChangePasswordForm />
+						</Card>
+						{authConfig.features.twoFactor && (
+							<Card className="p-6 md:p-8">
+								<TwoFactorBlock />
+							</Card>
+						)}
+						{authConfig.features.passkeys && (
+							<Card className="p-6 md:p-8">
+								<PasskeysBlock />
+							</Card>
+						)}
+					</div>
+				)}
 
-				<TabsContent value="security" className="mt-6 space-y-6">
-					<Card className="p-6 md:p-8">
-						<ChangePasswordForm />
-					</Card>
-					<Card className="p-6 md:p-8">
-						<TwoFactorBlock />
-					</Card>
-					<Card className="p-6 md:p-8">
-						<PasskeysBlock />
-					</Card>
-				</TabsContent>
+				{activeTab === "sessions" && (
+					<div className="space-y-6">
+						<Card className="p-6 md:p-8">
+							<SessionsBlock />
+						</Card>
+						{mcpOAuth.active && (
+							<Card className="p-6 md:p-8">
+								<ConnectedAppsBlock />
+							</Card>
+						)}
+					</div>
+				)}
 
-				<TabsContent value="sessions" className="mt-6">
-					<Card className="p-6 md:p-8">
-						<SessionsBlock />
-					</Card>
-				</TabsContent>
+				{activeTab === "danger" && <DeleteAccountBlock />}
 
-				<TabsContent value="danger" className="mt-6">
-					<DeleteAccountBlock />
-				</TabsContent>
-
-				{showBillingTab && (
-					<TabsContent value="billing" className="mt-6 space-y-6">
+				{showBillingTab && activeTab === "billing" && (
+					<div className="space-y-6">
 						<Card>
 							<CardContent className="space-y-6 p-6 md:p-8">
 								<div>
@@ -125,22 +122,12 @@ export default async function SettingsPage({
 								</Button>
 							</CardContent>
 						</Card>
-						<UserSettingsBilling
-							priceIds={{
-								pro: {
-									monthly: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
-									yearly: env.PAYMENTS_PRO_YEARLY_PRICE_ID ?? undefined,
-								},
-							}}
-						/>
-					</TabsContent>
+						<UserSettingsBilling priceIds={getPlanPriceIds()} />
+					</div>
 				)}
-				{showCreditsTab && (
-					<TabsContent value="credits" className="mt-6">
-						<CreditBalanceView />
-					</TabsContent>
-				)}
-			</Tabs>
+				{showCreditsTab && activeTab === "credits" && <CreditBalanceView />}
+				{renderSlot(appSlots.userSettings, { tab: activeTab })}
+			</div>
 		</div>
 	);
 }

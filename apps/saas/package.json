@@ -1,11 +1,11 @@
 {
 	"name": "@fuutu/saas",
-	"version": "1.0.0",
+	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev --port 3000",
+		"dev": "node ../../tooling/scripts/next.mjs dev saas",
 		"build": "next build",
-		"start": "next start --port 3000",
+		"start": "node ../../tooling/scripts/next.mjs start saas",
 		"check-types": "tsc --noEmit",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui"

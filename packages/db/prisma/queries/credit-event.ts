@@ -31,7 +31,7 @@ export const createCreditEvent = (
 export const getCreditEventsForUser = (userId: string, limit?: number) =>
 	db.creditEvent.findMany({
 		where: { userId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take: limit ?? 50,
 	});
 
@@ -41,7 +41,7 @@ export const getCreditEventsForOrganization = (
 ) =>
 	db.creditEvent.findMany({
 		where: { organizationId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take: limit ?? 50,
 	});
 
@@ -65,7 +65,7 @@ export const getCreditEventsForMeter = (params: {
 		where: {
 			AND: [{ OR: ownerFilters }, { meterKey: params.meterKey }],
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take: params.limit ?? 50,
 	});
 };

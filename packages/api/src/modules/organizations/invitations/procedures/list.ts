@@ -1,6 +1,7 @@
 import { auth } from "@fuutu/auth";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
+import { sortByCreatedAt } from "../../../../orpc/ordering";
 import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import { permissionProcedure } from "../../../../orpc/procedures";
 
@@ -27,10 +28,13 @@ export const listInvitations = permissionProcedure(
 			PERMISSIONS.ORGANIZATION.VIEW,
 			context,
 		);
-		const invitations = await auth.api.listInvitations({
-			query: { organizationId: input.organizationId },
-			headers: context.headers,
-		});
+		const invitations = sortByCreatedAt(
+			await auth.api.listInvitations({
+				query: { organizationId: input.organizationId },
+				headers: context.headers,
+			}),
+			"desc",
+		);
 		return {
 			items: invitations,
 			total: invitations.length,

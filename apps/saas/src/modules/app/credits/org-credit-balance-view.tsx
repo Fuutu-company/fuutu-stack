@@ -1,12 +1,12 @@
 "use client";
 
-import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import { Badge, Button, Card, CardContent, Progress } from "@fuutu/ui";
 import { Coins } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { orpc } from "@/utils/orpc";
 import { TopUpSection } from "./topup-section";
 
@@ -22,7 +22,9 @@ interface OrgCreditBalanceViewProps {
 export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 	const t = useTranslations("credits");
 	const locale = useLocale();
-	const { data: activeOrg } = authClient.useActiveOrganization();
+	// The org in the URL, not the session's active org — a deep link or a
+	// stale active-org cookie must not show another org's balance.
+	const { data: org } = useFullOrganization(slug);
 	const [balances, setBalances] = useState<BalanceResult["balances"]>([]);
 	const [history, setHistory] = useState<HistoryResult["events"]>([]);
 	const [loading, setLoading] = useState(true);
@@ -32,11 +34,11 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 		setLoading(true);
 		setError(null);
 		try {
-			if (!activeOrg?.id) return;
+			if (!org?.id) return;
 
 			const [balanceRes, historyRes] = await Promise.all([
-				orpc.credits.balance.call({ organizationId: activeOrg.id }),
-				orpc.credits.history.call({ organizationId: activeOrg.id }),
+				orpc.credits.balance.call({ organizationId: org.id }),
+				orpc.credits.history.call({ organizationId: org.id }),
 			]);
 			setBalances(balanceRes.balances ?? []);
 			setHistory(historyRes.events ?? []);
@@ -46,7 +48,7 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 		} finally {
 			setLoading(false);
 		}
-	}, [activeOrg?.id, t]);
+	}, [org?.id, t]);
 
 	useEffect(() => {
 		void load();
@@ -157,7 +159,7 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 				</div>
 			)}
 
-			<TopUpSection organizationId={activeOrg?.id} />
+			<TopUpSection organizationId={org?.id} />
 
 			<Card>
 				<CardContent className="space-y-4 p-6 md:p-8">
@@ -177,7 +179,7 @@ export function OrgCreditBalanceView({ slug }: OrgCreditBalanceViewProps) {
 												? t(`source.${event.source}`)
 												: event.source}
 										</p>
-										<p className="text-muted-foreground text-xs">
+										<p className="text-muted-foreground text-xs" data-volatile>
 											{new Date(event.createdAt).toLocaleString(locale)}
 										</p>
 									</div>

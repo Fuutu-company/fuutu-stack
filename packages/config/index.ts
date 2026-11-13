@@ -18,7 +18,8 @@
  *
  * This is the *kit* version (the version of the Fuutu boilerplate itself) —
  * **not** the downstream app version and **not** the @fuutu/api package
- * version. It is surfaced by:
+ * version. Your app's version is `APP_VERSION` (`@fuutu/config/app-version`,
+ * root package.json). It is surfaced by:
  *   - `GET /api/version`            (ops / telemetry correlation)
  *   - Telemetry ping (build-time + runtime)
  *   - `X-Framework` response header (`Fuutu-Stack/<version>`)
@@ -49,19 +50,29 @@ export const KIT_GENERATOR_META = `${KIT_NAME} ${KIT_VERSION}` as const;
  *      explicitly forbids removing or falsifying the kit fingerprint.
  *      Doing so is a license violation.
  *
- * Bump `KIT_VERSION` manually on release tags. Never edit
+ * Only the upstream kit release (tag `kit-vX.Y.Z`) changes `KIT_VERSION`;
+ * in your project it changes solely by merging a kit update. Never edit
  * `KIT_NAME`.
  */
 
 export const config = {
 	app: {
-		name: "Fuutu",
+		/**
+		 * YOUR app's display name — single source for titles, manifests,
+		 * auth/onboarding copy (`{appName}`), 2FA issuer, passkey RP name and
+		 * the API/MCP server name. Not the kit name (`KIT_NAME`).
+		 */
+		name: "Fuutu Stack",
 		kitName: KIT_NAME,
 		kitVersion: KIT_VERSION,
 		contact: {
-			email: "hello@fuutu.com",
+			email: "hello@fuutustack.com",
 			github: "github.com/Fuutu-company/fuutu-stack",
 			githubUrl: "https://github.com/Fuutu-company/fuutu-stack",
+			/** Optional support inbox shown to users — unset = not shown. */
+			supportEmail: undefined as string | undefined,
+			/** Optional community/support Discord invite URL — unset = not shown. */
+			discordUrl: undefined as string | undefined,
 		},
 		/**
 		 * Domains that ship with a swappable provider interface — one

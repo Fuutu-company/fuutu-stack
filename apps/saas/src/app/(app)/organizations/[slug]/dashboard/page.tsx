@@ -1,10 +1,17 @@
 import { QuickActions, RecentActivity, StatsOverview } from "@app/dashboard";
+import { renderSlot } from "@app/slots";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { appSlots } from "@/app-slots";
 
-export default async function OrgDashboardPage() {
+export default async function OrgDashboardPage({
+	params,
+}: {
+	params: Promise<{ slug: string }>;
+}) {
 	const t = await getTranslations("dashboard");
+	const { slug } = await params;
 
 	return (
 		<div className="space-y-6">
@@ -24,6 +31,7 @@ export default async function OrgDashboardPage() {
 				<RecentActivity />
 				<QuickActions />
 			</div>
+			{renderSlot(appSlots.dashboard, { orgSlug: slug })}
 		</div>
 	);
 }

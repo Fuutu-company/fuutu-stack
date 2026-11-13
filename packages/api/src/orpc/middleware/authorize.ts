@@ -21,7 +21,7 @@
  *   1. Auth (user must be authenticated)
  *   2. Scope detection (orgId in input? → org-scoped : user-scoped)
  *   3. Permission check (org OR system, depending on scope)
- *   4. Plan tier (resolves active plan, checks tier >= required)
+ *   4. Plan tier (resolves the entitlement, checks tier >= required)
  *   5. Active subscription (if requireActiveSubscription is set)
  *   6. Limit (counts current resources, checks against plan limit)
  *
@@ -30,8 +30,13 @@
  *   - org?: FullOrganization (when org-scoped)
  *   - orgRole?: OrgRole (when org-scoped)
  *   - membership?: OrgMember (when org-scoped)
+ *   - entitlement?: Entitlement (when plan/limit options set)
  *   - planId?: PlanId (when plan/limit options set)
  *   - planTier?: PlanTier (when plan/limit options set)
+ *
+ * Plan, subscription and limit gates read the owner's entitlement
+ * (`getUserEntitlement`, org-first) — so a resolver registered with
+ * `registerEntitlementResolver` governs them too.
  */
 
 import { auth } from "@fuutu/auth";
@@ -39,11 +44,13 @@ import type { UserWithRole } from "@fuutu/auth/types";
 import { getOrganizationWithMembers } from "@fuutu/db";
 import {
 	checkLimit,
+	type Entitlement,
 	getPlanLimit,
+	getUserEntitlement,
 	type LimitKey,
+	type LimitValue,
 	meetsTier,
 	type PlanTier,
-	resolveActivePlan,
 } from "@fuutu/payments";
 import type { PlanId } from "@fuutu/payments/config";
 import { paymentsConfig } from "@fuutu/payments/config";
@@ -161,9 +168,23 @@ export type AuthorizeContext = {
 	org?: FullOrganization;
 	orgRole?: OrgRole;
 	membership?: OrgMember;
+	entitlement?: Entitlement;
 	planId?: PlanId;
 	planTier?: PlanTier;
 };
+
+/**
+ * The resolved entitlement's limit for `key` — what race-safe creates
+ * must re-check against. Free plan when no entitlement was resolved.
+ */
+export function entitledLimit(
+	ctx: Pick<AuthorizeContext, "entitlement">,
+	key: LimitKey,
+): LimitValue {
+	return ctx.entitlement
+		? ctx.entitlement.limits[key]
+		: getPlanLimit("free", key);
+}
 
 export type AuthorizeOptions = {
 	/** Require a specific system-level permission (checked against SYSTEM_POLICY). */
@@ -184,7 +205,11 @@ export type AuthorizeOptions = {
 		/** If true, skip org check when the field is absent/undefined. */
 		optional?: boolean;
 	};
-	/** Require a minimum plan tier (free | pro | enterprise). */
+	/**
+	 * Require a minimum plan tier (see TIER_ORDER). Prefer the tier of the
+	 * gated FEATURE_CATALOG entry over a tier literal, e.g.
+	 * `plan: FEATURE_CATALOG.api.webhooks.tier`.
+	 */
 	plan?: PlanTier;
 	/** Require an active paid subscription (not just free tier). */
 	requireActiveSubscription?: boolean;
@@ -314,11 +339,14 @@ export async function runAuthorize(
 
 	// 5. Plan tier
 	if (options.plan || options.requireActiveSubscription || options.limit) {
-		const resolved = await resolveActivePlan(user.id, ctx.org?.id);
-		ctx.planId = resolved.planId;
-		ctx.planTier = resolved.tier;
+		const entitlement = await getUserEntitlement(user.id, {
+			activeOrganizationId: ctx.org?.id,
+		});
+		ctx.entitlement = entitlement;
+		ctx.planId = entitlement.planId;
+		ctx.planTier = entitlement.tier;
 
-		if (options.plan && !meetsTier(resolved.tier, options.plan)) {
+		if (options.plan && !meetsTier(entitlement.tier, options.plan)) {
 			throw new ORPCError("FORBIDDEN", {
 				message: "This feature requires a higher plan",
 			});
@@ -328,7 +356,7 @@ export async function runAuthorize(
 		if (
 			options.requireActiveSubscription &&
 			paymentsConfig.requireActiveSubscription &&
-			resolved.planId === "free"
+			entitlement.planId === "free"
 		) {
 			throw new ORPCError("FORBIDDEN", {
 				message: "An active subscription is required",
@@ -338,7 +366,7 @@ export async function runAuthorize(
 
 	// 7. Limit enforcement
 	if (options.limit) {
-		const limitValue = getPlanLimit(ctx.planId ?? "free", options.limit.key);
+		const limitValue = entitledLimit(ctx, options.limit.key);
 		const currentCount = await options.limit.count(ctx);
 		const result = checkLimit(limitValue, currentCount);
 		if (!result.ok) {

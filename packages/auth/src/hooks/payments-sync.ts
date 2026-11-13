@@ -10,9 +10,10 @@ import { countOrganizationMembers, getPurchasesByUserId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import {
 	cancelAllSubscriptionsForOrganization,
-	resolvePaymentProvider,
+	resolvePaymentProviderById,
 	updateSeatsInOrganizationSubscription,
 } from "@fuutu/payments";
+import { paymentsConfig } from "@fuutu/payments/config";
 
 const log = createLogger({ scope: "auth:payments-sync" });
 
@@ -20,11 +21,13 @@ type UserPurchase = Awaited<ReturnType<typeof getPurchasesByUserId>>[number];
 
 /**
  * Recomputes the current member count of the org and syncs it with the
- * payment provider. No-op when the org has no active subscription.
+ * payment provider. No-op when the org has no active subscription or
+ * `paymentsConfig.seatSync` is "none".
  */
 export async function syncSeatsForOrganization(
 	organizationId: string,
 ): Promise<void> {
+	if (paymentsConfig.seatSync === "none") return;
 	try {
 		const seats = await countOrganizationMembers(organizationId);
 		await updateSeatsInOrganizationSubscription(organizationId, seats);
@@ -50,9 +53,9 @@ export async function cancelActiveSubscriptionsForUser(
 		return;
 	}
 
-	const provider = resolvePaymentProvider();
-	// `allSettled` so a single provider failure does not leave the rest
-	// of the user's subscriptions dangling when the account is deleted.
+	// Each subscription is cancelled through the provider it was created
+	// with — never through whichever provider is active now. `allSettled` so
+	// a single provider failure does not leave the rest dangling.
 	const results = await Promise.allSettled(
 		purchases
 			.filter(
@@ -61,7 +64,21 @@ export async function cancelActiveSubscriptionsForUser(
 					p.subscriptionId != null &&
 					(p.status === "ACTIVE" || p.status === "TRIALING"),
 			)
-			.map((p) => provider.cancelSubscription(p.subscriptionId)),
+			.map((p) => {
+				const provider = resolvePaymentProviderById(p.provider);
+				if (!provider) {
+					log.warn(
+						"cancelActiveSubscriptionsForUser: unknown provider, cancel it manually",
+						{
+							userId,
+							provider: p.provider,
+							subscriptionId: p.subscriptionId,
+						},
+					);
+					return Promise.resolve();
+				}
+				return provider.cancelSubscription(p.subscriptionId);
+			}),
 	);
 	for (const r of results) {
 		if (r.status === "rejected") {

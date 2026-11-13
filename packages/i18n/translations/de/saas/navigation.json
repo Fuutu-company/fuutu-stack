@@ -66,7 +66,12 @@
 			"webhooks": "Webhooks",
 			"auditLog": "Audit-Log",
 			"invoices": "Rechnungen",
-			"notifications": "Benachrichtigungen"
-		}
+			"notifications": "Benachrichtigungen",
+			"credits": "Guthaben"
+		},
+		"groupAccount": "Konto",
+		"accountSettings": "Kontoeinstellungen",
+		"adminOverview": "Übersicht",
+		"credits": "Guthaben"
 	}
 }

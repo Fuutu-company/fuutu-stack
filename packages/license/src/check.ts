@@ -6,7 +6,7 @@ import type { CheckLicenseOptions, LicenseMode, LicenseStatus } from "./types";
 
 const log = createLogger({ scope: "license" });
 
-const DEFAULT_ENDPOINT = "https://stackapp.fuutu.com/api/license/validate";
+const DEFAULT_ENDPOINT = "https://app.fuutustack.com/api/license/validate";
 const DEFAULT_TIMEOUT_MS = 5_000;
 /** In-memory cache TTL — long enough that hot paths don't re-hit the
  *  validator, short enough that a freshly-purchased key starts working

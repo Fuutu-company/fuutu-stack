@@ -129,4 +129,9 @@ const de: Translations = {
 	"View as Markdown(page actions)": "Als Markdown ansehen",
 };
 
-export const i18nUI = defineI18nUI(i18n, { en, de });
+// Keyed by code, not by `Locale`: a bundle for a locale that is not enabled in
+// i18nConfig.locales (dormant) is simply never used, so removing a locale from
+// the config needs no edit here.
+const translations: Record<string, Translations> = { en, de };
+
+export const i18nUI = defineI18nUI(i18n, translations);

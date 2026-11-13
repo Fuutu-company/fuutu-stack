@@ -1,7 +1,7 @@
 import "./globals.css";
 import { ConsentBanner } from "@fuutu/analytics/consent";
 import { AnalyticsScript } from "@fuutu/analytics/script";
-import { KIT_GENERATOR_META } from "@fuutu/config";
+import { config, KIT_GENERATOR_META } from "@fuutu/config";
 import type { Locale } from "@fuutu/i18n";
 import { getDirection } from "@fuutu/i18n";
 import { Toaster } from "@fuutu/ui";
@@ -21,8 +21,8 @@ export const metadata = {
 	// (LICENSE.md §6(5), §7).
 	generator: KIT_GENERATOR_META,
 	title: {
-		default: "Fuutu Stack",
-		template: "%s — Fuutu Stack",
+		default: config.app.name,
+		template: `%s — ${config.app.name}`,
 	},
 	icons: {
 		icon: [

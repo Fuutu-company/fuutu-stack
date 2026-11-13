@@ -1,7 +1,9 @@
+import { config } from "@fuutu/config";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
+import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-select";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { LanguageSelect } from "@/components/language-select";
 import { defaultLocale, locales } from "@/i18n/config";
 import { baseOptions } from "@/lib/layout.shared";
 import { Link } from "@/navigation";
@@ -26,13 +28,13 @@ export async function generateMetadata({
 	}
 
 	return {
-		title: t("metaTitle"),
+		title: t("metaTitle", { appName: config.app.name }),
 		description: t("metaDescription"),
 		alternates: {
 			languages,
 		},
 		openGraph: {
-			title: t("metaTitle"),
+			title: t("metaTitle", { appName: config.app.name }),
 			description: t("metaDescription"),
 			locale,
 		},
@@ -47,14 +49,14 @@ export default async function HomePage({ params }: HomePageProps) {
 	return (
 		<HomeLayout
 			{...baseOptions()}
-			nav={{
-				title: t("title"),
-				children: <LocaleSwitcher />,
+			nav={{ title: t("title", { appName: config.app.name }) }}
+			slots={{
+				languageSelect: { root: LanguageSelect, text: LanguageSelectText },
 			}}
 		>
 			<div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
 				<h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
-					{t("title")}
+					{t("title", { appName: config.app.name })}
 				</h1>
 				<p className="mb-2 text-fd-muted-foreground text-lg">{t("subtitle")}</p>
 				<p className="mb-8 max-w-2xl text-fd-muted-foreground">

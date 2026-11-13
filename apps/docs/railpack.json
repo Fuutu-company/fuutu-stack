@@ -1,0 +1,35 @@
+{
+	"$schema": "https://schema.railpack.com",
+	"packages": { "node": "24" },
+	"steps": {
+		"build": {
+			"commands": [
+				"node packages/telemetry/bin/ping.mjs || true",
+				"SKIP_ENV_VALIDATION=1 pnpm --filter @fuutu/docs build",
+				"cp -r apps/docs/.next/static apps/docs/.next/standalone/apps/docs/.next/static",
+				"cp -r apps/docs/public apps/docs/.next/standalone/apps/docs/public"
+			]
+		}
+	},
+	"deploy": {
+		"inputs": [
+			{
+				"step": "packages:mise",
+				"include": [
+					"/mise/shims",
+					"/mise/installs",
+					"/usr/local/bin/mise",
+					"/etc/mise/config.toml",
+					"/root/.local/state/mise"
+				]
+			},
+			{ "step": "build", "include": ["apps/docs/.next/standalone"] }
+		],
+		"startCommand": "node apps/docs/.next/standalone/apps/docs/server.js",
+		"variables": {
+			"HOSTNAME": "0.0.0.0",
+			"PORT": "4000",
+			"NODE_ENV": "production"
+		}
+	}
+}

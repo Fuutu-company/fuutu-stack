@@ -14,6 +14,11 @@ vi.mock("../../prisma/client", () => ({
 		invitation: {
 			findUnique: vi.fn(),
 		},
+		member: {
+			count: vi.fn(),
+			findFirst: vi.fn(),
+			findMany: vi.fn(),
+		},
 		apiKey: {
 			create: vi.fn(),
 			findMany: vi.fn(),
@@ -21,6 +26,7 @@ vi.mock("../../prisma/client", () => ({
 			findUnique: vi.fn(),
 			findFirst: vi.fn(),
 			update: vi.fn(),
+			updateMany: vi.fn(),
 			delete: vi.fn(),
 		},
 		notification: {
@@ -49,6 +55,7 @@ vi.mock("../../prisma/client", () => ({
 		},
 		purchase: {
 			findFirst: vi.fn(),
+			update: vi.fn(),
 		},
 		invoice: {
 			create: vi.fn(),
@@ -121,6 +128,100 @@ describe("DB query functions - smoke tests", () => {
 				"function",
 			);
 		});
+
+		it("isOrganizationMember scopes the lookup to user AND org", async () => {
+			vi.mocked(db.member.count).mockResolvedValueOnce(1);
+			await expect(
+				organizationQueries.isOrganizationMember("user-1", "org-1"),
+			).resolves.toBe(true);
+			expect(db.member.count).toHaveBeenCalledWith({
+				where: { userId: "user-1", organizationId: "org-1" },
+			});
+		});
+
+		it("isOrganizationMember is false without a membership row", async () => {
+			vi.mocked(db.member.count).mockResolvedValueOnce(0);
+			await expect(
+				organizationQueries.isOrganizationMember("user-1", "org-2"),
+			).resolves.toBe(false);
+		});
+
+		it("findOrganizationMember matches id, user id or email inside that org only", async () => {
+			vi.mocked(db.member.findFirst).mockResolvedValueOnce({
+				id: "member-0",
+				userId: "user-0",
+				role: "owner",
+				user: { email: "owner@example.com" },
+			} as never);
+			await expect(
+				organizationQueries.findOrganizationMember("org-1", "member-0"),
+			).resolves.toEqual({
+				id: "member-0",
+				userId: "user-0",
+				role: "owner",
+				email: "owner@example.com",
+			});
+			expect(db.member.findFirst).toHaveBeenCalledWith({
+				where: {
+					organizationId: "org-1",
+					OR: [
+						{ id: "member-0" },
+						{ userId: "member-0" },
+						{ user: { email: "member-0" } },
+					],
+				},
+				select: {
+					id: true,
+					userId: true,
+					role: true,
+					user: { select: { email: true } },
+				},
+			});
+		});
+
+		it("findOrganizationMember is null when nothing matches", async () => {
+			vi.mocked(db.member.findFirst).mockResolvedValueOnce(null);
+			await expect(
+				organizationQueries.findOrganizationMember("org-1", "nope"),
+			).resolves.toBeNull();
+		});
+
+		it("getOrganizationMemberRole returns the role of the user in that org", async () => {
+			vi.mocked(db.member.findFirst).mockResolvedValueOnce({
+				role: "admin",
+			} as never);
+			await expect(
+				organizationQueries.getOrganizationMemberRole("org-1", "user-1"),
+			).resolves.toBe("admin");
+			expect(db.member.findFirst).toHaveBeenCalledWith({
+				where: { organizationId: "org-1", userId: "user-1" },
+				select: { role: true },
+			});
+		});
+
+		it("getOrganizationMemberRole is null without a membership row", async () => {
+			vi.mocked(db.member.findFirst).mockResolvedValueOnce(null);
+			await expect(
+				organizationQueries.getOrganizationMemberRole("org-2", "user-1"),
+			).resolves.toBeNull();
+		});
+
+		it("listMembershipsForUser flattens org + role for the user only", async () => {
+			vi.mocked(db.member.findMany).mockResolvedValueOnce([
+				{
+					role: "owner",
+					organization: { id: "org-1", name: "Acme", slug: "acme" },
+				},
+			] as never);
+			await expect(
+				organizationQueries.listMembershipsForUser("user-1"),
+			).resolves.toEqual([
+				{ id: "org-1", name: "Acme", slug: "acme", role: "owner" },
+			]);
+			expect(db.member.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({ where: { userId: "user-1" } }),
+			);
+		});
 	});
 
 	describe("api-key queries", () => {
@@ -158,6 +259,17 @@ describe("DB query functions - smoke tests", () => {
 
 		it("exports deleteApiKey function", () => {
 			expect(typeof apiKeyQueries.deleteApiKey).toBe("function");
+		});
+
+		it("revokeOrgApiKeysForUser revokes only that user's live keys in that org", async () => {
+			vi.mocked(db.apiKey.updateMany).mockResolvedValue({ count: 2 });
+			await expect(
+				apiKeyQueries.revokeOrgApiKeysForUser("org-1", "user-1"),
+			).resolves.toBe(2);
+			expect(db.apiKey.updateMany).toHaveBeenCalledWith({
+				where: { organizationId: "org-1", userId: "user-1", revokedAt: null },
+				data: { revokedAt: expect.any(Date) },
+			});
 		});
 	});
 
@@ -202,9 +314,9 @@ describe("DB query functions - smoke tests", () => {
 			);
 		});
 
-		it("filters via metadata ->> 'checkoutEventId' so the partial unique index is used", async () => {
+		it("looks the purchase up by provider + checkoutEventId (partial unique index)", async () => {
 			const row = { id: "pur_1", provider: "creem" };
-			vi.mocked(db.$queryRaw).mockResolvedValueOnce([row] as never);
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(row as never);
 
 			const found = await purchaseQueries.getPurchaseByCheckoutEventId(
 				"creem",
@@ -212,19 +324,27 @@ describe("DB query functions - smoke tests", () => {
 			);
 
 			expect(found).toEqual(row);
-			const [strings, ...values] = vi.mocked(db.$queryRaw).mock
-				.calls[0] as unknown as [TemplateStringsArray, ...string[]];
-			const sql = strings.join("");
-			expect(sql).toContain("->> 'checkoutEventId'");
-			expect(sql).not.toContain("#>");
-			expect(values).toEqual(["creem", "evt_123"]);
+			expect(db.purchase.findFirst).toHaveBeenCalledWith({
+				where: { provider: "creem", checkoutEventId: "evt_123" },
+			});
 		});
 
 		it("returns null when no purchase matches the event id", async () => {
-			vi.mocked(db.$queryRaw).mockResolvedValueOnce([] as never);
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
 			expect(
 				await purchaseQueries.getPurchaseByCheckoutEventId("creem", "evt_x"),
 			).toBeNull();
+		});
+
+		it("updatePurchase writes quantity when given", async () => {
+			vi.mocked(db.purchase.update).mockResolvedValueOnce({} as never);
+
+			await purchaseQueries.updatePurchase({ id: "pur_1", quantity: 5 });
+
+			expect(db.purchase.update).toHaveBeenCalledWith({
+				where: { id: "pur_1" },
+				data: { quantity: 5 },
+			});
 		});
 
 		it("getActiveSubscriptionForUser gates on ACTIVE/TRIALING or SCHEDULED_CANCEL within period", async () => {
@@ -269,6 +389,55 @@ describe("DB query functions - smoke tests", () => {
 			};
 			expect(where.where.organizationId).toBe("org_1");
 			expect(where.where.OR).toHaveLength(2);
+		});
+
+		it("getActiveOneTimePlanPurchase finds an ACTIVE one-time purchase of a plan product", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce({
+				id: "p_lifetime",
+			} as never);
+
+			const found = await purchaseQueries.getActiveOneTimePlanPurchase(
+				{ userId: "user_1" },
+				["price_lifetime"],
+			);
+
+			expect(found).toEqual({ id: "p_lifetime" });
+			expect(db.purchase.findFirst).toHaveBeenLastCalledWith({
+				where: {
+					userId: "user_1",
+					type: "ONE_TIME",
+					status: "ACTIVE",
+					productId: { in: ["price_lifetime"] },
+				},
+				orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+			});
+		});
+
+		it("getActiveOneTimePlanPurchase scopes to an organization owner", async () => {
+			vi.mocked(db.purchase.findFirst).mockResolvedValueOnce(null as never);
+
+			await purchaseQueries.getActiveOneTimePlanPurchase(
+				{ organizationId: "org_1" },
+				["price_lifetime"],
+			);
+
+			const args = vi.mocked(db.purchase.findFirst).mock.calls.at(-1)?.[0] as
+				| { where: Record<string, unknown> }
+				| undefined;
+			expect(args?.where.organizationId).toBe("org_1");
+			expect(args?.where).not.toHaveProperty("userId");
+		});
+
+		it("getActiveOneTimePlanPurchase skips the query when no plan product ids are given", async () => {
+			vi.mocked(db.purchase.findFirst).mockClear();
+
+			expect(
+				await purchaseQueries.getActiveOneTimePlanPurchase(
+					{ userId: "user_1" },
+					[],
+				),
+			).toBeNull();
+			expect(db.purchase.findFirst).not.toHaveBeenCalled();
 		});
 	});
 

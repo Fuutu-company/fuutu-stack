@@ -51,6 +51,16 @@ const PolarEventDataSchema = z
 		// nested product object (OrderProduct). items[] carries price ids
 		// (productPriceId), not product ids — wrong granularity here.
 		product: z.looseObject({ id: z.string() }).nullish(),
+		// Orders embed their subscription — a subscription_cycle order
+		// carries the renewed period end here.
+		subscription: z
+			.looseObject({
+				currentPeriodEnd: z.union([z.date(), z.string()]).nullish(),
+			})
+			.nullish(),
+		// Seat count on seat-based subscriptions / one-time orders; null
+		// for non-seat products.
+		seats: z.number().nullish(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
 	})
 	.optional();
@@ -98,6 +108,29 @@ function requireAbsoluteUrl(
 		);
 	}
 	return url;
+}
+
+const toDate = (value: Date | string): Date =>
+	value instanceof Date ? value : new Date(value);
+
+/**
+ * Period end for a renewal (`order.paid` / subscription_cycle). Order
+ * payloads carry no period of their own — read the embedded subscription,
+ * else fetch it, so the sync layer can reset recurring credits. A Polar
+ * API error propagates → non-2xx → Polar retries the delivery.
+ */
+async function resolveRenewalPeriodEnd(
+	data: PolarEventData,
+	subscriptionId: string,
+): Promise<Date | undefined> {
+	const embedded = data?.subscription?.currentPeriodEnd;
+	if (embedded) return toDate(embedded);
+	const subscription = await getClient().subscriptions.get({
+		id: subscriptionId,
+	});
+	return subscription.currentPeriodEnd
+		? toDate(subscription.currentPeriodEnd)
+		: undefined;
 }
 
 function mapPolarStatus(status: string): PurchaseStatusLiteral {
@@ -233,6 +266,10 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 			),
 			externalCustomerId: input.userId ?? input.organizationId,
 			seats: input.seats,
+			// Without trialDays the product's own trial config applies.
+			...(input.trialDays
+				? { trialInterval: "day" as const, trialIntervalCount: input.trialDays }
+				: {}),
 			metadata,
 		});
 		return { url: checkout.url };
@@ -334,6 +371,10 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 			// Order.productId can be null — the product then lives on the
 			// nested product object (OrderProduct.id).
 			productId: data?.productId ?? data?.product?.id ?? undefined,
+			units:
+				data?.seats && Number.isInteger(data.seats) && data.seats > 0
+					? data.seats
+					: undefined,
 		};
 
 		if (isSubscriptionPayload) {
@@ -352,9 +393,13 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 			// already transformed both to Date objects.
 			const periodEnd = data?.currentPeriodEnd ?? data?.endsAt;
 			if (periodEnd) {
-				providerEvent.currentPeriodEnd =
-					periodEnd instanceof Date ? periodEnd : new Date(periodEnd);
+				providerEvent.currentPeriodEnd = toDate(periodEnd);
 			}
+		} else if (eventType === "subscription.renewed" && subscriptionId) {
+			providerEvent.currentPeriodEnd = await resolveRenewalPeriodEnd(
+				data,
+				subscriptionId,
+			);
 		}
 
 		return [providerEvent];

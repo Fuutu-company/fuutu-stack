@@ -445,13 +445,14 @@ describe("in-flight guard", () => {
 describe("listJobs", () => {
 	it("returns all registered jobs", () => {
 		const jobs = listJobs();
-		expect(jobs.length).toBe(4);
+		expect(jobs.length).toBe(5);
 		expect(jobs.map((j) => j.name)).toEqual(
 			expect.arrayContaining([
 				"webhook-retry",
 				"audit-log-cleanup",
 				"subscription-reminder",
 				"telemetry-ping",
+				"oauth-client-cleanup",
 			]),
 		);
 	});

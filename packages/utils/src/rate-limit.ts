@@ -17,7 +17,17 @@ export type RateLimitCheckResult = {
 };
 
 export type RateLimitStore = {
+	/** Count one request against `key` and report whether it is allowed. */
 	check(
+		key: string,
+		limit: { maxRequests: number; windowMs: number },
+	): Promise<RateLimitCheckResult>;
+	/**
+	 * Report the state of `key` without counting a request — for budgets
+	 * that only count some outcomes (e.g. failed credential checks).
+	 * Optional: stores without it skip those budgets.
+	 */
+	peek?(
 		key: string,
 		limit: { maxRequests: number; windowMs: number },
 	): Promise<RateLimitCheckResult>;
@@ -27,15 +37,24 @@ type MemoryRecord = { count: number; resetAt: number };
 
 /**
  * In-memory rate-limit store. Safe for single-node dev/prod.
- * Entries are cleaned lazily on access to avoid a background timer
- * and unbounded memory growth under churn.
+ * No background timer: once more than `sweepThreshold` keys are tracked
+ * (e.g. one per client IP), expired entries are swept on the next check —
+ * so key churn can't grow memory without bound.
  */
-export function createMemoryRateLimitStore(): RateLimitStore {
+export function createMemoryRateLimitStore(
+	options: { sweepThreshold?: number } = {},
+): Required<RateLimitStore> {
 	const records = new Map<string, MemoryRecord>();
+	const sweepThreshold = options.sweepThreshold ?? 10_000;
 
 	return {
 		async check(key, { maxRequests, windowMs }) {
 			const now = Date.now();
+			if (records.size > sweepThreshold) {
+				for (const [k, record] of records) {
+					if (record.resetAt <= now) records.delete(k);
+				}
+			}
 			const existing = records.get(key);
 
 			if (!existing || existing.resetAt <= now) {
@@ -55,6 +74,19 @@ export function createMemoryRateLimitStore(): RateLimitStore {
 				resetAt: existing.resetAt,
 			};
 		},
+		async peek(key, { maxRequests, windowMs }) {
+			const now = Date.now();
+			const existing = records.get(key);
+			if (!existing || existing.resetAt <= now) {
+				return {
+					allowed: true,
+					remaining: maxRequests,
+					resetAt: now + windowMs,
+				};
+			}
+			const remaining = Math.max(0, maxRequests - existing.count);
+			return { allowed: remaining > 0, remaining, resetAt: existing.resetAt };
+		},
 	};
 }
 
@@ -65,14 +97,13 @@ export function createMemoryRateLimitStore(): RateLimitStore {
  */
 export function createRedisRateLimitStore(_config: {
 	url: string;
-}): RateLimitStore {
-	return {
-		async check() {
-			throw new Error(
-				"[@fuutu/utils/rate-limit] Redis driver is a v1 stub — implement createRedisRateLimitStore with a Redis INCR+PEXPIRE pipeline, or unset REDIS_URL to use the in-memory store.",
-			);
-		},
+}): Required<RateLimitStore> {
+	const stub = async (): Promise<RateLimitCheckResult> => {
+		throw new Error(
+			"[@fuutu/utils/rate-limit] Redis driver is a v1 stub — implement createRedisRateLimitStore with a Redis INCR+PEXPIRE pipeline (check) and GET+PTTL (peek), or unset REDIS_URL to use the in-memory store.",
+		);
 	};
+	return { check: stub, peek: stub };
 }
 
 /**

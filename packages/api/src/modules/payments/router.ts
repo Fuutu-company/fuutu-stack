@@ -1,4 +1,5 @@
 import { invoicesRouter } from "./invoices/router";
+import { orgPlansRouter } from "./org-plans/router";
 import { plansRouter } from "./plans/router";
 import { cancelSubscription } from "./procedures/cancel-subscription";
 import { createBillingPortal } from "./procedures/create-billing-portal";
@@ -9,6 +10,7 @@ import { subscriptionsRouter } from "./subscriptions/router";
 
 export const paymentsRouter = {
 	plans: plansRouter,
+	orgPlans: orgPlansRouter,
 	checkout: {
 		create: createCheckout,
 	},

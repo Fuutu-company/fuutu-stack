@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "../client";
 import type { CreditBalance, CreditEvent, Prisma } from "../generated/client";
+import { assertSingleOwner } from "./owner";
 import { isUniqueViolation } from "./transaction";
 
 /**
@@ -25,7 +26,7 @@ const withUniqueViolationRetry = async <T>(
  * Owner where clause for polymorphic credit tables. ANDs both columns
  * so a lookup for one owner can never match the other owner's rows
  * (or orphan rows). Exactly one of userId/organizationId should be
- * set — the DB enforces this via an XOR CHECK constraint.
+ * set — every write path checks it with assertSingleOwner().
  */
 const ownerWhere = (
 	userId?: string | null,
@@ -73,7 +74,7 @@ export type ConsumeCreditsTxResult = {
 };
 
 /**
- * P2002 raised by the raw-SQL partial unique indexes
+ * P2002 raised by the partial unique indexes
  * credit_event_user_idempotency_key /
  * credit_event_organization_idempotency_key. The indexes are not in the
  * Prisma schema, so the error surfaces with the constraint or column names
@@ -102,7 +103,7 @@ const isIdempotencyViolation = (err: unknown): boolean => {
 class CreditEventDedupSignal extends Error {}
 
 /**
- * P2002 raised by the raw-SQL partial unique index
+ * P2002 raised by the partial unique index
  * credit_package_purchaseId_key. The index is not in the Prisma schema,
  * so the error surfaces with the constraint or column name in
  * meta.target/message — same shape as isIdempotencyViolation. Only a
@@ -168,6 +169,7 @@ export const consumeCreditsTx = async (params: {
 	allowOverage: boolean;
 	idempotencyKey?: string;
 }): Promise<ConsumeCreditsTxResult> => {
+	assertSingleOwner(params);
 	const {
 		userId,
 		organizationId,
@@ -442,13 +444,14 @@ export const consumeCreditsTx = async (params: {
 	}
 };
 
-export const grantRecurringCreditsTx = (params: {
+export const grantRecurringCreditsTx = async (params: {
 	userId?: string;
 	organizationId?: string;
 	meterKey: string;
 	amount: number;
 	periodEnd: Date;
 }): Promise<void> => {
+	assertSingleOwner(params);
 	const { userId, organizationId, meterKey, amount, periodEnd } = params;
 
 	return withUniqueViolationRetry(() =>
@@ -523,6 +526,7 @@ export const grantTopUpCreditsTx = async (params: {
 	purchaseId?: string | null;
 	priority?: number;
 }): Promise<void> => {
+	assertSingleOwner(params);
 	const {
 		userId,
 		organizationId,

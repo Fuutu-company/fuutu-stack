@@ -8,6 +8,7 @@ export * from "./credit-package";
 export * from "./cron-job-run";
 export * from "./invoice";
 export * from "./notification";
+export * from "./oauth";
 export * from "./organization";
 export * from "./purchase";
 export * from "./transaction";

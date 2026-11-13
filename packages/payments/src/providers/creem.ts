@@ -133,8 +133,21 @@ const creemWebhookSchema = z.object({
 		current_period_end_date: z.string().optional(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
 		subscription: z.object({ id: z.string() }).optional(),
+		// Purchased units: checkout objects carry `units` at the top level,
+		// subscription objects via `items[]`, renewals via the embedded
+		// originating `checkout`.
+		units: z.number().optional(),
+		items: z.array(z.object({ units: z.number().optional() })).optional(),
+		checkout: z.object({ units: z.number().optional() }).optional(),
 	}),
 });
+
+/** A unit count is only meaningful as a positive integer. */
+function toUnits(value: number | undefined): number | undefined {
+	return value !== undefined && Number.isInteger(value) && value > 0
+		? value
+		: undefined;
+}
 
 function getCustomerId(
 	customer: string | { id: string; email?: string } | undefined,
@@ -182,7 +195,8 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 	async createCheckoutLink(input: CheckoutInput) {
 		// Note: Creem's checkout API does not accept a cancel_url parameter —
 		// `input.cancelUrl` is intentionally ignored; buyers use the hosted
-		// checkout page's back navigation.
+		// checkout page's back navigation. It has no trial parameter either —
+		// `input.trialDays` is ignored; configure the trial on the Creem product.
 		const response = await creemFetch("/checkouts", {
 			method: "POST",
 			body: JSON.stringify({
@@ -363,6 +377,9 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			productId,
 			status,
 			currentPeriodEnd,
+			units: toUnits(
+				object.units ?? object.items?.[0]?.units ?? object.checkout?.units,
+			),
 			metadata: object.metadata,
 		};
 

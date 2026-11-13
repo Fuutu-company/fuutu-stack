@@ -32,7 +32,7 @@ describe("getCreditEventsForMeter", () => {
 			where: {
 				AND: [{ OR: [{ userId: "user-1" }] }, { meterKey: "ai_tokens" }],
 			},
-			orderBy: { createdAt: "desc" },
+			orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 			take: 50,
 		});
 	});
@@ -49,7 +49,7 @@ describe("getCreditEventsForMeter", () => {
 			where: {
 				AND: [{ OR: [{ organizationId: "org-1" }] }, { meterKey: "ai_tokens" }],
 			},
-			orderBy: { createdAt: "desc" },
+			orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 			take: 50,
 		});
 	});
@@ -74,7 +74,7 @@ describe("getCreditEventsForMeter", () => {
 					{ meterKey: "ai_tokens" },
 				],
 			},
-			orderBy: { createdAt: "desc" },
+			orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 			take: 5,
 		});
 	});

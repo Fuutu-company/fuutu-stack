@@ -18,6 +18,7 @@ export {
 	type CreditTopupPackage,
 	FEATURE_CATALOG,
 	type FeatureEntry,
+	getSeatUpgradeUrl,
 	isPaymentsEnabled,
 	LIMITS,
 	type LimitValue,
@@ -31,10 +32,26 @@ export {
 	type PlanLimits,
 	type PlanTier,
 	paymentsConfig,
+	type SeatSyncMode,
 	setPaymentProvider,
+	TIER_ORDER,
 } from "./config";
 export { getPlanIdForProductId } from "./config.server";
 export { createCustomerForUser } from "./customers";
+export {
+	type Entitlement,
+	type EntitlementScope,
+	getOrgEntitlement,
+	getUserEntitlement,
+	hasFeature,
+} from "./entitlements";
+export {
+	type EntitlementResolver,
+	type EntitlementResolverFn,
+	onPurchaseChanged,
+	type PurchaseChangedHandler,
+	registerEntitlementResolver,
+} from "./extensions";
 export {
 	type CatalogFeature,
 	FEATURE_GROUPS,
@@ -64,7 +81,7 @@ export { creemPaymentProvider } from "./providers/creem";
 export { polarPaymentProvider } from "./providers/polar";
 export { noopPaymentProvider } from "./providers/skeletons";
 export { stripePaymentProvider } from "./providers/stripe";
-export { resolvePaymentProvider } from "./resolve";
+export { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
 export {
 	cancelAllSubscriptionsForOrganization,
 	updateSeatsInOrganizationSubscription,

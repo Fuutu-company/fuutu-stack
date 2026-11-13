@@ -2,6 +2,33 @@ import { describe, expect, it, vi } from "vitest";
 import { isValidLocale } from "../../lib/locale-utils";
 import { getFallbackChain, getMessagesForLocale } from "../../lib/messages";
 
+// Pin a two-locale config so the chain/merge tests do not depend on which
+// locales config.ts currently enables (single-locale mode is covered in
+// single-locale.test.ts).
+vi.mock("../../config", () => ({
+	i18nConfig: {
+		enabled: true,
+		locales: {
+			en: {
+				currency: "USD",
+				label: "English",
+				dateFormat: "MM/DD/YYYY",
+				direction: "ltr",
+			},
+			de: {
+				currency: "EUR",
+				label: "Deutsch",
+				dateFormat: "DD.MM.YYYY",
+				direction: "ltr",
+				fallbackLocale: "en",
+			},
+		},
+		defaultLocale: "en",
+		defaultCurrency: "USD",
+		localeCookieName: "NEXT_LOCALE",
+	},
+}));
+
 // Stub the de `common` bundle down to a single key so the tests can prove
 // missing de keys fall back to en — the real de bundle is at full parity.
 vi.mock("../../translations/de/common/index", () => ({

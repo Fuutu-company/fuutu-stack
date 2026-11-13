@@ -63,7 +63,7 @@ export const listContacts = (
 					}
 				: {}),
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 	});

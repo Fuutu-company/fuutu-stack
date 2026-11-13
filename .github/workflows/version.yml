@@ -1,0 +1,180 @@
+name: Version
+run-name: ${{ vars.FUUTU_VERSIONING_ENABLED == 'true' && 'Version' || 'Versioning disabled — set FUUTU_VERSIONING_ENABLED=true' }}
+
+# Automated semantic versioning of YOUR APP — requires a Fuutu versioning
+# API key (MCP Plus / Enterprise). Disabled by default; enable by
+# setting the repository variable FUUTU_VERSIONING_ENABLED=true, plus:
+#   variable FUUTU_VERSIONING_API_URL  — e.g. https://app.fuutustack.com
+#   secret   FUUTU_VERSIONING_API_KEY  — org key with `versioning` scope
+# (Settings → Secrets and variables → Actions).
+#
+# On every push to main the conventional-commit subjects since the last
+# git tag are sent to POST <FUUTU_VERSIONING_API_URL>/api/versioning/next;
+# the returned nextVersion is written to the root package.json `version`
+# (= APP_VERSION), then committed and tagged by the bot.
+#
+# Merge strategy does not matter: merge, squash or rebase — only the
+# commit messages count. Commits from merged kit updates are excluded.
+#
+# Two version lines exist — see docs "Versioning":
+#   APP_VERSION  root package.json  → yours, bumped here
+#   KIT_VERSION  packages/config    → Fuutu's, changes only when you merge
+#                                     a kit update. Never edit it.
+# Only the upstream kit repository (Fuutu-company/fuutu-stack) bumps
+# KIT_VERSION with this workflow.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # release commit + tag push
+
+jobs:
+  # Explains itself in the run summary while versioning is disabled — see ci.yml.
+  enable-versioning:
+    name: ℹ️ Versioning disabled — how to enable
+    runs-on: ubuntu-latest
+    if: vars.FUUTU_VERSIONING_ENABLED != 'true'
+    steps:
+      - run: |
+          {
+            echo "## Fuutu Stack versioning is disabled"
+            echo ""
+            echo "Automated releases require a **Fuutu versioning API key** (MCP Plus / Enterprise)."
+            echo ""
+            echo "**To enable versioning on this repository:**"
+            echo "1. Create the variable \`FUUTU_VERSIONING_ENABLED\` = \`true\`"
+            echo "2. Create the variable \`FUUTU_VERSIONING_API_URL\` (e.g. \`https://app.fuutustack.com\`)"
+            echo "3. Create the secret \`FUUTU_VERSIONING_API_KEY\` (org key with \`versioning\` scope)"
+            echo ""
+            echo "Under **Settings → Secrets and variables → Actions**, then push to main."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Fuutu Stack versioning is disabled — set repository variable FUUTU_VERSIONING_ENABLED=true to activate it (see run summary)."
+
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # GITHUB_TOKEN pushes fire no events, so the bot's release commit cannot
+    # retrigger this workflow; the head_commit guard covers PAT/manual pushes
+    # of a release commit.
+    if: vars.FUUTU_VERSIONING_ENABLED == 'true' && !startsWith(github.event.head_commit.message, 'chore(release):')
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history for tag lookup + commit range
+      - uses: ./.github/actions/setup
+        with:
+          db-generate: "false"
+
+      - name: Select version target
+        id: target
+        run: |
+          if [ "${{ github.repository }}" = "Fuutu-company/fuutu-stack" ]; then
+            echo "kind=kit" >> "$GITHUB_OUTPUT"
+            echo "tag=kit-v" >> "$GITHUB_OUTPUT"
+            CURRENT=$(node -p "require('fs').readFileSync('packages/config/index.ts','utf8').match(/KIT_VERSION = \"([^\"]+)\"/)[1]")
+          else
+            echo "kind=app" >> "$GITHUB_OUTPUT"
+            echo "tag=v" >> "$GITHUB_OUTPUT"
+            CURRENT=$(node -p "require('./package.json').version")
+          fi
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: Collect commits since last tag
+        id: commits
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+          # Public kit repo — its commits are Fuutu's, never your app's.
+          KIT_REPO: https://github.com/Fuutu-company/fuutu-stack.git
+        run: |
+          # App releases: every commit counts (merge, squash or rebase —
+          # only the message matters) EXCEPT commits that came from a kit
+          # update. Those are excluded by subtracting the kit's history.
+          EXCLUDE=""
+          if [ "$TAG" = "v" ]; then
+            if git fetch --quiet --no-tags "$KIT_REPO" "+refs/heads/main:refs/fuutu-kit/main"; then
+              EXCLUDE="refs/fuutu-kit/main"
+            else
+              echo "::warning::Could not fetch the kit history — kit commits may count towards the app version."
+            fi
+          fi
+          # Kit releases are tagged kit-vX.Y.Z, app releases vX.Y.Z — buyers
+          # clone the kit's tags, so the two lines must never collide.
+          LAST_TAG="$(git describe --tags --abbrev=0 --match "${TAG}[0-9]*" 2>/dev/null || true)"
+          if [ -n "$LAST_TAG" ] && [ "$(git rev-parse "$LAST_TAG^{commit}")" = "$(git rev-parse HEAD)" ]; then
+            echo "::notice::HEAD is already tagged $LAST_TAG — nothing to version."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Per commit we send the subject plus any `BREAKING CHANGE:` footer
+          # lines (API limits: 2000 chars per commit, 500 commits).
+          git log --format='%B%x1e' ${LAST_TAG:+$LAST_TAG..}HEAD ${EXCLUDE:+--not $EXCLUDE} \
+            | jq -Rs 'split("\u001e") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))
+                | map(split("\n") as $l | ([$l[0]] + [$l[] | select(test("^BREAKING[ -]CHANGE:"))]) | join("\n") | .[0:2000])
+                | .[0:500]' > commits.json
+          if [ "$(jq length commits.json)" -eq 0 ]; then
+            echo "::notice::No commits since last tag — nothing to version."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Request next version
+        id: api
+        if: steps.commits.outputs.skip != '1'
+        env:
+          API_URL: ${{ vars.FUUTU_VERSIONING_API_URL }}
+          API_KEY: ${{ secrets.FUUTU_VERSIONING_API_KEY }}
+          CURRENT: ${{ steps.target.outputs.current }}
+        run: |
+          jq -n --arg v "$CURRENT" --slurpfile c commits.json \
+            '{framework:"fuutu-stack", currentVersion:$v, commits:$c[0]}' > body.json
+          curl --fail-with-body -sS -X POST "$API_URL/api/versioning/next" \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @body.json -o response.json
+          NEXT=$(jq -r '.nextVersion // empty' response.json)
+          if [ -z "$NEXT" ] || [ "$NEXT" = "$CURRENT" ]; then
+            echo "::notice::No releasable commits (docs/chore/…) — version stays $CURRENT."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          jq '{bump, nextVersion, rationale}' response.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write version, commit and tag
+        if: steps.commits.outputs.skip != '1' && steps.api.outputs.skip != '1'
+        env:
+          KIND: ${{ steps.target.outputs.kind }}
+          TAG: ${{ steps.target.outputs.tag }}
+          CURRENT: ${{ steps.target.outputs.current }}
+          NEXT: ${{ steps.api.outputs.next }}
+        run: |
+          if [ "$KIND" = "kit" ]; then
+            # Kit release (upstream repo only): fingerprint source of truth +
+            # the telemetry ping + .mcp.json copies, which must stay in sync.
+            sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/config/index.ts
+            sed -i "s/KIT_VERSION = \"$CURRENT\"/KIT_VERSION = \"$NEXT\"/" packages/telemetry/bin/ping.mjs
+            sed -i "s/\"X-Fuutu-Kit-Version\": \"$CURRENT\"/\"X-Fuutu-Kit-Version\": \"$NEXT\"/" .mcp.json
+            TITLE="Fuutu Stack v$NEXT"
+          else
+            # App release: root package.json is the single APP_VERSION source.
+            node -e '
+              const fs = require("fs");
+              const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+              pkg.version = process.env.NEXT;
+              fs.writeFileSync("package.json", JSON.stringify(pkg, null, "\t") + "\n");
+            '
+            TITLE="v$NEXT"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u # tracked modifications only — temp JSON files stay untracked
+          git commit -m "chore(release): $TAG$NEXT"
+          git tag -a "$TAG$NEXT" -m "$TITLE"
+          git push --follow-tags

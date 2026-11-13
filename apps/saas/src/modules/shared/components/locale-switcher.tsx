@@ -2,6 +2,7 @@
 
 import type { Locale } from "@fuutu/i18n";
 import { i18nConfig } from "@fuutu/i18n/config";
+import { hasMultipleLocales } from "@fuutu/i18n/locale-utils";
 import {
 	Button,
 	DropdownMenu,
@@ -17,7 +18,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { setUserLocale } from "../actions/locale";
 
-const FLAG_ICONS: Record<Locale, IconifyIcon> = {
+// `Record<Locale, …>` forces a flag for every enabled locale; the `Partial`
+// intersection keeps flags of dormant locales so re-enabling is config-only.
+const FLAG_ICONS: Record<Locale, IconifyIcon> &
+	Partial<Record<string, IconifyIcon>> = {
 	en: gbFlag,
 	de: deFlag,
 };
@@ -33,6 +37,8 @@ export function LocaleSwitcher() {
 			window.location.reload();
 		});
 	};
+
+	if (!hasMultipleLocales()) return null;
 
 	return (
 		<DropdownMenu modal={false}>

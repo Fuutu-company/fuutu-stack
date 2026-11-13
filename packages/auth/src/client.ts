@@ -1,3 +1,4 @@
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { passkeyClient } from "@better-auth/passkey/client";
 import { config } from "@fuutu/config";
 import type { BetterAuthClientOptions } from "better-auth";
@@ -30,6 +31,8 @@ import type { auth } from "./index";
  * - organizationClient: Organization management (gated on organizationsMode)
  * - twoFactorClient: 2FA (gated on features.twoFactor)
  * - passkeyClient: Passkeys (gated on features.passkeys)
+ * - oauthProviderClient: carries the signed MCP OAuth request through
+ *   sign-in and consent (gated on mcpOAuth.enabled)
  */
 const authClientOptions = {
 	plugins: [
@@ -44,6 +47,7 @@ const authClientOptions = {
 			: []),
 		...(authConfig.features.twoFactor ? [twoFactorClient()] : []),
 		...(authConfig.features.passkeys ? [passkeyClient()] : []),
+		...(authConfig.mcpOAuth.enabled ? [oauthProviderClient()] : []),
 	],
 } satisfies BetterAuthClientOptions;
 

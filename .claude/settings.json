@@ -1,0 +1,50 @@
+{
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
+	"enabledMcpjsonServers": [
+		"fuutu",
+		"better-auth",
+		"next-devtools",
+		"shadcn",
+		"playwright"
+	],
+	"permissions": {
+		"allow": [
+			"Bash(pnpm check)",
+			"Bash(pnpm check-types)",
+			"Bash(pnpm test)",
+			"Bash(pnpm test *)",
+			"Bash(pnpm check-translations)"
+		],
+		"deny": ["Read(./**/.env.production*)", "Edit(./**/.env.production*)"],
+		"ask": [
+			"Bash(git push *)",
+			"Bash(git commit *)",
+			"Bash(pnpm db:migrate *)",
+			"Bash(pnpm db:push *)"
+		]
+	},
+	"plansDirectory": "./docs/plans",
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-generated.mjs\""
+					}
+				]
+			}
+		],
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$CLAUDE_PROJECT_DIR/tooling/scripts/dev-session.mjs\" ensure"
+					}
+				]
+			}
+		]
+	}
+}

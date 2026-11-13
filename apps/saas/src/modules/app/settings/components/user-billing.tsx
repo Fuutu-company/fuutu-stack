@@ -15,6 +15,7 @@ import { CreditCard, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { isPaymentsUnavailable } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "user-billing" });
@@ -99,7 +100,11 @@ export function UserSettingsBilling({
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
-			setError(tp("choosePlan.error"));
+			setError(
+				isPaymentsUnavailable(e)
+					? tp("choosePlan.unavailable")
+					: tp("choosePlan.error"),
+			);
 		} finally {
 			setCheckoutLoading(null);
 		}

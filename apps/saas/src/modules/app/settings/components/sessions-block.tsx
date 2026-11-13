@@ -30,7 +30,13 @@ export function SessionsBlock() {
 		try {
 			const res = await authClient.listSessions();
 			const data = (res.data ?? []) as Session[];
-			setSessions(data);
+			setSessions(
+				[...data].sort(
+					(a, b) =>
+						new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
+						a.id.localeCompare(b.id),
+				),
+			);
 		} finally {
 			setLoading(false);
 		}
@@ -103,15 +109,17 @@ export function SessionsBlock() {
 										<Icon className="size-4 text-muted-foreground" />
 									</div>
 									<div className="space-y-0.5">
-										<p className="flex items-center gap-2 font-medium text-sm">
-											<span className="line-clamp-1">{ua || "—"}</span>
+										<div className="flex items-center gap-2 font-medium text-sm">
+											<span className="line-clamp-1" data-volatile>
+												{ua || "—"}
+											</span>
 											{isCurrent && (
 												<Badge variant="secondary">
 													{t("settings.sessions.current")}
 												</Badge>
 											)}
-										</p>
-										<p className="text-muted-foreground text-xs">
+										</div>
+										<p className="text-muted-foreground text-xs" data-volatile>
 											{s.ipAddress ?? "—"} ·{" "}
 											{new Date(s.createdAt).toLocaleDateString()}
 										</p>

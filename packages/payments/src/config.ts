@@ -32,6 +32,14 @@ export type PaymentProviderId =
 
 export type BillingAttachedTo = "user" | "organization";
 
+/**
+ * - "members": the provider's seat quantity follows the org member count
+ *   (auth membership hooks call `syncSeatsForOrganization`).
+ * - "none": membership changes never touch the provider quantity — the
+ *   app manages it (e.g. seats bought up front at checkout).
+ */
+export type SeatSyncMode = "members" | "none";
+
 export interface PaymentsConfig {
 	provider: PaymentProviderId;
 	/**
@@ -57,6 +65,13 @@ export interface PaymentsConfig {
 	 * with the kit (e.g. LemonSqueezy, DodoPayments, or a proprietary system).
 	 */
 	customProvider?: PaymentProvider;
+	/** How seat-based subscriptions track membership. Default "members". */
+	seatSync: SeatSyncMode;
+	/**
+	 * Where seat-limit prompts (402 body, members page) send the user.
+	 * Default: the org's in-app billing page — see `getSeatUpgradeUrl`.
+	 */
+	seatUpgradeUrl?: (orgSlug: string) => string;
 }
 
 export const paymentsConfig: PaymentsConfig = {
@@ -82,7 +97,16 @@ export const paymentsConfig: PaymentsConfig = {
 		config.features.organizationsMode !== "off" ? "organization" : "user",
 	requireActiveSubscription: false,
 	creditsEnabled: config.features.credits ?? true,
+	seatSync: "members",
 };
+
+/** Seat-limit upgrade target for an org — one source for API and UI. */
+export function getSeatUpgradeUrl(orgSlug: string): string {
+	return (
+		paymentsConfig.seatUpgradeUrl?.(orgSlug) ??
+		`/organizations/${encodeURIComponent(orgSlug)}/settings/billing`
+	);
+}
 
 /**
  * Whether a real payment provider is active. False when the provider is
@@ -156,12 +180,23 @@ export const CREDIT_TOPUPS: CreditTopupPackage[] = [
 
 // ─── 2. Plans ─────────────────────────────────────────────────────────────────
 
+/**
+ * ISO 4217 code every plan is priced and charged in — the single source
+ * of truth for currency. Pricing UI, seat totals and invoice fallbacks
+ * read it; `displayPrice` strings must match it (config.test.ts), and the
+ * dev seed's invoices too (test-utils arch guard). The provider-side
+ * prices behind `priceIdEnvVars` must be created in this currency.
+ */
+export const BILLING_CURRENCY = "usd";
+
 export type PlanId = "free" | "pro" | "enterprise";
 
 /** -1 = custom price (no checkout), 0 = free */
 export type PlanAmount = number;
 
 export interface Plan {
+	/** Tier this plan grants — drives FEATURE_CATALOG gating (see TIER_ORDER). */
+	tier?: PlanTier;
 	/** Price in cents (e.g. 1900 = $19.00). 0 = free. -1 = negotiated/custom. */
 	amount: PlanAmount;
 	currency: string;
@@ -209,8 +244,9 @@ export interface Plan {
 
 export const PLANS = {
 	free: {
+		tier: "free",
 		amount: 0,
-		currency: "usd",
+		currency: BILLING_CURRENCY,
 		billingType: "free",
 		displayPrice: "$0",
 		showPriceSuffix: true,
@@ -220,8 +256,9 @@ export const PLANS = {
 		seatBased: undefined,
 	},
 	pro: {
+		tier: "pro",
 		amount: 1900,
-		currency: "usd",
+		currency: BILLING_CURRENCY,
 		billingType: "subscription",
 		interval: "month",
 		trialDays: 14,
@@ -239,14 +276,15 @@ export const PLANS = {
 		},
 	},
 	enterprise: {
+		tier: "enterprise",
 		amount: -1,
-		currency: "usd",
+		currency: BILLING_CURRENCY,
 		billingType: "custom",
 		displayPrice: "—",
 		showInSaas: true,
 		showInMarketing: true,
 		seatBased: undefined,
-		marketingCtaHref: "mailto:license@fuutu.com",
+		marketingCtaHref: "mailto:license@fuutustack.com",
 	},
 } as const satisfies Record<PlanId, Plan>;
 
@@ -326,7 +364,10 @@ export const CREDITS: Record<PlanId, Record<string, LimitValue>> = {
 
 // ─── 5. Features ────────────────────────────────────────────────────────────────
 
-export type PlanTier = "free" | "pro" | "enterprise";
+/** Tiers from lowest to highest — the single source for tier comparisons. */
+export const TIER_ORDER = ["free", "pro", "enterprise"] as const;
+
+export type PlanTier = (typeof TIER_ORDER)[number];
 
 export interface FeatureEntry {
 	/** Minimum tier required. "free" = all plans. */

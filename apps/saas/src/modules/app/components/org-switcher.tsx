@@ -1,6 +1,9 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { authConfig } from "@fuutu/auth/config";
+import { config } from "@fuutu/config";
+import type { PlanId } from "@fuutu/payments/config";
 import {
 	Badge,
 	DropdownMenu,
@@ -15,28 +18,20 @@ import {
 	SidebarMenuSkeleton,
 	useSidebar,
 } from "@fuutu/ui";
+import { useQuery } from "@tanstack/react-query";
 import { Building2, ChevronsUpDown, Plus, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-
-type OrgMetadata = {
-	plan?: string;
-};
+import { orpc } from "@/utils/orpc";
 
 type Org = {
 	id: string;
 	name: string;
 	slug: string;
 	logo?: string | null;
-	metadata?: OrgMetadata | null;
 };
-
-function getPlanLabel(org: Org | null, freePlan: string): string {
-	if (!org) return freePlan;
-	return org.metadata?.plan ?? freePlan;
-}
 
 export function OrgSwitcher() {
 	const t = useTranslations();
@@ -45,14 +40,46 @@ export function OrgSwitcher() {
 	const pathname = usePathname();
 	const { data: organizations, isPending: orgsLoading } =
 		authClient.useListOrganizations();
-	const { data: activeOrg } = authClient.useActiveOrganization();
+	const { data: session } = authClient.useSession();
+
+	// Org creation gate — mirrors the server-side Better Auth predicate so
+	// non-eligible users never see a create CTA (they can still reach
+	// /organizations to accept pending invitations).
+	const creation = authConfig.organizations.allowUserToCreateOrganization;
+	const canCreateOrg =
+		creation === "all" ||
+		(creation === "admin" &&
+			(session?.user as { role?: string } | undefined)?.role === "admin");
+
+	// Forced mode: no personal scope — users always operate inside an org.
+	const forcedOrgs = config.features.organizationsMode === "forced";
 
 	// Better Auth client returns untyped organization data — cast to our typed Org
 	const orgs = (organizations ?? []) as Org[];
-	const active = activeOrg as Org | null;
 
-	// Check if we're currently in personal mode (not inside an org route)
-	const inOrgRoute = pathname.startsWith("/organizations/");
+	// The org shown is the one in the URL, not the session's active org —
+	// deep links and a stale active-org cookie must not show another org.
+	const routeSlug = pathname.match(/^\/organizations\/([^/]+)/)?.[1] ?? null;
+	const inOrgRoute = routeSlug !== null;
+	const active = orgs.find((org) => org.slug === routeSlug) ?? null;
+
+	// Plans come from the same entitlement resolution the billing gates use
+	// (one request for all orgs) — Better Auth's org metadata holds no plan.
+	const { data: orgPlans } = useQuery(
+		orpc.payments.orgPlans.list.queryOptions({
+			input: {},
+			enabled: orgs.length > 0,
+		}),
+	);
+	const planByOrg = new Map<string, PlanId>(
+		(orgPlans?.items ?? []).map((item) => [item.organizationId, item.planId]),
+	);
+
+	function getPlanLabel(org: Org | null): string {
+		const planId = org ? planByOrg.get(org.id) : undefined;
+		if (!planId || planId === "free") return t("dashboard.freePlan");
+		return t(`payments.plans.${planId}.name`);
+	}
 
 	if (orgsLoading) {
 		return (
@@ -65,6 +92,27 @@ export function OrgSwitcher() {
 	}
 
 	if (orgs.length === 0) {
+		return (
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<SidebarMenuButton size="lg" asChild>
+						<Link href="/organizations">
+							<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+								<Building2 className="size-4" />
+							</div>
+							<div className="grid flex-1 text-left text-sm leading-tight">
+								<span className="truncate font-semibold">
+									{t("navigation.organizations")}
+								</span>
+							</div>
+						</Link>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+			</SidebarMenu>
+		);
+	}
+
+	if (orgs.length === 0 && canCreateOrg) {
 		return (
 			<SidebarMenu>
 				<SidebarMenuItem>
@@ -127,7 +175,7 @@ export function OrgSwitcher() {
 								</span>
 								<span className="truncate text-xs">
 									{inOrgRoute
-										? getPlanLabel(active, t("dashboard.freePlan"))
+										? getPlanLabel(active)
 										: t("navigation.personalAccountSubtitle")}
 								</span>
 							</div>
@@ -140,18 +188,25 @@ export function OrgSwitcher() {
 						side={isMobile ? "bottom" : "right"}
 						sideOffset={4}
 					>
-						<DropdownMenuLabel className="text-muted-foreground text-xs">
-							{t("navigation.personalAccount")}
-						</DropdownMenuLabel>
-						<DropdownMenuItem onClick={selectPersonal} className="gap-2 p-2">
-							<div className="flex size-6 items-center justify-center rounded-sm border">
-								<User className="size-4 shrink-0" />
-							</div>
-							<span className="truncate">
-								{t("navigation.personalAccount")}
-							</span>
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
+						{!forcedOrgs && (
+							<>
+								<DropdownMenuLabel className="text-muted-foreground text-xs">
+									{t("navigation.personalAccount")}
+								</DropdownMenuLabel>
+								<DropdownMenuItem
+									onClick={selectPersonal}
+									className="gap-2 p-2"
+								>
+									<div className="flex size-6 items-center justify-center rounded-sm border">
+										<User className="size-4 shrink-0" />
+									</div>
+									<span className="truncate">
+										{t("navigation.personalAccount")}
+									</span>
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+							</>
+						)}
 						<DropdownMenuLabel className="text-muted-foreground text-xs">
 							{t("navigation.organizations")}
 						</DropdownMenuLabel>
@@ -176,21 +231,23 @@ export function OrgSwitcher() {
 								</div>
 								<span className="truncate">{org.name}</span>
 								<Badge variant="secondary" className="ml-auto text-[10px]">
-									{getPlanLabel(org, t("dashboard.freePlan"))}
+									{getPlanLabel(org)}
 								</Badge>
 							</DropdownMenuItem>
 						))}
 						<DropdownMenuSeparator />
-						<DropdownMenuItem className="gap-2 p-2" asChild>
-							<Link href="/organizations">
-								<div className="flex size-6 items-center justify-center rounded-md border bg-background">
-									<Plus className="size-4" />
-								</div>
-								<div className="font-medium text-muted-foreground">
-									{t("navigation.createOrganization")}
-								</div>
-							</Link>
-						</DropdownMenuItem>
+						{canCreateOrg && (
+							<DropdownMenuItem className="gap-2 p-2" asChild>
+								<Link href="/organizations">
+									<div className="flex size-6 items-center justify-center rounded-md border bg-background">
+										<Plus className="size-4" />
+									</div>
+									<div className="font-medium text-muted-foreground">
+										{t("navigation.createOrganization")}
+									</div>
+								</Link>
+							</DropdownMenuItem>
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>

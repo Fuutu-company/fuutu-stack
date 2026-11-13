@@ -13,6 +13,11 @@ if git diff --cached --quiet; then
   echo "Baselines unchanged — nothing to commit"
   exit 0
 fi
+# [skip ci] only on merge-refresh pushes (develop/main): there the baseline
+# commit must NOT re-trigger CI (no required checks await it, a run would
+# just regen again → loop). PR-mode pushes deliberately carry no marker —
+# they fire a real synchronize run via FUUTU_CI_BOT_TOKEN, and the
+# chore(visual) head guard in the visual step terminates the chain.
 if [ "$mode" = "push" ]; then
   git commit -m "chore(visual): update ${app} baselines [skip ci]"
 else

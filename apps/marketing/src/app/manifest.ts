@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { getMessagesForLocale } from "@fuutu/i18n";
 import { i18nConfig } from "@fuutu/i18n/config";
 import type { MetadataRoute } from "next";
@@ -7,7 +8,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
 		i18nConfig.defaultLocale,
 		"marketing",
 	);
-	const brand = messages.app.brand;
+	const brand = config.app.name;
 
 	return {
 		name: brand,

@@ -1,6 +1,6 @@
 {
 	"onboarding": {
-		"title": "Willkommen bei Fuutu Stack",
+		"title": "Willkommen bei {appName}",
 		"description": "Lass uns dein Konto in wenigen Schritten einrichten.",
 		"step": "Schritt {current} von {total}",
 		"profile": {
@@ -15,13 +15,19 @@
 			"name": "Organisationsname",
 			"placeholder": "Acme GmbH",
 			"create": "Organisation erstellen",
-			"skip": "Vorerst überspringen"
+			"skip": "Vorerst überspringen",
+			"pendingInvitations": "Offene Einladungen",
+			"acceptInvitation": "Einladung annehmen",
+			"createDisabled": "Das Erstellen von Organisationen ist deaktiviert. Nimm eine offene Einladung an, um fortzufahren.",
+			"required": "Eine Organisation ist erforderlich. Erstelle eine oder nimm eine offene Einladung an.",
+			"forcedDescription": "Mit Organisationen kannst du im Team zusammenarbeiten. Dieser Workspace setzt eine Organisation voraus."
 		},
 		"done": {
 			"heading": "Alles bereit",
 			"description": "Dein Konto ist einsatzbereit. Auf zum Dashboard.",
 			"cta": "Zum Dashboard"
 		},
-		"failed": "Onboarding-Schritt konnte nicht gespeichert werden."
+		"failed": "Onboarding-Schritt konnte nicht gespeichert werden.",
+		"incomplete": "Schließe zuerst die restlichen Onboarding-Schritte ab."
 	}
 }

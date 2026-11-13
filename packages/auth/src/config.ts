@@ -77,11 +77,30 @@ export const authConfig = {
 		allowedDomains: [] as string[], // empty = all domains allowed
 		invitationOnly: false,
 	},
+	organizations: {
+		// Who may create organizations:
+		//  "all"   — any signed-in user (self-serve SaaS)
+		//  "admin" — only system admins (user.role "admin"); sales-led /
+		//            white-glove flows where staff provision orgs and invite
+		//            owners. Non-admins see invite/contact states instead of
+		//            the create form.
+		//  "none"  — org creation fully disabled; users join via invitation
+		//            only (orgs provisioned externally, e.g. seed/admin API).
+		allowUserToCreateOrganization: "all" as "all" | "admin" | "none",
+	},
+	// OAuth 2.1 sign-in for MCP clients (Claude.ai, ChatGPT, Claude Code,
+	// Cursor, VS Code) — Better Auth acts as the authorization server for
+	// `/api/mcp`. `false` registers no OAuth plugins (API keys only).
+	mcpOAuth: {
+		enabled: true,
+	},
 	redirects: {
 		afterSignIn: "/dashboard",
 		afterSignOut: "/auth/sign-in",
 		afterSignUp: "/onboarding",
 		afterEmailVerification: "/dashboard",
+		/** Auth and OAuth errors (Better Auth `onAPIError.errorURL`). */
+		error: "/auth/error",
 	},
 } as const;
 

@@ -3,9 +3,12 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
+	assignableOrgRoles,
+	canChangeMemberRole,
 	hasOrgPermission,
 	ORG_POLICY,
 	OrgAccessControl,
+	type OrgRole,
 	PERMISSIONS,
 	toOrgRole,
 } from "@fuutu/rbac";
@@ -20,11 +23,21 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@fuutu/ui";
-import { Mail, UserMinus } from "lucide-react";
+import { Mail, Sparkles, UserMinus } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
-import { planGateMessage } from "@/lib/api-error";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+	planGateMessage,
+	type SeatLimit,
+	seatLimitFromError,
+} from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
+import {
+	useFullOrganization,
+	useInvalidateOrganization,
+} from "./use-full-organization";
 
 const log = createLogger({ scope: "org-members" });
 
@@ -55,13 +68,20 @@ type FullOrg = {
 export function OrgSettingsMembers({ slug }: { slug: string }) {
 	const t = useTranslations();
 	const { data: session } = authClient.useSession();
-	const [org, setOrg] = useState<FullOrg | null>(null);
-	const [loading, setLoading] = useState(true);
+	const orgQuery = useFullOrganization(slug);
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (orgQuery.data ?? null) as FullOrg | null;
+	const loading = orgQuery.isPending;
+	const invalidateOrganization = useInvalidateOrganization();
+	const load = () => invalidateOrganization(slug);
 	const [inviteEmail, setInviteEmail] = useState("");
 	const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
 	const [inviting, setInviting] = useState(false);
 	const [inviteError, setInviteError] = useState<string | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
+	// Set from the server's PAYMENT_REQUIRED answer — seats are never
+	// pre-counted here; the auth seat hook is the single source of truth.
+	const [seatLimit, setSeatLimit] = useState<SeatLimit | null>(null);
 	const [busy, setBusy] = useState<string | null>(null);
 
 	const currentUserId = session?.user?.id;
@@ -75,6 +95,24 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 				PERMISSIONS.INVITE_MEMBER,
 			)
 		: false;
+	const actorRole = toOrgRole(currentUserRole);
+	// Same permission the updateRole procedure checks server-side.
+	const canChangeRoles = currentUserRole
+		? hasOrgPermission(ac, actorRole, PERMISSIONS.ORGANIZATION.UPDATE)
+		: false;
+	const ownerCount =
+		org?.members?.filter((m) => toOrgRole(m.role) === "owner").length ?? 0;
+
+	function roleOptionsFor(m: Member): OrgRole[] {
+		const current = toOrgRole(m.role);
+		if (!canChangeRoles || m.userId === currentUserId) return [];
+		// The last owner keeps the role — an org always needs one.
+		if (current === "owner" && ownerCount <= 1) return [];
+		const options = assignableOrgRoles(actorRole).filter((role) =>
+			canChangeMemberRole(actorRole, current, role),
+		);
+		return options.some((role) => role !== current) ? options : [];
+	}
 
 	const roleLabel: Record<string, string> = {
 		owner: t("organizations.settings.roleOwner"),
@@ -82,29 +120,12 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 		member: t("organizations.settings.roleMember"),
 	};
 
-	const load = useCallback(async () => {
-		setLoading(true);
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-			const data = res.data as FullOrg | null;
-			if (data) setOrg(data);
-		} finally {
-			setLoading(false);
-		}
-	}, [slug]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
-
 	async function invite(e: React.FormEvent) {
 		e.preventDefault();
 		if (!org) return;
 		setInviting(true);
 		setInviteError(null);
+		setSeatLimit(null);
 		try {
 			await orpc.organizations.members.invite.call({
 				organizationId: org.id,
@@ -115,7 +136,12 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 			await load();
 		} catch (e) {
 			log.error("inviteMember failed", { err: e });
-			setInviteError(planGateMessage(e, t, "organizations.settings.failed"));
+			const limit = seatLimitFromError(e);
+			if (limit) {
+				setSeatLimit(limit);
+			} else {
+				setInviteError(planGateMessage(e, t, "organizations.settings.failed"));
+			}
 		} finally {
 			setInviting(false);
 		}
@@ -130,10 +156,31 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 				organizationId: org.id,
 				memberIdOrEmail: memberId,
 			});
+			setSeatLimit(null);
 			await load();
 		} catch (e) {
 			log.error("removeMember failed", { err: e });
 			setActionError(t("organizations.settings.failed"));
+		} finally {
+			setBusy(null);
+		}
+	}
+
+	async function changeRole(m: Member, role: OrgRole) {
+		if (!org || toOrgRole(m.role) === role) return;
+		setBusy(m.id);
+		setActionError(null);
+		try {
+			await orpc.organizations.members.updateRole.call({
+				organizationId: org.id,
+				memberId: m.id,
+				role,
+			});
+			toast.success(t("organizations.settings.roleUpdated"));
+			await load();
+		} catch (e) {
+			log.error("updateMemberRole failed", { err: e });
+			toast.error(t("organizations.settings.roleUpdateFailed"));
 		} finally {
 			setBusy(null);
 		}
@@ -146,6 +193,7 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 			await orpc.organizations.invitations.revoke.call({
 				invitationId: id,
 			});
+			setSeatLimit(null);
 			await load();
 		} catch (e) {
 			log.error("cancelInvite failed", { err: e });
@@ -177,6 +225,26 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 
 			<Card>
 				<CardContent className="space-y-6 p-6 md:p-8">
+					{canManageMembers && seatLimit && (
+						<div className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+							<div>
+								<p className="font-medium text-sm">
+									{t("organizations.settings.seatLimitReached", {
+										seats: seatLimit.seatsTotal,
+									})}
+								</p>
+								<p className="text-muted-foreground text-xs">
+									{t("organizations.settings.seatLimitHint")}
+								</p>
+							</div>
+							<Button asChild size="sm">
+								<Link href={seatLimit.upgradeUrl}>
+									<Sparkles className="size-4" />
+									{t("organizations.settings.seatLimitCta")}
+								</Link>
+							</Button>
+						</div>
+					)}
 					{canManageMembers && (
 						<form onSubmit={invite} className="flex flex-col gap-3 sm:flex-row">
 							<Input
@@ -231,35 +299,63 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 								{t("organizations.settings.activeMembers")}
 							</p>
 							<ul className="divide-y rounded-lg border">
-								{org.members.map((m) => (
-									<li
-										key={m.id}
-										className="flex items-center justify-between gap-4 p-3"
-									>
-										<div>
-											<p className="font-medium text-sm">
-												{m.user?.name ?? m.user?.email ?? m.userId}
-											</p>
-											<p className="text-muted-foreground text-xs">
-												{m.user?.email} ·{" "}
-												{roleLabel[toOrgRole(m.role)] ?? m.role}
-											</p>
-										</div>
-										{canManageMembers && toOrgRole(m.role) !== "owner" && (
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => removeMember(m.id)}
-												disabled={busy === m.id}
-											>
-												<UserMinus className="size-4" />
-												<span className="sr-only">
-													{t("organizations.settings.removeMember")}
-												</span>
-											</Button>
-										)}
-									</li>
-								))}
+								{org.members.map((m) => {
+									const roleOptions = roleOptionsFor(m);
+									const memberName = m.user?.name ?? m.user?.email ?? m.userId;
+									return (
+										<li
+											key={m.id}
+											className="flex items-center justify-between gap-4 p-3"
+										>
+											<div>
+												<p className="font-medium text-sm">{memberName}</p>
+												<p className="text-muted-foreground text-xs">
+													{m.user?.email} ·{" "}
+													{roleLabel[toOrgRole(m.role)] ?? m.role}
+												</p>
+											</div>
+											<div className="flex items-center gap-2">
+												{roleOptions.length > 0 && (
+													<Select
+														value={toOrgRole(m.role)}
+														onValueChange={(v) => changeRole(m, toOrgRole(v))}
+														disabled={busy === m.id}
+													>
+														<SelectTrigger
+															aria-label={t(
+																"organizations.settings.changeRoleLabel",
+																{ name: memberName },
+															)}
+															className="w-28"
+														>
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{roleOptions.map((role) => (
+																<SelectItem key={role} value={role}>
+																	{roleLabel[role]}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												)}
+												{canManageMembers && toOrgRole(m.role) !== "owner" && (
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => removeMember(m.id)}
+														disabled={busy === m.id}
+													>
+														<UserMinus className="size-4" />
+														<span className="sr-only">
+															{t("organizations.settings.removeMember")}
+														</span>
+													</Button>
+												)}
+											</div>
+										</li>
+									);
+								})}
 							</ul>
 						</div>
 					)}

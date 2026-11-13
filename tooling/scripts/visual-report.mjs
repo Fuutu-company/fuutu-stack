@@ -2,6 +2,9 @@
 // Build a self-contained visual-diff HTML report from .fuutu/visual-baselines/<app>/.
 // "expected" = baseline committed in HEAD (git show), "actual" = the PNG on disk.
 // Usage: node tooling/scripts/visual-report.mjs --app <saas|marketing> [--out <dir>] [--threshold 0.005]
+// Local mode (visual-local.mjs): --expected <dir> --actual <dir> compares two
+// PNG directories instead of git HEAD vs the working tree; --label <text> adds a
+// banner; --local links back with file:// friendly hrefs (…/index.html).
 
 import { execFileSync } from "node:child_process";
 import {
@@ -32,21 +35,33 @@ const threshold = Number.parseFloat(arg("threshold", "0.005"));
 // Repo slug for GitHub PR links — GITHUB_REPOSITORY is set in CI.
 const repoSlug = process.env.GITHUB_REPOSITORY ?? "Fuutu-company/fuutu-stack";
 const outDir = arg("out", `apps/${app}/visual-report`);
+const expectedDirArg = arg("expected");
+const actualDirArg = arg("actual");
+const label = arg("label");
+const localMode = args.includes("--local");
+const dirMode = Boolean(expectedDirArg && actualDirArg);
 const imagesDir = path.join(outDir, "images");
 
 const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], {
 	encoding: "utf8",
 }).trim();
 const baselineDir = `.fuutu/visual-baselines/${app}`;
-const baselineAbs = path.join(repoRoot, baselineDir);
+const baselineAbs = dirMode
+	? path.resolve(actualDirArg)
+	: path.join(repoRoot, baselineDir);
+const expectedAbs = dirMode ? path.resolve(expectedDirArg) : null;
 if (!existsSync(baselineAbs)) {
-	console.error(`Baseline dir not found: ${baselineDir}`);
+	console.error(`Baseline dir not found: ${baselineAbs}`);
 	process.exit(2);
 }
 
 const git = (gitArgs) =>
 	execFileSync("git", gitArgs, { cwd: repoRoot, encoding: "utf8" }).trim();
 const gitShow = (file) => {
+	if (dirMode) {
+		const f = path.join(expectedAbs, path.basename(file));
+		return existsSync(f) ? readFileSync(f) : null;
+	}
 	try {
 		return execFileSync("git", ["show", `HEAD:${file}`], { cwd: repoRoot });
 	} catch {
@@ -56,9 +71,9 @@ const gitShow = (file) => {
 
 // --- working-tree status: which baselines the test run rewrote ----------------
 const statusByFile = new Map();
-for (const line of git(["status", "--porcelain", "--", baselineDir]).split(
-	"\n",
-)) {
+for (const line of dirMode
+	? []
+	: git(["status", "--porcelain", "--", baselineDir]).split("\n")) {
 	if (!line.trim()) continue;
 	statusByFile.set(line.slice(3).trim(), line.slice(0, 2));
 }
@@ -133,10 +148,14 @@ for (const [file, code] of statusByFile) {
 	const name = path.basename(file);
 	if (name.endsWith(".png") && code.includes("D")) files.add(name);
 }
+if (dirMode && existsSync(expectedAbs)) {
+	for (const f of readdirSync(expectedAbs))
+		if (f.endsWith(".png")) files.add(f);
+}
 
 const results = [];
 for (const file of [...files].sort()) {
-	const rel = `${baselineDir}/${file}`;
+	const rel = dirMode ? file : `${baselineDir}/${file}`;
 	const code = statusByFile.get(rel) ?? "";
 	const actual = onDisk.has(file)
 		? readFileSync(path.join(baselineAbs, file))
@@ -213,6 +232,7 @@ const summary = {
 	pr: process.env.GITHUB_EVENT_PULL_REQUEST_NUMBER || readPrNumber(),
 	sha: git(["rev-parse", "--short", "HEAD"]),
 	generatedAt: new Date().toISOString(),
+	label: label ?? null,
 	threshold,
 	total: results.length,
 	changed: count("changed"),
@@ -423,9 +443,10 @@ img{width:100%;border:1px solid #27272a;border-radius:.5rem;background:#000;imag
 .vp-mobile figure{max-width:390px}
 .vp-tablet figure{max-width:560px}
 </style></head><body>
-<nav class="backnav"><a href="../">← ${summary.pr ? "PR" : esc(summary.branch)} overview</a><a href="../../">All reports</a></nav>
+<nav class="backnav">${localMode ? `<a href="../index.html">← All reports</a>` : `<a href="../">← ${summary.pr ? "PR" : esc(summary.branch)} overview</a><a href="../../">All reports</a>`}</nav>
 <h1>Visual diff report — ${esc(app)}</h1>
 <p class="meta">branch <code>${esc(summary.branch)}</code>${summary.pr ? ` · PR <a href="https://github.com/${esc(repoSlug)}/pull/${esc(summary.pr)}" target="_blank" rel="noopener"><code>#${esc(summary.pr)}</code></a>` : ""} · commit <code>${esc(summary.sha)}</code> · ${esc(summary.generatedAt)} · ${(threshold * 100).toFixed(2).replace(/\.?0+$/, "")}% pixel tolerance</p>
+${label ? `<p class="meta"><strong>${esc(label)}</strong></p>` : ""}
 <nav class="filters">
 <label>Category <select id="f-category"><option value="">all</option>${options(categories)}</select></label>
 <label>Browser <select id="f-project"><option value="">all</option>${options(projects)}</select></label>

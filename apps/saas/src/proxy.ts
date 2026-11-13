@@ -1,8 +1,14 @@
 import {
+	hasApiKeyCredential,
+	hasSessionCookie,
+} from "@fuutu/auth/session-cookie";
+import {
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
+import { env } from "@fuutu/env/saas";
 import { type NextRequest, NextResponse } from "next/server";
+import { APP_PUBLIC_PREFIXES } from "./proxy-public";
 
 /**
  * Stamp the kit fingerprint on every NextResponse the proxy returns.
@@ -39,9 +45,9 @@ const PUBLIC_PREFIXES = [
 	"/api/auth",
 	"/api/health",
 	"/api/version",
-	// reason: webhook endpoints are auth-free by design — Polar (and any future
-	// payments provider) verify the request via a signed shared-secret header
-	// (`Polar-Signature`, HMAC). DO NOT add new bypasses here without a matching
+	// reason: webhook endpoints are auth-free by design — every payments
+	// provider (Creem, Stripe, Polar, custom) is verified by its signed
+	// shared-secret header (HMAC) inside handlePaymentsWebhook. DO NOT add new bypasses here without a matching
 	// signature scheme + smoke test — security: public proxy bypass requires
 	// webhook signature validation.
 	"/api/webhooks",
@@ -54,9 +60,20 @@ const PUBLIC_PREFIXES = [
 	// `Authorization: Bearer ${CRON_SECRET}` (shared secret), not a session
 	// cookie. The Hono route returns 501 when the secret is unset.
 	"/api/cron",
+	// reason: MCP endpoint — clients authenticate per request with an org
+	// API key (`Authorization: Bearer`, `mcp` scope) or an OAuth access token,
+	// both verified by resolveMcpPrincipal; anonymous callers only reach
+	// `public` tools.
+	"/api/mcp",
+	// reason: OAuth discovery documents (RFC 8414 authorization-server and
+	// RFC 9728 protected-resource metadata) are public by spec — MCP clients
+	// fetch them before they hold any credential. Read-only JSON, no secrets.
+	"/.well-known",
 	"/auth",
 	"/image-proxy",
-] as const;
+	// reason: app-owned prefixes — each documented in proxy-public.ts
+	...APP_PUBLIC_PREFIXES,
+];
 const AUTH_PREFIX = "/auth";
 
 function isPublic(pathname: string): boolean {
@@ -76,20 +93,25 @@ export async function proxy(req: NextRequest) {
 		return stamp(NextResponse.next({ request: { headers: requestHeaders } }));
 	}
 
-	const sessionToken = req.cookies.get("better-auth.session_token")?.value;
+	// Matches `__Secure-better-auth.session_token` (https) and the plain name.
+	const hasSession = hasSessionCookie(req, env.FUUTU_AUTH_COOKIE_PREFIX);
 
 	// API-key requests carry no session cookie — they authenticate in the oRPC
-	// context via `x-api-key` (verifyApiKey → owner session, org pinning
+	// context via `x-api-key` or `Authorization: Bearer futu_sk_…` (verifyApiKey → owner session, org pinning
 	// fail-closed). The optimistic cookie check must not bounce them.
-	const hasApiKey = req.headers.get("x-api-key") !== null;
+	const hasApiKey = hasApiKeyCredential(req.headers);
 
 	// OPTIMISTIC check only — real auth happens in layout via requireAuth().
-	if (!sessionToken && !hasApiKey) {
+	if (!hasSession && !hasApiKey) {
 		const loginUrl = new URL(`${AUTH_PREFIX}/sign-in`, req.url);
 		loginUrl.searchParams.set("redirect", pathname);
 		return stamp(NextResponse.redirect(loginUrl));
 	}
 
+	// Forced-mode org enforcement lives in `requireOrg()` ((app) layout):
+	// it needs a DB membership count — a cookie can't distinguish "member
+	// with no active org" from "no memberships", so an optimistic check
+	// here would redirect valid members. Proxy stays auth-only.
 	return stamp(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 

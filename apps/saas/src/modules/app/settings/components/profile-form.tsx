@@ -1,20 +1,42 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
-import { Button, Field, FieldGroup, FieldLabel, Input } from "@fuutu/ui";
+import {
+	Button,
+	Field,
+	FieldGroup,
+	FieldLabel,
+	Input,
+	Skeleton,
+} from "@fuutu/ui";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export function ProfileForm() {
+	const { data: session, isPending } = authClient.useSession();
+	// Mount the form only with the loaded user: starting from an empty name
+	// rendered the save button disabled, then faded it in — a visible flicker
+	// (and a mid-transition contrast failure in a11y scans).
+	if (isPending) return <Skeleton className="h-64 w-full" />;
+	return (
+		<ProfileFields
+			initialName={session?.user?.name ?? ""}
+			email={session?.user?.email ?? ""}
+		/>
+	);
+}
+
+function ProfileFields({
+	initialName,
+	email,
+}: {
+	initialName: string;
+	email: string;
+}) {
 	const t = useTranslations();
-	const { data: session } = authClient.useSession();
-	const [name, setName] = useState("");
+	const [name, setName] = useState(initialName);
 	const [isSaving, setIsSaving] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (session?.user?.name) setName(session.user.name);
-	}, [session?.user?.name]);
 
 	async function save(e: React.FormEvent) {
 		e.preventDefault();
@@ -55,12 +77,7 @@ export function ProfileForm() {
 					<FieldLabel htmlFor="email">
 						{t("settings.profile.emailLabel")}
 					</FieldLabel>
-					<Input
-						id="email"
-						type="email"
-						value={session?.user?.email ?? ""}
-						disabled
-					/>
+					<Input id="email" type="email" value={email} disabled />
 				</Field>
 			</FieldGroup>
 			<div className="flex items-center gap-3">

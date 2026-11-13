@@ -1,8 +1,8 @@
 {
-	"title": "Fuutu Stack Dokumentation",
+	"title": "{appName} Dokumentation",
 	"subtitle": "Produktionsreife Dokumentation mit Fumadocs",
 	"description": "Eine gebrauchsfertige Dokumentationsvorlage, die mit dem Fuutu Stack geliefert wird. Gebaut mit Fumadocs, Next.js und Tailwind CSS. Jede Fumadocs-Funktion wird als anpassbares Beispiel gezeigt.",
-	"metaTitle": "Fuutu Stack Dokumentation — Produktionsreife Doku",
+	"metaTitle": "{appName} Dokumentation — Produktionsreife Doku",
 	"metaDescription": "Eine gebrauchsfertige Dokumentationsvorlage mit Fumadocs, Next.js und Tailwind CSS. Vollständige i18n, OpenAPI-Docs, Suche und Dark Mode out of the box.",
 	"exploreDocs": "Dokumentation erkunden",
 	"viewOnGithub": "Auf GitHub ansehen"

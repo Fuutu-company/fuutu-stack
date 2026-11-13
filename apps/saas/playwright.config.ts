@@ -1,15 +1,46 @@
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+
+/** This project's port slot (`pnpm ports`) — assigned on first use. */
+function localProject(): { ports: Record<string, number> } {
+	let root = process.cwd();
+	while (!existsSync(join(root, "pnpm-workspace.yaml"))) {
+		const up = dirname(root);
+		if (up === root) throw new Error("no pnpm workspace above the cwd");
+		root = up;
+	}
+	const file = join(root, ".fuutu", "project.json");
+	if (!existsSync(file)) {
+		execFileSync("node", ["tooling/scripts/ports.mjs", "ensure"], {
+			cwd: root,
+		});
+	}
+	return JSON.parse(readFileSync(file, "utf8"));
+}
 
 const IS_CI = !!process.env.CI;
 const ALL_BROWSERS = IS_CI || process.env.PW_ALL_BROWSERS === "1";
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+// Local runs get their own server on this project's E2E port (port slots,
+// `pnpm ports`) with CI settings — the dev session on the app port stays
+// untouched. CI keeps the classic port.
+const project = IS_CI ? null : localProject();
+const BASE_URL =
+	process.env.PLAYWRIGHT_BASE_URL ??
+	(project
+		? `http://localhost:${project.ports.e2eSaas}`
+		: "http://localhost:3000");
 const USE_PROD = process.env.PLAYWRIGHT_USE_PROD === "1";
 
 export default defineConfig({
 	testDir: "./tests",
 	// Baselines are committed to the repo (.fuutu/visual-baselines/<app>) —
 	// CI regenerates + auto-commits them on merge to develop/main.
-	snapshotDir: "../../.fuutu/visual-baselines/saas",
+	// `pnpm test:visual:local` points this at a scratch dir so committed baselines stay untouched.
+	snapshotDir:
+		process.env.FUUTU_VISUAL_SNAPSHOT_DIR ??
+		"../../.fuutu/visual-baselines/saas",
 	snapshotPathTemplate: "{snapshotDir}/{arg}-{projectName}-{platform}{ext}",
 	timeout: 45_000,
 	expect: {
@@ -84,11 +115,14 @@ export default defineConfig({
 	webServer: process.env.PLAYWRIGHT_BASE_URL
 		? undefined
 		: {
-				command: USE_PROD
-					? "dotenv -c -e ../../.env -- pnpm -F @fuutu/saas start"
-					: "dotenv -c -e ../../.env -- pnpm -F @fuutu/saas dev",
+				command: IS_CI
+					? USE_PROD
+						? "dotenv -c -e ../../.env -- pnpm -F @fuutu/saas start"
+						: "dotenv -c -e ../../.env -- pnpm -F @fuutu/saas dev"
+					: "dotenv -c -e ../../.env -- node ../../tooling/scripts/next.mjs e2e saas",
 				url: BASE_URL,
 				reuseExistingServer: !IS_CI,
-				timeout: 60_000,
+				// Local E2E servers build once (production mode) before starting.
+				timeout: IS_CI ? 60_000 : 300_000,
 			},
 });

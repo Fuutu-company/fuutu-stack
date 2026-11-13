@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { analyticsCspOrigins } from "@fuutu/analytics";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
@@ -8,6 +9,7 @@ import { i18nConfig } from "@fuutu/i18n/config";
 import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { appRedirects } from "./app-redirects";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withMDX = createMDX();
@@ -24,7 +26,7 @@ const securityHeaders = [
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 	{
 		key: "Permissions-Policy",
-		value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+		value: "camera=(), microphone=(), geolocation=()",
 	},
 	{ key: "X-DNS-Prefetch-Control", value: "on" },
 	{
@@ -55,6 +57,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
 	typedRoutes: false,
 	reactCompiler: true,
+	// Self-hosting (Docker/Coolify): standalone server traced from the repo
+	// root so workspace packages (packages/*) land in .next/standalone.
+	output: "standalone",
+	outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
 	transpilePackages: ["shiki", "@fuutu/ui", "@fuutu/i18n", "@fuutu/analytics"],
 	async headers() {
 		return [
@@ -69,6 +75,9 @@ const nextConfig: NextConfig = {
 				],
 			},
 		];
+	},
+	async redirects() {
+		return appRedirects;
 	},
 	async rewrites() {
 		return [

@@ -1,3 +1,4 @@
+import { getAuthMethods } from "@fuutu/auth/methods";
 import { Skeleton } from "@fuutu/ui";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function SignInPage() {
 	return (
 		<Suspense fallback={<Skeleton className="h-80 w-full max-w-md" />}>
-			<AuthSignIn />
+			<AuthSignIn methods={getAuthMethods()} />
 		</Suspense>
 	);
 }

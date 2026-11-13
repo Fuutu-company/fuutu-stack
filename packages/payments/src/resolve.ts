@@ -49,3 +49,27 @@ export function resolvePaymentProvider(): PaymentProvider {
 		}
 	}
 }
+
+/**
+ * Resolve the provider that owns a stored record (`Purchase.provider`) —
+ * not necessarily the active one after a provider switch. Returns `null`
+ * for an id this install cannot serve (e.g. a removed custom provider or
+ * the noop skeleton): callers must then skip the provider call rather
+ * than send a foreign subscription id to the active provider.
+ */
+export function resolvePaymentProviderById(
+	providerId: string,
+): PaymentProvider | null {
+	switch (providerId) {
+		case polarPaymentProvider.id:
+			return polarPaymentProvider;
+		case stripePaymentProvider.id:
+			return stripePaymentProvider;
+		case creemPaymentProvider.id:
+			return creemPaymentProvider;
+		default:
+			return paymentsConfig.customProvider?.id === providerId
+				? paymentsConfig.customProvider
+				: null;
+	}
+}

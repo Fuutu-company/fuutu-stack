@@ -8,6 +8,7 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 import { analyticsConfig } from "./config";
@@ -89,31 +90,63 @@ export function useConsent(): ConsentContextValue {
 export function ConsentBanner() {
 	const t = useTranslations("consent");
 	const { status, hydrated, grant, deny } = useConsent();
-
-	if (!consentBannerVisible()) return null;
+	const bannerRef = useRef<HTMLDivElement>(null);
+	const [reservedPx, setReservedPx] = useState(0);
 	// Defer the first paint until we've checked the consent cookie client-side —
 	// otherwise the banner flashes on reload for users who already decided.
-	if (!hydrated) return null;
-	if (status !== "unknown") return null;
+	const visible = consentBannerVisible() && hydrated && status === "unknown";
+
+	// The banner floats over the bottom of the viewport. Reserve that strip
+	// while it is shown: `scroll-padding-bottom` keeps focused / scrolled-to
+	// elements (plan CTAs, form fields) above it, and the spacer below lets
+	// the end of the page scroll clear of it.
+	useEffect(() => {
+		const el = bannerRef.current;
+		if (!visible || !el) return;
+		const root = document.documentElement;
+		const update = () => {
+			const px = Math.max(
+				0,
+				Math.ceil(window.innerHeight - el.getBoundingClientRect().top),
+			);
+			setReservedPx(px);
+			root.style.scrollPaddingBottom = `${px}px`;
+		};
+		update();
+		const observer = new ResizeObserver(update);
+		observer.observe(el);
+		window.addEventListener("resize", update);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener("resize", update);
+			root.style.scrollPaddingBottom = "";
+		};
+	}, [visible]);
+
+	if (!visible) return null;
 
 	return (
-		<div
-			role="dialog"
-			aria-label={t("title")}
-			className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-2xl flex-col gap-3 rounded-xl border bg-background p-4 shadow-lg sm:flex-row sm:items-center sm:gap-4"
-		>
-			<div className="flex-1 text-sm">
-				<p className="font-medium">{t("title")}</p>
-				<p className="text-muted-foreground">{t("description")}</p>
+		<>
+			<div aria-hidden="true" style={{ height: reservedPx }} />
+			<div
+				ref={bannerRef}
+				role="dialog"
+				aria-label={t("title")}
+				className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-2xl flex-col gap-3 rounded-xl border bg-background p-4 shadow-lg sm:flex-row sm:items-center sm:gap-4"
+			>
+				<div className="flex-1 text-sm">
+					<p className="font-medium">{t("title")}</p>
+					<p className="text-muted-foreground">{t("description")}</p>
+				</div>
+				<div className="flex gap-2">
+					<Button type="button" variant="outline" size="sm" onClick={deny}>
+						{t("deny")}
+					</Button>
+					<Button type="button" size="sm" onClick={grant}>
+						{t("accept")}
+					</Button>
+				</div>
 			</div>
-			<div className="flex gap-2">
-				<Button type="button" variant="outline" size="sm" onClick={deny}>
-					{t("deny")}
-				</Button>
-				<Button type="button" size="sm" onClick={grant}>
-					{t("accept")}
-				</Button>
-			</div>
-		</div>
+		</>
 	);
 }

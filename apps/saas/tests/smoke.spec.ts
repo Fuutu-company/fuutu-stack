@@ -82,6 +82,14 @@ test.describe("API health", () => {
 		expect(body.name).toBe("Fuutu-Stack");
 		expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
 	});
+
+	test("/api/version reports the app version separately from the kit", async ({
+		request,
+	}) => {
+		const res = await request.get("/api/version");
+		const body = (await res.json()) as { app?: { version?: string } };
+		expect(body.app?.version).toMatch(/^\d+\.\d+\.\d+/);
+	});
 });
 
 test.describe("security headers + kit fingerprint", () => {
@@ -97,6 +105,8 @@ test.describe("security headers + kit fingerprint", () => {
 		expect(h["x-content-type-options"]).toBe("nosniff");
 		expect(h["referrer-policy"]).toContain("strict-origin");
 		expect(h["permissions-policy"]).toContain("camera=()");
+		// Retired FLoC token — current Chrome logs an error for it on every page.
+		expect(h["permissions-policy"]).not.toContain("interest-cohort");
 		expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
 	});
 });

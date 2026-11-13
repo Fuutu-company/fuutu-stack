@@ -10,6 +10,12 @@
 		"includes": [
 			"**",
 			"!**/.next",
+			"!**/.fuutu/browser",
+			"!**/.claude/worktrees",
+			"!**/.fuutu/session",
+			"!**/.fuutu/visual-report",
+			"!**/.fuutu/visual-local",
+			"!**/.fuutu/project.json",
 			"!**/dist",
 			"!**/out",
 			"!**/.turbo",

@@ -5,19 +5,20 @@ import type {
 	PurchaseStatus,
 	PurchaseType,
 } from "../generated/client";
+import { assertSingleOwner } from "./owner";
 
 const ACTIVE_STATUSES: PurchaseStatus[] = ["ACTIVE", "TRIALING"];
 
 export const getPurchasesByUserId = (userId: string) =>
 	db.purchase.findMany({
 		where: { userId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 
 export const getPurchasesByOrganizationId = (organizationId: string) =>
 	db.purchase.findMany({
 		where: { organizationId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 
 /**
@@ -44,6 +45,30 @@ export const getActiveSubscriptionForOrganization = (organizationId: string) =>
 		where: { organizationId, ...accessGatingWhere() },
 	});
 
+export type PurchaseOwner = { userId: string } | { organizationId: string };
+
+/**
+ * Lifetime access: an ACTIVE one-time purchase of a plan product
+ * (`billingType: "one_time"`). `productIds` are the plans' provider price
+ * ids — credit top-ups are one-time purchases too and must not count.
+ * Latest purchase first. No ids → no one-time plans configured → null.
+ */
+export const getActiveOneTimePlanPurchase = async (
+	owner: PurchaseOwner,
+	productIds: string[],
+): Promise<Purchase | null> => {
+	if (productIds.length === 0) return null;
+	return db.purchase.findFirst({
+		where: {
+			...owner,
+			type: "ONE_TIME",
+			status: "ACTIVE",
+			productId: { in: productIds },
+		},
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+	});
+};
+
 export const getPurchaseByProviderSubscriptionId = (
 	provider: string,
 	subscriptionId: string,
@@ -53,25 +78,14 @@ export const getPurchaseByProviderSubscriptionId = (
 	});
 
 /**
- * Idempotency lookup for one-time checkouts: `metadata.checkoutEventId`
- * stores the provider's webhook event id (set by webhook sync). The partial
- * unique index "purchase_provider_checkoutEventId_key" is on the text
- * extraction `(provider, metadata ->> 'checkoutEventId')` — Prisma's JSON
- * `path`+`equals` filter emits a jsonb `#>` comparison the index does not
- * cover, so this uses parameterized raw SQL matching the index expression.
+ * Idempotency lookup for one-time checkouts by the provider's webhook event
+ * id — backed by the partial unique index "purchase_provider_checkoutEventId_key".
  */
-export const getPurchaseByCheckoutEventId = async (
+export const getPurchaseByCheckoutEventId = (
 	provider: string,
 	checkoutEventId: string,
-): Promise<Purchase | null> => {
-	const rows = await db.$queryRaw<Purchase[]>`
-		SELECT * FROM "app"."purchase"
-		WHERE "provider" = ${provider}
-			AND "metadata" ->> 'checkoutEventId' = ${checkoutEventId}
-		LIMIT 1
-	`;
-	return rows[0] ?? null;
-};
+): Promise<Purchase | null> =>
+	db.purchase.findFirst({ where: { provider, checkoutEventId } });
 
 /**
  * Trialing subscriptions ending within a reminder window, for the
@@ -121,10 +135,15 @@ export type CreatePurchaseInput = {
 	userId?: string | null;
 	organizationId?: string | null;
 	metadata?: unknown;
+	/** Provider webhook event id of a one-time checkout (idempotency key). */
+	checkoutEventId?: string | null;
 };
 
-export const createPurchase = (input: CreatePurchaseInput): Promise<Purchase> =>
-	db.purchase.create({
+export const createPurchase = (
+	input: CreatePurchaseInput,
+): Promise<Purchase> => {
+	assertSingleOwner(input);
+	return db.purchase.create({
 		data: {
 			type: input.type,
 			status: input.status,
@@ -138,8 +157,10 @@ export const createPurchase = (input: CreatePurchaseInput): Promise<Purchase> =>
 			userId: input.userId ?? null,
 			organizationId: input.organizationId ?? null,
 			metadata: input.metadata as Prisma.InputJsonValue,
+			checkoutEventId: input.checkoutEventId ?? null,
 		},
 	});
+};
 
 export type UpdatePurchaseInput = {
 	id: string;
@@ -148,13 +169,17 @@ export type UpdatePurchaseInput = {
 	productId?: string | null;
 	currentPeriodEnd?: Date | null;
 	customerId?: string | null;
+	quantity?: number;
 	userId?: string | null;
 	organizationId?: string | null;
 	metadata?: unknown;
 };
 
-export const updatePurchase = (input: UpdatePurchaseInput): Promise<Purchase> =>
-	db.purchase.update({
+export const updatePurchase = (
+	input: UpdatePurchaseInput,
+): Promise<Purchase> => {
+	if (input.userId && input.organizationId) assertSingleOwner(input);
+	return db.purchase.update({
 		where: { id: input.id },
 		data: {
 			...(input.status !== undefined && { status: input.status }),
@@ -164,6 +189,7 @@ export const updatePurchase = (input: UpdatePurchaseInput): Promise<Purchase> =>
 				currentPeriodEnd: input.currentPeriodEnd,
 			}),
 			...(input.customerId !== undefined && { customerId: input.customerId }),
+			...(input.quantity !== undefined && { quantity: input.quantity }),
 			...(input.userId !== undefined && { userId: input.userId }),
 			...(input.organizationId !== undefined && {
 				organizationId: input.organizationId,
@@ -173,6 +199,7 @@ export const updatePurchase = (input: UpdatePurchaseInput): Promise<Purchase> =>
 			}),
 		},
 	});
+};
 
 export const updatePaymentsCustomerId = (
 	userId: string,

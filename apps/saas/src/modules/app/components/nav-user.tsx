@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { authConfig } from "@fuutu/auth/config";
 import type { UserWithRole } from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
 import {
@@ -31,6 +32,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { ACCOUNT_SETTINGS_PATH, orgBillingHref } from "./nav-config";
 
 function getInitials(name: string, email: string): string {
 	const nameLetter = name?.trim()?.[0] ?? "";
@@ -54,7 +56,7 @@ export function NavUser() {
 	const orgSlug = orgMatch?.[1] ?? null;
 	const billingHref = orgsOn
 		? orgSlug
-			? `/organizations/${orgSlug}/settings/billing`
+			? orgBillingHref(orgSlug)
 			: null
 		: "/choose-plan";
 
@@ -63,7 +65,7 @@ export function NavUser() {
 		await authClient.signOut({
 			fetchOptions: {
 				onSuccess: () => {
-					router.push("/auth/sign-in");
+					router.push(authConfig.redirects.afterSignOut);
 					router.refresh();
 				},
 			},
@@ -152,7 +154,7 @@ export function NavUser() {
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
 							<DropdownMenuItem asChild>
-								<Link href="/settings">
+								<Link href={ACCOUNT_SETTINGS_PATH}>
 									<BadgeCheck />
 									{t("account")}
 								</Link>

@@ -25,8 +25,12 @@ import {
 } from "@fuutu/ui";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { orpc } from "@/utils/orpc";
+import {
+	useFullOrganization,
+	useInvalidateOrganization,
+} from "./use-full-organization";
 
 const log = createLogger({ scope: "org-danger" });
 
@@ -49,8 +53,11 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 	const t = useTranslations();
 	const router = useRouter();
 	const { data: session } = authClient.useSession();
-	const [org, setOrg] = useState<FullOrg | null>(null);
-	const [loading, setLoading] = useState(true);
+	const orgQuery = useFullOrganization(slug);
+	const invalidateOrganization = useInvalidateOrganization();
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (orgQuery.data ?? null) as FullOrg | null;
+	const loading = orgQuery.isPending;
 	const [busy, setBusy] = useState<string | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -66,30 +73,13 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 			)
 		: false;
 
-	const load = useCallback(async () => {
-		setLoading(true);
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-			const data = res.data as FullOrg | null;
-			if (data) setOrg(data);
-		} finally {
-			setLoading(false);
-		}
-	}, [slug]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
-
 	async function deleteOrg() {
 		if (!org) return;
 		setBusy("__delete__");
 		setDeleteError(null);
 		try {
 			await orpc.organizations.delete.call({ organizationId: org.id });
+			await invalidateOrganization(slug, { remove: true });
 			router.push("/organizations");
 			router.refresh();
 		} catch (e) {

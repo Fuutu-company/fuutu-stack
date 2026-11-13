@@ -59,7 +59,7 @@ export const listWebhooks = (
 	const { take = 50, skip = 0 } = opts;
 	return db.webhook.findMany({
 		where: { organizationId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 		omit: { secret: true },
@@ -157,7 +157,7 @@ export const listDeliveries = (
 	const { take = 50, skip = 0, status } = opts;
 	return db.webhookDelivery.findMany({
 		where: { webhookId, ...(status ? { status } : {}) },
-		orderBy: { attemptedAt: "desc" },
+		orderBy: [{ attemptedAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 	});

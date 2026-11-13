@@ -11,14 +11,30 @@ import { authConfig } from "./config";
  * stays consistent. For non-auth flows call `@fuutu/utils/redirect` directly
  * with your own `fallback`.
  */
-export function getSafeRedirect(redirect: string | null | undefined): string {
-	const allowedOrigins = [env.NEXT_PUBLIC_SAAS_URL].filter(
-		(origin): origin is string => Boolean(origin),
+function getAllowedOrigins(): string[] {
+	return [env.NEXT_PUBLIC_SAAS_URL].filter((origin): origin is string =>
+		Boolean(origin),
 	);
+}
 
+export function getSafeRedirect(redirect: string | null | undefined): string {
 	return safeRedirect(redirect, {
 		fallback: authConfig.redirects.afterSignIn,
-		allowedOrigins,
+		allowedOrigins: getAllowedOrigins(),
+	});
+}
+
+/**
+ * Where the email-verification link lands (`callbackURL` of the sign-up
+ * request): an explicit safe target such as an invitation link, else
+ * `authConfig.redirects.afterEmailVerification`.
+ */
+export function getEmailVerificationRedirect(
+	redirect: string | null | undefined,
+): string {
+	return safeRedirect(redirect, {
+		fallback: authConfig.redirects.afterEmailVerification,
+		allowedOrigins: getAllowedOrigins(),
 	});
 }
 

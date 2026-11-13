@@ -20,10 +20,14 @@ import {
 } from "@fuutu/ui";
 import { Building2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { orpc } from "@/utils/orpc";
 import { OrgLogoUpload } from "./components/org-logo-upload";
+import {
+	useFullOrganization,
+	useInvalidateOrganization,
+} from "./use-full-organization";
 
 const log = createLogger({ scope: "org-settings" });
 
@@ -45,8 +49,11 @@ type FullOrg = {
 export function OrgSettingsGeneral({ slug }: { slug: string }) {
 	const t = useTranslations();
 	const { data: session } = authClient.useSession();
-	const [org, setOrg] = useState<FullOrg | null>(null);
-	const [loading, setLoading] = useState(true);
+	const orgQuery = useFullOrganization(slug);
+	const invalidateOrganization = useInvalidateOrganization();
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (orgQuery.data ?? null) as FullOrg | null;
+	const loading = orgQuery.isPending;
 	const [name, setName] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
@@ -63,28 +70,10 @@ export function OrgSettingsGeneral({ slug }: { slug: string }) {
 			)
 		: false;
 
-	const load = useCallback(async () => {
-		setLoading(true);
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-			const data = res.data as FullOrg | null;
-			if (data) {
-				setOrg(data);
-				setName(data.name);
-			}
-		} catch (e) {
-			log.error("failed to load organization", { err: e });
-		} finally {
-			setLoading(false);
-		}
-	}, [slug]);
-
+	const orgName = org?.name;
 	useEffect(() => {
-		void load();
-	}, [load]);
+		if (orgName !== undefined) setName(orgName);
+	}, [orgName]);
 
 	async function rename(e: React.FormEvent) {
 		e.preventDefault();
@@ -94,7 +83,7 @@ export function OrgSettingsGeneral({ slug }: { slug: string }) {
 		try {
 			await orpc.organizations.update.call({ organizationId: org.id, name });
 			setStatus(t("common.success"));
-			await load();
+			await invalidateOrganization(slug);
 		} catch (error) {
 			log.error("organization rename failed", { err: error });
 			setStatus(t("organizations.settings.failed"));

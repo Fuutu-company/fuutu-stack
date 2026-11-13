@@ -30,21 +30,21 @@
     <text x="170" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">packages</text>
 
     <rect x="310" y="150" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="440" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">93%</text>
-    <text x="440" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">test coverage</text>
+    <text x="440" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">6</text>
+    <text x="440" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">swappable provider domains</text>
 
     <rect x="580" y="150" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="710" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">854</text>
+    <text x="710" y="180" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">1,900+</text>
     <text x="710" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">tests passing</text>
 
     <!-- Row 2 -->
     <rect x="40" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="170" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">10+</text>
-    <text x="170" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">AI agents parallel</text>
+    <text x="170" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">MCP</text>
+    <text x="170" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">server built in</text>
 
     <rect x="310" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
-    <text x="440" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">4</text>
-    <text x="440" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">production apps</text>
+    <text x="440" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">3</text>
+    <text x="440" y="275" text-anchor="middle" font-size="13" font-weight="500" fill="#6B6F76">deployable apps</text>
 
     <rect x="580" y="225" width="260" height="60" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
     <text x="710" y="255" text-anchor="middle" font-size="26" font-weight="700" fill="#F7F8F8">0</text>
@@ -64,15 +64,15 @@
     Fair License
   </text>
   <text x="125" y="372" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#8A8F98">
-    Free for small teams (≤ 10 employees or ≤ $250k revenue).
+    Free for small teams (≤ 10 employees and ≤ $250k revenue).
   </text>
   <text x="125" y="390" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#8A8F98">
     Enterprise license above. No reselling as a competing kit.
   </text>
 
-  <!-- Right side: stack.fuutu.com = ORANGE (primary CTA) · sub-links = blue -->
+  <!-- Right side: fuutustack.com = ORANGE (primary CTA) · sub-links = blue -->
   <text x="820" y="348" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#FF4B1A">
-    stack.fuutu.com →
+    fuutustack.com →
   </text>
   <text x="820" y="372" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#6B6F76">
     <tspan fill="#3B82F6">docs</tspan> · <tspan fill="#3B82F6">pricing</tspan> · <tspan fill="#3B82F6">MCP</tspan> · <tspan fill="#3B82F6">license</tspan>

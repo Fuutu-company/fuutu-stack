@@ -1,7 +1,7 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
-import { useEffect, useState } from "react";
+import { useFullOrganization } from "./use-full-organization";
 
 /**
  * Resolve the current user's member role in the org identified by `slug`.
@@ -12,29 +12,8 @@ import { useEffect, useState } from "react";
  */
 export function useOrgRole(slug: string | null): string | undefined {
 	const { data: session } = authClient.useSession();
-	const [role, setRole] = useState<string | undefined>(undefined);
+	const { data: org } = useFullOrganization(slug);
 	const userId = session?.user.id;
-
-	useEffect(() => {
-		if (!userId || !slug) {
-			setRole(undefined);
-			return;
-		}
-		let cancelled = false;
-		authClient.organization
-			.getFullOrganization({ query: { organizationSlug: slug } })
-			.then((res) => {
-				if (cancelled) return;
-				const member = (
-					res.data as { members?: { userId: string; role: string }[] } | null
-				)?.members?.find((m) => m.userId === userId);
-				setRole(member?.role);
-			})
-			.catch(() => {});
-		return () => {
-			cancelled = true;
-		};
-	}, [slug, userId]);
-
-	return role;
+	if (!userId) return undefined;
+	return org?.members?.find((m) => m.userId === userId)?.role;
 }

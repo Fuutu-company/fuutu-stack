@@ -10,12 +10,9 @@ import {
 	SidebarContent,
 	SidebarFooter,
 	SidebarGroup,
-	SidebarGroupContent,
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
 	SidebarRail,
 	useSidebar,
 } from "@fuutu/ui";
@@ -25,6 +22,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
+import { ADMIN_PATH, getAdminItems } from "./nav-config";
+import { NavGroup } from "./nav-group";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import { OrgSwitcher } from "./org-switcher";
@@ -33,7 +32,6 @@ import { ThemeToggle } from "./theme-toggle";
 const ac = new SystemAccessControl(SYSTEM_POLICY);
 
 export function AppSidebar() {
-	const pathname = usePathname();
 	const t = useTranslations();
 	const { data: session } = authClient.useSession();
 	const user = session?.user as UserWithRole | undefined;
@@ -41,13 +39,15 @@ export function AppSidebar() {
 		? userHasPermission(ac, user, PERMISSIONS.VIEW_ADMIN)
 		: false;
 	const { isMobile, setOpenMobile } = useSidebar();
+	const pathname = usePathname();
 
-	// Auto-close mobile sidebar on route change
+	// Auto-close the mobile sidebar after every navigation.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the trigger
 	useEffect(() => {
 		if (isMobile) {
 			setOpenMobile(false);
 		}
-	}, [isMobile, setOpenMobile]);
+	}, [pathname, isMobile, setOpenMobile]);
 
 	return (
 		<Sidebar collapsible="icon">
@@ -56,11 +56,11 @@ export function AppSidebar() {
 				<Link href="/dashboard" className="flex items-center gap-2.5 px-2 py-2">
 					<BrandLogo
 						size="md"
-						alt={t("app.brand")}
+						alt={config.app.name}
 						className="size-7 dark:invert"
 					/>
 					<span className="font-semibold text-foreground text-sm tracking-tight group-data-[collapsible=icon]:hidden">
-						{t("app.brand")}
+						{config.app.name}
 					</span>
 				</Link>
 
@@ -74,21 +74,15 @@ export function AppSidebar() {
 						<SidebarGroupLabel>
 							{t("navigation.groupAdministration")}
 						</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								<SidebarMenuItem>
-									<SidebarMenuButton
-										asChild
-										isActive={pathname.startsWith("/admin")}
-									>
-										<Link href="/admin">
-											<Shield />
-											<span>{t("navigation.admin")}</span>
-										</Link>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							</SidebarMenu>
-						</SidebarGroupContent>
+						<SidebarMenu>
+							<NavGroup
+								id="admin"
+								label={t("navigation.admin")}
+								icon={Shield}
+								activePrefix={ADMIN_PATH}
+								items={getAdminItems()}
+							/>
+						</SidebarMenu>
 					</SidebarGroup>
 				)}
 			</SidebarContent>

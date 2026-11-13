@@ -5,8 +5,8 @@ import { authProcedure } from "../../../orpc/procedures";
 
 const listContactsSchema = z.object({
 	organizationId: z.string().min(1),
-	page: z.number().int().min(1).default(1),
-	limit: z.number().int().min(1).max(100).default(50),
+	page: z.coerce.number().int().min(1).default(1),
+	limit: z.coerce.number().int().min(1).max(100).default(50),
 	status: z.enum(["lead", "qualified", "proposal", "won", "lost"]).optional(),
 	search: z.string().optional(),
 });

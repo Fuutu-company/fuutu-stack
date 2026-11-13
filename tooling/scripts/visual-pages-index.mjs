@@ -1,15 +1,18 @@
 #!/usr/bin/env node
-// Regenerate the gh-pages index tree after a visual-report deploy:
+// Regenerate the Pages index tree after a visual-report deploy:
 //   <root>/index.html          — pinned develop/main rows ("latest"),
 //                                then pr-<N> rows, newest first
 //   <root>/<dir>/index.html    — per-dir landing page listing its app reports
 // A "report dir" (pr-<N>/, develop/, main/, …) holds one subdir per app,
 // each a self-contained visual-report (index.html + images/). Dirs without
 // any app report are skipped. Rerunning regenerates cleanly.
-// Usage: node tooling/scripts/visual-pages-index.mjs <gh-pages-worktree> [--pr-meta <file>]
+// Usage: node tooling/scripts/visual-pages-index.mjs <site-dir> [--pr-meta <file>]
+//        node tooling/scripts/visual-pages-index.mjs <site-dir> --local
+// --local (visual-local.mjs): <site-dir>/<app>/ report dirs sit directly under the
+//            root; one row per app with its summary.json stats, file:// friendly links.
 // --pr-meta: JSON { "<N>": { "title": "…", "branch": "…", "updated": "<ISO>" } }
-//            CI fills it via `gh api` (title + head branch) and `git log`
-//            (last-commit time for the pr-<N> dir). Missing/partial entries
+//            CI fills it via `gh api` (title + head branch) and the site's
+//            pages-meta.json (last deploy time per dir), see ci-pages-site.mjs. Missing/partial entries
 //            fall back to "PR #N" with no timestamp.
 
 import { execFileSync } from "node:child_process";
@@ -19,14 +22,14 @@ import path from "node:path";
 const argv = process.argv.slice(2);
 let root;
 let prMetaPath;
+let local = false;
 for (let i = 0; i < argv.length; i++) {
 	if (argv[i] === "--pr-meta") prMetaPath = argv[++i];
+	else if (argv[i] === "--local") local = true;
 	else if (!root) root = argv[i];
 }
 if (!root || !existsSync(root)) {
-	console.error(
-		"Usage: visual-pages-index.mjs <gh-pages-worktree> [--pr-meta <file>]",
-	);
+	console.error("Usage: visual-pages-index.mjs <site-dir> [--pr-meta <file>]");
 	process.exit(2);
 }
 
@@ -154,6 +157,44 @@ const page = (title, header, body) => `<!doctype html>
 ${body}
 </body></html>`;
 
+if (local) {
+	const rows = appDirs(".")
+		.map((a) => {
+			let s = {};
+			try {
+				s = JSON.parse(
+					readFileSync(path.join(root, a, "summary.json"), "utf8"),
+				);
+			} catch {}
+			const stats = [
+				`${s.changed ?? 0} changed`,
+				`${s.added ?? 0} added`,
+				`${s.removed ?? 0} removed`,
+				`${s.unchanged ?? 0} unchanged`,
+			].join(" · ");
+			const when = s.generatedAt ? fmtTime(s.generatedAt) : null;
+			return `<div class="row">
+<a class="cell ref" href="${esc(a)}/index.html">${esc(appName(a))}</a>
+<a class="cell desc" href="${esc(a)}/index.html"><span class="title">${esc(s.label ?? "Local run")}</span><span class="branch">${esc(stats)}</span></a>
+<span class="apps"></span>
+<span class="cell time">${when ? esc(when) : "—"}</span>
+</div>`;
+		})
+		.join("\n");
+	writeFileSync(
+		path.join(root, "index.html"),
+		page(
+			`Local visual reports — ${repo}`,
+			`<h1>Local visual reports — ${esc(repo)}</h1>`,
+			rows
+				? `<h2 class="section">Latest local run</h2>\n<div class="list">${rows}</div>`
+				: `<p class="meta">No local visual reports yet.</p>`,
+		),
+	);
+	console.log(`Local index → ${root}/index.html`);
+	process.exit(0);
+}
+
 // App badges on the root index link straight into <dir>/<app>/.
 const appLinks = (dir, apps) =>
 	`<span class="apps">${apps.map((a) => `<a class="chip" href="${esc(dir)}/${esc(a)}/">${esc(appName(a))}</a>`).join("")}</span>`;
@@ -223,9 +264,6 @@ ${appLinks(p.dir, p.apps)}
 	})
 	.join("\n");
 
-// Timestamps come from git log on gh-pages (via --pr-meta), so index bytes
-// now track history — the workflow regenerates the index inside its
-// rebase-retry loop so the last writer always renders the latest state.
 const body = `${pinnedRows ? `<h2 class="section">Latest</h2>\n<div class="list">${pinnedRows}</div>` : ""}
 ${prRows ? `<h2 class="section">Pull requests</h2>\n<div class="list">${prRows}</div>` : ""}
 ${!pinnedRows && !prRows ? `<p class="meta">No visual reports published yet.</p>` : ""}`;

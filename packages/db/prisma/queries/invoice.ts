@@ -46,7 +46,7 @@ export const listInvoicesByOrg = (
 	const { take = 50, skip = 0, status } = opts;
 	return db.invoice.findMany({
 		where: { organizationId, ...(status ? { status } : {}) },
-		orderBy: { issuedAt: "desc" },
+		orderBy: [{ issuedAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 	});
@@ -59,7 +59,7 @@ export const listInvoicesByUser = (
 	const { take = 50, skip = 0, status } = opts;
 	return db.invoice.findMany({
 		where: { userId, ...(status ? { status } : {}) },
-		orderBy: { issuedAt: "desc" },
+		orderBy: [{ issuedAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 	});

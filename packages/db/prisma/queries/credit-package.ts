@@ -28,11 +28,11 @@ export const getActiveCreditPackages = (params: {
 export const getCreditPackagesForUser = (userId: string) =>
 	db.creditPackage.findMany({
 		where: { userId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 
 export const getCreditPackagesForOrganization = (organizationId: string) =>
 	db.creditPackage.findMany({
 		where: { organizationId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});

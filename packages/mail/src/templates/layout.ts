@@ -8,15 +8,20 @@
  * Intentionally inline-styled: mail clients strip <style> tags aggressively.
  * No external CSS, no webfonts.
  */
-import { getDirection, type Locale } from "@fuutu/i18n";
+import { getDirection, isValidLocale } from "@fuutu/i18n";
 
 export interface LayoutOptions {
-	locale?: Locale;
+	locale?: string;
 	previewText?: string;
 }
 
 export function renderLayout(body: string, opts: LayoutOptions = {}): string {
-	const direction = opts.locale ? getDirection(opts.locale) : "ltr";
+	// getDirection only knows configured locales — dormant/unknown tags
+	// (which sendEmail payloads may legitimately carry) default to ltr.
+	const direction =
+		opts.locale && isValidLocale(opts.locale)
+			? getDirection(opts.locale)
+			: "ltr";
 	const preview = opts.previewText
 		? `<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">${escapeHtml(opts.previewText)}</div>`
 		: "";

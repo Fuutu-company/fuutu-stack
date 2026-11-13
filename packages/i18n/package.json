@@ -6,6 +6,7 @@
 	"exports": {
 		".": "./index.ts",
 		"./config": "./config.ts",
+		"./locale-utils": "./lib/locale-utils.ts",
 		"./types": "./types.ts"
 	},
 	"scripts": {

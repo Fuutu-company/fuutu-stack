@@ -1,6 +1,5 @@
 "use client";
 
-import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
 	type BillingInterval,
@@ -23,7 +22,12 @@ import { CreditCard, ExternalLink } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { isPaymentsUnavailable } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
+import {
+	useFullOrganization,
+	useInvalidateOrganization,
+} from "./use-full-organization";
 
 const log = createLogger({ scope: "org-billing" });
 
@@ -56,10 +60,14 @@ export function OrgSettingsBilling({
 	const t = useTranslations();
 	const tp = useTranslations("payments");
 	const locale = useLocale();
-	const { data: activeOrg } = authClient.useActiveOrganization();
-	const [org, setOrg] = useState<FullOrg | null>(null);
+	const orgQuery = useFullOrganization(slug);
+	const invalidateOrganization = useInvalidateOrganization();
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (orgQuery.data ?? null) as FullOrg | null;
+	const orgId = org?.id;
 	const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
-	const [loading, setLoading] = useState(true);
+	const [subLoading, setSubLoading] = useState(paymentsEnabled);
+	const loading = orgQuery.isPending || subLoading;
 	const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [seatCount, setSeatCount] = useState(1);
@@ -67,42 +75,37 @@ export function OrgSettingsBilling({
 	// Check if any plan is seat-based
 	const hasSeatBasedPlan = Object.values(PLANS).some((plan) => plan.seatBased);
 
-	const load = useCallback(async () => {
-		setLoading(true);
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			const data = res.data as FullOrg | null;
-			if (data) {
-				setOrg(data);
-				// Fetch active subscription for this org from the Purchase table
-				if (paymentsEnabled) {
-					try {
-						const sub = await orpc.payments.subscription.active.call({
-							organizationId: data.id,
-						});
-						if (sub) {
-							setActiveSub({
-								id: sub.id,
-								status: sub.status,
-								productId: sub.productId ?? "",
-								currentPeriodEnd: sub.currentPeriodEnd ?? undefined,
-							});
-						}
-					} catch (err) {
-						log.warn("subscription fetch failed", { err });
-					}
-				}
-			}
-		} finally {
-			setLoading(false);
+	const loadSubscription = useCallback(async () => {
+		if (!orgId || !paymentsEnabled) {
+			setSubLoading(false);
+			return;
 		}
-	}, [slug, paymentsEnabled]);
+		setSubLoading(true);
+		try {
+			// Active subscription for this org from the Purchase table
+			const sub = await orpc.payments.subscription.active.call({
+				organizationId: orgId,
+			});
+			if (sub) {
+				setActiveSub({
+					id: sub.id,
+					status: sub.status,
+					productId: sub.productId ?? "",
+					currentPeriodEnd: sub.currentPeriodEnd ?? undefined,
+				});
+			}
+		} catch (err) {
+			log.warn("subscription fetch failed", { err });
+		} finally {
+			setSubLoading(false);
+			// Returning from checkout/portal lands here — refresh the switcher badge.
+			void invalidateOrganization(slug, { plansOnly: true });
+		}
+	}, [orgId, paymentsEnabled, slug, invalidateOrganization]);
 
 	useEffect(() => {
-		void load();
-	}, [load]);
+		void loadSubscription();
+	}, [loadSubscription]);
 
 	// Map the active subscription's provider productId to a plan ID.
 	// A yearly subscription carries the yearly price ID — check both so a
@@ -145,7 +148,11 @@ export function OrgSettingsBilling({
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
-			setError(tp("choosePlan.error"));
+			setError(
+				isPaymentsUnavailable(e)
+					? tp("choosePlan.unavailable")
+					: tp("choosePlan.error"),
+			);
 		} finally {
 			setCheckoutLoading(null);
 		}
@@ -239,9 +246,7 @@ export function OrgSettingsBilling({
 						<div className="flex items-center gap-3">
 							<CreditCard className="size-5 text-muted-foreground" />
 							<div>
-								<p className="font-medium text-sm">
-									{activeOrg?.name ?? org.name}
-								</p>
+								<p className="font-medium text-sm">{org.name}</p>
 								<p className="text-muted-foreground text-xs">
 									{activeSub
 										? tp("planInterval", {

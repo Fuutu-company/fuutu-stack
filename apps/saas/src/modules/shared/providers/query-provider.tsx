@@ -21,6 +21,14 @@ export function QueryProvider({ children }: PropsWithChildren) {
 			new QueryClient({
 				queryCache: new QueryCache({
 					onError: (error, query) => {
+						// Expected failures (e.g. membership gone) opt out of the toast.
+						if (query.meta?.silent) {
+							log.warn("query failed silently", {
+								err: error,
+								queryKey: query.queryKey,
+							});
+							return;
+						}
 						log.error("query failed", {
 							err: error,
 							queryKey: query.queryKey,

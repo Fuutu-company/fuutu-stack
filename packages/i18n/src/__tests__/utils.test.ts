@@ -1,14 +1,50 @@
-import { describe, expect, it } from "vitest";
-import { i18nConfig } from "../../config";
+import { describe, expect, it, vi } from "vitest";
 import {
 	getAllLocales,
 	getCurrency,
 	getDateFormat,
 	getDirection,
 	getLocaleConfig,
+	hasMultipleLocales,
 	isValidLocale,
 } from "../../lib/locale-utils";
-import { getMessagesForLocale, importLocale } from "../../lib/messages";
+import {
+	getMessagesForLocale,
+	importLocale,
+	isKnownLocale,
+	namespaceLoaders,
+} from "../../lib/messages";
+import type { Locale } from "../../types";
+
+// Pin a two-locale config so these tests describe the helpers' behavior,
+// not whichever locales the app currently enables in config.ts. Enabled
+// locales of the real config are covered in enabled-locales.test.ts.
+const fixture = vi.hoisted(() => ({
+	enabled: true,
+	locales: {
+		en: {
+			currency: "USD",
+			label: "English",
+			dateFormat: "MM/DD/YYYY",
+			direction: "ltr",
+		},
+		de: {
+			currency: "EUR",
+			label: "Deutsch",
+			dateFormat: "DD.MM.YYYY",
+			direction: "ltr",
+			fallbackLocale: "en",
+		},
+	},
+	defaultLocale: "en",
+	defaultCurrency: "USD",
+	localeCookieName: "NEXT_LOCALE",
+}));
+vi.mock("../../config", () => ({ i18nConfig: fixture }));
+
+// The fixture's second locale is not part of the real `Locale` union when
+// the app runs single-locale — widen once, here.
+const second = "de" as Locale;
 
 describe("getAllLocales()", () => {
 	it("returns all configured locales", () => {
@@ -22,7 +58,13 @@ describe("getAllLocales()", () => {
 
 	it("matches the keys in i18nConfig.locales", () => {
 		const locales = getAllLocales();
-		expect(locales).toEqual(Object.keys(i18nConfig.locales));
+		expect(locales).toEqual(Object.keys(fixture.locales));
+	});
+});
+
+describe("hasMultipleLocales()", () => {
+	it("is true when two locales are enabled", () => {
+		expect(hasMultipleLocales()).toBe(true);
 	});
 });
 
@@ -32,7 +74,7 @@ describe("getCurrency()", () => {
 	});
 
 	it("returns EUR for de", () => {
-		expect(getCurrency("de")).toBe("EUR");
+		expect(getCurrency(second)).toBe("EUR");
 	});
 
 	it("returns a string for each locale", () => {
@@ -48,7 +90,7 @@ describe("getDateFormat()", () => {
 	});
 
 	it("returns DD.MM.YYYY for de", () => {
-		expect(getDateFormat("de")).toBe("DD.MM.YYYY");
+		expect(getDateFormat(second)).toBe("DD.MM.YYYY");
 	});
 
 	it("returns a string for each locale", () => {
@@ -64,7 +106,7 @@ describe("getDirection()", () => {
 	});
 
 	it("returns ltr for de", () => {
-		expect(getDirection("de")).toBe("ltr");
+		expect(getDirection(second)).toBe("ltr");
 	});
 });
 
@@ -76,7 +118,7 @@ describe("getLocaleConfig()", () => {
 	});
 
 	it("returns config for de", () => {
-		const cfg = getLocaleConfig("de");
+		const cfg = getLocaleConfig(second);
 		expect(cfg.currency).toBe("EUR");
 		expect(cfg.label).toBe("Deutsch");
 	});
@@ -108,6 +150,72 @@ describe("isValidLocale()", () => {
 	});
 });
 
+describe("isKnownLocale()", () => {
+	it("returns true for configured locales", () => {
+		expect(isKnownLocale("en")).toBe(true);
+		expect(isKnownLocale("de")).toBe(true);
+	});
+
+	it("returns true for a dormant locale with registered loaders", () => {
+		namespaceLoaders.tlh = dormantLoaders;
+		try {
+			expect(isKnownLocale("tlh")).toBe(true);
+			// Dormant ≠ configured: still not a valid (routable) locale.
+			expect(isValidLocale("tlh")).toBe(false);
+		} finally {
+			delete namespaceLoaders.tlh;
+		}
+	});
+
+	it.each(["xx", "__proto__", "constructor", "hasOwnProperty", ""])(
+		"returns false for garbage tag %s",
+		(tag) => {
+			expect(isKnownLocale(tag)).toBe(false);
+		},
+	);
+});
+
+const dormantLoaders = {
+	common: async () => ({ dormantProbe: "tlh-probe" }),
+	marketing: async () => ({}),
+	saas: async () => ({ dormantSaas: "tlh-saas" }),
+	docs: async () => ({}),
+};
+
+describe("dormant locales", () => {
+	it("importLocale loads a dormant locale's bundles instead of the default", async () => {
+		namespaceLoaders.tlh = dormantLoaders;
+		try {
+			const messages = await importLocale("tlh", "saas");
+			expect(messages).toMatchObject({
+				dormantProbe: "tlh-probe",
+				dormantSaas: "tlh-saas",
+			});
+			expect(messages).not.toHaveProperty("auth");
+		} finally {
+			delete namespaceLoaders.tlh;
+		}
+	});
+
+	it("importLocale still falls back to the default locale for unknown tags", async () => {
+		const messages = await importLocale("xx", "saas");
+		const en = await importLocale("en", "saas");
+		expect(messages).toEqual(en);
+	});
+
+	it("getMessagesForLocale merges a dormant locale over the default", async () => {
+		namespaceLoaders.tlh = dormantLoaders;
+		try {
+			const messages = await getMessagesForLocale("tlh", "saas");
+			expect(messages).toMatchObject({ dormantProbe: "tlh-probe" });
+			// Default-locale keys still resolve via the fallback chain.
+			expect(messages.auth.signIn).toBe("Sign In");
+		} finally {
+			delete namespaceLoaders.tlh;
+		}
+	});
+});
+
 describe("fallback chain", () => {
 	it("importLocale falls back to default locale for invalid locale", async () => {
 		const messages = await importLocale("fr");
@@ -122,16 +230,16 @@ describe("fallback chain", () => {
 	});
 
 	it("default locale is en", () => {
-		expect(i18nConfig.defaultLocale).toBe("en");
+		expect(fixture.defaultLocale).toBe("en");
 	});
 
 	it("de has fallbackLocale set to en", () => {
-		const deConfig = i18nConfig.locales.de;
+		const deConfig = fixture.locales.de;
 		expect(deConfig).toHaveProperty("fallbackLocale", "en");
 	});
 
 	it("en does not have a fallbackLocale (it is the default)", () => {
-		const enConfig = i18nConfig.locales.en;
+		const enConfig = fixture.locales.en;
 		expect(enConfig).not.toHaveProperty("fallbackLocale");
 	});
 });

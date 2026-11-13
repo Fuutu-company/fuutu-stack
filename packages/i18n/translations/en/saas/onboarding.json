@@ -1,6 +1,6 @@
 {
 	"onboarding": {
-		"title": "Welcome to Fuutu Stack",
+		"title": "Welcome to {appName}",
 		"description": "Let's get your account ready in a couple of steps.",
 		"step": "Step {current} of {total}",
 		"profile": {
@@ -15,13 +15,19 @@
 			"name": "Organization name",
 			"placeholder": "Acme Inc.",
 			"create": "Create organization",
-			"skip": "Skip for now"
+			"skip": "Skip for now",
+			"pendingInvitations": "Pending invitations",
+			"acceptInvitation": "Accept invitation",
+			"createDisabled": "Organization creation is disabled. Accept a pending invitation to continue.",
+			"required": "An organization is required. Create one or accept a pending invitation.",
+			"forcedDescription": "Organizations let you collaborate with your team. This workspace requires an organization to continue."
 		},
 		"done": {
 			"heading": "You're all set",
 			"description": "Your account is ready. Let's go to the dashboard.",
 			"cta": "Go to dashboard"
 		},
-		"failed": "Could not save onboarding step."
+		"failed": "Could not save onboarding step.",
+		"incomplete": "Finish the remaining onboarding steps first."
 	}
 }

@@ -27,7 +27,29 @@ const systemAC = new SystemAccessControl(SYSTEM_POLICY);
 // rather than the hard `EvlogOrpcContext` the evlog docs prescribe.
 export const publicProcedure = os
 	.$context<Context & Partial<EvlogOrpcContext>>()
-	.use(evlog<Context & Partial<EvlogOrpcContext>>());
+	.use(evlog<Context & Partial<EvlogOrpcContext>>())
+	.use(({ context, next }) => {
+		// A presented key from an IP over its failed-check budget
+		// (createContext). No Retry-After header: ORPCError carries no
+		// headers and the Hono dispatch copies only oRPC's response — the
+		// delay is in the message, like the other oRPC rate limits.
+		if (context.preAuthRateLimited) {
+			throw new ORPCError("TOO_MANY_REQUESTS", {
+				status: 429,
+				message: `Rate limit exceeded. Try again in ${context.preAuthRateLimited.retryAfter} seconds.`,
+			});
+		}
+		// A valid key whose `api` scope is plan-gated (createContext) gets a
+		// typed 402 instead of silently degrading to an anonymous caller.
+		if (context.apiKeyUpgradeRequired) {
+			throw new ORPCError("PAYMENT_REQUIRED", {
+				status: 402,
+				message: "Upgrade required",
+				data: context.apiKeyUpgradeRequired,
+			});
+		}
+		return next();
+	});
 
 export const protectedProcedure = publicProcedure.use(
 	async ({ context, next }, input) => {
@@ -105,7 +127,7 @@ export function permissionProcedure(permission: KnownPermission) {
  * and org actions — the input determines which permission is authoritative.
  *
  * The middleware attaches resolved data to context:
- * `user`, `systemRole`, `org`, `orgRole`, `membership`, `planId`, `planTier`.
+ * `user`, `systemRole`, `org`, `orgRole`, `membership`, `entitlement`, `planId`, `planTier`.
  *
  * @example
  * // Auth only
@@ -132,7 +154,7 @@ export function permissionProcedure(permission: KnownPermission) {
  * // Org + plan + limit (feature-gated org resource)
  * export const createWebhook = authProcedure({
  *   org: { permission: PERMISSIONS.WEBHOOK.CREATE },
- *   plan: "pro",
+ *   plan: FEATURE_CATALOG.api.webhooks.tier,
  *   limit: { key: "webhooks", count: async (ctx) => countWebhooks(ctx.org?.id ?? "") },
  * })
  *   .handler(...)

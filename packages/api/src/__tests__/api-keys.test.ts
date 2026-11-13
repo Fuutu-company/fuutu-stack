@@ -4,6 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
 import { apiKeysRouter } from "../modules/api-keys/router";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("@fuutu/payments/config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@fuutu/payments/config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 vi.mock("@fuutu/db", () => ({
 	createApiKeyWithinLimit: vi.fn(),
 	listApiKeys: vi.fn(),
@@ -13,6 +20,7 @@ vi.mock("@fuutu/db", () => ({
 	revokeApiKey: vi.fn(),
 	deleteApiKey: vi.fn(),
 	getApiKey: vi.fn(),
+	getOrganizationWithMembers: vi.fn(),
 	getActiveSubscriptionForUser: vi.fn().mockResolvedValue(null),
 	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
 }));
@@ -38,6 +46,7 @@ const {
 	revokeApiKey,
 	deleteApiKey,
 	getApiKey,
+	getOrganizationWithMembers,
 } = await import("@fuutu/db");
 const { auth } = await import("@fuutu/auth");
 
@@ -124,6 +133,60 @@ describe("apiKeys.create", () => {
 		);
 		expect(result).toBeDefined();
 		expect(result.key).toBeDefined();
+	});
+
+	it("passes scopes through for an org key", async () => {
+		await call(
+			apiKeysRouter.create,
+			{ name: "Scoped Key", organizationId: "org-1", scopes: ["mcp"] },
+			{ context: authenticatedContext },
+		);
+
+		expect(createApiKeyWithinLimit).toHaveBeenCalledWith({
+			userId: "user-1",
+			name: "Scoped Key",
+			organizationId: "org-1",
+			expiresAt: null,
+			max: 2,
+			scopes: ["mcp"],
+		});
+	});
+
+	it("accepts the api scope on an org key", async () => {
+		await call(
+			apiKeysRouter.create,
+			{ name: "API Key", organizationId: "org-1", scopes: ["api"] },
+			{ context: authenticatedContext },
+		);
+
+		expect(createApiKeyWithinLimit).toHaveBeenCalledWith(
+			expect.objectContaining({ scopes: ["api"] }),
+		);
+	});
+
+	it("rejects scopes on a personal key (scopes are an org-key concept)", async () => {
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{ name: "Scoped Key", scopes: ["mcp"] },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	});
+
+	it("rejects an unknown scope", async () => {
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{
+					name: "Scoped Key",
+					organizationId: "org-1",
+					// Not in the vocabulary — the input type rejects it too.
+					scopes: ["bogus-scope"] as never,
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
 
 	it("rejects empty name", async () => {
@@ -331,6 +394,32 @@ describe("apiKeys.revoke", () => {
 	});
 });
 
+describe("api key ids", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	// ApiKey.id is @default(cuid()) — revoke/delete must accept it.
+	const CUID = "cmwcs8x2k0001qz8h4f3a9b7d";
+
+	it.each([
+		["revoke", "revokeApiKey"],
+		["delete", "deleteApiKey"],
+	] as const)("%s accepts a cuid key id", async (route, query) => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: CUID,
+			userId: "user-1",
+			organizationId: null,
+		} as never);
+		const mocks = { revokeApiKey, deleteApiKey };
+		vi.mocked(mocks[query]).mockResolvedValue({ id: CUID } as never);
+		await call(
+			apiKeysRouter[route],
+			{ id: CUID },
+			{ context: authenticatedContext },
+		);
+		expect(mocks[query]).toHaveBeenCalledWith(CUID, { userId: "user-1" });
+	});
+});
+
 describe("apiKeys.delete", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -409,5 +498,164 @@ describe("apiKeys.delete", () => {
 				},
 			),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
+	});
+});
+
+// A key that reached oRPC (scope `api` or unscoped) authenticates as its
+// owner — it must not be able to mint, revoke or delete keys, or a leaked
+// key could escalate (wider scopes) or entrench itself.
+describe("API-key-authenticated callers cannot manage API keys", () => {
+	const orgKeyContext: Context = {
+		...authenticatedContext,
+		apiKey: { id: "key-caller", organizationId: "org-1" },
+	};
+	const personalKeyContext: Context = {
+		...authenticatedContext,
+		apiKey: { id: "key-caller", organizationId: null },
+	};
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(getOrganizationWithMembers).mockResolvedValue({
+			id: "org-1",
+			name: "Acme",
+			slug: "acme",
+			members: [
+				{
+					id: "member-1",
+					userId: "user-1",
+					role: "owner",
+					user: { email: "test@fuutu.local" },
+				},
+			],
+		} as never);
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(createApiKeyWithinLimit).mockResolvedValue({
+			id: KEY_ID,
+			key: "futu_sk_abc123",
+			prefix: "futu_sk_abc...",
+		});
+		vi.mocked(countApiKeys).mockResolvedValue(0);
+		vi.mocked(countOrgApiKeys).mockResolvedValue(0);
+		vi.mocked(listApiKeys).mockResolvedValue([] as never);
+		vi.mocked(listOrgApiKeys).mockResolvedValue([] as never);
+		vi.mocked(revokeApiKey).mockResolvedValue({ id: KEY_ID } as never);
+		vi.mocked(deleteApiKey).mockResolvedValue({ id: KEY_ID } as never);
+	});
+
+	it("org key cannot create an org key for its own org", async () => {
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{ name: "Minted", organizationId: "org-1", scopes: ["mcp"] },
+				{ context: orgKeyContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
+	});
+
+	it("personal key cannot create a personal key", async () => {
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{ name: "Minted" },
+				{ context: personalKeyContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
+	});
+
+	it("personal key cannot create an org key", async () => {
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{ name: "Minted", organizationId: "org-1" },
+				{ context: personalKeyContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["revoke", "revokeApiKey"],
+		["delete", "deleteApiKey"],
+	] as const)(
+		"personal key cannot %s the owner's other keys",
+		async (route, query) => {
+			vi.mocked(getApiKey).mockResolvedValue({
+				id: KEY_ID,
+				userId: "user-1",
+				organizationId: null,
+			} as never);
+			const mocks = { revokeApiKey, deleteApiKey };
+
+			await expect(
+				call(
+					apiKeysRouter[route],
+					{ id: KEY_ID },
+					{ context: personalKeyContext },
+				),
+			).rejects.toMatchObject({ code: "FORBIDDEN" });
+			expect(mocks[query]).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each([
+		["revoke", "revokeApiKey"],
+		["delete", "deleteApiKey"],
+	] as const)("org key cannot %s an org key", async (route, query) => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-1",
+			organizationId: "org-1",
+		} as never);
+		const mocks = { revokeApiKey, deleteApiKey };
+
+		await expect(
+			call(apiKeysRouter[route], { id: KEY_ID }, { context: orgKeyContext }),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(mocks[query]).not.toHaveBeenCalled();
+	});
+
+	it("org key may still list its org's keys", async () => {
+		await expect(
+			call(
+				apiKeysRouter.list,
+				{ organizationId: "org-1" },
+				{ context: orgKeyContext },
+			),
+		).resolves.toMatchObject({ items: [], total: 0 });
+	});
+
+	it("session caller is unaffected", async () => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-1",
+			organizationId: null,
+		} as never);
+
+		await expect(
+			call(
+				apiKeysRouter.create,
+				{ name: "Session Key" },
+				{ context: authenticatedContext },
+			),
+		).resolves.toMatchObject({ id: KEY_ID });
+		await expect(
+			call(
+				apiKeysRouter.revoke,
+				{ id: KEY_ID },
+				{ context: authenticatedContext },
+			),
+		).resolves.toEqual({ success: true });
+		await expect(
+			call(
+				apiKeysRouter.delete,
+				{ id: KEY_ID },
+				{ context: authenticatedContext },
+			),
+		).resolves.toEqual({ success: true });
 	});
 });

@@ -4,7 +4,7 @@ import { assertSignupPolicy } from "../hooks/signup-policy";
 
 const open = { enabled: true, allowedDomains: [] as string[] };
 const closed = { enabled: false, allowedDomains: [] as string[] };
-const restricted = { enabled: true, allowedDomains: ["fuutu.dev"] };
+const restricted = { enabled: true, allowedDomains: ["fuutustack.com"] };
 
 describe("assertSignupPolicy()", () => {
 	it("allows sign-up on /sign-up/email when enabled", () => {
@@ -63,7 +63,7 @@ describe("assertSignupPolicy()", () => {
 	it("allows listed domains when allowedDomains is set", () => {
 		expect(() =>
 			assertSignupPolicy(
-				{ email: "dev@fuutu.dev" },
+				{ email: "dev@fuutustack.com" },
 				{ path: "/sign-up/email" },
 				restricted,
 			),
@@ -89,7 +89,7 @@ describe("assertSignupPolicy()", () => {
 	it("matches domains case-insensitively", () => {
 		expect(() =>
 			assertSignupPolicy(
-				{ email: "dev@FUUTU.dev" },
+				{ email: "dev@FUUTUSTACK.com" },
 				{ path: "/sign-up/email" },
 				restricted,
 			),

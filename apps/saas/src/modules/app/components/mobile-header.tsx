@@ -1,12 +1,12 @@
 "use client";
 
+import { config } from "@fuutu/config";
 import { BrandLogo, Button, useSidebar } from "@fuutu/ui";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 export function MobileHeader() {
-	const t = useTranslations();
 	const tNav = useTranslations("navigation");
 	const { toggleSidebar } = useSidebar();
 
@@ -15,11 +15,11 @@ export function MobileHeader() {
 			<Link href="/dashboard" className="flex items-center gap-2.5">
 				<BrandLogo
 					size="md"
-					alt={t("app.brand")}
+					alt={config.app.name}
 					className="size-7 dark:invert"
 				/>
 				<span className="font-semibold text-foreground text-sm tracking-tight">
-					{t("app.brand")}
+					{config.app.name}
 				</span>
 			</Link>
 			<Button

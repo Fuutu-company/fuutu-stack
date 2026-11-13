@@ -90,6 +90,74 @@ describe("createMemoryRateLimitStore", () => {
 	});
 });
 
+describe("createMemoryRateLimitStore peek", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_000_000);
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	const limit = { maxRequests: 2, windowMs: 60_000 };
+
+	it("reports a fresh key as allowed without consuming budget", async () => {
+		const store = createMemoryRateLimitStore();
+		expect(await store.peek("k", limit)).toEqual({
+			allowed: true,
+			remaining: 2,
+			resetAt: 1_060_000,
+		});
+		await store.peek("k", limit);
+		expect((await store.check("k", limit)).remaining).toBe(1);
+		expect((await store.check("k", limit)).allowed).toBe(true);
+	});
+
+	it("reports an exhausted key as blocked, still without consuming", async () => {
+		const store = createMemoryRateLimitStore();
+		await store.check("k", limit);
+		await store.check("k", limit);
+		expect(await store.peek("k", limit)).toEqual({
+			allowed: false,
+			remaining: 0,
+			resetAt: 1_060_000,
+		});
+	});
+
+	it("reports the key allowed again once the window expired", async () => {
+		const store = createMemoryRateLimitStore();
+		await store.check("k", limit);
+		await store.check("k", limit);
+		vi.advanceTimersByTime(60_000);
+		expect((await store.peek("k", limit)).allowed).toBe(true);
+	});
+});
+
+describe("createMemoryRateLimitStore sweep", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_000_000);
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("keeps live buckets when sweeping expired ones (per-IP key churn)", async () => {
+		const store = createMemoryRateLimitStore({ sweepThreshold: 2 });
+		const short = { maxRequests: 1, windowMs: 1_000 };
+		const long = { maxRequests: 1, windowMs: 60_000 };
+		await store.check("live", long);
+		await store.check("old-1", short);
+		await store.check("old-2", short);
+		vi.advanceTimersByTime(2_000);
+		await store.check("new", short);
+		expect((await store.check("live", long)).allowed).toBe(false);
+		expect((await store.check("old-1", short)).allowed).toBe(true);
+	});
+});
+
 describe("createRedisRateLimitStore", () => {
 	it("fails loud on check so production never runs un-rate-limited", async () => {
 		const store = createRedisRateLimitStore({ url: "redis://localhost:6379" });
@@ -103,6 +171,15 @@ describe("createRedisRateLimitStore", () => {
 		await expect(
 			store.check("k", { maxRequests: 1, windowMs: 1000 }),
 		).rejects.toThrow("unset REDIS_URL");
+	});
+});
+
+describe("createRedisRateLimitStore peek", () => {
+	it("fails loud on peek too", async () => {
+		const store = createRedisRateLimitStore({ url: "redis://localhost:6379" });
+		await expect(
+			store.peek("k", { maxRequests: 1, windowMs: 1000 }),
+		).rejects.toThrow("Redis driver is a v1 stub");
 	});
 });
 

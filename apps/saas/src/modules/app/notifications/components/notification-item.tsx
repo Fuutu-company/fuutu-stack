@@ -84,7 +84,7 @@ export function NotificationItem({
 					)}
 				</div>
 				<p className="text-muted-foreground text-sm">{notification.body}</p>
-				<p className="text-muted-foreground text-xs">
+				<p className="text-muted-foreground text-xs" data-volatile>
 					{notification.createdAt.toLocaleString(locale)}
 				</p>
 			</div>

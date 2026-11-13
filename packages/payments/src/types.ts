@@ -53,6 +53,12 @@ export interface ProviderEvent {
 	/** Normalized status to write directly to the Purchase row. */
 	status?: PurchaseStatusLiteral;
 	currentPeriodEnd?: Date;
+	/**
+	 * Purchased unit/seat count (Creem `units`, Stripe item `quantity`,
+	 * Polar `seats`). Persisted to `Purchase.quantity`; absent → the
+	 * stored quantity is left unchanged (new rows default to 1).
+	 */
+	units?: number;
 	/** Contains user_id / organization_id (passed through checkout metadata). */
 	metadata?: Record<string, unknown>;
 	/**
@@ -104,6 +110,13 @@ export interface CheckoutInput {
 	organizationId?: string;
 	/** Seat count for seat-based plans. */
 	seats?: number;
+	/**
+	 * Free-trial length for subscription checkouts (`PLANS[].trialDays`).
+	 * Stripe: `subscription_data.trial_period_days`; Polar: a day-interval
+	 * checkout trial; Creem: ignored — its checkout API has no trial
+	 * parameter, trials are configured on the Creem product.
+	 */
+	trialDays?: number;
 	successUrl?: string;
 	cancelUrl?: string;
 	customerEmail?: string;

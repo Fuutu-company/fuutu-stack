@@ -1,4 +1,9 @@
 import { expect, test } from "./fixtures";
+import { planCtaLabel, upgradePlanId } from "./kit-catalog";
+
+// The upgrade target and its CTA come from PLANS + translations, not the
+// kit demo literals ("pro" / "Upgrade to Pro").
+const upgradeCta = planCtaLabel(upgradePlanId);
 
 test.describe("billing & checkout flows", () => {
 	test("choose-plan page renders", async ({ page }) => {
@@ -18,6 +23,67 @@ test.describe("billing & checkout flows", () => {
 			.first()
 			.click();
 		await expect(page).toHaveURL(/\/choose-plan/);
+	});
+
+	test("choose-plan checks out for the active organization in org billing mode", async ({
+		page,
+		baseURL,
+	}) => {
+		// Kit default: organizationsMode "on" → billing attached to the org.
+		const setActive = await page.request.post(
+			"/api/auth/organization/set-active",
+			{
+				data: { organizationSlug: "acme" },
+				headers: { origin: new URL(baseURL ?? page.url()).origin },
+			},
+		);
+		expect(setActive.ok()).toBe(true);
+		const { id: activeOrgId } = (await setActive.json()) as { id: string };
+
+		let checkoutInput: unknown;
+		await page.route("**/api/rpc/payments/checkout/create", async (route) => {
+			checkoutInput = (
+				route.request().postDataJSON() as { json?: unknown } | null
+			)?.json;
+			await route.abort();
+		});
+
+		await page.goto("/choose-plan");
+		await page.getByRole("button", { name: upgradeCta }).first().click();
+
+		await expect.poll(() => checkoutInput).toBeTruthy();
+		expect(checkoutInput).toMatchObject({
+			planId: upgradePlanId,
+			organizationId: activeOrgId,
+		});
+	});
+
+	test("org billing explains a misconfigured payment provider", async ({
+		page,
+	}) => {
+		// Replay the API's typed answer for a missing provider key
+		// (packages/api payments.test.ts pins the mapping).
+		await page.route("**/api/rpc/payments/checkout/create", (route) =>
+			route.fulfill({
+				status: 503,
+				contentType: "application/json",
+				body: JSON.stringify({
+					json: {
+						defined: false,
+						code: "SERVICE_UNAVAILABLE",
+						status: 503,
+						message: "Payments are not configured",
+					},
+				}),
+			}),
+		);
+
+		await page.goto("/organizations/acme/settings/billing");
+		await page.getByRole("button", { name: upgradeCta }).first().click();
+
+		await expect(
+			page.getByText(/payments are not configured for this environment/i),
+		).toBeVisible({ timeout: 10_000 });
 	});
 
 	test("settings page renders for authenticated user", async ({ page }) => {

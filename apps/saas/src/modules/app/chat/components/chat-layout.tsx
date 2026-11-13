@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { client, orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "chat-layout" });
@@ -37,38 +38,24 @@ const fullOrgSchema = z.object({
 	slug: z.string(),
 });
 
-type FullOrg = z.infer<typeof fullOrgSchema>;
-
 export function ChatLayout({ slug }: { slug?: string } = {}) {
 	const t = useTranslations("chat");
 	const queryClient = useQueryClient();
-	const { data: activeOrg } = authClient.useActiveOrganization();
-	const [orgBySlug, setOrgBySlug] = useState<FullOrg | null>(null);
+	// Unscoped route: the session's active org. Read from the (shared)
+	// session instead of useActiveOrganization(), which refetches
+	// get-full-organization on every mount — only the id is needed.
+	const { data: session } = authClient.useSession();
+	const activeOrgId = (
+		session?.session as { activeOrganizationId?: string | null } | undefined
+	)?.activeOrganizationId;
+	const parsedOrg = fullOrgSchema.safeParse(useFullOrganization(slug).data);
+	const orgBySlug = parsedOrg.success ? parsedOrg.data : null;
 
-	const loadOrg = useCallback(async () => {
-		if (!slug) return;
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			const parsed = fullOrgSchema.safeParse(res.data);
-			if (parsed.success) {
-				setOrgBySlug(parsed.data);
-			} else {
-				log.error("org lookup returned unexpected shape", { slug });
-			}
-		} catch (error) {
-			log.error("org lookup failed", { slug, error });
-		}
-	}, [slug]);
-
-	useEffect(() => {
-		void loadOrg();
-	}, [loadOrg]);
-
-	// Better Auth's active organization type is a superset of Org (has id, name, slug, …).
-	// Narrowing to Org | null is safe — we only read org.id.
-	const org = (slug ? orgBySlug : (activeOrg as Org | null)) ?? null;
+	const org: Org | null = slug
+		? orgBySlug
+		: activeOrgId
+			? { id: activeOrgId }
+			: null;
 	const organizationId = org?.id ?? null;
 
 	const [activeConversationId, setActiveConversationId] = useState<

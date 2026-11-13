@@ -1,12 +1,13 @@
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
+import { sortByCreatedAt } from "../../../../orpc/ordering";
 import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import { permissionProcedure } from "../../../../orpc/procedures";
 
 const listMembersSchema = z.object({
 	organizationId: z.string().min(1),
-	page: z.number().int().min(1).default(1),
-	limit: z.number().int().min(1).max(100).default(50),
+	page: z.coerce.number().int().min(1).default(1),
+	limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 export const listMembers = permissionProcedure(PERMISSIONS.ORGANIZATION.VIEW)
@@ -25,7 +26,7 @@ export const listMembers = permissionProcedure(PERMISSIONS.ORGANIZATION.VIEW)
 			PERMISSIONS.ORGANIZATION.VIEW,
 			context,
 		);
-		const members = org.members ?? [];
+		const members = sortByCreatedAt(org.members ?? [], "asc");
 		const total = members.length;
 		const skip = (input.page - 1) * input.limit;
 		const items = members.slice(skip, skip + input.limit);

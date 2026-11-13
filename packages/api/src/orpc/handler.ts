@@ -1,4 +1,5 @@
-import { config, KIT_VERSION } from "@fuutu/config";
+import { config } from "@fuutu/config";
+import { APP_VERSION } from "@fuutu/config/app-version";
 import { createLogger } from "@fuutu/logs";
 import { withEvlog } from "@fuutu/logs/orpc";
 import type { OpenAPI } from "@orpc/openapi";
@@ -7,7 +8,10 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { getBetterAuthSpecPaths } from "./openapi-merge";
+import {
+	getBetterAuthSpecPaths,
+	getBetterAuthSpecSchemas,
+} from "./openapi-merge";
 import { router } from "./router";
 
 const log = createLogger({ scope: "rpc-handler" });
@@ -32,15 +36,24 @@ export const openApiHandler = withEvlog(
 			new OpenAPIReferencePlugin({
 				schemaConverters: [new ZodToJsonSchemaConverter()],
 				specGenerateOptions: async () => {
-					const betterAuthPaths = await getBetterAuthSpecPaths();
+					const [betterAuthPaths, betterAuthSchemas] = await Promise.all([
+						getBetterAuthSpecPaths(),
+						getBetterAuthSpecSchemas(),
+					]);
 					return {
 						info: {
 							title: `${config.app.name} API`,
-							version: KIT_VERSION,
+							version: APP_VERSION,
 							description: "Type-safe API built with oRPC",
 						},
 						servers: [{ url: "/api" }],
 						paths: betterAuthPaths as OpenAPI.PathsObject,
+						components: {
+							schemas: betterAuthSchemas as Record<
+								string,
+								OpenAPI.SchemaObject
+							>,
+						},
 					};
 				},
 				docsPath: "/docs",

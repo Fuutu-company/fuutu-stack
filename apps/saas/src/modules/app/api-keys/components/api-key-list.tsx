@@ -1,23 +1,25 @@
 "use client";
 
-import { authClient } from "@fuutu/auth/client";
-import { createLogger } from "@fuutu/logs";
 import { Badge, Card, CardContent } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { orpc } from "@/utils/orpc";
-import { ApiKeyCreateDialog } from "./api-key-create-dialog";
+import {
+	ApiKeyCreateDialog,
+	type ApiKeyOrgOption,
+} from "./api-key-create-dialog";
 import { ApiKeyCreatedDialog } from "./api-key-created-dialog";
 import { ApiKeyRevokeDialog } from "./api-key-revoke-dialog";
-
-const log = createLogger({ scope: "api-key-list" });
 
 type ApiKey = {
 	id: string;
 	name: string;
 	prefix: string;
+	scopes: string[];
+	organizationId: string | null;
 	lastUsedAt: Date | null;
 	createdAt: Date;
 	revokedAt: Date | null;
@@ -45,32 +47,20 @@ function getKeyStatus(key: ApiKey): "active" | "revoked" | "expired" {
 export function ApiKeyList({
 	slug,
 	organizationId,
+	orgs = [],
+	isSystemAdmin = false,
 }: {
 	slug?: string;
 	organizationId?: string;
+	/** User settings: orgs the user may create keys for (org picker). */
+	orgs?: readonly ApiKeyOrgOption[];
+	isSystemAdmin?: boolean;
 }) {
 	const t = useTranslations("apiKeys");
 	const locale = useLocale();
-	const [org, setOrg] = useState<FullOrg | null>(null);
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (useFullOrganization(slug).data ?? null) as FullOrg | null;
 	const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
-
-	const loadOrg = useCallback(async () => {
-		if (!slug) return;
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-			const data = res.data as FullOrg | null;
-			if (data) setOrg(data);
-		} catch (e) {
-			log.error("failed to load organization", { err: e });
-		}
-	}, [slug]);
-
-	useEffect(() => {
-		void loadOrg();
-	}, [loadOrg]);
 
 	const effectiveOrgId = organizationId ?? org?.id;
 
@@ -81,6 +71,12 @@ export function ApiKeyList({
 	);
 
 	const items = query.data?.items ?? [];
+
+	const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
+
+	function scopeLabel(scope: string): string {
+		return t.has(`scopes.${scope}`) ? t(`scopes.${scope}`) : scope;
+	}
 
 	function formatDate(date: Date | null): string {
 		if (!date) return t("neverUsed");
@@ -98,6 +94,8 @@ export function ApiKeyList({
 				</div>
 				<ApiKeyCreateDialog
 					organizationId={effectiveOrgId}
+					orgs={orgs}
+					isSystemAdmin={isSystemAdmin}
 					onCreated={(key) => setCreatedKey(key)}
 				/>
 			</div>
@@ -116,6 +114,8 @@ export function ApiKeyList({
 						</p>
 						<ApiKeyCreateDialog
 							organizationId={effectiveOrgId}
+							orgs={orgs}
+							isSystemAdmin={isSystemAdmin}
 							onCreated={(key) => setCreatedKey(key)}
 						/>
 					</CardContent>
@@ -129,6 +129,7 @@ export function ApiKeyList({
 									<tr className="text-left">
 										<th className="p-3 font-medium">{t("col.name")}</th>
 										<th className="p-3 font-medium">{t("col.prefix")}</th>
+										<th className="p-3 font-medium">{t("col.scopes")}</th>
 										<th className="p-3 font-medium">{t("col.lastUsed")}</th>
 										<th className="p-3 font-medium">{t("col.createdAt")}</th>
 										<th className="p-3 font-medium">{t("col.status")}</th>
@@ -142,9 +143,35 @@ export function ApiKeyList({
 										const status = getKeyStatus(key);
 										return (
 											<tr key={key.id}>
-												<td className="p-3 font-medium">{key.name}</td>
+												<td className="p-3 font-medium">
+													{key.name}
+													{!effectiveOrgId &&
+														key.organizationId &&
+														orgNames.has(key.organizationId) && (
+															<span className="block font-normal text-muted-foreground text-xs">
+																{orgNames.get(key.organizationId)}
+															</span>
+														)}
+												</td>
 												<td className="p-3 font-mono text-muted-foreground text-xs">
 													{key.prefix}
+												</td>
+												<td className="p-3">
+													<div className="flex flex-wrap gap-1">
+														{key.scopes.length === 0 ? (
+															<Badge variant="secondary">
+																{key.organizationId
+																	? t("scopes.full")
+																	: t("scopes.personal")}
+															</Badge>
+														) : (
+															key.scopes.map((scope) => (
+																<Badge key={scope} variant="secondary">
+																	{scopeLabel(scope)}
+																</Badge>
+															))
+														)}
+													</div>
 												</td>
 												<td className="p-3 text-muted-foreground text-xs">
 													{formatDate(key.lastUsedAt)}

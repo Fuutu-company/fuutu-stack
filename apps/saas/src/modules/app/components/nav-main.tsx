@@ -1,47 +1,41 @@
 "use client";
 
 import { config } from "@fuutu/config";
-import { paymentsConfig } from "@fuutu/payments/config";
 import {
 	hasOrgPermission,
+	type KnownPermission,
 	ORG_POLICY,
 	OrgAccessControl,
 	PERMISSIONS,
 	toOrgRole,
 } from "@fuutu/rbac";
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarMenuSub,
-	SidebarMenuSubButton,
-	SidebarMenuSubItem,
-	useSidebar,
 } from "@fuutu/ui";
 import {
 	Bell,
-	ChevronRight,
 	LayoutDashboard,
 	type LucideIcon,
 	MessageSquare,
 	Settings,
+	UserCog,
 	Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useOrgRole } from "../organizations/use-org-role";
+import {
+	ACCOUNT_SETTINGS_PATH,
+	getAccountItems,
+	getOrgSettingsItems,
+	orgSettingsBase,
+} from "./nav-config";
+import { NavGroup } from "./nav-group";
 
 const orgAC = new OrgAccessControl(ORG_POLICY);
 
@@ -49,11 +43,6 @@ interface NavItem {
 	titleKey: string;
 	url: string;
 	icon: LucideIcon;
-}
-
-interface SubItem {
-	titleKey: string;
-	url: string;
 }
 
 /** Extract org slug from pathname if inside an org route */
@@ -69,8 +58,6 @@ export function NavMain() {
 	const orgSlug = useOrgSlug();
 	const orgRole = useOrgRole(orgSlug);
 	const inOrg = orgSlug !== null;
-	const { isMobile, state: sidebarState } = useSidebar();
-	const isCollapsed = !isMobile && sidebarState === "collapsed";
 
 	// Build base URLs — org-scoped when inside an org, personal otherwise
 	const base = inOrg ? `/organizations/${orgSlug}` : "";
@@ -105,42 +92,14 @@ export function NavMain() {
 		icon: Bell,
 	});
 
-	// Organization settings sub-items — only when inside an org
-	const settingsBase = `/organizations/${orgSlug}/settings`;
-	const settingsSubItems: SubItem[] = [
-		{ titleKey: "general", url: `${settingsBase}/general` },
-		{ titleKey: "members", url: `${settingsBase}/members` },
-	];
-	if (paymentsConfig.billingAttachedTo === "organization") {
-		settingsSubItems.push({
-			titleKey: "billing",
-			url: `${settingsBase}/billing`,
-		});
-	}
-	settingsSubItems.push(
-		{ titleKey: "apiKeys", url: `${settingsBase}/api-keys` },
-		{ titleKey: "webhooks", url: `${settingsBase}/webhooks` },
-	);
-	// Audit log requires AUDIT_LOG.VIEW (admin+) — keep in sync with
-	// OrgSettingsNav and the page-level permission gate.
-	if (
-		orgRole &&
-		hasOrgPermission(orgAC, toOrgRole(orgRole), PERMISSIONS.AUDIT_LOG.VIEW)
-	) {
-		settingsSubItems.push({
-			titleKey: "auditLog",
-			url: `${settingsBase}/audit-log`,
-		});
-	}
-	settingsSubItems.push({ titleKey: "danger", url: `${settingsBase}/danger` });
-
+	const can = (permission: KnownPermission): boolean =>
+		orgRole ? hasOrgPermission(orgAC, toOrgRole(orgRole), permission) : false;
+	const canViewAuditLog = can(PERMISSIONS.AUDIT_LOG.VIEW);
 	const showOrgGroup = inOrg && config.features.organizationsMode !== "off";
 
 	const isActive = (url: string): boolean => {
 		return pathname === url || pathname.startsWith(`${url}/`);
 	};
-
-	const isSettingsActive = showOrgGroup && pathname.startsWith(settingsBase);
 
 	const renderItem = (item: NavItem) => (
 		<SidebarMenuItem key={item.titleKey}>
@@ -157,8 +116,6 @@ export function NavMain() {
 		</SidebarMenuItem>
 	);
 
-	const settingsLabel = t("navigation.organizationSettings");
-
 	return (
 		<>
 			<SidebarGroup>
@@ -168,83 +125,35 @@ export function NavMain() {
 				</SidebarMenu>
 			</SidebarGroup>
 
-			{showOrgGroup && (
+			{showOrgGroup && orgSlug && (
 				<SidebarGroup>
 					<SidebarGroupLabel>
 						{t("navigation.groupOrganization")}
 					</SidebarGroupLabel>
 					<SidebarMenu>
-						{isCollapsed ? (
-							<SidebarMenuItem>
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<SidebarMenuButton
-											tooltip={settingsLabel}
-											isActive={isSettingsActive}
-										>
-											<Settings />
-											<span>{settingsLabel}</span>
-										</SidebarMenuButton>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent
-										side="right"
-										sideOffset={4}
-										align="start"
-										className="min-w-56"
-									>
-										<DropdownMenuLabel className="text-muted-foreground text-xs">
-											{settingsLabel}
-										</DropdownMenuLabel>
-										<DropdownMenuSeparator />
-										{settingsSubItems.map((subItem) => (
-											<DropdownMenuItem key={subItem.titleKey} asChild>
-												<Link href={subItem.url}>
-													{t(`navigation.${subItem.titleKey}`)}
-												</Link>
-											</DropdownMenuItem>
-										))}
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</SidebarMenuItem>
-						) : (
-							<Collapsible
-								asChild
-								defaultOpen={isSettingsActive}
-								className="group/collapsible"
-							>
-								<SidebarMenuItem>
-									<CollapsibleTrigger asChild>
-										<SidebarMenuButton
-											tooltip={settingsLabel}
-											isActive={isSettingsActive}
-										>
-											<Settings />
-											<span>{settingsLabel}</span>
-											<ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-										</SidebarMenuButton>
-									</CollapsibleTrigger>
-									<CollapsibleContent>
-										<SidebarMenuSub>
-											{settingsSubItems.map((subItem) => (
-												<SidebarMenuSubItem key={subItem.titleKey}>
-													<SidebarMenuSubButton
-														asChild
-														isActive={pathname === subItem.url}
-													>
-														<Link href={subItem.url}>
-															<span>{t(`navigation.${subItem.titleKey}`)}</span>
-														</Link>
-													</SidebarMenuSubButton>
-												</SidebarMenuSubItem>
-											))}
-										</SidebarMenuSub>
-									</CollapsibleContent>
-								</SidebarMenuItem>
-							</Collapsible>
-						)}
+						<NavGroup
+							id="org-settings"
+							label={t("navigation.organizationSettings")}
+							icon={Settings}
+							activePrefix={orgSettingsBase(orgSlug)}
+							items={getOrgSettingsItems(orgSlug, canViewAuditLog, can)}
+						/>
 					</SidebarMenu>
 				</SidebarGroup>
 			)}
+
+			<SidebarGroup>
+				<SidebarGroupLabel>{t("navigation.groupAccount")}</SidebarGroupLabel>
+				<SidebarMenu>
+					<NavGroup
+						id="account-settings"
+						label={t("navigation.accountSettings")}
+						icon={UserCog}
+						activePrefix={ACCOUNT_SETTINGS_PATH}
+						items={getAccountItems()}
+					/>
+				</SidebarMenu>
+			</SidebarGroup>
 		</>
 	);
 }

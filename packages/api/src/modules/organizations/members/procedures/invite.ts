@@ -1,5 +1,4 @@
 import { auth } from "@fuutu/auth";
-import { countOrganizationMembers } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { dispatchEvent } from "@fuutu/webhooks";
@@ -7,6 +6,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../../orpc/procedures";
+import { toSeatLimitError } from "../../seat-limit-error";
 
 const log = createLogger({ scope: "api:organizations" });
 
@@ -16,12 +16,11 @@ const inviteMemberSchema = z.object({
 	role: z.enum(["owner", "admin", "member"]).default("member"),
 });
 
+// No `limit` pre-flight: the seat cap is enforced by the auth
+// organizationHooks against Entitlement.seatsTotal (members + pending
+// invitations) and surfaced below as a typed PAYMENT_REQUIRED error.
 export const inviteMember = authProcedure({
 	org: { permission: PERMISSIONS.INVITE_MEMBER },
-	limit: {
-		key: "membersPerOrg",
-		count: async (ctx) => countOrganizationMembers(ctx.org?.id ?? ""),
-	},
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
@@ -41,14 +40,19 @@ export const inviteMember = authProcedure({
 				message: "Cannot invite a member with a higher role than your own",
 			});
 		}
-		const invitation = await auth.api.createInvitation({
-			body: {
-				email: input.email,
-				role: input.role,
-				organizationId: input.organizationId,
-			},
-			headers: context.headers,
-		});
+		let invitation: Awaited<ReturnType<typeof auth.api.createInvitation>>;
+		try {
+			invitation = await auth.api.createInvitation({
+				body: {
+					email: input.email,
+					role: input.role,
+					organizationId: input.organizationId,
+				},
+				headers: context.headers,
+			});
+		} catch (e) {
+			throw toSeatLimitError(e) ?? e;
+		}
 		try {
 			await dispatchEvent({
 				event: "member.invited",

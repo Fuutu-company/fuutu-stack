@@ -1,0 +1,28 @@
+{
+	"mcpServers": {
+		"fuutu": {
+			"type": "http",
+			"url": "https://app.fuutustack.com/api/mcp",
+			"headers": {
+				"Authorization": "Bearer ${FUUTU_MCP_API_KEY:-}",
+				"X-Fuutu-Kit-Version": "1.0.0"
+			}
+		},
+		"better-auth": {
+			"type": "http",
+			"url": "https://mcp.better-auth.com/mcp"
+		},
+		"next-devtools": {
+			"command": "pnpm",
+			"args": ["dlx", "next-devtools-mcp@0.4.0"]
+		},
+		"shadcn": {
+			"command": "pnpm",
+			"args": ["dlx", "shadcn@4.21.4", "mcp"]
+		},
+		"playwright": {
+			"command": "node",
+			"args": ["tooling/scripts/playwright-mcp.mjs"]
+		}
+	}
+}

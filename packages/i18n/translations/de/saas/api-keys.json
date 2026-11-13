@@ -10,6 +10,7 @@
 		"col": {
 			"name": "Name",
 			"prefix": "Schlüssel",
+			"scopes": "Bereiche",
 			"lastUsed": "Zuletzt verwendet",
 			"createdAt": "Erstellt",
 			"status": "Status",
@@ -28,7 +29,28 @@
 			"namePlaceholder": "Produktionsserver",
 			"expiryLabel": "Ablaufdatum (optional)",
 			"expiryPlaceholder": "Datum wählen",
+			"typeLabel": "Schlüsseltyp",
+			"types": {
+				"personal": "Persönlich",
+				"org": "Organisation"
+			},
+			"orgLabel": "Organisation",
+			"orgPlaceholder": "Organisation auswählen",
+			"scopesLabel": "Berechtigungen",
+			"orgKeyHint": "Organisations-Schlüssel handeln mit deiner Rolle in der Organisation und funktionieren nicht mehr, wenn du sie verlässt. Wähle alle Bereiche, in denen dieser Schlüssel genutzt werden darf.",
 			"submit": "Schlüssel erstellen"
+		},
+		"scopes": {
+			"personal": "Persönlich",
+			"full": "Vollzugriff",
+			"mcp": "MCP",
+			"versioning": "Versionierung",
+			"api": "API"
+		},
+		"scopeDescriptions": {
+			"api": "REST- und oRPC-API aufrufen.",
+			"mcp": "KI-Agenten über den MCP-Server anbinden.",
+			"versioning": "Versions- und Release-Informationen lesen."
 		},
 		"createdDialog": {
 			"title": "Dein neuer API-Schlüssel",

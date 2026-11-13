@@ -15,8 +15,12 @@ import { slugify } from "@fuutu/utils";
 import { Building2, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { orpc } from "@/utils/orpc";
+import {
+	useFullOrganization,
+	useInvalidateOrganization,
+} from "../use-full-organization";
 
 const MAX_LOGO_SIZE = 5 * 1024 * 1024;
 
@@ -41,7 +45,10 @@ type FullOrg = {
 export function OrgLogoUpload({ slug }: { slug: string }) {
 	const t = useTranslations("organizations");
 	const { data: session } = authClient.useSession();
-	const [org, setOrg] = useState<FullOrg | null>(null);
+	const orgQuery = useFullOrganization(slug);
+	const invalidateOrganization = useInvalidateOrganization();
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (orgQuery.data ?? null) as FullOrg | null;
 	const [uploading, setUploading] = useState(false);
 	const [removing, setRemoving] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
@@ -58,23 +65,6 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 				PERMISSIONS.ORGANIZATION.UPDATE,
 			)
 		: false;
-
-	const loadOrg = useCallback(async () => {
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-			const data = res.data as FullOrg | null;
-			if (data) setOrg(data);
-		} catch (e) {
-			log.error("failed to load organization", { err: e });
-		}
-	}, [slug]);
-
-	useEffect(() => {
-		void loadOrg();
-	}, [loadOrg]);
 
 	async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
@@ -112,7 +102,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 			});
 
 			setStatus(t("settings.logo.saved"));
-			await loadOrg();
+			await invalidateOrganization(slug);
 		} catch (e) {
 			log.error("logo upload failed", { err: e });
 			setStatus(t("settings.logo.failed"));
@@ -132,7 +122,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 				logo: null,
 			});
 			setStatus(t("settings.logo.saved"));
-			await loadOrg();
+			await invalidateOrganization(slug);
 		} catch (e) {
 			log.error("logo removal failed", { err: e });
 			setStatus(t("settings.logo.failed"));

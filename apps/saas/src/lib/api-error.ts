@@ -1,4 +1,23 @@
+import { ORPCError } from "@orpc/client";
 import type { useTranslations } from "next-intl";
+
+export type SeatLimit = { seatsTotal: number; upgradeUrl: string };
+
+/**
+ * The org's seat cap when `err` is the API's typed seat-limit error
+ * (`PAYMENT_REQUIRED`, data `{ seatsTotal, upgradeUrl }`), else null.
+ */
+export function seatLimitFromError(err: unknown): SeatLimit | null {
+	if (!(err instanceof ORPCError) || err.code !== "PAYMENT_REQUIRED") {
+		return null;
+	}
+	const data: unknown = err.data;
+	if (typeof data !== "object" || data === null) return null;
+	const { seatsTotal, upgradeUrl } = data as Record<string, unknown>;
+	return typeof seatsTotal === "number" && typeof upgradeUrl === "string"
+		? { seatsTotal, upgradeUrl }
+		: null;
+}
 
 /**
  * Map an API error to a localized message. The API's authorize middleware
@@ -23,4 +42,17 @@ export function planGateMessage(
 		return t("common.errors.planFeatureRequired");
 	}
 	return t(fallbackKey);
+}
+
+/**
+ * True when a payments call failed because the deployment cannot take
+ * payments — provider off (`NOT_IMPLEMENTED`) or misconfigured, e.g. a
+ * missing API key (`SERVICE_UNAVAILABLE`). The UI says so instead of a
+ * generic "checkout failed".
+ */
+export function isPaymentsUnavailable(err: unknown): boolean {
+	return (
+		err instanceof ORPCError &&
+		(err.code === "SERVICE_UNAVAILABLE" || err.code === "NOT_IMPLEMENTED")
+	);
 }

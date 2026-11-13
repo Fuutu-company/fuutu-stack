@@ -1,10 +1,13 @@
+import { renderSlot } from "@app/slots";
 import { env } from "@fuutu/env/saas";
 import {
 	isPaymentsEnabled,
 	type PaymentProviderId,
 	paymentsConfig,
 } from "@fuutu/payments/config";
+import { getPlanPriceIds } from "@fuutu/payments/config.server";
 import { redirect } from "next/navigation";
+import { appSlots } from "@/app-slots";
 import { OrgSettingsBilling } from "@/modules/app/organizations/org-settings-billing";
 
 interface Props {
@@ -32,17 +35,14 @@ export default async function BillingPage({ params }: Props) {
 		isPaymentsEnabled() &&
 		PROVIDER_CREDENTIALS_CONFIGURED[paymentsConfig.provider];
 	return (
-		<div className="mx-auto max-w-4xl">
+		<div className="mx-auto max-w-4xl space-y-6">
+			{renderSlot(appSlots.orgBillingTop, { slug })}
 			<OrgSettingsBilling
 				slug={slug}
 				paymentsEnabled={paymentsEnabled}
-				productIds={{
-					pro: {
-						monthly: env.PAYMENTS_PRO_PRICE_ID ?? undefined,
-						yearly: env.PAYMENTS_PRO_YEARLY_PRICE_ID ?? undefined,
-					},
-				}}
+				productIds={getPlanPriceIds()}
 			/>
+			{renderSlot(appSlots.orgBillingBottom, { slug })}
 		</div>
 	);
 }

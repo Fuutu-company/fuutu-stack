@@ -10,6 +10,7 @@
 		"col": {
 			"name": "Name",
 			"prefix": "Key",
+			"scopes": "Scopes",
 			"lastUsed": "Last used",
 			"createdAt": "Created",
 			"status": "Status",
@@ -28,7 +29,28 @@
 			"namePlaceholder": "Production server",
 			"expiryLabel": "Expiry date (optional)",
 			"expiryPlaceholder": "Pick a date",
+			"typeLabel": "Key type",
+			"types": {
+				"personal": "Personal",
+				"org": "Organization"
+			},
+			"orgLabel": "Organization",
+			"orgPlaceholder": "Select an organization",
+			"scopesLabel": "Scopes",
+			"orgKeyHint": "Organization keys act with your role in that organization and stop working if you leave it. Pick every surface this key may be used on.",
 			"submit": "Create key"
+		},
+		"scopes": {
+			"personal": "Personal",
+			"full": "Full",
+			"mcp": "MCP",
+			"versioning": "Versioning",
+			"api": "API"
+		},
+		"scopeDescriptions": {
+			"api": "Call the REST and oRPC API.",
+			"mcp": "Connect AI agents through the MCP server.",
+			"versioning": "Read version and release information."
 		},
 		"createdDialog": {
 			"title": "Your new API key",

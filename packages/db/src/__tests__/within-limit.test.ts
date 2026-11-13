@@ -183,7 +183,7 @@ describe("createApiKeyWithinLimit", () => {
 		expect(db.$transaction).toHaveBeenCalledTimes(1);
 	});
 
-	it("gives up after 3 attempts on repeated P2034 conflicts", async () => {
+	it("gives up after 5 attempts on repeated P2034 conflicts", async () => {
 		const tx = apiKeyTx(0);
 		tx.apiKey.create.mockRejectedValue(makeP2034());
 		await runTx(tx);
@@ -191,7 +191,7 @@ describe("createApiKeyWithinLimit", () => {
 		await expect(
 			createApiKeyWithinLimit({ userId: "user-1", name: "Key", max: 2 }),
 		).rejects.toThrow("serialization failure");
-		expect(db.$transaction).toHaveBeenCalledTimes(3);
+		expect(db.$transaction).toHaveBeenCalledTimes(5);
 	});
 });
 

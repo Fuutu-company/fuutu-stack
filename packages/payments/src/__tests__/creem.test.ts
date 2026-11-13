@@ -373,3 +373,69 @@ describe("creem provider — SDK integration", () => {
 		expect(mockFetch).toHaveBeenCalledTimes(2);
 	});
 });
+
+describe("creem provider — purchased units", () => {
+	async function parseSigned(payload: unknown) {
+		const crypto = await import("node:crypto");
+		const body = JSON.stringify(payload);
+		const signature = crypto
+			.createHmac("sha256", "test-webhook-secret")
+			.update(body)
+			.digest("hex");
+		return creemPaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "creem-signature": signature },
+				body,
+			}),
+		);
+	}
+
+	it("reads units from a one-time checkout object", async () => {
+		const events = await parseSigned({
+			id: "evt_co",
+			eventType: "checkout.completed",
+			object: { id: "ch_1", product: { id: "prod_1" }, units: 3 },
+		});
+		expect(events[0]?.units).toBe(3);
+	});
+
+	it("reads units from subscription items[]", async () => {
+		const events = await parseSigned({
+			eventType: "subscription.active",
+			object: {
+				id: "sub_1",
+				product: { id: "prod_1" },
+				status: "active",
+				items: [{ units: 4 }],
+			},
+		});
+		expect(events[0]?.units).toBe(4);
+	});
+
+	it("reads units from the embedded checkout on a renewal", async () => {
+		const events = await parseSigned({
+			eventType: "subscription.paid",
+			object: {
+				id: "sub_1",
+				product: { id: "prod_1" },
+				status: "active",
+				checkout: { units: 2 },
+			},
+		});
+		expect(events[0]).toMatchObject({ type: "subscription.renewed", units: 2 });
+	});
+
+	it("leaves units undefined when the payload reports none", async () => {
+		const events = await parseSigned({
+			eventType: "subscription.active",
+			object: { id: "sub_1", product: { id: "prod_1" }, status: "active" },
+		});
+		expect(events[0]?.units).toBeUndefined();
+	});
+});
+
+const { testPaymentProviderContract } = await import("./provider-contract");
+testPaymentProviderContract("creem", () => creemPaymentProvider, {
+	behavior: "shape",
+});

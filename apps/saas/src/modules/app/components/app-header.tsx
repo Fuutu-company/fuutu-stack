@@ -16,118 +16,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { NotificationBell } from "@/modules/app/notifications/components/notification-bell";
+import { type BreadcrumbSegment, buildBreadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
-
-interface BreadcrumbSegment {
-	/** i18n key under navigation.breadcrumb.*, or null for dynamic labels */
-	labelKey: string | null;
-	/** Raw label for dynamic segments (e.g. org slug) */
-	label?: string;
-	href?: string;
-}
-
-function capitalize(str: string): string {
-	return str.charAt(0).toUpperCase() + str.slice(1);
-}
 
 function useBreadcrumbs(): BreadcrumbSegment[] {
 	const pathname = usePathname();
-	const searchParams = useSearchParams();
-	const segments = pathname.split("/").filter(Boolean);
-	const crumbs: BreadcrumbSegment[] = [];
-
-	const routeMap: Record<string, string> = {
-		dashboard: "breadcrumb.dashboard",
-		settings: "breadcrumb.settings",
-		organizations: "breadcrumb.organizations",
-		admin: "breadcrumb.admin",
-		chat: "breadcrumb.chat",
-		crm: "breadcrumb.crm",
-		onboarding: "breadcrumb.onboarding",
-		"choose-plan": "breadcrumb.choosePlan",
-		notifications: "breadcrumb.notifications",
-	};
-
-	const adminSubRoutes: Record<string, string> = {
-		users: "breadcrumb.users",
-		"audit-logs": "breadcrumb.auditLogs",
-	};
-
-	const settingsTabMap: Record<string, string> = {
-		profile: "breadcrumb.profile",
-		security: "breadcrumb.security",
-		sessions: "breadcrumb.sessions",
-	};
-
-	const settingsSubRoutes: Record<string, string> = {
-		"api-keys": "breadcrumb.apiKeys",
-		billing: "breadcrumb.billing",
-	};
-
-	const orgSettingsSubRoutes: Record<string, string> = {
-		general: "breadcrumb.general",
-		members: "breadcrumb.members",
-		billing: "breadcrumb.billing",
-		danger: "breadcrumb.danger",
-		"api-keys": "breadcrumb.apiKeys",
-		webhooks: "breadcrumb.webhooks",
-		"audit-log": "breadcrumb.auditLog",
-	};
-
-	// Check if we're in an org route: /organizations/[slug]/...
-	const orgSlugIndex = segments.indexOf("organizations");
-	const inOrgRoute = orgSlugIndex !== -1 && orgSlugIndex + 1 < segments.length;
-
-	for (let i = 0; i < segments.length; i++) {
-		const segment = segments[i];
-		const key = routeMap[segment];
-
-		if (key) {
-			const href = `/${segments.slice(0, i + 1).join("/")}`;
-			crumbs.push({ labelKey: key, href });
-		} else if (segments[0] === "admin" && adminSubRoutes[segment]) {
-			crumbs.push({
-				labelKey: adminSubRoutes[segment],
-				href: `/${segments.slice(0, i + 1).join("/")}`,
-			});
-		} else if (inOrgRoute && i === orgSlugIndex + 1) {
-			// Dynamic org slug
-			crumbs.push({
-				labelKey: null,
-				label: capitalize(segment),
-				href: `/organizations/${segment}/dashboard`,
-			});
-		} else if (inOrgRoute && orgSettingsSubRoutes[segment]) {
-			crumbs.push({
-				labelKey: orgSettingsSubRoutes[segment],
-				href: `/${segments.slice(0, i + 1).join("/")}`,
-			});
-		} else if (inOrgRoute && segment === "invoices") {
-			crumbs.push({
-				labelKey: "breadcrumb.invoices",
-				href: `/${segments.slice(0, i + 1).join("/")}`,
-			});
-		} else if (
-			!inOrgRoute &&
-			segments.includes("settings") &&
-			settingsSubRoutes[segment]
-		) {
-			crumbs.push({
-				labelKey: settingsSubRoutes[segment],
-				href: `/${segments.slice(0, i + 1).join("/")}`,
-			});
-		}
-	}
-
-	// Add tab suffix for personal settings (still tab-based)
-	const tab = searchParams.get("tab");
-	if (tab) {
-		if (segments.includes("settings") && settingsTabMap[tab]) {
-			crumbs.push({ labelKey: settingsTabMap[tab] });
-		}
-	}
-
-	return crumbs;
+	const tab = useSearchParams().get("tab");
+	return buildBreadcrumbs(pathname, tab);
 }
 
 function BreadcrumbLabel({

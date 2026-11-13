@@ -1,11 +1,11 @@
 {
 	"name": "@fuutu/mail-preview",
-	"version": "1.0.0",
+	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev --port 3003",
+		"dev": "node ../../tooling/scripts/next.mjs dev mail-preview",
 		"build": "next build",
-		"start": "next start --port 3003",
+		"start": "node ../../tooling/scripts/next.mjs start mail-preview",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {

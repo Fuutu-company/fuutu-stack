@@ -5,6 +5,7 @@
 			"description": "Pick the plan that fits your stage. Upgrade or downgrade anytime.",
 			"redirecting": "Redirecting…",
 			"error": "Checkout failed",
+			"noOrganization": "Select an organization first — billing is attached to organizations.",
 			"unavailable": "Payments are not configured for this environment.",
 			"popular": "Most popular",
 			"monthly": "Monthly",
@@ -91,6 +92,7 @@
 					"api_keys": "Unlimited API keys",
 					"api_webhooks": "Outbound webhooks",
 					"infrastructure_storage": "50 GB storage",
+					"support_community": "Community support",
 					"support_email": "Priority email support"
 				}
 			},

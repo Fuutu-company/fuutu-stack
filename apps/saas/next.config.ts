@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { analyticsCspOrigins } from "@fuutu/analytics";
 import {
 	KIT_FINGERPRINT_HEADER_NAME,
@@ -42,7 +43,7 @@ const securityHeaders = [
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 	{
 		key: "Permissions-Policy",
-		value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+		value: "camera=(), microphone=(), geolocation=()",
 	},
 	{ key: "X-DNS-Prefetch-Control", value: "on" },
 	{
@@ -77,6 +78,10 @@ const nextConfig: NextConfig = {
 	// through NEXT_PUBLIC_MARKETING_URL.
 	typedRoutes: false,
 	reactCompiler: true,
+	// Self-hosting (Docker/Coolify): standalone server traced from the repo
+	// root so workspace packages (packages/*) land in .next/standalone.
+	output: "standalone",
+	outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
 	transpilePackages: ["shiki", "@fuutu/ui", "@fuutu/i18n", "@fuutu/analytics"],
 	async headers() {
 		return [

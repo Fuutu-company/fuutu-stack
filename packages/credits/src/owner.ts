@@ -2,9 +2,9 @@ import type { z } from "zod";
 
 /**
  * Polymorphic-owner invariant for credit records: exactly one of
- * userId / organizationId must be set. Mirrors the XOR CHECK
- * constraint on the DB tables — enforced here so bad input fails
- * fast with a clear message instead of a constraint violation.
+ * userId / organizationId must be set. The db query functions enforce
+ * it too (assertSingleOwner) — validated here so bad input fails fast
+ * with a clear message.
  */
 export function ownerXorIssue(value: {
 	userId?: string | null;

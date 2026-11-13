@@ -1,0 +1,43 @@
+# Docker build context — keep it small and secret-free.
+# The three app Dockerfiles build from the repo root (turbo prune).
+
+# Dependencies & build output (recreated inside the image)
+**/node_modules
+**/.next
+**/.source
+**/.turbo
+**/dist
+**/coverage
+**/playwright-report
+**/test-results
+**/.playwright-mcp-artifacts
+**/*.tsbuildinfo
+**/.evlog
+
+# Secrets / local env — never enter the build context
+**/.env
+**/.env.*
+
+# VCS & tooling
+.git
+.github
+.vscode
+.idea
+.fuutu
+.shadcn-staging
+.pnpm-store
+
+# Tests are not needed to build or run the apps
+apps/*/tests
+
+# Repo-only assets / docs / deploy helpers
+# (/docs is anchored to the repo root — do NOT match apps/docs)
+assets
+/docs
+tmp
+temp
+out
+*.tgz
+*.bak
+*.bak[0-9]*
+docker-compose.deploy*.yml

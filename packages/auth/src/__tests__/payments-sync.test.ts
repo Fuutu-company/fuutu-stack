@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { paymentsConfig } from "@fuutu/payments/config";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	cancelActiveSubscriptionsForUser,
 	syncSeatsForOrganization,
@@ -7,6 +8,14 @@ import {
 const countOrganizationMembers = vi.fn();
 const getPurchasesByUserId = vi.fn();
 const cancelSubscription = vi.fn();
+const polarCancel = vi.fn();
+const resolveById = vi.fn((id: string) =>
+	id === "polar"
+		? { id: "polar", cancelSubscription: polarCancel }
+		: id === "stripe"
+			? { id: "stripe", cancelSubscription }
+			: null,
+);
 const updateSeatsInOrganizationSubscription = vi.fn();
 const logError = vi.fn();
 
@@ -17,7 +26,8 @@ vi.mock("@fuutu/db", () => ({
 }));
 
 vi.mock("@fuutu/payments", () => ({
-	resolvePaymentProvider: () => ({ cancelSubscription }),
+	resolvePaymentProvider: () => ({ id: "stripe", cancelSubscription }),
+	resolvePaymentProviderById: (id: string) => resolveById(id),
 	updateSeatsInOrganizationSubscription: (...args: unknown[]) =>
 		updateSeatsInOrganizationSubscription(...args),
 	cancelAllSubscriptionsForOrganization: vi.fn(),
@@ -33,6 +43,7 @@ vi.mock("@fuutu/logs", () => ({
 
 const sub = (over: Record<string, unknown> = {}) => ({
 	type: "SUBSCRIPTION",
+	provider: "stripe",
 	subscriptionId: "sub_1",
 	status: "ACTIVE",
 	...over,
@@ -52,6 +63,21 @@ describe("syncSeatsForOrganization()", () => {
 			"org-1",
 			3,
 		);
+	});
+
+	describe('with paymentsConfig.seatSync = "none"', () => {
+		afterEach(() => {
+			paymentsConfig.seatSync = "members";
+		});
+
+		it("leaves the provider seat quantity alone", async () => {
+			paymentsConfig.seatSync = "none";
+
+			await syncSeatsForOrganization("org-1");
+
+			expect(countOrganizationMembers).not.toHaveBeenCalled();
+			expect(updateSeatsInOrganizationSubscription).not.toHaveBeenCalled();
+		});
 	});
 
 	it("swallows provider failures and logs them", async () => {
@@ -109,5 +135,27 @@ describe("cancelActiveSubscriptionsForUser()", () => {
 		).resolves.toBeUndefined();
 		expect(cancelSubscription).not.toHaveBeenCalled();
 		expect(logError).toHaveBeenCalled();
+	});
+});
+
+describe("cancelActiveSubscriptionsForUser() — provider per purchase", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("cancels each subscription through the provider it belongs to", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ provider: "polar", subscriptionId: "sub_polar" }),
+		]);
+		await cancelActiveSubscriptionsForUser("user-1");
+		expect(polarCancel).toHaveBeenCalledWith("sub_polar");
+		expect(cancelSubscription).not.toHaveBeenCalled();
+	});
+
+	it("never calls another provider when the purchase's provider is unknown", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ provider: "gone", subscriptionId: "sub_x" }),
+		]);
+		await cancelActiveSubscriptionsForUser("user-1");
+		expect(cancelSubscription).not.toHaveBeenCalled();
+		expect(polarCancel).not.toHaveBeenCalled();
 	});
 });
