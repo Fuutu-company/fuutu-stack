@@ -44,7 +44,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 			suppressHydrationWarning
 		>
 			<body className="flex min-h-screen flex-col">
-				<RootProvider i18n={i18nUI.provider(locale)}>
+				<RootProvider theme={{ enabled: false }} i18n={i18nUI.provider(locale)}>
 					<ThemeProvider>{children}</ThemeProvider>
 				</RootProvider>
 			</body>
