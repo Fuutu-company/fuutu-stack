@@ -9,6 +9,11 @@
  * Slot 0 = the classic ports (3000/3001/4000). Slots never move once
  * assigned, so two registered projects can never meet — running or not.
  *
+ * Every local command that touches the database (`pnpm dev`, E2E, `pnpm
+ * db:migrate | db:push | db:seed | db:studio`) runs with the slot's env
+ * (tooling/scripts/with-slot-env.mjs), so a git worktree never writes into the
+ * main checkout's database. Remote URLs are never rewritten.
+ *
  * Local development only: deployments use fixed container ports.
  */
 import {
@@ -492,4 +497,13 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
 	}
 	out.FUUTU_AUTH_COOKIE_PREFIX = project.authCookiePrefix;
 	return out;
+}
+
+/**
+ * Env overrides for a one-off command (db:migrate, db:seed, …): the slot env
+ * computed from the root .env under the process env, so the command targets
+ * this project's slot database — never another checkout's.
+ */
+export function commandSlotEnv(root, project, env = process.env) {
+	return slotEnv(project, { ...readDotEnv(root), ...env });
 }
