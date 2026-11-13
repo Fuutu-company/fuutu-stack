@@ -40,7 +40,7 @@ export default async function SuspendedPage() {
 				{!isPermanent && user.banExpires && (
 					<div className="rounded-lg bg-muted p-4">
 						<p className="font-medium text-sm">{t("suspended.banExpires")}</p>
-						<p className="text-muted-foreground text-sm">
+						<p className="text-muted-foreground text-sm" data-volatile>
 							{new Date(user.banExpires).toLocaleDateString(locale, {
 								year: "numeric",
 								month: "long",

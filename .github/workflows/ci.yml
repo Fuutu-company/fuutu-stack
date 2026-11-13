@@ -226,6 +226,14 @@ jobs:
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
+      # Baselines must not depend on rows the non-visual run left behind
+      # (renamed users, extra contacts, invoices, keys): reset + reseed.
+      - name: Reset database for visual tests
+        if: matrix.app == 'saas'
+        run: |
+          pnpm -F @fuutu/db exec prisma db push --force-reset
+          NODE_ENV=development pnpm db:seed
+
       # --update-snapshots "passes" on pixel diffs — the diff signal is the
       # git diff afterwards. A real failure aborts before the status check.
       # Update mode only on user commits: when the head commit is already a
@@ -274,7 +282,9 @@ jobs:
       - name: Commit updated baselines to PR branch
         id: baseline-pr
         if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1' && env.BOT_TOKEN != ''
-        run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.head_ref }}" pr
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "$HEAD_REF" pr
 
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
@@ -299,30 +309,16 @@ jobs:
         if: github.event_name == 'push'
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.ref_name }}" push
 
-      # Hosted report: pr-<N>/<app>/ on PRs, <branch>/<app>/ on pushes. Opt-in
-      # via FUUTU_PAGES_ENABLED; requires Pages → deploy from branch gh-pages.
-      - name: Deploy visual report to GitHub Pages
+      # Hosted report (opt-in via FUUTU_PAGES_ENABLED): handed to the pages
+      # job below, which publishes it to pr-<N>/<app>/ or <branch>/<app>/.
+      - name: Keep visual report for Pages
         if: vars.FUUTU_PAGES_ENABLED == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')
-        uses: peaceiris/actions-gh-pages@v4
+        uses: actions/upload-artifact@v7
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: apps/${{ matrix.app }}/visual-report
-          destination_dir: ${{ github.event_name == 'pull_request' && format('pr-{0}/{1}', github.event.pull_request.number, matrix.app) || format('{0}/{1}', github.ref_name, matrix.app) }}
-          keep_files: true
-
-      # Regenerate the gh-pages index tree (root listing + per-dir landing
-      # pages) so the reports are navigable from the Pages root. Same gate
-      # as the deploy; a rejected push (fork PR) warns — the next deploy
-      # regenerates the index. The index embeds per-dir last-commit
-      # timestamps and PR titles, so it is regenerated inside the retry
-      # loop on top of the latest origin/gh-pages — concurrent matrix-leg
-      # pushes converge instead of conflicting on index.html.
-      - name: Update gh-pages index
-        if: vars.FUUTU_PAGES_ENABLED == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: tooling/scripts/ci-pages-index.sh
+          name: visual-report-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/visual-report
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Comment on visual result (PR)
         if: github.event_name == 'pull_request' && steps.visual.outputs.mode != 'compare' && (steps.visual.outputs.changed == '1' || steps.visual.outcome == 'failure')
@@ -331,7 +327,9 @@ jobs:
           script: |
             const changed = "${{ steps.visual.outputs.changed }}" === "1";
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const pagesEnabled = "${{ vars.FUUTU_PAGES_ENABLED }}" === "true";
+            // Fork PRs are not published (see the pages job).
+            const sameRepo = context.payload.pull_request?.head?.repo?.full_name === `${context.repo.owner}/${context.repo.repo}`;
+            const pagesEnabled = "${{ vars.FUUTU_PAGES_ENABLED }}" === "true" && sameRepo;
             // If Pages uses a custom domain, adjust this base URL.
             const pagesBase = `https://${context.repo.owner}.github.io/${context.repo.repo}/pr-${context.issue.number}`;
             const reportsLine = pagesEnabled
@@ -367,3 +365,16 @@ jobs:
             apps/${{ matrix.app }}/visual-report
           if-no-files-found: ignore
           retention-days: 14
+
+  # Publishes the visual reports of this run (both apps in one deploy).
+  # Same-repo PRs and pushes only — fork PRs get no Pages permissions.
+  pages:
+    needs: e2e
+    if: ${{ !cancelled() && needs.e2e.result != 'skipped' && vars.FUUTU_PAGES_ENABLED == 'true' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      pages: write
+      id-token: write

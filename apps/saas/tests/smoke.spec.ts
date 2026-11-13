@@ -105,6 +105,8 @@ test.describe("security headers + kit fingerprint", () => {
 		expect(h["x-content-type-options"]).toBe("nosniff");
 		expect(h["referrer-policy"]).toContain("strict-origin");
 		expect(h["permissions-policy"]).toContain("camera=()");
+		// Retired FLoC token — current Chrome logs an error for it on every page.
+		expect(h["permissions-policy"]).not.toContain("interest-cohort");
 		expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
 	});
 });

@@ -107,7 +107,10 @@ export function OrgAuditLogList({
 								<tbody className="divide-y">
 									{logs.map((log) => (
 										<tr key={log.id}>
-											<td className="p-3 text-muted-foreground text-xs">
+											<td
+												className="p-3 text-muted-foreground text-xs"
+												data-volatile
+											>
 												{log.createdAt.toLocaleString(locale)}
 											</td>
 											<td className="p-3 font-mono text-xs">{log.action}</td>
@@ -127,7 +130,10 @@ export function OrgAuditLogList({
 													labels.notAvailable
 												)}
 											</td>
-											<td className="p-3 text-muted-foreground text-xs">
+											<td
+												className="p-3 text-muted-foreground text-xs"
+												data-volatile
+											>
 												{log.ip ?? labels.notAvailable}
 											</td>
 										</tr>

@@ -1,5 +1,5 @@
 import type { Context as HonoContext } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@fuutu/auth", () => ({
 	auth: {
@@ -15,7 +15,14 @@ vi.mock("@fuutu/db", () => ({
 	getOrganizationMemberRole: vi.fn(),
 }));
 
+vi.mock("@fuutu/payments", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@fuutu/payments")>()),
+	getOrgEntitlement: vi.fn(),
+}));
+
 const { auth } = await import("@fuutu/auth");
+const { getOrgEntitlement } = await import("@fuutu/payments");
+const { apiConfig } = await import("../config");
 const { verifyApiKeyWithOwner, getOrganizationMemberRole } = await import(
 	"@fuutu/db"
 );
@@ -134,9 +141,9 @@ const verifiedKey = (scopes: string[]) => ({
 	user: { id: "user-9", email: "u@example.com", banned: false },
 });
 
-async function callWithHeaders(headers: Headers) {
+async function callWithHeaders(headers: Headers, input?: unknown) {
 	const context = await createContext({ context: fakeHonoContext(headers) });
-	return call(whoami, undefined, { context });
+	return call(whoami, input, { context });
 }
 
 describe("createContext — API-key scopes on the oRPC surface", () => {
@@ -184,6 +191,16 @@ describe("createContext — API-key scopes on the oRPC surface", () => {
 		).resolves.toBe("user-9");
 	});
 
+	it("accepts a key carrying api among several other scopes", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
+			verifiedKey(["versioning", "api", "mcp"]) as never,
+		);
+
+		await expect(
+			callWithHeaders(new Headers({ "x-api-key": "futu_sk_multi" })),
+		).resolves.toBe("user-9");
+	});
+
 	it("accepts an unscoped key (full credential)", async () => {
 		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
 			verifiedKey([]) as never,
@@ -224,5 +241,141 @@ describe("createContext — API-key scopes on the oRPC surface", () => {
 
 		expect(verifyApiKeyWithOwner).not.toHaveBeenCalled();
 		expect(ctx.session).toBeNull();
+	});
+});
+
+// Org keys may only call procedures whose input names their own org.
+const ORG_INPUT = { organizationId: "org-7" };
+
+// `apiConfig.apiKeyScopeFeatures.api` gates the oRPC surface exactly like
+// requireApiKey gates its scope — a plan-gated `api` must not be reachable
+// by keys of orgs without the feature, nor by personal keys (no org
+// entitlement to check). Default `{}` = ungated.
+
+describe("createContext — api scope feature gate", () => {
+	const orgKey = (scopes: string[]) => ({
+		apiKey: { id: "key-o", organizationId: "org-7", scopes },
+		user: { id: "user-9", email: "u@example.com", banned: false },
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(auth.api.getSession).mockResolvedValue(null);
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue("member");
+	});
+
+	afterEach(() => {
+		delete apiConfig.apiKeyScopeFeatures.api;
+	});
+
+	const expectPaymentRequired = async (promise: Promise<unknown>) => {
+		const err = await promise.catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(ORPCError);
+		expect(err).toMatchObject({
+			code: "PAYMENT_REQUIRED",
+			status: 402,
+			data: {
+				feature: "api_access",
+				upgradeUrl: expect.stringMatching(/\/pricing$/),
+			},
+		});
+	};
+
+	it("ungated by default: org and personal keys pass without an entitlement lookup", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(orgKey([]) as never);
+		await expect(
+			callWithHeaders(new Headers({ "x-api-key": "futu_sk_org" }), ORG_INPUT),
+		).resolves.toBe("user-9");
+
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
+			verifiedKey([]) as never,
+		);
+		await expect(
+			callWithHeaders(new Headers({ "x-api-key": "futu_sk_personal" })),
+		).resolves.toBe("user-9");
+
+		expect(getOrgEntitlement).not.toHaveBeenCalled();
+	});
+
+	it.each([[[]], [["api"]], [["mcp", "api"]]])(
+		"rejects an org key scoped %j with 402 when the org lacks the feature",
+		async (scopes) => {
+			apiConfig.apiKeyScopeFeatures.api = "api_access";
+			vi.mocked(getOrgEntitlement).mockResolvedValue({
+				features: ["other_feature"],
+			} as never);
+			vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
+				orgKey(scopes) as never,
+			);
+
+			await expectPaymentRequired(
+				callWithHeaders(new Headers({ "x-api-key": "futu_sk_org" }), ORG_INPUT),
+			);
+			expect(getOrgEntitlement).toHaveBeenCalledWith("org-7");
+		},
+	);
+
+	it("does not authenticate the gated key as its owner", async () => {
+		apiConfig.apiKeyScopeFeatures.api = "api_access";
+		vi.mocked(getOrgEntitlement).mockResolvedValue({ features: [] } as never);
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(orgKey([]) as never);
+
+		const ctx = await createContext({
+			context: fakeHonoContext(new Headers({ "x-api-key": "futu_sk_org" })),
+		});
+
+		expect(ctx.session).toBeNull();
+		expect(ctx.apiKey).toBeNull();
+	});
+
+	it("accepts an org key when the org's entitlement includes the feature", async () => {
+		apiConfig.apiKeyScopeFeatures.api = "api_access";
+		vi.mocked(getOrgEntitlement).mockResolvedValue({
+			features: ["api_access"],
+		} as never);
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
+			orgKey(["api"]) as never,
+		);
+
+		await expect(
+			callWithHeaders(new Headers({ "x-api-key": "futu_sk_org" }), ORG_INPUT),
+		).resolves.toBe("user-9");
+	});
+
+	it("fails closed for a personal key when api is gated", async () => {
+		apiConfig.apiKeyScopeFeatures.api = "api_access";
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
+			verifiedKey([]) as never,
+		);
+
+		await expectPaymentRequired(
+			callWithHeaders(new Headers({ "x-api-key": "futu_sk_personal" })),
+		);
+		expect(getOrgEntitlement).not.toHaveBeenCalled();
+	});
+
+	it("still rejects a key without the api scope as UNAUTHORIZED", async () => {
+		apiConfig.apiKeyScopeFeatures.api = "api_access";
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
+			orgKey(["mcp"]) as never,
+		);
+
+		await expect(
+			callWithHeaders(new Headers({ "x-api-key": "futu_sk_mcp" }), ORG_INPUT),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+		expect(getOrgEntitlement).not.toHaveBeenCalled();
+	});
+
+	it("leaves session callers ungated", async () => {
+		apiConfig.apiKeyScopeFeatures.api = "api_access";
+		vi.mocked(auth.api.getSession).mockResolvedValue({
+			user: { id: "user-1", banned: false },
+			session: { id: "sess-1" },
+		} as never);
+
+		await expect(
+			callWithHeaders(new Headers({ "x-api-key": "futu_sk_ignored" })),
+		).resolves.toBe("user-1");
+		expect(getOrgEntitlement).not.toHaveBeenCalled();
 	});
 });

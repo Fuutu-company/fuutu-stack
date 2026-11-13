@@ -42,6 +42,8 @@ export function AdminUsersTable() {
 			const res = await authClient.admin.listUsers({
 				query: {
 					limit: 100,
+					sortBy: "email",
+					sortDirection: "asc",
 					searchField: "email",
 					searchOperator: "contains",
 					searchValue: search || undefined,
@@ -176,7 +178,10 @@ export function AdminUsersTable() {
 													</span>
 												)}
 											</td>
-											<td className="p-3 text-muted-foreground text-xs">
+											<td
+												className="p-3 text-muted-foreground text-xs"
+												data-volatile
+											>
 												{new Date(u.createdAt).toLocaleDateString(locale)}
 											</td>
 											<td className="p-3">

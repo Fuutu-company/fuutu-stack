@@ -12,13 +12,13 @@ const ACTIVE_STATUSES: PurchaseStatus[] = ["ACTIVE", "TRIALING"];
 export const getPurchasesByUserId = (userId: string) =>
 	db.purchase.findMany({
 		where: { userId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 
 export const getPurchasesByOrganizationId = (organizationId: string) =>
 	db.purchase.findMany({
 		where: { organizationId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 
 /**
@@ -65,7 +65,7 @@ export const getActiveOneTimePlanPurchase = async (
 			status: "ACTIVE",
 			productId: { in: productIds },
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 };
 

@@ -10,6 +10,7 @@ import { apiConfig } from "../../../config";
 import { entitledLimit } from "../../../orpc/middleware/authorize";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
+import { assertSessionCaller } from "../assert-session-caller";
 
 const createApiKeySchema = z.object({
 	name: z.string().min(1).max(100),
@@ -42,6 +43,7 @@ export const createApiKeyProcedure = authProcedure({
 	})
 	.input(createApiKeySchema)
 	.handler(async ({ input, context }) => {
+		assertSessionCaller(context);
 		if (input.scopes?.length) {
 			// Scopes are an org-key concept: requireApiKey only admits keys
 			// with an organizationId, so a scoped personal key could never

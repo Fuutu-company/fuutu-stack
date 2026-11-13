@@ -69,7 +69,10 @@ export function RecentActivity() {
 											{actionKey ? t(actionKey) : t("activity.unknownAction")}
 										</span>
 									</p>
-									<p className="mt-1 text-muted-foreground text-xs">
+									<p
+										className="mt-1 text-muted-foreground text-xs"
+										data-volatile
+									>
 										{formatRelativeTime(item.createdAt)}
 									</p>
 								</div>

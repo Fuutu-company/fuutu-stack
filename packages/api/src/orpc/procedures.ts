@@ -27,7 +27,19 @@ const systemAC = new SystemAccessControl(SYSTEM_POLICY);
 // rather than the hard `EvlogOrpcContext` the evlog docs prescribe.
 export const publicProcedure = os
 	.$context<Context & Partial<EvlogOrpcContext>>()
-	.use(evlog<Context & Partial<EvlogOrpcContext>>());
+	.use(evlog<Context & Partial<EvlogOrpcContext>>())
+	.use(({ context, next }) => {
+		// A valid key whose `api` scope is plan-gated (createContext) gets a
+		// typed 402 instead of silently degrading to an anonymous caller.
+		if (context.apiKeyUpgradeRequired) {
+			throw new ORPCError("PAYMENT_REQUIRED", {
+				status: 402,
+				message: "Upgrade required",
+				data: context.apiKeyUpgradeRequired,
+			});
+		}
+		return next();
+	});
 
 export const protectedProcedure = publicProcedure.use(
 	async ({ context, next }, input) => {

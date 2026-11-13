@@ -15,7 +15,7 @@ const isProd = env.NODE_ENV === "production";
 // Security headers for the public marketing surface.
 // Slightly looser than SaaS: allows the active analytics provider's
 // origins and external fonts/images for blog content. Still blocks
-// framing and interest-cohort tracking.
+// framing.
 const analyticsCsp = analyticsCspOrigins();
 
 const securityHeaders = [
@@ -24,7 +24,7 @@ const securityHeaders = [
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 	{
 		key: "Permissions-Policy",
-		value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+		value: "camera=(), microphone=(), geolocation=()",
 	},
 	{ key: "X-DNS-Prefetch-Control", value: "on" },
 	{

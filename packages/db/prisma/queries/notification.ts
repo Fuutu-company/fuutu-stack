@@ -30,7 +30,7 @@ export const listNotifications = (
 	const { take = 50, skip = 0 } = opts;
 	return db.notification.findMany({
 		where: { userId },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 	});
@@ -79,6 +79,6 @@ export const searchNotifications = (
 		},
 		take,
 		skip,
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 };

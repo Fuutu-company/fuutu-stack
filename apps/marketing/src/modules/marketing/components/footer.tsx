@@ -52,7 +52,8 @@ export function MarketingFooter() {
 					))}
 				</div>
 				<div className="mt-8 border-t pt-8 text-center text-muted-foreground text-sm">
-					© {new Date().getFullYear()} {config.app.name}. {t("footer.rights")}
+					© <span data-volatile>{new Date().getFullYear()}</span>{" "}
+					{config.app.name}. {t("footer.rights")}
 				</div>
 			</div>
 		</footer>

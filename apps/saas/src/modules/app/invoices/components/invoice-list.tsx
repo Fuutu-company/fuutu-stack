@@ -142,7 +142,10 @@ export function InvoiceList({ slug }: { slug?: string }) {
 								<tbody className="divide-y">
 									{filteredInvoices.map((invoice) => (
 										<tr key={invoice.id}>
-											<td className="p-3 text-muted-foreground text-xs">
+											<td
+												className="p-3 text-muted-foreground text-xs"
+												data-volatile
+											>
 												{invoice.issuedAt.toLocaleDateString(locale)}
 											</td>
 											<td className="p-3 font-medium">

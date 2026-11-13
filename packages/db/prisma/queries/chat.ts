@@ -26,14 +26,14 @@ export const listConversations = (
 	if (organizationId) {
 		return db.chatConversation.findMany({
 			where: { userId, organizationId },
-			orderBy: { updatedAt: "desc" },
+			orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
 			take,
 			skip,
 		});
 	}
 	return db.chatConversation.findMany({
 		where: { userId, organizationId: null },
-		orderBy: { updatedAt: "desc" },
+		orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 	});
@@ -63,10 +63,13 @@ export const getConversation = async (
 		include: {
 			messages:
 				opts.take === undefined
-					? { orderBy: { createdAt: "asc" } }
+					? { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }
 					: // Newest N, descending — callers reverse back to
 						// chronological order before use.
-						{ orderBy: { createdAt: "desc" }, take: opts.take },
+						{
+							orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+							take: opts.take,
+						},
 		},
 	});
 	return owned;
@@ -115,7 +118,7 @@ export const listMessages = async (
 	const { take = 50, skip = 0 } = opts;
 	return db.chatMessage.findMany({
 		where: { conversationId },
-		orderBy: { createdAt: "asc" },
+		orderBy: [{ createdAt: "asc" }, { id: "asc" }],
 		take,
 		skip,
 	});

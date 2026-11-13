@@ -105,7 +105,10 @@ export const apiConfig = {
 	 * Maps an API-key scope to a FEATURE_CATALOG flat feature id
 	 * (e.g. `{ versioning: "api_webhooks" }`). `requireApiKey` responds
 	 * 402 upgrade_required when the org's entitlement lacks the mapped
-	 * feature. Empty = no feature gates.
+	 * feature. `api` is gated on oRPC/REST too: unscoped and `api`-scoped
+	 * org keys get 402 PAYMENT_REQUIRED without the feature, personal keys
+	 * always do (no org entitlement). MCP keys/tokens follow `mcp`.
+	 * Empty = no feature gates.
 	 */
 	apiKeyScopeFeatures: {} as Record<string, string>,
 	/**

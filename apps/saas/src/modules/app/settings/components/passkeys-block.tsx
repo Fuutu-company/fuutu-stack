@@ -104,7 +104,7 @@ export function PasskeysBlock() {
 											k.deviceType ??
 											t("settings.passkeys.defaultName")}
 									</p>
-									<p className="text-muted-foreground text-xs">
+									<p className="text-muted-foreground text-xs" data-volatile>
 										{t("settings.passkeys.addedOn", {
 											date: new Date(k.createdAt).toLocaleDateString(),
 										})}

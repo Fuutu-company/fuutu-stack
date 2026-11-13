@@ -132,13 +132,10 @@ CI ships **disabled**. Until you opt in, every job is skipped — skipped runs e
 **Step 2 — optional, hosted visual reports** (requires step 1):
 
 1. Same place: create a second variable `FUUTU_PAGES_ENABLED` = `true`
-2. **Settings** → left sidebar **Pages** (under *Code and automation*)
-3. Under **Build and deployment → Source** select **Deploy from a branch**
-4. Under **Branch** select `gh-pages` and folder `/(root)` → **Save**
+2. **Settings** → left sidebar **Pages** (under *Code and automation*) → **Build and deployment → Source**: select **GitHub Actions**
+3. **Settings** → **Environments** → `github-pages` → **Deployment branches and tags**: select **No restriction**, so PR and `develop` reports can deploy, not only `main`. Anyone with write access can then publish to the Pages site, the same people who can already change the workflows
 
-CI then publishes the per-PR visual-diff report to `https://<owner>.github.io/<repo>/pr-<N>/<app>/` and links it in the visual-changes PR comment. Without `FUUTU_PAGES_ENABLED`, reports still ship as workflow artifacts.
-
-> The `gh-pages` branch is created automatically on the first deploy — if it doesn't appear in the Branch dropdown yet, open a PR that produces a visual report first, then finish step 2.
+CI then publishes the visual-diff reports to `https://<owner>.github.io/<repo>/` (`pr-<N>/<app>/` per PR, `<branch>/<app>/` per push) and links them in the visual-changes PR comment. No `gh-pages` branch and no report commits: each deploy restores the live site from the previous deploy artifact, adds the new reports and prunes closed PRs (`.github/workflows/pages.yml`). The weekly run keeps the artifact alive; after more than 90 days without a deploy the site starts empty again (the baselines live in the repo, nothing is lost). Without `FUUTU_PAGES_ENABLED`, reports still ship as workflow artifacts. Fork PRs are not published.
 
 ## Reporting Issues
 

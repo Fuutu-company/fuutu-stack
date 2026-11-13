@@ -597,6 +597,46 @@ describe("organizations.members.updateRole", () => {
 	});
 });
 
+describe("organizations.members.list ordering", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns members in a total order: createdAt asc, id asc on ties", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [
+				{
+					id: "m-c",
+					userId: "user-1",
+					role: "owner",
+					createdAt: new Date("2024-01-02T00:00:00Z"),
+				},
+				{
+					id: "m-b",
+					userId: "user-2",
+					role: "member",
+					createdAt: new Date("2024-01-01T00:00:00Z"),
+				},
+				{
+					id: "m-a",
+					userId: "user-3",
+					role: "member",
+					createdAt: new Date("2024-01-01T00:00:00Z"),
+				},
+			],
+		} as never);
+
+		const result = await call(
+			organizationsRouter.members.list,
+			{ organizationId: "org-1" },
+			{ context: authenticatedContext },
+		);
+
+		expect(result.items.map((m) => m.id)).toEqual(["m-a", "m-b", "m-c"]);
+	});
+});
+
 describe("organizations.invitations.list", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -627,6 +667,25 @@ describe("organizations.invitations.list", () => {
 			limit: 1,
 			totalPages: 1,
 		});
+	});
+
+	it("returns invitations in a total order: createdAt desc, id asc on ties", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(auth.api.listInvitations).mockResolvedValue([
+			{ id: "inv-b", createdAt: new Date("2024-01-01T00:00:00Z") },
+			{ id: "inv-c", createdAt: new Date("2024-01-02T00:00:00Z") },
+			{ id: "inv-a", createdAt: new Date("2024-01-01T00:00:00Z") },
+		] as never);
+
+		const result = await call(
+			organizationsRouter.invitations.list,
+			{ organizationId: "org-1" },
+			{ context: authenticatedContext },
+		);
+
+		expect(result.items.map((i) => i.id)).toEqual(["inv-c", "inv-a", "inv-b"]);
 	});
 });
 

@@ -27,5 +27,15 @@ export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
  */
 export const API_KEY_ADMIN_SCOPES: readonly ApiKeyScope[] = [];
 
+/**
+ * Scopes pre-checked in the create dialog. A key can carry any combination
+ * of scopes, so users do not need one key per surface. Entries that are
+ * unknown or admin-only for the viewer are dropped by the dialog.
+ * (The API still accepts an empty list — existing unscoped keys keep
+ * working as full credentials on oRPC/REST — but the dialog requires at
+ * least one scope for new keys.)
+ */
+export const API_KEY_DEFAULT_SCOPES: readonly ApiKeyScope[] = ["api"];
+
 /** Scope that admits a scoped key on the oRPC/REST API. */
 export const API_SCOPE: ApiKeyScope = "api";

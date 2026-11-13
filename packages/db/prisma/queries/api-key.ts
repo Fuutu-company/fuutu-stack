@@ -103,7 +103,7 @@ export const listApiKeys = (
 	const { take = 50, skip = 0 } = opts;
 	return db.apiKey.findMany({
 		where: { userId, revokedAt: null },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 		omit: { key: true },
@@ -120,7 +120,7 @@ export const listOrgApiKeys = (
 	const { take = 50, skip = 0 } = opts;
 	return db.apiKey.findMany({
 		where: { organizationId, revokedAt: null },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 		omit: { key: true },

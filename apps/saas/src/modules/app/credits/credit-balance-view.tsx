@@ -167,7 +167,7 @@ export function CreditBalanceView() {
 												? t(`source.${event.source}`)
 												: event.source}
 										</p>
-										<p className="text-muted-foreground text-xs">
+										<p className="text-muted-foreground text-xs" data-volatile>
 											{new Date(event.createdAt).toLocaleString(locale)}
 										</p>
 									</div>

@@ -25,7 +25,7 @@ export const listAuditLogs = (opts: {
 			...(userId ? { userId } : {}),
 			...(action ? { action } : {}),
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 		include: {
@@ -66,7 +66,7 @@ export const findAuditLogsByOrg = (
 			organizationId,
 			...(actionFilter ? actionFilter : {}),
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
 		include: {
@@ -114,7 +114,7 @@ export const searchAuditLogs = (
 		},
 		take,
 		skip,
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 };
 

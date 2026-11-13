@@ -62,6 +62,11 @@ async function main() {
 	const memberId = randomUUID();
 	const orgId = randomUUID();
 	const password = await hashPassword("DevPassword!2345");
+	// Every seeded list gets distinct `createdAt` values (1 s apart) so list
+	// order never depends on insert order or random ids — screenshots and
+	// tests see the same sequence on every seed.
+	const seedStart = Date.now();
+	const at = (n: number) => new Date(seedStart - (100 - n) * 1000);
 
 	await db.user.upsert({
 		where: { email: "admin@fuutu.local" },
@@ -112,20 +117,20 @@ async function main() {
 			id: orgId,
 			name: "Acme",
 			slug: "acme",
-			createdAt: new Date(),
+			createdAt: at(1),
 			members: {
 				create: [
 					{
 						id: randomUUID(),
 						userId: adminId,
 						role: "owner",
-						createdAt: new Date(),
+						createdAt: at(2),
 					},
 					{
 						id: randomUUID(),
 						userId: memberId,
 						role: "member",
-						createdAt: new Date(),
+						createdAt: at(3),
 					},
 				],
 			},
@@ -162,29 +167,34 @@ async function main() {
 				{
 					userId: admin.id,
 					organizationId: acme.id,
+					createdAt: at(11),
 					action: "auth.session_created",
 					ip: "127.0.0.1",
 				},
 				{
 					userId: member.id,
 					organizationId: acme.id,
+					createdAt: at(12),
 					action: "auth.session_created",
 					ip: "127.0.0.1",
 				},
 				{
 					userId: admin.id,
 					organizationId: acme.id,
+					createdAt: at(13),
 					action: "org.create",
 				},
 				{
 					userId: admin.id,
 					organizationId: acme.id,
+					createdAt: at(14),
 					action: "org.invite",
 					metadata: { email: "member@fuutu.local" },
 				},
 				{
 					userId: member.id,
 					organizationId: acme.id,
+					createdAt: at(15),
 					action: "org.invite.accept",
 				},
 			],
@@ -230,7 +240,7 @@ async function main() {
 		];
 		await db.apiKey.createMany({
 			data: await Promise.all(
-				keys.map(async (k) => {
+				keys.map(async (k, index) => {
 					const plain = makeKey();
 					return {
 						key: await sha256(plain),
@@ -239,6 +249,7 @@ async function main() {
 						userId: admin.id,
 						organizationId: k.org,
 						expiresAt: k.expires,
+						createdAt: at(20 + index),
 					};
 				}),
 			),
@@ -318,6 +329,7 @@ async function main() {
 						"invoice.paid",
 					],
 					isActive: true,
+					createdAt: at(30),
 				},
 				{
 					organizationId: acme.id,
@@ -325,6 +337,7 @@ async function main() {
 					secret: randomBytes(32).toString("base64url"),
 					events: ["user.created"],
 					isActive: false,
+					createdAt: at(31),
 				},
 			],
 		});

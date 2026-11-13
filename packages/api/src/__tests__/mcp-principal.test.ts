@@ -132,6 +132,52 @@ describe("resolveMcpPrincipal", () => {
 		expect(res.status).toBe(402);
 	});
 
+	it("admits a multi-scope key and exposes all of its scopes", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			...ORG_KEY,
+			apiKey: { ...ORG_KEY.apiKey, scopes: ["api", "versioning", "mcp"] },
+		} as never);
+		const principal = await resolveMcpPrincipal(request("futu_sk_multi"));
+		expect(principal).toMatchObject({
+			kind: "user",
+			via: "api-key",
+			scopes: ["api", "versioning", "mcp"],
+		});
+	});
+
+	it("only applies the mcp feature gate, not the gates of the key's other scopes", async () => {
+		(apiConfig.apiKeyScopeFeatures as Record<string, string>) = {
+			versioning: "api_versioning",
+		};
+		const { getOrgEntitlement } = await import("@fuutu/payments");
+		vi.mocked(getOrgEntitlement).mockResolvedValue({ features: [] } as never);
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			...ORG_KEY,
+			apiKey: { ...ORG_KEY.apiKey, scopes: ["versioning", "mcp"] },
+		} as never);
+		const principal = await resolveMcpPrincipal(request("futu_sk_multi"));
+		expect(principal).toMatchObject({ kind: "user" });
+	});
+
+	it("returns 402 for a multi-scope key when the mcp gate is unmet", async () => {
+		(apiConfig.apiKeyScopeFeatures as Record<string, string>) = {
+			mcp: "mcpAccess",
+			versioning: "api_versioning",
+		};
+		const { getOrgEntitlement } = await import("@fuutu/payments");
+		vi.mocked(getOrgEntitlement).mockResolvedValue({
+			features: ["api_versioning"],
+		} as never);
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			...ORG_KEY,
+			apiKey: { ...ORG_KEY.apiKey, scopes: ["versioning", "mcp"] },
+		} as never);
+		const res = (await resolveMcpPrincipal(
+			request("futu_sk_multi"),
+		)) as Response;
+		expect(res.status).toBe(402);
+	});
+
 	it("sends the OAuth challenge on 401 so clients can start the flow", async () => {
 		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(null);
 		const res = (await resolveMcpPrincipal(request("futu_sk_bad"))) as Response;

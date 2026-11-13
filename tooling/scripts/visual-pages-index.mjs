@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-// Regenerate the gh-pages index tree after a visual-report deploy:
+// Regenerate the Pages index tree after a visual-report deploy:
 //   <root>/index.html          — pinned develop/main rows ("latest"),
 //                                then pr-<N> rows, newest first
 //   <root>/<dir>/index.html    — per-dir landing page listing its app reports
 // A "report dir" (pr-<N>/, develop/, main/, …) holds one subdir per app,
 // each a self-contained visual-report (index.html + images/). Dirs without
 // any app report are skipped. Rerunning regenerates cleanly.
-// Usage: node tooling/scripts/visual-pages-index.mjs <gh-pages-worktree> [--pr-meta <file>]
+// Usage: node tooling/scripts/visual-pages-index.mjs <site-dir> [--pr-meta <file>]
 // --pr-meta: JSON { "<N>": { "title": "…", "branch": "…", "updated": "<ISO>" } }
-//            CI fills it via `gh api` (title + head branch) and `git log`
-//            (last-commit time for the pr-<N> dir). Missing/partial entries
+//            CI fills it via `gh api` (title + head branch) and the site's
+//            pages-meta.json (last deploy time per dir), see ci-pages-site.mjs. Missing/partial entries
 //            fall back to "PR #N" with no timestamp.
 
 import { execFileSync } from "node:child_process";
@@ -24,9 +24,7 @@ for (let i = 0; i < argv.length; i++) {
 	else if (!root) root = argv[i];
 }
 if (!root || !existsSync(root)) {
-	console.error(
-		"Usage: visual-pages-index.mjs <gh-pages-worktree> [--pr-meta <file>]",
-	);
+	console.error("Usage: visual-pages-index.mjs <site-dir> [--pr-meta <file>]");
 	process.exit(2);
 }
 
@@ -223,9 +221,6 @@ ${appLinks(p.dir, p.apps)}
 	})
 	.join("\n");
 
-// Timestamps come from git log on gh-pages (via --pr-meta), so index bytes
-// now track history — the workflow regenerates the index inside its
-// rebase-retry loop so the last writer always renders the latest state.
 const body = `${pinnedRows ? `<h2 class="section">Latest</h2>\n<div class="list">${pinnedRows}</div>` : ""}
 ${prRows ? `<h2 class="section">Pull requests</h2>\n<div class="list">${prRows}</div>` : ""}
 ${!pinnedRows && !prRows ? `<p class="meta">No visual reports published yet.</p>` : ""}`;

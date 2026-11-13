@@ -58,7 +58,10 @@ export function AuditLogsTable() {
 						<tbody className="divide-y">
 							{data.items.map((log) => (
 								<tr key={log.id}>
-									<td className="p-3 text-muted-foreground text-xs">
+									<td
+										className="p-3 text-muted-foreground text-xs"
+										data-volatile
+									>
 										{new Date(log.createdAt).toLocaleString(locale)}
 									</td>
 									<td className="p-3 font-mono text-xs">{log.action}</td>
@@ -78,7 +81,10 @@ export function AuditLogsTable() {
 											t("common.notAvailable")
 										)}
 									</td>
-									<td className="p-3 text-muted-foreground text-xs">
+									<td
+										className="p-3 text-muted-foreground text-xs"
+										data-volatile
+									>
 										{log.ip ?? t("common.notAvailable")}
 									</td>
 								</tr>

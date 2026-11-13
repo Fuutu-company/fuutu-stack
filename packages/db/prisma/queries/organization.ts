@@ -17,6 +17,7 @@ export const getOrganizationWithMembers = (id: string) =>
 		include: {
 			members: {
 				include: { user: { select: { email: true } } },
+				orderBy: [{ createdAt: "asc" }, { id: "asc" }],
 			},
 		},
 	});
@@ -24,7 +25,7 @@ export const getOrganizationWithMembers = (id: string) =>
 export const listOrganizationsForUser = (userId: string) =>
 	db.organization.findMany({
 		where: { members: { some: { userId } } },
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 
 export const setOrganizationPaymentsCustomerId = (
@@ -116,7 +117,7 @@ export const listMembershipsForUser = async (
 ): Promise<UserMembership[]> => {
 	const members = await db.member.findMany({
 		where: { userId },
-		orderBy: { createdAt: "asc" },
+		orderBy: [{ createdAt: "asc" }, { id: "asc" }],
 		select: {
 			role: true,
 			organization: { select: { id: true, name: true, slug: true } },
@@ -146,5 +147,5 @@ export const listPendingInvitationsForUser = (email: string) =>
 			role: true,
 			organization: { select: { name: true, slug: true } },
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});

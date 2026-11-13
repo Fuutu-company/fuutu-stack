@@ -32,11 +32,12 @@
 			"typeLabel": "Schlüsseltyp",
 			"types": {
 				"personal": "Persönlich",
-				"org": "Organisation (voller Zugriff)"
+				"org": "Organisation"
 			},
 			"orgLabel": "Organisation",
 			"orgPlaceholder": "Organisation auswählen",
-			"orgKeyHint": "Organisationsschlüssel handeln mit deiner Rolle in dieser Organisation und funktionieren nicht mehr, wenn du sie verlässt.",
+			"scopesLabel": "Berechtigungen",
+			"orgKeyHint": "Organisations-Schlüssel handeln mit deiner Rolle in der Organisation und funktionieren nicht mehr, wenn du sie verlässt. Wähle alle Bereiche, in denen dieser Schlüssel genutzt werden darf.",
 			"submit": "Schlüssel erstellen"
 		},
 		"scopes": {
@@ -45,6 +46,11 @@
 			"mcp": "MCP",
 			"versioning": "Versionierung",
 			"api": "API"
+		},
+		"scopeDescriptions": {
+			"api": "REST- und oRPC-API aufrufen.",
+			"mcp": "KI-Agenten über den MCP-Server anbinden.",
+			"versioning": "Versions- und Release-Informationen lesen."
 		},
 		"createdDialog": {
 			"title": "Dein neuer API-Schlüssel",

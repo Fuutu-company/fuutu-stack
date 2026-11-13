@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
+import { assertSessionCaller } from "../assert-session-caller";
 
 const apiKeyIdSchema = z.object({
 	id: z.string().min(1).max(64),
@@ -24,6 +25,7 @@ export const deleteApiKeyProcedure = permissionProcedure(
 	})
 	.input(apiKeyIdSchema)
 	.handler(async ({ input, context }) => {
+		assertSessionCaller(context);
 		const key = await getApiKey(input.id);
 		if (!key) {
 			throw new ORPCError("NOT_FOUND", { message: "API key not found" });

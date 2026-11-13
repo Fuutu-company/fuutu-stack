@@ -2,6 +2,10 @@ import { auth } from "@fuutu/auth";
 import { API_KEY_PREFIX } from "@fuutu/db";
 import type { Context as HonoContext } from "hono";
 import { API_SCOPE } from "./api-key-scopes";
+import {
+	findMissingScopeFeature,
+	type MissingScopeFeature,
+} from "./modules/api-keys/scope-feature";
 import { verifyApiKeyCredential } from "./modules/api-keys/verify-credential";
 
 export type CreateContextOptions = {
@@ -65,6 +69,7 @@ export async function createContext({ context }: CreateContextOptions) {
 	const headers = context.req.raw.headers as Headers;
 	let session = await auth.api.getSession({ headers });
 	let apiKey: ApiKeyAuth | null = null;
+	let apiKeyUpgradeRequired: MissingScopeFeature | null = null;
 
 	if (!session) {
 		const rawKey = extractApiKey(headers);
@@ -73,19 +78,29 @@ export async function createContext({ context }: CreateContextOptions) {
 			// on every request (verifyApiKeyCredential) — fail closed.
 			const verified = await verifyApiKeyCredential(rawKey);
 			if (verified && isAllowedOnApi(verified.apiKey.scopes)) {
-				session = toApiKeySession(asSessionUser(verified.user));
-				apiKey = {
-					id: verified.apiKey.id,
-					organizationId: verified.apiKey.organizationId,
-				};
+				// Same `api` feature gate as requireApiKey; the key stays
+				// unauthenticated and publicProcedure answers 402.
+				apiKeyUpgradeRequired = await findMissingScopeFeature(
+					verified.apiKey.organizationId,
+					API_SCOPE,
+				);
+				if (!apiKeyUpgradeRequired) {
+					session = toApiKeySession(asSessionUser(verified.user));
+					apiKey = {
+						id: verified.apiKey.id,
+						organizationId: verified.apiKey.organizationId,
+					};
+				}
 			}
 		}
 	}
-	return { session, headers, apiKey };
+	return { session, headers, apiKey, apiKeyUpgradeRequired };
 }
 
 export type Context = {
 	session: Awaited<ReturnType<typeof auth.api.getSession>>;
 	headers: Headers;
 	apiKey: ApiKeyAuth | null;
+	/** Set when a presented API key is valid but its `api` scope is plan-gated. */
+	apiKeyUpgradeRequired?: MissingScopeFeature | null;
 };

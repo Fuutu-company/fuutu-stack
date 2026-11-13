@@ -369,7 +369,7 @@ describe("DB query functions - smoke tests", () => {
 					status: "ACTIVE",
 					productId: { in: ["price_lifetime"] },
 				},
-				orderBy: { createdAt: "desc" },
+				orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 			});
 		});
 

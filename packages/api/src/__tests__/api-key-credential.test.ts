@@ -85,6 +85,15 @@ describe("verifyApiKeyCredential", () => {
 		expect(await verifyApiKeyCredential("futu_sk_ok")).not.toBeNull();
 	});
 
+	it("keeps every scope of a multi-scope key and needs system admin if any one is an admin scope", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			...orgKey(["api", "mcp", "internal"]),
+			user: { ...owner, role: "admin" },
+		} as never);
+		const credential = await verifyApiKeyCredential("futu_sk_ok");
+		expect(credential?.apiKey.scopes).toEqual(["api", "mcp", "internal"]);
+	});
+
 	it("reads multi-role system roles (Better Auth stores 'admin,user')", async () => {
 		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
 			...orgKey(["internal"]),

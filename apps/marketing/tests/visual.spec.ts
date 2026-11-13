@@ -1,5 +1,10 @@
-import { expect, scrollThroughPage, test } from "./fixtures";
 import { DEFAULT_LOCALE, LOCALES, OTHER_LOCALES } from "./locales";
+import {
+	expect,
+	expectVisual,
+	scrollThroughPage,
+	test,
+} from "./visual-helpers";
 
 /**
  * Visual regression tests for the marketing site.
@@ -53,7 +58,7 @@ test.describe("visual regression — marketing pages", () => {
 				await page.goto(`/${locale}${path}`);
 				await page.waitForLoadState("domcontentloaded");
 				await scrollThroughPage(page);
-				await expect(page).toHaveScreenshot(`${name}-${locale}-desktop.png`, {
+				await expectVisual(page, `${name}-${locale}-desktop.png`, {
 					fullPage: true,
 				});
 			});
@@ -91,7 +96,8 @@ test.describe("visual regression — marketing pages", () => {
 				await page.goto(`/${DEFAULT_LOCALE}${path}`);
 				await page.waitForLoadState("domcontentloaded");
 				await scrollThroughPage(page);
-				await expect(page).toHaveScreenshot(
+				await expectVisual(
+					page,
 					`${name}-${DEFAULT_LOCALE}-${viewport.label}.png`,
 					{ fullPage: true },
 				);
@@ -118,7 +124,7 @@ test.describe("visual regression — components", () => {
 			.click();
 		const menu = page.getByRole("menu");
 		await expect(menu).toBeVisible();
-		await expect(menu).toHaveScreenshot("component--locale-switcher.png");
+		await expectVisual(menu, "component--locale-switcher.png");
 	});
 
 	test("mobile nav menu matches baseline", async ({ page, isMobile }) => {
@@ -129,7 +135,8 @@ test.describe("visual regression — components", () => {
 		const toggle = page.getByRole("button", { name: /toggle menu/i });
 		await toggle.click();
 		await expect(toggle).toHaveAttribute("aria-expanded", "true");
-		await expect(page.locator("header").first()).toHaveScreenshot(
+		await expectVisual(
+			page.locator("header").first(),
 			"component--mobile-nav.png",
 		);
 	});

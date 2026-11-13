@@ -104,7 +104,7 @@ export function ConnectedAppsBlock() {
 											</Badge>
 										)}
 									</div>
-									<p className="text-muted-foreground text-xs">
+									<p className="text-muted-foreground text-xs" data-volatile>
 										{t("settings.connectedApps.connectedOn", {
 											date: format.dateTime(new Date(app.grantedAt), {
 												dateStyle: "medium",

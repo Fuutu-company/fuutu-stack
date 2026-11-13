@@ -211,3 +211,62 @@ describe("requireApiKey", () => {
 		expect(verifyApiKeyWithOwner).toHaveBeenCalledWith("futu_sk_bearer");
 	});
 });
+
+describe("requireApiKey — keys carrying several scopes", () => {
+	const multi = {
+		apiKey: {
+			id: "key-multi",
+			organizationId: "org-1",
+			scopes: ["api", "mcp", "versioning"],
+		},
+		user: { id: "user-1", banned: false },
+	};
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(multi as never);
+		vi.mocked(getOrganizationMemberRole).mockResolvedValue("member");
+		vi.mocked(getOrgEntitlement).mockResolvedValue({
+			features: [],
+		} as never);
+	});
+
+	it("admits the same key on each scope it lists", async () => {
+		const headers = bearerHeaders("futu_sk_multi");
+		await expect(requireApiKey(headers, "mcp")).resolves.toEqual({
+			orgId: "org-1",
+			keyId: "key-multi",
+		});
+		await expect(requireApiKey(headers, "api")).resolves.toEqual({
+			orgId: "org-1",
+			keyId: "key-multi",
+		});
+	});
+
+	it("applies the feature gate per requested scope, not per key", async () => {
+		const headers = bearerHeaders("futu_sk_multi");
+		// "versioning" is gated and the org lacks the feature → 402 ...
+		await expectHttpError(requireApiKey(headers, "versioning"), 402, {
+			error: "upgrade_required",
+			feature: "api_versioning",
+			upgradeUrl: "https://marketing.test/pricing",
+		});
+		// ... while the ungated "mcp" scope of the very same key still works.
+		await expect(requireApiKey(headers, "mcp")).resolves.toEqual({
+			orgId: "org-1",
+			keyId: "key-multi",
+		});
+	});
+
+	it("still rejects a scope the key does not list", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			...multi,
+			apiKey: { ...multi.apiKey, scopes: ["api", "mcp"] },
+		} as never);
+		await expectHttpError(
+			requireApiKey(bearerHeaders("futu_sk_multi"), "versioning"),
+			401,
+			{ error: "invalid_api_key" },
+		);
+	});
+});

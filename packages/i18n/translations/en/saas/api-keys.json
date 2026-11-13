@@ -32,11 +32,12 @@
 			"typeLabel": "Key type",
 			"types": {
 				"personal": "Personal",
-				"org": "Organization (full credential)"
+				"org": "Organization"
 			},
 			"orgLabel": "Organization",
 			"orgPlaceholder": "Select an organization",
-			"orgKeyHint": "Organization keys act with your role in that organization and stop working if you leave it.",
+			"scopesLabel": "Scopes",
+			"orgKeyHint": "Organization keys act with your role in that organization and stop working if you leave it. Pick every surface this key may be used on.",
 			"submit": "Create key"
 		},
 		"scopes": {
@@ -45,6 +46,11 @@
 			"mcp": "MCP",
 			"versioning": "Versioning",
 			"api": "API"
+		},
+		"scopeDescriptions": {
+			"api": "Call the REST and oRPC API.",
+			"mcp": "Connect AI agents through the MCP server.",
+			"versioning": "Read version and release information."
 		},
 		"createdDialog": {
 			"title": "Your new API key",

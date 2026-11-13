@@ -61,7 +61,7 @@ export async function listOAuthConnectedApps(
 ): Promise<OAuthConnectedApp[]> {
 	const consents = await db.oauthConsent.findMany({
 		where: { userId },
-		orderBy: { createdAt: "asc" },
+		orderBy: [{ createdAt: "asc" }, { id: "asc" }],
 		select: {
 			clientId: true,
 			scopes: true,
