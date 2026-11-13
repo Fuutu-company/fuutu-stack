@@ -17,10 +17,10 @@
  *
  * Usage:
  *   pnpm assets:sync                              # generate + sync everything
- *   pnpm assets:sync --skip favicon.svg           # leave favicon.svg untouched (generate + sync the rest)
- *   pnpm assets:sync --skip favicon.svg,apple-touch-icon.png
+ *   pnpm assets:sync --skip=favicon.svg           # leave favicon.svg untouched (generate + sync the rest)
+ *   pnpm assets:sync --skip=favicon.svg,apple-touch-icon.png
  *
- * --skip accepts a comma-separated list of filenames (as they appear in
+ * --skip= accepts a comma-separated list of filenames (as they appear in
  * packages/config/assets/). Skipped files are neither generated nor distributed.
  */
 

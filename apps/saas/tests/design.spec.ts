@@ -1,6 +1,10 @@
+import { config } from "@fuutu/config";
 import { CONTRAST_PAIRS } from "@fuutu/ui/color";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+
+// The style guide is optional: buyers turn it off before launch.
+test.skip(!config.features.designSystem, "config.features.designSystem is off");
 
 const SECTION_IDS = [
 	"foundations",

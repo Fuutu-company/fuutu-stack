@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
  *
  * - The Acme `ai_tokens` grant mirrors `CREDITS.pro.ai_tokens`
  *   (@fuutu/payments/config). The seed cannot import it (@fuutu/payments
- *   depends on @fuutu/db), so this keeps the copies aligned.
+ *   depends on @fuutu/db), so this keeps the copies aligned. The grant and
+ *   its usage events are seeded only when Acme resolves to the Pro price.
  * - Demo activity rows carry a seed marker and are only inserted while no
  *   marked row exists, so `pnpm db:seed` stays idempotent.
  */
@@ -47,6 +48,43 @@ describe("seed demo data guard", () => {
 		// never matches the configured price and leaves Acme on Free.
 		expect(purchaseBlock).not.toMatch(/(?:priceId|productId):\s*"/);
 		expect(purchaseBlock).toMatch(/update:\s*\{[^}]*productId/);
+	});
+
+	it("grants the Pro ai_tokens demo only when Acme resolves to the Pro price", () => {
+		const envVar = read("packages/payments/src/config.ts").match(
+			/\bpro:\s*\{[\s\S]*?priceIdEnvVars:\s*\{\s*month:\s*"(\w+)"/,
+		)?.[1];
+		expect(envVar, "PLANS.pro.priceIdEnvVars.month not found").toBeDefined();
+
+		// Without the env var the purchase falls back to a placeholder id the
+		// app maps to Free — a 500k Pro grant would contradict the plan.
+		const flag = seed.match(
+			new RegExp(`const (\\w+)\\s*=\\s*Boolean\\(env\\.${envVar}\\)`),
+		)?.[1];
+		expect(
+			flag,
+			`const <flag> = Boolean(env.${envVar}) not found`,
+		).toBeDefined();
+
+		const grantAt = seed.indexOf("db.creditBalance.create(");
+		expect(grantAt, "db.creditBalance.create not found").toBeGreaterThan(-1);
+		const before = seed.slice(0, grantAt);
+		const guard = before.slice(before.lastIndexOf("if ("));
+		const condition = /^if \(([^)]*)\)\s*\{/.exec(guard)?.[1] ?? "";
+		// Pro flag gates the grant; the existing-balance check keeps re-runs
+		// idempotent; usage events sit in the same block.
+		expect(condition).toMatch(new RegExp(`\\b${flag}\\b`));
+		expect(condition).toMatch(/!\s*aiBalance\b/);
+		expect(guard, "the guarded block closes before the grant").not.toContain(
+			"\n\t}\n",
+		);
+		const block = seed.slice(
+			before.lastIndexOf("if ("),
+			seed.indexOf("\n\t}\n", grantAt),
+		);
+		expect(block).toMatch(/db\.creditEvent\.createMany/);
+		expect(seed.match(/db\.creditBalance\.create\(/g)).toHaveLength(1);
+		expect(seed.match(/db\.creditEvent\.createMany/g)).toHaveLength(1);
 	});
 
 	it("demo activity rows are guarded by the seed marker", () => {

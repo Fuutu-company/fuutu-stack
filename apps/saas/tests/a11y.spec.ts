@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { config } from "@fuutu/config";
 import { expect, test } from "./fixtures";
 
 /**
@@ -64,6 +65,7 @@ test.describe("authenticated routes accessibility", () => {
 	});
 
 	test("/design has no critical a11y violations", async ({ page }) => {
+		test.skip(!config.features.designSystem, "/design is turned off");
 		await page.goto("/design");
 		await expect(
 			page.getByRole("heading", { level: 1, name: /^design system$/i }),
@@ -82,6 +84,7 @@ test.describe("authenticated routes accessibility", () => {
 	test("/design has no critical a11y violations in dark mode", async ({
 		page,
 	}) => {
+		test.skip(!config.features.designSystem, "/design is turned off");
 		await page.addInitScript(() => localStorage.setItem("theme", "dark"));
 		await page.goto("/design");
 		await expect(page.locator("html")).toHaveClass(/dark/);

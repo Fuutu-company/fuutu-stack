@@ -61,6 +61,32 @@ test.describe("billing & checkout flows", () => {
 		).toBeVisible({ timeout: 10_000 });
 	});
 
+	test("can navigate from the sidebar org settings group to org billing", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		await page.goto("/organizations/acme/dashboard");
+
+		const settingsGroup = page.locator("[data-nav-group='org-settings']");
+		const trigger = settingsGroup.getByRole("button", { name: /^settings$/i });
+		await expect(trigger).toHaveAttribute("aria-expanded", "false", {
+			timeout: 10_000,
+		});
+		await trigger.click();
+		const billingLink = settingsGroup.getByRole("link", { name: /^billing$/i });
+		await billingLink.click();
+
+		await expect(page).toHaveURL(/\/organizations\/acme\/settings\/billing$/);
+		await expect(billingLink).toHaveAttribute("aria-current", "page");
+		await expect(
+			page.getByRole("heading", { level: 1, name: /^billing$/i }),
+		).toHaveCount(1);
+		await expect(
+			page.getByRole("heading", { level: 2, name: /^choose a plan$/i }),
+		).toBeVisible({ timeout: 10_000 });
+	});
+
 	test("choose-plan checks out for the active organization in org billing mode", async ({
 		page,
 		baseURL,

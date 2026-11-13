@@ -60,3 +60,26 @@ export function extractInvitationId(
 		return null;
 	}
 }
+
+/** Entry pages a signed-in visitor is bounced away from — never a target. */
+const AUTH_ENTRY_PATHS = new Set(["/auth/sign-in", "/auth/sign-up"]);
+
+/**
+ * Where a signed-in visitor of sign-in / sign-up goes: the `redirect` param
+ * when it is safe, else `authConfig.redirects.afterSignIn` (also when the
+ * param points back at sign-in / sign-up, which would loop). `null` keeps
+ * the page: a signed OAuth authorization request (`sig`) — the MCP
+ * authorization server sends signed-in users there for `prompt=login` /
+ * `prompt=create`.
+ */
+export function getSignedInRedirect(
+	params: Record<string, string | string[] | undefined>,
+): string | null {
+	if (params.sig !== undefined) return null;
+	const raw = typeof params.redirect === "string" ? params.redirect : null;
+	const target = getSafeRedirect(raw);
+	const { pathname } = new URL(target, "http://localhost");
+	return AUTH_ENTRY_PATHS.has(pathname.replace(/\/$/, ""))
+		? getSafeRedirect(null)
+		: target;
+}

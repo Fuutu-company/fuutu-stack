@@ -202,7 +202,7 @@ Schibsted Grotesk for headings and display text (`font-heading`), Manrope for in
 - `display` is the marketing hero. The hero scales fluidly with `text-[clamp(2.75rem,8vw,4.75rem)]`; `text-6xl` is the fixed role size.
 - Default reading size is `body`. `small` is for captions, badges and metadata, never for primary content.
 - Tighten tracking only on headings (`tracking-heading`, `tracking-display`). Keep body copy at default tracking.
-- Fonts are loaded with `next/font/google` in `apps/*/src/app/fonts.ts` (identical in every app, kept in sync by a guard) and exposed through `--font-sans`, `--font-heading` and `--font-mono`. All three are variable fonts and `latin` covers English and German.
+- Fonts are loaded with `next/font/google` in `apps/*/src/app/fonts.ts` (identical in every app, kept in sync by a guard that accepts any three families from `next/font/google` or `next/font/local`) and exposed through `--font-sans`, `--font-heading` and `--font-mono`. All three are variable fonts and `latin` covers English and German.
 
 ## Layout
 
@@ -317,7 +317,7 @@ Honest list of places that do not yet follow the tokens. Fix these before relyin
 - **Destructive text is literal white.** Button and Badge `destructive` render `text-white`, so `--destructive-foreground` is ignored. The audit measures white on the destructive fill, which is what users see.
 - **Shadows cannot be recolored.** Shadow tokens are mapped with fallbacks, so `shadow-<color>` utilities do not recolor them (they only change when the theme defines `--shadow-*`).
 - **Older shadcn class patterns.** Dialog, sheet, select, tabs and switch still use earlier shadcn class compositions. They work with the tokens but differ from current registry output.
-- **Email templates use inline hex**, because mail clients do not support CSS variables. `MAIL_COLORS` in `packages/mail/src/templates/colors.ts` holds the light palette: page `#f0f4f7`, card `#ffffff`, border `#d9dfe3`, text `#151b24`, muted `#545b66`, button `#181f2e`, button text `#f7f8fc`. They do not follow a pasted theme; update them by hand.
+- **Email templates use inline hex**, because mail clients do not support CSS variables. `MAIL_COLORS` in `packages/mail/src/templates/colors.ts` holds the light palette: page `#f0f4f7`, card `#ffffff`, border `#d9dfe3`, text `#151b24`, muted `#545b66`, button `#181f2e`, button text `#f7f8fc`. They do not follow a pasted theme; update them by hand. The `mail-colors-sync` test in `pnpm -F @fuutu/ui test` fails, naming the key, until they match the light tokens.
 - **OG images use literal hex.** Social cards can't read CSS variables. The static card is rendered from `packages/config/assets/og-image.html` (light palette, Google Fonts at render time; distributed with `pnpm assets:sync`); the blog card (`apps/marketing/src/app/(marketing)/[locale]/blog/[slug]/opengraph-image.tsx`) hard-codes the light background, text, muted text and the Users Blue pill as hex and renders with the default OG font. The docs app uses Fumadocs' own OG image generator, which does not read the tokens. Re-render or update all of them after a color change.
 - **Google logo** keeps its official brand hex values.
 - **MacFrame palette** (`packages/ui/src/components/media-frame/constants.ts`) is a fixed set of window-chrome colors, such as the traffic-light dots and titlebar, independent of the theme.

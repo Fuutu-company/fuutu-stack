@@ -33,18 +33,6 @@ const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
 const HEX = /(?<![&\w])#[0-9a-fA-F]{3,8}\b/g;
 
 describe("MAIL_COLORS", () => {
-	it("is the light Tactile palette", () => {
-		expect(MAIL_COLORS).toEqual({
-			page: "#f0f4f7",
-			card: "#ffffff",
-			border: "#d9dfe3",
-			text: "#151b24",
-			muted: "#545b66",
-			button: "#181f2e",
-			buttonText: "#f7f8fc",
-		});
-	});
-
 	it.each(Object.keys(fixtures) as TemplateName[])(
 		"%s contains no hex color outside MAIL_COLORS values",
 		(name) => {

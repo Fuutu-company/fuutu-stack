@@ -15,6 +15,7 @@
  *   - 5 sample AuditLog entries
  *   - 36 demo-activity AuditLog entries over the last 29 days (dashboard chart)
  *   - 1 ai_tokens CreditBalance for the org + 14 usage CreditEvents
+ *     (only with PAYMENTS_PRO_PRICE_ID set, i.e. when Acme resolves to Pro)
  *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org
  *   - 3 demo API keys for the admin (org-scoped, user-scoped, expired)
  *   - 4 demo invoices for the acme org (2 paid, 1 open, 1 void)
@@ -286,14 +287,21 @@ async function main() {
 		});
 	}
 
+	// Acme's purchase (below) uses the Pro price id the app resolves plans from
+	// (`PLANS.pro.priceIdEnvVars.month`). Unset env falls back to a placeholder
+	// that the app maps to Free.
+	const proPriceId = env.PAYMENTS_PRO_PRICE_ID ?? "seed_product_pro";
+	const acmeOnPro = Boolean(env.PAYMENTS_PRO_PRICE_ID);
+
 	// Demo AI usage — the org's ai_tokens balance (pro grant) plus the usage
-	// events that consumed it. Skipped when the org already has a balance
-	// (real usage), so seeded numbers never overwrite real ones.
+	// events that consumed it. Only while Acme really is on Pro (a Free org
+	// gets no grant), and skipped when the org already has a balance (real
+	// usage or an earlier seed), so seeded numbers never overwrite real ones.
 	const aiBalance = await db.creditBalance.findFirst({
 		where: { organizationId: acme.id, meterKey: "ai_tokens" },
 		select: { id: true },
 	});
-	if (!aiBalance) {
+	if (acmeOnPro && !aiBalance) {
 		const consumed = DEMO_AI_USAGE.reduce(
 			(sum, [, , amount]) => sum + amount,
 			0,
@@ -322,11 +330,7 @@ async function main() {
 		]);
 	}
 
-	// Sample purchase — pretend the org bought the "pro" plan. The ids are the
-	// ones the app resolves plans from (`PLANS.pro.priceIdEnvVars.month`), so
-	// Acme really is on Pro; unset env falls back to a placeholder that the
-	// app maps to Free.
-	const proPriceId = env.PAYMENTS_PRO_PRICE_ID ?? "seed_product_pro";
+	// Sample purchase — pretend the org bought the "pro" plan (see proPriceId).
 	await db.purchase.upsert({
 		where: {
 			provider_subscriptionId: {

@@ -196,10 +196,9 @@ function formatBytes(bytes: number): string {
 }
 
 /**
- * Scrolls through the entire page to trigger all `whileInView`
- * framer-motion animations. Without this, elements that start at
- * opacity:0 and animate on scroll-into-view remain invisible
- * in full-page screenshots.
+ * Scrolls through the entire page so lazy-loaded images (`loading="lazy"`)
+ * load and late-mounting sections render before a full-page screenshot or
+ * audit, then waits for running CSS animations to finish.
  *
  * Usage in visual tests:
  *   await page.goto("/en");
@@ -218,8 +217,8 @@ export async function scrollThroughPage(page: import("@playwright/test").Page) {
 		let y = 0;
 		let stable = 0;
 		// Scroll in viewport steps until the bottom is reached twice in a
-		// row with an unchanged scrollHeight — whileInView sections can
-		// grow the page as they mount, so a single pass exits too early.
+		// row with an unchanged scrollHeight — lazy content can grow the
+		// page as it loads, so a single pass exits too early.
 		while (stable < 2) {
 			y += step;
 			window.scrollTo(0, y);
@@ -234,28 +233,14 @@ export async function scrollThroughPage(page: import("@playwright/test").Page) {
 		window.scrollTo(0, 0);
 	});
 
-	// Wait for in-flight animations to settle…
+	// Wait for in-flight animations to settle. Bounded — a stuck animation
+	// must not hang the test, `animations: "disabled"` still stabilizes the
+	// screenshot.
 	await page
 		.waitForFunction(
 			() => document.getAnimations().every((a) => a.playState === "finished"),
 			undefined,
 			{ timeout: 5000 },
-		)
-		.catch(() => {});
-
-	// …then give whileInView sections time to transition out of their
-	// initial opacity:0 state (framer-motion does not always register
-	// with getAnimations()). Bounded — a stuck element must not hang the
-	// test, `animations: "disabled"` still stabilizes the screenshot.
-	await page
-		.waitForFunction(
-			() =>
-				[...document.querySelectorAll("main [style]")].every((el) => {
-					const opacity = (el as HTMLElement).style.opacity;
-					return opacity === "" || Number.parseFloat(opacity) > 0.05;
-				}),
-			undefined,
-			{ timeout: 3000 },
 		)
 		.catch(() => {});
 }

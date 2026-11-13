@@ -5,24 +5,24 @@ import { describe, expect, it } from "vitest";
 /**
  * Guard test: every app loads the same fonts the same way.
  *
- * - `apps/<app>/src/app/fonts.ts` loads Manrope (sans), Schibsted Grotesk
- *   (heading) and Geist Mono (mono) via `next/font/google` and exports
- *   `fontVariables`; the files are identical across apps.
+ * - `apps/<app>/src/app/fonts.ts` makes exactly three font loader calls
+ *   (sans, heading, mono), each imported from `next/font/google` or
+ *   `next/font/local`, with a `variable` and `display: "swap"` (Google calls
+ *   also `subsets`, local calls `src`), and exports `fontVariables`. Any
+ *   families are allowed; the files are identical across apps.
  * - Each root layout applies `fontVariables` on `<html>`.
- * - The CSS variable names match the `var()` the brand.css font stacks read,
- *   otherwise the stacks silently fall back to system fonts.
+ * - The `var()` names the brand.css `--font-sans/--font-heading/--font-mono`
+ *   stacks read are declared as a `variable` in fonts.ts, otherwise the stacks
+ *   silently fall back to system fonts.
  * - The `geist` package is not used for fonts anymore.
  */
 
 const REPO_ROOT = join(import.meta.dirname, "../../../../");
 const APPS = ["saas", "marketing", "docs"] as const;
 const BRAND_CSS = join(REPO_ROOT, "packages/config/brand.css");
+const ROLES = ["font-sans", "font-heading", "font-mono"] as const;
 
-const FONTS = [
-	{ fn: "Manrope", token: "font-sans" },
-	{ fn: "Schibsted_Grotesk", token: "font-heading" },
-	{ fn: "Geist_Mono", token: "font-mono" },
-] as const;
+type Loader = "next/font/google" | "next/font/local";
 
 const fontsPath = (app: string) =>
 	join(REPO_ROOT, `apps/${app}/src/app/fonts.ts`);
@@ -30,15 +30,96 @@ const layoutPath = (app: string) =>
 	join(REPO_ROOT, `apps/${app}/src/app/layout.tsx`);
 const read = (path: string) => readFileSync(path, "utf8");
 
-/** The options object literal passed to `<fn>({ … })`, or undefined. */
-function fontCallOptions(src: string, fn: string): string | undefined {
-	return new RegExp(`\\b${fn}\\(\\s*\\{([\\s\\S]*?)\\}\\s*\\)`).exec(src)?.[1];
+/** Local binding name → loader module, for every `next/font` import. */
+function fontLoaders(src: string): Map<string, Loader> {
+	const loaders = new Map<string, Loader>();
+	for (const [, names = ""] of src.matchAll(
+		/import\s*\{([^}]*)\}\s*from\s*["']next\/font\/google["']/g,
+	)) {
+		for (const name of names.split(",")) {
+			const local = name
+				.trim()
+				.split(/\s+as\s+/)
+				.pop();
+			if (local) loaders.set(local, "next/font/google");
+		}
+	}
+	for (const [, name = ""] of src.matchAll(
+		/import\s+(\w+)\s+from\s*["']next\/font\/local["']/g,
+	)) {
+		loaders.set(name, "next/font/local");
+	}
+	return loaders;
 }
 
-/** First `var(--x)` in the `:root` declaration of `--<token>` in brand.css. */
-function brandFontVar(token: string): string | undefined {
-	const decl = new RegExp(`--${token}\\s*:\\s*([^;]+);`).exec(read(BRAND_CSS));
+/** The body of every `<fn>({ … })` options object, braces balanced. */
+function callOptions(src: string, fn: string): string[] {
+	const bodies: string[] = [];
+	for (const match of src.matchAll(new RegExp(`\\b${fn}\\(\\s*\\{`, "g"))) {
+		const start = match.index + match[0].length;
+		let depth = 1;
+		let quote: string | undefined;
+		for (let i = start; i < src.length; i++) {
+			const char = src[i];
+			if (quote) {
+				if (char === "\\") i++;
+				else if (char === quote) quote = undefined;
+			} else if (char === '"' || char === "'" || char === "`") quote = char;
+			else if (char === "{") depth++;
+			else if (char === "}" && --depth === 0) {
+				bodies.push(src.slice(start, i));
+				break;
+			}
+		}
+	}
+	return bodies;
+}
+
+/** First `var(--x)` name in the declaration of `--<role>`. */
+function brandFontVar(brandCss: string, role: string): string | undefined {
+	const decl = new RegExp(`--${role}\\s*:\\s*([^;]+);`).exec(brandCss);
 	return decl?.[1] ? /var\(\s*--([\w-]+)/.exec(decl[1])?.[1] : undefined;
+}
+
+/** Everything wrong with a fonts.ts against the brand.css font stacks. */
+function fontsFileProblems(src: string, brandCss: string): string[] {
+	const problems: string[] = [];
+	const calls = [...fontLoaders(src)].flatMap(([fn, loader]) =>
+		callOptions(src, fn).map((options) => ({ fn, loader, options })),
+	);
+	if (calls.length !== ROLES.length) {
+		problems.push(
+			`expected ${ROLES.length} font loader calls (sans, heading, mono) from next/font/google or next/font/local, found ${calls.length}`,
+		);
+	}
+	const variables: string[] = [];
+	for (const { fn, loader, options } of calls) {
+		const variable = /variable:\s*["']--([\w-]+)["']/.exec(options)?.[1];
+		if (variable) variables.push(variable);
+		else problems.push(`${fn}(): missing variable: "--…"`);
+		if (!/display:\s*["']swap["']/.test(options)) {
+			problems.push(`${fn}(): missing display: "swap"`);
+		}
+		if (loader === "next/font/google" && !/\bsubsets:\s*\[/.test(options)) {
+			problems.push(`${fn}(): missing subsets (next/font/google)`);
+		}
+		if (loader === "next/font/local" && !/\bsrc:/.test(options)) {
+			problems.push(`${fn}(): missing src (next/font/local)`);
+		}
+	}
+	for (const role of ROLES) {
+		const name = brandFontVar(brandCss, role);
+		if (!name) problems.push(`brand.css --${role} reads no var(--…)`);
+		else if (!variables.includes(name)) {
+			problems.push(
+				`brand.css --${role} reads var(--${name}), which no fonts.ts loader declares as its variable`,
+			);
+		}
+	}
+	if (!/export const fontVariables\b/.test(src)) {
+		problems.push("fonts.ts does not export `fontVariables`");
+	}
+	return problems;
 }
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -50,6 +131,81 @@ function walk(dir: string, out: string[] = []): string[] {
 	}
 	return out;
 }
+
+const BRAND_FIXTURE = `:root {
+	--font-sans: var(--font-body), ui-sans-serif, sans-serif;
+	--font-heading: var(--font-display), ui-sans-serif, sans-serif;
+	--font-mono: var(--font-code), ui-monospace, monospace;
+}`;
+
+const fixture = (imports: string, calls: string[]) =>
+	`${imports}\n${calls.join("\n")}\nexport const fontVariables = "";\n`;
+
+describe("fontsFileProblems", () => {
+	it("accepts Inter / Fraunces / JetBrains_Mono from next/font/google", () => {
+		const src = fixture(
+			`import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";`,
+			[
+				`const sans = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });`,
+				`const heading = Fraunces({ subsets: ["latin"], variable: "--font-display", display: "swap" });`,
+				`const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", display: "swap" });`,
+			],
+		);
+		expect(fontsFileProblems(src, BRAND_FIXTURE)).toEqual([]);
+	});
+
+	it("accepts next/font/local with src and variable", () => {
+		const src = fixture(`import localFont from "next/font/local";`, [
+			`const sans = localFont({\n\tsrc: [{ path: "./fonts/body.woff2", weight: "100 900" }],\n\tvariable: "--font-body",\n\tdisplay: "swap",\n});`,
+			`const heading = localFont({ src: "./fonts/display.woff2", variable: "--font-display", display: "swap" });`,
+			`const mono = localFont({ src: "./fonts/code.woff2", variable: "--font-code", display: "swap" });`,
+		]);
+		expect(fontsFileProblems(src, BRAND_FIXTURE)).toEqual([]);
+	});
+
+	it("rejects a fonts.ts with only two families", () => {
+		const src = fixture(
+			`import { Inter, JetBrains_Mono } from "next/font/google";`,
+			[
+				`const sans = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });`,
+				`const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", display: "swap" });`,
+			],
+		);
+		const problems = fontsFileProblems(src, BRAND_FIXTURE).join("\n");
+		expect(problems).toMatch(/found 2/);
+		expect(problems).toMatch(/--font-heading/);
+	});
+
+	it("rejects a variable that brand.css --font-heading does not read", () => {
+		const src = fixture(
+			`import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";`,
+			[
+				`const sans = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });`,
+				`const heading = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap" });`,
+				`const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", display: "swap" });`,
+			],
+		);
+		expect(fontsFileProblems(src, BRAND_FIXTURE)).toEqual([
+			"brand.css --font-heading reads var(--font-display), which no fonts.ts loader declares as its variable",
+		]);
+	});
+
+	it("rejects a call without display swap, a Google call without subsets and a local call without src", () => {
+		const src = fixture(
+			`import { Inter } from "next/font/google";\nimport localFont from "next/font/local";`,
+			[
+				`const sans = Inter({ variable: "--font-body", display: "swap" });`,
+				`const heading = localFont({ variable: "--font-display", display: "swap" });`,
+				`const mono = localFont({ src: "./code.woff2", variable: "--font-code" });`,
+			],
+		);
+		expect(fontsFileProblems(src, BRAND_FIXTURE)).toEqual([
+			"Inter(): missing subsets (next/font/google)",
+			"localFont(): missing src (next/font/local)",
+			'localFont(): missing display: "swap"',
+		]);
+	});
+});
 
 describe("font setup guard", () => {
 	it.each(APPS)(
@@ -65,25 +221,14 @@ describe("font setup guard", () => {
 	);
 
 	it.each(APPS)(
-		"%s fonts.ts loads Manrope, Schibsted_Grotesk, Geist_Mono from next/font/google with display swap and subsets latin",
+		"%s fonts.ts loads three fonts from next/font/google or next/font/local whose variables the brand.css font stacks read",
 		(app) => {
 			expect(existsSync(fontsPath(app)), `apps/${app}/src/app/fonts.ts`).toBe(
 				true,
 			);
-			const src = read(fontsPath(app));
-			const imported =
-				/import\s*\{([^}]*)\}\s*from\s*["']next\/font\/google["']/.exec(
-					src,
-				)?.[1] ?? "";
-			for (const { fn } of FONTS) {
-				expect(imported, `${fn} imported`).toMatch(new RegExp(`\\b${fn}\\b`));
-				const options = fontCallOptions(src, fn);
-				expect(options, `${fn}({ … }) called`).toBeDefined();
-				expect(options).toMatch(/subsets:\s*\[\s*["']latin["']\s*\]/);
-				expect(options).toMatch(/display:\s*["']swap["']/);
-				expect(options).toMatch(/variable:\s*["']--[\w-]+["']/);
-			}
-			expect(src).toMatch(/export const fontVariables\b/);
+			expect(fontsFileProblems(read(fontsPath(app)), read(BRAND_CSS))).toEqual(
+				[],
+			);
 		},
 	);
 
@@ -93,17 +238,6 @@ describe("font setup guard", () => {
 		);
 		for (const [i, src] of rest.entries()) {
 			expect(src, `apps/${APPS[i + 1]}/src/app/fonts.ts`).toBe(first);
-		}
-	});
-
-	it("fonts.ts variable names equal the var() names in brand.css --font-sans/--font-heading/--font-mono", () => {
-		const src = existsSync(fontsPath("saas")) ? read(fontsPath("saas")) : "";
-		for (const { fn, token } of FONTS) {
-			const variable = /variable:\s*["']--([\w-]+)["']/.exec(
-				fontCallOptions(src, fn) ?? "",
-			)?.[1];
-			expect(variable, `${fn} variable`).toBeDefined();
-			expect(brandFontVar(token), `brand.css --${token}`).toBe(variable);
 		}
 	});
 

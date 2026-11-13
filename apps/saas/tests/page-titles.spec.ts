@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { expect, test } from "./fixtures";
 
 /**
@@ -34,7 +35,10 @@ const COMPACT_ROUTES = [
 	"/choose-plan",
 ];
 
-const VISIBLE_ROUTES = ["/dashboard", "/design"];
+const VISIBLE_ROUTES = [
+	"/dashboard",
+	...(config.features.designSystem ? ["/design"] : []),
+];
 
 /** sr-only collapses the box to 1×1 and clips it. */
 const isVisuallyHidden = (el: Element) => {

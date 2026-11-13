@@ -126,6 +126,23 @@ describe("account + admin extras", () => {
 		]);
 	});
 
+	it('resolves the deprecated "adminOverview" anchor to the first admin item', () => {
+		extras.appAdminNavItems = [
+			{
+				titleKey: "adminTenants",
+				href: "/admin/tenants",
+				after: "adminOverview",
+			},
+			{ titleKey: "adminPlans", href: "/admin/plans", after: "adminOverview" },
+		];
+		expect(keys(nav.getAdminItems())).toEqual([
+			"adminUsers",
+			"adminTenants",
+			"adminPlans",
+			"adminAuditLogs",
+		]);
+	});
+
 	it("returns the kit admin list without extras — no overview self-link", () => {
 		expect(nav.getAdminItems()).toEqual([
 			{ titleKey: "adminUsers", href: "/admin/users" },
