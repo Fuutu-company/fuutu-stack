@@ -146,6 +146,46 @@ describe("DB query functions - smoke tests", () => {
 			).resolves.toBe(false);
 		});
 
+		it("findOrganizationMember matches id, user id or email inside that org only", async () => {
+			vi.mocked(db.member.findFirst).mockResolvedValueOnce({
+				id: "member-0",
+				userId: "user-0",
+				role: "owner",
+				user: { email: "owner@example.com" },
+			} as never);
+			await expect(
+				organizationQueries.findOrganizationMember("org-1", "member-0"),
+			).resolves.toEqual({
+				id: "member-0",
+				userId: "user-0",
+				role: "owner",
+				email: "owner@example.com",
+			});
+			expect(db.member.findFirst).toHaveBeenCalledWith({
+				where: {
+					organizationId: "org-1",
+					OR: [
+						{ id: "member-0" },
+						{ userId: "member-0" },
+						{ user: { email: "member-0" } },
+					],
+				},
+				select: {
+					id: true,
+					userId: true,
+					role: true,
+					user: { select: { email: true } },
+				},
+			});
+		});
+
+		it("findOrganizationMember is null when nothing matches", async () => {
+			vi.mocked(db.member.findFirst).mockResolvedValueOnce(null);
+			await expect(
+				organizationQueries.findOrganizationMember("org-1", "nope"),
+			).resolves.toBeNull();
+		});
+
 		it("getOrganizationMemberRole returns the role of the user in that org", async () => {
 			vi.mocked(db.member.findFirst).mockResolvedValueOnce({
 				role: "admin",

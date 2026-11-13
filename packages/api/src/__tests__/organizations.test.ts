@@ -28,6 +28,8 @@ vi.mock("@fuutu/db", () => ({
 	countOrganizationMembers: vi.fn().mockResolvedValue(0),
 	getActiveSubscriptionForUser: vi.fn().mockResolvedValue(null),
 	getActiveSubscriptionForOrganization: vi.fn().mockResolvedValue(null),
+	getOrganizationWithMembers: vi.fn().mockResolvedValue(null),
+	findOrganizationMember: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("@fuutu/ai", () => ({
@@ -35,9 +37,11 @@ vi.mock("@fuutu/ai", () => ({
 }));
 
 const { auth } = await import("@fuutu/auth");
-const { getOrganizationBySlug, getInvitationOrganizationId } = await import(
-	"@fuutu/db"
-);
+const {
+	getOrganizationBySlug,
+	getInvitationOrganizationId,
+	findOrganizationMember,
+} = await import("@fuutu/db");
 
 const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
@@ -566,6 +570,53 @@ describe("organizations.members.updateRole", () => {
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
 	});
 
+	it("throws FORBIDDEN when an admin demotes an owner", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [
+				{ userId: "user-0", role: "owner", id: "member-0" },
+				{ userId: "user-1", role: "admin", id: "member-1" },
+			],
+		} as never);
+
+		await expect(
+			call(
+				organizationsRouter.members.updateRole,
+				{
+					organizationId: "org-1",
+					memberId: "member-0",
+					role: "member",
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(auth.api.updateMemberRole).not.toHaveBeenCalled();
+	});
+
+	it("throws FORBIDDEN when an admin assigns owner", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [
+				{ userId: "user-0", role: "owner", id: "member-0" },
+				{ userId: "user-1", role: "admin", id: "member-1" },
+				{ userId: "user-2", role: "member", id: "member-2" },
+			],
+		} as never);
+
+		await expect(
+			call(
+				organizationsRouter.members.updateRole,
+				{
+					organizationId: "org-1",
+					memberId: "member-2",
+					role: "owner",
+				},
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(auth.api.updateMemberRole).not.toHaveBeenCalled();
+	});
+
 	it("allows owner to promote another member", async () => {
 		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
 			orgFixture as never,
@@ -594,6 +645,25 @@ describe("organizations.members.updateRole", () => {
 			headers: authenticatedContext.headers,
 		});
 		expect(result).toEqual({ id: "member-2", role: "admin" });
+	});
+
+	it("passes the resolved member id when addressed by user id", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(auth.api.updateMemberRole).mockResolvedValue({} as never);
+
+		await call(
+			organizationsRouter.members.updateRole,
+			{ organizationId: "org-1", memberId: "user-2", role: "admin" },
+			{ context: authenticatedContext },
+		);
+
+		expect(auth.api.updateMemberRole).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: expect.objectContaining({ memberId: "member-2" }),
+			}),
+		);
 	});
 });
 
@@ -723,6 +793,70 @@ describe("organizations.invitations.revoke", () => {
 			call(
 				organizationsRouter.invitations.revoke,
 				{ invitationId: "inv-missing" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
+	});
+});
+
+// getFullOrganization caps the member list; a target beyond the cap must be
+// resolved from the DB, never defaulted to "member".
+describe("member target outside the loaded member list", () => {
+	const cappedOrg = {
+		...orgFixture,
+		members: [{ userId: "user-1", role: "admin", id: "member-1" }],
+	};
+	const ownerRow = {
+		id: "member-0",
+		userId: "user-0",
+		role: "owner",
+		email: "owner@example.com",
+	};
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			cappedOrg as never,
+		);
+		vi.mocked(findOrganizationMember).mockImplementation(async (_org, id) =>
+			id === "member-0" ? ownerRow : null,
+		);
+	});
+
+	it("an admin cannot demote an owner missing from the loaded list", async () => {
+		await expect(
+			call(
+				organizationsRouter.members.updateRole,
+				{ organizationId: "org-1", memberId: "member-0", role: "member" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(auth.api.updateMemberRole).not.toHaveBeenCalled();
+	});
+
+	it("an admin cannot remove an owner missing from the loaded list", async () => {
+		await expect(
+			call(
+				organizationsRouter.members.remove,
+				{ organizationId: "org-1", memberIdOrEmail: "member-0" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(auth.api.removeMember).not.toHaveBeenCalled();
+	});
+
+	it("an unknown member id is NOT_FOUND", async () => {
+		await expect(
+			call(
+				organizationsRouter.members.updateRole,
+				{ organizationId: "org-1", memberId: "nope", role: "member" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await expect(
+			call(
+				organizationsRouter.members.remove,
+				{ organizationId: "org-1", memberIdOrEmail: "nope" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });

@@ -43,3 +43,16 @@ export function planGateMessage(
 	}
 	return t(fallbackKey);
 }
+
+/**
+ * True when a payments call failed because the deployment cannot take
+ * payments — provider off (`NOT_IMPLEMENTED`) or misconfigured, e.g. a
+ * missing API key (`SERVICE_UNAVAILABLE`). The UI says so instead of a
+ * generic "checkout failed".
+ */
+export function isPaymentsUnavailable(err: unknown): boolean {
+	return (
+		err instanceof ORPCError &&
+		(err.code === "SERVICE_UNAVAILABLE" || err.code === "NOT_IMPLEMENTED")
+	);
+}

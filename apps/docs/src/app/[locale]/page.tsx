@@ -1,8 +1,9 @@
 import { config } from "@fuutu/config";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
+import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-select";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { LanguageSelect } from "@/components/language-select";
 import { defaultLocale, locales } from "@/i18n/config";
 import { baseOptions } from "@/lib/layout.shared";
 import { Link } from "@/navigation";
@@ -48,9 +49,9 @@ export default async function HomePage({ params }: HomePageProps) {
 	return (
 		<HomeLayout
 			{...baseOptions()}
-			nav={{
-				title: t("title", { appName: config.app.name }),
-				children: <LocaleSwitcher />,
+			nav={{ title: t("title", { appName: config.app.name }) }}
+			slots={{
+				languageSelect: { root: LanguageSelect, text: LanguageSelectText },
 			}}
 		>
 			<div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">

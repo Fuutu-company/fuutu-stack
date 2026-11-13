@@ -65,6 +65,7 @@ vi.mock("@fuutu/payments", () => ({
 	resolvePaymentProvider: vi.fn(),
 	isPaymentsEnabled: vi.fn().mockReturnValue(true),
 	PaymentsDisabledError: class PaymentsDisabledError extends Error {},
+	WebhookConfigError: class WebhookConfigError extends Error {},
 	CREDIT_TOPUPS: [
 		{
 			id: "ai_tokens_100k",
@@ -100,8 +101,12 @@ vi.mock("@fuutu/ai", () => ({
 	resolveAIProvider: vi.fn(),
 }));
 
-const { resolvePaymentProvider, PaymentsDisabledError, isPaymentsEnabled } =
-	await import("@fuutu/payments");
+const {
+	resolvePaymentProvider,
+	PaymentsDisabledError,
+	WebhookConfigError,
+	isPaymentsEnabled,
+} = await import("@fuutu/payments");
 const { buildPricingTiers } = await import("@fuutu/payments/plans");
 const {
 	getOrganizationById,
@@ -118,6 +123,11 @@ const { auth } = await import("@fuutu/auth");
 
 const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
+// Own user so these cases do not eat the shared paymentsMutation
+// rate-limit budget of `authenticatedContext`.
+const configErrorContext = makeSession<Context>(
+	makeUser({ id: "user-config-error" }),
+);
 
 const mockProvider = {
 	id: "polar",
@@ -336,6 +346,55 @@ describe("payments.checkout.create", () => {
 		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
 	});
 
+	it("maps a provider misconfiguration to SERVICE_UNAVAILABLE without leaking details", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockRejectedValue(
+			new WebhookConfigError("[payments:creem] CREEM_API_KEY is not set."),
+		);
+
+		const error = await call(
+			paymentsRouter.checkout.create,
+			{ planId: "pro" },
+			{ context: configErrorContext },
+		).catch((err: unknown) => err);
+
+		expect(error).toMatchObject({
+			code: "SERVICE_UNAVAILABLE",
+			message: "Payments are not configured",
+		});
+		expect(JSON.stringify(error)).not.toContain("CREEM_API_KEY");
+	});
+
+	it("maps a misconfigured provider resolution to SERVICE_UNAVAILABLE", async () => {
+		vi.mocked(resolvePaymentProvider).mockImplementationOnce(() => {
+			throw new WebhookConfigError(
+				'[payments] provider is "custom" but paymentsConfig.customProvider is not set.',
+			);
+		});
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "pro" },
+				{ context: configErrorContext },
+			),
+		).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
+	});
+
+	it("rethrows unknown provider errors unchanged", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		const boom = new Error("network down");
+		mockProvider.createCheckoutLink.mockRejectedValue(boom);
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: "pro" },
+				{ context: configErrorContext },
+			),
+		).rejects.toBe(boom);
+	});
+
 	it("passes organizationId and sanitized same-origin URLs when provided", async () => {
 		mockOrgMembership();
 		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
@@ -457,6 +516,21 @@ describe("payments.topupPackages.list", () => {
 });
 
 describe("payments.topupCheckout.create", () => {
+	it("maps a provider misconfiguration to SERVICE_UNAVAILABLE", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockRejectedValue(
+			new WebhookConfigError("CREEM_API_KEY is not set"),
+		);
+
+		await expect(
+			call(
+				paymentsRouter.topupCheckout.create,
+				{ topupId: "ai_tokens_100k" },
+				{ context: configErrorContext },
+			),
+		).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});

@@ -180,6 +180,15 @@ export const CREDIT_TOPUPS: CreditTopupPackage[] = [
 
 // ─── 2. Plans ─────────────────────────────────────────────────────────────────
 
+/**
+ * ISO 4217 code every plan is priced and charged in — the single source
+ * of truth for currency. Pricing UI, seat totals and invoice fallbacks
+ * read it; `displayPrice` strings must match it (config.test.ts), and the
+ * dev seed's invoices too (test-utils arch guard). The provider-side
+ * prices behind `priceIdEnvVars` must be created in this currency.
+ */
+export const BILLING_CURRENCY = "usd";
+
 export type PlanId = "free" | "pro" | "enterprise";
 
 /** -1 = custom price (no checkout), 0 = free */
@@ -237,7 +246,7 @@ export const PLANS = {
 	free: {
 		tier: "free",
 		amount: 0,
-		currency: "usd",
+		currency: BILLING_CURRENCY,
 		billingType: "free",
 		displayPrice: "$0",
 		showPriceSuffix: true,
@@ -249,7 +258,7 @@ export const PLANS = {
 	pro: {
 		tier: "pro",
 		amount: 1900,
-		currency: "usd",
+		currency: BILLING_CURRENCY,
 		billingType: "subscription",
 		interval: "month",
 		trialDays: 14,
@@ -269,7 +278,7 @@ export const PLANS = {
 	enterprise: {
 		tier: "enterprise",
 		amount: -1,
-		currency: "usd",
+		currency: BILLING_CURRENCY,
 		billingType: "custom",
 		displayPrice: "—",
 		showInSaas: true,

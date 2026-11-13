@@ -66,7 +66,12 @@
 			"webhooks": "Webhooks",
 			"auditLog": "Audit log",
 			"invoices": "Invoices",
-			"notifications": "Notifications"
-		}
+			"notifications": "Notifications",
+			"credits": "Credits"
+		},
+		"groupAccount": "Account",
+		"accountSettings": "Account settings",
+		"adminOverview": "Overview",
+		"credits": "Credits"
 	}
 }

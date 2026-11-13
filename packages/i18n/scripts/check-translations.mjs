@@ -6,7 +6,9 @@
  *    every key. Folders under translations/ that are not enabled are dormant:
  *    reported as info, never checked, never an error.
  * 2. Warns about keys in translation files that are never referenced in source code.
- * 3. Cross-checks FEATURE_CATALOG IDs against payments.features translation keys.
+ * 3. Cross-checks FEATURE_CATALOG IDs against payments.features translation keys,
+ *    and every feature a rendered plan card lists against
+ *    payments.plans.<id>.featureLabels (a missing label shows the raw id).
  * 4. Cross-checks CREDIT_METERS keys + CREDIT_TOPUPS ids against credits.* keys
  *    (and warns about stale credits.meters/credits.topup.packages keys).
  *
@@ -17,6 +19,10 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseConfiguredLocales, partitionLocaleDirs } from "./locales.mjs";
+import {
+	extractVisiblePlanFeatures,
+	findMissingPlanFeatureLabels,
+} from "./plan-features.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../../..");
@@ -281,6 +287,13 @@ if (configSrc !== null && !catalogMatch) {
 		}
 	}
 
+	const planFeatures = extractVisiblePlanFeatures(configSrc);
+	if (planFeatures === null) {
+		featureErrors.push(
+			"Could not extract PLANS / TIER_ORDER / FEATURE_CATALOG from config.ts",
+		);
+	}
+
 	for (const locale of locales) {
 		const localeDir = join(translationsDir, locale);
 		const paymentsFile = collectJsonFiles(localeDir).find((f) =>
@@ -340,7 +353,14 @@ if (configSrc !== null && !catalogMatch) {
 			}
 		}
 
-		// 3d. No unknown sections
+		// 3d. Every feature a rendered plan card lists has a label
+		if (planFeatures !== null) {
+			featureErrors.push(
+				...findMissingPlanFeatureLabels(planFeatures, plans, locale),
+			);
+		}
+
+		// 3e. No unknown sections
 		const knownSections = new Set([...groups, "groups", "tooltips"]);
 		for (const section of Object.keys(features)) {
 			if (!knownSections.has(section)) {

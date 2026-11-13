@@ -1,7 +1,8 @@
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-select";
 import { setRequestLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
-import { SidebarActions } from "@/components/sidebar-actions";
+import { LanguageSelect } from "@/components/language-select";
 import { baseOptions } from "@/lib/layout.shared";
 import { source } from "@/lib/source";
 
@@ -18,7 +19,7 @@ export default async function Layout({ children, params }: DocsLayoutProps) {
 			tree={source.getPageTree(locale)}
 			{...baseOptions()}
 			slots={{
-				themeSwitch: SidebarActions,
+				languageSelect: { root: LanguageSelect, text: LanguageSelectText },
 			}}
 		>
 			{children}

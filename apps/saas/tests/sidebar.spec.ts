@@ -98,4 +98,104 @@ test.describe("sidebar navigation", () => {
 			{ timeout: 10_000 },
 		);
 	});
+
+	test("user menu billing link opens the Settings group and highlights Billing", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		await page.goto("/organizations/acme/dashboard");
+
+		const settingsGroup = page.locator("[data-nav-group='org-settings']");
+		const groupTrigger = settingsGroup.getByRole("button", {
+			name: /^settings$/i,
+		});
+		await expect(groupTrigger).toHaveAttribute("aria-expanded", "false", {
+			timeout: 10_000,
+		});
+
+		const footer = page.locator("[data-sidebar='footer']");
+		await expect(footer.getByText(/@/)).toBeVisible({ timeout: 10_000 });
+		await footer.getByRole("button").click();
+		await page.getByRole("menuitem", { name: /^billing$/i }).click();
+
+		// Client-side navigation: no reload, the group must open by itself.
+		await expect(page).toHaveURL(/\/organizations\/acme\/settings\/billing/);
+		await expect(groupTrigger).toHaveAttribute("aria-expanded", "true", {
+			timeout: 10_000,
+		});
+		await expect(
+			settingsGroup.getByRole("link", { name: /^billing$/i }),
+		).toHaveAttribute("aria-current", "page");
+	});
+
+	test("admin group expands and lists its sub-pages", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		await page.goto("/dashboard");
+
+		const adminGroup = page.locator("[data-nav-group='admin']");
+		const trigger = adminGroup.getByRole("button", { name: /^admin$/i });
+		await expect(trigger).toHaveAttribute("aria-expanded", "false", {
+			timeout: 10_000,
+		});
+		await trigger.click();
+
+		await expect(
+			adminGroup.getByRole("link", { name: /^overview$/i }),
+		).toBeVisible();
+		await expect(
+			adminGroup.getByRole("link", { name: /^users$/i }),
+		).toBeVisible();
+		await expect(
+			adminGroup.getByRole("link", { name: /^audit logs$/i }),
+		).toBeVisible();
+
+		await adminGroup.getByRole("link", { name: /^users$/i }).click();
+		await expect(page).toHaveURL(/\/admin\/users/);
+		await expect(
+			adminGroup.getByRole("link", { name: /^users$/i }),
+		).toHaveAttribute("aria-current", "page");
+	});
+
+	test("account group lists settings sections and highlights the active tab", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		await page.goto("/settings?tab=security");
+
+		const accountGroup = page.locator("[data-nav-group='account-settings']");
+		await expect(
+			accountGroup.getByRole("link", { name: /^security$/i }),
+		).toHaveAttribute("aria-current", "page", { timeout: 10_000 });
+		await expect(
+			accountGroup.getByRole("link", { name: /^profile$/i }),
+		).not.toHaveAttribute("aria-current", "page");
+	});
+
+	test("settings pages render no duplicate in-page tab navigation", async ({
+		page,
+	}) => {
+		const urls = [
+			"/settings",
+			"/settings?tab=security",
+			"/settings/api-keys",
+			"/organizations/acme/settings/general",
+			"/organizations/acme/settings/members",
+			"/organizations/acme/settings/billing",
+			"/organizations/acme/settings/api-keys",
+		];
+		for (const url of urls) {
+			await page.goto(url);
+			await expect(page.getByRole("heading").first()).toBeVisible({
+				timeout: 10_000,
+			});
+			await expect(page.getByRole("tab")).toHaveCount(0);
+			// The breadcrumb is a labelled <nav>; the removed tab nav had no label.
+			await expect(page.locator("main nav:not([aria-label])")).toHaveCount(0);
+		}
+	});
 });

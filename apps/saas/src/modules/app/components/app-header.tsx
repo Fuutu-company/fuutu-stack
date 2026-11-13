@@ -57,17 +57,22 @@ function useBreadcrumbs(): BreadcrumbSegment[] {
 		profile: "breadcrumb.profile",
 		security: "breadcrumb.security",
 		sessions: "breadcrumb.sessions",
+		danger: "breadcrumb.danger",
+		billing: "breadcrumb.billing",
+		credits: "breadcrumb.credits",
 	};
 
 	const settingsSubRoutes: Record<string, string> = {
 		"api-keys": "breadcrumb.apiKeys",
 		billing: "breadcrumb.billing",
+		credits: "breadcrumb.credits",
 	};
 
 	const orgSettingsSubRoutes: Record<string, string> = {
 		general: "breadcrumb.general",
 		members: "breadcrumb.members",
 		billing: "breadcrumb.billing",
+		credits: "breadcrumb.credits",
 		danger: "breadcrumb.danger",
 		"api-keys": "breadcrumb.apiKeys",
 		webhooks: "breadcrumb.webhooks",

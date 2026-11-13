@@ -37,7 +37,7 @@ test.describe("organization flows", () => {
 
 		// "Settings" is a collapsible — expand it, then click "General" sub-link
 		await page
-			.getByRole("button", { name: /settings/i })
+			.getByRole("button", { name: /^settings$/i })
 			.first()
 			.click();
 		await page
@@ -72,8 +72,9 @@ test.describe("organization settings — invite & members", () => {
 			timeout: 10_000,
 		});
 
-		// Role select is labeled "Role" via aria-label
-		await expect(page.getByRole("combobox", { name: /role/i })).toBeVisible({
+		// Invite role select is labeled exactly "Role" — per-member role
+		// selects are labeled "Change role for …".
+		await expect(page.getByRole("combobox", { name: /^role$/i })).toBeVisible({
 			timeout: 10_000,
 		});
 	});
@@ -126,6 +127,42 @@ test.describe("organization settings — invite & members", () => {
 		await expect(page.getByText(inviteEmail)).not.toBeVisible({
 			timeout: 10_000,
 		});
+	});
+
+	test("an owner can change a member's role and change it back", async ({
+		page,
+	}) => {
+		await page.goto("/organizations/acme/settings/members");
+		// Scoped to <main>: the sidebar's user menu is a listitem too.
+		const memberRow = page
+			.getByRole("main")
+			.getByRole("listitem")
+			.filter({ hasText: "member@fuutu.local" });
+		const roleSelect = memberRow.getByRole("combobox", {
+			name: /change role for member user/i,
+		});
+		await expect(roleSelect).toBeVisible({ timeout: 10_000 });
+
+		await roleSelect.click();
+		await page.getByRole("option", { name: /^admin$/i }).click();
+		await expect(page.getByText(/role updated/i).first()).toBeVisible({
+			timeout: 10_000,
+		});
+		await expect(memberRow).toContainText(/· admin/i);
+
+		await roleSelect.click();
+		await page.getByRole("option", { name: /^member$/i }).click();
+		await expect(memberRow).toContainText(/· member/i, { timeout: 10_000 });
+	});
+
+	test("the owner's own row has no role select", async ({ page }) => {
+		await page.goto("/organizations/acme/settings/members");
+		const ownRow = page
+			.getByRole("main")
+			.getByRole("listitem")
+			.filter({ hasText: "admin@fuutu.local" });
+		await expect(ownRow).toBeVisible({ timeout: 10_000 });
+		await expect(ownRow.getByRole("combobox")).toHaveCount(0);
 	});
 
 	test("a seat-limit rejection shows the seat cap and the upgrade link", async ({

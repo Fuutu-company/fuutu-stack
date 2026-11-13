@@ -70,6 +70,28 @@ export function hasRoleAtLeast(role: OrgRole, required: OrgRole): boolean {
 	return r !== -1 && req !== -1 && r >= req;
 }
 
+/**
+ * Whether an actor may move a member from `current` to `next`: never above
+ * the actor's own role, and only owners may touch a member at or above
+ * their own level (so an admin cannot demote an owner, then remove them).
+ * Self-changes are a separate rule — callers block those themselves.
+ */
+export function canChangeMemberRole(
+	actor: OrgRole,
+	current: OrgRole,
+	next: OrgRole,
+): boolean {
+	if (!hasRoleAtLeast(actor, next)) return false;
+	return actor === "owner" || !hasRoleAtLeast(current, actor);
+}
+
+/** Roles an actor may assign, highest first. */
+export function assignableOrgRoles(actor: OrgRole): OrgRole[] {
+	return [...ORG_ROLE_HIERARCHY]
+		.reverse()
+		.filter((role) => hasRoleAtLeast(actor, role));
+}
+
 export type ResourcePermissions<TResource extends string> = {
 	[A in CrudAction]: `${A}:${TResource}`;
 };

@@ -1,6 +1,5 @@
 "use client";
 
-import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
 	AlertDialog,
@@ -25,9 +24,10 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Trash2, Webhook } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { planGateMessage } from "@/lib/api-error";
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { orpc } from "@/utils/orpc";
 import { WebhookCreateDialog } from "./webhook-create-dialog";
 import { WebhookDeliveries } from "./webhook-deliveries";
@@ -54,25 +54,13 @@ export function WebhookList({ slug }: { slug: string }) {
 	const t = useTranslations("webhooks");
 	const tRoot = useTranslations();
 	const tCommon = useTranslations("common");
-	const [org, setOrg] = useState<FullOrg | null>(null);
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (useFullOrganization(slug).data ?? null) as FullOrg | null;
 	const [secretWebhook, setSecretWebhook] = useState<CreatedWebhook | null>(
 		null,
 	);
 	const [deleteId, setDeleteId] = useState<string | null>(null);
 	const [deleting, setDeleting] = useState(false);
-
-	const loadOrg = useCallback(async () => {
-		const res = await authClient.organization.getFullOrganization({
-			query: { organizationSlug: slug },
-		});
-		// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-		const data = res.data as FullOrg | null;
-		if (data) setOrg(data);
-	}, [slug]);
-
-	useEffect(() => {
-		void loadOrg();
-	}, [loadOrg]);
 
 	const query = useQuery(
 		orpc.webhooks.list.queryOptions({

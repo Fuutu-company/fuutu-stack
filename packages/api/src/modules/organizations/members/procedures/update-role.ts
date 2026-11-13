@@ -1,9 +1,10 @@
 import { auth } from "@fuutu/auth";
-import { hasRoleAtLeast, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
+import { canChangeMemberRole, PERMISSIONS, toOrgRole } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../../orpc/procedures";
+import { findOrgMember } from "../find-member";
 
 const updateMemberRoleSchema = z.object({
 	organizationId: z.string().min(1),
@@ -26,36 +27,30 @@ export const updateMemberRole = authProcedure({
 	.input(updateMemberRoleSchema)
 	.handler(async ({ input, context }) => {
 		const actorRole = context.orgRole ?? "member";
-		const targetMember = context.org?.members?.find(
-			(m: { id: string; userId: string; role: string }) =>
-				m.id === input.memberId,
+		const targetMember = await findOrgMember(
+			input.organizationId,
+			context.org?.members,
+			input.memberId,
 		);
 		const targetRole = toOrgRole(input.role);
-		if (targetMember && targetMember.userId === context.user.id) {
+		if (targetMember.userId === context.user.id) {
 			throw new ORPCError("FORBIDDEN", {
 				message: "Cannot change your own role — use a transfer ownership flow",
 			});
 		}
-		if (!hasRoleAtLeast(actorRole, targetRole)) {
-			throw new ORPCError("FORBIDDEN", {
-				message: "Cannot assign a role higher than your own",
-			});
-		}
-		// The actor must also outrank the target's CURRENT role — otherwise
-		// an admin could demote an owner and then remove them (remove.ts's
-		// owner guard no longer applies after the demotion).
-		const currentRole = toOrgRole(targetMember?.role);
+		// Never above the actor's own role; only owners may touch a member at
+		// or above their level — otherwise an admin could demote an owner and
+		// then remove them (remove.ts's owner guard no longer applies).
 		if (
-			!hasRoleAtLeast(actorRole, "owner") &&
-			hasRoleAtLeast(currentRole, actorRole)
+			!canChangeMemberRole(actorRole, toOrgRole(targetMember.role), targetRole)
 		) {
 			throw new ORPCError("FORBIDDEN", {
-				message: "Cannot change the role of a member with equal or higher role",
+				message: "Cannot change this member to that role",
 			});
 		}
 		const result = await auth.api.updateMemberRole({
 			body: {
-				memberId: input.memberId,
+				memberId: targetMember.id,
 				role: input.role,
 				organizationId: input.organizationId,
 			},

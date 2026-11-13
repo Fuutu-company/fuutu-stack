@@ -3,15 +3,7 @@ import { authConfig } from "@fuutu/auth/config";
 import { mcpOAuth } from "@fuutu/auth/mcp-oauth";
 import { paymentsConfig } from "@fuutu/payments/config";
 import { getPlanPriceIds } from "@fuutu/payments/config.server";
-import {
-	Button,
-	Card,
-	CardContent,
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
-} from "@fuutu/ui";
+import { Button, Card, CardContent } from "@fuutu/ui";
 import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -56,64 +48,55 @@ export default async function SettingsPage({
 		<div className="mx-auto max-w-4xl space-y-6">
 			<div>
 				<h1 className="font-bold text-3xl tracking-tight">{t("title")}</h1>
-				<p className="mt-2 text-muted-foreground">{t("account.title")}</p>
+				<p className="mt-2 text-muted-foreground">{t(`tabs.${activeTab}`)}</p>
 			</div>
-			<Tabs defaultValue={activeTab} className="w-full">
-				<TabsList>
-					<TabsTrigger value="profile">{t("tabs.profile")}</TabsTrigger>
-					<TabsTrigger value="security">{t("tabs.security")}</TabsTrigger>
-					<TabsTrigger value="sessions">{t("tabs.sessions")}</TabsTrigger>
-					<TabsTrigger value="danger">{t("tabs.danger")}</TabsTrigger>
-					{showBillingTab && (
-						<TabsTrigger value="billing">{t("tabs.billing")}</TabsTrigger>
-					)}
-					{showCreditsTab && (
-						<TabsTrigger value="credits">{t("tabs.credits")}</TabsTrigger>
-					)}
-				</TabsList>
-
-				<TabsContent value="profile" className="mt-6 space-y-6">
-					<Card className="p-6 md:p-8">
-						<ProfileForm />
-					</Card>
-					<Card className="p-6 md:p-8">
-						<EmailChangeForm />
-					</Card>
-				</TabsContent>
-
-				<TabsContent value="security" className="mt-6 space-y-6">
-					<Card className="p-6 md:p-8">
-						<ChangePasswordForm />
-					</Card>
-					{authConfig.features.twoFactor && (
+			<div className="space-y-6">
+				{activeTab === "profile" && (
+					<div className="space-y-6">
 						<Card className="p-6 md:p-8">
-							<TwoFactorBlock />
+							<ProfileForm />
 						</Card>
-					)}
-					{authConfig.features.passkeys && (
 						<Card className="p-6 md:p-8">
-							<PasskeysBlock />
+							<EmailChangeForm />
 						</Card>
-					)}
-				</TabsContent>
+					</div>
+				)}
 
-				<TabsContent value="sessions" className="mt-6 space-y-6">
-					<Card className="p-6 md:p-8">
-						<SessionsBlock />
-					</Card>
-					{mcpOAuth.active && (
+				{activeTab === "security" && (
+					<div className="space-y-6">
 						<Card className="p-6 md:p-8">
-							<ConnectedAppsBlock />
+							<ChangePasswordForm />
 						</Card>
-					)}
-				</TabsContent>
+						{authConfig.features.twoFactor && (
+							<Card className="p-6 md:p-8">
+								<TwoFactorBlock />
+							</Card>
+						)}
+						{authConfig.features.passkeys && (
+							<Card className="p-6 md:p-8">
+								<PasskeysBlock />
+							</Card>
+						)}
+					</div>
+				)}
 
-				<TabsContent value="danger" className="mt-6">
-					<DeleteAccountBlock />
-				</TabsContent>
+				{activeTab === "sessions" && (
+					<div className="space-y-6">
+						<Card className="p-6 md:p-8">
+							<SessionsBlock />
+						</Card>
+						{mcpOAuth.active && (
+							<Card className="p-6 md:p-8">
+								<ConnectedAppsBlock />
+							</Card>
+						)}
+					</div>
+				)}
 
-				{showBillingTab && (
-					<TabsContent value="billing" className="mt-6 space-y-6">
+				{activeTab === "danger" && <DeleteAccountBlock />}
+
+				{showBillingTab && activeTab === "billing" && (
+					<div className="space-y-6">
 						<Card>
 							<CardContent className="space-y-6 p-6 md:p-8">
 								<div>
@@ -138,14 +121,10 @@ export default async function SettingsPage({
 							</CardContent>
 						</Card>
 						<UserSettingsBilling priceIds={getPlanPriceIds()} />
-					</TabsContent>
+					</div>
 				)}
-				{showCreditsTab && (
-					<TabsContent value="credits" className="mt-6">
-						<CreditBalanceView />
-					</TabsContent>
-				)}
-			</Tabs>
+				{showCreditsTab && activeTab === "credits" && <CreditBalanceView />}
+			</div>
 		</div>
 	);
 }

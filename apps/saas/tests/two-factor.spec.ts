@@ -3,18 +3,18 @@ import { expect, test } from "./fixtures";
 
 test.describe("two-factor authentication", () => {
 	test("settings page has 2FA section", async ({ page }) => {
-		await page.goto("/settings");
+		await page.goto("/settings?tab=security");
 
 		await expect(
 			page.getByRole("heading", { name: /settings/i }),
 		).toBeVisible();
-		await expect(page.getByRole("tab", { name: /security/i })).toBeVisible();
+		await expect(
+			page.getByRole("heading", { name: /two-factor authentication/i }),
+		).toBeVisible();
 	});
 
 	test("2FA section is visible on the security tab", async ({ page }) => {
-		await page.goto("/settings");
-
-		await page.getByRole("tab", { name: /security/i }).click();
+		await page.goto("/settings?tab=security");
 
 		await expect(
 			page.getByRole("heading", { name: /two-factor authentication/i }),
@@ -22,9 +22,7 @@ test.describe("two-factor authentication", () => {
 	});
 
 	test("2FA enable or disable button is visible", async ({ page }) => {
-		await page.goto("/settings");
-
-		await page.getByRole("tab", { name: /security/i }).click();
+		await page.goto("/settings?tab=security");
 
 		await expect(
 			page.getByRole("heading", { name: /two-factor authentication/i }),

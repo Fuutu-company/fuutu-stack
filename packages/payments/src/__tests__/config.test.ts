@@ -2,6 +2,7 @@ import { config } from "@fuutu/config";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+	BILLING_CURRENCY,
 	FEATURE_CATALOG,
 	type FeatureEntry,
 	getSeatUpgradeUrl,
@@ -9,6 +10,7 @@ import {
 	LIMITS,
 	PLAN_IDS,
 	PLANS,
+	type Plan,
 	type PlanId,
 	type PlanLimits,
 	paymentsConfig,
@@ -233,5 +235,28 @@ describe("getSeatUpgradeUrl()", () => {
 	it("uses paymentsConfig.seatUpgradeUrl when configured", () => {
 		paymentsConfig.seatUpgradeUrl = (slug) => `https://shop.test/${slug}`;
 		expect(getSeatUpgradeUrl("acme")).toBe("https://shop.test/acme");
+	});
+});
+
+describe("billing currency", () => {
+	it("every plan bills in BILLING_CURRENCY", () => {
+		for (const id of PLAN_IDS) {
+			expect(PLANS[id].currency, id).toBe(BILLING_CURRENCY);
+		}
+	});
+
+	it("priced plans display their amount in BILLING_CURRENCY", () => {
+		const format = (cents: number) =>
+			new Intl.NumberFormat("en", {
+				style: "currency",
+				currency: BILLING_CURRENCY,
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 2,
+			}).format(cents / 100);
+		for (const id of PLAN_IDS) {
+			const plan: Plan = PLANS[id];
+			if (plan.amount <= 0) continue;
+			expect(plan.displayPrice, id).toBe(format(plan.amount));
+		}
 	});
 });

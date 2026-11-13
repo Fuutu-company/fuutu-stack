@@ -6,6 +6,7 @@ const log = createLogger({ scope: "openapi-merge" });
 
 interface BetterAuthSpec {
 	paths?: Record<string, Record<string, unknown>>;
+	components?: { schemas?: Record<string, unknown> };
 }
 
 let cachedSpec: BetterAuthSpec | null = null;
@@ -56,4 +57,16 @@ export async function getBetterAuthSpecPaths(): Promise<
 		prefixed[`/auth${path}`] = def;
 	}
 	return prefixed;
+}
+
+/**
+ * Better Auth's component schemas (`User`, `Session`, …). Its paths `$ref`
+ * them, so they must ship alongside the merged paths — otherwise the
+ * reference UI reports unresolved `#/components/schemas/*` refs.
+ */
+export async function getBetterAuthSpecSchemas(): Promise<
+	Record<string, unknown>
+> {
+	const spec = await getBetterAuthSpec();
+	return spec?.components?.schemas ?? {};
 }

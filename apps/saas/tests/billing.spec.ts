@@ -56,6 +56,37 @@ test.describe("billing & checkout flows", () => {
 		});
 	});
 
+	test("org billing explains a misconfigured payment provider", async ({
+		page,
+	}) => {
+		// Replay the API's typed answer for a missing provider key
+		// (packages/api payments.test.ts pins the mapping).
+		await page.route("**/api/rpc/payments/checkout/create", (route) =>
+			route.fulfill({
+				status: 503,
+				contentType: "application/json",
+				body: JSON.stringify({
+					json: {
+						defined: false,
+						code: "SERVICE_UNAVAILABLE",
+						status: 503,
+						message: "Payments are not configured",
+					},
+				}),
+			}),
+		);
+
+		await page.goto("/organizations/acme/settings/billing");
+		await page
+			.getByRole("button", { name: /upgrade to pro/i })
+			.first()
+			.click();
+
+		await expect(
+			page.getByText(/payments are not configured for this environment/i),
+		).toBeVisible({ timeout: 10_000 });
+	});
+
 	test("settings page renders for authenticated user", async ({ page }) => {
 		await page.goto("/settings");
 		expect(page.url()).not.toMatch(/\/auth\/sign-in/);

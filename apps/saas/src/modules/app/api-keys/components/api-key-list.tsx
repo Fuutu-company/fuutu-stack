@@ -1,12 +1,11 @@
 "use client";
 
-import { authClient } from "@fuutu/auth/client";
-import { createLogger } from "@fuutu/logs";
 import { Badge, Card, CardContent } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { orpc } from "@/utils/orpc";
 import {
 	ApiKeyCreateDialog,
@@ -14,8 +13,6 @@ import {
 } from "./api-key-create-dialog";
 import { ApiKeyCreatedDialog } from "./api-key-created-dialog";
 import { ApiKeyRevokeDialog } from "./api-key-revoke-dialog";
-
-const log = createLogger({ scope: "api-key-list" });
 
 type ApiKey = {
 	id: string;
@@ -61,26 +58,9 @@ export function ApiKeyList({
 }) {
 	const t = useTranslations("apiKeys");
 	const locale = useLocale();
-	const [org, setOrg] = useState<FullOrg | null>(null);
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (useFullOrganization(slug).data ?? null) as FullOrg | null;
 	const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
-
-	const loadOrg = useCallback(async () => {
-		if (!slug) return;
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-			const data = res.data as FullOrg | null;
-			if (data) setOrg(data);
-		} catch (e) {
-			log.error("failed to load organization", { err: e });
-		}
-	}, [slug]);
-
-	useEffect(() => {
-		void loadOrg();
-	}, [loadOrg]);
 
 	const effectiveOrgId = organizationId ?? org?.id;
 

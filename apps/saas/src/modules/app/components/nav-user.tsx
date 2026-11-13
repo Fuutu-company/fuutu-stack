@@ -32,6 +32,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { ACCOUNT_SETTINGS_PATH, orgBillingHref } from "./nav-config";
 
 function getInitials(name: string, email: string): string {
 	const nameLetter = name?.trim()?.[0] ?? "";
@@ -55,7 +56,7 @@ export function NavUser() {
 	const orgSlug = orgMatch?.[1] ?? null;
 	const billingHref = orgsOn
 		? orgSlug
-			? `/organizations/${orgSlug}/settings/billing`
+			? orgBillingHref(orgSlug)
 			: null
 		: "/choose-plan";
 
@@ -153,7 +154,7 @@ export function NavUser() {
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
 							<DropdownMenuItem asChild>
-								<Link href="/settings">
+								<Link href={ACCOUNT_SETTINGS_PATH}>
 									<BadgeCheck />
 									{t("account")}
 								</Link>

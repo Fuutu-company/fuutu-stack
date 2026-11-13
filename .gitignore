@@ -93,3 +93,6 @@ temp
 # Temp working docs — local only, not pushed (root only — do NOT match
 # apps/docs, that is the real Fumadocs app)
 /docs/
+
+# Claude Code git worktrees
+.claude/worktrees/

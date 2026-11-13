@@ -22,6 +22,39 @@ export const getOrganizationWithMembers = (id: string) =>
 		},
 	});
 
+/**
+ * One member of an organization, matched by member id, user id or user
+ * email — a bounded lookup for member mutations (no full member list).
+ */
+export const findOrganizationMember = async (
+	organizationId: string,
+	idOrUserIdOrEmail: string,
+) => {
+	const row = await db.member.findFirst({
+		where: {
+			organizationId,
+			OR: [
+				{ id: idOrUserIdOrEmail },
+				{ userId: idOrUserIdOrEmail },
+				{ user: { email: idOrUserIdOrEmail } },
+			],
+		},
+		select: {
+			id: true,
+			userId: true,
+			role: true,
+			user: { select: { email: true } },
+		},
+	});
+	if (!row) return null;
+	return {
+		id: row.id,
+		userId: row.userId,
+		role: row.role,
+		email: row.user.email,
+	};
+};
+
 export const listOrganizationsForUser = (userId: string) =>
 	db.organization.findMany({
 		where: { members: { some: { userId } } },

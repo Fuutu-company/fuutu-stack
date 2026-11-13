@@ -1,7 +1,6 @@
 "use client";
 
-import { authClient } from "@fuutu/auth/client";
-import { createLogger } from "@fuutu/logs";
+import { BILLING_CURRENCY } from "@fuutu/payments/config";
 import {
 	Button,
 	Card,
@@ -16,11 +15,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Download, FileText } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { orpc } from "@/utils/orpc";
 import { InvoiceStatusBadge } from "./invoice-status-badge";
-
-const log = createLogger({ scope: "invoice-list" });
 
 type FullOrg = {
 	id: string;
@@ -33,26 +31,9 @@ type DateFilter = "all" | "last30" | "last90";
 export function InvoiceList({ slug }: { slug?: string }) {
 	const t = useTranslations("invoices");
 	const locale = useLocale();
-	const [org, setOrg] = useState<FullOrg | null>(null);
+	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
+	const org = (useFullOrganization(slug).data ?? null) as FullOrg | null;
 	const [dateFilter, setDateFilter] = useState<DateFilter>("all");
-
-	const loadOrg = useCallback(async () => {
-		if (!slug) return;
-		try {
-			const res = await authClient.organization.getFullOrganization({
-				query: { organizationSlug: slug },
-			});
-			// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
-			const data = res.data as FullOrg | null;
-			if (data) setOrg(data);
-		} catch (e) {
-			log.error("failed to load organization", { err: e });
-		}
-	}, [slug]);
-
-	useEffect(() => {
-		void loadOrg();
-	}, [loadOrg]);
 
 	const query = useQuery(
 		orpc.payments.invoices.list.queryOptions({
@@ -79,7 +60,7 @@ export function InvoiceList({ slug }: { slug?: string }) {
 	function formatAmount(amount: number, currency: string): string {
 		return new Intl.NumberFormat(locale, {
 			style: "currency",
-			currency: currency || "USD",
+			currency: currency || BILLING_CURRENCY,
 		}).format(amount);
 	}
 

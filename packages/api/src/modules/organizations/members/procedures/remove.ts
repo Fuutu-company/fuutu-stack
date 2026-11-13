@@ -5,8 +5,8 @@ import { dispatchEvent } from "@fuutu/webhooks";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
-import type { OrgMember } from "../../../../orpc/org-access";
 import { authProcedure } from "../../../../orpc/procedures";
+import { findOrgMember } from "../find-member";
 
 const log = createLogger({ scope: "api:organizations" });
 
@@ -32,13 +32,12 @@ export const removeMember = authProcedure({
 		// context.org and context.orgRole are set by authorize middleware
 		// (org option is not optional, so both are guaranteed defined)
 		const actorRole = context.orgRole ?? "member";
-		const target = context.org?.members?.find(
-			(m: OrgMember) =>
-				m.id === input.memberIdOrEmail ||
-				m.userId === input.memberIdOrEmail ||
-				m.email === input.memberIdOrEmail,
+		const target = await findOrgMember(
+			input.organizationId,
+			context.org?.members,
+			input.memberIdOrEmail,
 		);
-		const targetRole = toOrgRole(target?.role);
+		const targetRole = toOrgRole(target.role);
 		if (targetRole === "owner") {
 			throw new ORPCError("FORBIDDEN", { message: "Cannot remove owner" });
 		}

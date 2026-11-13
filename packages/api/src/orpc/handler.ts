@@ -8,7 +8,10 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { getBetterAuthSpecPaths } from "./openapi-merge";
+import {
+	getBetterAuthSpecPaths,
+	getBetterAuthSpecSchemas,
+} from "./openapi-merge";
 import { router } from "./router";
 
 const log = createLogger({ scope: "rpc-handler" });
@@ -33,7 +36,10 @@ export const openApiHandler = withEvlog(
 			new OpenAPIReferencePlugin({
 				schemaConverters: [new ZodToJsonSchemaConverter()],
 				specGenerateOptions: async () => {
-					const betterAuthPaths = await getBetterAuthSpecPaths();
+					const [betterAuthPaths, betterAuthSchemas] = await Promise.all([
+						getBetterAuthSpecPaths(),
+						getBetterAuthSpecSchemas(),
+					]);
 					return {
 						info: {
 							title: `${config.app.name} API`,
@@ -42,6 +48,12 @@ export const openApiHandler = withEvlog(
 						},
 						servers: [{ url: "/api" }],
 						paths: betterAuthPaths as OpenAPI.PathsObject,
+						components: {
+							schemas: betterAuthSchemas as Record<
+								string,
+								OpenAPI.SchemaObject
+							>,
+						},
 					};
 				},
 				docsPath: "/docs",
