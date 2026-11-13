@@ -211,13 +211,13 @@ describe("audit mechanics (fixtures)", () => {
 			fg: "primary-foreground",
 			bg: "primary",
 			min: 4.5,
-			effective: "primary-hover-fill",
+			effective: "primary-hover-blend",
 		};
 
 		it("is part of CONTRAST_PAIRS at 4.5", () => {
 			expect(
 				CONTRAST_PAIRS.some(
-					(p) => p.effective === "primary-hover-fill" && p.min === 4.5,
+					(p) => p.effective === "primary-hover-blend" && p.min === 4.5,
 				),
 			).toBe(true);
 		});

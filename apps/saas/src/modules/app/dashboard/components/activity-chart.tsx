@@ -4,12 +4,12 @@ import {
 	AREA_CLASSES,
 	AREAS,
 	AreaBadge,
-	buildStackedBars,
 	Card,
 	CardContent,
 	CardHeader,
 	CardTitle,
 } from "@fuutu/ui";
+import { buildStackedBars } from "@fuutu/ui/stacked-bars";
 import { useFormatter, useTranslations } from "next-intl";
 import type { DashboardOverviewData } from "../lib/usage";
 

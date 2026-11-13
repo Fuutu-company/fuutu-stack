@@ -1,6 +1,7 @@
 "use client";
 
-import { Badge, CONTRAST_PAIRS, type ContrastPair } from "@fuutu/ui";
+import { Badge } from "@fuutu/ui";
+import { CONTRAST_PAIRS, type ContrastPair } from "@fuutu/ui/color";
 import { cn } from "@fuutu/utils/cn";
 import { Check, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
@@ -38,7 +39,7 @@ function PairTile({ pair }: { pair: ContrastPair }) {
 	const measured = ratio !== null;
 	const pass = measured && ratio >= pair.min;
 	const isDestructiveFill = pair.effective === "destructive-fill";
-	const isPrimaryHover = pair.effective === "primary-hover-fill";
+	const isPrimaryHover = pair.effective === "primary-hover-blend";
 	const isFocusRing = pair.effective === "focus-ring";
 	const isEffective = isDestructiveFill || isPrimaryHover;
 	const kind = sampleKindOf(pair);

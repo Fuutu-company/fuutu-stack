@@ -1,8 +1,4 @@
-import {
-	contrastRatio,
-	type Vec3,
-	WCAG_AA,
-} from "../../../packages/ui/src/lib/color";
+import { contrastRatio, type Vec3, WCAG_AA } from "@fuutu/ui/color";
 import { expect, scrollThroughPage, test } from "./fixtures";
 import { DEFAULT_LOCALE, OTHER_LOCALES, readHomeMessages } from "./locales";
 

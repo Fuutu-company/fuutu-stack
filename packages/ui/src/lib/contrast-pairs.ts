@@ -7,14 +7,14 @@ import { WCAG_AA } from "./color";
  * (`fg` is "white", not a token; `--destructive-foreground` is ignored) on a
  * solid fill in light and `destructive/60` in dark, composited over
  * background, card and popover. The worst ratio counts.
- * `effective: "primary-hover-fill"` measures `primary-foreground` on what
+ * `effective: "primary-hover-blend"` measures `primary-foreground` on what
  * `hover:bg-primary/90` renders: primary at 90% over background.
  * `effective: "focus-ring"` measures what `ring-ring/50` renders: ring at
  * 50% over background, card and popover. The worst ratio counts.
  */
 export type EffectiveKind =
 	| "destructive-fill"
-	| "primary-hover-fill"
+	| "primary-hover-blend"
 	| "focus-ring";
 
 export type ContrastPair = {
@@ -58,7 +58,10 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
 		TEXT_ON_SURFACES.map((bg) => text(fg, bg)),
 	),
 	{ ...text("white", "destructive"), effective: "destructive-fill" },
-	{ ...text("primary-foreground", "primary"), effective: "primary-hover-fill" },
+	{
+		...text("primary-foreground", "primary"),
+		effective: "primary-hover-blend",
+	},
 	...AREAS.flatMap((area) => [
 		text(`area-${area}-foreground`, `area-${area}`),
 		...TEXT_ON_SURFACES.map((bg) => text(`area-${area}-foreground`, bg)),

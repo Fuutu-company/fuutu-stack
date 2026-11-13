@@ -18,7 +18,7 @@ Constraints    : <deadlines, compliance, performance budgets>
 
 ## 1 · What this repo is
 
-Your app, built on **Fuutu Stack** — a TypeScript SaaS starter kit (pnpm + Turborepo monorepo). `apps/saas` and `apps/marketing` ship as a working demo of the kit's features; replace the demo content with your product.
+Your app, built on **Fuutu Stack** — a TypeScript SaaS starter kit (pnpm + Turborepo monorepo). `apps/saas` and `apps/marketing` ship as a working demo of the kit's features; replace the demo content with your product. Before launch, set `config.features.designSystem: false` — otherwise the `/design` style guide ships to your users.
 
 | | Your app | The kit (Fuutu-owned) |
 |---|---|---|

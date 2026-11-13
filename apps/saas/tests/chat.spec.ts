@@ -65,8 +65,8 @@ test.describe("AI chat", () => {
 		// Click should work without DevTools overlay blocking it
 		await sendButton.click();
 
-		// Wait for the optimistic update to render
-		await page.waitForTimeout(500);
+		// The send was accepted: the input clears
+		await expect(messageInput).toHaveValue("");
 
 		// The user message appears immediately in the message list (optimistic update)
 		await expect(page.getByText(testMessage)).toBeVisible({

@@ -300,7 +300,7 @@ export function measurePair(
 	if (pair.effective === "destructive-fill") {
 		return measureDestructiveFill(blocks, mode);
 	}
-	if (pair.effective === "primary-hover-fill") {
+	if (pair.effective === "primary-hover-blend") {
 		return measurePrimaryHoverFill(blocks, mode, pair);
 	}
 	if (pair.effective === "focus-ring") {

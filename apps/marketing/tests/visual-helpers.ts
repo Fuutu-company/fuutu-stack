@@ -29,9 +29,9 @@ export const test = base.extend({
 export { expect, scrollThroughPage };
 
 /**
- * JS-driven animations (framer-motion springs, `height: auto`) are not
+ * JS-driven layout changes (`height: auto`, inline styles) are not
  * covered by `animations: "disabled"` — wait until the page height and
- * every inline motion style have stopped changing before shooting.
+ * every inline opacity/transform style have stopped changing before shooting.
  */
 async function waitForStableLayout(page: Page) {
 	await page.evaluate(async () => {
@@ -40,8 +40,8 @@ async function waitForStableLayout(page: Page) {
 		let last = "";
 		let stable = 0;
 		for (let i = 0; i < 50 && stable < 5; i++) {
-			// Height plus every inline motion style: springs and staggered
-			// reveals change transform/opacity long after the height settled.
+			// Height plus every inline opacity/transform style: they can keep
+			// changing after the height settled.
 			const signature = [
 				document.documentElement.scrollHeight,
 				...[
@@ -58,39 +58,6 @@ async function waitForStableLayout(page: Page) {
 }
 
 /**
- * `whileInView` reveals start at opacity 0 and only fire once their
- * IntersectionObserver reports the element. `scrollThroughPage` dwells a
- * fixed time per step, which is not enough for every engine (mobile
- * WebKit skips sections), so a shot could capture blank sections. Scroll
- * each element still hidden into view until none is left.
- */
-async function waitForRevealed(page: Page) {
-	await page.evaluate(async () => {
-		const sleep = (ms: number) =>
-			new Promise((resolve) => setTimeout(resolve, ms));
-		// Rendered elements only — hidden containers (closed menus) also carry
-		// opacity 0 inline but have no box and can never intersect.
-		const hidden = () =>
-			[
-				...document.querySelectorAll<HTMLElement>("body [style*='opacity']"),
-			].filter(
-				(el) =>
-					Number.parseFloat(el.style.opacity) === 0 &&
-					el.getClientRects().length > 0,
-			);
-		for (let pass = 0; pass < 5; pass++) {
-			const pending = hidden();
-			if (pending.length === 0) break;
-			for (const el of pending) {
-				el.scrollIntoView({ block: "center" });
-				await sleep(150);
-			}
-		}
-		window.scrollTo(0, 0);
-	});
-}
-
-/**
  * The one way to take a screenshot in visual specs: masks every `[data-volatile]` element on top of caller-supplied masks.
  */
 export async function expectVisual(
@@ -99,7 +66,6 @@ export async function expectVisual(
 	{ mask = [], ...options }: VisualOptions = {},
 ) {
 	const page = isLocator(target) ? target.page() : target;
-	await waitForRevealed(page);
 	await waitForStableLayout(page);
 	const masks = [page.locator(VOLATILE_SELECTOR), ...mask];
 	if (isLocator(target)) {

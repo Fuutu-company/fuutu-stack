@@ -1,4 +1,4 @@
-import type { ContrastPair } from "@fuutu/ui";
+import type { ContrastPair } from "@fuutu/ui/color";
 import {
 	Bell,
 	Building2,
@@ -117,7 +117,7 @@ function isPartnerPair({ fg, bg }: ContrastPair): boolean {
 
 export function contrastGroupOf(pair: ContrastPair): ContrastGroup {
 	if (pair.effective === "destructive-fill") return "destructiveFill";
-	if (pair.effective === "primary-hover-fill") return "primaryHover";
+	if (pair.effective === "primary-hover-blend") return "primaryHover";
 	if (pair.effective === "focus-ring") return "focusRing";
 	if (pair.fg.startsWith("area-")) return "areas";
 	if (pair.min < 4.5) return "nonText";

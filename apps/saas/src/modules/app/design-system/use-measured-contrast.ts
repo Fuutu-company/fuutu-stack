@@ -5,7 +5,7 @@ import {
 	contrastRatio,
 	type ParsedColor,
 	parseColor,
-} from "@fuutu/ui";
+} from "@fuutu/ui/color";
 import { useTheme } from "next-themes";
 import { type RefObject, useEffect, useState } from "react";
 

@@ -220,6 +220,8 @@ Shadow tokens come from the theme when a pasted export defines them and fall bac
 
 One `--radius` drives the whole scale (`sm` 12px to `4xl` 32px at 1rem). Buttons and badges are pills (`rounded-full`), cards use `2xl`, dialogs, sheets and the auth card use `3xl`, inputs and selects use `md`, menu items use `sm`, checkboxes are 4px, avatars and dots are `full`. Changing `--radius` in `brand.css` re-shapes the entire product at once, so choose it as a brand decision, not per component.
 
+Shape and size live in the component classes, not only in tokens: which radius step a component takes, its height and its padding are set in its class composition in `packages/ui/src/components/` (luma-style). A pasted theme changes `--radius` and the colors; a different button shape or control height is an edit to that component.
+
 ## Components
 
 Components come from `@fuutu/ui` (shadcn, new-york style, with the class compositions of the shadcn luma preset ported by hand). The `components` recipes in the frontmatter are the canonical class compositions for the most common pieces, including the `area-tile`.
@@ -293,6 +295,8 @@ Files that move together:
 2. Fonts: `apps/*/src/app/fonts.ts` (keep the three files identical) and `--font-sans` / `--font-heading` / `--font-mono` in `brand.css`. The root layouts only apply `fontVariables`; never touch `metadata.generator` there.
 3. Mail and OG hex: `packages/mail/src/templates/colors.ts`, `packages/config/assets/og-image.html` (re-render and run `pnpm assets:sync`) and the blog `opengraph-image.tsx`.
 4. Then run `pnpm -F @fuutu/ui test` and open `/design` in the SaaS app, in light and dark.
+
+Before launch, set `config.features.designSystem: false` in `packages/config/index.ts`. The `/design` route then returns 404; the module can also be deleted, its guards skip.
 
 Make it calm: set all four area tokens (fill and ink) to one neutral tint, for example `--muted` fills with `--foreground` inks. Tiles, icons and the hero backdrop go quiet and the rest of the product is unchanged. Keep the ink pairs at 4.5:1.
 

@@ -1,4 +1,4 @@
-import { CONTRAST_PAIRS } from "@fuutu/ui";
+import { CONTRAST_PAIRS } from "@fuutu/ui/color";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
