@@ -31,6 +31,22 @@ describe("E2E build output guard", () => {
 		expect(e2eEnv).toContain('NEXT_DIST_DIR: ".next-e2e"');
 	});
 
+	it("restores next-env.d.ts after the build (also on failure) and before start", () => {
+		const flow = launcher.slice(launcher.indexOf("if (e2e) {"));
+		const snapshot = flow.indexOf("next-env.d.ts");
+		const build = flow.indexOf('next(["build"');
+		const restoreAfterBuild = flow.indexOf("restoreNextEnv()", build);
+		const failCheck = flow.indexOf("if (built !== 0)");
+		const start = flow.indexOf('next(["start"');
+		expect(snapshot).toBeGreaterThan(-1);
+		expect(snapshot).toBeLessThan(build);
+		expect(restoreAfterBuild).toBeGreaterThan(build);
+		// restored before the failure exit, so a failed build restores too
+		expect(restoreAfterBuild).toBeLessThan(failCheck);
+		expect(flow.indexOf("restoreNextEnv()", failCheck)).toBeGreaterThan(-1);
+		expect(flow.indexOf("restoreNextEnv()", failCheck)).toBeLessThan(start);
+	});
+
 	it.each(e2eApps)("apps/%s/next.config.ts honours it", (app) => {
 		expect(read("apps", app, "next.config.ts")).toMatch(
 			/distDir: process\.env\.NEXT_DIST_DIR \?\? "\.next",/,

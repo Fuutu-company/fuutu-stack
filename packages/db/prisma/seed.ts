@@ -15,7 +15,10 @@
  *   - 5 sample AuditLog entries
  *   - 36 demo-activity AuditLog entries over the last 29 days (dashboard chart)
  *   - 1 ai_tokens CreditBalance for the org + 14 usage CreditEvents
- *     (only with PAYMENTS_PRO_PRICE_ID set, i.e. when Acme resolves to Pro)
+ *     (only with PAYMENTS_PRO_PRICE_ID set, i.e. when Acme resolves to Pro;
+ *     without it the Pro plan and the demo AI-token balance do not appear.
+ *     Databases seeded before this change keep the old balance — reset and
+ *     re-seed (prisma migrate reset, then `pnpm db:seed`))
  *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org
  *   - 3 demo API keys for the admin (org-scoped, user-scoped, expired)
  *   - 4 demo invoices for the acme org (2 paid, 1 open, 1 void)

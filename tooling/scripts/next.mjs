@@ -11,6 +11,7 @@
  * In CI there is no registry: slot 0 (the classic ports).
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	describeProject,
@@ -104,8 +105,21 @@ function resetE2eDatabase() {
 if (e2e) {
 	const reset = resetE2eDatabase();
 	if (reset !== 0) process.exit(reset);
+	// `next build` with a custom distDir repoints next-env.d.ts at
+	// `.next-e2e/types`; plain `tsc` would then depend on the E2E output.
+	const nextEnvPath = join(root, "apps", app, "next-env.d.ts");
+	const nextEnvSnapshot = existsSync(nextEnvPath)
+		? readFileSync(nextEnvPath, "utf8")
+		: null;
+	const restoreNextEnv = () => {
+		if (nextEnvSnapshot === null) return;
+		if (readFileSync(nextEnvPath, "utf8") !== nextEnvSnapshot)
+			writeFileSync(nextEnvPath, nextEnvSnapshot);
+	};
 	const built = next(["build", ...rest]);
+	restoreNextEnv();
 	if (built !== 0) process.exit(built);
+	restoreNextEnv();
 	process.exit(next(["start", "--port", String(port)]));
 }
 process.exit(next([mode, "--port", String(port), ...rest]));

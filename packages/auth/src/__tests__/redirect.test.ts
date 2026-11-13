@@ -148,9 +148,19 @@ describe("getSignedInRedirect()", () => {
 			"/auth/sign-up/",
 			"/auth/sign-in?redirect=%2Fauth%2Fsign-up",
 			"https://app.example.com/auth/sign-up",
+			"/auth/sign-in//",
+			"/auth//sign-in",
+			"/auth/%73ign-in",
+			"/auth/sign-up%2F",
 		]) {
 			expect(getSignedInRedirect({ redirect }), redirect).toBe("/dashboard");
 		}
+	});
+
+	it("falls back to afterSignIn for a malformed-encoding path", () => {
+		expect(getSignedInRedirect({ redirect: "/auth/%E0%A4%A" })).toBe(
+			"/dashboard",
+		);
 	});
 
 	it("keeps other auth pages as targets", () => {
