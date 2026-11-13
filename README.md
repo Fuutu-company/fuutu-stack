@@ -45,7 +45,7 @@ It is also built for working with AI coding agents from the first prompt. Archit
 - **Organizations & RBAC**: multi-tenant orgs, invitations, seat limits, granular roles and permissions. [Organizations](https://docs.fuutustack.com/docs/organizations)
 - **i18n**: next-intl, configurable locales, 100% translation policy. [i18n](https://docs.fuutustack.com/docs/i18n)
 - **Provider-swappable domains**: mail, payments, storage, analytics, AI, search and logs, one active provider each and skeletons for the rest. [Provider pattern](https://docs.fuutustack.com/docs/concepts/provider-pattern)
-- **AI-native**: `AGENTS.md`, 15 skills (workflow + kit) and an 8-role agent team for Claude Code (and any other agent), plus the Fuutu MCP with version-matched docs, free, and rules and full skills with MCP Plus. [Build with AI coding agents](https://docs.fuutustack.com/docs/coding-agents)
+- **AI-native**: `AGENTS.md`, 17 skills (workflow + kit) and an 8-role agent team for Claude Code (and any other agent), plus the Fuutu MCP with version-matched docs, free, and rules and full skills with MCP Plus. [Build with AI coding agents](https://docs.fuutustack.com/docs/coding-agents)
 - **Many projects side by side**: every project and git worktree gets its own ports, database, buckets, cookie and browser, so agents never clash. [Port slots](https://docs.fuutustack.com/docs/getting-started/port-slots)
 - **Testing & CI**: Vitest, Playwright E2E, stable visual-regression baselines with hosted diff reports, opt-in GitHub Actions. [Testing](https://docs.fuutustack.com/docs/testing)
 - **Ships a demo app**: dashboard, chat, CRM, notifications, billing, admin and onboarding to learn from or replace.

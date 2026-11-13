@@ -77,6 +77,11 @@
 			"category": "workflow"
 		},
 		{
+			"name": "build-ui",
+			"source": "repo",
+			"category": "design"
+		},
+		{
 			"name": "setup-brand",
 			"source": "mcp",
 			"category": "design"

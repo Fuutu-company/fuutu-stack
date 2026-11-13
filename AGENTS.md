@@ -81,7 +81,7 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 - **Auth guards**: server-side in layouts (`requireAuth()` / `requireOnboarded()` from `apps/saas/src/lib/auth-server.ts`); `proxy.ts` is an optimistic pre-check only.
 - **Redirects**: `getSafeRedirect()` from `@fuutu/utils/redirect`.
 - **i18n**: zero literal strings in JSX; keys in every locale under `packages/i18n/translations/<locale>/` in the same change; ICU for plurals/params; `pnpm check-translations`.
-- **UI**: `@fuutu/ui` stays framework-agnostic (no `next/*` imports); single `cn` from `@fuutu/utils/cn`; colors only via semantic tokens (`DESIGN.md`) — edit `brand.css`, never `theme.css`.
+- **UI**: `@fuutu/ui` stays framework-agnostic (no `next/*` imports); single `cn` from `@fuutu/utils/cn`; colors only via semantic tokens (`DESIGN.md`) — edit `brand.css`, never `theme.css`; follow `build-ui`.
 - **Routes** (saas): flat (`/dashboard`, `/settings`) — `(app)` is a route group.
 - **Naming**: camelCase vars/functions · PascalCase types · UPPER_SNAKE constants · kebab-case files.
 
@@ -115,6 +115,7 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 | About to claim done | `verify-before-done` (+ `check-in-browser` for UI) |
 | Review comments received | `handle-review-feedback` |
 | Work verified, changes exist | `propose-commit` — conventional messages drive the app version; never commit/push without approval |
+| Building or changing UI: pages, components, styles, a single-token tweak | `build-ui` (+ `check-in-browser`) |
 | Rebrand: colors, fonts, radius, density | `setup-brand` (full version via Fuutu MCP) |
 | New entity / API endpoint / provider swap / payments / code review | `add-entity` · `add-api-endpoint` · `swap-provider` · `connect-payments` · `review-code` (full versions via Fuutu MCP) |
 
