@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://fuutustack.com">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
+  <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://docs.fuutustack.com/docs">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
 </p>
 
 ---
@@ -20,223 +20,42 @@ cd my-saas
 pnpm install
 cp .env.example .env
 pnpm db:start        # Postgres 16 + MinIO via docker-compose (local dev only)
-pnpm db:migrate      # apply migrations — includes raw-SQL constraints (db:push skips those)
+pnpm db:migrate      # apply migrations (db:push skips raw-SQL constraints)
 pnpm db:seed         # optional: seed admin@fuutu.local / DevPassword!2345
-pnpm dev             # saas :3000 · marketing :3001 · docs :4000 (port slot 0 — see `pnpm ports`)
+pnpm dev             # saas :3000 · marketing :3001 · docs :4000
 ```
+
+Also: `pnpm check` (Biome) · `pnpm check-types` · `pnpm test` · `pnpm test:e2e`. Full setup, env vars and every command: [Install and run locally](https://docs.fuutustack.com/docs/getting-started/installation).
 
 ---
 
 ## What is Fuutu Stack?
 
-A **production-grade TypeScript SaaS starter kit** — not a toy project. Next.js 16, Hono, oRPC, Better Auth, Prisma, TailwindCSS v4. Every domain (mail, payments, storage, analytics, AI, search) is behind a provider interface with one active implementation and skeletons (stubs that throw until implemented) for the rest. Swap Plunk for Resend, Creem for Stripe, S3 for Cloudflare R2 — without touching business logic.
+A **production-grade TypeScript SaaS starter kit**, not a toy project: Next.js 16, Hono, oRPC, Better Auth, Prisma and Tailwind v4 in a pnpm + Turborepo monorepo, with auth, billing, organizations, i18n, testing and CI already wired. Every external service sits behind a typed provider interface, so you swap Plunk for Resend, Creem for Stripe or S3 for Cloudflare R2 without touching business logic.
 
-**AI-ready**: ships an `AGENTS.md`, Claude Code config and workflow skills so coding agents work with the kit's conventions from the first prompt, plus an MCP server foundation for your own app. AI provider-swappable (OpenRouter / Google / OpenAI / Anthropic / Noop).
+It is also built for working with AI coding agents from the first prompt. Architecture and monorepo layout: [Architecture](https://docs.fuutustack.com/docs/concepts/architecture) · [Project structure](https://docs.fuutustack.com/docs/getting-started/project-structure).
 
 ---
 
 ## Features
 
-### Authentication & Security
-- **Email/Password** with password policy + validation
-- **Magic-Link** sign-in
-- **OAuth** social login
-- **2FA** (TOTP) + **Passkeys** (WebAuthn)
-- **Organizations** — multi-tenant, members, invitations, seat syncing
-- **RBAC** — granular role-based access control
-- **Admin panel** — user management, ban, admin override
-- **Invitation-only signup** — gate registration by domain or allowlist
-- **Rate limiting** — per-endpoint, configurable
-- **CSP** + **HSTS** + **open-redirect guard**
-- **Audit logs** — immutable, paginated, org-scoped, auto-retention
-
-### API & Backend
-- **Hono 4** server (mounted at `/api/[[...rest]]`)
-- **oRPC 1.15** — end-to-end type-safe API with auto-OpenAPI spec
-- **Zod** validation on every input
-- **API keys** — generate, revoke, scoped access
-- **Webhooks** — signed delivery, retry with backoff, at-least-once with `X-Fuutu-Event-Id` dedupe key for receivers
-- **Cron jobs** — audit-log cleanup, subscription reminders, telemetry ping, webhook retry
-
-### Database & ORM
-- **Prisma 7** on PostgreSQL 16
-- Split `auth` + `app` schemas
-- Generated Zod schemas from Prisma types
-- ORM-swappable queries — all callers go through typed `@fuutu/db` functions; swapping ORMs touches one package
-
-### Frontend & UI
-- **Next.js 16** (App Router, React 19, Turbopack)
-- **TailwindCSS v4** with OKLCH theme
-- **shadcn/ui** — framework-agnostic shared components (`@fuutu/ui`)
-- **next-intl 4** — `en` + `de`, 100% translation policy ([guide](https://docs.fuutustack.com/docs/i18n))
-- **MediaFrame** — locale-aware images, CSP-safe
-
-### Provider-Swappable Architecture
-Every domain behind an interface — swap providers without touching business logic:
-
-| Domain | Interface | Active | Skeletons |
-|---|---|---|---|
-| **Mail** | `EmailProvider` | Plunk (Resend implemented) | Postmark, Mailgun, Nodemailer… |
-| **Payments** | `PaymentProvider` | Creem (Stripe implemented; Polar alpha) | Anything else via `customProvider`… |
-| **Storage** | `StorageProvider` | S3 + MinIO | Supabase, Noop… |
-| **Analytics** | `AnalyticsProvider` | Umami (GDPR consent built-in) | Plausible, Pirsch, Mixpanel, GA4… |
-| **AI** | `AIProvider` | OpenRouter (Google implemented) | OpenAI, Anthropic, Noop… |
-| **Search** | `SearchProvider` | Postgres | MeiliSearch, Typesense (`noop` returns empty — dev/test)… |
-
-### AI-Native
-- **AI provider-swappable** — OpenRouter / Google / OpenAI / Anthropic / Noop
-- **Chat module** — conversations, messages, streaming
-- **MCP server foundation** — `/api/mcp` with public/authenticated tools, API-key auth, rate limiting (`@fuutu/mcp`)
-- **AI agent setup** — `AGENTS.md`, Claude Code config, workflow skills (see AI-ready below)
-
-### App Modules (SaaS)
-- **Dashboard** — overview, activity feed
-- **Chat** — AI conversations with streaming
-- **CRM** — contacts, pipeline
-- **Notifications** — in-app, multi-channel
-- **Organizations** — team management, invitations
-- **Onboarding** — guided setup flow
-- **Settings** — profile, API keys, billing
-- **Admin** — audit logs, user management
-- **Billing** — plans, subscriptions, invoices, credit metering + top-up packages
-
-### Infrastructure
-- **Turborepo** + pnpm workspaces (version-catalog)
-- **Biome** — format + lint (replaces ESLint + Prettier)
-- **Vitest** — 1,900+ unit + integration tests
-- **Playwright** — E2E tests (saas + marketing)
-- **Telemetry** — build-time + runtime, non-blocking
-- **License compliance** — 5 fingerprint emission points, kit integrity
-- **Logging** — `createLogger({ scope })` with provider interface
+- **Auth & security**: email/password, magic link, OAuth, 2FA (TOTP) and passkeys, invitation-only sign-up, admin panel, rate limiting, CSP/HSTS, open-redirect guard, immutable audit logs. [Security overview](https://docs.fuutustack.com/docs/security)
+- **API**: Hono + oRPC with auto-generated OpenAPI, Zod on every input, scoped and revocable API keys, signed outbound webhooks with retry, cron jobs, and an MCP server for your own app (`/api/mcp`). [API docs](https://docs.fuutustack.com/docs/api)
+- **Payments**: Creem, Stripe or Polar (alpha) behind one interface, per-seat billing, credit metering and top-ups, plans and limits in one config. [Payments](https://docs.fuutustack.com/docs/payments)
+- **Organizations & RBAC**: multi-tenant orgs, invitations, seat limits, granular roles and permissions. [Organizations](https://docs.fuutustack.com/docs/organizations)
+- **i18n**: next-intl, configurable locales, 100% translation policy. [i18n](https://docs.fuutustack.com/docs/i18n)
+- **Provider-swappable domains**: mail, payments, storage, analytics, AI, search and logs, one active provider each and skeletons for the rest. [Provider pattern](https://docs.fuutustack.com/docs/concepts/provider-pattern)
+- **AI-native**: `AGENTS.md`, 15 skills (workflow + kit) and an 8-role agent team for Claude Code (and any other agent), plus the Fuutu MCP with version-matched docs, free, and rules and full skills with MCP Plus. [Build with AI coding agents](https://docs.fuutustack.com/docs/coding-agents)
+- **Many projects side by side**: every project and git worktree gets its own ports, database, buckets, cookie and browser, so agents never clash. [Port slots](https://docs.fuutustack.com/docs/getting-started/port-slots)
+- **Testing & CI**: Vitest, Playwright E2E, stable visual-regression baselines with hosted diff reports, opt-in GitHub Actions. [Testing](https://docs.fuutustack.com/docs/testing)
+- **Ships a demo app**: dashboard, chat, CRM, notifications, billing, admin and onboarding to learn from or replace.
+- **Deployment**: Docker, Docker Compose and Coolify. [Deployment](https://docs.fuutustack.com/docs/deployment)
 
 ---
 
-## Architecture
+## Kit version vs. your app
 
-```
-fuutu-stack/
-├── apps/
-│   ├── saas/             # authed app + API (port 3000)
-│   ├── marketing/        # public site (port 3001)
-│   ├── docs/             # documentation (port 4000)
-│   └── mail-preview/     # mail template preview (dev only)
-├── packages/
-│   ├── ai/               # AI provider-swappable (OpenRouter/Google/OpenAI/Anthropic/Noop)
-│   ├── analytics/        # AnalyticsProvider interface + Umami
-│   ├── api/              # oRPC routers + Hono server
-│   ├── auth/             # Better Auth (server + client)
-│   ├── config/           # cross-cutting config + theme.css
-│   ├── content/          # TSX content collections: posts, changelog, legal
-│   ├── credits/          # credit meters + grant/consume/reset over @fuutu/db
-│   ├── cron/             # scheduled jobs (audit cleanup, reminders, telemetry)
-│   ├── db/               # Prisma client + queries (ORM-swappable export)
-│   ├── env/              # environment validation (@t3-oss/env-nextjs)
-│   ├── i18n/             # next-intl utilities + i18nConfig
-│   ├── license/          # checkLicense(), getLicenseMode() — compliance
-│   ├── logs/             # createLogger({ scope }) + provider interface
-│   ├── mail/             # EmailProvider interface + templates
-│   ├── notifications/    # in-app + multi-channel notifications
-│   ├── payments/         # PaymentProvider interface + Creem/Stripe/Polar (alpha)
-│   ├── rbac/             # role-based access control
-│   ├── search/           # SearchProvider interface
-│   ├── storage/          # StorageProvider interface + S3/MinIO
-│   ├── telemetry/        # build-time + runtime telemetry helpers
-│   ├── test-utils/       # shared test helpers + architecture guard tests
-│   ├── ui/               # shared UI components (framework-agnostic)
-│   ├── utils/            # cn, getSafeRedirect, slugify, hash, invariant, getBaseUrl, rate-limit
-│   └── webhooks/         # signed delivery, retry, idempotent
-├── tooling/
-│   ├── typescript/       # shared tsconfigs (base / nextjs / react-library)
-│   └── scripts/          # repo tooling (assets-sync.mjs, dependency-report.mjs)
-```
-
-Detailed architecture: **[docs.fuutustack.com/docs/concepts/architecture](https://docs.fuutustack.com/docs/concepts/architecture)**
-
----
-
-## Name & version — kit vs. your app
-
-Two independent identities. Never mix them up.
-
-| | **Your app** | **The kit** (Fuutu's) |
-|---|---|---|
-| What | The product you build on the kit | The Fuutu Stack release you are based on |
-| Name | `config.app.name` in `packages/config/index.ts` — titles, manifest, auth/onboarding copy, 2FA issuer, passkey RP name, API title | `KIT_NAME` (`Fuutu-Stack`) |
-| Version source | root `package.json` → `"version"` (starts at `0.0.0`) | `KIT_VERSION` in `packages/config/index.ts` |
-| Runtime | `APP_VERSION` from `@fuutu/config/app-version` · `/api/version` → `app.version` · OpenAPI `info.version` | `KIT_VERSION` · `/api/version` → `version` · `X-Framework` header · `<meta name="generator">` |
-| Who changes it | You — `pnpm version patch\|minor\|major` or `.github/workflows/version.yml` | Only Fuutu. It changes when you **merge a kit update** — never edit it by hand |
-| Git tags | `vX.Y.Z` | `kit-vX.Y.Z` |
-
-Why `KIT_NAME` / `KIT_VERSION` are read-only: the Fuutu MCP serves docs, rules and skills matched to it, support identifies your base release by it, and it is part of the kit fingerprint (LICENSE.md §6(5), §7). A wrong value means wrong AI guidance and unactionable bug reports.
-
-Automated app releases: `.github/workflows/version.yml` computes the next semver from your conventional commits (`feat` → minor, `fix`/`perf` → patch, `!`/`BREAKING CHANGE` → major) via the Fuutu versioning API and tags `vX.Y.Z`. Merge strategy doesn't matter (merge, squash, rebase) — only commit messages count. Commits that arrive with a kit update are excluded, so kit changes never bump your app version.
-
----
-
-## Deployment
-
-Docker (per-app `Dockerfile`s + `docker-compose.deploy.yml`) and Coolify (Dockerfile or Railpack). See the **[deployment docs](https://docs.fuutustack.com/docs/deployment)**.
-
----
-
-## AI-ready
-
-### In the repo — free, works without any subscription
-
-| What | Where |
-|---|---|
-| Agent instructions (read by Claude Code, Cursor, Codex, Copilot, Windsurf, …) | `AGENTS.md` (+ `CLAUDE.md` → `@AGENTS.md`) |
-| 10 workflow skills — `delegate-tasks` (lead), `brainstorm-feature`, `plan-implementation`, `execute-plan`, `write-tests-first`, `debug-root-cause`, `verify-before-done`, `check-in-browser`, `propose-commit` (versioning-aware), `handle-review-feedback` | `.claude/skills/` (mirrored at `.agents/skills/`) |
-| 5 kit skills — `add-entity`, `add-api-endpoint`, `swap-provider`, `connect-payments`, `review-code` — minimal path in the repo, full version-matched version via Fuutu MCP | `.claude/skills/` |
-| Skill catalog | `fuutu.skills.json` |
-| Claude Code project config (Fuutu MCP server, permissions, hook that blocks hand edits of generated files) | `.mcp.json`, `.claude/settings.json`, `.claude/hooks/` |
-| Team of 8 agents (scout, architect, builder, senior-builder, reviewer, qa, security, scribe) on cost tiers; the main session leads via `delegate-tasks` | `.claude/agents/` |
-| MCP servers: Fuutu, Better Auth, Next.js DevTools, shadcn, Playwright | `.mcp.json` |
-| Setup guide for any other agent (Cursor, Copilot, Codex, OpenCode, …) + upgrade migration | [docs: Set up any AI agent](https://docs.fuutustack.com/docs/coding-agents/other-tools) |
-
-### MCP server for your own app
-
-`@fuutu/mcp` (official MCP TypeScript SDK v2) is mounted at `/api/mcp`. Define tools with `defineMcpTool` and mark each `public`, `authenticated` or a custom rule (role, scope, org). Callers authenticate with an organization API key carrying the `mcp` scope; anonymous callers only see public tools. Two example tools ship: `app_info` (public) and `whoami` (authenticated). Configure it under `apiConfig.mcp` (`packages/api/src/config.ts`).
-
-### Fuutu MCP — free + MCP Plus
-
-Connects your coding agent to Fuutu's MCP server (already configured in `.mcp.json`).
-
-- **Free, no key** (rate-limited per IP): docs search, docs pages, changelog and update check — **matched to your `KIT_VERSION`**.
-- **MCP Plus** (set `FUUTU_MCP_API_KEY`, per-user limits): per-domain rules, the full kit skills, and the versioning API used by `.github/workflows/version.yml`. Included in Enterprise.
-
-Without the server, everything in the repo keeps working.
-
----
-
-## Many projects, worktrees and agents side by side
-
-Every Fuutu Stack project — and every git worktree of one — gets its own **port slot** on your machine, assigned on the first `pnpm dev` and kept for good:
-
-| | Slot 0 (first project) | Slot 1 | … up to ~200 slots |
-|---|---|---|---|
-| SaaS / Marketing | 3000 / 3001 | 3100 / 3101 | apps range keeps room for more apps (mobile, desktop, …) |
-| Docs / Mail preview | 4000 / 4003 | 4100 / 4103 | separate docs/tools range |
-| Local DB, storage buckets | `your-db` | `your-db-s1`, `s1-…` | created, migrated and seeded automatically |
-| Login cookie, session browser | own per slot | own per slot | stay signed in to every project at once |
-
-Two projects never meet — running or not — because slots live in a machine-wide registry (`~/.fuutu/projects.json`). An AI agent in its own worktree gets its own apps, database and browser and cannot disturb yours. `pnpm ports` shows everything; `pnpm ports set <slot>` / `reassign` / `release` change it. Once a team needs identical local URLs (OAuth callbacks, payment webhooks), `pnpm ports pin` commits a **preferred slot** to `package.json`: every clone takes it wherever it is free, and says clearly when another project holds it. Deployments are unaffected: containers keep their fixed ports.
-
-`pnpm dev:session` keeps the apps and one visible browser running for the whole coding session, so you can watch your agents work.
-
-## Scripts
-
-```bash
-pnpm dev                   # all apps in parallel
-pnpm dev:saas              # saas only
-pnpm dev:marketing         # marketing only
-pnpm build                 # build everything
-pnpm check                 # biome format + lint --write
-pnpm check-types           # tsc --noEmit across workspaces
-pnpm db:push / :migrate / :studio / :seed / :start / :stop
-pnpm test                  # vitest (unit/integration)
-pnpm test:e2e              # Playwright (saas + marketing)
-```
+Two independent identities. `KIT_NAME` and `KIT_VERSION` (`packages/config/index.ts`) belong to the kit: read-only, they change only when you merge a kit update. Your app's version is the root `package.json` `version`, and its name is `config.app.name`. Never mix them. Details and automated app releases: [Kit version vs. app version](https://docs.fuutustack.com/docs/updates/versions).
 
 ---
 
@@ -259,7 +78,7 @@ Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing
 - **Documentation**: [docs.fuutustack.com](https://docs.fuutustack.com/docs)
 - **Pricing**: [fuutustack.com/pricing](https://fuutustack.com/pricing)
 - **Support**: [fuutustack.com](https://fuutustack.com)
-- **License**: [LICENSE.md](./LICENSE.md)
+- **Contributing**: [CONTRIBUTING.md](./CONTRIBUTING.md) · **Security**: [SECURITY.md](./SECURITY.md) · **License**: [LICENSE.md](./LICENSE.md)
 
 ---
 
