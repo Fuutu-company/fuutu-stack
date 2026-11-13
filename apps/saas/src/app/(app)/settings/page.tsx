@@ -4,7 +4,7 @@ import { authConfig } from "@fuutu/auth/config";
 import { mcpOAuth } from "@fuutu/auth/mcp-oauth";
 import { paymentsConfig } from "@fuutu/payments/config";
 import { getPlanPriceIds } from "@fuutu/payments/config.server";
-import { Button, Card, CardContent } from "@fuutu/ui";
+import { AreaIcon, Button, Card, CardContent, PageHeader } from "@fuutu/ui";
 import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -48,10 +48,10 @@ export default async function SettingsPage({
 
 	return (
 		<div className="mx-auto max-w-4xl space-y-6">
-			<div>
-				<h1 className="font-bold text-3xl tracking-tight">{t("title")}</h1>
-				<p className="mt-2 text-muted-foreground">{t(`tabs.${activeTab}`)}</p>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("heading", { tab: t(`tabs.${activeTab}`) })}
+			/>
 			<div className="space-y-6">
 				{activeTab === "profile" && (
 					<div className="space-y-6">
@@ -99,18 +99,20 @@ export default async function SettingsPage({
 
 				{showBillingTab && activeTab === "billing" && (
 					<div className="space-y-6">
-						<Card>
+						<Card className="py-0">
 							<CardContent className="space-y-6 p-6 md:p-8">
 								<div>
-									<h3 className="font-semibold text-lg">
+									<h3 className="font-bold font-heading text-lg tracking-heading">
 										{t("billing.title")}
 									</h3>
 									<p className="text-muted-foreground text-sm">
 										{t("billing.description")}
 									</p>
 								</div>
-								<div className="flex items-center gap-3 rounded-lg border p-4">
-									<CreditCard className="size-5 text-muted-foreground" />
+								<div className="flex items-center gap-3 rounded-xl bg-muted/60 p-4">
+									<AreaIcon area="billing">
+										<CreditCard />
+									</AreaIcon>
 									<div className="flex-1">
 										<p className="font-medium text-sm">
 											{t("billing.manageHint")}
@@ -125,7 +127,9 @@ export default async function SettingsPage({
 						<UserSettingsBilling priceIds={getPlanPriceIds()} />
 					</div>
 				)}
-				{showCreditsTab && activeTab === "credits" && <CreditBalanceView />}
+				{showCreditsTab && activeTab === "credits" && (
+					<CreditBalanceView showHeader={false} />
+				)}
 				{renderSlot(appSlots.userSettings, { tab: activeTab })}
 			</div>
 		</div>

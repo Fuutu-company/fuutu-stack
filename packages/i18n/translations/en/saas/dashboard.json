@@ -1,45 +1,97 @@
 {
 	"dashboard": {
 		"title": "Dashboard",
-		"welcome": "Welcome back! Here's what's happening with your stack.",
-		"stats": {
-			"authEvents": "Recent auth events",
-			"authEventsDescription": "Security events logged",
-			"plansConfigured": "Plans configured",
-			"plansConfiguredDescription": "Payment tiers available",
-			"providersSwappable": "Providers swappable",
-			"providersSwappableDescription": "Domains with pluggable backends",
-			"localesShipped": "Locales shipped",
-			"localesShippedDescription": "Languages supported"
+		"greeting": "Welcome back, {name}",
+		"greetingNoName": "Welcome back",
+		"subtitle": "{scope} · {plan} plan",
+		"scopePersonal": "Personal",
+		"inviteMember": "Invite member",
+		"viewOrganizations": "View organizations",
+		"loadErrorTitle": "The overview didn't load",
+		"loadError": "Something went wrong while loading this dashboard. Try again in a moment.",
+		"loadErrorRetry": "Try again",
+		"noAccess": "No access with your role",
+		"areas": {
+			"users": "Users",
+			"billing": "Billing",
+			"ai": "AI",
+			"api": "API"
+		},
+		"kpi": {
+			"members": {
+				"title": "Members",
+				"description": "{limit, select, unlimited {Unlimited seats} disabled {Not on this plan} other {of {max} seats}}"
+			},
+			"organizations": {
+				"title": "Organizations",
+				"description": "{limit, select, unlimited {Unlimited organizations} disabled {Not on this plan} other {of {max} organizations}}"
+			},
+			"billing": {
+				"title": "Billing",
+				"renews": "Renews {date}",
+				"noRenewal": "No renewal scheduled",
+				"livesOnOrgs": "Per organization"
+			},
+			"ai": {
+				"title": "AI tokens",
+				"left": "{pct}% of {total} left",
+				"included": "included per month"
+			},
+			"api": {
+				"title": "API keys",
+				"webhooks": "{count, plural, one {# webhook} other {# webhooks}}",
+				"ofLimit": "{limit, select, unlimited {Unlimited keys} disabled {Not on this plan} other {of {max} keys}}"
+			}
+		},
+		"chart": {
+			"title": "Activity",
+			"range": "30 days",
+			"summary": "{total, plural, one {# event} other {# events}} in 30 days, busiest day {date}",
+			"summaryEmpty": "No events in the last 30 days",
+			"today": "Today",
+			"legendItem": "{area}: {total, number}"
+		},
+		"feed": {
+			"title": "Happening now",
+			"empty": "Nothing yet. Invite a member or create an API key and it shows up here.",
+			"someone": "Someone",
+			"kinds": {
+				"authSignUp": "<b>{actor}</b> signed up",
+				"authSessionCreated": "<b>{actor}</b> signed in",
+				"orgCreate": "<b>{actor}</b> created an organization",
+				"orgInvite": "<b>{actor}</b> invited a member",
+				"orgInviteAccept": "<b>{actor}</b> accepted an invitation",
+				"auditOther": "<b>{actor}</b> performed an action",
+				"invoicePaid": "Invoice paid, <b>{amount}</b>",
+				"invoiceOpen": "Invoice issued, <b>{amount}</b>",
+				"apiKeyCreated": "API key <b>{label}</b> created",
+				"creditsConsumed": "<b>{amount}</b> AI tokens used"
+			}
+		},
+		"usage": {
+			"title": "Plan usage",
+			"members": "Members",
+			"organizations": "Organizations",
+			"apiKeys": "API keys",
+			"webhooks": "Webhooks",
+			"ai": "AI tokens",
+			"ratio": "{used} / {limit}",
+			"unlimited": "Unlimited",
+			"unavailable": "Not on {plan}",
+			"noAccess": "No access with your role"
+		},
+		"yours": {
+			"title": "Make it yours",
+			"body": "Every color you see comes from <code>brand.css</code>. Preview the tokens on <design>/design</design> or let the <code>setup-brand</code> skill design a brand for you.",
+			"openDesign": "Open design system",
+			"theming": "Read the theming guide",
+			"swatches": "Area color tokens"
 		},
 		"activity": {
-			"title": "Recent activity",
-			"empty": "No recent activity",
-			"error": "Failed to load recent activity",
 			"justNow": "just now",
 			"minutesAgo": "{n, plural, one {#m ago} other {#m ago}}",
 			"hoursAgo": "{n, plural, one {#h ago} other {#h ago}}",
-			"daysAgo": "{n, plural, one {#d ago} other {#d ago}}",
-			"unknownUser": "Unknown",
-			"unknownAction": "performed an action",
-			"signedIn": "signed in",
-			"signedOut": "signed out",
-			"signedUp": "signed up",
-			"sessionCreated": "started a session",
-			"createdOrg": "created an organization",
-			"invitedMember": "invited a member",
-			"acceptedInvite": "accepted an invitation",
-			"changedPlan": "changed the billing plan",
-			"changedRole": "changed a member role",
-			"switchedLocale": "switched locale",
-			"updatedProfile": "updated profile",
-			"verifiedEmail": "verified email"
-		},
-		"quickActions": {
-			"title": "Quick actions",
-			"inviteMember": "Invite member",
-			"createOrg": "Create organization",
-			"configureBilling": "Configure billing"
+			"daysAgo": "{n, plural, one {#d ago} other {#d ago}}"
 		},
 		"orgSelection": {
 			"title": "Select an organization",
@@ -50,8 +102,6 @@
 			"members": "{count, plural, =0 {No members} =1 {1 member} other {# members}}"
 		},
 		"freePlan": "Free",
-		"backToOrgs": "Back to organizations",
-		"backToPersonal": "Back to personal account",
-		"viewOrganizations": "View organizations"
+		"backToOrgs": "Back to organizations"
 	}
 }

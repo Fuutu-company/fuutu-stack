@@ -1,16 +1,7 @@
 {
 	"admin": {
-		"dashboard": {
-			"title": "Admin",
-			"description": "Manage users and inspect audit logs.",
-			"usersCard": "Manage users",
-			"usersCardDescription": "Search, ban and promote users.",
-			"auditLogsCard": "Audit logs",
-			"auditLogsCardDescription": "Inspect all sensitive actions."
-		},
 		"users": {
 			"title": "Users",
-			"description": "Search, ban, and manage roles for all platform users.",
 			"searchPlaceholder": "Search by email…",
 			"empty": "No users found.",
 			"role": "Role",
@@ -41,7 +32,6 @@
 		},
 		"auditLogs": {
 			"title": "Audit logs",
-			"description": "Recent security-relevant events across the platform.",
 			"col": {
 				"time": "Time",
 				"action": "Action",

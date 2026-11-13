@@ -1,4 +1,6 @@
 import { posts } from "@fuutu/content";
+import { Card } from "@fuutu/ui";
+import { PageIntro } from "@shared/components/page-intro";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/navigation";
@@ -19,44 +21,50 @@ export default async function BlogPage({ params }: BlogPageProps) {
 	const { locale } = await params;
 	setRequestLocale(locale);
 	const t = await getTranslations("blog");
+	const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: "long" });
 
 	const visible = posts.filter((p) => !p.frontmatter.draft);
 
 	return (
-		<div className="container mx-auto max-w-3xl px-4 py-16">
-			<h1 className="mb-4 font-bold text-4xl tracking-tight">{t("title")}</h1>
-			<p className="mb-12 text-lg text-muted-foreground">{t("description")}</p>
+		<div className="mx-auto max-w-3xl px-4 pt-12 sm:px-6 md:pt-20">
+			<PageIntro title={t("title")} description={t("description")} />
 			{visible.length === 0 ? (
-				<p className="text-muted-foreground">{t("empty")}</p>
+				<p className="mt-12 text-muted-foreground">{t("empty")}</p>
 			) : (
-				<ul className="divide-y border-y">
-					{visible.map((post) => (
-						<li key={post.slug} className="py-6">
-							<Link
-								href={`/blog/${post.slug}`}
-								className="block transition-colors hover:text-primary"
-							>
-								<h2 className="font-semibold text-xl">
-									{post.frontmatter.title}
-								</h2>
-								<p className="mt-1 text-muted-foreground text-sm">
-									{post.frontmatter.description}
-								</p>
-								{post.frontmatter.tags && post.frontmatter.tags.length > 0 ? (
-									<div className="mt-3 flex flex-wrap gap-1.5">
-										{post.frontmatter.tags.map((tag) => (
-											<span
-												key={tag}
-												className="rounded-full border px-2 py-0.5 text-muted-foreground text-xs"
-											>
-												{tag}
-											</span>
-										))}
-									</div>
-								) : null}
-							</Link>
-						</li>
-					))}
+				<ul className="mt-12 flex flex-col gap-4">
+					{visible.map((post) => {
+						const meta = [
+							...(post.frontmatter.authors ?? []),
+							...(post.frontmatter.tags ?? []).map((tag) => `#${tag}`),
+						];
+						return (
+							<li key={post.slug}>
+								<Card className="relative gap-3 px-6 py-6 transition-shadow duration-150 focus-within:shadow-md hover:shadow-md motion-reduce:transition-none md:px-8 md:py-7">
+									<p className="text-muted-foreground text-sm">
+										<time dateTime={post.frontmatter.publishedAt}>
+											{dateFormat.format(
+												new Date(post.frontmatter.publishedAt),
+											)}
+										</time>
+										{meta.length > 0 ? ` · ${meta.join(" · ")}` : null}
+									</p>
+									<h2 className="font-extrabold font-heading text-2xl leading-tight tracking-heading">
+										<Link
+											href={`/blog/${post.slug}`}
+											className="underline-offset-4 outline-none after:absolute after:inset-0 after:rounded-2xl hover:underline focus-visible:underline focus-visible:after:ring-[3px] focus-visible:after:ring-ring/50"
+										>
+											{post.frontmatter.title}
+										</Link>
+									</h2>
+									{post.frontmatter.description ? (
+										<p className="text-muted-foreground leading-7">
+											{post.frontmatter.description}
+										</p>
+									) : null}
+								</Card>
+							</li>
+						);
+					})}
 				</ul>
 			)}
 		</div>

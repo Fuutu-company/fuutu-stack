@@ -148,6 +148,7 @@ const kitServerEnv = {
 const kitClientEnv = {
 	NEXT_PUBLIC_MARKETING_URL: z.url().optional(),
 	NEXT_PUBLIC_SAAS_URL: z.url().optional(),
+	NEXT_PUBLIC_DOCS_URL: z.url().optional(),
 	NEXT_PUBLIC_ANALYTICS_PROVIDER: z
 		.enum(["umami", "plausible", "pirsch", "mixpanel", "ga4", "noop"])
 		.optional(),
@@ -178,6 +179,7 @@ export const env = createEnv({
 		...appClientRuntimeEnv,
 		NEXT_PUBLIC_MARKETING_URL: process.env.NEXT_PUBLIC_MARKETING_URL,
 		NEXT_PUBLIC_SAAS_URL: process.env.NEXT_PUBLIC_SAAS_URL,
+		NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
 		NEXT_PUBLIC_ANALYTICS_PROVIDER: process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER,
 		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT:
 			process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT,

@@ -24,7 +24,7 @@ export default async function AuthErrorPage({
 
 	return (
 		<AuthCard title={t("title")}>
-			<div className="flex flex-col gap-4 text-center">
+			<div className="flex flex-col gap-4">
 				<p className="text-muted-foreground text-sm">{t("description")}</p>
 				<p className="text-muted-foreground text-xs">
 					{t("code")} <code className="font-mono">{code}</code>

@@ -123,7 +123,9 @@ export function TwoFactorBlock() {
 		<div className="space-y-5">
 			<div className="flex items-start justify-between gap-4">
 				<div>
-					<h3 className="font-semibold text-lg">{t("title")}</h3>
+					<h3 className="font-bold font-heading text-lg tracking-heading">
+						{t("title")}
+					</h3>
 					<p className="text-muted-foreground text-sm">{t("description")}</p>
 				</div>
 				<span
@@ -206,7 +208,7 @@ export function TwoFactorBlock() {
 					</div>
 
 					{setup.backupCodes.length > 0 && (
-						<div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+						<div className="rounded-lg border border-warning/50 bg-warning/10 p-4">
 							<p className="mb-1 font-medium text-sm">{t("backupCodes")}</p>
 							<p className="mb-2 text-muted-foreground text-xs">
 								{t("backupCodesHint")}

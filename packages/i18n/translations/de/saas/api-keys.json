@@ -1,7 +1,6 @@
 {
 	"apiKeys": {
 		"title": "API-Schlüssel",
-		"description": "Erstelle und verwalte API-Schlüssel für programmatischen Zugriff.",
 		"create": "API-Schlüssel erstellen",
 		"creating": "Erstelle…",
 		"empty": "Noch keine API-Schlüssel",

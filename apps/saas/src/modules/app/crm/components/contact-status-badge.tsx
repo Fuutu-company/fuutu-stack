@@ -33,7 +33,7 @@ const STATUS_VARIANTS: Record<
 	}
 > = {
 	lead: {
-		className: "border-primary/30 bg-primary/10 text-primary",
+		className: "border-transparent bg-area-users text-area-users-foreground",
 		variant: "secondary",
 	},
 	qualified: {

@@ -3,8 +3,8 @@
 import { authClient } from "@fuutu/auth/client";
 import { getSafeRedirect } from "@fuutu/auth/redirect";
 import { createLogger } from "@fuutu/logs";
-import { AuthCard, Button } from "@fuutu/ui";
-import { Building2 } from "lucide-react";
+import { AreaIcon, AuthCard, Button } from "@fuutu/ui";
+import { Building2, RotateCw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -32,11 +32,29 @@ export function AcceptInvitation() {
 	const [accepting, setAccepting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
+	const [sessionUnavailable, setSessionUnavailable] = useState(false);
+	const [attempt, setAttempt] = useState(0);
 
-	const checkSession = useCallback(async () => {
-		const res = await authClient.getSession();
-		setSession(Boolean(res.data));
-		return Boolean(res.data);
+	/**
+	 * Only a successful answer without a session means "signed out". A failed
+	 * check (rate limit, 5xx, network) must not send a signed-in user to
+	 * sign-in — the server would bounce them straight back here, in a loop.
+	 */
+	const checkSession = useCallback(async (): Promise<
+		"signed-in" | "signed-out" | "unavailable"
+	> => {
+		try {
+			const res = await authClient.getSession();
+			if (res.error) {
+				log.warn("session check failed", { status: res.error.status });
+				return "unavailable";
+			}
+			setSession(Boolean(res.data));
+			return res.data ? "signed-in" : "signed-out";
+		} catch (e) {
+			log.warn("session check failed", { err: e });
+			return "unavailable";
+		}
 	}, []);
 
 	const loadInvitation = useCallback(async () => {
@@ -68,10 +86,17 @@ export function AcceptInvitation() {
 		}
 	}, [invitationId, t]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the check on Try again
 	useEffect(() => {
 		void (async () => {
-			const loggedIn = await checkSession();
-			if (!loggedIn) {
+			const state = await checkSession();
+			if (state === "unavailable") {
+				setSessionUnavailable(true);
+				setLoading(false);
+				return;
+			}
+			setSessionUnavailable(false);
+			if (state === "signed-out") {
 				if (invitationId) {
 					const redirectPath = `/auth/accept-invitation?id=${invitationId}`;
 					const safeRedirect = getSafeRedirect(redirectPath);
@@ -85,7 +110,7 @@ export function AcceptInvitation() {
 			}
 			await loadInvitation();
 		})();
-	}, [checkSession, loadInvitation, invitationId, router]);
+	}, [checkSession, loadInvitation, invitationId, router, attempt]);
 
 	async function handleAccept() {
 		if (!invitationId) return;
@@ -116,12 +141,30 @@ export function AcceptInvitation() {
 		}
 	}
 
+	if (sessionUnavailable && !loading) {
+		return (
+			<AuthCard title={t("sessionErrorTitle")}>
+				<div role="alert" className="flex flex-col gap-4">
+					<p className="text-muted-foreground text-sm">{t("sessionError")}</p>
+					<Button
+						onClick={() => {
+							setLoading(true);
+							setAttempt((n) => n + 1);
+						}}
+						className="w-full"
+					>
+						<RotateCw />
+						{t("retry")}
+					</Button>
+				</div>
+			</AuthCard>
+		);
+	}
+
 	if (loading || session === null) {
 		return (
 			<AuthCard title={t("loading")}>
-				<p className="text-center text-muted-foreground text-sm">
-					{t("loading")}
-				</p>
+				<p className="text-muted-foreground text-sm">{t("loading")}</p>
 			</AuthCard>
 		);
 	}
@@ -129,9 +172,7 @@ export function AcceptInvitation() {
 	if (!invitationId) {
 		return (
 			<AuthCard title={t("errorTitle")}>
-				<p className="text-center text-muted-foreground text-sm">
-					{t("missingId")}
-				</p>
+				<p className="text-muted-foreground text-sm">{t("missingId")}</p>
 			</AuthCard>
 		);
 	}
@@ -139,10 +180,10 @@ export function AcceptInvitation() {
 	if (success) {
 		return (
 			<AuthCard title={t("success")}>
-				<div className="flex flex-col gap-4 text-center">
-					<div className="mx-auto flex size-12 items-center justify-center bg-primary/10 text-primary">
-						<Building2 className="size-6" />
-					</div>
+				<div className="flex flex-col gap-4">
+					<AreaIcon area="users">
+						<Building2 />
+					</AreaIcon>
 					<p className="text-muted-foreground text-sm">
 						{t("successDescription")}
 					</p>
@@ -154,7 +195,7 @@ export function AcceptInvitation() {
 	if (error && !invitation) {
 		return (
 			<AuthCard title={t("errorTitle")}>
-				<p className="text-center text-muted-foreground text-sm">{error}</p>
+				<p className="text-muted-foreground text-sm">{error}</p>
 			</AuthCard>
 		);
 	}
@@ -168,9 +209,9 @@ export function AcceptInvitation() {
 			})}
 		>
 			<div className="space-y-6">
-				<div className="mx-auto flex size-12 items-center justify-center bg-primary/10 text-primary">
-					<Building2 className="size-6" />
-				</div>
+				<AreaIcon area="users">
+					<Building2 />
+				</AreaIcon>
 				{error && (
 					<div className="rounded-lg bg-destructive/10 p-3 text-destructive text-sm">
 						{error}

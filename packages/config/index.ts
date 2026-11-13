@@ -111,6 +111,13 @@ export const config = {
 		credits: true,
 		aiChat: true,
 		crm: true,
+		/**
+		 * Live design-system page at `/design`: the link under "Administration"
+		 * in the sidebar and the route itself. Off: link hidden, route 404s.
+		 * A selling point of the demo — turn it off before you launch.
+		 * Deleting the module is safe, its guards skip.
+		 */
+		designSystem: true,
 	},
 	theme: {
 		modes: ["light", "dark"] as const,

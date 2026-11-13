@@ -32,7 +32,7 @@ export function ChatMessageList({
 
 	if (messages.length === 0 && !stream) {
 		return (
-			<div className="flex flex-1 items-center justify-center p-8">
+			<div className="flex flex-1 items-center justify-center bg-muted/40 p-8">
 				<p className="text-center text-muted-foreground text-sm">
 					{t("emptyConversation")}
 				</p>
@@ -41,7 +41,7 @@ export function ChatMessageList({
 	}
 
 	return (
-		<div className="flex-1 space-y-4 overflow-y-auto p-4">
+		<div className="scrollbar-soft flex-1 space-y-4 overflow-y-auto bg-muted/40 p-4 md:p-6">
 			{messages.map((message) => (
 				<ChatMessageBubble
 					key={message.id}
@@ -51,10 +51,10 @@ export function ChatMessageList({
 			))}
 			{stream && (
 				<div className="flex w-full flex-row gap-3">
-					<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-medium text-secondary-foreground text-xs">
+					<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-area-ai font-bold text-area-ai-foreground text-xs">
 						{t("assistant").charAt(0)}
 					</div>
-					<div className="max-w-[80%] rounded-lg bg-muted px-4 py-2">
+					<div className="max-w-[80%] rounded-3xl bg-card px-4 py-2.5 text-card-foreground text-sm leading-6 shadow-sm ring-1 ring-foreground/5 dark:ring-foreground/10">
 						<ChatStreamingText stream={stream} onComplete={onStreamComplete} />
 					</div>
 				</div>

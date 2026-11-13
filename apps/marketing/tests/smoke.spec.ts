@@ -5,7 +5,6 @@ import {
 	localeLabel,
 	localePrefix,
 	OTHER_LOCALES,
-	readHomeMessages,
 } from "./locales";
 
 /**
@@ -162,6 +161,22 @@ test.describe("navigation", () => {
 		expect(res?.status()).toBe(404);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 	});
+
+	test("404 page logs no console errors", async ({ page }) => {
+		const errors: string[] = [];
+		page.on("console", (msg) => {
+			// The browser reports the 404 document itself as a failed resource.
+			if (msg.type() === "error" && !msg.text().includes("status of 404")) {
+				errors.push(msg.text());
+			}
+		});
+		page.on("pageerror", (err) => errors.push(err.message));
+
+		const res = await page.goto(`/${DEFAULT_LOCALE}/this-page-does-not-exist`);
+		expect(res?.status()).toBe(404);
+		await page.waitForLoadState("networkidle");
+		expect(errors).toEqual([]);
+	});
 });
 
 // ── Responsive: mobile viewport ─────────────────────────────────────────
@@ -181,6 +196,21 @@ test.describe("responsive — mobile viewport", () => {
 		);
 		expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
 	});
+
+	for (const locale of OTHER_LOCALES) {
+		test(`home page renders on mobile without horizontal scroll in ${locale}`, async ({
+			page,
+		}) => {
+			await page.setViewportSize({ width: 375, height: 812 });
+			await page.goto(`/${locale}`);
+			await page.waitForLoadState("domcontentloaded");
+			const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+				scrollWidth: document.documentElement.scrollWidth,
+				clientWidth: document.documentElement.clientWidth,
+			}));
+			expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+		});
+	}
 
 	test("pricing page renders on mobile without horizontal scroll", async ({
 		page,
@@ -203,6 +233,63 @@ test.describe("responsive — mobile viewport", () => {
 		await page.waitForLoadState("domcontentloaded");
 		const nav = page.locator("nav").first();
 		await expect(nav).toBeVisible();
+	});
+});
+
+// ── Landing hero ────────────────────────────────────────────────────────
+
+test.describe("landing hero", () => {
+	for (const locale of LOCALES) {
+		test(`${locale}: hero headline renders the highlight mark`, async ({
+			page,
+		}) => {
+			await page.goto(`/${locale}`);
+			const mark = page.locator("h1 mark");
+			await expect(mark).toHaveCount(1);
+			await expect(mark).toBeVisible();
+			await expect(mark).not.toHaveText("");
+		});
+	}
+
+	test("with reduced motion the hero has no running animations", async ({
+		page,
+	}) => {
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto("/", { waitUntil: "domcontentloaded" });
+		// Measure the hero itself, not a streamed loading fallback.
+		await page.locator("h1 mark").waitFor({ state: "attached" });
+		const state = await page.evaluate(() => {
+			// Effective opacity: computed opacity is not inherited, so multiply
+			// it up the ancestor chain.
+			let headlineOpacity = 1;
+			for (
+				let el: Element | null = document.querySelector("h1");
+				el;
+				el = el.parentElement
+			) {
+				headlineOpacity *= Number(getComputedStyle(el).opacity);
+			}
+			return {
+				running: document
+					.getAnimations()
+					.filter((animation) => animation.playState === "running")
+					.map((animation) => {
+						const target =
+							animation.effect instanceof KeyframeEffect
+								? animation.effect.target
+								: null;
+						const name =
+							animation instanceof CSSAnimation
+								? animation.animationName
+								: animation instanceof CSSTransition
+									? animation.transitionProperty
+									: animation.constructor.name;
+						return `${name} on ${target?.tagName ?? "?"}.${String(target?.className ?? "").slice(0, 60)}`;
+					}),
+				headlineOpacity,
+			};
+		});
+		expect(state).toEqual({ running: [], headlineOpacity: 1 });
 	});
 });
 
@@ -269,18 +356,6 @@ test.describe("audit regressions", () => {
 			await expect(page.locator("svg.lucide-play")).toHaveCount(0);
 		}
 	});
-
-	for (const locale of OTHER_LOCALES) {
-		test(`${locale} home logo-rail tooltips render localized copy`, async ({
-			page,
-		}) => {
-			const expected =
-				readHomeMessages(locale).home.hero.stack.nextjs.description;
-			await page.goto(`/${locale}`);
-			await page.locator("img[alt='Next.js']").first().hover();
-			await expect(page.getByText(expected)).toBeVisible();
-		});
-	}
 });
 
 // ── Security headers + kit fingerprint ──────────────────────────────────

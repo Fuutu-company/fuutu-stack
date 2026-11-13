@@ -62,6 +62,7 @@ const DYNAMIC_PRISMA_PKG_RE =
 const SKIP_DIRS = new Set([
 	"node_modules",
 	".next",
+	".next-e2e",
 	".turbo",
 	"coverage",
 	"dist",

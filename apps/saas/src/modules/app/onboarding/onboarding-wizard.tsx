@@ -3,6 +3,8 @@
 import { authClient } from "@fuutu/auth/client";
 import { config } from "@fuutu/config";
 import {
+	AreaBadge,
+	AreaIcon,
 	Button,
 	Card,
 	CardContent,
@@ -10,7 +12,6 @@ import {
 	FieldGroup,
 	FieldLabel,
 	Input,
-	Progress,
 } from "@fuutu/ui";
 import { slugify } from "@fuutu/utils";
 import { ArrowRight, Building2, Check, User } from "lucide-react";
@@ -62,7 +63,6 @@ export function OnboardingWizard({
 	const orgsEnabled = config.features.organizationsMode !== "off";
 	const steps = buildOnboardingSteps(orgsEnabled, appOnboardingSteps);
 	const currentIndex = steps.indexOf(step);
-	const progress = ((currentIndex + 1) / steps.length) * 100;
 	const completed = orgCreated ? ["organization"] : [];
 	const goNext = (from: string) =>
 		setStep(nextOnboardingStep(steps, from, completed));
@@ -144,15 +144,37 @@ export function OnboardingWizard({
 
 	return (
 		<div className="mx-auto flex w-full max-w-lg flex-col gap-6">
-			<div className="space-y-3 text-center">
-				<h1 className="font-semibold text-3xl tracking-tight">
+			<div className="space-y-2 text-center">
+				<h1 className="break-words font-extrabold font-heading text-3xl leading-tight tracking-heading md:text-4xl">
 					{t("title", { appName: config.app.name })}
 				</h1>
 				<p className="text-muted-foreground">{t("description")}</p>
 			</div>
-			<Progress value={progress} />
-			<Card className="shadow-xl">
-				<CardContent className="p-6 md:p-8">
+			<ol className="flex flex-wrap items-center justify-center gap-2">
+				{steps.map((id, index) =>
+					index === currentIndex ? (
+						<li key={id}>
+							<AreaBadge area="users">
+								{t("step", { current: index + 1, total: steps.length })}
+							</AreaBadge>
+						</li>
+					) : (
+						<li key={id} aria-hidden="true">
+							{index < currentIndex ? (
+								<AreaBadge area="users">
+									<Check />
+								</AreaBadge>
+							) : (
+								<span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-2 font-bold text-muted-foreground text-xs tabular-nums">
+									{index + 1}
+								</span>
+							)}
+						</li>
+					),
+				)}
+			</ol>
+			<Card className="rounded-3xl py-0 shadow-md">
+				<CardContent className="p-6 sm:p-8 md:p-9">
 					{error && (
 						<div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 							{error}
@@ -161,11 +183,13 @@ export function OnboardingWizard({
 					{step === "profile" && (
 						<FieldGroup>
 							<div className="flex items-center gap-3">
-								<div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-									<User className="size-5" />
-								</div>
+								<AreaIcon area="users">
+									<User />
+								</AreaIcon>
 								<div>
-									<h2 className="font-semibold">{t("profile.heading")}</h2>
+									<h2 className="font-bold font-heading">
+										{t("profile.heading")}
+									</h2>
 									<p className="text-muted-foreground text-xs">{userEmail}</p>
 								</div>
 							</div>
@@ -192,7 +216,7 @@ export function OnboardingWizard({
 					{step === "organization" && (
 						<FieldGroup>
 							<div>
-								<h2 className="font-semibold">{t("org.heading")}</h2>
+								<h2 className="font-bold font-heading">{t("org.heading")}</h2>
 								<p className="text-muted-foreground text-sm">
 									{canCreateOrg
 										? t(
@@ -243,7 +267,7 @@ export function OnboardingWizard({
 									<p className="mb-2 font-medium text-sm">
 										{t("org.pendingInvitations")}
 									</p>
-									<ul className="divide-y rounded-lg border">
+									<ul className="divide-y overflow-hidden rounded-xl border">
 										{invitations.map((inv) => (
 											<li key={inv.id}>
 												<Link
@@ -254,7 +278,7 @@ export function OnboardingWizard({
 														<Building2 className="size-4 text-muted-foreground" />
 														{inv.organizationName}
 													</span>
-													<span className="text-primary text-sm">
+													<span className="font-semibold text-sm underline underline-offset-4">
 														{t("org.acceptInvitation")}
 													</span>
 												</Link>
@@ -267,7 +291,7 @@ export function OnboardingWizard({
 					)}
 					{appStep && (
 						<FieldGroup>
-							<h2 className="font-semibold">{t(appStep.titleKey)}</h2>
+							<h2 className="font-bold font-heading">{t(appStep.titleKey)}</h2>
 							<appStep.Component
 								key={appStep.id}
 								onNext={() => goNext(appStep.id)}
@@ -281,7 +305,9 @@ export function OnboardingWizard({
 								<Check className="size-7" />
 							</div>
 							<div className="space-y-2">
-								<h2 className="font-semibold text-xl">{t("done.heading")}</h2>
+								<h2 className="font-bold font-heading text-xl tracking-heading">
+									{t("done.heading")}
+								</h2>
 								<p className="text-muted-foreground text-sm">
 									{t("done.description")}
 								</p>

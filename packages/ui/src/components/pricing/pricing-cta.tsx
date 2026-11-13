@@ -8,17 +8,17 @@ export function PricingCTA({
 	tier,
 	LinkComponent,
 	size = "default",
-	inverted = false,
+	variant = "outline",
 	isYearly = false,
 }: {
 	tier: PricingTier;
 	LinkComponent?: LinkComponent;
 	size?: "default" | "sm";
-	inverted?: boolean;
+	/** Ink (`default`) for the highlighted tier, `outline` for the rest. */
+	variant?: "default" | "outline";
 	/** Whether the billing toggle is on yearly — forwarded to onCtaClick as the interval. */
 	isYearly?: boolean;
 }) {
-	const variant = inverted ? "secondary" : "default";
 	// Emit "year" only when this tier actually has a yearly price — a
 	// yearly toggle must not sell a yearly interval for a monthly-only tier.
 	const interval = isYearly && tier.yearlyPrice ? "year" : "month";

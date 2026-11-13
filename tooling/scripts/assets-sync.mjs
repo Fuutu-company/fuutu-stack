@@ -4,7 +4,7 @@
  *
  * Source of truth: packages/config/assets/
  *   - logo.svg      (1:1 SVG, you provide this — adaptive dark mode via CSS inside the SVG)
- *   - og-image.png  (1200×630 PNG, you provide this — cannot be generated from the square logo)
+ *   - og-image.png  (1200×630 PNG, rendered from og-image.html in the same folder — see its header)
  *
  * Generated from logo.svg:
  *   - favicon.svg               (copy of logo.svg, renamed for browser favicon convention)
@@ -17,10 +17,10 @@
  *
  * Usage:
  *   pnpm assets:sync                              # generate + sync everything
- *   pnpm assets:sync --skip favicon.svg           # leave favicon.svg untouched (generate + sync the rest)
- *   pnpm assets:sync --skip favicon.svg,apple-touch-icon.png
+ *   pnpm assets:sync --skip=favicon.svg           # leave favicon.svg untouched (generate + sync the rest)
+ *   pnpm assets:sync --skip=favicon.svg,apple-touch-icon.png
  *
- * --skip accepts a comma-separated list of filenames (as they appear in
+ * --skip= accepts a comma-separated list of filenames (as they appear in
  * packages/config/assets/). Skipped files are neither generated nor distributed.
  */
 

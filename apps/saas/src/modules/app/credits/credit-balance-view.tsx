@@ -1,7 +1,16 @@
 "use client";
 
 import { createLogger } from "@fuutu/logs";
-import { Badge, Button, Card, CardContent, Progress } from "@fuutu/ui";
+import {
+	AreaIcon,
+	Badge,
+	Button,
+	Card,
+	CardContent,
+	PageHeader,
+	Progress,
+	Skeleton,
+} from "@fuutu/ui";
 import { Coins } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +23,12 @@ const log = createLogger({ scope: "credit-balance-view" });
 type BalanceResult = Awaited<ReturnType<typeof orpc.credits.balance.call>>;
 type HistoryResult = Awaited<ReturnType<typeof orpc.credits.history.call>>;
 
-export function CreditBalanceView() {
+/** `showHeader={false}` when a parent page (the settings tabs) owns the title. */
+export function CreditBalanceView({
+	showHeader = true,
+}: {
+	showHeader?: boolean;
+}) {
 	const t = useTranslations("credits");
 	const locale = useLocale();
 	const [balances, setBalances] = useState<BalanceResult["balances"]>([]);
@@ -44,27 +58,34 @@ export function CreditBalanceView() {
 		void load();
 	}, [load]);
 
-	if (loading) {
-		return <p className="text-muted-foreground text-sm">{t("title")}</p>;
-	}
+	const header = showHeader && (
+		<PageHeader variant="compact" title={t("title")} />
+	);
 
-	if (error) {
+	if (loading || error) {
 		return (
-			<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
-				{error}
+			<div className="space-y-6">
+				{header}
+				{error ? (
+					<div className="rounded-xl bg-destructive/10 p-4 text-destructive text-sm">
+						{error}
+					</div>
+				) : (
+					<div className="grid gap-6 md:grid-cols-2">
+						<Skeleton className="h-56 rounded-2xl" />
+						<Skeleton className="h-56 rounded-2xl" />
+					</div>
+				)}
 			</div>
 		);
 	}
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="font-bold text-3xl tracking-tight">{t("title")}</h1>
-				<p className="mt-2 text-muted-foreground">{t("description")}</p>
-			</div>
+			{header}
 
 			{balances.length === 0 ? (
-				<Card>
+				<Card className="py-0">
 					<CardContent className="p-6 md:p-8">
 						<p className="text-muted-foreground text-sm">{t("noBalances")}</p>
 					</CardContent>
@@ -72,11 +93,13 @@ export function CreditBalanceView() {
 			) : (
 				<div className="grid gap-6 md:grid-cols-2">
 					{balances.map((balance) => (
-						<Card key={balance.meterKey}>
+						<Card key={balance.meterKey} className="py-0">
 							<CardContent className="space-y-4 p-6 md:p-8">
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-3">
-										<Coins className="size-5 text-muted-foreground" />
+										<AreaIcon area="ai">
+											<Coins />
+										</AreaIcon>
 										<div>
 											<p className="font-medium">
 												{t.has(`meters.${balance.meterKey}`)
@@ -114,6 +137,7 @@ export function CreditBalanceView() {
 												: 0
 										}
 										className="h-2"
+										indicatorClassName="bg-area-ai-foreground"
 									/>
 								</div>
 
@@ -149,9 +173,11 @@ export function CreditBalanceView() {
 
 			<TopUpSection />
 
-			<Card>
+			<Card className="py-0">
 				<CardContent className="space-y-4 p-6 md:p-8">
-					<h2 className="font-semibold text-lg">{t("history")}</h2>
+					<h2 className="font-bold font-heading text-lg tracking-heading">
+						{t("history")}
+					</h2>
 					{history.length === 0 ? (
 						<p className="text-muted-foreground text-sm">{t("noHistory")}</p>
 					) : (
@@ -159,7 +185,7 @@ export function CreditBalanceView() {
 							{history.map((event) => (
 								<div
 									key={event.id}
-									className="flex items-center justify-between rounded-lg border p-3"
+									className="flex items-center justify-between rounded-xl bg-muted/60 p-3"
 								>
 									<div>
 										<p className="font-medium text-sm">

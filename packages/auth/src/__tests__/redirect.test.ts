@@ -3,6 +3,7 @@ import {
 	extractInvitationId,
 	getEmailVerificationRedirect,
 	getSafeRedirect,
+	getSignedInRedirect,
 } from "../redirect";
 
 // Distinct from afterSignIn ("/dashboard") so a wrong fallback is caught.
@@ -111,5 +112,67 @@ describe("getEmailVerificationRedirect()", () => {
 		expect(getEmailVerificationRedirect("https://evil.example.com")).toBe(
 			"/verified",
 		);
+	});
+});
+
+describe("getSignedInRedirect()", () => {
+	it("sends a signed-in visitor to a safe redirect target", () => {
+		expect(getSignedInRedirect({ redirect: "/settings/billing" })).toBe(
+			"/settings/billing",
+		);
+		expect(
+			getSignedInRedirect({ redirect: "https://app.example.com/settings" }),
+		).toBe("https://app.example.com/settings");
+	});
+
+	it("falls back to afterSignIn without a usable redirect param", () => {
+		expect(getSignedInRedirect({})).toBe("/dashboard");
+		expect(getSignedInRedirect({ redirect: "" })).toBe("/dashboard");
+		expect(getSignedInRedirect({ redirect: ["/a", "/b"] })).toBe("/dashboard");
+	});
+
+	it("rejects open-redirect attempts", () => {
+		for (const redirect of [
+			"https://evil.example.com/phish",
+			"//evil.example.com",
+			"/\\evil.example.com",
+			"javascript:alert(1)",
+		]) {
+			expect(getSignedInRedirect({ redirect }), redirect).toBe("/dashboard");
+		}
+	});
+
+	it("never targets the sign-in or sign-up page (redirect loop)", () => {
+		for (const redirect of [
+			"/auth/sign-in",
+			"/auth/sign-up/",
+			"/auth/sign-in?redirect=%2Fauth%2Fsign-up",
+			"https://app.example.com/auth/sign-up",
+			"/auth/sign-in//",
+			"/auth//sign-in",
+			"/auth/%73ign-in",
+			"/auth/sign-up%2F",
+		]) {
+			expect(getSignedInRedirect({ redirect }), redirect).toBe("/dashboard");
+		}
+	});
+
+	it("falls back to afterSignIn for a malformed-encoding path", () => {
+		expect(getSignedInRedirect({ redirect: "/auth/%E0%A4%A" })).toBe(
+			"/dashboard",
+		);
+	});
+
+	it("keeps other auth pages as targets", () => {
+		expect(
+			getSignedInRedirect({ redirect: "/auth/accept-invitation?id=inv_1" }),
+		).toBe("/auth/accept-invitation?id=inv_1");
+	});
+
+	it("stays on the page for a signed OAuth authorization request (sig)", () => {
+		expect(
+			getSignedInRedirect({ sig: "abc", redirect: "/settings" }),
+		).toBeNull();
+		expect(getSignedInRedirect({ sig: "" })).toBeNull();
 	});
 });

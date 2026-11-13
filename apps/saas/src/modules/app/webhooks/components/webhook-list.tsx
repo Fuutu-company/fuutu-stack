@@ -10,6 +10,7 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
+	AreaIcon,
 	Badge,
 	Button,
 	Card,
@@ -20,6 +21,7 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	PageHeader,
 } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Trash2, Webhook } from "lucide-react";
@@ -91,33 +93,33 @@ export function WebhookList({ slug }: { slug: string }) {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h1 className="font-bold text-3xl tracking-tight">{t("title")}</h1>
-					<p className="mt-2 text-muted-foreground text-sm">
-						{t("description")}
-					</p>
-				</div>
-				{org && (
-					<WebhookCreateDialog
-						organizationId={org.id}
-						onCreated={(webhook) => {
-							setSecretWebhook(webhook);
-							void query.refetch();
-						}}
-					/>
-				)}
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("title")}
+				actions={
+					org && (
+						<WebhookCreateDialog
+							organizationId={org.id}
+							onCreated={(webhook) => {
+								setSecretWebhook(webhook);
+								void query.refetch();
+							}}
+						/>
+					)
+				}
+			/>
 
 			{!org || query.isLoading ? (
 				<p className="text-muted-foreground text-sm">{t("loading")}</p>
 			) : query.isError ? (
 				<p className="text-destructive text-sm">{t("failed")}</p>
 			) : items.length === 0 ? (
-				<Card>
+				<Card className="py-0">
 					<CardContent className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-						<Webhook className="size-8 text-muted-foreground" />
-						<p className="font-medium text-sm">{t("empty")}</p>
+						<AreaIcon area="api">
+							<Webhook />
+						</AreaIcon>
+						<p className="font-bold font-heading">{t("empty")}</p>
 						<p className="text-muted-foreground text-sm">
 							{t("emptyDescription")}
 						</p>
@@ -135,7 +137,7 @@ export function WebhookList({ slug }: { slug: string }) {
 			) : (
 				<div className="space-y-4">
 					{items.map((webhook) => (
-						<Card key={webhook.id}>
+						<Card key={webhook.id} className="py-0">
 							<CardContent className="space-y-3 p-6">
 								<div className="flex items-start justify-between gap-4">
 									<div className="space-y-1">
@@ -223,7 +225,7 @@ export function WebhookList({ slug }: { slug: string }) {
 						<AlertDialogAction
 							onClick={deleteWebhook}
 							disabled={deleting}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							variant="destructive"
 						>
 							{t("deleteDialog.confirm")}
 						</AlertDialogAction>

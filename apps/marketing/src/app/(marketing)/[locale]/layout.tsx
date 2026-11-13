@@ -30,7 +30,7 @@ export default async function MarketingLayout({
 			<Providers>
 				<div className="flex min-h-screen flex-col">
 					<MarketingNavbar />
-					<main className="flex-1 overflow-x-hidden pt-[4.5rem]">
+					<main className="flex-1 overflow-x-hidden pt-[5.25rem]">
 						{children}
 					</main>
 					<MarketingFooter />

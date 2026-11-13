@@ -6,7 +6,7 @@ import { ContactList } from "@app/crm/components/contact-list";
 import type { ContactStatus } from "@app/crm/components/contact-status-badge";
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
-import { Button, Card, CardContent, Input } from "@fuutu/ui";
+import { Button, Card, CardContent, Input, PageHeader } from "@fuutu/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -189,24 +189,31 @@ export function CrmLayout({ slug }: { slug?: string } = {}) {
 
 	if (!organizationId) {
 		return (
-			<div className="flex flex-col items-center justify-center py-16 text-center">
-				<p className="text-muted-foreground text-sm">
-					{orgError ? t("loadOrgError") : t("noOrganization")}
-				</p>
+			<div className="space-y-4">
+				<PageHeader variant="compact" title={t("title")} />
+				<div className="flex flex-col items-center justify-center py-16 text-center">
+					<p className="text-muted-foreground text-sm">
+						{orgError ? t("loadOrgError") : t("noOrganization")}
+					</p>
+				</div>
 			</div>
 		);
 	}
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-end gap-4">
-				<Button onClick={handleNewContact}>
-					<Plus className="mr-2 size-4" />
-					{t("newContact")}
-				</Button>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("title")}
+				actions={
+					<Button onClick={handleNewContact}>
+						<Plus className="mr-2 size-4" />
+						{t("newContact")}
+					</Button>
+				}
+			/>
 
-			<Card>
+			<Card className="overflow-hidden py-0">
 				<CardContent className="space-y-4 p-6">
 					<div className="relative max-w-sm">
 						<Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />

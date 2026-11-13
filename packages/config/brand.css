@@ -1,0 +1,165 @@
+/**
+ * Fuutu Stack — brand.css (paste zone, yours to edit)
+ *
+ * Standard shadcn/ui theme tokens. A tweakcn or ui.shadcn.com/create
+ * `:root` + `.dark` block can replace block 1 as-is. Keep blocks 2 and 3.
+ * Literal values only; theme.css (kit-owned) maps them into Tailwind.
+ * `pnpm -F @fuutu/ui test` audits every pair against WCAG AA.
+ */
+
+/* ━━ Block 1 · shadcn theme tokens ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+	--radius: 1rem;
+
+	--background: oklch(0.965 0.006 240);
+	--foreground: oklch(0.22 0.02 260);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.22 0.02 260);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.22 0.02 260);
+	--primary: oklch(0.24 0.03 265);
+	--primary-foreground: oklch(0.98 0.005 265);
+	--secondary: oklch(0.945 0.008 240);
+	--secondary-foreground: oklch(0.24 0.03 265);
+	--muted: oklch(0.945 0.008 240);
+	--muted-foreground: oklch(0.47 0.02 260);
+	--accent: oklch(0.935 0.012 240);
+	--accent-foreground: oklch(0.24 0.03 265);
+	--destructive: oklch(0.52 0.2 27);
+	--border: oklch(0.9 0.008 240);
+	--input: oklch(0.6 0.015 250);
+	--ring: oklch(0.24 0.03 265);
+	--chart-1: oklch(0.5 0.11 240);
+	--chart-2: oklch(0.52 0.11 160);
+	--chart-3: oklch(0.52 0.16 300);
+	--chart-4: oklch(0.56 0.11 85);
+	--chart-5: oklch(0.55 0.17 5);
+	--sidebar: oklch(1 0 0);
+	--sidebar-foreground: oklch(0.22 0.02 260);
+	--sidebar-primary: oklch(0.24 0.03 265);
+	--sidebar-primary-foreground: oklch(0.98 0.005 265);
+	--sidebar-accent: oklch(0.955 0.008 240);
+	--sidebar-accent-foreground: oklch(0.22 0.02 260);
+	--sidebar-border: oklch(0.9 0.008 240);
+	--sidebar-ring: oklch(0.24 0.03 265);
+
+	--font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+	--font-heading:
+		var(--font-schibsted-grotesk), ui-sans-serif, system-ui, sans-serif;
+	--font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+	--tracking-heading: -0.035em;
+	--tracking-display: -0.045em;
+
+	--shadow-2xs: 0 1px 1px oklch(0.2 0.02 260 / 4%);
+	--shadow-xs: 0 1px 2px oklch(0.2 0.02 260 / 6%);
+	--shadow-sm:
+		0 1px 2px oklch(0.2 0.02 260 / 6%),
+		0 8px 24px -8px oklch(0.2 0.02 260 / 12%);
+	--shadow-md:
+		0 2px 4px oklch(0.2 0.02 260 / 6%),
+		0 12px 32px -12px oklch(0.2 0.02 260 / 16%);
+	--shadow-lg:
+		0 4px 8px oklch(0.2 0.02 260 / 6%),
+		0 20px 48px -16px oklch(0.2 0.02 260 / 20%);
+	--shadow-xl:
+		0 8px 16px oklch(0.2 0.02 260 / 8%),
+		0 32px 64px -20px oklch(0.2 0.02 260 / 24%);
+	--shadow-2xl: 0 40px 80px -24px oklch(0.2 0.02 260 / 30%);
+}
+
+.dark {
+	--background: oklch(0.17 0.012 260);
+	--foreground: oklch(0.95 0.006 260);
+	--card: oklch(0.215 0.014 260);
+	--card-foreground: oklch(0.95 0.006 260);
+	--popover: oklch(0.24 0.015 260);
+	--popover-foreground: oklch(0.95 0.006 260);
+	--primary: oklch(0.95 0.01 265);
+	--primary-foreground: oklch(0.2 0.02 265);
+	--secondary: oklch(0.26 0.015 260);
+	--secondary-foreground: oklch(0.95 0.006 260);
+	--muted: oklch(0.26 0.015 260);
+	--muted-foreground: oklch(0.73 0.015 260);
+	--accent: oklch(0.28 0.018 260);
+	--accent-foreground: oklch(0.95 0.006 260);
+	--destructive: oklch(0.66 0.2 25);
+	--border: oklch(0.3 0.015 260);
+	--input: oklch(0.54 0.02 260);
+	--ring: oklch(0.95 0.01 265);
+	--chart-1: oklch(0.76 0.1 235);
+	--chart-2: oklch(0.76 0.11 160);
+	--chart-3: oklch(0.74 0.13 300);
+	--chart-4: oklch(0.8 0.11 90);
+	--chart-5: oklch(0.74 0.14 5);
+	--sidebar: oklch(0.215 0.014 260);
+	--sidebar-foreground: oklch(0.95 0.006 260);
+	--sidebar-primary: oklch(0.95 0.01 265);
+	--sidebar-primary-foreground: oklch(0.2 0.02 265);
+	--sidebar-accent: oklch(0.27 0.016 260);
+	--sidebar-accent-foreground: oklch(0.95 0.006 260);
+	--sidebar-border: oklch(0.3 0.015 260);
+	--sidebar-ring: oklch(0.95 0.01 265);
+
+	--shadow-2xs: 0 1px 1px oklch(0 0 0 / 20%);
+	--shadow-xs: 0 1px 2px oklch(0 0 0 / 30%);
+	--shadow-sm:
+		0 1px 2px oklch(0 0 0 / 30%), 0 10px 30px -10px oklch(0 0 0 / 50%);
+	--shadow-md:
+		0 2px 4px oklch(0 0 0 / 30%), 0 12px 32px -12px oklch(0 0 0 / 55%);
+	--shadow-lg:
+		0 4px 8px oklch(0 0 0 / 35%), 0 20px 48px -16px oklch(0 0 0 / 60%);
+	--shadow-xl:
+		0 8px 16px oklch(0 0 0 / 40%), 0 32px 64px -20px oklch(0 0 0 / 65%);
+	--shadow-2xl: 0 40px 80px -24px oklch(0 0 0 / 70%);
+}
+
+/* ━━ Block 2 · Kit status tokens — keep when pasting ━━━━━━━━━━━━━━━━━━
+ * Not part of shadcn's theme; the kit uses them for success, warning and
+ * info states (shadcn's documented `--x` / `--x-foreground` pattern).
+ * warning and info are fills: use `bg-warning text-warning-foreground`,
+ * never `text-warning` on a surface. */
+:root {
+	--success: oklch(0.5 0.13 150);
+	--success-foreground: oklch(0.985 0.01 150);
+	--warning: oklch(0.82 0.15 80);
+	--warning-foreground: oklch(0.3 0.07 60);
+	--info: oklch(0.52 0.12 245);
+	--info-foreground: oklch(0.985 0.005 245);
+}
+
+.dark {
+	--success: oklch(0.74 0.15 150);
+	--success-foreground: oklch(0.2 0.04 150);
+	--warning: oklch(0.82 0.14 80);
+	--warning-foreground: oklch(0.25 0.06 60);
+	--info: oklch(0.74 0.12 245);
+	--info-foreground: oklch(0.2 0.04 245);
+}
+
+/* ━━ Block 3 · Kit area tokens — keep when pasting ━━━━━━━━━━━━━━━━━━━━
+ * One pastel hue per product area: users / auth / organizations, billing,
+ * AI / credits, API / webhooks. Use the fill with its own ink:
+ * `bg-area-users text-area-users-foreground`. The ink also works as text
+ * on background and card. Never put opacity on area text. For a calm
+ * look, set all four to the same neutral tint. */
+:root {
+	--area-users: oklch(0.9 0.06 230);
+	--area-users-foreground: oklch(0.38 0.08 240);
+	--area-billing: oklch(0.91 0.07 160);
+	--area-billing-foreground: oklch(0.38 0.08 160);
+	--area-ai: oklch(0.9 0.055 300);
+	--area-ai-foreground: oklch(0.4 0.14 300);
+	--area-api: oklch(0.93 0.08 95);
+	--area-api-foreground: oklch(0.42 0.08 85);
+}
+
+.dark {
+	--area-users: oklch(0.33 0.06 235);
+	--area-users-foreground: oklch(0.88 0.07 230);
+	--area-billing: oklch(0.33 0.06 160);
+	--area-billing-foreground: oklch(0.88 0.08 160);
+	--area-ai: oklch(0.33 0.07 300);
+	--area-ai-foreground: oklch(0.88 0.065 300);
+	--area-api: oklch(0.35 0.06 90);
+	--area-api-foreground: oklch(0.9 0.09 95);
+}

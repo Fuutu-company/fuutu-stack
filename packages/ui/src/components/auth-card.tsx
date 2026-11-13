@@ -1,13 +1,13 @@
-import { Fingerprint } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../lib/utils";
-import { Card, CardContent } from "./card";
 
 export interface AuthCardProps {
 	title: string;
 	description?: string;
 	children: ReactNode;
 	footer?: ReactNode;
+	/** A lower level when the card sits inside a page that already has its h1. */
+	titleAs?: "h1" | "h2" | "h3" | "h4";
 	className?: string;
 }
 
@@ -16,41 +16,29 @@ export function AuthCard({
 	description,
 	children,
 	footer,
+	titleAs: Title = "h1",
 	className,
 }: AuthCardProps) {
 	return (
-		<div className={cn("flex flex-col gap-6", className)}>
-			<Card className="overflow-hidden p-0">
-				<CardContent className="grid p-0 md:grid-cols-2">
-					<div className="p-6 md:p-8">
-						<div className="flex flex-col items-center gap-2 text-center">
-							<h1 className="font-bold text-2xl">{title}</h1>
-							{description && (
-								<p className="text-balance text-muted-foreground text-sm">
-									{description}
-								</p>
-							)}
-						</div>
-						<div className="mt-6">{children}</div>
-					</div>
-					<div className="relative hidden md:block">
-						{/* Brand-tinted gradient backdrop — deep violet fading to muted,
-						    evokes the "secure vault" feeling for an auth surface. */}
-						<div className="absolute inset-0 bg-linear-to-br from-primary/25 via-primary/10 to-muted" />
-						{/* Subtle radial glow behind the icon for depth. */}
-						<div className="absolute inset-0 bg-radial-[at_50%_45%] from-primary/20 to-transparent" />
-						{/* Large centered fingerprint — the universal auth symbol. */}
-						<div className="absolute inset-0 flex items-center justify-center">
-							<Fingerprint
-								className="size-32 text-primary/70"
-								strokeWidth={1.25}
-							/>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
+		<div className={cn("flex w-full flex-col gap-6", className)}>
+			<div
+				data-slot="auth-card"
+				className="rounded-3xl bg-card p-6 text-card-foreground shadow-md ring-1 ring-foreground/5 sm:p-8 md:p-9 dark:ring-foreground/10"
+			>
+				<div className="flex flex-col gap-1.5">
+					<Title className="break-words font-extrabold font-heading text-3xl leading-tight tracking-heading">
+						{title}
+					</Title>
+					{description && (
+						<p className="text-pretty text-muted-foreground text-sm leading-6">
+							{description}
+						</p>
+					)}
+				</div>
+				<div className="mt-6">{children}</div>
+			</div>
 			{footer && (
-				<div className="text-balance text-center text-muted-foreground text-xs [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
+				<div className="text-balance text-center text-muted-foreground text-xs [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-foreground">
 					{footer}
 				</div>
 			)}

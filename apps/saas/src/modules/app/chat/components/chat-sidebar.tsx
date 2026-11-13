@@ -31,6 +31,7 @@ type ChatSidebarProps = {
 	onSelect: (id: string) => void;
 	onNew: () => void;
 	onDelete: (id: string) => void;
+	className?: string;
 };
 
 export function ChatSidebar({
@@ -40,19 +41,22 @@ export function ChatSidebar({
 	onSelect,
 	onNew,
 	onDelete,
+	className,
 }: ChatSidebarProps) {
 	const t = useTranslations("chat");
 	const [deleteId, setDeleteId] = useState<string | null>(null);
 
 	return (
-		<div className="flex h-full w-64 flex-col border-r">
+		<div
+			className={cn("flex h-full w-64 shrink-0 flex-col border-r", className)}
+		>
 			<div className="p-3">
 				<Button onClick={onNew} className="w-full" variant="outline">
 					<Plus className="mr-2 size-4" />
 					{t("newConversation")}
 				</Button>
 			</div>
-			<div className="flex-1 overflow-y-auto px-2 pb-2">
+			<div className="scrollbar-soft flex-1 overflow-y-auto px-2 pb-2">
 				{loading ? (
 					<div className="space-y-2">
 						{Array.from({ length: 4 }).map((_, i) => (
@@ -72,7 +76,7 @@ export function ChatSidebar({
 							<div
 								key={conv.id}
 								className={cn(
-									"group flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+									"group flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors",
 									activeId === conv.id
 										? "bg-accent text-accent-foreground"
 										: "hover:bg-accent/50",
@@ -96,7 +100,7 @@ export function ChatSidebar({
 										<button
 											type="button"
 											aria-label={t("deleteConversationAria")}
-											className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+											className="shrink-0 text-muted-foreground opacity-100 transition-opacity hover:text-destructive md:opacity-0 md:group-hover:opacity-100"
 											onClick={(e) => {
 												e.stopPropagation();
 												setDeleteId(conv.id);

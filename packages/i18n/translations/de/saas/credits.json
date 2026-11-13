@@ -1,10 +1,9 @@
 {
 	"credits": {
 		"title": "Guthaben",
-		"description": "Verwalte deine Guthaben und Nutzung",
 		"recurring": "Monatliches Kontingent",
 		"topups": "Aufladepakete",
-		"total": "Gesamt verbleibend",
+		"total": "Gesamt",
 		"remaining": "{count} verbleibend",
 		"remainingLabel": "Verbleibend",
 		"of": "{used} von {total}",

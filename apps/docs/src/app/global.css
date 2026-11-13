@@ -8,9 +8,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fuutu/config/theme.css";
-@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/shadcn.css";
 @import "fumadocs-ui/css/preset.css";
 @import "fumadocs-openapi/css/preset.css";
+
+:root,
+.dark {
+	--color-fd-info: var(--info);
+	--color-fd-warning: var(--warning);
+	--color-fd-success: var(--success);
+	--color-fd-error: var(--destructive);
+}
 
 /* Exclude build artifacts from class scanning — binary Turbopack SST
  * caches under .next/ inject corrupted candidates that break prod builds. */

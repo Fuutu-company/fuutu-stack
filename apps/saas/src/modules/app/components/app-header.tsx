@@ -40,14 +40,14 @@ export function AppHeader() {
 	const crumbs = useBreadcrumbs();
 
 	return (
-		<header className="hidden h-10 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-9 md:flex">
+		<header className="hidden h-14 shrink-0 items-center gap-2 bg-transparent px-4 md:flex md:px-8">
 			<SidebarTrigger className="-ml-1" />
 			<Separator
 				orientation="vertical"
 				className="mr-2 data-[orientation=vertical]:h-4"
 			/>
 			<Breadcrumb label={t("breadcrumb.ariaLabel")}>
-				<BreadcrumbList>
+				<BreadcrumbList className="font-semibold text-sm">
 					{crumbs.map((crumb, index) => {
 						const isLast = index === crumbs.length - 1;
 						return (

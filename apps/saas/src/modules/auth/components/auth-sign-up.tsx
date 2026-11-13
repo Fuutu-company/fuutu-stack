@@ -62,6 +62,10 @@ export function AuthSignUp({
 	// raw `?redirect=` pointing at an external accept-invitation lookalike
 	// must not inject an invitation id.
 	const invitationId = extractInvitationId(redirectTo);
+	// Forward the (sanitized) target to sign-in, mirroring its sign-up link.
+	const signInHref = redirectParam
+		? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}`
+		: "/auth/sign-in";
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const hasSocial = methods.google || methods.github;
@@ -240,7 +244,12 @@ export function AuthSignUp({
 							</Field>
 
 							<Field>
-								<Button type="submit" disabled={isLoading} className="w-full">
+								<Button
+									type="submit"
+									size="lg"
+									disabled={isLoading}
+									className="w-full"
+								>
 									{isLoading
 										? t("signUpForm.signingUp")
 										: t("signUpForm.button")}
@@ -336,6 +345,13 @@ export function AuthSignUp({
 							)}
 						</Field>
 					)}
+
+					<FieldDescription className="text-center">
+						{t("hasAccount")}{" "}
+						<Link href={signInHref} className="underline underline-offset-4">
+							{t("signUpForm.signInLink")}
+						</Link>
+					</FieldDescription>
 				</FieldGroup>
 			</form>
 		</AuthCard>

@@ -1,16 +1,7 @@
 {
 	"admin": {
-		"dashboard": {
-			"title": "Admin",
-			"description": "Verwalte Benutzer und prüfe Audit-Logs.",
-			"usersCard": "Benutzer verwalten",
-			"usersCardDescription": "Suchen, sperren und Rollen vergeben.",
-			"auditLogsCard": "Audit-Logs",
-			"auditLogsCardDescription": "Alle sicherheitsrelevanten Aktionen einsehen."
-		},
 		"users": {
 			"title": "Benutzer",
-			"description": "Suche, sperre und verwalte Rollen für alle Plattform-Benutzer.",
 			"searchPlaceholder": "Nach E-Mail suchen…",
 			"empty": "Keine Benutzer gefunden.",
 			"role": "Rolle",
@@ -41,7 +32,6 @@
 		},
 		"auditLogs": {
 			"title": "Audit-Logs",
-			"description": "Kürzliche sicherheitsrelevante Ereignisse auf der Plattform.",
 			"col": {
 				"time": "Zeit",
 				"action": "Aktion",

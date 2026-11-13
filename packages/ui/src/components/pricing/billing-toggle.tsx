@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "../../lib/utils";
+import { AreaBadge } from "../area";
 
 export interface BillingToggleProps {
 	isYearly: boolean;
@@ -10,6 +11,12 @@ export interface BillingToggleProps {
 	yearlyBadge?: string;
 }
 
+const OPTION =
+	"inline-flex h-9 items-center gap-2 rounded-full px-4 font-semibold text-sm outline-none transition-[color,background-color,box-shadow] duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:transition-none";
+const ACTIVE = "bg-card text-foreground shadow-sm";
+const IDLE = "text-muted-foreground hover:text-foreground";
+
+/** Monthly / yearly switch, styled as the Tabs pill. */
 export function BillingToggle({
 	isYearly,
 	setIsYearly,
@@ -18,35 +25,27 @@ export function BillingToggle({
 	yearlyBadge,
 }: BillingToggleProps) {
 	return (
-		<div className="mb-10 flex items-center justify-center gap-3">
-			<div className="relative inline-flex items-center rounded-full bg-secondary/80 p-1">
+		<div className="mb-10 flex items-center justify-center">
+			<div className="inline-flex items-center gap-1 rounded-full bg-muted p-1">
 				<button
 					type="button"
+					aria-pressed={!isYearly}
 					onClick={() => setIsYearly(false)}
-					className={cn(
-						"relative z-10 rounded-full px-5 py-2 font-medium text-sm transition-all",
-						!isYearly
-							? "bg-primary text-primary-foreground shadow-sm"
-							: "text-muted-foreground hover:text-foreground",
-					)}
+					className={cn(OPTION, isYearly ? IDLE : ACTIVE)}
 				>
 					{monthlyLabel}
 				</button>
 				<button
 					type="button"
+					aria-pressed={isYearly}
 					onClick={() => setIsYearly(true)}
-					className={cn(
-						"relative z-10 rounded-full px-5 py-2 font-medium text-sm transition-all",
-						isYearly
-							? "bg-primary text-primary-foreground shadow-sm"
-							: "text-muted-foreground hover:text-foreground",
-					)}
+					className={cn(OPTION, isYearly ? ACTIVE : IDLE)}
 				>
 					{yearlyLabel}
 					{yearlyBadge && (
-						<span className="absolute -top-1 -right-1 rounded-full bg-primary px-1 py-px font-medium text-[8px] text-primary-foreground leading-tight">
+						<AreaBadge area="billing" className="h-5 px-2 text-[11px]">
 							{yearlyBadge}
-						</span>
+						</AreaBadge>
 					)}
 				</button>
 			</div>

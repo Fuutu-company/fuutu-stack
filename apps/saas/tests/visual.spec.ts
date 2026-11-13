@@ -174,14 +174,6 @@ test.describe("visual regression — app pages", () => {
 		});
 	});
 
-	test("admin matches baseline", async ({ page }) => {
-		await page.goto("/admin");
-		await page.waitForLoadState("domcontentloaded");
-		await expectVisual(page, "admin--admin.png", {
-			fullPage: true,
-		});
-	});
-
 	test("admin users matches baseline", async ({ page }) => {
 		await page.goto("/admin/users");
 		await page.waitForLoadState("domcontentloaded");

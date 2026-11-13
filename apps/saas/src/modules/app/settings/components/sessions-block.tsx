@@ -70,7 +70,7 @@ export function SessionsBlock() {
 		<div className="space-y-5">
 			<div className="flex items-start justify-between gap-4">
 				<div>
-					<h3 className="font-semibold text-lg">
+					<h3 className="font-bold font-heading text-lg tracking-heading">
 						{t("settings.sessions.title")}
 					</h3>
 					<p className="text-muted-foreground text-sm">
@@ -93,7 +93,7 @@ export function SessionsBlock() {
 					{t("settings.sessions.none")}
 				</p>
 			) : (
-				<ul className="divide-y rounded-lg border">
+				<ul className="divide-y overflow-hidden rounded-xl border">
 					{sessions.map((s) => {
 						const ua = s.userAgent ?? "";
 						const isMobile = /iPhone|Android|Mobile/i.test(ua);

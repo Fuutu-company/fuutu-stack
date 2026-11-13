@@ -33,7 +33,10 @@ export async function DashboardLayout({ children }: DashboardLayoutProps) {
 			<SidebarInset>
 				<MobileHeader />
 				<AppHeader />
-				<div className="flex-1 overflow-y-auto p-6">{children}</div>
+				{/* The document scrolls, not this column: `overflow-x-clip` contains wide content without becoming a scroll container, so `position: sticky` inside pages works. */}
+				<div className="min-w-0 flex-1 overflow-x-clip bg-background px-4 pt-4 pb-10 md:px-8 md:pt-0">
+					<div className="mx-auto w-full max-w-7xl">{children}</div>
+				</div>
 			</SidebarInset>
 		</SidebarProvider>
 	);

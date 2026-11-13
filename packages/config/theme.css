@@ -1,24 +1,11 @@
+@import "./brand.css";
+
 /**
- * Fuutu Stack — Theme CSS (4-Token Design System)
+ * Fuutu Stack — theme.css (kit-owned, do not edit)
  *
- * ╔═══════════════════════════════════════════════════════════════════════╗
- * ║  HOW TO CUSTOMIZE                                                     ║
- * ║  Edit ONLY the 4 base tokens in the `:root` block below:              ║
- * ║    --brand         → your brand / primary accent color                ║
- * ║    --neutral       → base hue for greys, bg, text, borders            ║
- * ║    --success       → success/positive state (optional, has default)   ║
- * ║    --destructive   → error/danger state (optional, has default)       ║
- * ║  Plus: --radius, --font-sans, --font-mono.                            ║
- * ║                                                                       ║
- * ║  Everything else (--background, --card, --muted, --border, --chart-*, ║
- * ║  --sidebar-*, …) is DERIVED via oklch(from ...) and updates auto.     ║
- * ║                                                                       ║
- * ║  Dark mode (`.dark`) mirrors this exactly: 4 base tokens only, then   ║
- * ║  the same oklch(from …) derivations with an inverted lightness curve. ║
- * ║  See UI package documentation for component/token conventions.        ║
- * ╚═══════════════════════════════════════════════════════════════════════╝
- *
- * Note: Fonts are imported in each app's globals.css.
+ * Colors, radius and fonts live in brand.css (the paste zone). This file
+ * maps them into Tailwind v4 via `@theme inline` and adds the base layer.
+ * Fonts are loaded in each app's layout via next/font.
  */
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -40,169 +27,11 @@
  * Without this, Tailwind v4 defaults to prefers-color-scheme. */
 @custom-variant dark (&:is(.dark *));
 
-:root {
-	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-	 * BASE TOKENS — edit these 4 colors to rebrand the whole stack.
-	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-	--brand: oklch(
-		0.42 0.22 270
-	); /* primary brand color (≥4.5:1 vs white text) */
-	--neutral: oklch(0.13 0.03 260); /* dark neutral (text)         */
-	--success: oklch(0.65 0.18 150); /* success state               */
-	--destructive: oklch(0.6 0.2 25); /* error / danger              */
-
-	--radius: 0.75rem;
-	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-	--font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
-
-	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-	 * DERIVED TOKENS — auto-generated from the 4 base tokens.
-	 * Do NOT edit by hand. Change the base tokens above instead.
-	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-	/* Surfaces (from --neutral hue, progressively lighter) */
-	--background: oklch(from var(--neutral) 0.99 0.003 h);
-	--foreground: var(--neutral);
-	--card: oklch(from var(--neutral) 1 0 h);
-	--card-foreground: var(--neutral);
-	--popover: oklch(from var(--neutral) 1 0 h);
-	--popover-foreground: var(--neutral);
-
-	--muted: oklch(from var(--neutral) 0.96 0.008 h);
-	--muted-foreground: oklch(from var(--neutral) 0.45 0.03 h);
-	--accent: oklch(from var(--neutral) 0.94 0.015 h);
-	--accent-foreground: var(--neutral);
-	--secondary: oklch(from var(--neutral) 0.96 0.008 h);
-	--secondary-foreground: var(--neutral);
-
-	--border: oklch(from var(--neutral) 0.92 0.008 h);
-	--input: oklch(from var(--neutral) 0.92 0.008 h);
-
-	/* Auto-contrast foregrounds — `clamp(0, (T - l) * 100, 1)` is a step
-	 * function at threshold T: l < T → 1 (white), l > T → 0 (black).
-	 * Brand/sidebar use T = 0.6 (brand accents keep white text further up
-	 * the lightness curve); state colors use T = 0.5. Dark mode uses 0.6
-	 * throughout — its base tokens are brighter by design.
-	 * The trailing `/ 1` forces full opacity so a user-provided alpha on
-	 * --brand / --success / --destructive can't bleed into buttons. */
-	--primary: oklch(from var(--brand) l c h / 1);
-	--primary-foreground: oklch(
-		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
-		1
-	);
-	/* Darker hover — an alpha blend (bg-primary/90) lightens against the
-	 * card and can break the 4.5:1 contrast of the white label. */
-	--primary-hover: oklch(from var(--brand) calc(l - 0.08) c h / 1);
-	--ring: var(--brand);
-
-	/* State */
-	--destructive-foreground: oklch(
-		from var(--destructive) clamp(0, (0.5 - l) * 100, 1) 0 h /
-		1
-	);
-	--success-foreground: oklch(
-		from var(--success) clamp(0, (0.5 - l) * 100, 1) 0 h /
-		1
-	);
-
-	/* Charts — harmonic rotations around --brand */
-	--chart-1: var(--brand);
-	--chart-2: oklch(from var(--brand) l c calc(h + 60));
-	--chart-3: oklch(from var(--brand) l c calc(h + 120));
-	--chart-4: oklch(from var(--brand) l c calc(h + 180));
-	--chart-5: oklch(from var(--brand) l c calc(h + 240));
-
-	/* Sidebar */
-	--sidebar: oklch(from var(--neutral) 0.98 0.006 h);
-	--sidebar-foreground: var(--neutral);
-	--sidebar-primary: oklch(from var(--brand) l c h / 1);
-	--sidebar-primary-foreground: oklch(
-		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
-		1
-	);
-	--sidebar-accent: oklch(from var(--neutral) 0.94 0.015 h);
-	--sidebar-accent-foreground: var(--neutral);
-	--sidebar-border: oklch(from var(--neutral) 0.92 0.008 h);
-	--sidebar-ring: var(--brand);
-}
-
-.dark {
-	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-	 * BASE TOKENS (dark) — same 4-token discipline as :root.
-	 * Edit these 4 to rebrand dark mode; everything else derives.
-	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-	--brand: oklch(0.68 0.2 270); /* brightened for contrast on dark bg  */
-	--neutral: oklch(0.98 0.005 260); /* inverted: now the light reference   */
-	--success: oklch(0.72 0.17 150); /* brightened equivalent               */
-	--destructive: oklch(0.68 0.2 25); /* brightened equivalent             */
-
-	/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-	 * DERIVED TOKENS (dark) — mirror :root formulas with a dark
-	 * lightness curve. Hue is always pulled from the base tokens.
-	 * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-	/* Surfaces (from --neutral hue, progressively darker) */
-	--background: oklch(from var(--neutral) 0.11 0.025 h);
-	--foreground: var(--neutral);
-	--card: oklch(from var(--neutral) 0.14 0.03 h);
-	--card-foreground: var(--neutral);
-	--popover: oklch(from var(--neutral) 0.14 0.03 h);
-	--popover-foreground: var(--neutral);
-
-	--muted: oklch(from var(--neutral) 0.2 0.04 h);
-	--muted-foreground: oklch(from var(--neutral) 0.7 0.03 h);
-	--accent: oklch(from var(--neutral) 0.22 0.05 h);
-	--accent-foreground: var(--neutral);
-	--secondary: oklch(from var(--neutral) 0.2 0.04 h);
-	--secondary-foreground: var(--neutral);
-
-	--border: oklch(from var(--neutral) 1 0 h / 10%);
-	--input: oklch(from var(--neutral) 1 0 h / 15%);
-
-	/* Brand — auto-contrast foreground (see :root explanation). */
-	--primary: oklch(from var(--brand) l c h / 1);
-	--primary-foreground: oklch(
-		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
-		1
-	);
-	--primary-hover: oklch(from var(--brand) calc(l - 0.08) c h / 1);
-	--ring: var(--brand);
-
-	/* State */
-	--destructive-foreground: oklch(
-		from var(--destructive) clamp(0, (0.6 - l) * 100, 1) 0 h /
-		1
-	);
-	--success-foreground: oklch(
-		from var(--success) clamp(0, (0.6 - l) * 100, 1) 0 h /
-		1
-	);
-
-	/* Charts — harmonic rotations around --brand */
-	--chart-1: var(--brand);
-	--chart-2: oklch(from var(--brand) l c calc(h + 60));
-	--chart-3: oklch(from var(--brand) l c calc(h + 120));
-	--chart-4: oklch(from var(--brand) l c calc(h + 180));
-	--chart-5: oklch(from var(--brand) l c calc(h + 240));
-
-	/* Sidebar */
-	--sidebar: oklch(from var(--neutral) 0.14 0.03 h);
-	--sidebar-foreground: var(--neutral);
-	--sidebar-primary: oklch(from var(--brand) l c h / 1);
-	--sidebar-primary-foreground: oklch(
-		from var(--brand) clamp(0, (0.6 - l) * 100, 1) 0 h /
-		1
-	);
-	--sidebar-accent: oklch(from var(--neutral) 0.2 0.04 h);
-	--sidebar-accent-foreground: var(--neutral);
-	--sidebar-border: oklch(from var(--neutral) 1 0 h / 10%);
-	--sidebar-ring: var(--brand);
-}
-
 /**
- * Tailwind v4: expose CSS variables as theme tokens so utilities like
- * `bg-background`, `text-foreground`, `border-border`, `bg-primary`, etc.
- * are generated. Without this block, all custom color classes silently fail.
+ * Tailwind v4: expose the brand.css variables as theme tokens so utilities
+ * like `bg-background`, `text-foreground`, `border-border`, `bg-primary`
+ * are generated. Tolerated tweakcn extras (destructive-foreground,
+ * font-serif, shadows) fall back to kit defaults when brand.css omits them.
  */
 @theme inline {
 	--color-background: var(--background);
@@ -216,7 +45,6 @@
 
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
-	--color-primary-hover: var(--primary-hover);
 
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);
@@ -228,13 +56,7 @@
 	--color-accent-foreground: var(--accent-foreground);
 
 	--color-destructive: var(--destructive);
-	--color-destructive-foreground: var(--destructive-foreground);
-
-	--color-success: var(--success);
-	--color-success-foreground: var(--success-foreground);
-
-	--color-brand: var(--brand);
-	--color-neutral: var(--neutral);
+	--color-destructive-foreground: var(--destructive-foreground, oklch(1 0 0));
 
 	--color-border: var(--border);
 	--color-input: var(--input);
@@ -255,22 +77,191 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 
+	/* Kit status tokens (brand.css block 2) */
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+
+	/* Kit area tokens (brand.css block 3) */
+	--color-area-users: var(--area-users);
+	--color-area-users-foreground: var(--area-users-foreground);
+	--color-area-billing: var(--area-billing);
+	--color-area-billing-foreground: var(--area-billing-foreground);
+	--color-area-ai: var(--area-ai);
+	--color-area-ai-foreground: var(--area-ai-foreground);
+	--color-area-api: var(--area-api);
+	--color-area-api-foreground: var(--area-api-foreground);
+
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 8px);
+	--radius-3xl: calc(var(--radius) + 12px);
+	--radius-4xl: calc(var(--radius) + 16px);
 
 	--font-sans: var(--font-sans);
 	--font-mono: var(--font-mono);
+	--font-heading: var(--font-heading);
+	--font-serif: var(--font-serif, ui-serif, Georgia, serif);
+
+	--tracking-heading: var(--tracking-heading, -0.025em);
+	--tracking-display: var(--tracking-display, -0.04em);
+
+	/* tweakcn exports --shadow-*; otherwise Tailwind's defaults apply. */
+	--shadow-2xs: var(--shadow-2xs, 0 1px rgb(0 0 0 / 0.05));
+	--shadow-xs: var(--shadow-xs, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+	--shadow-sm: var(
+		--shadow-sm,
+		0 1px 3px 0 rgb(0 0 0 / 0.1),
+		0 1px 2px -1px rgb(0 0 0 / 0.1)
+	);
+	--shadow-md: var(
+		--shadow-md,
+		0 4px 6px -1px rgb(0 0 0 / 0.1),
+		0 2px 4px -2px rgb(0 0 0 / 0.1)
+	);
+	--shadow-lg: var(
+		--shadow-lg,
+		0 10px 15px -3px rgb(0 0 0 / 0.1),
+		0 4px 6px -4px rgb(0 0 0 / 0.1)
+	);
+	--shadow-xl: var(
+		--shadow-xl,
+		0 20px 25px -5px rgb(0 0 0 / 0.1),
+		0 8px 10px -6px rgb(0 0 0 / 0.1)
+	);
+	--shadow-2xl: var(--shadow-2xl, 0 25px 50px -12px rgb(0 0 0 / 0.25));
 }
 
 @layer base {
+	:root {
+		color-scheme: light;
+	}
+	.dark {
+		color-scheme: dark;
+	}
 	* {
-		@apply border-border;
+		@apply border-border outline-ring/50;
 	}
 	body {
 		@apply bg-background text-foreground;
 		font-family: var(--font-sans);
+		accent-color: var(--primary);
+		caret-color: var(--primary);
+	}
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-heading);
+	}
+	::selection {
+		background-color: var(--primary);
+		color: var(--primary-foreground);
+	}
+	td,
+	th,
+	output,
+	input[type="number"] {
+		font-variant-numeric: tabular-nums;
+	}
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * scrollbar-soft — overlay-style scroll area for rounded panels.
+ * Thin rounded thumb in a muted foreground tint, transparent track, no
+ * border; thumb appears on hover / keyboard focus. Edges fade out (only
+ * while content is scrolled / overflowing) via scroll-driven animation
+ * where supported. Forced-colors keeps the native scrollbar.
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@property --scroll-fade-top {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+@property --scroll-fade-bottom {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+@keyframes scroll-fade-top {
+	from {
+		--scroll-fade-top: 0px;
+	}
+	to {
+		--scroll-fade-top: 1.25rem;
+	}
+}
+@keyframes scroll-fade-bottom {
+	from {
+		--scroll-fade-bottom: 1.25rem;
+	}
+	to {
+		--scroll-fade-bottom: 0px;
+	}
+}
+@utility scrollbar-soft {
+	@media not (forced-colors: active) {
+		@supports not selector(::-webkit-scrollbar) {
+			scrollbar-width: thin;
+			scrollbar-color: transparent transparent;
+			&:hover,
+			&:focus-within {
+				scrollbar-color: color-mix(in oklab, var(--foreground) 24%, transparent)
+					transparent;
+			}
+		}
+		@supports selector(::-webkit-scrollbar) {
+			&::-webkit-scrollbar {
+				width: 6px;
+				height: 6px;
+				background: transparent;
+			}
+			&::-webkit-scrollbar-track,
+			&::-webkit-scrollbar-corner {
+				background: transparent;
+				border: 0;
+			}
+			&::-webkit-scrollbar-thumb {
+				background-color: transparent;
+				border-radius: 9999px;
+			}
+			&:hover::-webkit-scrollbar-thumb,
+			&:focus-within::-webkit-scrollbar-thumb {
+				background-color: color-mix(
+					in oklab,
+					var(--foreground) 24%,
+					transparent
+				);
+			}
+			&::-webkit-scrollbar-thumb:hover {
+				background-color: color-mix(
+					in oklab,
+					var(--foreground) 40%,
+					transparent
+				);
+			}
+		}
+		@supports (animation-timeline: scroll()) {
+			animation:
+				scroll-fade-top linear both,
+				scroll-fade-bottom linear both;
+			animation-timeline: scroll(self block), scroll(self block);
+			animation-range:
+				0 1.25rem,
+				calc(100% - 1.25rem) 100%;
+			mask-image: linear-gradient(
+				to bottom,
+				transparent,
+				#000 var(--scroll-fade-top),
+				#000 calc(100% - var(--scroll-fade-bottom)),
+				transparent
+			);
+		}
 	}
 }
 
@@ -278,12 +269,12 @@
  * MeshGradient — animated CSS mesh gradient utility
  *
  * Lives in this cross-cutting file (not @fuutu/ui) because it is a pure
- * CSS utility keyed on the 4-token theme — keeping it next to the tokens
+ * CSS utility keyed on the theme tokens — keeping it next to the tokens
  * guarantees every app gets it via the single theme.css import.
  *
  * Controlled via CSS custom properties:
- *   --mg-1      primary color   (default: var(--primary))
- *   --mg-2      secondary color (default: lighter primary tint)
+ *   --mg-1      primary color   (default: var(--area-users))
+ *   --mg-2      secondary color (default: var(--area-ai))
  *   --mg-3      base color      (default: var(--background))
  *   --mg-speed  animation duration, e.g. 12s (set to 0s to disable)
  *   --mg-opacity overall opacity
@@ -323,8 +314,8 @@
 }
 
 .mesh-gradient {
-	--mg-1: var(--primary);
-	--mg-2: oklch(from var(--primary) calc(l + 0.15) calc(c * 0.6) calc(h + 40));
+	--mg-1: var(--area-users);
+	--mg-2: var(--area-ai);
 	--mg-3: var(--background);
 	--mg-speed: 12s;
 	--mg-opacity: 1;

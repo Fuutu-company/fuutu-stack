@@ -67,7 +67,9 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 	return (
 		<div className="space-y-4">
 			<div>
-				<h2 className="font-semibold text-lg">{t("title")}</h2>
+				<h2 className="font-bold font-heading text-lg tracking-heading">
+					{t("title")}
+				</h2>
 				<p className="text-muted-foreground text-sm">{t("description")}</p>
 			</div>
 
@@ -85,7 +87,7 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 
 			<div className="grid gap-4 md:grid-cols-3">
 				{topups.map((topup) => (
-					<Card key={topup.id} className="relative">
+					<Card key={topup.id} className="relative py-0">
 						{topup.popular && (
 							<Badge className="absolute -top-2 right-4" variant="default">
 								{t("popular")}
@@ -108,7 +110,9 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 								</div>
 							</div>
 							<div className="flex items-center justify-between">
-								<span className="font-bold text-2xl">{topup.displayPrice}</span>
+								<span className="font-extrabold font-heading text-2xl tabular-nums tracking-heading">
+									{topup.displayPrice}
+								</span>
 								<span className="text-muted-foreground text-xs">
 									{t("perPackage")}
 								</span>

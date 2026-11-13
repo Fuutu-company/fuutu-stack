@@ -6,6 +6,7 @@ import { apiKeysRouter } from "../modules/api-keys/router";
 import { chatRouter } from "../modules/chat/router";
 import { creditsRouter } from "../modules/credits/router";
 import { crmRouter } from "../modules/crm/router";
+import { dashboardRouter } from "../modules/dashboard/router";
 import { notificationsRouter } from "../modules/notifications/router";
 import { organizationsRouter } from "../modules/organizations/router";
 import { paymentsRouter } from "../modules/payments/router";
@@ -18,6 +19,7 @@ import { publicProcedure } from "./procedures";
 export const router = publicProcedure.router({
 	users: usersRouter,
 	activity: activityRouter,
+	dashboard: dashboardRouter,
 	admin: adminRouter,
 	ai: aiRouter,
 	organizations: organizationsRouter,

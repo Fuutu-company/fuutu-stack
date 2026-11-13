@@ -18,6 +18,7 @@ import {
 	countAuditLogsByOrg,
 	createAuditLog,
 	findAuditLogsByOrg,
+	listAuditLogDates,
 	searchAuditLogs,
 } from "../../prisma/queries/audit-log";
 import { prismaAuditSink } from "../../prisma/sinks/audit";
@@ -120,6 +121,45 @@ describe("searchAuditLogs", () => {
 				},
 			}),
 		);
+	});
+});
+
+describe("listAuditLogDates", () => {
+	const since = new Date("2026-10-15T00:00:00Z");
+
+	it("selects only action + createdAt for an org since the cutoff", async () => {
+		vi.mocked(db.auditLog.findMany).mockResolvedValueOnce([] as never);
+
+		await listAuditLogDates({ organizationId: "org1", since });
+
+		expect(db.auditLog.findMany).toHaveBeenCalledWith({
+			where: { organizationId: "org1", createdAt: { gte: since } },
+			select: { action: true, createdAt: true },
+			orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+			take: 5000,
+		});
+	});
+
+	it("scopes to userId and honours take", async () => {
+		vi.mocked(db.auditLog.findMany).mockResolvedValueOnce([] as never);
+
+		await listAuditLogDates({ userId: "u1", since, take: 10 });
+
+		expect(db.auditLog.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { userId: "u1", createdAt: { gte: since } },
+				take: 10,
+			}),
+		);
+	});
+
+	it("refuses to run without an owner (no cross-tenant series)", () => {
+		expect(() =>
+			listAuditLogDates({ since } as unknown as Parameters<
+				typeof listAuditLogDates
+			>[0]),
+		).toThrow(/userId or organizationId/);
+		expect(db.auditLog.findMany).not.toHaveBeenCalled();
 	});
 });
 

@@ -98,11 +98,20 @@ export const createApiKeyWithinLimit = (params: {
 
 export const listApiKeys = (
 	userId: string,
-	opts: { take?: number; skip?: number } = {},
+	opts: {
+		take?: number;
+		skip?: number;
+		/** Exclude org keys the user created. */
+		personalOnly?: boolean;
+	} = {},
 ) => {
-	const { take = 50, skip = 0 } = opts;
+	const { take = 50, skip = 0, personalOnly = false } = opts;
 	return db.apiKey.findMany({
-		where: { userId, revokedAt: null },
+		where: {
+			userId,
+			revokedAt: null,
+			...(personalOnly ? { organizationId: null } : {}),
+		},
 		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
@@ -110,8 +119,17 @@ export const listApiKeys = (
 	});
 };
 
-export const countApiKeys = (userId: string) =>
-	db.apiKey.count({ where: { userId, revokedAt: null } });
+export const countApiKeys = (
+	userId: string,
+	opts: { personalOnly?: boolean } = {},
+) =>
+	db.apiKey.count({
+		where: {
+			userId,
+			revokedAt: null,
+			...(opts.personalOnly ? { organizationId: null } : {}),
+		},
+	});
 
 export const listOrgApiKeys = (
 	organizationId: string,

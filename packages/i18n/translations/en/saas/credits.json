@@ -1,10 +1,9 @@
 {
 	"credits": {
 		"title": "Credits",
-		"description": "Manage your credit balances and usage",
 		"recurring": "Monthly allowance",
 		"topups": "Top-up packages",
-		"total": "Total remaining",
+		"total": "Total",
 		"remaining": "{count} remaining",
 		"remainingLabel": "Remaining",
 		"of": "{used} of {total}",

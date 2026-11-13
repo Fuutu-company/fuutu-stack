@@ -53,7 +53,9 @@ export function ChangePasswordForm() {
 	return (
 		<form onSubmit={onSubmit} className="space-y-6">
 			<div>
-				<h3 className="font-semibold text-lg">{t("title")}</h3>
+				<h3 className="font-bold font-heading text-lg tracking-heading">
+					{t("title")}
+				</h3>
 				<p className="text-muted-foreground text-sm">{t("description")}</p>
 			</div>
 			{error && (

@@ -109,8 +109,8 @@ describe("getMessagesForLocale() merging", () => {
 
 	it("replaces arrays instead of concatenating them", async () => {
 		const messages = await getMessagesForLocale("de", "marketing");
-		expect(messages.home.faq.categories).toHaveLength(3);
-		expect(messages.home.faq.categories[0]?.label).toBe("Lizenz");
+		expect(messages.home.features.team.members).toHaveLength(3);
+		expect(messages.home.features.team.members[2]?.role).toBe("Mitglied");
 	});
 
 	it("resolves a BCP-47 parent before the default — de-AT merges de over en", async () => {

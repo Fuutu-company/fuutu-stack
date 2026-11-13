@@ -11,14 +11,14 @@ export function MobileHeader() {
 	const { toggleSidebar } = useSidebar();
 
 	return (
-		<header className="sticky top-0 z-50 flex h-12 items-center justify-between border-b bg-background px-4 md:hidden">
+		<header className="sticky top-0 z-50 flex h-14 items-center justify-between bg-background px-4 md:hidden">
 			<Link href="/dashboard" className="flex items-center gap-2.5">
 				<BrandLogo
 					size="md"
 					alt={config.app.name}
 					className="size-7 dark:invert"
 				/>
-				<span className="font-semibold text-foreground text-sm tracking-tight">
+				<span className="font-bold font-heading text-foreground text-sm tracking-heading">
 					{config.app.name}
 				</span>
 			</Link>

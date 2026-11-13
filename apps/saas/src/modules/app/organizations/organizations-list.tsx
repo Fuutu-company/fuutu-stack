@@ -3,6 +3,7 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
+	AreaIcon,
 	Button,
 	Card,
 	CardContent,
@@ -10,6 +11,7 @@ import {
 	FieldGroup,
 	FieldLabel,
 	Input,
+	PageHeader,
 } from "@fuutu/ui";
 import { slugify } from "@fuutu/utils";
 import { Building2, Plus } from "lucide-react";
@@ -93,30 +95,26 @@ export function OrganizationsList({
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h1 className="font-bold text-3xl tracking-tight">
-						{t("organizations.list.title")}
-					</h1>
-					<p className="mt-2 text-muted-foreground">
-						{t("organizations.list.description")}
-					</p>
-				</div>
-				{canCreateOrg && (
-					<Button onClick={() => setCreating((v) => !v)}>
-						<Plus className="mr-2 size-4" />
-						{t("organizations.list.create")}
-					</Button>
-				)}
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("organizations.list.title")}
+				actions={
+					canCreateOrg && (
+						<Button onClick={() => setCreating((v) => !v)}>
+							<Plus className="size-4" />
+							{t("organizations.list.create")}
+						</Button>
+					)
+				}
+			/>
 
 			{invitations.length > 0 && (
-				<Card>
+				<Card className="py-0">
 					<CardContent className="p-6">
-						<h2 className="font-semibold">
+						<h2 className="font-bold font-heading">
 							{t("organizations.list.pendingInvitations")}
 						</h2>
-						<ul className="mt-3 divide-y rounded-lg border">
+						<ul className="mt-3 divide-y overflow-hidden rounded-xl border">
 							{invitations.map((inv) => (
 								<li key={inv.id}>
 									<Link
@@ -127,7 +125,7 @@ export function OrganizationsList({
 											<Building2 className="size-4 text-muted-foreground" />
 											{inv.organizationName}
 										</span>
-										<span className="text-primary text-sm">
+										<span className="shrink-0 font-semibold text-sm underline underline-offset-4">
 											{t("organizations.list.acceptInvitation")}
 										</span>
 									</Link>
@@ -139,7 +137,7 @@ export function OrganizationsList({
 			)}
 
 			{creating && (
-				<Card>
+				<Card className="py-0">
 					<CardContent className="p-6">
 						<form onSubmit={create}>
 							<FieldGroup>
@@ -183,12 +181,14 @@ export function OrganizationsList({
 			{loading ? (
 				<p className="text-muted-foreground text-sm">{t("common.loading")}</p>
 			) : orgs.length === 0 ? (
-				<Card>
+				<Card className="py-0">
 					<CardContent className="p-10 text-center">
 						<div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
 							<Building2 className="size-5 text-muted-foreground" />
 						</div>
-						<h3 className="font-semibold">{t("organizations.list.empty")}</h3>
+						<h3 className="font-bold font-heading">
+							{t("organizations.list.empty")}
+						</h3>
 						<p className="mx-auto mt-2 max-w-sm text-muted-foreground text-sm">
 							{canCreateOrg
 								? t("organizations.list.emptyDescription")
@@ -202,19 +202,19 @@ export function OrganizationsList({
 						<Link
 							key={org.id}
 							href={`/organizations/${org.slug}`}
-							className="group rounded-xl border bg-card p-5 transition-all hover:border-primary/40 hover:shadow-md"
+							className="group rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 						>
-							<div className="flex items-center gap-3">
-								<div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-									<Building2 className="size-5" />
-								</div>
+							<Card className="h-full flex-row items-center gap-3 p-5 transition-shadow group-hover:shadow-md">
+								<AreaIcon area="users">
+									<Building2 />
+								</AreaIcon>
 								<div className="min-w-0">
 									<p className="truncate font-semibold">{org.name}</p>
 									<p className="truncate text-muted-foreground text-xs">
 										/{org.slug}
 									</p>
 								</div>
-							</div>
+							</Card>
 						</Link>
 					))}
 				</div>

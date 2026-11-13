@@ -16,7 +16,7 @@ mkdir -p "$HOME" /work
 # (.claude holds worktrees with their own .env).
 tar -C /src \
   --exclude=./node_modules --exclude='*/node_modules' \
-  --exclude='*/.next' --exclude=./.git --exclude='*/.turbo' --exclude=./.turbo \
+  --exclude='*/.next' --exclude='*/.next-e2e' --exclude=./.git --exclude='*/.turbo' --exclude=./.turbo \
   --exclude='.env' --exclude='.env.*' --exclude='.claude' --exclude=./.fuutu \
   --exclude='*/test-results' --exclude='*/playwright-report' --exclude='*/visual-report' \
   -cf - . | tar -C /work -xf -
@@ -47,6 +47,12 @@ if [ "$APP" = "saas" ]; then
     echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)"
   } >> .env
 fi
+
+# `next build` only reads apps/<app>/.env — CI passes these as job env, so do
+# the same here (a build without BETTER_AUTH_SECRET/URL fails env validation).
+set -a
+. ./.env
+set +a
 
 pnpm install --frozen-lockfile || fail "pnpm install failed"
 if [ "$APP" = "saas" ]; then

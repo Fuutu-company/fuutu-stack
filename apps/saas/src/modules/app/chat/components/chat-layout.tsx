@@ -5,7 +5,16 @@ import { ChatMessageList } from "@app/chat/components/chat-message-list";
 import { ChatSidebar } from "@app/chat/components/chat-sidebar";
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
+import {
+	Button,
+	Card,
+	Sheet,
+	SheetContent,
+	SheetTitle,
+	SheetTrigger,
+} from "@fuutu/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MessageSquare, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -61,6 +70,7 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 	const [activeConversationId, setActiveConversationId] = useState<
 		string | null
 	>(null);
+	const [listOpen, setListOpen] = useState(false);
 	const [stream, setStream] = useState<ReadableStream<Uint8Array> | null>(null);
 	const [messages, setMessages] = useState<Message[]>([]);
 	const loadedConversationRef = useRef<string | null>(null);
@@ -219,6 +229,7 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 	);
 
 	const handleNewConversation = useCallback(() => {
+		setListOpen(false);
 		createConversationMutation.mutate();
 	}, [createConversationMutation]);
 
@@ -232,11 +243,13 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 	const handleSelectConversation = useCallback((id: string) => {
 		setActiveConversationId(id);
 		setStream(null);
+		setListOpen(false);
 	}, []);
 
 	return (
-		<div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg border">
+		<Card className="h-[calc(100dvh-9rem)] min-h-[28rem] flex-row gap-0 overflow-hidden py-0">
 			<ChatSidebar
+				className="hidden md:flex"
 				conversations={conversations}
 				activeId={activeConversationId}
 				loading={conversationsLoading}
@@ -244,7 +257,41 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 				onNew={handleNewConversation}
 				onDelete={handleDeleteConversation}
 			/>
-			<div className="flex flex-1 flex-col">
+			<div className="flex min-w-0 flex-1 flex-col">
+				<div className="flex items-center gap-2 border-b p-2 md:hidden">
+					<Sheet open={listOpen} onOpenChange={setListOpen}>
+						<SheetTrigger asChild>
+							<Button variant="outline" size="sm">
+								<MessageSquare className="mr-2 size-4" />
+								{t("conversations")}
+							</Button>
+						</SheetTrigger>
+						<SheetContent
+							side="left"
+							closeLabel={t("closeConversations")}
+							aria-describedby={undefined}
+							className="w-72 gap-0 p-0"
+						>
+							<SheetTitle className="p-4 pb-0">{t("conversations")}</SheetTitle>
+							<ChatSidebar
+								className="w-full border-r-0"
+								conversations={conversations}
+								activeId={activeConversationId}
+								loading={conversationsLoading}
+								onSelect={handleSelectConversation}
+								onNew={handleNewConversation}
+								onDelete={handleDeleteConversation}
+							/>
+						</SheetContent>
+					</Sheet>
+					<Button
+						size="icon-sm"
+						aria-label={t("newConversation")}
+						onClick={handleNewConversation}
+					>
+						<Plus className="size-4" />
+					</Button>
+				</div>
 				<ChatMessageList
 					messages={messages}
 					stream={stream}
@@ -259,6 +306,6 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 					}
 				/>
 			</div>
-		</div>
+		</Card>
 	);
 }

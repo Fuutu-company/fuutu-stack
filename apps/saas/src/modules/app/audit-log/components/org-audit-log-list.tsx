@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, CardContent } from "@fuutu/ui";
+import { Button, Card, CardContent, PageHeader } from "@fuutu/ui";
 import { ScrollText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
@@ -22,7 +22,6 @@ type AuditLog = {
 
 type Labels = {
 	title: string;
-	description: string;
 	empty: string;
 	colTime: string;
 	colAction: string;
@@ -73,35 +72,43 @@ export function OrgAuditLogList({
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h1 className="font-bold text-3xl tracking-tight">{labels.title}</h1>
-					<p className="mt-2 text-muted-foreground text-sm">
-						{labels.description}
-					</p>
-				</div>
-				<AuditLogFilters
-					value={filter}
-					onChange={(value) => updateQuery({ filter: value, page: "" })}
-				/>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={labels.title}
+				actions={
+					<AuditLogFilters
+						value={filter}
+						onChange={(value) => updateQuery({ filter: value, page: "" })}
+					/>
+				}
+			/>
 
-			<Card>
+			<Card className="overflow-hidden py-0">
 				<CardContent className="space-y-4 p-6">
 					{logs.length === 0 ? (
 						<div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-							<ScrollText className="size-8 text-muted-foreground" />
+							<span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+								<ScrollText className="size-[1.125rem]" />
+							</span>
 							<p className="text-muted-foreground text-sm">{labels.empty}</p>
 						</div>
 					) : (
-						<div className="overflow-hidden rounded-lg border">
+						<div className="-mx-6 -mt-6 overflow-x-auto border-b">
 							<table className="w-full text-sm">
 								<thead className="bg-muted/50">
 									<tr className="text-left">
-										<th className="p-3 font-medium">{labels.colTime}</th>
-										<th className="p-3 font-medium">{labels.colAction}</th>
-										<th className="p-3 font-medium">{labels.colUser}</th>
-										<th className="p-3 font-medium">{labels.colIp}</th>
+										<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+											{labels.colTime}
+										</th>
+										<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+											{labels.colAction}
+										</th>
+										<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+											{labels.colUser}
+										</th>
+										<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+											{labels.colIp}
+										</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y">
@@ -113,8 +120,10 @@ export function OrgAuditLogList({
 											>
 												{log.createdAt.toLocaleString(locale)}
 											</td>
-											<td className="p-3 font-mono text-xs">{log.action}</td>
-											<td className="p-3 text-xs">
+											<td className="px-4 py-3 font-mono text-xs">
+												{log.action}
+											</td>
+											<td className="px-4 py-3 text-xs">
 												{log.user ? (
 													<div>
 														<div className="font-medium">

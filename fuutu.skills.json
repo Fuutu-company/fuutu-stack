@@ -75,6 +75,16 @@
 			"name": "review-code",
 			"source": "mcp",
 			"category": "workflow"
+		},
+		{
+			"name": "build-ui",
+			"source": "repo",
+			"category": "design"
+		},
+		{
+			"name": "setup-brand",
+			"source": "mcp",
+			"category": "design"
 		}
 	]
 }

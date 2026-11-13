@@ -1,7 +1,6 @@
 {
 	"crm": {
 		"title": "CRM",
-		"description": "Manage contacts, deals, and your sales pipeline.",
 		"comingSoon": "Coming soon",
 		"features": {
 			"contacts": "Contact management",

@@ -7,6 +7,7 @@ import {
 	canChangeMemberRole,
 	hasOrgPermission,
 	ORG_POLICY,
+	ORG_ROLE_HIERARCHY,
 	OrgAccessControl,
 	type OrgRole,
 	PERMISSIONS,
@@ -17,6 +18,7 @@ import {
 	Card,
 	CardContent,
 	Input,
+	PageHeader,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -100,6 +102,16 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 	const canChangeRoles = currentUserRole
 		? hasOrgPermission(ac, actorRole, PERMISSIONS.ORGANIZATION.UPDATE)
 		: false;
+	// The API returns members in storage order, which is not stable — sort so
+	// the list never reshuffles between loads: highest role first, then email.
+	const members = org?.members
+		? [...org.members].sort(
+				(a, b) =>
+					ORG_ROLE_HIERARCHY.indexOf(toOrgRole(b.role)) -
+						ORG_ROLE_HIERARCHY.indexOf(toOrgRole(a.role)) ||
+					(a.user?.email ?? a.userId).localeCompare(b.user?.email ?? b.userId),
+			)
+		: undefined;
 	const ownerCount =
 		org?.members?.filter((m) => toOrgRole(m.role) === "owner").length ?? 0;
 
@@ -214,26 +226,22 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="font-bold text-3xl tracking-tight">
-					{t("organizations.settings.members")}
-				</h1>
-				<p className="mt-2 text-muted-foreground text-sm">
-					{t("organizations.settings.membersDescription")}
-				</p>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("organizations.settings.members")}
+			/>
 
-			<Card>
+			<Card className="py-0">
 				<CardContent className="space-y-6 p-6 md:p-8">
 					{canManageMembers && seatLimit && (
-						<div className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
-							<div>
-								<p className="font-medium text-sm">
+						<div className="flex flex-col gap-3 rounded-xl bg-area-users p-4 text-area-users-foreground sm:flex-row sm:items-center sm:justify-between">
+							<div className="min-w-0">
+								<p className="font-bold text-sm">
 									{t("organizations.settings.seatLimitReached", {
 										seats: seatLimit.seatsTotal,
 									})}
 								</p>
-								<p className="text-muted-foreground text-xs">
+								<p className="font-medium text-xs">
 									{t("organizations.settings.seatLimitHint")}
 								</p>
 							</div>
@@ -293,28 +301,30 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 						</div>
 					)}
 
-					{org.members && org.members.length > 0 && (
+					{members && members.length > 0 && (
 						<div>
 							<p className="mb-2 font-medium text-sm">
 								{t("organizations.settings.activeMembers")}
 							</p>
-							<ul className="divide-y rounded-lg border">
-								{org.members.map((m) => {
+							<ul className="divide-y overflow-hidden rounded-xl border">
+								{members.map((m) => {
 									const roleOptions = roleOptionsFor(m);
 									const memberName = m.user?.name ?? m.user?.email ?? m.userId;
 									return (
 										<li
 											key={m.id}
-											className="flex items-center justify-between gap-4 p-3"
+											className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-3"
 										>
-											<div>
-												<p className="font-medium text-sm">{memberName}</p>
-												<p className="text-muted-foreground text-xs">
+											<div className="min-w-0 flex-1 basis-48">
+												<p className="truncate font-medium text-sm">
+													{memberName}
+												</p>
+												<p className="break-all text-muted-foreground text-xs">
 													{m.user?.email} ·{" "}
 													{roleLabel[toOrgRole(m.role)] ?? m.role}
 												</p>
 											</div>
-											<div className="flex items-center gap-2">
+											<div className="flex shrink-0 items-center gap-2">
 												{roleOptions.length > 0 && (
 													<Select
 														value={toOrgRole(m.role)}
@@ -326,7 +336,7 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 																"organizations.settings.changeRoleLabel",
 																{ name: memberName },
 															)}
-															className="w-28"
+															className="w-auto min-w-28"
 														>
 															<SelectValue />
 														</SelectTrigger>
@@ -360,21 +370,23 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 						</div>
 					)}
 
-					{org.invitations && org.invitations.length > 0 && (
+					{org.invitations?.some((i) => i.status === "pending") && (
 						<div>
 							<p className="mb-2 font-medium text-sm">
 								{t("organizations.settings.pendingInvitations")}
 							</p>
-							<ul className="divide-y rounded-lg border">
+							<ul className="divide-y overflow-hidden rounded-xl border">
 								{org.invitations
 									.filter((i) => i.status === "pending")
 									.map((i) => (
 										<li
 											key={i.id}
-											className="flex items-center justify-between gap-4 p-3"
+											className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-3"
 										>
-											<div>
-												<p className="font-medium text-sm">{i.email}</p>
+											<div className="min-w-0 flex-1 basis-48">
+												<p className="break-all font-medium text-sm">
+													{i.email}
+												</p>
 												<p className="text-muted-foreground text-xs">
 													{roleLabel[toOrgRole(i.role)] ?? i.role}
 												</p>

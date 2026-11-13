@@ -49,6 +49,7 @@ const BANNED_SOURCES: ReadonlyArray<{ label: string; re: RegExp }> = [
 const SKIP_DIRS = new Set([
 	"node_modules",
 	".next",
+	".next-e2e",
 	".turbo",
 	"coverage",
 	"dist",

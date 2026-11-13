@@ -1,0 +1,711 @@
+{
+	"designSystem": {
+		"title": "Design system",
+		"eyebrow": "Live style guide",
+		"intro": "The live style guide of this app: what your product looks like today, and where to change it.",
+		"mode": "Mode",
+		"about": {
+			"title": "What this page is",
+			"body": "Every color, type role and component below is rendered live from the tokens in <code>packages/config/brand.css</code>, through the same <code>@fuutu/ui</code> components your screens use. Nothing here is a screenshot: change a token and this page follows.",
+			"contract": "<code>DESIGN.md</code> is the written contract: roles, rules and decisions in plain words. A test fails as soon as its colors drift from brand.css, and <code>pnpm -F @fuutu/ui test</code> checks every pair against WCAG AA.",
+			"howTitle": "How to change it",
+			"steps": {
+				"edit": {
+					"title": "Edit the tokens",
+					"description": "Change the light and dark values in <code>packages/config/brand.css</code>. It is the only file you edit."
+				},
+				"paste": {
+					"title": "Paste a theme",
+					"description": "Export a theme from <code>tweakcn</code> or <code>ui.shadcn.com/create</code> and paste it into brand.css unchanged."
+				},
+				"skill": {
+					"title": "Let your agent do it",
+					"description": "Ask your coding agent to run the <code>setup-brand</code> skill with your brand colors, fonts and radius."
+				}
+			}
+		},
+		"nav": {
+			"label": "On this page"
+		},
+		"sections": {
+			"foundations": {
+				"title": "Foundations",
+				"description": "Color roles with contrast measured live in your browser, the full palette, type roles, spacing, radius, elevation and icons. Nothing here is hard-coded; every value is read from the running CSS."
+			},
+			"components": {
+				"title": "Components",
+				"description": "Every primitive exported from <code>@fuutu/ui</code>, variants and states side by side: default, hover, focus, active, disabled and invalid, pinned without touching the mouse."
+			},
+			"patterns": {
+				"title": "Patterns",
+				"description": "Kit compositions built from those primitives and fed with real config: stats, pricing, auth card, media frames, logo rail and the mesh gradient."
+			},
+			"doDont": {
+				"title": "Do & Don't",
+				"description": "The rules from <code>DESIGN.md</code>, rendered as right and wrong pairs."
+			},
+			"example": {
+				"title": "Example screen",
+				"description": "A complete settings screen assembled only from tokens and <code>@fuutu/ui</code>: what your product looks like before you write a line of CSS."
+			}
+		},
+		"foundations": {
+			"colors": {
+				"title": "Color roles",
+				"description": "Every surface is tested with its foreground. The ratio on each tile is measured in your browser from the computed styles, so it follows light and dark mode and any edit to <code>brand.css</code>.",
+				"sample": "Aa",
+				"pair": "<code>{fg}</code> on <code>{bg}</code>",
+				"badge": "{ratio}:1 · {status, select, pass {AA pass} other {AA fail}}",
+				"pending": "Measuring",
+				"minimum": "min {ratio}:1",
+				"groups": {
+					"roles": {
+						"title": "Surface and foreground",
+						"description": "Each surface with its own text color. Needs 4.5:1."
+					},
+					"textUse": {
+						"title": "Text on page surfaces",
+						"description": "Roles that appear as text on background and card, like links and form errors. Needs 4.5:1."
+					},
+					"areas": {
+						"title": "Area colors",
+						"description": "Each area ink on its own fill, and as text on background and card. Needs 4.5:1."
+					},
+					"destructiveFill": {
+						"title": "Destructive fill",
+						"description": "Buttons and badges render literal white on the fill, and a 60% fill in dark mode. Measured as rendered."
+					},
+					"primaryHover": {
+						"title": "Primary hover fill",
+						"description": "The default button hover renders primary at 90% over the page. Measured as rendered."
+					},
+					"focusRing": {
+						"title": "Focus ring",
+						"description": "Components draw focus as the ring at 50% over the surface. Measured as rendered. Needs 3:1."
+					},
+					"nonText": {
+						"title": "Focus, form edges and charts",
+						"description": "Non-text elements need 3:1 against the surface they sit on."
+					}
+				}
+			},
+			"palette": {
+				"title": "Palette",
+				"description": "Every token in <code>brand.css</code> with the value the browser resolves right now. Switch the mode and the values change.",
+				"pending": "Reading value",
+				"groups": {
+					"surfaces": "Surfaces",
+					"actions": "Actions",
+					"neutrals": "Neutrals and edges",
+					"status": "Status",
+					"areas": "Area colors",
+					"charts": "Charts",
+					"sidebar": "Sidebar"
+				}
+			},
+			"areas": {
+				"title": "Areas",
+				"description": "Four product areas each own a pastel fill and a darker ink of the same hue. Fill with <code>bg-area-*</code>, set text and icons with <code>text-area-*-foreground</code>, and never put opacity on area text.",
+				"markers": "Icons and badges",
+				"items": {
+					"users": {
+						"name": "Users",
+						"covers": "Auth, members, organizations"
+					},
+					"billing": {
+						"name": "Billing",
+						"covers": "Plans, invoices, seats"
+					},
+					"ai": {
+						"name": "AI",
+						"covers": "Chat, credits, usage"
+					},
+					"api": {
+						"name": "API",
+						"covers": "API keys, webhooks, MCP"
+					}
+				},
+				"header": {
+					"label": "Page header on an area backdrop",
+					"title": "Members",
+					"description": "Invite teammates and assign roles. Changes apply on their next sign-in.",
+					"action": "Invite member"
+				}
+			},
+			"type": {
+				"title": "Typography",
+				"description": "Pick a role, do not invent sizes. Schibsted Grotesk for display and headings, Manrope for the interface, Geist Mono for code and identifiers.",
+				"roles": {
+					"display": {
+						"name": "Display",
+						"use": "Hero headline on marketing surfaces. Fluid on marketing, 60px here.",
+						"sample": "Ship the product, not the plumbing"
+					},
+					"h1": {
+						"name": "Heading 1",
+						"use": "One per page.",
+						"sample": "Organization settings"
+					},
+					"h2": {
+						"name": "Heading 2",
+						"use": "Titles of cards and panels.",
+						"sample": "Danger zone"
+					},
+					"h3": {
+						"name": "Heading 3",
+						"use": "List items and subsections.",
+						"sample": "Production API key"
+					},
+					"body": {
+						"name": "Body",
+						"use": "Default reading size.",
+						"sample": "Invite teammates and assign roles. Changes apply on their next sign-in."
+					},
+					"small": {
+						"name": "Small",
+						"use": "Captions, badges, metadata. Never primary content.",
+						"sample": "Last used 2 minutes ago"
+					},
+					"mono": {
+						"name": "Mono",
+						"use": "Code, tokens and identifiers.",
+						"sample": "pnpm -F @fuutu/ui test"
+					}
+				}
+			},
+			"spacing": {
+				"title": "Spacing",
+				"description": "A 4px base unit. Group related controls tightly and separate groups with a full card gap.",
+				"step": "{unit} · {px}px",
+				"notes": {
+					"1": "Base unit",
+					"6": "Card padding, card gap, page gutter"
+				}
+			},
+			"radius": {
+				"title": "Radius",
+				"description": "One <code>--radius</code> drives the scale. Change it once to re-shape the product. Buttons and badges use <code>rounded-full</code>.",
+				"roles": {
+					"sm": "Menu items",
+					"md": "Inputs and selects",
+					"lg": "Callouts and panels",
+					"xl": "Menus and popovers",
+					"2xl": "Cards",
+					"3xl": "Dialogs, sheets, auth card",
+					"4xl": "Largest feature surfaces"
+				}
+			},
+			"elevation": {
+				"title": "Elevation",
+				"description": "Tactile surfaces lift with a soft shadow and a faint ring, never a border. Overlays get the larger shadows.",
+				"levels": {
+					"2xs": {
+						"name": "shadow-2xs",
+						"use": "Hairline lift"
+					},
+					"xs": {
+						"name": "shadow-xs",
+						"use": "Form controls"
+					},
+					"sm": {
+						"name": "shadow-sm",
+						"use": "Resting cards"
+					},
+					"md": {
+						"name": "shadow-md",
+						"use": "Raised cards"
+					},
+					"lg": {
+						"name": "shadow-lg",
+						"use": "Dropdowns and popovers"
+					},
+					"xl": {
+						"name": "shadow-xl",
+						"use": "Dialogs and sheets"
+					},
+					"2xl": {
+						"name": "shadow-2xl",
+						"use": "Hero surfaces"
+					}
+				}
+			},
+			"icons": {
+				"title": "Icons",
+				"description": "Lucide, outline style. <code>size-4</code> inside controls, 20 to 24px when standalone. They inherit the text color."
+			}
+		},
+		"patterns": {
+			"stats": {
+				"title": "Stats cards",
+				"description": "Numbers read from the kit's own config, not made up. Add a locale or a plan and these change.",
+				"locales": {
+					"title": "Locales shipped",
+					"description": "Enabled in i18nConfig"
+				},
+				"plans": {
+					"title": "Plans configured",
+					"description": "Defined in PLANS"
+				},
+				"domains": {
+					"title": "Swappable domains",
+					"description": "One typed interface each"
+				}
+			},
+			"pricing": {
+				"title": "Pricing",
+				"description": "<code>PricingCompact</code> fed by <code>buildPricingTiers()</code>, so tiers, prices and features come straight from <code>PLANS</code> and the feature catalog.",
+				"fullToggle": "Full plan comparison"
+			},
+			"auth": {
+				"title": "Auth card",
+				"description": "The shell around every sign-in and sign-up screen. This form does not submit.",
+				"card": {
+					"title": "Welcome back",
+					"description": "Sign in to continue to your workspace.",
+					"email": "Email",
+					"emailPlaceholder": "you@company.com",
+					"password": "Password",
+					"forgot": "Forgot password?",
+					"submit": "Sign in",
+					"footer": "Sessions, OAuth and two-factor ship with the kit."
+				}
+			},
+			"media": {
+				"title": "Media frames",
+				"description": "Wrap a screenshot, a video or any content. The chrome variant adds a window bar.",
+				"plain": "Plain frame",
+				"chrome": "Window chrome",
+				"imageAlt": "The Fuutu Stack dashboard"
+			},
+			"logos": {
+				"title": "Logo rail",
+				"description": "The stack at a glance. Hover or focus a logo for details.",
+				"items": {
+					"nextjs": {
+						"name": "Next.js",
+						"description": "App Router and React 19 in all apps.",
+						"detail": "apps/saas, apps/marketing, apps/docs"
+					},
+					"typescript": {
+						"name": "TypeScript",
+						"description": "Strict mode, ESM everywhere.",
+						"detail": "No any, enforced by Biome"
+					},
+					"better-auth": {
+						"name": "Better Auth",
+						"description": "Sessions, OAuth, two-factor, organizations.",
+						"detail": "@fuutu/auth"
+					},
+					"prisma": {
+						"name": "Prisma",
+						"description": "Typed queries behind exported functions.",
+						"detail": "@fuutu/db"
+					},
+					"postgresql": {
+						"name": "PostgreSQL",
+						"description": "One database per port slot.",
+						"detail": "pnpm db:start"
+					},
+					"tailwind": {
+						"name": "Tailwind CSS",
+						"description": "Version 4 with OKLCH tokens.",
+						"detail": "packages/config/brand.css"
+					},
+					"turborepo": {
+						"name": "Turborepo",
+						"description": "Cached builds across the workspace.",
+						"detail": "pnpm check-types"
+					},
+					"hono": {
+						"name": "Hono",
+						"description": "The API behind oRPC procedures.",
+						"detail": "packages/api"
+					}
+				},
+				"single": "A single item card, as the rail renders each logo."
+			},
+			"mesh": {
+				"title": "Mesh gradient",
+				"description": "Two ways to get the hero background. Both read <code>--primary</code> and <code>--chart-4</code>, so they follow the brand.",
+				"component": {
+					"title": "MeshGradient",
+					"caption": "WebGL, animated, configurable speed."
+				},
+				"utility": {
+					"title": ".mesh-gradient",
+					"caption": "CSS only, no JavaScript."
+				},
+				"areas": {
+					"title": "color1=\"var(--area-users)\" color2=\"var(--area-ai)\"",
+					"caption": "CSS vars resolve at runtime. Area colors tint the hero while the primary stays ink."
+				}
+			}
+		},
+		"doDont": {
+			"do": "Do",
+			"dont": "Don't",
+			"pairs": {
+				"roles": {
+					"title": "Name a role, not a color",
+					"do": "Components ask for <code>bg-primary</code>. Rebranding changes one file.",
+					"dont": "A palette color like <code>bg-indigo-600</code> ignores dark mode and every future theme.",
+					"doSample": "Active",
+					"dontSample": "Hard-coded color",
+					"doCode": "bg-primary",
+					"dontCode": "bg-indigo-600"
+				},
+				"primary": {
+					"title": "One primary button per view",
+					"do": "One filled action, the rest step back to outline.",
+					"dont": "Three filled buttons compete. Nobody knows what the page wants.",
+					"cancel": "Cancel",
+					"save": "Save changes",
+					"publish": "Publish",
+					"invite": "Invite member"
+				},
+				"colorAlone": {
+					"title": "Never rely on color alone",
+					"do": "Icon and label carry the state. Color only reinforces it.",
+					"dont": "A red dot without a label is invisible to screen readers and some eyes.",
+					"label": "Payment failed"
+				},
+				"fills": {
+					"title": "Warning and info are fills, never text",
+					"do": "A filled callout always carries its own foreground color.",
+					"dont": "Amber text such as <code>text-warning</code> sits near 1.6:1 on a light surface.",
+					"callout": "Your trial ends in 3 days. Add a payment method to keep your plan.",
+					"dontCode": "text-warning"
+				},
+				"intent": {
+					"title": "Destructive means irreversible",
+					"do": "The red button is reserved for an action that cannot be undone.",
+					"dont": "Red on a routine save teaches people to ignore red.",
+					"delete": "Delete organization",
+					"save": "Save changes"
+				},
+				"areaMark": {
+					"title": "Area color marks the area, never status",
+					"do": "The users tint labels the members area: tile, icon and badge.",
+					"dont": "A billing tint on a failed payment reads as status. Use <code>bg-destructive</code> and an icon instead.",
+					"members": "Members",
+					"dontCode": "bg-area-billing (payment failed)"
+				},
+				"areaOpacity": {
+					"title": "No opacity on area text",
+					"do": "Area ink stays solid on its own fill, so it keeps its measured contrast.",
+					"dont": "Fading the ink drops it below 4.5:1 on the pastel fill.",
+					"sample": "AI credits",
+					"dontCode": "text-area-ai-foreground/60"
+				}
+			}
+		},
+		"example": {
+			"orgName": "Acme",
+			"plan": "Pro",
+			"heading": "Organization settings",
+			"subheading": "Manage how your team works in Acme.",
+			"tabs": {
+				"label": "Organization sections",
+				"general": "General",
+				"members": "Members",
+				"billing": "Billing"
+			},
+			"general": {
+				"nameLabel": "Organization name",
+				"nameValue": "Acme",
+				"slugLabel": "URL slug",
+				"slugValue": "acme",
+				"slugHint": "Used in links like /organizations/acme. Changing it breaks existing links.",
+				"roleLabel": "Default role for new members",
+				"rolePlaceholder": "Choose a role",
+				"roles": {
+					"admin": "Admin",
+					"member": "Member",
+					"viewer": "Viewer"
+				},
+				"twoFactorLabel": "Require two-factor authentication",
+				"twoFactorHint": "Members without it are asked to set it up on their next sign-in.",
+				"inviteLabel": "Let members invite teammates",
+				"inviteHint": "Admins can always invite."
+			},
+			"members": {
+				"title": "Members",
+				"owner": "Owner",
+				"admin": "Admin",
+				"member": "Member",
+				"items": {
+					"one": {
+						"name": "Admin User",
+						"email": "admin@fuutu.local",
+						"initials": "AU"
+					},
+					"two": {
+						"name": "Maya Lindqvist",
+						"email": "maya@acme.test",
+						"initials": "ML"
+					},
+					"three": {
+						"name": "Tom Brandt",
+						"email": "tom@acme.test",
+						"initials": "TB"
+					}
+				}
+			},
+			"callout": "All 5 seats on your Pro plan are in use. Add seats in Billing before you invite more people.",
+			"cancel": "Cancel",
+			"save": "Save changes",
+			"billing": {
+				"seats": "Seats in use",
+				"usage": "{used} of {total} seats"
+			}
+		},
+		"components": {
+			"matrix": {
+				"states": {
+					"default": "Default",
+					"hover": "Hover",
+					"focus": "Focus",
+					"active": "Active",
+					"disabled": "Disabled",
+					"invalid": "Invalid"
+				},
+				"none": "—"
+			},
+			"button": {
+				"title": "Button",
+				"description": "Six variants. Use <code>default</code> once per view; <code>destructive</code> only for actions that cannot be undone.",
+				"label": "Continue",
+				"sizes": "Sizes",
+				"iconLabel": "Add item"
+			},
+			"badge": {
+				"title": "Badge",
+				"description": "Status and metadata. A badge is not interactive, so hover, active and disabled do not apply.",
+				"label": "Active"
+			},
+			"form": {
+				"title": "Form controls",
+				"description": "The pinned states use the same classes a real hover or keyboard focus does. Slider thumbs and one-time-code slots follow real focus only."
+			},
+			"input": {
+				"aria": "Organization name",
+				"value": "Acme"
+			},
+			"textarea": {
+				"aria": "Description",
+				"value": "Used on invoices."
+			},
+			"select": {
+				"aria": "Default role",
+				"member": "Member",
+				"admin": "Admin"
+			},
+			"checkbox": {
+				"aria": "Accept the terms"
+			},
+			"switch": {
+				"aria": "Enable notifications"
+			},
+			"radio": {
+				"aria": "Billing interval",
+				"item": "Monthly"
+			},
+			"slider": {
+				"aria": "Storage limit"
+			},
+			"otp": {
+				"title": "One-time code",
+				"aria": "Verification code"
+			},
+			"fields": {
+				"title": "Fields",
+				"description": "<code>Field</code> ties a label, a control, a hint and an error together. Error and disabled come from <code>data-invalid</code> and <code>data-disabled</code>.",
+				"typical": {
+					"name": "Typical",
+					"label": "Email",
+					"placeholder": "you@company.com"
+				},
+				"described": {
+					"name": "With description",
+					"label": "URL slug",
+					"value": "acme",
+					"hint": "Used in links like /organizations/acme."
+				},
+				"error": {
+					"name": "With error",
+					"label": "Email",
+					"value": "you@company",
+					"message": "Enter a full address, like you@company.com."
+				},
+				"disabled": {
+					"name": "Disabled",
+					"label": "Plan",
+					"value": "Pro"
+				},
+				"group": {
+					"legend": "Email me about",
+					"description": "Group related choices in a field set.",
+					"invites": "New member invites",
+					"billing": "Billing and invoices",
+					"or": "or",
+					"digestTitle": "Weekly digest",
+					"digestHint": "One summary instead of single emails.",
+					"compact": "Use compact layout"
+				}
+			},
+			"overlays": {
+				"title": "Overlays",
+				"description": "Each one opens from a real trigger. Press <code>Esc</code> to close.",
+				"closeLabel": "Close",
+				"dialog": {
+					"title": "Dialog",
+					"description": "Focused tasks that keep the page behind it.",
+					"trigger": "Open dialog",
+					"heading": "Invite a teammate",
+					"body": "They get an email with a link that expires in seven days.",
+					"cancel": "Cancel",
+					"confirm": "Send invite"
+				},
+				"alertDialog": {
+					"title": "Alert dialog",
+					"description": "Confirms an action that cannot be undone.",
+					"trigger": "Delete organization",
+					"heading": "Delete Acme?",
+					"body": "This removes all members, API keys and webhooks. It cannot be undone.",
+					"cancel": "Keep organization",
+					"action": "Delete"
+				},
+				"sheet": {
+					"title": "Sheet",
+					"description": "Side panel for details and secondary forms.",
+					"trigger": "Open sheet",
+					"heading": "Audit log entry",
+					"body": "Who changed what, and when.",
+					"close": "Close"
+				},
+				"dropdown": {
+					"title": "Dropdown menu",
+					"description": "Actions, toggles, choices and nested menus.",
+					"trigger": "Open menu",
+					"label": "Account",
+					"profile": "Profile",
+					"profileShortcut": "⇧⌘P",
+					"billing": "Billing",
+					"billingShortcut": "⌘B",
+					"archived": "Show archived",
+					"comfortable": "Comfortable",
+					"compact": "Compact",
+					"more": "More",
+					"export": "Export data",
+					"import": "Import data"
+				},
+				"tooltip": {
+					"title": "Tooltip",
+					"description": "A short hint on hover and keyboard focus.",
+					"trigger": "Hover or focus me",
+					"text": "Copies the key to your clipboard"
+				},
+				"select": {
+					"title": "Select",
+					"description": "Grouped options in a popover.",
+					"aria": "Region",
+					"placeholder": "Choose a region",
+					"europe": "Europe",
+					"frankfurt": "Frankfurt",
+					"dublin": "Dublin",
+					"americas": "Americas",
+					"virginia": "Virginia"
+				},
+				"toast": {
+					"title": "Toast",
+					"description": "Feedback that fades on its own. The app mounts one toaster for the whole product.",
+					"default": {
+						"trigger": "Default",
+						"title": "Settings saved",
+						"description": "Your changes are live."
+					},
+					"success": {
+						"trigger": "Success",
+						"title": "Invite sent"
+					},
+					"error": {
+						"trigger": "Error",
+						"title": "Could not send the invite"
+					}
+				}
+			},
+			"display": {
+				"title": "Display and navigation",
+				"description": "Smaller building blocks you compose every day.",
+				"tabs": {
+					"overview": "Overview",
+					"activity": "Activity",
+					"settings": "Settings",
+					"overviewBody": "Plan, usage and members at a glance.",
+					"activityBody": "The latest sign-ins and role changes.",
+					"settingsBody": "Name, slug and defaults."
+				},
+				"breadcrumb": {
+					"home": "Home",
+					"more": "More pages",
+					"organizations": "Organizations",
+					"current": "Acme"
+				},
+				"alert": {
+					"title": "Heads up",
+					"body": "Seats are billed per member and adjust automatically.",
+					"errorTitle": "Payment failed",
+					"errorBody": "Update your card to keep the Pro plan."
+				},
+				"card": {
+					"title": "Webhook endpoint",
+					"description": "Receives billing events.",
+					"action": "Edit",
+					"body": "https://api.acme.test/hooks/billing",
+					"footer": "Last delivery 2 minutes ago"
+				},
+				"avatar": {
+					"alt": "Fuutu Stack",
+					"fallback": "FS",
+					"initials": "ML",
+					"initialsLarge": "TB"
+				},
+				"progress": {
+					"label": "Storage used, {value} percent"
+				},
+				"separator": {
+					"docs": "Docs",
+					"source": "Source",
+					"support": "Support",
+					"note": "Horizontal and vertical."
+				},
+				"collapsible": {
+					"title": "Included in Pro",
+					"toggle": "Show more",
+					"first": "Passkeys",
+					"second": "Audit log, 30 days"
+				}
+			},
+			"sidebar": {
+				"title": "Sidebar",
+				"description": "Every sidebar part, in an inline copy of the app shell. The toggle and rail are disabled here.",
+				"toggle": "Toggle sidebar",
+				"brand": "Fuutu Stack",
+				"search": "Search",
+				"platform": "Platform",
+				"add": "Add item",
+				"dashboard": "Dashboard",
+				"notifications": "Notifications",
+				"unread": "3",
+				"organizations": "Organizations",
+				"more": "More actions",
+				"members": "Members",
+				"billing": "Billing",
+				"apiKeys": "API keys",
+				"loading": "Loading",
+				"footer": "admin@fuutu.local",
+				"content": "Page content"
+			}
+		}
+	}
+}

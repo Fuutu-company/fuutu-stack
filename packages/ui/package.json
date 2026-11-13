@@ -4,7 +4,9 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./color": "./src/color.ts",
+		"./stacked-bars": "./src/lib/stacked-bars.ts"
 	},
 	"scripts": {
 		"check-types": "tsc --noEmit",

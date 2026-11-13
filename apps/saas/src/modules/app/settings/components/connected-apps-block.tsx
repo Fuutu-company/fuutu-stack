@@ -60,7 +60,7 @@ export function ConnectedAppsBlock() {
 	return (
 		<div className="space-y-5" data-testid="connected-apps">
 			<div>
-				<h3 className="font-semibold text-lg">
+				<h3 className="font-bold font-heading text-lg tracking-heading">
 					{t("settings.connectedApps.title")}
 				</h3>
 				<p className="text-muted-foreground text-sm">
@@ -81,7 +81,7 @@ export function ConnectedAppsBlock() {
 					{t("settings.connectedApps.none")}
 				</p>
 			) : (
-				<ul className="divide-y rounded-lg border">
+				<ul className="divide-y overflow-hidden rounded-xl border">
 					{apps.map((app) => (
 						<li
 							key={app.clientId}

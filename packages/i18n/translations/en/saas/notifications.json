@@ -1,7 +1,6 @@
 {
 	"notifications": {
 		"title": "Notifications",
-		"description": "Your recent activity and alerts.",
 		"markAllRead": "Mark all as read",
 		"marking": "Marking…",
 		"markAllReadError": "Failed to mark notifications as read.",

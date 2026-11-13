@@ -9,6 +9,7 @@
  * No external CSS, no webfonts.
  */
 import { getDirection, isValidLocale } from "@fuutu/i18n";
+import { MAIL_COLORS } from "./colors";
 
 export interface LayoutOptions {
 	locale?: string;
@@ -32,9 +33,9 @@ export function renderLayout(body: string, opts: LayoutOptions = {}): string {
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Fuutu</title><!-- intentional: kit's own demo branding -->
   </head>
-  <body style="margin:0;padding:24px;background:#f6f6f7;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;color:#111;">
+  <body style="margin:0;padding:24px;background:${MAIL_COLORS.page};font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;color:${MAIL_COLORS.text};">
     ${preview}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:${MAIL_COLORS.card};border-radius:20px;border:1px solid ${MAIL_COLORS.border};">
       <tr>
         <td style="padding:32px;">
           ${body}
@@ -50,7 +51,7 @@ export function renderLayout(body: string, opts: LayoutOptions = {}): string {
  * Apple Mail. Uses a table fallback-free approach — enough for dev.
  */
 export function renderButton(href: string, label: string): string {
-	return `<a href="${escapeAttr(safeHref(href))}" style="display:inline-block;padding:12px 20px;background:#111;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">${escapeHtml(label)}</a>`;
+	return `<a href="${escapeAttr(safeHref(href))}" style="display:inline-block;padding:12px 20px;background:${MAIL_COLORS.button};color:${MAIL_COLORS.buttonText};border-radius:999px;text-decoration:none;font-weight:600;">${escapeHtml(label)}</a>`;
 }
 
 /**

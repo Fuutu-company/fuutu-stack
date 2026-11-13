@@ -1,11 +1,11 @@
 {
 	"pricing": {
-		"eyebrow": "Preise",
 		"title": "Einfache, transparente Preise",
 		"description": "Wähle den Plan, der zu deiner Phase passt. Upgrade oder Downgrade jederzeit möglich.",
 		"moreFeatures": "weitere Features",
 		"seeAll": "Alle Features ansehen",
 		"watchDemo": "Demo ansehen",
+		"customPrice": "Individuell",
 		"enterprise": {
 			"dedicated_support": "Dedizierter Support",
 			"dedicated_support_desc": "Ein fester Engineer für dein Team.",

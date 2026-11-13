@@ -13,11 +13,13 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
 	SidebarRail,
 	useSidebar,
 } from "@fuutu/ui";
 import { LocaleSwitcher } from "@shared/components/locale-switcher";
-import { Shield } from "lucide-react";
+import { Palette, Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -50,7 +52,7 @@ export function AppSidebar() {
 	}, [pathname, isMobile, setOpenMobile]);
 
 	return (
-		<Sidebar collapsible="icon">
+		<Sidebar collapsible="icon" variant="floating">
 			<SidebarHeader>
 				{/* Static app logo + name — name hidden when sidebar collapsed to icon */}
 				<Link href="/dashboard" className="flex items-center gap-2.5 px-2 py-2">
@@ -82,6 +84,19 @@ export function AppSidebar() {
 								activePrefix={ADMIN_PATH}
 								items={getAdminItems()}
 							/>
+							{config.features.designSystem && (
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										asChild
+										isActive={pathname.startsWith("/design")}
+									>
+										<Link href="/design">
+											<Palette />
+											<span>{t("navigation.design")}</span>
+										</Link>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							)}
 						</SidebarMenu>
 					</SidebarGroup>
 				)}

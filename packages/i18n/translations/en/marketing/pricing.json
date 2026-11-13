@@ -1,11 +1,11 @@
 {
 	"pricing": {
-		"eyebrow": "Pricing",
 		"title": "Simple, transparent pricing",
 		"description": "Choose the plan that fits your stage. Upgrade or downgrade any time.",
 		"moreFeatures": "more features",
 		"seeAll": "See all features",
 		"watchDemo": "Watch demo",
+		"customPrice": "Custom",
 		"enterprise": {
 			"dedicated_support": "Dedicated support",
 			"dedicated_support_desc": "A named engineer on call for your team.",

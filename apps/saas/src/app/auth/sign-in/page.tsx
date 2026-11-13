@@ -3,6 +3,7 @@ import { Skeleton } from "@fuutu/ui";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
+import { redirectIfSignedIn } from "@/lib/auth-server";
 import { AuthSignIn } from "@/modules/auth/components/auth-sign-in";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -12,7 +13,12 @@ export async function generateMetadata(): Promise<Metadata> {
 	};
 }
 
-export default function SignInPage() {
+export default async function SignInPage({
+	searchParams,
+}: {
+	searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+	await redirectIfSignedIn(await searchParams);
 	return (
 		<Suspense fallback={<Skeleton className="h-80 w-full max-w-md" />}>
 			<AuthSignIn methods={getAuthMethods()} />

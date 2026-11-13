@@ -31,7 +31,10 @@ export function StatsCard({
 				{Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
 			</CardHeader>
 			<CardContent>
-				<div className="font-bold text-2xl" data-testid="stat-value">
+				<div
+					className="font-bold text-2xl tabular-nums"
+					data-testid="stat-value"
+				>
 					{value}
 				</div>
 				{description && (

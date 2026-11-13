@@ -23,6 +23,7 @@
 	"workbench.editor.enablePreview": false,
 	"search.exclude": {
 		"**/.next": true,
+		"**/.next-e2e": true,
 		"**/node_modules": true,
 		"**/dist": true,
 		"**/.turbo": true,
@@ -30,6 +31,7 @@
 	},
 	"files.watcherExclude": {
 		"**/.next/**": true,
+		"**/.next-e2e/**": true,
 		"**/node_modules/**": true,
 		"**/dist/**": true,
 		"**/.turbo/**": true,

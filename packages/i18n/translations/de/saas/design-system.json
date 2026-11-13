@@ -1,0 +1,711 @@
+{
+	"designSystem": {
+		"title": "Designsystem",
+		"eyebrow": "Live-Styleguide",
+		"intro": "Der Live-Styleguide dieser App: so sieht dein Produkt heute aus, und hier änderst du es.",
+		"mode": "Modus",
+		"about": {
+			"title": "Was diese Seite ist",
+			"body": "Jede Farbe, jede Schriftrolle und jede Komponente unten wird live aus den Tokens in <code>packages/config/brand.css</code> gerendert, mit denselben <code>@fuutu/ui</code>-Komponenten wie deine Screens. Nichts davon ist ein Screenshot: Änderst du einen Token, zieht diese Seite mit.",
+			"contract": "<code>DESIGN.md</code> ist der schriftliche Vertrag: Rollen, Regeln und Entscheidungen in Klartext. Ein Test schlägt fehl, sobald die Farben von brand.css abweichen, und <code>pnpm -F @fuutu/ui test</code> prüft jedes Paar gegen WCAG AA.",
+			"howTitle": "So änderst du es",
+			"steps": {
+				"edit": {
+					"title": "Tokens bearbeiten",
+					"description": "Ändere die Hell- und Dunkel-Werte in <code>packages/config/brand.css</code>. Das ist die einzige Datei, die du bearbeitest."
+				},
+				"paste": {
+					"title": "Theme einfügen",
+					"description": "Exportiere ein Theme aus <code>tweakcn</code> oder <code>ui.shadcn.com/create</code> und füge es unverändert in brand.css ein."
+				},
+				"skill": {
+					"title": "Den Agenten machen lassen",
+					"description": "Bitte deinen Coding-Agenten, den <code>setup-brand</code>-Skill mit deinen Markenfarben, Schriften und Radien auszuführen."
+				}
+			}
+		},
+		"nav": {
+			"label": "Auf dieser Seite"
+		},
+		"sections": {
+			"foundations": {
+				"title": "Grundlagen",
+				"description": "Farbrollen mit live im Browser gemessenem Kontrast, die komplette Palette, Schriftrollen, Abstände, Radien, Ebenen und Icons. Nichts davon ist fest codiert; jeder Wert wird aus dem laufenden CSS gelesen."
+			},
+			"components": {
+				"title": "Komponenten",
+				"description": "Jedes aus <code>@fuutu/ui</code> exportierte Primitive, Varianten und Zustände nebeneinander: Standard, Hover, Fokus, Aktiv, Deaktiviert und Ungültig, fixiert, ohne die Maus zu bewegen."
+			},
+			"patterns": {
+				"title": "Muster",
+				"description": "Kit-Kompositionen aus diesen Primitiven, gespeist mit echter Konfiguration: Kennzahlen, Preise, Auth-Karte, Media-Frames, Logo-Leiste und der Mesh-Verlauf."
+			},
+			"doDont": {
+				"title": "Richtig & falsch",
+				"description": "Die Regeln aus <code>DESIGN.md</code>, dargestellt als Paare aus richtig und falsch."
+			},
+			"example": {
+				"title": "Beispielscreen",
+				"description": "Ein vollständiger Einstellungs-Screen, nur aus Tokens und <code>@fuutu/ui</code> gebaut: So sieht dein Produkt aus, bevor du eine Zeile CSS schreibst."
+			}
+		},
+		"foundations": {
+			"colors": {
+				"title": "Farbrollen",
+				"description": "Jede Fläche wird mit ihrer Vordergrundfarbe getestet. Das Verhältnis auf jeder Kachel wird im Browser aus den berechneten Styles gemessen und folgt deshalb Hell und Dunkel sowie jeder Änderung an <code>brand.css</code>.",
+				"sample": "Aa",
+				"pair": "<code>{fg}</code> auf <code>{bg}</code>",
+				"badge": "{ratio}:1 · {status, select, pass {AA bestanden} other {AA nicht bestanden}}",
+				"pending": "Wird gemessen",
+				"minimum": "min. {ratio}:1",
+				"groups": {
+					"roles": {
+						"title": "Fläche und Vordergrund",
+						"description": "Jede Fläche mit ihrer eigenen Textfarbe. Erfordert 4,5:1."
+					},
+					"textUse": {
+						"title": "Text auf Seitenflächen",
+						"description": "Rollen, die als Text auf background und card erscheinen, etwa Links und Formularfehler. Erfordert 4,5:1."
+					},
+					"areas": {
+						"title": "Bereichsfarben",
+						"description": "Jede Bereichsfarbe auf ihrer eigenen Füllung und als Text auf background und card. Erfordert 4,5:1."
+					},
+					"destructiveFill": {
+						"title": "Destruktive Füllung",
+						"description": "Buttons und Badges rendern reines Weiß auf der Füllung, im Dark Mode mit 60 % Deckkraft. Gemessen wie gerendert."
+					},
+					"primaryHover": {
+						"title": "Primär-Hover-Füllung",
+						"description": "Der Standard-Button-Hover rendert Primär mit 90 % Deckkraft über der Seite. Gemessen wie gerendert."
+					},
+					"focusRing": {
+						"title": "Fokusring",
+						"description": "Komponenten zeichnen den Fokus als Ring mit 50 % Deckkraft über der Fläche. Gemessen wie gerendert. Erfordert 3:1."
+					},
+					"nonText": {
+						"title": "Fokus, Formularränder und Diagramme",
+						"description": "Nicht-Text-Elemente brauchen 3:1 gegenüber ihrer Fläche."
+					}
+				}
+			},
+			"palette": {
+				"title": "Palette",
+				"description": "Jedes Token aus <code>brand.css</code> mit dem Wert, den der Browser gerade auflöst. Wechselst du den Modus, ändern sich die Werte.",
+				"pending": "Wert wird gelesen",
+				"groups": {
+					"surfaces": "Flächen",
+					"actions": "Aktionen",
+					"neutrals": "Neutrale Töne und Ränder",
+					"status": "Status",
+					"areas": "Bereichsfarben",
+					"charts": "Diagramme",
+					"sidebar": "Seitenleiste"
+				}
+			},
+			"areas": {
+				"title": "Bereiche",
+				"description": "Vier Produktbereiche haben je eine Pastellfläche und eine dunklere Tinte im selben Farbton. Flächen mit <code>bg-area-*</code>, Text und Icons mit <code>text-area-*-foreground</code>, und Bereichstext nie mit Deckkraft abschwächen.",
+				"markers": "Icons und Badges",
+				"items": {
+					"users": {
+						"name": "Nutzer",
+						"covers": "Auth, Mitglieder, Organisationen"
+					},
+					"billing": {
+						"name": "Abrechnung",
+						"covers": "Pläne, Rechnungen, Plätze"
+					},
+					"ai": {
+						"name": "KI",
+						"covers": "Chat, Credits, Verbrauch"
+					},
+					"api": {
+						"name": "API",
+						"covers": "API-Keys, Webhooks, MCP"
+					}
+				},
+				"header": {
+					"label": "Seitenkopf auf Bereichshintergrund",
+					"title": "Mitglieder",
+					"description": "Lade Teammitglieder ein und vergib Rollen. Änderungen gelten ab ihrer nächsten Anmeldung.",
+					"action": "Mitglied einladen"
+				}
+			},
+			"type": {
+				"title": "Typografie",
+				"description": "Wähle eine Rolle, erfinde keine Größen. Schibsted Grotesk für Display und Überschriften, Manrope für die Oberfläche, Geist Mono für Code und Bezeichner.",
+				"roles": {
+					"display": {
+						"name": "Display",
+						"use": "Hero-Überschrift auf Marketing-Seiten. Dort fluid, hier 60px.",
+						"sample": "Liefere das Produkt, nicht die Infrastruktur"
+					},
+					"h1": {
+						"name": "Überschrift 1",
+						"use": "Eine pro Seite.",
+						"sample": "Organisationseinstellungen"
+					},
+					"h2": {
+						"name": "Überschrift 2",
+						"use": "Titel von Karten und Panels.",
+						"sample": "Gefahrenbereich"
+					},
+					"h3": {
+						"name": "Überschrift 3",
+						"use": "Listeneinträge und Unterabschnitte.",
+						"sample": "Produktions-API-Schlüssel"
+					},
+					"body": {
+						"name": "Fließtext",
+						"use": "Standardgröße zum Lesen.",
+						"sample": "Lade Teammitglieder ein und weise Rollen zu. Änderungen gelten ab der nächsten Anmeldung."
+					},
+					"small": {
+						"name": "Klein",
+						"use": "Beschriftungen, Badges, Metadaten. Nie Hauptinhalt.",
+						"sample": "Zuletzt vor 2 Minuten verwendet"
+					},
+					"mono": {
+						"name": "Mono",
+						"use": "Code, Token und Bezeichner.",
+						"sample": "pnpm -F @fuutu/ui test"
+					}
+				}
+			},
+			"spacing": {
+				"title": "Abstände",
+				"description": "Eine Basiseinheit von 4px. Verwandte Controls eng gruppieren, Gruppen mit einem vollen Karten-Abstand trennen.",
+				"step": "{unit} · {px}px",
+				"notes": {
+					"1": "Basiseinheit",
+					"6": "Karten-Padding, Karten-Abstand, Seitenrand"
+				}
+			},
+			"radius": {
+				"title": "Radius",
+				"description": "Ein einziges <code>--radius</code> steuert die Skala. Einmal ändern, und das ganze Produkt bekommt eine neue Form. Buttons und Badges nutzen <code>rounded-full</code>.",
+				"roles": {
+					"sm": "Menüeinträge",
+					"md": "Eingaben und Selects",
+					"lg": "Hinweise und Panels",
+					"xl": "Menüs und Popovers",
+					"2xl": "Karten",
+					"3xl": "Dialoge, Sheets, Auth-Karte",
+					"4xl": "Größte Feature-Flächen"
+				}
+			},
+			"elevation": {
+				"title": "Erhebung",
+				"description": "Tactile-Flächen heben sich mit weichem Schatten und feinem Ring ab, nie mit Rand. Overlays bekommen die größeren Schatten.",
+				"levels": {
+					"2xs": {
+						"name": "shadow-2xs",
+						"use": "Haarfeine Anhebung"
+					},
+					"xs": {
+						"name": "shadow-xs",
+						"use": "Formularfelder"
+					},
+					"sm": {
+						"name": "shadow-sm",
+						"use": "Ruhende Karten"
+					},
+					"md": {
+						"name": "shadow-md",
+						"use": "Erhöhte Karten"
+					},
+					"lg": {
+						"name": "shadow-lg",
+						"use": "Dropdowns und Popovers"
+					},
+					"xl": {
+						"name": "shadow-xl",
+						"use": "Dialoge und Sheets"
+					},
+					"2xl": {
+						"name": "shadow-2xl",
+						"use": "Hero-Flächen"
+					}
+				}
+			},
+			"icons": {
+				"title": "Icons",
+				"description": "Lucide im Outline-Stil. <code>size-4</code> in Controls, 20 bis 24px allein stehend. Sie übernehmen die Textfarbe."
+			}
+		},
+		"patterns": {
+			"stats": {
+				"title": "Statistik-Karten",
+				"description": "Zahlen direkt aus der Konfiguration des Kits, nicht erfunden. Füge eine Sprache oder einen Plan hinzu, und sie ändern sich.",
+				"locales": {
+					"title": "Mitgelieferte Sprachen",
+					"description": "Aktiv in i18nConfig"
+				},
+				"plans": {
+					"title": "Konfigurierte Pläne",
+					"description": "Definiert in PLANS"
+				},
+				"domains": {
+					"title": "Austauschbare Domains",
+					"description": "Je ein typisiertes Interface"
+				}
+			},
+			"pricing": {
+				"title": "Preise",
+				"description": "<code>PricingCompact</code> gespeist von <code>buildPricingTiers()</code>. Pläne, Preise und Features kommen direkt aus <code>PLANS</code> und dem Feature-Katalog.",
+				"fullToggle": "Vollständiger Planvergleich"
+			},
+			"auth": {
+				"title": "Auth-Karte",
+				"description": "Die Hülle um jeden Anmelde- und Registrierungsbildschirm. Dieses Formular sendet nichts ab.",
+				"card": {
+					"title": "Willkommen zurück",
+					"description": "Melde dich an, um in deinen Arbeitsbereich zu gelangen.",
+					"email": "E-Mail",
+					"emailPlaceholder": "du@firma.de",
+					"password": "Passwort",
+					"forgot": "Passwort vergessen?",
+					"submit": "Anmelden",
+					"footer": "Sitzungen, OAuth und Zwei-Faktor-Authentifizierung sind im Kit enthalten."
+				}
+			},
+			"media": {
+				"title": "Medien-Rahmen",
+				"description": "Fasse einen Screenshot, ein Video oder beliebige Inhalte ein. Die Chrome-Variante ergänzt eine Fensterleiste.",
+				"plain": "Einfacher Rahmen",
+				"chrome": "Fenster-Chrome",
+				"imageAlt": "Das Fuutu-Stack-Dashboard"
+			},
+			"logos": {
+				"title": "Logo-Leiste",
+				"description": "Der Stack auf einen Blick. Fahre über ein Logo oder fokussiere es für Details.",
+				"items": {
+					"nextjs": {
+						"name": "Next.js",
+						"description": "App Router und React 19 in allen Apps.",
+						"detail": "apps/saas, apps/marketing, apps/docs"
+					},
+					"typescript": {
+						"name": "TypeScript",
+						"description": "Strict Mode, überall ESM.",
+						"detail": "Kein any, durchgesetzt von Biome"
+					},
+					"better-auth": {
+						"name": "Better Auth",
+						"description": "Sitzungen, OAuth, Zwei-Faktor, Organisationen.",
+						"detail": "@fuutu/auth"
+					},
+					"prisma": {
+						"name": "Prisma",
+						"description": "Typisierte Abfragen hinter exportierten Funktionen.",
+						"detail": "@fuutu/db"
+					},
+					"postgresql": {
+						"name": "PostgreSQL",
+						"description": "Eine Datenbank pro Port-Slot.",
+						"detail": "pnpm db:start"
+					},
+					"tailwind": {
+						"name": "Tailwind CSS",
+						"description": "Version 4 mit OKLCH-Tokens.",
+						"detail": "packages/config/brand.css"
+					},
+					"turborepo": {
+						"name": "Turborepo",
+						"description": "Gecachte Builds im ganzen Workspace.",
+						"detail": "pnpm check-types"
+					},
+					"hono": {
+						"name": "Hono",
+						"description": "Die API hinter den oRPC-Procedures.",
+						"detail": "packages/api"
+					}
+				},
+				"single": "Eine einzelne Karte, so rendert die Leiste jedes Logo."
+			},
+			"mesh": {
+				"title": "Mesh-Gradient",
+				"description": "Zwei Wege zum Hero-Hintergrund. Beide lesen <code>--primary</code> und <code>--chart-4</code> und folgen damit der Marke.",
+				"component": {
+					"title": "MeshGradient",
+					"caption": "WebGL, animiert, Geschwindigkeit einstellbar."
+				},
+				"utility": {
+					"title": ".mesh-gradient",
+					"caption": "Nur CSS, kein JavaScript."
+				},
+				"areas": {
+					"title": "color1=\"var(--area-users)\" color2=\"var(--area-ai)\"",
+					"caption": "CSS-Variablen werden zur Laufzeit aufgelöst. Bereichsfarben tönen den Hero, der Primary bleibt Tinte."
+				}
+			}
+		},
+		"doDont": {
+			"do": "Richtig",
+			"dont": "Falsch",
+			"pairs": {
+				"roles": {
+					"title": "Eine Rolle nennen, keine Farbe",
+					"do": "Komponenten verlangen <code>bg-primary</code>. Ein Rebranding ändert eine einzige Datei.",
+					"dont": "Eine Palettenfarbe wie <code>bg-indigo-600</code> ignoriert Dark Mode und jedes künftige Theme.",
+					"doSample": "Aktiv",
+					"dontSample": "Fest verdrahtete Farbe",
+					"doCode": "bg-primary",
+					"dontCode": "bg-indigo-600"
+				},
+				"primary": {
+					"title": "Ein Primär-Button pro Ansicht",
+					"do": "Eine gefüllte Aktion, die übrigen treten als Outline zurück.",
+					"dont": "Drei gefüllte Buttons konkurrieren. Niemand weiß, was die Seite will.",
+					"cancel": "Abbrechen",
+					"save": "Änderungen speichern",
+					"publish": "Veröffentlichen",
+					"invite": "Mitglied einladen"
+				},
+				"colorAlone": {
+					"title": "Nie nur auf Farbe verlassen",
+					"do": "Icon und Beschriftung tragen den Zustand. Die Farbe verstärkt ihn nur.",
+					"dont": "Ein roter Punkt ohne Beschriftung bleibt für Screenreader und manche Augen unsichtbar.",
+					"label": "Zahlung fehlgeschlagen"
+				},
+				"fills": {
+					"title": "Warning und Info sind Flächen, nie Text",
+					"do": "Ein gefüllter Hinweis bringt immer seine eigene Vordergrundfarbe mit.",
+					"dont": "Bernsteinfarbener Text wie <code>text-warning</code> liegt auf hellem Grund bei etwa 1,6:1.",
+					"callout": "Deine Testphase endet in 3 Tagen. Hinterlege eine Zahlungsmethode, um deinen Plan zu behalten.",
+					"dontCode": "text-warning"
+				},
+				"intent": {
+					"title": "Destruktiv heißt unwiderruflich",
+					"do": "Der rote Button ist für Aktionen reserviert, die sich nicht rückgängig machen lassen.",
+					"dont": "Rot bei einem gewöhnlichen Speichern lehrt Menschen, Rot zu ignorieren.",
+					"delete": "Organisation löschen",
+					"save": "Änderungen speichern"
+				},
+				"areaMark": {
+					"title": "Bereichsfarbe markiert den Bereich, nie einen Status",
+					"do": "Der Users-Ton kennzeichnet den Mitgliederbereich: Kachel, Icon und Badge.",
+					"dont": "Ein Billing-Ton bei fehlgeschlagener Zahlung wirkt wie ein Status. Nutze stattdessen <code>bg-destructive</code> und ein Icon.",
+					"members": "Mitglieder",
+					"dontCode": "bg-area-billing (Zahlung fehlgeschlagen)"
+				},
+				"areaOpacity": {
+					"title": "Keine Deckkraft auf Bereichstext",
+					"do": "Die Bereichstinte bleibt auf ihrer Fläche voll deckend und behält so den gemessenen Kontrast.",
+					"dont": "Verblasste Tinte fällt auf der Pastellfläche unter 4,5:1.",
+					"sample": "KI-Guthaben",
+					"dontCode": "text-area-ai-foreground/60"
+				}
+			}
+		},
+		"example": {
+			"orgName": "Acme",
+			"plan": "Pro",
+			"heading": "Organisationseinstellungen",
+			"subheading": "Lege fest, wie dein Team in Acme arbeitet.",
+			"tabs": {
+				"label": "Bereiche der Organisation",
+				"general": "Allgemein",
+				"members": "Mitglieder",
+				"billing": "Abrechnung"
+			},
+			"general": {
+				"nameLabel": "Name der Organisation",
+				"nameValue": "Acme",
+				"slugLabel": "URL-Kürzel",
+				"slugValue": "acme",
+				"slugHint": "Wird in Links wie /organizations/acme verwendet. Eine Änderung bricht bestehende Links.",
+				"roleLabel": "Standardrolle für neue Mitglieder",
+				"rolePlaceholder": "Rolle wählen",
+				"roles": {
+					"admin": "Admin",
+					"member": "Mitglied",
+					"viewer": "Betrachter"
+				},
+				"twoFactorLabel": "Zwei-Faktor-Authentifizierung verlangen",
+				"twoFactorHint": "Mitglieder ohne 2FA werden bei der nächsten Anmeldung zur Einrichtung aufgefordert.",
+				"inviteLabel": "Mitglieder dürfen Teamkollegen einladen",
+				"inviteHint": "Admins dürfen immer einladen."
+			},
+			"members": {
+				"title": "Mitglieder",
+				"owner": "Inhaber",
+				"admin": "Admin",
+				"member": "Mitglied",
+				"items": {
+					"one": {
+						"name": "Admin User",
+						"email": "admin@fuutu.local",
+						"initials": "AU"
+					},
+					"two": {
+						"name": "Maya Lindqvist",
+						"email": "maya@acme.test",
+						"initials": "ML"
+					},
+					"three": {
+						"name": "Tom Brandt",
+						"email": "tom@acme.test",
+						"initials": "TB"
+					}
+				}
+			},
+			"callout": "Alle 5 Plätze deines Pro-Plans sind belegt. Buche in der Abrechnung Plätze dazu, bevor du weitere Personen einlädst.",
+			"cancel": "Abbrechen",
+			"save": "Änderungen speichern",
+			"billing": {
+				"seats": "Belegte Plätze",
+				"usage": "{used} von {total} Plätzen"
+			}
+		},
+		"components": {
+			"matrix": {
+				"states": {
+					"default": "Standard",
+					"hover": "Hover",
+					"focus": "Fokus",
+					"active": "Aktiv",
+					"disabled": "Deaktiviert",
+					"invalid": "Ungültig"
+				},
+				"none": "—"
+			},
+			"button": {
+				"title": "Button",
+				"description": "Sechs Varianten. <code>default</code> nur einmal pro Ansicht; <code>destructive</code> nur für Aktionen, die sich nicht rückgängig machen lassen.",
+				"label": "Weiter",
+				"sizes": "Größen",
+				"iconLabel": "Eintrag hinzufügen"
+			},
+			"badge": {
+				"title": "Badge",
+				"description": "Status und Metadaten. Ein Badge ist nicht interaktiv, daher gelten Hover, Aktiv und Deaktiviert nicht.",
+				"label": "Aktiv"
+			},
+			"form": {
+				"title": "Formular-Controls",
+				"description": "Die fixierten Zustände nutzen dieselben Klassen wie ein echtes Hovern oder Tastaturfokus. Slider-Griffe und Code-Felder folgen nur dem echten Fokus."
+			},
+			"input": {
+				"aria": "Name der Organisation",
+				"value": "Acme"
+			},
+			"textarea": {
+				"aria": "Beschreibung",
+				"value": "Steht auf Rechnungen."
+			},
+			"select": {
+				"aria": "Standardrolle",
+				"member": "Mitglied",
+				"admin": "Admin"
+			},
+			"checkbox": {
+				"aria": "Bedingungen akzeptieren"
+			},
+			"switch": {
+				"aria": "Benachrichtigungen aktivieren"
+			},
+			"radio": {
+				"aria": "Abrechnungsintervall",
+				"item": "Monatlich"
+			},
+			"slider": {
+				"aria": "Speicherlimit"
+			},
+			"otp": {
+				"title": "Einmalcode",
+				"aria": "Bestätigungscode"
+			},
+			"fields": {
+				"title": "Felder",
+				"description": "<code>Field</code> verbindet Label, Control, Hinweis und Fehler. Fehler und deaktiviert kommen aus <code>data-invalid</code> und <code>data-disabled</code>.",
+				"typical": {
+					"name": "Typisch",
+					"label": "E-Mail",
+					"placeholder": "du@firma.de"
+				},
+				"described": {
+					"name": "Mit Beschreibung",
+					"label": "URL-Kürzel",
+					"value": "acme",
+					"hint": "Wird in Links wie /organizations/acme verwendet."
+				},
+				"error": {
+					"name": "Mit Fehler",
+					"label": "E-Mail",
+					"value": "du@firma",
+					"message": "Gib eine vollständige Adresse an, etwa du@firma.de."
+				},
+				"disabled": {
+					"name": "Deaktiviert",
+					"label": "Plan",
+					"value": "Pro"
+				},
+				"group": {
+					"legend": "E-Mails zu",
+					"description": "Verwandte Optionen in einem Field Set gruppieren.",
+					"invites": "Einladungen neuer Mitglieder",
+					"billing": "Abrechnung und Rechnungen",
+					"or": "oder",
+					"digestTitle": "Wöchentliche Zusammenfassung",
+					"digestHint": "Eine Übersicht statt einzelner E-Mails.",
+					"compact": "Kompaktes Layout verwenden"
+				}
+			},
+			"overlays": {
+				"title": "Overlays",
+				"description": "Jedes öffnet sich über einen echten Auslöser. Mit <code>Esc</code> schließt du es.",
+				"closeLabel": "Schließen",
+				"dialog": {
+					"title": "Dialog",
+					"description": "Fokussierte Aufgaben, die die Seite dahinter bestehen lassen.",
+					"trigger": "Dialog öffnen",
+					"heading": "Teamkollegen einladen",
+					"body": "Sie erhalten eine E-Mail mit einem Link, der nach sieben Tagen abläuft.",
+					"cancel": "Abbrechen",
+					"confirm": "Einladung senden"
+				},
+				"alertDialog": {
+					"title": "Warn-Dialog",
+					"description": "Bestätigt eine Aktion, die sich nicht rückgängig machen lässt.",
+					"trigger": "Organisation löschen",
+					"heading": "Acme löschen?",
+					"body": "Dadurch werden alle Mitglieder, API-Schlüssel und Webhooks entfernt. Das lässt sich nicht rückgängig machen.",
+					"cancel": "Organisation behalten",
+					"action": "Löschen"
+				},
+				"sheet": {
+					"title": "Sheet",
+					"description": "Seitenpanel für Details und sekundäre Formulare.",
+					"trigger": "Sheet öffnen",
+					"heading": "Audit-Log-Eintrag",
+					"body": "Wer was wann geändert hat.",
+					"close": "Schließen"
+				},
+				"dropdown": {
+					"title": "Dropdown-Menü",
+					"description": "Aktionen, Schalter, Auswahl und verschachtelte Menüs.",
+					"trigger": "Menü öffnen",
+					"label": "Konto",
+					"profile": "Profil",
+					"profileShortcut": "⇧⌘P",
+					"billing": "Abrechnung",
+					"billingShortcut": "⌘B",
+					"archived": "Archivierte anzeigen",
+					"comfortable": "Komfortabel",
+					"compact": "Kompakt",
+					"more": "Mehr",
+					"export": "Daten exportieren",
+					"import": "Daten importieren"
+				},
+				"tooltip": {
+					"title": "Tooltip",
+					"description": "Ein kurzer Hinweis bei Hover und Tastaturfokus.",
+					"trigger": "Hovern oder fokussieren",
+					"text": "Kopiert den Schlüssel in die Zwischenablage"
+				},
+				"select": {
+					"title": "Select",
+					"description": "Gruppierte Optionen in einem Popover.",
+					"aria": "Region",
+					"placeholder": "Region wählen",
+					"europe": "Europa",
+					"frankfurt": "Frankfurt",
+					"dublin": "Dublin",
+					"americas": "Amerika",
+					"virginia": "Virginia"
+				},
+				"toast": {
+					"title": "Toast",
+					"description": "Rückmeldung, die von selbst verschwindet. Die App bindet einen einzigen Toaster für das ganze Produkt ein.",
+					"default": {
+						"trigger": "Standard",
+						"title": "Einstellungen gespeichert",
+						"description": "Deine Änderungen sind live."
+					},
+					"success": {
+						"trigger": "Erfolg",
+						"title": "Einladung gesendet"
+					},
+					"error": {
+						"trigger": "Fehler",
+						"title": "Einladung konnte nicht gesendet werden"
+					}
+				}
+			},
+			"display": {
+				"title": "Darstellung und Navigation",
+				"description": "Kleinere Bausteine, die du täglich zusammensetzt.",
+				"tabs": {
+					"overview": "Übersicht",
+					"activity": "Aktivität",
+					"settings": "Einstellungen",
+					"overviewBody": "Plan, Nutzung und Mitglieder auf einen Blick.",
+					"activityBody": "Die letzten Anmeldungen und Rollenänderungen.",
+					"settingsBody": "Name, Kürzel und Standardwerte."
+				},
+				"breadcrumb": {
+					"home": "Start",
+					"more": "Weitere Seiten",
+					"organizations": "Organisationen",
+					"current": "Acme"
+				},
+				"alert": {
+					"title": "Hinweis",
+					"body": "Plätze werden pro Mitglied abgerechnet und passen sich automatisch an.",
+					"errorTitle": "Zahlung fehlgeschlagen",
+					"errorBody": "Aktualisiere deine Karte, um den Pro-Plan zu behalten."
+				},
+				"card": {
+					"title": "Webhook-Endpunkt",
+					"description": "Empfängt Abrechnungsereignisse.",
+					"action": "Bearbeiten",
+					"body": "https://api.acme.test/hooks/billing",
+					"footer": "Letzte Zustellung vor 2 Minuten"
+				},
+				"avatar": {
+					"alt": "Fuutu Stack",
+					"fallback": "FS",
+					"initials": "ML",
+					"initialsLarge": "TB"
+				},
+				"progress": {
+					"label": "Speicher belegt, {value} Prozent"
+				},
+				"separator": {
+					"docs": "Doku",
+					"source": "Quellcode",
+					"support": "Support",
+					"note": "Horizontal und vertikal."
+				},
+				"collapsible": {
+					"title": "Enthalten in Pro",
+					"toggle": "Mehr anzeigen",
+					"first": "Passkeys",
+					"second": "Audit-Log, 30 Tage"
+				}
+			},
+			"sidebar": {
+				"title": "Seitenleiste",
+				"description": "Jeder Teil der Seitenleiste in einer eingebetteten Kopie der App-Shell. Umschalter und Rail sind hier deaktiviert.",
+				"toggle": "Seitenleiste umschalten",
+				"brand": "Fuutu Stack",
+				"search": "Suchen",
+				"platform": "Plattform",
+				"add": "Eintrag hinzufügen",
+				"dashboard": "Dashboard",
+				"notifications": "Benachrichtigungen",
+				"unread": "3",
+				"organizations": "Organisationen",
+				"more": "Weitere Aktionen",
+				"members": "Mitglieder",
+				"billing": "Abrechnung",
+				"apiKeys": "API-Schlüssel",
+				"loading": "Lädt",
+				"footer": "admin@fuutu.local",
+				"content": "Seiteninhalt"
+			}
+		}
+	}
+}

@@ -35,22 +35,22 @@ export function AuditLogsTable() {
 	}
 
 	return (
-		<Card>
+		<Card className="overflow-hidden py-0">
 			<CardContent className="space-y-4 p-6">
-				<div className="overflow-hidden rounded-lg border">
+				<div className="-mx-6 -mt-6 overflow-x-auto border-b">
 					<table className="w-full text-sm">
 						<thead className="bg-muted/50">
 							<tr className="text-left">
-								<th className="p-3 font-medium">
+								<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 									{t("admin.auditLogs.col.time")}
 								</th>
-								<th className="p-3 font-medium">
+								<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 									{t("admin.auditLogs.col.action")}
 								</th>
-								<th className="p-3 font-medium">
+								<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 									{t("admin.auditLogs.col.user")}
 								</th>
-								<th className="p-3 font-medium">
+								<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 									{t("admin.auditLogs.col.ip")}
 								</th>
 							</tr>
@@ -64,8 +64,8 @@ export function AuditLogsTable() {
 									>
 										{new Date(log.createdAt).toLocaleString(locale)}
 									</td>
-									<td className="p-3 font-mono text-xs">{log.action}</td>
-									<td className="p-3 text-xs">
+									<td className="px-4 py-3 font-mono text-xs">{log.action}</td>
+									<td className="px-4 py-3 text-xs">
 										{log.user ? (
 											<div>
 												<div className="font-medium">

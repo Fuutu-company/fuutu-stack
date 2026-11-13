@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { getSignedInRedirect } from "@fuutu/auth/redirect";
 import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
 import { countOrganizationsForUser, getOrganizationBySlug } from "@fuutu/db";
@@ -35,6 +36,21 @@ export async function requireAuth() {
 	}
 
 	return session;
+}
+
+/**
+ * Sign-in / sign-up only: a visitor with a valid session goes straight to the
+ * post-login destination (`getSignedInRedirect`). A signed OAuth
+ * authorization request (`sig`) keeps the page.
+ */
+export async function redirectIfSignedIn(
+	params: Record<string, string | string[] | undefined>,
+) {
+	const target = getSignedInRedirect(params);
+	if (target === null) return;
+	const session = await getSession();
+	if (!session) return;
+	redirect(target);
 }
 
 /**

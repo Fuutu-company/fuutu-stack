@@ -105,9 +105,12 @@ export function ConsentBanner() {
 		if (!visible || !el) return;
 		const root = document.documentElement;
 		const update = () => {
+			// +1: layouts with fractional heights round `scrollHeight` down, so
+			// a spacer of exactly the banner height leaves up to 1px of the page
+			// end unscrollable under the banner.
 			const px = Math.max(
 				0,
-				Math.ceil(window.innerHeight - el.getBoundingClientRect().top),
+				Math.ceil(window.innerHeight - el.getBoundingClientRect().top) + 1,
 			);
 			setReservedPx(px);
 			root.style.scrollPaddingBottom = `${px}px`;

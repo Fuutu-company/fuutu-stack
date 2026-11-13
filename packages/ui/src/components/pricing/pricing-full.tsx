@@ -3,6 +3,7 @@
 import { Check, Info, Minus, Play } from "lucide-react";
 import * as React from "react";
 import { cn } from "../../lib/utils";
+import { AreaBadge, AreaIcon } from "../area";
 import { Button } from "../button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../dialog";
 import { MediaFrame } from "../media-frame";
@@ -14,6 +15,7 @@ import {
 } from "../tooltip";
 import { BillingToggle } from "./billing-toggle";
 import { PricingCTA } from "./pricing-cta";
+import { PRICE_CLASS, tierSurfaceClass } from "./surface";
 import type { FeatureMatrixRow, PricingFullProps, PricingTier } from "./types";
 import { resolveTierDisplay } from "./utils";
 
@@ -54,16 +56,6 @@ export function PricingFull({
 	return (
 		<TooltipProvider delayDuration={200}>
 			<div className={cn("relative w-full", className)}>
-				{/* Ambient gradient */}
-				<div
-					aria-hidden
-					className="pointer-events-none absolute inset-0 -z-10"
-					style={{
-						background:
-							"radial-gradient(ellipse 70% 40% at 50% -25%, oklch(from var(--primary) l c h / 0.1) 0%, transparent 60%)",
-					}}
-				/>
-
 				{/* Billing toggle */}
 				{hasYearly && (
 					<BillingToggle
@@ -75,8 +67,10 @@ export function PricingFull({
 					/>
 				)}
 
-				{/* Single table — thead aligns perfectly with tbody columns */}
-				<div className="hidden overflow-x-auto md:block">
+				{/* Single table — thead aligns perfectly with tbody columns. The
+				    scroll wrapper clips on every side, so `pt-2` leaves room for the
+				    highlighted tier's ring. */}
+				<div className="hidden overflow-x-auto pt-2 md:block">
 					<table className="w-full min-w-140 border-collapse">
 						<colgroup>
 							<col style={{ width: "30%" }} />
@@ -188,116 +182,60 @@ function PlanHeader({
 		suffix: displaySuffix,
 		isCustom: isCustomPrice,
 	} = resolveTierDisplay(tier, isYearly, customPriceLabel);
-	const isEnterprise = isCustomPrice;
 
 	return (
 		<div
-			className={cn(
-				"relative flex h-72.5 flex-col rounded-2xl p-5",
-				hl
-					? "bg-primary text-primary-foreground shadow-2xl ring-2 ring-primary/30"
-					: isEnterprise
-						? "border border-primary/30 bg-card/80 shadow-lg ring-1 ring-primary/20 backdrop-blur-sm"
-						: "border bg-card/80 shadow-sm backdrop-blur-sm",
-			)}
+			data-slot="pricing-tier"
+			data-highlighted={hl ? "" : undefined}
+			className={tierSurfaceClass(hl, "h-72.5 p-5 text-left")}
 		>
-			{/* Glow */}
-			{(hl || isEnterprise) && (
-				<div
-					aria-hidden
-					className="pointer-events-none absolute inset-x-6 -bottom-4 -z-10 h-12 blur-2xl"
-					style={{
-						background: hl
-							? "oklch(from var(--primary) l c h / 0.45)"
-							: "oklch(from var(--primary) l c h / 0.2)",
-					}}
-				/>
-			)}
-
 			{/* Popular badge — fixed top slot so non-highlighted cards stay aligned */}
-			<div className="mb-3 h-5">
+			<div className="mb-3 h-6">
 				{hl && popularLabel && (
-					<span className="inline-flex items-center gap-1 rounded-full bg-primary-foreground px-2.5 py-0.5 font-semibold text-[11px] text-primary uppercase tracking-wide">
-						{popularLabel}
-					</span>
+					<AreaBadge area="billing">{popularLabel}</AreaBadge>
 				)}
 			</div>
 
-			{/* Plan identity */}
-			<div className="mb-4 flex items-center gap-2">
+			<div className="mb-4 flex items-center gap-2.5">
 				{Icon && (
-					<span
-						className={cn(
-							"flex size-7 shrink-0 items-center justify-center rounded-lg",
-							hl ? "bg-primary-foreground/15" : "bg-primary/10",
-						)}
-					>
-						<Icon
-							className={cn(
-								"size-4",
-								hl ? "text-primary-foreground" : "text-primary",
-							)}
-						/>
-					</span>
+					<AreaIcon area="billing" size="sm">
+						<Icon />
+					</AreaIcon>
 				)}
-				<span
-					className={cn(
-						"font-semibold text-base",
-						hl ? "text-primary-foreground" : "text-foreground",
-					)}
-				>
+				<h3 className="font-bold font-heading text-base tracking-heading">
 					{tier.name}
-				</span>
+				</h3>
 			</div>
 
-			{/* Price block */}
 			<div className="mb-2">
-				<div className="flex items-baseline gap-1.5">
+				<div className="flex flex-wrap items-baseline gap-x-1.5">
 					<span
-						className={cn(
+						className={
 							isCustomPrice
-								? "font-bold text-2xl tracking-tight"
-								: "font-extrabold text-4xl tracking-tighter",
-							hl ? "text-primary-foreground" : "text-foreground",
-						)}
+								? "font-extrabold font-heading text-2xl tracking-heading"
+								: PRICE_CLASS
+						}
 					>
 						{displayPrice}
 					</span>
 					{displaySuffix && !isCustomPrice && (
-						<span
-							className={cn(
-								"text-sm",
-								hl ? "text-primary-foreground/60" : "text-muted-foreground",
-							)}
-						>
+						<span className="text-muted-foreground text-sm">
 							{displaySuffix}
 						</span>
 					)}
 				</div>
 				{tier.description && (
-					<p
-						className={cn(
-							"mt-2 line-clamp-2 text-xs leading-relaxed",
-							hl ? "text-primary-foreground/65" : "text-muted-foreground",
-						)}
-					>
+					<p className="mt-2 line-clamp-2 text-muted-foreground text-xs leading-5">
 						{tier.description}
 					</p>
 				)}
 			</div>
 
-			{/* Divider + CTA — pushed to bottom via mt-auto */}
-			<div className="mt-auto">
-				<div
-					className={cn(
-						"mb-4 h-px w-full",
-						hl ? "bg-primary-foreground/15" : "bg-border",
-					)}
-				/>
+			<div className="mt-auto pt-4">
 				<PricingCTA
 					tier={tier}
 					LinkComponent={LinkComponent}
-					inverted={hl}
+					variant={hl ? "default" : "outline"}
 					size="sm"
 					isYearly={isYearly}
 				/>
@@ -313,7 +251,7 @@ function GroupRow({ label, colSpan }: { label: string; colSpan: number }) {
 		<tr>
 			<td
 				colSpan={colSpan}
-				className="border-border border-t pt-8 pb-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-widest"
+				className="border-border border-t pt-8 pb-3 font-bold font-heading text-foreground text-sm"
 			>
 				{label}
 			</td>
@@ -344,9 +282,9 @@ function FeatureRow({
 		<>
 			<tr className="group transition-colors">
 				{/* Feature label + tooltip + optional video trigger */}
-				<td className="border-border/40 border-b py-4 pr-6 group-last:border-0">
+				<td className="border-border/60 border-b py-4 pr-6 group-last:border-0">
 					<div className="flex items-center gap-1.5">
-						<span className="text-foreground/90 text-sm">{row.label}</span>
+						<span className="text-foreground text-sm">{row.label}</span>
 
 						{(row.tooltip || row.videoSrc) && (
 							<span className="ml-1 flex items-center gap-2">
@@ -355,7 +293,7 @@ function FeatureRow({
 										<TooltipTrigger asChild>
 											<button
 												type="button"
-												className="text-muted-foreground/70 transition-colors hover:text-primary"
+												className="rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
 												aria-label={row.label}
 											>
 												<Info className="size-3.5" />
@@ -374,7 +312,7 @@ function FeatureRow({
 									<Button
 										variant="ghost"
 										size="sm"
-										className="h-auto gap-1 px-2 py-0.5 font-medium text-primary/60 text-xs hover:text-primary"
+										className="h-auto gap-1 px-2 py-0.5 font-semibold text-muted-foreground text-xs hover:text-foreground"
 										onClick={() => setVideoOpen(true)}
 									>
 										<Play className="size-3 fill-current" />
@@ -386,38 +324,28 @@ function FeatureRow({
 					</div>
 				</td>
 
-				{/* Value per plan — alternating column bands make row→plan mapping obvious */}
-				{tiers.map((tier, i) => {
+				{/* Value per plan — the highlighted plan keeps a card-colored column band */}
+				{tiers.map((tier) => {
 					const val = row.values[tier.id];
 					return (
 						<td
 							key={tier.id}
 							className={cn(
-								"border-border/40 border-b px-3 py-4 text-center text-sm group-last:border-0",
-								tier.highlighted
-									? "bg-primary/12"
-									: tier.price === "—" || tier.price === "-"
-										? "bg-primary/6"
-										: i % 2 === 0
-											? "bg-muted/30"
-											: "bg-muted/10",
+								"border-border/60 border-b px-3 py-4 text-center text-sm group-last:border-0",
+								tier.highlighted && "bg-card",
 							)}
 						>
 							{val === true ? (
-								<span
-									className={cn(
-										"inline-flex size-5 items-center justify-center rounded-full",
-										tier.highlighted
-											? "bg-primary-foreground text-primary"
-											: "bg-primary/15 text-primary",
-									)}
-								>
-									<Check className="size-3" />
+								<span className="inline-flex size-5 items-center justify-center rounded-full bg-area-billing text-area-billing-foreground">
+									<Check aria-hidden="true" className="size-3" />
 								</span>
 							) : val === false || val === undefined ? (
-								<Minus className="mx-auto size-3.5 text-muted-foreground/20" />
+								<Minus
+									aria-hidden="true"
+									className="mx-auto size-3.5 text-muted-foreground"
+								/>
 							) : (
-								<span className="font-semibold text-foreground text-sm">
+								<span className="font-semibold text-foreground text-sm tabular-nums">
 									{val}
 								</span>
 							)}
@@ -486,84 +414,34 @@ function MobilePlanCard({
 
 	return (
 		<div
-			className={cn(
-				"relative overflow-hidden rounded-3xl p-6",
-				hl
-					? "bg-primary text-primary-foreground shadow-2xl"
-					: "border border-border/60 bg-card shadow-sm",
-			)}
+			data-slot="pricing-tier"
+			data-highlighted={hl ? "" : undefined}
+			className={tierSurfaceClass(hl, "rounded-3xl p-6")}
 		>
-			{hl && (
-				<div
-					aria-hidden
-					className="pointer-events-none absolute inset-x-0 top-0 h-px"
-					style={{
-						background:
-							"linear-gradient(90deg, transparent, oklch(from var(--primary-foreground) l c h / 0.4), transparent)",
-					}}
-				/>
-			)}
-
-			<div className="mb-5 flex items-center justify-between">
+			<div className="mb-5 flex items-center justify-between gap-3">
 				<div className="flex items-center gap-2.5">
 					{Icon && (
-						<span
-							className={cn(
-								"flex size-8 shrink-0 items-center justify-center rounded-xl",
-								hl ? "bg-primary-foreground/15" : "bg-primary/10",
-							)}
-						>
-							<Icon
-								className={cn(
-									"size-4",
-									hl ? "text-primary-foreground" : "text-primary",
-								)}
-							/>
-						</span>
+						<AreaIcon area="billing" size="sm">
+							<Icon />
+						</AreaIcon>
 					)}
-					<span
-						className={cn(
-							"font-semibold text-lg tracking-tight",
-							hl ? "text-primary-foreground" : "text-foreground",
-						)}
-					>
+					<h3 className="font-bold font-heading text-lg tracking-heading">
 						{tier.name}
-					</span>
+					</h3>
 				</div>
 				{hl && popularLabel && (
-					<span className="rounded-full bg-primary-foreground px-3 py-0.5 font-semibold text-[11px] text-primary uppercase tracking-wide">
-						{popularLabel}
-					</span>
+					<AreaBadge area="billing">{popularLabel}</AreaBadge>
 				)}
 			</div>
 
-			<div className="mb-1">
-				<span
-					className={cn(
-						"font-bold text-4xl tracking-tighter",
-						hl ? "text-primary-foreground" : "text-foreground",
-					)}
-				>
-					{displayPrice}
-				</span>
+			<div className="mb-1 flex flex-wrap items-baseline gap-x-2">
+				<span className={PRICE_CLASS}>{displayPrice}</span>
 				{displaySuffix && (
-					<span
-						className={cn(
-							"ml-2 text-sm",
-							hl ? "text-primary-foreground/60" : "text-muted-foreground",
-						)}
-					>
-						{displaySuffix}
-					</span>
+					<span className="text-muted-foreground text-sm">{displaySuffix}</span>
 				)}
 			</div>
 			{tier.description && (
-				<p
-					className={cn(
-						"mb-5 text-sm leading-relaxed",
-						hl ? "text-primary-foreground/65" : "text-muted-foreground",
-					)}
-				>
+				<p className="mb-5 text-muted-foreground text-sm leading-6">
 					{tier.description}
 				</p>
 			)}
@@ -572,18 +450,13 @@ function MobilePlanCard({
 				<PricingCTA
 					tier={tier}
 					LinkComponent={LinkComponent}
-					inverted={hl}
+					variant={hl ? "default" : "outline"}
 					size="sm"
 					isYearly={isYearly}
 				/>
 			</div>
 
-			<div
-				className={cn(
-					"mb-4 h-px w-full",
-					hl ? "bg-primary-foreground/15" : "bg-border",
-				)}
-			/>
+			<div className="mb-4 h-px w-full bg-border" />
 
 			<div className="space-y-5">
 				{groups.map((group) => {
@@ -591,101 +464,52 @@ function MobilePlanCard({
 					if (groupRows.length === 0) return null;
 					return (
 						<div key={group}>
-							<p
-								className={cn(
-									"mb-2.5 font-semibold text-[11px] uppercase tracking-widest",
-									hl
-										? "text-primary-foreground/40"
-										: "text-muted-foreground/70",
-								)}
-							>
+							<p className="mb-2.5 font-bold font-heading text-sm">
 								{featureGroupLabels[group] ?? group}
 							</p>
-							<ul className="space-y-2.5">
-								{groupRows.map((row) => {
-									const val = row.values[tier.id];
-									return (
-										<li
-											key={row.id}
-											className="flex items-start gap-2.5 text-sm"
-										>
-											<Check
-												className={cn(
-													"mt-0.5 size-4 shrink-0",
-													hl ? "text-primary-foreground" : "text-primary",
-												)}
-											/>
-											<span
-												className={cn(
-													hl
-														? "text-primary-foreground/90"
-														: "text-foreground/90",
-												)}
-											>
-												{row.label}
-												{typeof val === "string" && (
-													<span
-														className={cn(
-															hl
-																? "text-primary-foreground/60"
-																: "text-muted-foreground",
-														)}
-													>
-														{" — "}
-														{val}
-													</span>
-												)}
-											</span>
-										</li>
-									);
-								})}
-							</ul>
+							<IncludedList rows={groupRows} tierId={tier.id} />
 						</div>
 					);
 				})}
-				{(() => {
-					const ungrouped = includedRows.filter((r) => !r.group);
-					if (ungrouped.length === 0) return null;
-					return (
-						<ul className="space-y-2.5">
-							{ungrouped.map((row) => {
-								const val = row.values[tier.id];
-								return (
-									<li key={row.id} className="flex items-start gap-2.5 text-sm">
-										<Check
-											className={cn(
-												"mt-0.5 size-4 shrink-0",
-												hl ? "text-primary-foreground" : "text-primary",
-											)}
-										/>
-										<span
-											className={cn(
-												hl
-													? "text-primary-foreground/90"
-													: "text-foreground/90",
-											)}
-										>
-											{row.label}
-											{typeof val === "string" && (
-												<span
-													className={cn(
-														hl
-															? "text-primary-foreground/60"
-															: "text-muted-foreground",
-													)}
-												>
-													{" — "}
-													{val}
-												</span>
-											)}
-										</span>
-									</li>
-								);
-							})}
-						</ul>
-					);
-				})()}
+				<IncludedList
+					rows={includedRows.filter((r) => !r.group)}
+					tierId={tier.id}
+				/>
 			</div>
 		</div>
+	);
+}
+
+function IncludedList({
+	rows,
+	tierId,
+}: {
+	rows: FeatureMatrixRow[];
+	tierId: string;
+}) {
+	if (rows.length === 0) return null;
+	return (
+		<ul className="space-y-2.5">
+			{rows.map((row) => {
+				const val = row.values[tierId];
+				return (
+					<li key={row.id} className="flex items-start gap-2.5 text-sm">
+						<Check
+							aria-hidden="true"
+							className="mt-0.5 size-4 shrink-0 text-area-billing-foreground"
+						/>
+						<span>
+							{row.label}
+							{typeof val === "string" && (
+								<span className="text-muted-foreground">
+									{" — "}
+									{val}
+								</span>
+							)}
+						</span>
+					</li>
+				);
+			})}
+		</ul>
 	);
 }

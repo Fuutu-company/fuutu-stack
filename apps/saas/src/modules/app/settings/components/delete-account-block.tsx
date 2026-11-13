@@ -12,6 +12,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 	Button,
+	Card,
 	Field,
 	FieldGroup,
 	FieldLabel,
@@ -45,9 +46,9 @@ export function DeleteAccountBlock() {
 	}
 
 	return (
-		<div className="space-y-5 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+		<Card className="gap-5 bg-destructive/5 p-6 ring-destructive/30 md:p-8">
 			<div>
-				<h3 className="font-semibold text-destructive text-lg">
+				<h3 className="font-bold font-heading text-destructive text-lg tracking-heading">
 					{t("settings.danger.title")}
 				</h3>
 				<p className="text-muted-foreground text-sm">
@@ -89,15 +90,12 @@ export function DeleteAccountBlock() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={onConfirm}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-						>
+						<AlertDialogAction onClick={onConfirm} variant="destructive">
 							{t("settings.danger.confirmCta")}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-		</div>
+		</Card>
 	);
 }

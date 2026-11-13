@@ -24,7 +24,7 @@ export default async function SuspendedPage() {
 	return (
 		<AuthCard title={t("suspended.title")}>
 			<div className="flex flex-col gap-4">
-				<p className="text-center text-muted-foreground text-sm">
+				<p className="text-muted-foreground text-sm">
 					{t("suspended.suspendedMessage", {
 						duration: isPermanent
 							? t("suspended.permanently")
@@ -52,7 +52,7 @@ export default async function SuspendedPage() {
 					</div>
 				)}
 
-				<div className="flex flex-col gap-2 text-center text-muted-foreground text-sm">
+				<div className="flex flex-col items-start gap-2 text-muted-foreground text-sm">
 					<p>{t("suspended.contactSupport")}</p>
 					<form
 						action={async () => {
@@ -63,7 +63,7 @@ export default async function SuspendedPage() {
 					>
 						<button
 							type="submit"
-							className="text-primary underline underline-offset-4 hover:underline"
+							className="font-semibold text-foreground underline underline-offset-4 hover:decoration-2"
 						>
 							{t("suspended.signOut")}
 						</button>

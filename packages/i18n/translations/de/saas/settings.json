@@ -1,6 +1,7 @@
 {
 	"settings": {
 		"title": "Einstellungen",
+		"heading": "Einstellungen: {tab}",
 		"account": {
 			"title": "Konto",
 			"language": {

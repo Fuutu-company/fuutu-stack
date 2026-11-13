@@ -292,3 +292,58 @@ describe("slot environment", () => {
 		);
 	});
 });
+
+describe("db command environment", () => {
+	it("points the root .env's local database at the slot", async () => {
+		await lib.ensureSlot(project("a"), { busy: idle });
+		const root = project("b");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		expect(lib.commandSlotEnv(root, p, {}).DATABASE_URL).toBe(
+			"postgresql://u:p@localhost:5432/acme-s1",
+		);
+	});
+
+	it("leaves slot 0 on the unsuffixed database", async () => {
+		const root = project("a");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		expect(lib.commandSlotEnv(root, p, {}).DATABASE_URL).toBe(
+			"postgresql://u:p@localhost:5432/acme",
+		);
+	});
+
+	it("never rewrites a remote database from .env or the process env", async () => {
+		await lib.ensureSlot(project("a"), { busy: idle });
+		const root = project("b", "postgresql://u:p@db.example.com:5432/prod");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		expect(lib.commandSlotEnv(root, p, {}).DATABASE_URL).toBeUndefined();
+		expect(
+			lib.commandSlotEnv(root, p, {
+				DATABASE_URL: "postgresql://u:p@postgres:5432/fuutu-stack",
+			}).DATABASE_URL,
+		).toBeUndefined();
+	});
+
+	it("leaves an env that already carries the slot env untouched (E2E seed on <db>-e2e)", async () => {
+		await lib.ensureSlot(project("a"), { busy: idle });
+		const root = project("b");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		const e2e = lib.slotEnv(
+			p,
+			{ DATABASE_URL: "postgresql://u:p@localhost:5432/acme" },
+			{ e2e: true },
+		);
+		expect(e2e[lib.SLOT_ENV_MARKER]).toBe("1");
+		expect(lib.commandSlotEnv(root, p, { ...e2e })).toEqual({});
+	});
+
+	it("lets the process env win over .env", async () => {
+		await lib.ensureSlot(project("a"), { busy: idle });
+		const root = project("b");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		expect(
+			lib.commandSlotEnv(root, p, {
+				DATABASE_URL: "postgresql://u:p@127.0.0.1:5433/other",
+			}).DATABASE_URL,
+		).toBe("postgresql://u:p@127.0.0.1:5433/acme-s1");
+	});
+});

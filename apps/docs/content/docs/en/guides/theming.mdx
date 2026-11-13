@@ -42,14 +42,31 @@ Fumadocs uses `--color-fd-*` CSS variables. The theme is imported from two
 sources:
 
 1. **Fuutu Stack theme**: `@fuutu/config/theme.css` — shared across all apps
-2. **Fumadocs neutral theme**: `fumadocs-ui/css/neutral.css` — docs-specific
+2. **Fumadocs shadcn theme**: `fumadocs-ui/css/shadcn.css` — maps the shared shadcn tokens onto `--color-fd-*`
 
 ```css title="src/app/global.css"
 @import "tailwindcss";
 @import "@fuutu/config/theme.css";
-@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/shadcn.css";
 @import "fumadocs-ui/css/preset.css";
+@import "fumadocs-openapi/css/preset.css";
+
+:root,
+.dark {
+  --color-fd-info: var(--info);
+  --color-fd-warning: var(--warning);
+  --color-fd-success: var(--success);
+  --color-fd-error: var(--destructive);
+}
 ```
+
+The second block maps the kit's status colors onto the Fumadocs callout colors.
+To change the palette, edit `packages/config/brand.css`.
+
+`brand.css` also holds the four product-area tokens (`--area-users`, `--area-billing`,
+`--area-ai`, `--area-api`, each with a `-foreground` ink). The docs app inherits them
+along with the primary, which is ink. Fonts are loaded in `src/app/fonts.ts` and exposed
+through `--font-sans`, `--font-heading` and `--font-mono`.
 
 ## Customizing colors
 
@@ -64,18 +81,3 @@ To override Fumadocs colors, add CSS variables in `global.css`:
   --color-fd-primary: oklch(0.65 0.25 260);
 }
 ```
-
-<Callout type="warn">
-  The Fuutu Stack uses OKLCH colors for better perceptual uniformity. See
-  the `better-colors` skill for guidance on OKLCH color usage.
-</Callout>
-
-## Theme presets
-
-Fumadocs ships with multiple theme presets:
-
-- `fumadocs-ui/css/neutral.css` — neutral gray (current)
-- `fumadocs-ui/css/blue.css` — blue accent
-- `fumadocs-ui/css/green.css` — green accent
-
-Swap the import in `global.css` to change the accent color.

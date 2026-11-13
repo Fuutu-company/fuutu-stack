@@ -92,7 +92,6 @@ export default async function OrgAuditLogPage({ params, searchParams }: Props) {
 				filter={filter}
 				labels={{
 					title: t("settings.auditLog.title"),
-					description: t("settings.auditLog.description"),
 					empty: tAdmin("auditLogs.empty"),
 					colTime: tAdmin("auditLogs.col.time"),
 					colAction: tAdmin("auditLogs.col.action"),

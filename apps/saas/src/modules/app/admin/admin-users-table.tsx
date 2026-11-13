@@ -9,7 +9,7 @@ import {
 	SystemAccessControl,
 	toSystemRole,
 } from "@fuutu/rbac";
-import { Button, Card, CardContent, Input } from "@fuutu/ui";
+import { AreaBadge, Button, Card, CardContent, Input } from "@fuutu/ui";
 import { Ban, Check, Search, Shield, UserCheck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -94,7 +94,7 @@ export function AdminUsersTable() {
 	}
 
 	return (
-		<Card>
+		<Card className="overflow-hidden py-0">
 			<CardContent className="space-y-4 p-6">
 				<form
 					onSubmit={(e) => {
@@ -124,17 +124,23 @@ export function AdminUsersTable() {
 						{t("admin.users.empty")}
 					</p>
 				) : (
-					<div className="overflow-hidden rounded-lg border">
+					<div className="-mx-6 -mb-6 overflow-x-auto border-t">
 						<table className="w-full text-sm">
 							<thead className="bg-muted/50">
 								<tr className="text-left">
-									<th className="p-3 font-medium">{t("admin.users.email")}</th>
-									<th className="p-3 font-medium">{t("admin.users.role")}</th>
-									<th className="p-3 font-medium">{t("admin.users.status")}</th>
-									<th className="p-3 font-medium">
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("admin.users.email")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("admin.users.role")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("admin.users.status")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 										{t("admin.users.createdAt")}
 									</th>
-									<th className="p-3 text-right font-medium">
+									<th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-muted-foreground text-xs">
 										{t("admin.users.actions")}
 									</th>
 								</tr>
@@ -144,7 +150,7 @@ export function AdminUsersTable() {
 									const rbacRole = toSystemRole(u.role);
 									return (
 										<tr key={u.id}>
-											<td className="p-3">
+											<td className="px-4 py-3">
 												<div className="font-medium">
 													{u.name ?? t("common.notAvailable")}
 												</div>
@@ -152,22 +158,22 @@ export function AdminUsersTable() {
 													{u.email}
 												</div>
 											</td>
-											<td className="p-3">
-												<span
-													className={`rounded-full border px-2 py-0.5 font-medium text-xs ${
-														hasSystemPermission(
-															ac,
-															rbacRole,
-															PERMISSIONS.VIEW_ADMIN,
-														)
-															? "border-primary/30 bg-primary/10 text-primary"
-															: "bg-muted text-muted-foreground"
-													}`}
-												>
-													{t(`admin.users.roleValue.${u.role ?? "user"}`)}
-												</span>
+											<td className="px-4 py-3">
+												{hasSystemPermission(
+													ac,
+													rbacRole,
+													PERMISSIONS.VIEW_ADMIN,
+												) ? (
+													<AreaBadge area="users">
+														{t(`admin.users.roleValue.${u.role ?? "user"}`)}
+													</AreaBadge>
+												) : (
+													<span className="rounded-full border bg-muted px-2 py-0.5 font-medium text-muted-foreground text-xs">
+														{t(`admin.users.roleValue.${u.role ?? "user"}`)}
+													</span>
+												)}
 											</td>
-											<td className="p-3">
+											<td className="px-4 py-3">
 												{u.banned ? (
 													<span className="rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 font-medium text-destructive text-xs">
 														{t("admin.users.banned")}
@@ -184,7 +190,7 @@ export function AdminUsersTable() {
 											>
 												{new Date(u.createdAt).toLocaleDateString(locale)}
 											</td>
-											<td className="p-3">
+											<td className="px-4 py-3">
 												<div className="flex justify-end gap-1">
 													{hasSystemPermission(
 														ac,

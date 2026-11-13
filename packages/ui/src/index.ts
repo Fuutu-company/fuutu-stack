@@ -1,6 +1,8 @@
 // shadcn/ui Components - Feedback
 export * from "./components/alert";
 export * from "./components/alert-dialog";
+// Tactile layout primitives
+export * from "./components/area";
 // shadcn/ui Components - Data Display
 export * from "./components/auth-card";
 export * from "./components/avatar";
@@ -24,6 +26,7 @@ export * from "./components/logo-rail";
 // Custom Components
 export * from "./components/media-frame";
 export * from "./components/mesh-gradient";
+export * from "./components/page-header";
 export * from "./components/pricing";
 export * from "./components/progress";
 export * from "./components/radio-group";

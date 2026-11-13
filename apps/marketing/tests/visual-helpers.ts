@@ -29,20 +29,29 @@ export const test = base.extend({
 export { expect, scrollThroughPage };
 
 /**
- * JS-driven animations (framer-motion springs, `height: auto`) are not
- * covered by `animations: "disabled"` — wait until the page height has
- * stopped changing before shooting.
+ * JS-driven layout changes (`height: auto`, inline styles) are not
+ * covered by `animations: "disabled"` — wait until the page height and
+ * every inline opacity/transform style have stopped changing before shooting.
  */
 async function waitForStableLayout(page: Page) {
 	await page.evaluate(async () => {
 		const sleep = (ms: number) =>
 			new Promise((resolve) => setTimeout(resolve, ms));
-		let last = -1;
+		let last = "";
 		let stable = 0;
 		for (let i = 0; i < 50 && stable < 5; i++) {
-			const height = document.documentElement.scrollHeight;
-			stable = height === last ? stable + 1 : 0;
-			last = height;
+			// Height plus every inline opacity/transform style: they can keep
+			// changing after the height settled.
+			const signature = [
+				document.documentElement.scrollHeight,
+				...[
+					...document.querySelectorAll<HTMLElement>(
+						"body [style*='opacity'], body [style*='transform']",
+					),
+				].map((el) => `${el.style.opacity}|${el.style.transform}`),
+			].join(";");
+			stable = signature === last ? stable + 1 : 0;
+			last = signature;
 			await sleep(100);
 		}
 	});

@@ -1,6 +1,6 @@
 {
 	"footer": {
-		"tagline": "Wir bauen die Zukunft von SaaS-Anwendungen.",
+		"tagline": "Ein ruhiger Workspace für dein Team: Mitglieder, Abrechnung, ein KI-Assistent und ein CRM, schön verbunden.",
 		"product": "Produkt",
 		"resources": "Ressourcen",
 		"companyAndLegal": "Unternehmen & Recht",
@@ -9,6 +9,7 @@
 		"privacy": "Datenschutz",
 		"terms": "AGB",
 		"imprint": "Impressum",
-		"rights": "Alle Rechte vorbehalten."
+		"rights": "Alle Rechte vorbehalten.",
+		"areas": "Vier Bereiche, ein Produkt."
 	}
 }

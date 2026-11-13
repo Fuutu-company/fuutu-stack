@@ -10,6 +10,8 @@ export const urls = {
 	docs: docsBase,
 	app: appBase,
 	github: config.app.contact.githubUrl,
+	/** The demo's live design system page (tokens, areas, components). */
+	design: `${appBase}/design`,
 	auth: {
 		signIn: `${appBase}/auth/sign-in`,
 		signUp: `${appBase}/auth/sign-up`,

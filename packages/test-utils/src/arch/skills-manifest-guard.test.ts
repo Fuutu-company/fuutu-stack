@@ -61,6 +61,13 @@ describe("skills manifest guard", () => {
 		});
 	}
 
+	it("names every manifest skill in AGENTS.md", () => {
+		const agentsMd = readFileSync(join(REPO_ROOT, "AGENTS.md"), "utf8");
+		for (const entry of manifest.skills) {
+			expect(agentsMd, entry.name).toContain(`\`${entry.name}\``);
+		}
+	});
+
 	it(".agents/skills is a symlink to .claude/skills", () => {
 		const link = join(REPO_ROOT, ".agents", "skills");
 		expect(lstatSync(link).isSymbolicLink()).toBe(true);

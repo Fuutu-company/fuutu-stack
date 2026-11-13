@@ -22,6 +22,7 @@ import {
 	Button,
 	Card,
 	CardContent,
+	PageHeader,
 } from "@fuutu/ui";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -101,19 +102,15 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="font-bold text-3xl text-destructive tracking-tight">
-					{t("organizations.settings.danger")}
-				</h1>
-				<p className="mt-2 text-muted-foreground text-sm">
-					{t("organizations.settings.dangerDescription")}
-				</p>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("organizations.settings.danger")}
+			/>
 
-			<Card className="border-destructive/30 bg-destructive/5">
+			<Card className="bg-destructive/5 py-0 ring-destructive/30">
 				<CardContent className="space-y-4 p-6 md:p-8">
 					<div>
-						<h3 className="font-semibold text-destructive text-lg">
+						<h3 className="font-bold font-heading text-destructive text-lg tracking-heading">
 							{t("organizations.settings.deleteOrg")}
 						</h3>
 						<p className="text-muted-foreground text-sm">
@@ -143,10 +140,7 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 								</AlertDialogHeader>
 								<AlertDialogFooter>
 									<AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-									<AlertDialogAction
-										onClick={deleteOrg}
-										className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-									>
+									<AlertDialogAction onClick={deleteOrg} variant="destructive">
 										{t("organizations.settings.deleteCta")}
 									</AlertDialogAction>
 								</AlertDialogFooter>

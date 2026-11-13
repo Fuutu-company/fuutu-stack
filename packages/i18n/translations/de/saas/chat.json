@@ -1,7 +1,6 @@
 {
 	"chat": {
 		"title": "AI Chat",
-		"description": "Konversations-Interface powered by Vercel AI SDK.",
 		"comingSoon": "Bald verfügbar",
 		"features": {
 			"streaming": "Streaming-Antworten",
@@ -25,6 +24,7 @@
 		"cancel": "Abbrechen",
 		"confirmDelete": "Löschen",
 		"conversations": "Konversationen",
+		"closeConversations": "Konversationen schließen",
 		"loadingConversations": "Konversationen werden geladen…",
 		"noConversations": "Noch keine Konversationen",
 		"deleteConversationAria": "Konversation löschen",

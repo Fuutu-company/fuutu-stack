@@ -32,8 +32,6 @@
 		"clsx": "catalog:",
 		"dotenv": "catalog:",
 		"evlog": "catalog:",
-		"framer-motion": "catalog:",
-		"geist": "catalog:",
 		"lucide-react": "catalog:",
 		"next": "catalog:",
 		"next-intl": "catalog:",
@@ -44,6 +42,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "catalog:",
 		"@fuutu/tsconfig": "workspace:*",
 		"@playwright/test": "catalog:",
 		"@tailwindcss/postcss": "catalog:",

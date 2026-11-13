@@ -16,38 +16,45 @@ const log = createLogger({ scope: "query" });
 
 export function QueryProvider({ children }: PropsWithChildren) {
 	const t = useTranslations("common.errors");
-	const [queryClient] = useState(
-		() =>
-			new QueryClient({
-				queryCache: new QueryCache({
-					onError: (error, query) => {
-						// Expected failures (e.g. membership gone) opt out of the toast.
-						if (query.meta?.silent) {
-							log.warn("query failed silently", {
-								err: error,
-								queryKey: query.queryKey,
-							});
-							return;
-						}
-						log.error("query failed", {
+	const [queryClient] = useState(() => {
+		const client: QueryClient = new QueryClient({
+			queryCache: new QueryCache({
+				onError: (error, query) => {
+					// Expected failures (e.g. membership gone) opt out of the toast.
+					if (query.meta?.silent) {
+						log.warn("query failed silently", {
 							err: error,
 							queryKey: query.queryKey,
 						});
-						toast.error(t("somethingWentWrong"), {
-							action: {
-								label: t("retry"),
-								onClick: query.invalidate,
+						return;
+					}
+					log.error("query failed", {
+						err: error,
+						queryKey: query.queryKey,
+					});
+					toast.error(t("somethingWentWrong"), {
+						action: {
+							label: t("retry"),
+							// Refetch through the client: `query.invalidate` loses its
+							// `this` when Sonner calls it, and only marks the query stale.
+							onClick: () => {
+								void client.invalidateQueries({
+									queryKey: query.queryKey,
+									exact: true,
+								});
 							},
-						});
-					},
-				}),
-				defaultOptions: {
-					queries: {
-						staleTime: 60 * 1000,
-					},
+						},
+					});
 				},
 			}),
-	);
+			defaultOptions: {
+				queries: {
+					staleTime: 60 * 1000,
+				},
+			},
+		});
+		return client;
+	});
 
 	// Hide DevTools in E2E tests to prevent pointer event interception.
 	// Deferred to useEffect to avoid hydration mismatch — server renders

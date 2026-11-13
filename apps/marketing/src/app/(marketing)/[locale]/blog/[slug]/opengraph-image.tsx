@@ -19,6 +19,8 @@ export async function generateImageMetadata({ params }: OgImageProps) {
 	return [{ id: slug, alt: `${config.app.name} — ${t("title")}` }];
 }
 
+// Colors mirror the light tokens in packages/config/brand.css (OG images need
+// literal values): background, foreground, muted-foreground, area-users.
 export default async function BlogOgImage({ params }: OgImageProps) {
 	const { locale, slug } = await params;
 	const t = await getTranslations({ locale, namespace: "blog" });
@@ -37,21 +39,25 @@ export default async function BlogOgImage({ params }: OgImageProps) {
 				flexDirection: "column",
 				justifyContent: "space-between",
 				padding: "72px",
-				background: "linear-gradient(135deg, #0b1020 0%, #1e1b4b 100%)",
-				color: "white",
+				background: "#f0f4f7",
+				color: "#151b24",
 				fontFamily: "sans-serif",
 			}}
 		>
-			<div
-				style={{
-					fontSize: 28,
-					letterSpacing: "0.08em",
-					textTransform: "uppercase",
-					color: "#a5b4fc",
-					display: "flex",
-				}}
-			>
-				{config.app.name} · {t("title")}
+			<div style={{ display: "flex" }}>
+				<div
+					style={{
+						fontSize: 28,
+						fontWeight: 600,
+						color: "#0d4768",
+						background: "#b6e6ff",
+						borderRadius: 999,
+						padding: "10px 28px",
+						display: "flex",
+					}}
+				>
+					{config.app.name} · {t("title")}
+				</div>
 			</div>
 			<div
 				style={{
@@ -63,7 +69,7 @@ export default async function BlogOgImage({ params }: OgImageProps) {
 				<div
 					style={{
 						fontSize: 72,
-						fontWeight: 700,
+						fontWeight: 800,
 						lineHeight: 1.05,
 						letterSpacing: "-0.02em",
 						display: "flex",
@@ -75,7 +81,7 @@ export default async function BlogOgImage({ params }: OgImageProps) {
 					<div
 						style={{
 							fontSize: 32,
-							color: "#cbd5e1",
+							color: "#545b66",
 							lineHeight: 1.3,
 							display: "flex",
 						}}

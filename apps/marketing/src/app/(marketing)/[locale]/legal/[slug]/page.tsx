@@ -1,7 +1,9 @@
 import { getLegalDocument, legal } from "@fuutu/content";
+import { Card } from "@fuutu/ui";
+import { PageIntro } from "@shared/components/page-intro";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 interface LegalPageProps {
 	params: Promise<{ locale: string; slug: string }>;
@@ -16,7 +18,10 @@ export async function generateMetadata({
 }: LegalPageProps): Promise<Metadata> {
 	const { locale, slug } = await params;
 	const doc = getLegalDocument(slug, locale);
-	if (!doc) return {};
+	if (!doc) {
+		const t = await getTranslations({ locale, namespace: "notFound" });
+		return { title: t("title") };
+	}
 	return {
 		title: doc.frontmatter.title,
 		description: `${doc.frontmatter.title} — ${doc.frontmatter.updatedAt}`,
@@ -32,18 +37,19 @@ export default async function LegalPage({ params }: LegalPageProps) {
 
 	const Body = doc.body;
 	return (
-		<article className="container mx-auto max-w-3xl px-4 py-16">
-			<header className="mb-10">
-				<h1 className="mb-2 font-bold text-4xl tracking-tight">
-					{doc.frontmatter.title}
-				</h1>
+		<article className="mx-auto max-w-3xl px-4 pt-12 sm:px-6 md:pt-20">
+			<PageIntro title={doc.frontmatter.title}>
 				<p className="text-muted-foreground text-sm">
-					{doc.frontmatter.updatedAt}
+					<time dateTime={doc.frontmatter.updatedAt}>
+						{doc.frontmatter.updatedAt}
+					</time>
 				</p>
-			</header>
-			<div className="prose prose-neutral dark:prose-invert">
-				<Body />
-			</div>
+			</PageIntro>
+			<Card className="mt-10 block px-6 py-8 md:px-10 md:py-10">
+				<div className="prose">
+					<Body />
+				</div>
+			</Card>
 		</article>
 	);
 }
