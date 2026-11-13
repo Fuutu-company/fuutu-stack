@@ -41,6 +41,7 @@
 		"test:e2e:ui:saas": "cross-env FUUTU_TELEMETRY_DISABLED=1 dotenv -c -- pnpm -F @fuutu/saas exec playwright test --ui",
 		"test:e2e:ui:marketing": "cross-env FUUTU_TELEMETRY_DISABLED=1 dotenv -c -- pnpm -F @fuutu/marketing exec playwright test --ui",
 		"test:visual:update": "cross-env FUUTU_TELEMETRY_DISABLED=1 dotenv -c -- pnpm -F @fuutu/saas exec playwright test tests/visual.spec.ts --update-snapshots && cross-env FUUTU_TELEMETRY_DISABLED=1 dotenv -c -- pnpm -F @fuutu/marketing exec playwright test tests/visual.spec.ts --update-snapshots",
+		"test:visual:local": "node tooling/scripts/visual-local.mjs",
 		"test:setup": "pnpm -F @fuutu/saas exec playwright install chromium && pnpm -F @fuutu/marketing exec playwright install chromium",
 		"test:clean": "rm -rf apps/saas/test-results apps/saas/playwright-report apps/saas/tests/.auth apps/marketing/test-results apps/marketing/playwright-report .playwright-mcp-artifacts/* && echo 'Playwright artifacts cleaned.'",
 		"check": "biome check --write .",

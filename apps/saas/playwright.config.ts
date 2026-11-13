@@ -37,7 +37,10 @@ export default defineConfig({
 	testDir: "./tests",
 	// Baselines are committed to the repo (.fuutu/visual-baselines/<app>) —
 	// CI regenerates + auto-commits them on merge to develop/main.
-	snapshotDir: "../../.fuutu/visual-baselines/saas",
+	// `pnpm test:visual:local` points this at a scratch dir so committed baselines stay untouched.
+	snapshotDir:
+		process.env.FUUTU_VISUAL_SNAPSHOT_DIR ??
+		"../../.fuutu/visual-baselines/saas",
 	snapshotPathTemplate: "{snapshotDir}/{arg}-{projectName}-{platform}{ext}",
 	timeout: 45_000,
 	expect: {

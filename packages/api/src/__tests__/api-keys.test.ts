@@ -4,6 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
 import { apiKeysRouter } from "../modules/api-keys/router";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("@fuutu/payments/config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@fuutu/payments/config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 vi.mock("@fuutu/db", () => ({
 	createApiKeyWithinLimit: vi.fn(),
 	listApiKeys: vi.fn(),

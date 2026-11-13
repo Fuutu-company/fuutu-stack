@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("../config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 // Mock @fuutu/db — entitlement resolution reads purchases, nothing else.
 // The stub surface must cover every named import in ../sync (transitively
 // pulled in via ../plan-resolver), same as sync.test.ts.

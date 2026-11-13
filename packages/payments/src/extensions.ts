@@ -3,8 +3,12 @@
  * entitlements its own way without editing sync.ts / entitlements.ts.
  *
  * Kept free of runtime imports so sync.ts and entitlements.ts can both
- * depend on it without an import cycle. Register at server startup
- * (e.g. the SaaS app's `instrumentation.ts`).
+ * depend on it without an import cycle. Register once at server startup
+ * — in the SaaS app: `registerApp()` in `apps/saas/src/server-init.ts`.
+ *
+ * State lives on `globalThis` (not module scope): Next.js may evaluate
+ * this module once per bundle (instrumentation, route handlers, RSC), and
+ * a registration made in one bundle must be visible in all of them.
  */
 import type { PurchaseOwner } from "@fuutu/db";
 import type { Entitlement } from "./entitlements";
@@ -31,7 +35,24 @@ export type EntitlementResolver = {
 	user?: EntitlementResolverFn;
 };
 
-let entitlementResolver: EntitlementResolver | null = null;
+// Bundle-shared state (see header).
+interface ExtensionRegistry {
+	entitlementResolver: EntitlementResolver | null;
+	purchaseChangedHandlers: Set<PurchaseChangedHandler>;
+}
+
+const REGISTRY_KEY = Symbol.for("fuutu.payments.extensions");
+
+function registry(): ExtensionRegistry {
+	const scope = globalThis as typeof globalThis & {
+		[REGISTRY_KEY]?: ExtensionRegistry;
+	};
+	scope[REGISTRY_KEY] ??= {
+		entitlementResolver: null,
+		purchaseChangedHandlers: new Set(),
+	};
+	return scope[REGISTRY_KEY];
+}
 
 /**
  * Replace the default live entitlement computation for the scopes the
@@ -41,11 +62,11 @@ let entitlementResolver: EntitlementResolver | null = null;
 export function registerEntitlementResolver(
 	resolver: EntitlementResolver | null,
 ): void {
-	entitlementResolver = resolver;
+	registry().entitlementResolver = resolver;
 }
 
 export function getEntitlementResolver(): EntitlementResolver | null {
-	return entitlementResolver;
+	return registry().entitlementResolver;
 }
 
 // ─── Purchase-changed callback ────────────────────────────────────────────────
@@ -53,8 +74,6 @@ export function getEntitlementResolver(): EntitlementResolver | null {
 export type PurchaseChangedHandler = (
 	owner: PurchaseOwner,
 ) => void | Promise<void>;
-
-const purchaseChangedHandlers = new Set<PurchaseChangedHandler>();
 
 /**
  * Run `handler` after webhook sync writes a purchase for an owner. A
@@ -65,6 +84,7 @@ const purchaseChangedHandlers = new Set<PurchaseChangedHandler>();
  * unsubscribe function.
  */
 export function onPurchaseChanged(handler: PurchaseChangedHandler): () => void {
+	const { purchaseChangedHandlers } = registry();
 	purchaseChangedHandlers.add(handler);
 	return () => {
 		purchaseChangedHandlers.delete(handler);
@@ -82,7 +102,7 @@ export async function notifyPurchaseChanged(
 			? { userId }
 			: null;
 	if (!owner) return;
-	for (const handler of purchaseChangedHandlers) {
+	for (const handler of registry().purchaseChangedHandlers) {
 		await handler(owner);
 	}
 }

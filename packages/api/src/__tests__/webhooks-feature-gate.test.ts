@@ -7,8 +7,11 @@ import type { Context } from "../context";
 // FEATURE_CATALOG, not by a hard-coded tier id. Move the feature to the
 // enterprise tier and a pro org must be turned away.
 vi.mock("@fuutu/payments/config", async (importOriginal) => {
-	const actual =
-		await importOriginal<typeof import("@fuutu/payments/config")>();
+	// Fixed kit plan catalog (@fuutu/test-utils), not the app's PLANS.
+	const actual = {
+		...(await importOriginal<typeof import("@fuutu/payments/config")>()),
+		...(await import("@fuutu/test-utils")).planCatalogFixture,
+	};
 	return {
 		...actual,
 		FEATURE_CATALOG: {

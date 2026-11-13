@@ -31,6 +31,9 @@
 		},
 		"./rate-limit": {
 			"default": "./src/rate-limit.ts"
+		},
+		"./insert-after": {
+			"default": "./src/insert-after.ts"
 		}
 	},
 	"dependencies": {

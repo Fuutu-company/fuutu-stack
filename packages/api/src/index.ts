@@ -15,3 +15,8 @@ export {
 } from "./orpc/procedures";
 export type { AppRouter, AppRouterClient } from "./orpc/router";
 export { appRouter, router } from "./orpc/router";
+export {
+	type PreAuthAttempt,
+	type PreAuthLimit,
+	throttlePreAuth,
+} from "./pre-auth-throttle";

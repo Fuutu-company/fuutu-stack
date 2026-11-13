@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 // TIER_ORDER — swap both in the config and every helper must follow.
 // "pro" is re-declared as the top tier and "enterprise" demoted below it.
 vi.mock("../config", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("../config")>();
+	// Fixed kit plan catalog (@fuutu/test-utils), not the app's PLANS.
+	const actual = {
+		...(await importOriginal<typeof import("../config")>()),
+		...(await import("@fuutu/test-utils")).planCatalogFixture,
+	};
 	return {
 		...actual,
 		TIER_ORDER: ["free", "enterprise", "pro"],

@@ -1,4 +1,11 @@
 import { paymentsConfig } from "@fuutu/payments/config";
+import type { KnownPermission } from "@fuutu/rbac";
+import { insertAfter } from "@fuutu/utils/insert-after";
+import {
+	appAccountNavItems,
+	appAdminNavItems,
+	appOrgSettingsNavItems,
+} from "../../../app-navigation";
 
 export interface NavSubItem {
 	titleKey: string;
@@ -8,6 +15,88 @@ export interface NavSubItem {
 	exact?: boolean;
 	/** Active when the `tab` query is absent (account page default tab). */
 	isDefaultTab?: boolean;
+}
+
+/** Kit org-settings item keys — anchors for `AppOrgSettingsNavItem.after`. */
+export type OrgSettingsNavKey =
+	| "general"
+	| "members"
+	| "billing"
+	| "credits"
+	| "apiKeys"
+	| "webhooks"
+	| "auditLog"
+	| "danger";
+
+/** Kit account-settings item keys — anchors for `AppAccountNavItem.after`. */
+export type AccountNavKey =
+	| "profile"
+	| "security"
+	| "sessions"
+	| "billing"
+	| "credits"
+	| "apiKeys"
+	| "danger";
+
+/** Kit admin item keys — anchors for `AppAdminNavItem.after`. */
+export type AdminNavKey = "adminOverview" | "adminUsers" | "adminAuditLogs";
+
+interface AppNavItemBase<TAnchor extends string> {
+	/** i18n key under `navigation.*`; also the item's unique key. */
+	titleKey: string;
+	/** Place directly after this kit item; omitted or hidden → appended. */
+	after?: TAnchor;
+	/** Match the path exactly instead of as a prefix. */
+	exact?: boolean;
+	/** Feature gate — `false` hides the item. Default `true`. */
+	enabled?: boolean;
+}
+
+/** App item in the organization-settings group. */
+export interface AppOrgSettingsNavItem
+	extends AppNavItemBase<OrgSettingsNavKey> {
+	/** Route segment under `/organizations/<slug>/settings/`. */
+	segment: string;
+	/** Shown only when the viewer's org role has this permission. */
+	permission?: KnownPermission;
+}
+
+/** App item in the account-settings group. */
+export interface AppAccountNavItem extends AppNavItemBase<AccountNavKey> {
+	/** Absolute path, e.g. `/settings/integrations`. */
+	href: string;
+}
+
+/** App item in the admin group (already system-admin only). */
+export interface AppAdminNavItem extends AppNavItemBase<AdminNavKey> {
+	/** Absolute path, e.g. `/admin/tenants`. */
+	href: string;
+}
+
+function toNavSubItem(item: AppNavItemBase<string>, href: string): NavSubItem {
+	return {
+		titleKey: item.titleKey,
+		href,
+		...(item.exact ? { exact: true } : {}),
+	};
+}
+
+function mergeAppItems<T extends AppNavItemBase<string>>(
+	base: NavSubItem[],
+	extras: readonly T[],
+	toHref: (item: T) => string,
+	visible: (item: T) => boolean = () => true,
+): NavSubItem[] {
+	return insertAfter(
+		base,
+		extras
+			.filter((item) => item.enabled !== false && visible(item))
+			.map((item) => ({
+				after: item.after,
+				item: toNavSubItem(item, toHref(item)),
+			})),
+		(item) => item.titleKey,
+	);
 }
 
 export const ACCOUNT_SETTINGS_PATH = "/settings";
@@ -21,9 +110,14 @@ export function orgBillingHref(slug: string): string {
 	return `${orgSettingsBase(slug)}/billing`;
 }
 
+/**
+ * `can` checks the viewer's org role for app items with a `permission`;
+ * without it, permission-gated app items stay hidden (fail closed).
+ */
 export function getOrgSettingsItems(
 	slug: string,
 	canViewAuditLog: boolean,
+	can?: (permission: KnownPermission) => boolean,
 ): NavSubItem[] {
 	const base = orgSettingsBase(slug);
 	const items: NavSubItem[] = [
@@ -46,7 +140,12 @@ export function getOrgSettingsItems(
 		items.push({ titleKey: "auditLog", href: `${base}/audit-log` });
 	}
 	items.push({ titleKey: "danger", href: `${base}/danger` });
-	return items;
+	return mergeAppItems(
+		items,
+		appOrgSettingsNavItems,
+		(item) => `${base}/${item.segment}`,
+		(item) => !item.permission || (can?.(item.permission) ?? false),
+	);
 }
 
 export function getAccountItems(): NavSubItem[] {
@@ -75,15 +174,19 @@ export function getAccountItems(): NavSubItem[] {
 		{ titleKey: "apiKeys", href: `${ACCOUNT_SETTINGS_PATH}/api-keys` },
 		{ titleKey: "danger", href: `${ACCOUNT_SETTINGS_PATH}?tab=danger` },
 	);
-	return items;
+	return mergeAppItems(items, appAccountNavItems, (item) => item.href);
 }
 
 export function getAdminItems(): NavSubItem[] {
-	return [
-		{ titleKey: "adminOverview", href: ADMIN_PATH, exact: true },
-		{ titleKey: "adminUsers", href: `${ADMIN_PATH}/users` },
-		{ titleKey: "adminAuditLogs", href: `${ADMIN_PATH}/audit-logs` },
-	];
+	return mergeAppItems(
+		[
+			{ titleKey: "adminOverview", href: ADMIN_PATH, exact: true },
+			{ titleKey: "adminUsers", href: `${ADMIN_PATH}/users` },
+			{ titleKey: "adminAuditLogs", href: `${ADMIN_PATH}/audit-logs` },
+		],
+		appAdminNavItems,
+		(item) => item.href,
+	);
 }
 
 export function isPathWithin(pathname: string, prefix: string): boolean {

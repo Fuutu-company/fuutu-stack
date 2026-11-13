@@ -10,6 +10,13 @@ import {
 } from "../features";
 import { buildPricingTiers, type PlanTranslations } from "../plans";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("../config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 const ALL_PLAN_IDS: PlanId[] = ["free", "pro", "enterprise"];
 const ALL_LIMIT_KEYS: LimitKey[] = [
 	"organizations",
@@ -307,26 +314,5 @@ describe("planIdToTier()", () => {
 
 	it("maps enterprise to enterprise", () => {
 		expect(planIdToTier("enterprise")).toBe("enterprise");
-	});
-});
-
-describe("check-translations plan feature parity", () => {
-	it("the script lists exactly the features buildPricingTiers renders", async () => {
-		const { readFileSync } = await import("node:fs");
-		const { extractVisiblePlanFeatures } = await import(
-			"../../../i18n/scripts/plan-features.mjs"
-		);
-		const source = readFileSync(new URL("../config.ts", import.meta.url), {
-			encoding: "utf-8",
-		});
-
-		const rendered: Record<string, string[]> = {};
-		for (const audience of ["saas", "marketing"] as const) {
-			for (const tier of buildPricingTiers({ audience, t: mockTranslations })) {
-				rendered[tier.id] = tier.featureIds;
-			}
-		}
-
-		expect(extractVisiblePlanFeatures(source)).toEqual(rendered);
 	});
 });

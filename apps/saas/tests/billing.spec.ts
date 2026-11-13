@@ -1,4 +1,9 @@
 import { expect, test } from "./fixtures";
+import { planCtaLabel, upgradePlanId } from "./kit-catalog";
+
+// The upgrade target and its CTA come from PLANS + translations, not the
+// kit demo literals ("pro" / "Upgrade to Pro").
+const upgradeCta = planCtaLabel(upgradePlanId);
 
 test.describe("billing & checkout flows", () => {
 	test("choose-plan page renders", async ({ page }) => {
@@ -44,14 +49,11 @@ test.describe("billing & checkout flows", () => {
 		});
 
 		await page.goto("/choose-plan");
-		await page
-			.getByRole("button", { name: /upgrade to pro/i })
-			.first()
-			.click();
+		await page.getByRole("button", { name: upgradeCta }).first().click();
 
 		await expect.poll(() => checkoutInput).toBeTruthy();
 		expect(checkoutInput).toMatchObject({
-			planId: "pro",
+			planId: upgradePlanId,
 			organizationId: activeOrgId,
 		});
 	});
@@ -77,10 +79,7 @@ test.describe("billing & checkout flows", () => {
 		);
 
 		await page.goto("/organizations/acme/settings/billing");
-		await page
-			.getByRole("button", { name: /upgrade to pro/i })
-			.first()
-			.click();
+		await page.getByRole("button", { name: upgradeCta }).first().click();
 
 		await expect(
 			page.getByText(/payments are not configured for this environment/i),

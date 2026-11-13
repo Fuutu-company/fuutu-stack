@@ -1,6 +1,7 @@
 import type { McpPrincipal } from "@fuutu/mcp";
 import type { RateLimitStore } from "@fuutu/utils/rate-limit";
 import { getClientIp } from "../client-ip";
+import { rateLimitedResponse } from "../pre-auth-throttle";
 
 export type McpRateLimits = {
 	anonymous: { maxRequests: number; windowMs: number };
@@ -35,15 +36,5 @@ export async function checkMcpRateLimit(
 		limit,
 	);
 	if (result.allowed) return null;
-	const retryAfter = Math.max(
-		1,
-		Math.ceil((result.resetAt - Date.now()) / 1000),
-	);
-	return new Response(JSON.stringify({ error: "rate_limited" }), {
-		status: 429,
-		headers: {
-			"content-type": "application/json",
-			"retry-after": String(retryAfter),
-		},
-	});
+	return rateLimitedResponse(result.resetAt);
 }

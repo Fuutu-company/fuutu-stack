@@ -38,7 +38,10 @@ export default defineConfig({
 	testDir: "./tests",
 	// Baselines are committed to the repo (.fuutu/visual-baselines/<app>) —
 	// CI refreshes them per PR and commits the diff onto the branch.
-	snapshotDir: "../../.fuutu/visual-baselines/marketing",
+	// `pnpm test:visual:local` points this at a scratch dir so committed baselines stay untouched.
+	snapshotDir:
+		process.env.FUUTU_VISUAL_SNAPSHOT_DIR ??
+		"../../.fuutu/visual-baselines/marketing",
 	snapshotPathTemplate: "{snapshotDir}/{arg}-{projectName}-{platform}{ext}",
 	timeout: 30_000,
 	...(COVERAGE ? { globalTeardown: "./tests/coverage-teardown.ts" } : {}),

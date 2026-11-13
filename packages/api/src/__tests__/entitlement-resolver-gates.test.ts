@@ -4,6 +4,13 @@ import { call } from "@orpc/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("@fuutu/payments/config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@fuutu/payments/config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 // A registered entitlement resolver must drive every oRPC plan/limit gate,
 // not only direct getOrgEntitlement callers. The DB says "pro" for both the
 // org and the user; the resolver says otherwise.

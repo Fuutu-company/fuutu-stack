@@ -2,6 +2,14 @@ import { env } from "@fuutu/env/saas";
 import { API_KEY_ADMIN_SCOPES, API_KEY_SCOPES } from "./api-key-scopes";
 
 /**
+ * Failed credential checks allowed per trusted client IP and minute
+ * (`throttlePreAuth`) — bounds lookups from random-credential floods.
+ * Only failures count, so legitimate callers never get near it. Needs
+ * `TRUST_PROXY_HEADERS`; without trusted client IPs nothing is throttled.
+ */
+const PRE_AUTH_FAILURES = { maxRequests: 60, windowMs: 60 * 1000 };
+
+/**
  * API configuration — owned by @fuutu/api.
  *
  * Per-endpoint rate limits applied by the oRPC rate-limit middleware.
@@ -21,6 +29,8 @@ export const apiConfig = {
 			maxRequests: 100,
 			windowMs: 60 * 1000, // 1 minute
 		},
+		// Failed credential checks per client IP (oRPC API keys).
+		preAuth: PRE_AUTH_FAILURES,
 		endpoints: {
 			// AI endpoints — stricter limits
 			aiChat: {
@@ -127,10 +137,15 @@ export const apiConfig = {
 		auth: "optional" as "optional" | "required",
 		/** Always-loaded guidance for connected agents (keep < 4 KB). */
 		instructions: undefined as string | undefined,
-		/** Per client IP (anonymous) / per credential (API key, OAuth token). */
+		/**
+		 * Per client IP (anonymous) / per credential (API key, OAuth token).
+		 * `preAuth`: failed credential checks per client IP (see
+		 * `throttlePreAuth`).
+		 */
 		rateLimit: {
 			anonymous: { maxRequests: 30, windowMs: 60 * 1000 },
 			authenticated: { maxRequests: 300, windowMs: 60 * 1000 },
+			preAuth: PRE_AUTH_FAILURES,
 		},
 	},
 } as const;

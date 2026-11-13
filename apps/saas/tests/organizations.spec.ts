@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { orgSettingsCopy } from "./kit-catalog";
 
 test.describe("organization flows", () => {
 	test("organizations page renders for authenticated user", async ({
@@ -196,11 +197,11 @@ test.describe("organization settings — invite & members", () => {
 		await emailInput.fill(`qa-seat-${Date.now()}@fuutu.local`);
 		await page.getByRole("button", { name: /^invite$/i }).click();
 
-		await expect(page.getByText(/seat limit reached \(3 seats\)/i)).toBeVisible(
-			{ timeout: 10_000 },
-		);
 		await expect(
-			page.getByRole("link", { name: /upgrade plan/i }),
+			page.getByText(orgSettingsCopy("seatLimitReached", { seats: 3 })),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page.getByRole("link", { name: orgSettingsCopy("seatLimitCta") }),
 		).toHaveAttribute("href", "/organizations/acme/settings/billing");
 	});
 });

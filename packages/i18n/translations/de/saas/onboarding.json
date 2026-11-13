@@ -27,6 +27,7 @@
 			"description": "Dein Konto ist einsatzbereit. Auf zum Dashboard.",
 			"cta": "Zum Dashboard"
 		},
-		"failed": "Onboarding-Schritt konnte nicht gespeichert werden."
+		"failed": "Onboarding-Schritt konnte nicht gespeichert werden.",
+		"incomplete": "Schließe zuerst die restlichen Onboarding-Schritte ab."
 	}
 }

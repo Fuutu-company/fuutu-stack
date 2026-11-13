@@ -27,6 +27,7 @@
 			"description": "Your account is ready. Let's go to the dashboard.",
 			"cta": "Go to dashboard"
 		},
-		"failed": "Could not save onboarding step."
+		"failed": "Could not save onboarding step.",
+		"incomplete": "Finish the remaining onboarding steps first."
 	}
 }

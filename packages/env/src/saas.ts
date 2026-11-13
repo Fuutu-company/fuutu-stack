@@ -1,5 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+import { appClientEnv, appClientRuntimeEnv, appServerEnv } from "./app-env";
+import { mergeAppEnv } from "./merge-app-env";
 import { cookieDomainSchema } from "./public";
 
 // Must stay in sync with packages/logs/src/config.ts — @fuutu/logs reads
@@ -14,153 +16,166 @@ const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
 const strictFlag = () =>
 	z.stringbool({ truthy: ["1", "true"], falsy: ["0", "false"] });
 
+const kitServerEnv = {
+	DATABASE_URL: z.url(),
+	// Selects the Redis rate-limit store when set — driver is a stub
+	// until implemented, see @fuutu/utils/rate-limit.
+	REDIS_URL: z.url().optional(),
+	BETTER_AUTH_SECRET: z.string().min(32),
+	BETTER_AUTH_URL: z.url(),
+	// CORS origin for the Hono API — must be a concrete URL, never "*"
+	// (the API sends credentials; "*" + credentials is an invalid and
+	// dangerous combination that browsers reject anyway). URL
+	// validation already rejects "*".
+	CORS_ORIGIN: z.url().optional().default("http://localhost:3000"),
+	POLAR_ACCESS_TOKEN: z.string().optional(),
+	POLAR_SUCCESS_URL: z.url().optional(),
+	GOOGLE_CLIENT_ID: z.string().optional(),
+	GOOGLE_CLIENT_SECRET: z.string().optional(),
+	GITHUB_CLIENT_ID: z.string().optional(),
+	GITHUB_CLIENT_SECRET: z.string().optional(),
+	GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
+	// AI
+	AI_PROVIDER: z
+		.enum(["openrouter", "google", "openai", "anthropic", "noop"])
+		.optional(),
+	AI_API_KEY: z.string().optional(),
+	AI_BASE_URL: z.url().optional(),
+	AI_MODEL: z.string().optional(),
+	// Cron
+	CRON_PROVIDER: z.enum(["inline", "trigger-dev"]).optional(),
+	// Bearer secret for the /api/cron trigger endpoint (Vercel Cron,
+	// cron-job.org, etc. send `Authorization: Bearer <CRON_SECRET>`).
+	// When unset the endpoint returns 501 — cron stays disabled.
+	// min(16): the secret is compared verbatim as a Bearer token.
+	CRON_SECRET: z.string().min(16).optional(),
+	// Email
+	EMAIL_PROVIDER: z
+		.enum([
+			"console",
+			"noop",
+			"resend",
+			"plunk",
+			"nodemailer",
+			"postmark",
+			"mailgun",
+		])
+		.optional(),
+	EMAIL_FROM: z.string().optional(),
+	RESEND_API_KEY: z.string().optional(),
+	PLUNK_API_KEY: z.string().optional(),
+	// Payments — Polar
+	POLAR_WEBHOOK_SECRET: z.string().optional(),
+	// Payments — Stripe
+	STRIPE_SECRET_KEY: z.string().optional(),
+	STRIPE_WEBHOOK_SECRET: z.string().optional(),
+	// Payments — Creem
+	CREEM_API_KEY: z.string().optional(),
+	CREEM_WEBHOOK_SECRET: z.string().optional(),
+	CREEM_TEST_MODE: z.stringbool().optional(),
+	// Payments — Plan price/product IDs (provider-agnostic)
+	// Set to your active provider's ID: Stripe price_id, Creem product_id, Polar product_id, etc.
+	PAYMENTS_PRO_PRICE_ID: z.string().optional(),
+	PAYMENTS_PRO_YEARLY_PRICE_ID: z.string().optional(),
+	// Payments — Credit top-up package price IDs
+	CREDITS_AI_TOKENS_100K_PRICE_ID: z.string().optional(),
+	CREDITS_AI_TOKENS_500K_PRICE_ID: z.string().optional(),
+	CREDITS_API_CALLS_50K_PRICE_ID: z.string().optional(),
+	// Payments — Provider selection
+	PAYMENTS_PROVIDER: z
+		.enum(["polar", "stripe", "creem", "custom", "noop"])
+		.optional(),
+	// Storage (S3 / MinIO)
+	STORAGE_PROVIDER: z.enum(["s3", "supabase", "noop"]).optional(),
+	// Search (@fuutu/search)
+	SEARCH_PROVIDER: z
+		.enum(["postgres", "meilisearch", "typesense", "noop"])
+		.optional(),
+	S3_ENDPOINT: z.url().optional(),
+	S3_REGION: z.string().optional(),
+	S3_ACCESS_KEY_ID: z.string().optional(),
+	S3_SECRET_ACCESS_KEY: z.string().optional(),
+	S3_BUCKET_AVATARS: z.string().optional(),
+	S3_BUCKET_ORGANIZATION_LOGOS: z.string().optional(),
+	S3_FORCE_PATH_STYLE: z.stringbool().optional(),
+	MINIO_ROOT_USER: z.string().optional(),
+	MINIO_ROOT_PASSWORD: z.string().optional(),
+	// Observability — consumed by the evlog drains selected via LOG_DRAIN
+	SENTRY_DSN: z.url().optional(),
+	AXIOM_TOKEN: z.string().optional(),
+	AXIOM_DATASET: z.string().optional(),
+	// Logging
+	// Comma-separated drain list, e.g. "sentry,fs" — each entry must be a
+	// known drain id (console is always on but allowed in the list).
+	LOG_DRAIN: z
+		.string()
+		.refine(
+			(v) =>
+				v
+					.split(",")
+					.every((s) => LOG_DRAIN_VALUES.includes(s.trim().toLowerCase())),
+			{
+				message: `LOG_DRAIN must be a comma-separated list of: ${LOG_DRAIN_VALUES.join(", ")}`,
+			},
+		)
+		.optional(),
+	LOG_AUDIT_SINK: z.enum(["console", "db"]).default("console"),
+	LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+	// Service label for log output — read directly by @fuutu/logs
+	// (documented exception, see top of file); optional, default "fuutu".
+	SERVICE_NAME: z.string().optional(),
+	// Fuutu Business License & Telemetry
+	FUUTU_LICENSE_KEY: z.string().optional(),
+	FUUTU_LICENSE_ENDPOINT: z.url().optional(),
+	FUUTU_TELEMETRY_ENDPOINT: z.url().optional(),
+	FUUTU_TELEMETRY_DISABLED: z.stringbool().optional(),
+	FUUTU_DISABLE_RATE_LIMIT: strictFlag().optional(),
+	// Trust X-Forwarded-For / X-Real-IP for per-IP rate limiting — only
+	// behind a reverse proxy that overwrites them (Traefik, nginx, LB).
+	TRUST_PROXY_HEADERS: strictFlag().default(false),
+	// Auth cookie prefix — set per project by the port slot (local dev),
+	// so several projects on localhost don't share one login cookie.
+	FUUTU_AUTH_COOKIE_PREFIX: z
+		.string()
+		.regex(/^[a-z0-9-]+$/)
+		.optional(),
+	// Explicit opt-in for outbound-webhook SSRF relaxation (http: +
+	// private/loopback targets). Needed for local receivers in dev —
+	// must NEVER be set in production.
+	WEBHOOK_ALLOW_PRIVATE_URLS: strictFlag().optional(),
+};
+
+const kitClientEnv = {
+	NEXT_PUBLIC_MARKETING_URL: z.url().optional(),
+	NEXT_PUBLIC_SAAS_URL: z.url().optional(),
+	NEXT_PUBLIC_ANALYTICS_PROVIDER: z
+		.enum(["umami", "plausible", "pirsch", "mixpanel", "ga4", "noop"])
+		.optional(),
+	NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
+	NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
+	NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: cookieDomainSchema,
+	NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
+	NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
+};
+
+// App vars (./app-env) join the kit groups; a key the kit already defines
+// throws at load (mergeAppEnv). App server vars are read from process.env
+// by key; client vars need literal reads and come mapped from the app file.
+const appServerRuntimeEnv = Object.fromEntries(
+	Object.keys(appServerEnv).map((key) => [key, process.env[key]]),
+) as Record<keyof typeof appServerEnv, string | undefined>;
+
 export const env = createEnv({
-	server: {
-		DATABASE_URL: z.url(),
-		// Selects the Redis rate-limit store when set — driver is a stub
-		// until implemented, see @fuutu/utils/rate-limit.
-		REDIS_URL: z.url().optional(),
-		BETTER_AUTH_SECRET: z.string().min(32),
-		BETTER_AUTH_URL: z.url(),
-		// CORS origin for the Hono API — must be a concrete URL, never "*"
-		// (the API sends credentials; "*" + credentials is an invalid and
-		// dangerous combination that browsers reject anyway). URL
-		// validation already rejects "*".
-		CORS_ORIGIN: z.url().optional().default("http://localhost:3000"),
-		POLAR_ACCESS_TOKEN: z.string().optional(),
-		POLAR_SUCCESS_URL: z.url().optional(),
-		GOOGLE_CLIENT_ID: z.string().optional(),
-		GOOGLE_CLIENT_SECRET: z.string().optional(),
-		GITHUB_CLIENT_ID: z.string().optional(),
-		GITHUB_CLIENT_SECRET: z.string().optional(),
-		GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
-		// AI
-		AI_PROVIDER: z
-			.enum(["openrouter", "google", "openai", "anthropic", "noop"])
-			.optional(),
-		AI_API_KEY: z.string().optional(),
-		AI_BASE_URL: z.url().optional(),
-		AI_MODEL: z.string().optional(),
-		// Cron
-		CRON_PROVIDER: z.enum(["inline", "trigger-dev"]).optional(),
-		// Bearer secret for the /api/cron trigger endpoint (Vercel Cron,
-		// cron-job.org, etc. send `Authorization: Bearer <CRON_SECRET>`).
-		// When unset the endpoint returns 501 — cron stays disabled.
-		// min(16): the secret is compared verbatim as a Bearer token.
-		CRON_SECRET: z.string().min(16).optional(),
-		// Email
-		EMAIL_PROVIDER: z
-			.enum([
-				"console",
-				"noop",
-				"resend",
-				"plunk",
-				"nodemailer",
-				"postmark",
-				"mailgun",
-			])
-			.optional(),
-		EMAIL_FROM: z.string().optional(),
-		RESEND_API_KEY: z.string().optional(),
-		PLUNK_API_KEY: z.string().optional(),
-		// Payments — Polar
-		POLAR_WEBHOOK_SECRET: z.string().optional(),
-		// Payments — Stripe
-		STRIPE_SECRET_KEY: z.string().optional(),
-		STRIPE_WEBHOOK_SECRET: z.string().optional(),
-		// Payments — Creem
-		CREEM_API_KEY: z.string().optional(),
-		CREEM_WEBHOOK_SECRET: z.string().optional(),
-		CREEM_TEST_MODE: z.stringbool().optional(),
-		// Payments — Plan price/product IDs (provider-agnostic)
-		// Set to your active provider's ID: Stripe price_id, Creem product_id, Polar product_id, etc.
-		PAYMENTS_PRO_PRICE_ID: z.string().optional(),
-		PAYMENTS_PRO_YEARLY_PRICE_ID: z.string().optional(),
-		// Payments — Credit top-up package price IDs
-		CREDITS_AI_TOKENS_100K_PRICE_ID: z.string().optional(),
-		CREDITS_AI_TOKENS_500K_PRICE_ID: z.string().optional(),
-		CREDITS_API_CALLS_50K_PRICE_ID: z.string().optional(),
-		// Payments — Provider selection
-		PAYMENTS_PROVIDER: z
-			.enum(["polar", "stripe", "creem", "custom", "noop"])
-			.optional(),
-		// Storage (S3 / MinIO)
-		STORAGE_PROVIDER: z.enum(["s3", "supabase", "noop"]).optional(),
-		// Search (@fuutu/search)
-		SEARCH_PROVIDER: z
-			.enum(["postgres", "meilisearch", "typesense", "noop"])
-			.optional(),
-		S3_ENDPOINT: z.url().optional(),
-		S3_REGION: z.string().optional(),
-		S3_ACCESS_KEY_ID: z.string().optional(),
-		S3_SECRET_ACCESS_KEY: z.string().optional(),
-		S3_BUCKET_AVATARS: z.string().optional(),
-		S3_BUCKET_ORGANIZATION_LOGOS: z.string().optional(),
-		S3_FORCE_PATH_STYLE: z.stringbool().optional(),
-		MINIO_ROOT_USER: z.string().optional(),
-		MINIO_ROOT_PASSWORD: z.string().optional(),
-		// Observability — consumed by the evlog drains selected via LOG_DRAIN
-		SENTRY_DSN: z.url().optional(),
-		AXIOM_TOKEN: z.string().optional(),
-		AXIOM_DATASET: z.string().optional(),
-		// Logging
-		// Comma-separated drain list, e.g. "sentry,fs" — each entry must be a
-		// known drain id (console is always on but allowed in the list).
-		LOG_DRAIN: z
-			.string()
-			.refine(
-				(v) =>
-					v
-						.split(",")
-						.every((s) => LOG_DRAIN_VALUES.includes(s.trim().toLowerCase())),
-				{
-					message: `LOG_DRAIN must be a comma-separated list of: ${LOG_DRAIN_VALUES.join(", ")}`,
-				},
-			)
-			.optional(),
-		LOG_AUDIT_SINK: z.enum(["console", "db"]).default("console"),
-		LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
-		// Service label for log output — read directly by @fuutu/logs
-		// (documented exception, see top of file); optional, default "fuutu".
-		SERVICE_NAME: z.string().optional(),
-		// Fuutu Business License & Telemetry
-		FUUTU_LICENSE_KEY: z.string().optional(),
-		FUUTU_LICENSE_ENDPOINT: z.url().optional(),
-		FUUTU_TELEMETRY_ENDPOINT: z.url().optional(),
-		FUUTU_TELEMETRY_DISABLED: z.stringbool().optional(),
-		FUUTU_DISABLE_RATE_LIMIT: strictFlag().optional(),
-		// Trust X-Forwarded-For / X-Real-IP for per-IP rate limiting — only
-		// behind a reverse proxy that overwrites them (Traefik, nginx, LB).
-		TRUST_PROXY_HEADERS: strictFlag().default(false),
-		// Auth cookie prefix — set per project by the port slot (local dev),
-		// so several projects on localhost don't share one login cookie.
-		FUUTU_AUTH_COOKIE_PREFIX: z
-			.string()
-			.regex(/^[a-z0-9-]+$/)
-			.optional(),
-		// Explicit opt-in for outbound-webhook SSRF relaxation (http: +
-		// private/loopback targets). Needed for local receivers in dev —
-		// must NEVER be set in production.
-		WEBHOOK_ALLOW_PRIVATE_URLS: strictFlag().optional(),
-	},
+	server: mergeAppEnv(kitServerEnv, appServerEnv, "server"),
 	shared: {
 		NODE_ENV: z
 			.enum(["development", "production", "test"])
 			.default("development"),
 	},
-	client: {
-		NEXT_PUBLIC_MARKETING_URL: z.url().optional(),
-		NEXT_PUBLIC_SAAS_URL: z.url().optional(),
-		NEXT_PUBLIC_ANALYTICS_PROVIDER: z
-			.enum(["umami", "plausible", "pirsch", "mixpanel", "ga4", "noop"])
-			.optional(),
-		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
-		NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
-		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: cookieDomainSchema,
-		NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
-		NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
-	},
+	client: mergeAppEnv(kitClientEnv, appClientEnv, "client"),
 	runtimeEnv: {
+		...appServerRuntimeEnv,
+		...appClientRuntimeEnv,
 		NEXT_PUBLIC_MARKETING_URL: process.env.NEXT_PUBLIC_MARKETING_URL,
 		NEXT_PUBLIC_SAAS_URL: process.env.NEXT_PUBLIC_SAAS_URL,
 		NEXT_PUBLIC_ANALYTICS_PROVIDER: process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER,

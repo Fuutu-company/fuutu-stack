@@ -1,5 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+import { appClientEnv, appClientRuntimeEnv } from "./app-env";
+import { mergeAppEnv } from "./merge-app-env";
 
 /**
  * Cookie-domain shape for NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN —
@@ -13,6 +15,20 @@ export const cookieDomainSchema = z
 		/^\.?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i,
 	)
 	.optional();
+
+const kitClientEnv = {
+	NEXT_PUBLIC_MARKETING_URL: z.url().optional(),
+	NEXT_PUBLIC_SAAS_URL: z.url().optional(),
+	NEXT_PUBLIC_DOCS_URL: z.url().optional(),
+	NEXT_PUBLIC_ANALYTICS_PROVIDER: z
+		.enum(["umami", "plausible", "pirsch", "mixpanel", "ga4", "noop"])
+		.optional(),
+	NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
+	NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
+	NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: cookieDomainSchema,
+	NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
+	NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
+};
 
 /**
  * Shared env surface for the public apps (marketing + docs).
@@ -28,20 +44,10 @@ export const publicEnvOptions = {
 			.enum(["development", "production", "test"])
 			.default("development"),
 	},
-	client: {
-		NEXT_PUBLIC_MARKETING_URL: z.url().optional(),
-		NEXT_PUBLIC_SAAS_URL: z.url().optional(),
-		NEXT_PUBLIC_DOCS_URL: z.url().optional(),
-		NEXT_PUBLIC_ANALYTICS_PROVIDER: z
-			.enum(["umami", "plausible", "pirsch", "mixpanel", "ga4", "noop"])
-			.optional(),
-		NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: z.stringbool().optional(),
-		NEXT_PUBLIC_ANALYTICS_SHOW_CONSENT_BANNER: z.stringbool().optional(),
-		NEXT_PUBLIC_ANALYTICS_CONSENT_DOMAIN: cookieDomainSchema,
-		NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional(),
-		NEXT_PUBLIC_UMAMI_SCRIPT_URL: z.url().optional(),
-	},
+	// App public vars (./app-env); a key the kit defines throws at load.
+	client: mergeAppEnv(kitClientEnv, appClientEnv, "client"),
 	runtimeEnv: {
+		...appClientRuntimeEnv,
 		NODE_ENV: process.env.NODE_ENV,
 		NEXT_PUBLIC_MARKETING_URL: process.env.NEXT_PUBLIC_MARKETING_URL,
 		NEXT_PUBLIC_SAAS_URL: process.env.NEXT_PUBLIC_SAAS_URL,

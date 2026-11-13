@@ -8,6 +8,7 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import { icons } from "lucide-react";
 import type { MDXComponents } from "mdx/types";
 import { type ComponentProps, createElement, type ReactNode } from "react";
+import { appDocs } from "./app-docs";
 
 /** `icon="book-open"` in MDX → the Lucide icon `BookOpen`. */
 function resolveIcon(icon: ReactNode): ReactNode {
@@ -37,6 +38,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
 		Tab,
 		Tabs,
 		TypeTable,
+		...appDocs.mdxComponents,
 		...components,
 	};
 }

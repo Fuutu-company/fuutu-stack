@@ -1,8 +1,10 @@
 import { QuickActions, RecentActivity, StatsOverview } from "@app/dashboard";
+import { renderSlot } from "@app/slots";
 import { config } from "@fuutu/config";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { appSlots } from "@/app-slots";
 
 export default async function DashboardPage() {
 	const t = await getTranslations("dashboard");
@@ -27,6 +29,7 @@ export default async function DashboardPage() {
 				<RecentActivity />
 				<QuickActions />
 			</div>
+			{renderSlot(appSlots.dashboard, { orgSlug: null })}
 		</div>
 	);
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("../config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 // Mock env with only SOME top-up price IDs set — exercises the isEnvKey
 // fallback for packages whose env var was never configured.
 vi.mock("@fuutu/env/saas", () => ({

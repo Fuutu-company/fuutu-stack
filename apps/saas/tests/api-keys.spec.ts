@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { apiKeyScopeLabel, defaultApiKeyScopes } from "./kit-catalog";
 
 type ApiKeyItem = {
 	id: string;
@@ -29,16 +30,23 @@ test.describe("API keys — org key from user settings", () => {
 			dialog.getByRole("combobox", { name: "Organization" }),
 		).toContainText("Acme");
 
-		// Kit default is "api" pre-checked; submit needs at least one scope.
-		const apiScope = dialog.getByRole("checkbox", { name: "API" });
-		const mcpScope = dialog.getByRole("checkbox", { name: "MCP" });
+		// API_KEY_DEFAULT_SCOPES are pre-checked; submit needs at least one.
+		const scopeBox = (scope: string) =>
+			dialog.getByRole("checkbox", { name: apiKeyScopeLabel(scope) });
 		const submit = dialog.getByRole("button", { name: "Create key" });
-		await expect(apiScope).toBeChecked();
-		await expect(mcpScope).not.toBeChecked();
-		await apiScope.click();
+		for (const scope of ["api", "mcp"]) {
+			if (defaultApiKeyScopes.includes(scope)) {
+				await expect(scopeBox(scope), scope).toBeChecked();
+			} else {
+				await expect(scopeBox(scope), scope).not.toBeChecked();
+			}
+		}
+		for (const scope of defaultApiKeyScopes) {
+			await scopeBox(scope).uncheck();
+		}
 		await expect(submit).toBeDisabled();
-		await apiScope.click();
-		await mcpScope.click();
+		await scopeBox("api").check();
+		await scopeBox("mcp").check();
 		await expect(submit).toBeEnabled();
 		await submit.click();
 

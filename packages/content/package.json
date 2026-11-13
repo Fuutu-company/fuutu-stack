@@ -6,6 +6,9 @@
 	"exports": {
 		".": {
 			"default": "./src/index.tsx"
+		},
+		"./changelog-meta": {
+			"default": "./src/changelog-meta.ts"
 		}
 	},
 	"scripts": {

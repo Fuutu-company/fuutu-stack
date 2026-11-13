@@ -29,6 +29,16 @@ export const publicProcedure = os
 	.$context<Context & Partial<EvlogOrpcContext>>()
 	.use(evlog<Context & Partial<EvlogOrpcContext>>())
 	.use(({ context, next }) => {
+		// A presented key from an IP over its failed-check budget
+		// (createContext). No Retry-After header: ORPCError carries no
+		// headers and the Hono dispatch copies only oRPC's response — the
+		// delay is in the message, like the other oRPC rate limits.
+		if (context.preAuthRateLimited) {
+			throw new ORPCError("TOO_MANY_REQUESTS", {
+				status: 429,
+				message: `Rate limit exceeded. Try again in ${context.preAuthRateLimited.retryAfter} seconds.`,
+			});
+		}
 		// A valid key whose `api` scope is plan-gated (createContext) gets a
 		// typed 402 instead of silently degrading to an anonymous caller.
 		if (context.apiKeyUpgradeRequired) {

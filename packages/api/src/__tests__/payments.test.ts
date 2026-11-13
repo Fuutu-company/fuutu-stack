@@ -43,8 +43,11 @@ const proPlanOverrides = vi.hoisted(
 );
 
 vi.mock("@fuutu/payments/config", async (importOriginal) => {
-	const actual =
-		await importOriginal<typeof import("@fuutu/payments/config")>();
+	// Fixed kit plan catalog (@fuutu/test-utils), not the app's PLANS.
+	const actual = {
+		...(await importOriginal<typeof import("@fuutu/payments/config")>()),
+		...(await import("@fuutu/test-utils")).planCatalogFixture,
+	};
 	return {
 		...actual,
 		PLANS: {

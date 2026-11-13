@@ -1,4 +1,23 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { PLAN_IDS, PLANS } from "../../../packages/payments/src/config";
+
+/** English CTA label of every plan the marketing pricing page shows. */
+function marketingPlanCtas(): string[] {
+	const messages = JSON.parse(
+		readFileSync(
+			resolve(
+				__dirname,
+				"../../../packages/i18n/translations/en/common/payments.json",
+			),
+			"utf-8",
+		),
+	) as { payments: { plans: Record<string, { ctaLabel: string }> } };
+	return PLAN_IDS.filter((id) => PLANS[id].showInMarketing).map(
+		(id) => messages.payments.plans[id]?.ctaLabel ?? id,
+	);
+}
 
 // Base Playwright `test` on purpose: the shared fixture pre-accepts consent,
 // this spec needs the banner on screen.
@@ -42,7 +61,9 @@ test.describe("consent banner", () => {
 				{ selector, text },
 			);
 
-		for (const cta of ["Get started free", "Upgrade to Pro", "Contact sales"]) {
+		const ctas = marketingPlanCtas();
+		expect(ctas.length).toBeGreaterThan(0);
+		for (const cta of ctas) {
 			expect(await overlapsBanner("main a, main button", cta), cta).toBe(false);
 		}
 

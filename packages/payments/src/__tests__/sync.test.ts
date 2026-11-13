@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
+// app's PLANS — an app that replaces its catalog keeps them meaningful.
+vi.mock("../config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
 // Mock @fuutu/db — we're testing the sync logic, not DB writes
 const mockCreatePurchase = vi.fn();
 const mockUpdatePurchase = vi.fn();

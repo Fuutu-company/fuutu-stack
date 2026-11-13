@@ -3,6 +3,7 @@
 import { config } from "@fuutu/config";
 import {
 	hasOrgPermission,
+	type KnownPermission,
 	ORG_POLICY,
 	OrgAccessControl,
 	PERMISSIONS,
@@ -91,9 +92,9 @@ export function NavMain() {
 		icon: Bell,
 	});
 
-	const canViewAuditLog = orgRole
-		? hasOrgPermission(orgAC, toOrgRole(orgRole), PERMISSIONS.AUDIT_LOG.VIEW)
-		: false;
+	const can = (permission: KnownPermission): boolean =>
+		orgRole ? hasOrgPermission(orgAC, toOrgRole(orgRole), permission) : false;
+	const canViewAuditLog = can(PERMISSIONS.AUDIT_LOG.VIEW);
 	const showOrgGroup = inOrg && config.features.organizationsMode !== "off";
 
 	const isActive = (url: string): boolean => {
@@ -135,7 +136,7 @@ export function NavMain() {
 							label={t("navigation.organizationSettings")}
 							icon={Settings}
 							activePrefix={orgSettingsBase(orgSlug)}
-							items={getOrgSettingsItems(orgSlug, canViewAuditLog)}
+							items={getOrgSettingsItems(orgSlug, canViewAuditLog, can)}
 						/>
 					</SidebarMenu>
 				</SidebarGroup>

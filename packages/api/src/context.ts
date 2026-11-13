@@ -7,6 +7,7 @@ import {
 	type MissingScopeFeature,
 } from "./modules/api-keys/scope-feature";
 import { verifyApiKeyCredential } from "./modules/api-keys/verify-credential";
+import { throttlePreAuth } from "./pre-auth-throttle";
 
 export type CreateContextOptions = {
 	context: HonoContext;
@@ -70,13 +71,24 @@ export async function createContext({ context }: CreateContextOptions) {
 	let session = await auth.api.getSession({ headers });
 	let apiKey: ApiKeyAuth | null = null;
 	let apiKeyUpgradeRequired: MissingScopeFeature | null = null;
+	let preAuthRateLimited: PreAuthRateLimited | null = null;
 
 	if (!session) {
 		const rawKey = extractApiKey(headers);
-		if (rawKey) {
+		// A presented key costs a DB lookup before the oRPC rate limit can
+		// run — failed checks are counted per client IP; an IP over the
+		// budget gets 429 from publicProcedure.
+		const attempt = rawKey ? await throttlePreAuth(headers, "orpc") : null;
+		if (attempt?.limited) {
+			preAuthRateLimited = {
+				retryAfter: Number(attempt.limited.headers.get("retry-after") ?? "1"),
+			};
+		} else if (rawKey && attempt) {
 			// Owner ban, org membership and admin-scope role are re-checked
 			// on every request (verifyApiKeyCredential) — fail closed.
-			const verified = await verifyApiKeyCredential(rawKey);
+			const verified = await attempt.verify(() =>
+				verifyApiKeyCredential(rawKey),
+			);
 			if (verified && isAllowedOnApi(verified.apiKey.scopes)) {
 				// Same `api` feature gate as requireApiKey; the key stays
 				// unauthenticated and publicProcedure answers 402.
@@ -94,8 +106,17 @@ export async function createContext({ context }: CreateContextOptions) {
 			}
 		}
 	}
-	return { session, headers, apiKey, apiKeyUpgradeRequired };
+	return {
+		session,
+		headers,
+		apiKey,
+		apiKeyUpgradeRequired,
+		preAuthRateLimited,
+	};
 }
+
+/** Set when a presented key came from an IP over its failed-check budget (seconds until retry). */
+export type PreAuthRateLimited = { retryAfter: number };
 
 export type Context = {
 	session: Awaited<ReturnType<typeof auth.api.getSession>>;
@@ -103,4 +124,6 @@ export type Context = {
 	apiKey: ApiKeyAuth | null;
 	/** Set when a presented API key is valid but its `api` scope is plan-gated. */
 	apiKeyUpgradeRequired?: MissingScopeFeature | null;
+	/** Set when a presented API key was refused by the pre-auth throttle. */
+	preAuthRateLimited?: PreAuthRateLimited | null;
 };

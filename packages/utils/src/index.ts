@@ -1,6 +1,7 @@
 export { getBaseUrl } from "./base-url";
 export { cn } from "./cn";
 export { hash, sha256 } from "./hash";
+export { insertAfter } from "./insert-after";
 export { invariant } from "./invariant";
 export {
 	createMemoryRateLimitStore,

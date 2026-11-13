@@ -1,4 +1,5 @@
 import { ProfileForm } from "@app/settings";
+import { renderSlot } from "@app/slots";
 import { authConfig } from "@fuutu/auth/config";
 import { mcpOAuth } from "@fuutu/auth/mcp-oauth";
 import { paymentsConfig } from "@fuutu/payments/config";
@@ -7,6 +8,7 @@ import { Button, Card, CardContent } from "@fuutu/ui";
 import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { appSlots } from "@/app-slots";
 import { CreditBalanceView } from "@/modules/app/credits/credit-balance-view";
 import { ChangePasswordForm } from "@/modules/app/settings/components/change-password-form";
 import { ConnectedAppsBlock } from "@/modules/app/settings/components/connected-apps-block";
@@ -124,6 +126,7 @@ export default async function SettingsPage({
 					</div>
 				)}
 				{showCreditsTab && activeTab === "credits" && <CreditBalanceView />}
+				{renderSlot(appSlots.userSettings, { tab: activeTab })}
 			</div>
 		</div>
 	);

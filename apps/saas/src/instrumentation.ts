@@ -45,4 +45,7 @@ export async function register() {
 	if (env.PAYMENTS_PROVIDER) {
 		setPaymentProvider(env.PAYMENTS_PROVIDER);
 	}
+	// App-owned startup hook (entitlement resolvers, purchase hooks, …).
+	const { registerApp } = await import("./server-init");
+	await registerApp();
 }

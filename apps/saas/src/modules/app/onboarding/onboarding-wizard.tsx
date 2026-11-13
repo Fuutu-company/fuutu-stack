@@ -18,11 +18,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { appOnboardingSteps } from "@/app-onboarding";
 import { orpc } from "@/utils/orpc";
 import { completeOnboardingAction } from "./actions";
-
-const STEPS = ["profile", "organization", "done"] as const;
-type Step = (typeof STEPS)[number];
+import {
+	buildOnboardingSteps,
+	nextOnboardingStep,
+	previousOnboardingStep,
+} from "./onboarding-steps";
 
 const forcedOrgs = config.features.organizationsMode === "forced";
 
@@ -47,16 +50,27 @@ export function OnboardingWizard({
 }: OnboardingWizardProps) {
 	const t = useTranslations("onboarding");
 	const router = useRouter();
-	const [step, setStep] = useState<Step>("profile");
+	const [step, setStep] = useState<string>("profile");
 	const [name, setName] = useState(initialName);
 	const [orgName, setOrgName] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	// Created in this flow — navigating back or forward skips the org step
+	// so "Create" can't run a second time.
+	const [orgCreated, setOrgCreated] = useState(false);
 
 	const orgsEnabled = config.features.organizationsMode !== "off";
-	const steps: Step[] = orgsEnabled ? [...STEPS] : ["profile", "done"];
+	const steps = buildOnboardingSteps(orgsEnabled, appOnboardingSteps);
 	const currentIndex = steps.indexOf(step);
 	const progress = ((currentIndex + 1) / steps.length) * 100;
+	const completed = orgCreated ? ["organization"] : [];
+	const goNext = (from: string) =>
+		setStep(nextOnboardingStep(steps, from, completed));
+	const goBack = (from: string) =>
+		setStep(previousOnboardingStep(steps, from, completed));
+	const appStep = steps.includes(step)
+		? appOnboardingSteps.find((s) => s.id === step)
+		: undefined;
 
 	async function saveProfile() {
 		setIsLoading(true);
@@ -67,7 +81,7 @@ export function OnboardingWizard({
 				setError(t("failed"));
 				return;
 			}
-			setStep(orgsEnabled ? "organization" : "done");
+			goNext("profile");
 		} catch {
 			setError(t("failed"));
 		} finally {
@@ -79,7 +93,7 @@ export function OnboardingWizard({
 		if (skip || !orgName.trim()) {
 			// Forced mode never allows skipping the org step.
 			if (forcedOrgs) return;
-			setStep("done");
+			goNext("organization");
 			return;
 		}
 		setIsLoading(true);
@@ -87,7 +101,8 @@ export function OnboardingWizard({
 		try {
 			const slug = slugify(orgName);
 			await orpc.organizations.create.call({ name: orgName, slug });
-			setStep("done");
+			setOrgCreated(true);
+			goNext("organization");
 		} catch {
 			setError(t("failed"));
 		} finally {
@@ -109,7 +124,11 @@ export function OnboardingWizard({
 					return;
 				}
 			}
-			await completeOnboardingAction();
+			const result = await completeOnboardingAction();
+			if (!result.ok) {
+				setError(t("incomplete"));
+				return;
+			}
 			// Refresh the cached session cookie so the server-side onboarding
 			// guard sees onboardingComplete=true immediately (cookie cache TTL
 			// would otherwise keep redirecting to /onboarding for minutes).
@@ -244,6 +263,16 @@ export function OnboardingWizard({
 									</ul>
 								</div>
 							)}
+						</FieldGroup>
+					)}
+					{appStep && (
+						<FieldGroup>
+							<h2 className="font-semibold">{t(appStep.titleKey)}</h2>
+							<appStep.Component
+								key={appStep.id}
+								onNext={() => goNext(appStep.id)}
+								onBack={() => goBack(appStep.id)}
+							/>
 						</FieldGroup>
 					)}
 					{step === "done" && (

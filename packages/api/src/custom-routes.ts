@@ -20,10 +20,20 @@ export type ApiApp = Hono<
  *
  * ```ts
  * app.get("/v1/status", async (c) => {
- *   const { orgId } = await requireApiKey(c.req.raw.headers, "api");
+ *   const attempt = await throttlePreAuth(c.req.raw.headers, "status");
+ *   if (attempt.limited) return attempt.limited;
+ *   const { orgId } = await attempt.verify(() =>
+ *     requireApiKey(c.req.raw.headers, "api"),
+ *   );
  *   return c.json({ orgId });
  * });
  * ```
+ *
+ * `throttlePreAuth` (`./pre-auth-throttle`) counts rejected keys per
+ * client IP and answers 429 BEFORE `requireApiKey` looks a key up once an
+ * IP is over the budget — without it, a flood of random keys costs one DB
+ * lookup each. Use it on every route that verifies a credential (needs
+ * `TRUST_PROXY_HEADERS`; without trusted client IPs it is a no-op).
  *
  * No rate limit by default — oRPC's `createRateLimitMiddleware` does not
  * run here. Add one per route with the shared store, keyed per caller:

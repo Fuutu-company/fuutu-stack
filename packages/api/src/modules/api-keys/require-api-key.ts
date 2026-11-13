@@ -45,6 +45,10 @@ const extractApiKey = (headers: Headers): string | null => {
  *    scope (see verifyApiKeyCredential)
  *  - 402 { error: "upgrade_required" }  — scope is feature-gated and the
  *    org's entitlement lacks the mapped feature
+ *
+ * Every call with a credential costs a DB lookup, valid or not — run it
+ * through `throttlePreAuth(headers, "<route>")` (`../../pre-auth-throttle`)
+ * so random-key floods get 429 before reaching it.
  */
 export const requireApiKey = async (
 	headers: Headers,
