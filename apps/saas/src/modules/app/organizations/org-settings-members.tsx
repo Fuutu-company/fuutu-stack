@@ -7,6 +7,7 @@ import {
 	canChangeMemberRole,
 	hasOrgPermission,
 	ORG_POLICY,
+	ORG_ROLE_HIERARCHY,
 	OrgAccessControl,
 	type OrgRole,
 	PERMISSIONS,
@@ -101,6 +102,16 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 	const canChangeRoles = currentUserRole
 		? hasOrgPermission(ac, actorRole, PERMISSIONS.ORGANIZATION.UPDATE)
 		: false;
+	// The API returns members in storage order, which is not stable — sort so
+	// the list never reshuffles between loads: highest role first, then email.
+	const members = org?.members
+		? [...org.members].sort(
+				(a, b) =>
+					ORG_ROLE_HIERARCHY.indexOf(toOrgRole(b.role)) -
+						ORG_ROLE_HIERARCHY.indexOf(toOrgRole(a.role)) ||
+					(a.user?.email ?? a.userId).localeCompare(b.user?.email ?? b.userId),
+			)
+		: undefined;
 	const ownerCount =
 		org?.members?.filter((m) => toOrgRole(m.role) === "owner").length ?? 0;
 
@@ -290,13 +301,13 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 						</div>
 					)}
 
-					{org.members && org.members.length > 0 && (
+					{members && members.length > 0 && (
 						<div>
 							<p className="mb-2 font-medium text-sm">
 								{t("organizations.settings.activeMembers")}
 							</p>
 							<ul className="divide-y overflow-hidden rounded-xl border">
-								{org.members.map((m) => {
+								{members.map((m) => {
 									const roleOptions = roleOptionsFor(m);
 									const memberName = m.user?.name ?? m.user?.email ?? m.userId;
 									return (
