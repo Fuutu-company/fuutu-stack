@@ -4,6 +4,7 @@
 # Dependencies & build output (recreated inside the image)
 **/node_modules
 **/.next
+**/.next-e2e
 **/.source
 **/.turbo
 **/dist

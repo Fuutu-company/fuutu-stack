@@ -55,6 +55,8 @@ const env = {
 		FUUTU_DISABLE_RATE_LIMIT: "1",
 		EMAIL_PROVIDER: "console",
 		FUUTU_TELEMETRY_DISABLED: "1",
+		// Own build output: `next build` must not overwrite the dev server's `.next`.
+		NEXT_DIST_DIR: ".next-e2e",
 	}),
 };
 const next = (args) =>

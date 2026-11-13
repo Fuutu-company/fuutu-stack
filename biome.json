@@ -10,6 +10,7 @@
 		"includes": [
 			"**",
 			"!**/.next",
+			"!**/.next-e2e",
 			"!**/.fuutu/browser",
 			"!**/.claude/worktrees",
 			"!**/.fuutu/session",

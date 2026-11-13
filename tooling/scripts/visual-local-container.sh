@@ -16,7 +16,7 @@ mkdir -p "$HOME" /work
 # (.claude holds worktrees with their own .env).
 tar -C /src \
   --exclude=./node_modules --exclude='*/node_modules' \
-  --exclude='*/.next' --exclude=./.git --exclude='*/.turbo' --exclude=./.turbo \
+  --exclude='*/.next' --exclude='*/.next-e2e' --exclude=./.git --exclude='*/.turbo' --exclude=./.turbo \
   --exclude='.env' --exclude='.env.*' --exclude='.claude' --exclude=./.fuutu \
   --exclude='*/test-results' --exclude='*/playwright-report' --exclude='*/visual-report' \
   -cf - . | tar -C /work -xf -

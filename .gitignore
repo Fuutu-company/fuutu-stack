@@ -82,6 +82,7 @@ temp
 
 
 *.next
+.next-e2e
 
 # Fuutu MCP local config (T-083)
 

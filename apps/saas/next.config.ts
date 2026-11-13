@@ -78,6 +78,9 @@ const nextConfig: NextConfig = {
 	// through NEXT_PUBLIC_MARKETING_URL.
 	typedRoutes: false,
 	reactCompiler: true,
+	// E2E builds (tooling/scripts/next.mjs) write to their own dir so the
+	// running dev server's `.next` stays intact.
+	distDir: process.env.NEXT_DIST_DIR ?? ".next",
 	// Self-hosting (Docker/Coolify): standalone server traced from the repo
 	// root so workspace packages (packages/*) land in .next/standalone.
 	output: "standalone",

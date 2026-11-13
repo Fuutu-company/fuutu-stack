@@ -12,6 +12,7 @@
 /* Exclude build artifacts from class scanning — binary Turbopack SST
  * caches under .next/ inject corrupted candidates that break prod builds. */
 @source not "../../.next";
+@source not "../../.next-e2e";
 @source not "../../.turbo";
 
 /* State preview for /design: `data-preview="hover focus-visible"` pins a

@@ -84,6 +84,7 @@ function loadLocaleKeys(locale) {
 const SKIP_DIRS = new Set([
 	"node_modules",
 	".next",
+	".next-e2e",
 	"dist",
 	".turbo",
 	"coverage",
