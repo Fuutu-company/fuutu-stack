@@ -161,6 +161,22 @@ test.describe("navigation", () => {
 		expect(res?.status()).toBe(404);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 	});
+
+	test("404 page logs no console errors", async ({ page }) => {
+		const errors: string[] = [];
+		page.on("console", (msg) => {
+			// The browser reports the 404 document itself as a failed resource.
+			if (msg.type() === "error" && !msg.text().includes("status of 404")) {
+				errors.push(msg.text());
+			}
+		});
+		page.on("pageerror", (err) => errors.push(err.message));
+
+		const res = await page.goto(`/${DEFAULT_LOCALE}/this-page-does-not-exist`);
+		expect(res?.status()).toBe(404);
+		await page.waitForLoadState("networkidle");
+		expect(errors).toEqual([]);
+	});
 });
 
 // ── Responsive: mobile viewport ─────────────────────────────────────────
