@@ -92,6 +92,7 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 - Plans only in `PLANS` / `FEATURE_CATALOG` / `LIMITS` (`@fuutu/payments/config`); apps call `buildPricingTiers()`.
 - `apps/marketing` never imports auth, DB, `@fuutu/api` or `@fuutu/env/saas`.
 - All input validated with Zod. Errors generic to users, detailed in logs. Secrets in `httpOnly` cookies only. Rate-limit auth + mutations.
+- **Stay mergeable with kit updates** (`git merge` from the kit): customise through the app-owned files — `app-*.ts(x)`, `server-init.ts`, `custom-routes.ts`, `proxy-public.ts`, `mcp/server.ts`, `api-key-scopes.ts` ([Extend without forking](https://docs.fuutustack.com/docs/concepts/extend-without-forking)) — and the config objects above. Edit a kit-owned file only when no extension point fits, and then minimally: keep its identifiers, file names, env vars, i18n keys and formatting; append instead of interleaving; never rename, reorder or reword for taste. Replace a whole kit component with a new file plus a one-line import swap, not by rewriting it.
 
 ## 8 · Kit-owned — do not modify
 
