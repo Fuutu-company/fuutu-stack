@@ -15,14 +15,17 @@ export const createAuditLog = (input: AuditLogInput) =>
 
 export const listAuditLogs = (opts: {
 	userId?: string;
+	/** With `userId`: only that user's rows inside this organization. */
+	organizationId?: string;
 	action?: string;
 	take?: number;
 	skip?: number;
 }) => {
-	const { userId, action, take = 50, skip = 0 } = opts;
+	const { userId, organizationId, action, take = 50, skip = 0 } = opts;
 	return db.auditLog.findMany({
 		where: {
 			...(userId ? { userId } : {}),
+			...(organizationId ? { organizationId } : {}),
 			...(action ? { action } : {}),
 		},
 		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
@@ -72,6 +75,38 @@ export const findAuditLogsByOrg = (
 		include: {
 			user: { select: { id: true, email: true, name: true } },
 		},
+	});
+};
+
+/**
+ * Owner scope for `listAuditLogDates`: a user (personal — all of the user's
+ * rows), an organization (all rows of that org), or a user inside one
+ * organization (that member's own rows in that org only).
+ */
+export type AuditLogDatesScope =
+	| { userId: string; organizationId?: never }
+	| { organizationId: string; userId?: string };
+
+/**
+ * Action + timestamp of every audit row since `since`, for activity charts.
+ * An owner is required — the series must never span tenants.
+ */
+export const listAuditLogDates = (
+	opts: AuditLogDatesScope & { since: Date; take?: number },
+) => {
+	const { organizationId, userId, since, take = 5000 } = opts;
+	if (!organizationId && !userId) {
+		throw new Error("listAuditLogDates requires userId or organizationId");
+	}
+	return db.auditLog.findMany({
+		where: {
+			...(organizationId ? { organizationId } : {}),
+			...(userId ? { userId } : {}),
+			createdAt: { gte: since },
+		},
+		select: { action: true, createdAt: true },
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+		take,
 	});
 };
 

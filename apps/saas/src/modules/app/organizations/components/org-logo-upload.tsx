@@ -134,10 +134,12 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 	if (!org) return null;
 
 	return (
-		<Card>
+		<Card className="py-0">
 			<CardContent className="space-y-4 p-6 md:p-8">
 				<div>
-					<h3 className="font-semibold text-lg">{t("settings.logo.title")}</h3>
+					<h3 className="font-bold font-heading text-lg tracking-heading">
+						{t("settings.logo.title")}
+					</h3>
 					<p className="text-muted-foreground text-sm">
 						{t("settings.logo.description")}
 					</p>

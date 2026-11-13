@@ -1,4 +1,5 @@
 import { PricingCardsPage } from "@marketing/pricing";
+import { PageIntro } from "@shared/components/page-intro";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -21,14 +22,13 @@ export default async function PricingPage({ params }: PricingPageProps) {
 
 	return (
 		<>
-			<section className="py-16">
-				<div className="container mx-auto max-w-6xl px-4 text-center">
-					<h1 className="mb-4 font-bold text-4xl">{t("title")}</h1>
-					<p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-						{t("description")}
-					</p>
-				</div>
-			</section>
+			<div className="mx-auto max-w-6xl px-4 pt-12 sm:px-6 md:pt-20">
+				<PageIntro
+					align="center"
+					title={t("title")}
+					description={t("description")}
+				/>
+			</div>
 			<PricingCardsPage />
 		</>
 	);

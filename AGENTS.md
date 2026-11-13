@@ -37,7 +37,7 @@ Without it, everything still works: read the owning package's source and follow 
 
 ## 3 · Stack
 
-Node ≥ 20 · pnpm · Turborepo · TypeScript strict, ESM · Next.js 16 (App Router, React 19) · Hono at `/api/[[...rest]]` · oRPC (+ OpenAPI at `/api/docs`) · PostgreSQL + Prisma (`packages/db`) · Better Auth · Tailwind v4 (OKLCH, `packages/config/theme.css`) · `@fuutu/ui` (shadcn) · next-intl (`@fuutu/i18n`) · Zod · TanStack Query · Biome · Vitest · Playwright · MCP server (`@fuutu/mcp`, `/api/mcp`).
+Node ≥ 20 · pnpm · Turborepo · TypeScript strict, ESM · Next.js 16 (App Router, React 19) · Hono at `/api/[[...rest]]` · oRPC (+ OpenAPI at `/api/docs`) · PostgreSQL + Prisma (`packages/db`) · Better Auth · Tailwind v4 (OKLCH; brand tokens in `packages/config/brand.css`, kit rules in `theme.css`, design contract in `DESIGN.md`) · `@fuutu/ui` (shadcn) · next-intl (`@fuutu/i18n`) · Zod · TanStack Query · Biome · Vitest · Playwright · MCP server (`@fuutu/mcp`, `/api/mcp`).
 
 **Swappable domains** — one active provider behind a typed interface, selected in the package config; callers import only `@fuutu/<domain>`: `mail`, `payments`, `storage`, `analytics`, `logs`, `ai`. `db` swaps by reimplementing its query functions.
 
@@ -81,7 +81,7 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 - **Auth guards**: server-side in layouts (`requireAuth()` / `requireOnboarded()` from `apps/saas/src/lib/auth-server.ts`); `proxy.ts` is an optimistic pre-check only.
 - **Redirects**: `getSafeRedirect()` from `@fuutu/utils/redirect`.
 - **i18n**: zero literal strings in JSX; keys in every locale under `packages/i18n/translations/<locale>/` in the same change; ICU for plurals/params; `pnpm check-translations`.
-- **UI**: `@fuutu/ui` stays framework-agnostic (no `next/*` imports); single `cn` from `@fuutu/utils/cn`.
+- **UI**: `@fuutu/ui` stays framework-agnostic (no `next/*` imports); single `cn` from `@fuutu/utils/cn`; colors only via semantic tokens (`DESIGN.md`) — edit `brand.css`, never `theme.css`.
 - **Routes** (saas): flat (`/dashboard`, `/settings`) — `(app)` is a route group.
 - **Naming**: camelCase vars/functions · PascalCase types · UPPER_SNAKE constants · kebab-case files.
 
@@ -114,6 +114,7 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 | About to claim done | `verify-before-done` (+ `check-in-browser` for UI) |
 | Review comments received | `handle-review-feedback` |
 | Work verified, changes exist | `propose-commit` — conventional messages drive the app version; never commit/push without approval |
+| Rebrand: colors, fonts, radius, density | `setup-brand` (full version via Fuutu MCP) |
 | New entity / API endpoint / provider swap / payments / code review | `add-entity` · `add-api-endpoint` · `swap-provider` · `connect-payments` · `review-code` (full versions via Fuutu MCP) |
 
 ### Team (Claude Code)

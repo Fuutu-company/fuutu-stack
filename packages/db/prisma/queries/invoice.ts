@@ -54,11 +54,21 @@ export const listInvoicesByOrg = (
 
 export const listInvoicesByUser = (
 	userId: string,
-	opts: { take?: number; skip?: number; status?: string } = {},
+	opts: {
+		take?: number;
+		skip?: number;
+		status?: string;
+		/** Exclude invoices of organizations the user paid for. */
+		personalOnly?: boolean;
+	} = {},
 ) => {
-	const { take = 50, skip = 0, status } = opts;
+	const { take = 50, skip = 0, status, personalOnly = false } = opts;
 	return db.invoice.findMany({
-		where: { userId, ...(status ? { status } : {}) },
+		where: {
+			userId,
+			...(personalOnly ? { organizationId: null } : {}),
+			...(status ? { status } : {}),
+		},
 		orderBy: [{ issuedAt: "desc" }, { id: "asc" }],
 		take,
 		skip,

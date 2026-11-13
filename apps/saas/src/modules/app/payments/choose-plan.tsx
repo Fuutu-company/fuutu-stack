@@ -128,6 +128,9 @@ export function ChoosePlan() {
 						perMonth: t("seatSelector.perMonth"),
 						perYear: t("seatSelector.perYear"),
 						description: t("seatSelector.description"),
+						decrease: t("seatSelector.decrease"),
+						increase: t("seatSelector.increase"),
+						seatCount: t("seatSelector.count"),
 					}}
 				/>
 			)}

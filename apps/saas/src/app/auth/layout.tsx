@@ -1,5 +1,5 @@
 import { config } from "@fuutu/config";
-import { BrandLogo } from "@fuutu/ui";
+import { AreaBackdrop, BrandLogo } from "@fuutu/ui";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
@@ -14,15 +14,18 @@ export default async function AuthLayout({
 
 	return (
 		<NextIntlClientProvider locale={locale} messages={messages}>
-			<div className="relative flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
-				<a
-					href="/"
-					aria-label={config.app.name}
-					className="absolute top-6 left-6 flex items-center gap-2 font-semibold text-lg md:top-8 md:left-8"
-				>
-					<BrandLogo size="2xl" className="dark:invert" />
-				</a>
-				<div className="w-full max-w-sm md:max-w-4xl">{children}</div>
+			<div className="relative isolate flex min-h-svh flex-col items-center justify-center bg-background px-4 py-10 sm:p-10">
+				<AreaBackdrop />
+				<div className="flex w-full max-w-md flex-col gap-6">
+					<a
+						href="/"
+						className="flex items-center gap-2.5 self-center font-extrabold font-heading text-lg tracking-heading"
+					>
+						<BrandLogo size="lg" className="dark:invert" />
+						{config.app.name}
+					</a>
+					{children}
+				</div>
 			</div>
 		</NextIntlClientProvider>
 	);

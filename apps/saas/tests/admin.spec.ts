@@ -1,20 +1,17 @@
 import { expect, test } from "./fixtures";
 
 test.describe("admin user management", () => {
-	test("admin dashboard page renders with management cards", async ({
-		page,
-	}) => {
+	test("/admin redirects to the users page server-side", async ({ page }) => {
+		const response = await page.request.get("/admin", { maxRedirects: 0 });
+		expect(response.status()).toBeGreaterThanOrEqual(300);
+		expect(response.status()).toBeLessThan(400);
+		expect(response.headers().location).toMatch(/\/admin\/users$/);
+
 		await page.goto("/admin");
-		await expect(page).not.toHaveURL(/\/auth\/sign-in/);
-
-		await expect(page.getByRole("heading", { name: /admin/i })).toBeVisible({
-			timeout: 10_000,
-		});
-
-		// Admin dashboard links to user management
+		await expect(page).toHaveURL(/\/admin\/users$/);
 		await expect(
-			page.getByRole("link", { name: /manage users/i }),
-		).toBeVisible();
+			page.getByRole("heading", { level: 1, name: /^users$/i }),
+		).toBeAttached({ timeout: 10_000 });
 	});
 
 	test("admin users page renders with user list table", async ({ page }) => {

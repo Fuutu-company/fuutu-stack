@@ -1,245 +1,177 @@
 {
 	"home": {
-		"metaTitle": "Enterprise-grade. In Tagen live.",
+		"metaTitle": "Ein ruhiger Workspace für dein ganzes Team",
 		"hero": {
-			"title": "Enterprise-grade.",
-			"titleHighlight": "In Tagen live.",
-			"description": "Der Production-Stack für AI-Speed-Development. Best Practices vorgekabelt, jeder Provider austauschbar — von der Idee zur Live-App in Tagen, nicht Monaten.",
+			"title": "Dein ganzes Team in <mark>einem ruhigen</mark> Workspace.",
+			"description": "Mitglieder, Abrechnung, ein KI-Assistent und ein CRM, schön verbunden. In Minuten eingerichtet, geliebt von allen, die es öffnen.",
 			"cta": {
-				"getStarted": "Stack holen",
-				"viewDocs": "Features ansehen"
+				"start": "Kostenlos starten",
+				"tour": "Tour ansehen"
 			},
-			"benefit": {
-				"openSource": "Fuutu Business License",
-				"typescript": "100% TypeScript, strict",
-				"edgeReady": "Provider-austauschbar"
-			},
-			"glassCard": {
-				"ready": "Sofort einsatzbereit"
-			},
-			"stack": {
-				"nextjs": {
-					"name": "Next.js 16",
-					"description": "React-Framework — App Router, RSC, Turbopack.",
-					"detail": "Full-Stack-Fundament: Routing, SSR, API-Routen."
+			"note": "Free-Plan · Keine Kreditkarte · Anmeldung mit Passkey",
+			"screenshotAlt": "Das {appName}-Dashboard mit Mitgliedern, Plan, KI-Credits und aktueller Team-Aktivität",
+			"floats": {
+				"joined": {
+					"title": "Mia ist Acme beigetreten",
+					"meta": "Einladung angenommen · gerade eben"
 				},
-				"typescript": {
-					"name": "TypeScript",
-					"description": "TypeScript im Strict-Mode in jedem Package.",
-					"detail": "Kein any. Keine Escape-Hatches. End-to-End-Typsicherheit."
+				"upgraded": {
+					"title": "Upgrade auf {plan}",
+					"meta": "{price} {suffix} · Rechnung verschickt"
 				},
-				"better-auth": {
-					"name": "Better Auth",
-					"description": "Modernes Auth für Node.js.",
-					"detail": "OAuth, MFA, Passkeys, Sessions, RBAC — vorkonfiguriert."
+				"assistant": {
+					"title": "„Fasse die neuen Leads dieser Woche zusammen.“",
+					"meta": "KI-Assistent · {credits, number} Credits"
 				},
-				"prisma": {
-					"name": "Prisma",
-					"description": "Typsicheres ORM für PostgreSQL.",
-					"detail": "DB-Client in @fuutu/db — Schema, Migrationen, Seed."
-				},
-				"postgresql": {
-					"name": "PostgreSQL",
-					"description": "Relationale Datenbank für den Produktivbetrieb.",
-					"detail": "Primär-Store — Benutzer, Sessions, Orgs, Audit-Logs."
-				},
-				"tailwind": {
-					"name": "Tailwind CSS v4",
-					"description": "Utility-First-CSS mit OKLCH-Farbengine.",
-					"detail": "Theme-Tokens in theme.css, Dark Mode inklusive."
-				},
-				"turborepo": {
-					"name": "Turborepo",
-					"description": "High-Performance-Buildsystem für Monorepos.",
-					"detail": "Orchestriert 15+ Packages — inkrementelle Builds."
-				},
-				"hono": {
-					"name": "Hono",
-					"description": "Ultraschnelles Web-Framework für die Edge.",
-					"detail": "API-Server unter /api/[[...rest]] in apps/saas."
-				}
-			},
-			"pillar": {
-				"auth": {
-					"title": "Auth & Sessions",
-					"desc": "Registrierung, OAuth, MFA, RBAC — fertig"
-				},
-				"billing": {
-					"title": "Billing & Pläne",
-					"desc": "Creem, Plan-Katalog, Webhooks"
-				},
-				"swappable": {
-					"title": "Provider-austauschbar",
-					"desc": "Mail, Storage, Payments — eine Zeile"
-				},
-				"speed": {
-					"title": "In einer Woche live",
-					"desc": "Kein Template — eine Produktions-Codebase"
+				"webhook": {
+					"title": "Webhook zugestellt",
+					"meta": "crm.sync · 200 OK · 84 ms"
 				}
 			}
 		},
-		"cta": {
-			"title": "Bereit zu starten?",
-			"description": "Repo klonen, Provider konfigurieren — und in Minuten live.",
-			"getStarted": "Jetzt loslegen",
-			"viewDocs": "Dokumentation lesen"
-		},
-		"testimonials": {
-			"title": "Beliebt bei Buildern",
-			"description": "Teams shippen mit Fuutu schneller — das sagen sie dazu.",
-			"items": [
-				{
-					"quote": "Mit Fuutu sind wir in zwei Wochen vom leeren Repo zu zahlenden Kunden gekommen. Allein das Auth- und Payments-Setup hat uns einen Monat gespart.",
-					"author": "Sara Lindqvist",
-					"role": "Gründerin, Northwave Labs"
-				},
-				{
-					"quote": "Ich habe vier SaaS-Produkte auf eigenen Stacks gebaut. Das ist das erste, bei dem ich keinen einzigen Workaround brauchte.",
-					"author": "Daniel Okafor",
-					"role": "Staff Engineer, Mercator"
-				},
-				{
-					"quote": "Das Provider-Pattern ist exakt so, wie ich es selbst bauen würde — nur dass es ab Tag eins funktioniert.",
-					"author": "Mei-Ling Tan",
-					"role": "CTO, Vellum AI"
-				}
-			]
-		},
-		"faq": {
-			"eyebrow": "FAQ",
-			"title": "Häufige Fragen",
-			"description": "Alles, was du wissen musst, bevor du das Repo klonst.",
-			"categoryAria": "FAQ-Kategorien",
-			"categories": [
-				{
-					"key": "license",
-					"label": "Lizenz",
-					"description": "Lizenzbedingungen, Gratis-Tier-Grenzen und kommerzielle Nutzung.",
-					"items": [
-						{
-							"q": "Brauche ich eine Lizenz, um Fuutu zu nutzen?",
-							"a": "Kostenlos für Einzelpersonen und Firmen mit bis zu 10 Mitarbeiter:innen und bis zu 250.000 $ Jahresumsatz. Sobald eine der beiden Grenzen überschritten wird, ist eine Enterprise-Lizenz erforderlich. Die vollständigen Bedingungen findest du in der LICENSE.md."
-						},
-						{
-							"q": "Was passiert, wenn ich die Gratis-Grenzen überschreite?",
-							"a": "Du hast 30 Tage ab dem Überschreiten einer der beiden Grenzen (mehr als 10 Mitarbeiter:innen oder mehr als 250.000 $ Umsatz), um eine Enterprise-Lizenz zu erwerben. Bis dahin funktioniert alles weiter — kein Feature-Gating, keine Testlaufzeit."
-						},
-						{
-							"q": "Kann ich Fuutu für kommerzielle Produkte nutzen?",
-							"a": "Ja. Die Gratis-Stufe erlaubt ausdrücklich kommerzielle Nutzung. Baue, deploye und verkaufe dein Produkt — derselbe Code läuft in Gratis- und Enterprise-Tier."
-						},
-						{
-							"q": "Ist die Enterprise-Lizenz pro Sitz oder pro Firma?",
-							"a": "Pro juristischer Person, jährlich. Eine Lizenz deckt alle Mitarbeiter:innen und alle Projekte innerhalb derselben Firma ab. Keine Zählung pro Sitz, kein Usage-Tracking."
-						}
-					]
-				},
-				{
-					"key": "technical",
-					"label": "Technisch",
-					"description": "Provider, Datenbanken, Produktionsreife und Architektur.",
-					"items": [
-						{
-							"q": "Kann ich Payment-, Mail- oder Storage-Provider tauschen?",
-							"a": "Ja. Jede externe Abhängigkeit läuft hinter einem Provider-Interface — eine Config-Zeile ändern, SDK einsetzen, fertig. Creem, Plunk und S3 sind in v1 aktiv; Stripe, Resend, R2 und weitere als Skeletons."
-						},
-						{
-							"q": "Ist der Code produktionsreif?",
-							"a": "v1 liefert Rate-Limiting, Audit-Logging, CSRF, sichere Cookies, RBAC und Playwright-E2E-Tests. Plus dein eigenes Monitoring + Backups — und du bist live."
-						},
-						{
-							"q": "Kann ich die Datenbank oder das ORM tauschen?",
-							"a": "Die Datenbank-Schicht liegt hinter @fuutu/db, das eine ORM-agnostische Query-Schnittstelle exportiert. Prisma ist der Default, aber die Query-Schicht abstrahiert das. Du kannst das Interface für Drizzle oder jedes andere ORM implementieren."
-						},
-						{
-							"q": "Warum next-intl statt eigener i18n-Schicht?",
-							"a": "Native App-Router-Unterstützung, typsichere Message-Keys, ICU-Plurale und null Runtime-Kosten. Locales leben in @fuutu/i18n mit smarter Fallback-Kette."
-						}
-					]
-				},
-				{
-					"key": "development",
-					"label": "Entwicklung",
-					"description": "Updates, AI-Tooling, Deployment und was im Bundle enthalten ist.",
-					"items": [
-						{
-							"q": "Wie funktionieren Updates?",
-							"a": "Das Kit ist ein Git-Repository. Du klonst es, baust dein Produkt darauf auf und pullst Updates vom Upstream, wenn neue Versionen erscheinen. Updates sind in allen Tiers kostenlos."
-						},
-						{
-							"q": "Funktioniert das AI-Agent-Harness mit meinem Tool?",
-							"a": "Das Codebase enthält Skills, Subagent-Profile und Rules, die Cursor, Claude Code, Windsurf und Devin nativ verstehen. Deine AI-Agents können das Monorepo navigieren, Code nach den Patterns schreiben und ihre Arbeit verifizieren."
-						},
-						{
-							"q": "Kann ich auf Vercel / Railway / self-hosted deployen?",
-							"a": "Ja. Der Stack läuft auf jedem Node 20+-Host. Vercel und Railway funktionieren out of the box. Self-Hosting erfordert PostgreSQL 16+ und Node 20+. Keine vendor-spezifischen Runtime-APIs werden verwendet."
-						},
-						{
-							"q": "Was ist im Monorepo enthalten?",
-							"a": "23+ Packages: Auth, API (oRPC), Datenbank (Prisma), Mail, Payments, Storage, Analytics, i18n, RBAC, UI-Komponenten und mehr. Plus 4 Apps: Marketing, SaaS, Docs und Mail Preview."
-						}
-					]
-				}
-			]
+		"integrations": {
+			"title": "Verbindet sich mit den Tools, für die du schon zahlst"
 		},
 		"features": {
-			"expand": "{label} aufklappen",
-			"featureListAria": "Feature-Liste",
-			"items": {
-				"dashboard": {
-					"label": "Dashboard",
-					"title": "Dein gesamtes Produkt,\nfertig ab Tag eins.",
-					"description": "Fuutu Stack liefert ein vollständiges SaaS-Dashboard: Auth, Billing, Orgs, Einstellungen, API-Docs — alles verdrahtet und produktionsbereit.",
-					"frameLabel": "Dashboard"
+			"title": "Gebaut für die Art, wie kleine Teams wirklich arbeiten.",
+			"description": "Jeder Teil des Produkts kennt die anderen. Lade jemanden ein, und er bekommt sofort die richtigen Rechte, den richtigen Plan und die richtige Sprache.",
+			"team": {
+				"title": "Dein Team, organisiert",
+				"description": "Lade Leute ein, gib ihnen eine Rolle, sieh, wer was getan hat. Organisationen halten Kunden und Projekte getrennt.",
+				"members": [
+					{
+						"initials": "LF",
+						"name": "Lena Fischer",
+						"detail": "lena@acme.io",
+						"role": "Owner"
+					},
+					{
+						"initials": "SO",
+						"name": "Sam Okafor",
+						"detail": "sam@acme.io",
+						"role": "Admin"
+					},
+					{
+						"initials": "MC",
+						"name": "Mia Chen",
+						"detail": "Einladung ausstehend",
+						"role": "Mitglied"
+					}
+				]
+			},
+			"billing": {
+				"title": "Abrechnung, die von selbst läuft",
+				"description": "Monatliche oder jährliche Pläne, Plätze und Rechnungen. Upgrade in zwei Klicks, jederzeit kündbar.",
+				"perSeat": "/ Platz / Jahr",
+				"invoice": "Rechnung INV-0042 · heute bezahlt",
+				"paid": "Bezahlt"
+			},
+			"ai": {
+				"title": "Ein Assistent, der deine Arbeit kennt",
+				"description": "Chatte mit deinen Daten. Credits sind in jedem Plan enthalten.",
+				"prompt": "Schreib ein Follow-up für die Berliner Leads",
+				"reply": "Erledigt. 4 Entwürfe bereit, nach Deal-Größe sortiert."
+			},
+			"security": {
+				"title": "Von Haus aus sicher",
+				"description": "Passkeys, Zwei-Faktor und Sitzungen, die du siehst und beenden kannst.",
+				"passkey": "Passkey · MacBook Pro",
+				"passkeyMeta": "Vor 2 Minuten genutzt",
+				"twoFactor": "Zwei-Faktor aktiv",
+				"twoFactorMeta": "Authenticator-App"
+			},
+			"connect": {
+				"title": "Verbindet sich mit allem",
+				"description": "API-Keys, signierte Webhooks und ein MCP-Server für KI-Agenten.",
+				"delivered": "200 · 84 ms",
+				"retrying": "Versuch 2 / 5",
+				"live": "Live"
+			},
+			"languages": {
+				"title": "Spricht die Sprache deiner Kunden",
+				"description": "Jede Seite, jede E-Mail und jede Rechnung in der Sprache deiner Kunden, pro Person umschaltbar. Die Browsersprache wird automatisch erkannt.",
+				"listLabel": "Verfügbare Sprachen",
+				"more": "Weitere Sprachen folgen"
+			}
+		},
+		"tour": {
+			"title": "Sieh es dir an, bevor du dich registrierst.",
+			"tabsLabel": "Produktansichten",
+			"tabs": {
+				"dashboard": "Dashboard",
+				"assistant": "KI-Assistent",
+				"team": "Team",
+				"dark": "Dark Mode"
+			},
+			"alt": {
+				"dashboard": "Das {appName}-Dashboard mit Mitgliedern, Plan, KI-Credits und aktueller Team-Aktivität",
+				"assistant": "Der KI-Assistent in {appName} im Gespräch über den Workspace",
+				"team": "Die Mitgliederseite in {appName} mit Rollen und Einladungen",
+				"dark": "Das {appName}-Dashboard im Dark Mode"
+			}
+		},
+		"security": {
+			"title": "Schnell für dein Team. Langweilig für dein Security-Review.",
+			"description": "Rate-Limits, Audit-Logs, signierte Webhooks und Rollen mit minimalen Rechten sind vom ersten Tag an aktiv, damit du sie später nie erklären musst.",
+			"cta": "Sprich mit unserem Team",
+			"facts": {
+				"twoFactor": {
+					"title": "2FA",
+					"description": "Passkeys & TOTP"
 				},
-				"auth": {
-					"label": "Auth & Security",
-					"title": "Auth in Minuten,\nnicht Wochen.",
-					"description": "OAuth, Magic Links, Passkeys, MFA, Session-Management und RBAC — alles vorkonfiguriert mit Better Auth.",
-					"frameLabel": "Sign-in"
+				"roles": {
+					"title": "Rollen",
+					"description": "Owner, Admin, Mitglied"
 				},
-				"payments": {
-					"label": "Payments",
-					"title": "Billing, das ab Tag\n eins funktioniert.",
-					"description": "Abonnements via Creem, Einmalkäufe und Webhooks. Wechsle zu Stripe mit einer Config-Zeile.",
-					"frameLabel": "Plan wählen"
-				},
-				"i18n": {
-					"label": "i18n",
-					"title": "Global ab Tag\n eins.",
-					"description": "next-intl mit EN + DE out of the box. Füge eine Locale in einer JSON-Datei hinzu — jede Komponente übernimmt sie automatisch.",
-					"frameLabel": "Locale-Switch"
-				},
-				"rbac": {
-					"label": "RBAC & Orgs",
-					"title": "Feingranulare Rollen\nfür jedes Team.",
-					"description": "owner → admin → member. Organisation-Einladungen, Rollenwechsel und Audit-Logs — in jede API-Route integriert.",
-					"frameLabel": "Team-Einstellungen"
+				"audit": {
+					"title": "Audit",
+					"description": "Jede Aktion protokolliert"
 				},
 				"api": {
-					"label": "Type-safe API",
-					"title": "oRPC + OpenAPI,\nnull Boilerplate.",
-					"description": "Jede Route ist vollständig typsicher via oRPC. Auto-generierte OpenAPI-Docs unter /api/docs ab Tag eins.",
-					"frameLabel": "API-Docs"
-				},
-				"providers": {
-					"label": "Swappable Providers",
-					"title": "Jeden Provider tauschen,\nohne Routes anzufassen.",
-					"description": "Jede Domain (Mail, Storage, Analytics, Payments) ist ein typisiertes Interface. Ändere den aktiven Provider in einer Config-Zeile.",
-					"frameLabel": "Provider-Config"
+					"title": "API",
+					"description": "Begrenzte, widerrufbare Keys"
 				}
-			},
-			"hero": {
-				"heading": "Dein gesamtes Produkt,\nfertig ab Tag eins.",
-				"subheading": "Fuutu Stack liefert ein vollständiges SaaS-Dashboard: Auth, Billing, Orgs, Einstellungen, API-Docs — alles verdrahtet und produktionsbereit."
-			},
-			"row": {
-				"heading": "Alles, was dein SaaS braucht."
-			},
-			"showcase": {
-				"heading": "Von Tag eins auf Skalierung ausgelegt.",
-				"subheading": "Jedes Feature wird produktionsgehärtet geliefert — RBAC, typsichere API, austauschbare Provider. Klick auf ein Feature, um es in Aktion zu sehen."
 			}
+		},
+		"pricing": {
+			"title": "Einfache Pläne, die mit dir wachsen.",
+			"description": "Starte kostenlos und upgrade, wenn dein Team wächst. Der KI-Assistent ist in jedem Plan dabei."
+		},
+		"faq": {
+			"title": "Fragen, beantwortet.",
+			"description": "Was Teams wissen wollen, bevor sie loslegen.",
+			"items": [
+				{
+					"q": "Gibt es einen kostenlosen Plan, und was ist enthalten?",
+					"a": "Ja. Free umfasst einen Workspace mit bis zu 5 Mitgliedern, 2 API-Schlüsseln, 500 MB Speicher und den KI-Assistenten. Du brauchst keine Kreditkarte, und der Plan läuft nicht ab."
+				},
+				{
+					"q": "Wie funktionieren Mitglieder und Abrechnung?",
+					"a": "Abgerechnet wird pro Workspace, monatlich oder jährlich. Lade dein Team als Inhaber, Admin oder Mitglied ein, jede Rolle sieht nur, was sie braucht. Upgrade, Downgrade und der Wechsel zwischen monatlich und jährlich sind jederzeit in der Abrechnung möglich."
+				},
+				{
+					"q": "Wie sind meine Daten geschützt?",
+					"a": "Melde dich mit E-Mail, Social-Konto oder Passkey an und sichere dein Konto zusätzlich mit Zwei-Faktor-Authentifizierung per Authenticator-App. Sitzungen lassen sich widerrufen, jede wichtige Aktion steht im Audit-Log, und Rollen halten den Zugriff so klein wie möglich."
+				},
+				{
+					"q": "Was sind KI-Credits, und was passiert, wenn sie aufgebraucht sind?",
+					"a": "Jeder Plan enthält ein monatliches KI-Credit-Kontingent, das sich jeden Monat erneuert. Ist es aufgebraucht, pausiert der Assistent, und der Rest der App läuft weiter. Mit zusätzlichen Credits oder einem größeren Plan geht es sofort weiter."
+				},
+				{
+					"q": "In welchen Sprachen gibt es die App?",
+					"a": "Die gesamte App, deine E-Mails und diese Website gibt es auf Deutsch und Englisch. Jede Person im Team wählt ihre Sprache selbst in den Einstellungen."
+				},
+				{
+					"q": "Kann ich kündigen, und was passiert mit meinen Daten?",
+					"a": "Du kannst jederzeit in der Abrechnung kündigen. Dein Workspace wechselt am Ende des Zeitraums in den Free-Plan, deine Daten bleiben erhalten. In den Einstellungen kannst du dein Konto jederzeit löschen, dabei werden deine Daten endgültig entfernt."
+				}
+			]
+		},
+		"cta": {
+			"title": "Der neue Lieblingstab deines Teams.",
+			"description": "Richte deinen Workspace in unter einer Minute ein. Deine ersten {members, plural, one {# Mitglied ist} other {# Mitglieder sind}} kostenlos.",
+			"start": "Kostenlos starten",
+			"signIn": "App öffnen"
 		}
 	}
 }

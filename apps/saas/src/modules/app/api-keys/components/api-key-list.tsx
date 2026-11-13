@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, CardContent } from "@fuutu/ui";
+import { AreaIcon, Badge, Card, CardContent, PageHeader } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -85,30 +85,30 @@ export function ApiKeyList({
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h1 className="font-bold text-3xl tracking-tight">{t("title")}</h1>
-					<p className="mt-2 text-muted-foreground text-sm">
-						{t("description")}
-					</p>
-				</div>
-				<ApiKeyCreateDialog
-					organizationId={effectiveOrgId}
-					orgs={orgs}
-					isSystemAdmin={isSystemAdmin}
-					onCreated={(key) => setCreatedKey(key)}
-				/>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("title")}
+				actions={
+					<ApiKeyCreateDialog
+						organizationId={effectiveOrgId}
+						orgs={orgs}
+						isSystemAdmin={isSystemAdmin}
+						onCreated={(key) => setCreatedKey(key)}
+					/>
+				}
+			/>
 
 			{query.isLoading ? (
 				<p className="text-muted-foreground text-sm">{t("loading")}</p>
 			) : query.isError ? (
 				<p className="text-destructive text-sm">{t("failed")}</p>
 			) : items.length === 0 ? (
-				<Card>
+				<Card className="py-0">
 					<CardContent className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-						<KeyRound className="size-8 text-muted-foreground" />
-						<p className="font-medium text-sm">{t("empty")}</p>
+						<AreaIcon area="api">
+							<KeyRound />
+						</AreaIcon>
+						<p className="font-bold font-heading">{t("empty")}</p>
 						<p className="text-muted-foreground text-sm">
 							{t("emptyDescription")}
 						</p>
@@ -121,88 +121,98 @@ export function ApiKeyList({
 					</CardContent>
 				</Card>
 			) : (
-				<Card>
-					<CardContent className="p-6">
-						<div className="overflow-hidden rounded-lg border">
-							<table className="w-full text-sm">
-								<thead className="bg-muted/50">
-									<tr className="text-left">
-										<th className="p-3 font-medium">{t("col.name")}</th>
-										<th className="p-3 font-medium">{t("col.prefix")}</th>
-										<th className="p-3 font-medium">{t("col.scopes")}</th>
-										<th className="p-3 font-medium">{t("col.lastUsed")}</th>
-										<th className="p-3 font-medium">{t("col.createdAt")}</th>
-										<th className="p-3 font-medium">{t("col.status")}</th>
-										<th className="p-3 text-right font-medium">
-											{t("col.actions")}
-										</th>
-									</tr>
-								</thead>
-								<tbody className="divide-y">
-									{items.map((key: ApiKey) => {
-										const status = getKeyStatus(key);
-										return (
-											<tr key={key.id}>
-												<td className="p-3 font-medium">
-													{key.name}
-													{!effectiveOrgId &&
-														key.organizationId &&
-														orgNames.has(key.organizationId) && (
-															<span className="block font-normal text-muted-foreground text-xs">
-																{orgNames.get(key.organizationId)}
-															</span>
-														)}
-												</td>
-												<td className="p-3 font-mono text-muted-foreground text-xs">
-													{key.prefix}
-												</td>
-												<td className="p-3">
-													<div className="flex flex-wrap gap-1">
-														{key.scopes.length === 0 ? (
-															<Badge variant="secondary">
-																{key.organizationId
-																	? t("scopes.full")
-																	: t("scopes.personal")}
-															</Badge>
-														) : (
-															key.scopes.map((scope) => (
-																<Badge key={scope} variant="secondary">
-																	{scopeLabel(scope)}
-																</Badge>
-															))
-														)}
-													</div>
-												</td>
-												<td className="p-3 text-muted-foreground text-xs">
-													{formatDate(key.lastUsedAt)}
-												</td>
-												<td className="p-3 text-muted-foreground text-xs">
-													{formatDate(key.createdAt)}
-												</td>
-												<td className="p-3">
-													<Badge
-														variant={
-															status === "active" ? "default" : "secondary"
-														}
-													>
-														{t(`status.${status}`)}
-													</Badge>
-												</td>
-												<td className="p-3 text-right">
-													{status === "active" && (
-														<ApiKeyRevokeDialog
-															apiKeyId={key.id}
-															onRevoked={() => void query.refetch()}
-														/>
+				<Card className="overflow-hidden py-0">
+					<div className="overflow-x-auto">
+						<table className="w-full text-sm">
+							<thead className="bg-muted/50">
+								<tr className="text-left">
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.name")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.prefix")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.scopes")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.lastUsed")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.createdAt")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.status")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-muted-foreground text-xs">
+										{t("col.actions")}
+									</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y">
+								{items.map((key: ApiKey) => {
+									const status = getKeyStatus(key);
+									return (
+										<tr key={key.id}>
+											<td className="px-4 py-3 font-medium">
+												{key.name}
+												{!effectiveOrgId &&
+													key.organizationId &&
+													orgNames.has(key.organizationId) && (
+														<span className="block font-normal text-muted-foreground text-xs">
+															{orgNames.get(key.organizationId)}
+														</span>
 													)}
-												</td>
-											</tr>
-										);
-									})}
-								</tbody>
-							</table>
-						</div>
-					</CardContent>
+											</td>
+											<td className="px-4 py-3 font-mono text-muted-foreground text-xs">
+												{key.prefix}
+											</td>
+											<td className="px-4 py-3">
+												<div className="flex flex-wrap gap-1">
+													{key.scopes.length === 0 ? (
+														<Badge variant="secondary">
+															{key.organizationId
+																? t("scopes.full")
+																: t("scopes.personal")}
+														</Badge>
+													) : (
+														key.scopes.map((scope) => (
+															<Badge key={scope} variant="secondary">
+																{scopeLabel(scope)}
+															</Badge>
+														))
+													)}
+												</div>
+											</td>
+											<td className="px-4 py-3 text-muted-foreground text-xs">
+												{formatDate(key.lastUsedAt)}
+											</td>
+											<td className="px-4 py-3 text-muted-foreground text-xs">
+												{formatDate(key.createdAt)}
+											</td>
+											<td className="px-4 py-3">
+												<Badge
+													variant={
+														status === "active" ? "default" : "secondary"
+													}
+												>
+													{t(`status.${status}`)}
+												</Badge>
+											</td>
+											<td className="px-4 py-3 text-right">
+												{status === "active" && (
+													<ApiKeyRevokeDialog
+														apiKeyId={key.id}
+														onRevoked={() => void query.refetch()}
+													/>
+												)}
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
 				</Card>
 			)}
 

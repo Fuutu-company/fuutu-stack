@@ -120,16 +120,14 @@ describe("account + admin extras", () => {
 			{ titleKey: "adminTenants", href: "/admin/tenants", after: "adminUsers" },
 		];
 		expect(keys(nav.getAdminItems())).toEqual([
-			"adminOverview",
 			"adminUsers",
 			"adminTenants",
 			"adminAuditLogs",
 		]);
 	});
 
-	it("returns the kit admin list without extras", () => {
+	it("returns the kit admin list without extras — no overview self-link", () => {
 		expect(nav.getAdminItems()).toEqual([
-			{ titleKey: "adminOverview", href: "/admin", exact: true },
 			{ titleKey: "adminUsers", href: "/admin/users" },
 			{ titleKey: "adminAuditLogs", href: "/admin/audit-logs" },
 		]);
@@ -139,10 +137,50 @@ describe("account + admin extras", () => {
 		extras.appAdminNavItems = [
 			{ titleKey: "adminTenants", href: "/admin/tenants", after: "adminUsers" },
 		];
-		expect(nav.getAdminItems()[2]).toEqual({
+		expect(nav.getAdminItems()[1]).toEqual({
 			titleKey: "adminTenants",
 			href: "/admin/tenants",
 		});
+	});
+});
+
+describe("no overview items", () => {
+	// A group's trigger is not a page: no item links to the group root itself.
+	it("no group lists a self-link to its own root path", () => {
+		const groups = [
+			{
+				root: "/organizations/acme/settings",
+				items: nav.getOrgSettingsItems("acme", true, () => true),
+			},
+			{ root: nav.ACCOUNT_SETTINGS_PATH, items: nav.getAccountItems() },
+			{ root: nav.ADMIN_PATH, items: nav.getAdminItems() },
+		];
+		for (const { root, items } of groups) {
+			for (const item of items) {
+				expect(item.href, item.titleKey).not.toBe(root);
+				expect(item.titleKey, item.titleKey).not.toMatch(/overview/i);
+			}
+		}
+	});
+
+	it("the admin home is the first admin item", () => {
+		expect(nav.ADMIN_HOME).toBe("/admin/users");
+		expect(nav.getAdminItems()[0]?.href).toBe(nav.ADMIN_HOME);
+	});
+});
+
+describe("plain sub-items", () => {
+	// Sub-items render identically: no item carries an area (no marker dot).
+	it("no kit item in any group carries an area", () => {
+		const all = [
+			...nav.getOrgSettingsItems("acme", true, () => true),
+			...nav.getAccountItems(),
+			...nav.getAdminItems(),
+		];
+		expect(all.length).toBeGreaterThan(8);
+		for (const item of all) {
+			expect(item, item.titleKey).not.toHaveProperty("area");
+		}
 	});
 });
 
@@ -162,6 +200,13 @@ describe("breadcrumb extras", () => {
 		expect(buildBreadcrumbs("/settings", "security")).toEqual([
 			{ labelKey: "breadcrumb.settings", href: "/settings" },
 			{ labelKey: "breadcrumb.security" },
+		]);
+	});
+
+	it("the Admin crumb links to the admin home, not the bare group root", () => {
+		expect(buildBreadcrumbs("/admin/audit-logs", null)).toEqual([
+			{ labelKey: "breadcrumb.admin", href: "/admin/users" },
+			{ labelKey: "breadcrumb.auditLogs", href: "/admin/audit-logs" },
 		]);
 	});
 
@@ -223,7 +268,7 @@ describe("the shipped app lists (apps/saas/src/app-navigation.ts)", () => {
 			"apiKeys",
 			"danger",
 		],
-		appAdminNavItems: ["adminOverview", "adminUsers", "adminAuditLogs"],
+		appAdminNavItems: ["adminUsers", "adminAuditLogs"],
 	} as const;
 
 	const loadShipped = () =>

@@ -1,4 +1,5 @@
 import { ChatLayout } from "@app/chat";
+import { PageHeader } from "@fuutu/ui";
 import { getTranslations } from "next-intl/server";
 
 interface Props {
@@ -11,10 +12,7 @@ export default async function OrgChatPage({ params }: Props) {
 
 	return (
 		<div className="space-y-4">
-			<div>
-				<h1 className="font-bold text-3xl">{t("title")}</h1>
-				<p className="mt-2 text-muted-foreground">{t("description")}</p>
-			</div>
+			<PageHeader variant="compact" title={t("title")} />
 			<ChatLayout slug={slug} />
 		</div>
 	);

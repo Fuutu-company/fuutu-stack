@@ -4,12 +4,11 @@ import type { Locale } from "@fuutu/i18n";
 import { getDirection } from "@fuutu/i18n";
 import { getBaseUrl } from "@fuutu/utils";
 import { RootProvider } from "fumadocs-ui/provider/next";
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
 import { getLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
 import { i18nUI } from "@/lib/i18n";
 import { ThemeProvider } from "@/modules/shared/providers/theme-provider";
+import { fontVariables } from "./fonts";
 
 export const metadata = {
 	metadataBase: new URL(getBaseUrl({ defaultPort: 4000 })),
@@ -40,7 +39,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 		<html
 			lang={locale}
 			dir={direction}
-			className={`${GeistSans.variable} ${GeistMono.variable}`}
+			className={fontVariables}
 			suppressHydrationWarning
 		>
 			<body className="flex min-h-screen flex-col">

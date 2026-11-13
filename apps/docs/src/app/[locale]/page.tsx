@@ -55,7 +55,7 @@ export default async function HomePage({ params }: HomePageProps) {
 			}}
 		>
 			<div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-				<h1 className="mb-4 font-bold text-4xl tracking-tight sm:text-5xl">
+				<h1 className="mb-4 font-extrabold font-heading text-5xl leading-[0.98] tracking-display sm:text-6xl">
 					{t("title", { appName: config.app.name })}
 				</h1>
 				<p className="mb-2 text-fd-muted-foreground text-lg">{t("subtitle")}</p>
@@ -65,7 +65,7 @@ export default async function HomePage({ params }: HomePageProps) {
 				<div className="flex flex-wrap items-center justify-center gap-4">
 					<Link
 						href="/docs"
-						className="inline-flex items-center justify-center rounded-lg bg-fd-primary px-6 py-3 font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
+						className="inline-flex h-11 items-center justify-center rounded-full bg-fd-primary px-6 font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
 					>
 						{t("exploreDocs")}
 					</Link>
@@ -73,7 +73,7 @@ export default async function HomePage({ params }: HomePageProps) {
 						href="https://github.com/Fuutu-company/fuutu-stack"
 						target="_blank"
 						rel="noreferrer noopener"
-						className="inline-flex items-center justify-center rounded-lg border border-fd-border px-6 py-3 font-medium transition-colors hover:bg-fd-accent"
+						className="inline-flex h-11 items-center justify-center rounded-full border border-fd-border px-6 font-medium transition-colors hover:bg-fd-accent"
 					>
 						{t("viewOnGithub")}
 					</a>

@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { getSafeRedirect } from "@fuutu/auth/redirect";
 import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
 import { countOrganizationsForUser, getOrganizationBySlug } from "@fuutu/db";
@@ -35,6 +36,32 @@ export async function requireAuth() {
 	}
 
 	return session;
+}
+
+/** Entry pages a signed-in visitor is bounced away from — never a target. */
+const AUTH_ENTRY_PATHS = new Set(["/auth/sign-in", "/auth/sign-up"]);
+
+/**
+ * Sign-in / sign-up only: a visitor with a valid session goes straight to the
+ * post-login destination — the `redirect` param when it is safe, else
+ * `authConfig.redirects.afterSignIn`. A signed OAuth authorization request
+ * (`sig`) keeps the page: the MCP authorization server sends signed-in users
+ * here for `prompt=login` / `prompt=create`.
+ */
+export async function redirectIfSignedIn(
+	params: Record<string, string | string[] | undefined>,
+) {
+	if (params.sig !== undefined) return;
+	const session = await getSession();
+	if (!session) return;
+	const raw = typeof params.redirect === "string" ? params.redirect : null;
+	const target = getSafeRedirect(raw);
+	const { pathname } = new URL(target, "http://localhost");
+	redirect(
+		AUTH_ENTRY_PATHS.has(pathname.replace(/\/$/, ""))
+			? getSafeRedirect(null)
+			: target,
+	);
 }
 
 /**

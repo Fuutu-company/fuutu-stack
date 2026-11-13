@@ -21,6 +21,10 @@ export interface SeatSelectorTranslations {
 	perMonth: string;
 	perYear: string;
 	description: string;
+	/** Accessible names for the controls; pass translated strings. */
+	decrease?: string;
+	increase?: string;
+	seatCount?: string;
 }
 
 export interface SeatSelectorProps {
@@ -93,6 +97,7 @@ export function SeatSelector({
 					type="button"
 					variant="outline"
 					size="icon"
+					aria-label={translations.decrease}
 					onClick={handleDecrement}
 					disabled={seatCount <= SEAT_MIN}
 					className="size-8"
@@ -105,6 +110,7 @@ export function SeatSelector({
 					min={SEAT_MIN}
 					max={SEAT_MAX}
 					value={seatCount}
+					aria-label={translations.seatCount}
 					onChange={handleInputChange}
 					className="w-20 text-center"
 				/>
@@ -113,6 +119,7 @@ export function SeatSelector({
 					type="button"
 					variant="outline"
 					size="icon"
+					aria-label={translations.increase}
 					onClick={handleIncrement}
 					disabled={seatCount >= SEAT_MAX}
 					className="size-8"

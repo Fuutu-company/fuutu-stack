@@ -1,6 +1,6 @@
 {
 	"footer": {
-		"tagline": "Building the future of SaaS applications.",
+		"tagline": "One calm workspace for your team: members, billing, an AI assistant and a CRM, beautifully connected.",
 		"product": "Product",
 		"resources": "Resources",
 		"companyAndLegal": "Company & Legal",
@@ -9,6 +9,7 @@
 		"privacy": "Privacy",
 		"terms": "Terms",
 		"imprint": "Imprint",
-		"rights": "All rights reserved."
+		"rights": "All rights reserved.",
+		"areas": "Four areas, one product."
 	}
 }

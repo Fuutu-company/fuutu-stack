@@ -10,7 +10,14 @@ import {
 	buildPricingTiers,
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
-import { Badge, Button, Card, CardContent, PricingCompact } from "@fuutu/ui";
+import {
+	AreaIcon,
+	Badge,
+	Button,
+	Card,
+	CardContent,
+	PricingCompact,
+} from "@fuutu/ui";
 import { CreditCard, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -165,12 +172,14 @@ export function UserSettingsBilling({
 
 	return (
 		<div className="space-y-6">
-			<Card>
+			<Card className="py-0">
 				<CardContent className="space-y-4 p-6 md:p-8">
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex items-center gap-3">
-							<CreditCard className="size-5 text-muted-foreground" />
-							<div>
+					<div className="flex flex-wrap items-center justify-between gap-4">
+						<div className="flex min-w-0 items-center gap-3">
+							<AreaIcon area="billing">
+								<CreditCard />
+							</AreaIcon>
+							<div className="min-w-0">
 								<p className="font-medium text-sm">
 									{activeSub
 										? tp("planInterval", {
@@ -195,7 +204,7 @@ export function UserSettingsBilling({
 					</div>
 
 					{activeSub && (
-						<div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+						<div className="flex flex-col gap-3 rounded-xl bg-muted/60 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
 								<p className="font-medium text-sm">
 									{t("organizations.settings.billingManagePortal")}

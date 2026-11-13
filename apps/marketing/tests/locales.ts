@@ -20,7 +20,7 @@ export const localePrefix = (locale: string): string =>
 
 /** Marketing home messages of a locale, read from its translation bundle. */
 export function readHomeMessages(locale: string): {
-	home: { hero: { stack: { nextjs: { description: string } } } };
+	home: { hero: { screenshotAlt: string } };
 } {
 	const file = resolve(
 		__dirname,

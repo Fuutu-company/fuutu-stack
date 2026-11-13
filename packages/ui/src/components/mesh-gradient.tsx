@@ -133,7 +133,7 @@ export interface MeshGradientProps {
 	 * Primary color — hex, `rgb()/oklch()/color(srgb)` string, or CSS custom
 	 * property (e.g. `"var(--primary)"`). Defaults to the `--primary` theme
 	 * token, resolved at runtime through a probe element so relative-color
-	 * tokens like `oklch(from var(--brand) l c h)` produce real colors.
+	 * tokens like `oklch(from var(--primary) l c h)` produce real colors.
 	 */
 	color1?: string;
 	/** Secondary color. Defaults to the `--secondary` theme token. */

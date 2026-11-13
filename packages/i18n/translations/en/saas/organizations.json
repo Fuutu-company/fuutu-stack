@@ -2,7 +2,6 @@
 	"organizations": {
 		"list": {
 			"title": "Organizations",
-			"description": "Collaborate with your team across multiple workspaces.",
 			"create": "Create organization",
 			"createHeading": "New organization",
 			"name": "Organization name",
@@ -24,7 +23,6 @@
 			"generalDescription": "Update your organization's display name.",
 			"name": "Name",
 			"members": "Members",
-			"membersDescription": "Invite teammates and manage roles.",
 			"invitePlaceholder": "teammate@company.com",
 			"roleMember": "Member",
 			"roleAdmin": "Admin",
@@ -43,14 +41,12 @@
 			"seatLimitHint": "Remove a member or cancel a pending invitation to free a seat, or upgrade your plan.",
 			"seatLimitCta": "Upgrade plan",
 			"danger": "Danger zone",
-			"dangerDescription": "Permanently delete this organization.",
 			"deleteOrg": "Delete organization",
 			"deleteTitle": "Delete this organization?",
 			"deleteDescription": "All members will lose access. This action cannot be undone.",
 			"deleteCta": "Yes, delete",
 			"failed": "Action failed.",
 			"billing": "Billing",
-			"billingDescription": "Manage your organization's subscription and payment method.",
 			"billingManageHint": "Upgrade or change your organization's plan anytime.",
 			"billingUpgrade": "Upgrade plan",
 			"billingCurrentPlan": "Current plan",
@@ -64,7 +60,6 @@
 			"credits": "Credits",
 			"auditLog": {
 				"title": "Audit log",
-				"description": "Security-relevant events for this organization.",
 				"filterAll": "All events",
 				"filterMember": "Member changes",
 				"filterBilling": "Billing",

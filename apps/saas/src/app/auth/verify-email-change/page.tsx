@@ -39,12 +39,12 @@ function VerifyEmailChangeContent() {
 	return (
 		<AuthCard title={t("emailChange.title")}>
 			{status === "verifying" && (
-				<p className="text-center text-muted-foreground text-sm">
+				<p className="text-muted-foreground text-sm">
 					{t("emailChange.verifying")}
 				</p>
 			)}
 			{status === "ok" && (
-				<div className="flex flex-col gap-4 text-center">
+				<div className="flex flex-col gap-4">
 					<p className="font-medium">{t("emailChange.success")}</p>
 					<Button asChild className="w-full">
 						<Link href="/settings">{t("emailChange.continue")}</Link>
@@ -52,7 +52,7 @@ function VerifyEmailChangeContent() {
 				</div>
 			)}
 			{status === "error" && (
-				<div className="flex flex-col gap-4 text-center">
+				<div className="flex flex-col gap-4">
 					<p className="text-destructive text-sm">{t("emailChange.error")}</p>
 					<Button asChild variant="outline" className="w-full">
 						<Link href="/settings">{t("emailChange.continue")}</Link>

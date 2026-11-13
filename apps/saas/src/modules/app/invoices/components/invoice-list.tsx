@@ -2,9 +2,11 @@
 
 import { BILLING_CURRENCY } from "@fuutu/payments/config";
 import {
+	AreaIcon,
 	Button,
 	Card,
 	CardContent,
+	PageHeader,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -66,37 +68,37 @@ export function InvoiceList({ slug }: { slug?: string }) {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h1 className="font-bold text-3xl tracking-tight">{t("title")}</h1>
-					<p className="mt-2 text-muted-foreground text-sm">
-						{t("description")}
-					</p>
-				</div>
-				<Select
-					value={dateFilter}
-					onValueChange={(v) => setDateFilter(v as DateFilter)}
-				>
-					<SelectTrigger className="w-40">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">{t("filter.all")}</SelectItem>
-						<SelectItem value="last30">{t("filter.last30")}</SelectItem>
-						<SelectItem value="last90">{t("filter.last90")}</SelectItem>
-					</SelectContent>
-				</Select>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("title")}
+				actions={
+					<Select
+						value={dateFilter}
+						onValueChange={(v) => setDateFilter(v as DateFilter)}
+					>
+						<SelectTrigger className="w-40">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">{t("filter.all")}</SelectItem>
+							<SelectItem value="last30">{t("filter.last30")}</SelectItem>
+							<SelectItem value="last90">{t("filter.last90")}</SelectItem>
+						</SelectContent>
+					</Select>
+				}
+			/>
 
 			{query.isLoading ? (
 				<p className="text-muted-foreground text-sm">{t("loading")}</p>
 			) : query.isError ? (
 				<p className="text-destructive text-sm">{t("failed")}</p>
 			) : filteredInvoices.length === 0 ? (
-				<Card>
+				<Card className="py-0">
 					<CardContent className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-						<FileText className="size-8 text-muted-foreground" />
-						<p className="font-medium text-sm">{t("empty")}</p>
+						<AreaIcon area="billing">
+							<FileText />
+						</AreaIcon>
+						<p className="font-bold font-heading">{t("empty")}</p>
 						<p className="text-muted-foreground text-sm">
 							{t("emptyDescription")}
 						</p>
@@ -106,59 +108,63 @@ export function InvoiceList({ slug }: { slug?: string }) {
 					</CardContent>
 				</Card>
 			) : (
-				<Card>
-					<CardContent className="p-6">
-						<div className="overflow-hidden rounded-lg border">
-							<table className="w-full text-sm">
-								<thead className="bg-muted/50">
-									<tr className="text-left">
-										<th className="p-3 font-medium">{t("col.date")}</th>
-										<th className="p-3 font-medium">{t("col.amount")}</th>
-										<th className="p-3 font-medium">{t("col.status")}</th>
-										<th className="p-3 text-right font-medium">
-											{t("col.actions")}
-										</th>
+				<Card className="overflow-hidden py-0">
+					<div className="overflow-x-auto">
+						<table className="w-full text-sm">
+							<thead className="bg-muted/50">
+								<tr className="text-left">
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.date")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.amount")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+										{t("col.status")}
+									</th>
+									<th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-muted-foreground text-xs">
+										{t("col.actions")}
+									</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y">
+								{filteredInvoices.map((invoice) => (
+									<tr key={invoice.id}>
+										<td
+											className="p-3 text-muted-foreground text-xs"
+											data-volatile
+										>
+											{invoice.issuedAt.toLocaleDateString(locale)}
+										</td>
+										<td className="px-4 py-3 font-medium">
+											{formatAmount(Number(invoice.amount), invoice.currency)}
+										</td>
+										<td className="px-4 py-3">
+											<InvoiceStatusBadge status={invoice.status} />
+										</td>
+										<td className="px-4 py-3 text-right">
+											{invoice.pdfUrl || invoice.url ? (
+												<Button variant="ghost" size="sm" asChild>
+													<a
+														href={invoice.pdfUrl ?? invoice.url ?? "#"}
+														target="_blank"
+														rel="noopener noreferrer"
+													>
+														<Download className="size-4" />
+														{t("download")}
+													</a>
+												</Button>
+											) : (
+												<span className="text-muted-foreground text-xs">
+													{t("noPdf")}
+												</span>
+											)}
+										</td>
 									</tr>
-								</thead>
-								<tbody className="divide-y">
-									{filteredInvoices.map((invoice) => (
-										<tr key={invoice.id}>
-											<td
-												className="p-3 text-muted-foreground text-xs"
-												data-volatile
-											>
-												{invoice.issuedAt.toLocaleDateString(locale)}
-											</td>
-											<td className="p-3 font-medium">
-												{formatAmount(Number(invoice.amount), invoice.currency)}
-											</td>
-											<td className="p-3">
-												<InvoiceStatusBadge status={invoice.status} />
-											</td>
-											<td className="p-3 text-right">
-												{invoice.pdfUrl || invoice.url ? (
-													<Button variant="ghost" size="sm" asChild>
-														<a
-															href={invoice.pdfUrl ?? invoice.url ?? "#"}
-															target="_blank"
-															rel="noopener noreferrer"
-														>
-															<Download className="size-4" />
-															{t("download")}
-														</a>
-													</Button>
-												) : (
-													<span className="text-muted-foreground text-xs">
-														{t("noPdf")}
-													</span>
-												)}
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					</CardContent>
+								))}
+							</tbody>
+						</table>
+					</div>
 				</Card>
 			)}
 		</div>

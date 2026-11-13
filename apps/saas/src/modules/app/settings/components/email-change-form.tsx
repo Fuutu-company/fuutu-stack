@@ -41,7 +41,9 @@ export function EmailChangeForm() {
 	return (
 		<form onSubmit={submit} className="space-y-5">
 			<div>
-				<h3 className="font-semibold text-lg">{t("emailChange.title")}</h3>
+				<h3 className="font-bold font-heading text-lg tracking-heading">
+					{t("emailChange.title")}
+				</h3>
 				<p className="text-muted-foreground text-sm">
 					{t("emailChange.description")}
 				</p>

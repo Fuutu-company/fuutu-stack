@@ -74,3 +74,30 @@ test.describe("AI chat", () => {
 		});
 	});
 });
+
+test.describe("AI chat on a phone-width viewport", () => {
+	test.use({ viewport: { width: 375, height: 800 } });
+
+	test("conversation list collapses into a drawer and messages get the full width", async ({
+		page,
+	}) => {
+		await page.goto("/chat");
+		const input = page.getByPlaceholder(/type your message/i);
+		await expect(input).toBeVisible({ timeout: 10_000 });
+
+		const box = await input.boundingBox();
+		expect(box?.width ?? 0).toBeGreaterThan(250);
+
+		await page.getByRole("button", { name: /^conversations$/i }).click();
+		const drawer = page.getByRole("dialog", { name: /conversations/i });
+		await expect(drawer).toBeVisible();
+		await expect(
+			drawer
+				.locator('[data-slot="button"]')
+				.filter({ hasText: /new conversation/i }),
+		).toBeVisible();
+
+		await page.getByRole("button", { name: /close conversations/i }).click();
+		await expect(drawer).toBeHidden();
+	});
+});

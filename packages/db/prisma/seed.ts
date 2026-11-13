@@ -13,6 +13,8 @@
  * Data
  *   - 1 Organization "Acme" with both users as members
  *   - 5 sample AuditLog entries
+ *   - 36 demo-activity AuditLog entries over the last 29 days (dashboard chart)
+ *   - 1 ai_tokens CreditBalance for the org + 14 usage CreditEvents
  *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org
  *   - 3 demo API keys for the admin (org-scoped, user-scoped, expired)
  *   - 4 demo invoices for the acme org (2 paid, 1 open, 1 void)
@@ -28,6 +30,72 @@ import { hashPassword } from "@better-auth/utils/password";
 import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
 import { db } from "./client";
+
+// Dashboard demo data. Marked rows (`metadata.seed`) are inserted only while
+// none exist, so re-runs stay idempotent and real audit rows never block them.
+const DEMO_ACTIVITY_MARKER = "demo-activity";
+// = CREDITS.pro.ai_tokens (@fuutu/payments/config) — the seed cannot import
+// payments; seed-demo-data-guard keeps the two aligned.
+const DEMO_AI_TOKENS_GRANTED = 500_000;
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+// [days ago, minutes before the seed time, actor, kit-emitted action]
+const DEMO_AUDIT_ACTIVITY: [number, number, "admin" | "member", string][] = [
+	[0, 20, "admin", "auth.session_created"],
+	[0, 95, "member", "auth.session_created"],
+	[1, 30, "admin", "auth.session_created"],
+	[1, 240, "member", "auth.session_created"],
+	[2, 60, "admin", "auth.session_created"],
+	[3, 45, "admin", "auth.session_created"],
+	[3, 300, "member", "auth.session_created"],
+	[4, 120, "admin", "org.invite"],
+	[4, 90, "member", "org.invite.accept"],
+	[5, 15, "admin", "auth.session_created"],
+	[6, 200, "member", "auth.session_created"],
+	[7, 50, "admin", "auth.session_created"],
+	[8, 10, "admin", "auth.session_created"],
+	[8, 360, "member", "auth.session_created"],
+	[9, 80, "admin", "auth.session_created"],
+	[10, 140, "admin", "auth.session_created"],
+	[11, 25, "member", "auth.session_created"],
+	[12, 70, "admin", "auth.session_created"],
+	[13, 180, "admin", "org.invite"],
+	[13, 150, "member", "auth.session_created"],
+	[14, 40, "admin", "auth.session_created"],
+	[15, 260, "member", "auth.session_created"],
+	[16, 35, "admin", "auth.session_created"],
+	[17, 110, "admin", "auth.session_created"],
+	[18, 55, "member", "auth.session_created"],
+	[19, 15, "admin", "auth.session_created"],
+	[20, 320, "admin", "auth.session_created"],
+	[21, 90, "member", "auth.session_created"],
+	[22, 45, "admin", "auth.session_created"],
+	[23, 130, "admin", "auth.session_created"],
+	[24, 75, "member", "auth.session_created"],
+	[25, 20, "admin", "auth.session_created"],
+	[26, 210, "admin", "auth.session_created"],
+	[27, 60, "admin", "org.create"],
+	[28, 300, "member", "auth.sign_up"],
+	[28, 360, "admin", "auth.sign_up"],
+];
+
+// [days ago, minutes before the seed time, tokens consumed]
+const DEMO_AI_USAGE: [number, number, number][] = [
+	[0, 40, 1_850],
+	[1, 120, 3_200],
+	[3, 60, 2_400],
+	[5, 200, 4_100],
+	[7, 30, 1_200],
+	[9, 90, 5_600],
+	[11, 150, 2_750],
+	[13, 45, 3_900],
+	[15, 240, 1_650],
+	[18, 75, 6_300],
+	[20, 20, 2_100],
+	[23, 180, 4_450],
+	[25, 100, 3_050],
+	[28, 60, 2_600],
+];
 
 // Password hashing MUST go through `@better-auth/utils/password` — Better-Auth
 // uses scrypt with `N=16384, r=16, p=1, dkLen=64` and `password.normalize("NFKC")`.
@@ -201,7 +269,64 @@ async function main() {
 		});
 	}
 
-	// Sample purchase — pretend the org bought the "pro" plan.
+	// Dashboard demo activity — guarded by its own marker, not by the total
+	// row count, so dev DBs that already have audit rows pick it up too.
+	const demoActivity = await db.auditLog.count({
+		where: { metadata: { path: ["seed"], equals: DEMO_ACTIVITY_MARKER } },
+	});
+	if (demoActivity === 0) {
+		await db.auditLog.createMany({
+			data: DEMO_AUDIT_ACTIVITY.map(([daysAgo, minutes, actor, action]) => ({
+				userId: actor === "admin" ? admin.id : member.id,
+				organizationId: acme.id,
+				action,
+				createdAt: new Date(seedStart - daysAgo * DAY_MS - minutes * 60_000),
+				metadata: { seed: DEMO_ACTIVITY_MARKER },
+			})),
+		});
+	}
+
+	// Demo AI usage — the org's ai_tokens balance (pro grant) plus the usage
+	// events that consumed it. Skipped when the org already has a balance
+	// (real usage), so seeded numbers never overwrite real ones.
+	const aiBalance = await db.creditBalance.findFirst({
+		where: { organizationId: acme.id, meterKey: "ai_tokens" },
+		select: { id: true },
+	});
+	if (!aiBalance) {
+		const consumed = DEMO_AI_USAGE.reduce(
+			(sum, [, , amount]) => sum + amount,
+			0,
+		);
+		await db.$transaction([
+			db.creditBalance.create({
+				data: {
+					organizationId: acme.id,
+					meterKey: "ai_tokens",
+					recurringGranted: DEMO_AI_TOKENS_GRANTED,
+					recurringConsumed: consumed,
+					recurringPeriodEnd: new Date(seedStart + 18 * DAY_MS),
+				},
+			}),
+			db.creditEvent.createMany({
+				data: DEMO_AI_USAGE.map(([daysAgo, minutes, amount]) => ({
+					organizationId: acme.id,
+					meterKey: "ai_tokens",
+					amount,
+					source: "recurring",
+					reason: "ai_chat_message",
+					createdAt: new Date(seedStart - daysAgo * DAY_MS - minutes * 60_000),
+					metadata: { seed: DEMO_ACTIVITY_MARKER },
+				})),
+			}),
+		]);
+	}
+
+	// Sample purchase — pretend the org bought the "pro" plan. The ids are the
+	// ones the app resolves plans from (`PLANS.pro.priceIdEnvVars.month`), so
+	// Acme really is on Pro; unset env falls back to a placeholder that the
+	// app maps to Free.
+	const proPriceId = env.PAYMENTS_PRO_PRICE_ID ?? "seed_product_pro";
 	await db.purchase.upsert({
 		where: {
 			provider_subscriptionId: {
@@ -209,13 +334,13 @@ async function main() {
 				subscriptionId: "seed_sub_pro_org",
 			},
 		},
-		update: {},
+		update: { priceId: proPriceId, productId: proPriceId },
 		create: {
 			type: "SUBSCRIPTION",
 			status: "ACTIVE",
 			provider: "creem",
-			priceId: "seed_price_pro",
-			productId: "seed_product_pro",
+			priceId: proPriceId,
+			productId: proPriceId,
 			subscriptionId: "seed_sub_pro_org",
 			customerId: "seed_customer_acme",
 			quantity: 2,

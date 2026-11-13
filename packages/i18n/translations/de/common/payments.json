@@ -2,7 +2,6 @@
 	"payments": {
 		"choosePlan": {
 			"title": "Plan wählen",
-			"description": "Wähle den Plan, der zu deiner Phase passt. Upgrade oder Downgrade jederzeit.",
 			"unavailable": "Zahlung ist in dieser Umgebung nicht konfiguriert.",
 			"redirecting": "Weiterleiten…",
 			"error": "Checkout fehlgeschlagen",
@@ -20,6 +19,9 @@
 			"perMonth": "/Monat",
 			"perYear": "/Jahr",
 			"total": "Gesamt",
+			"decrease": "Einen Sitz entfernen",
+			"increase": "Einen Sitz hinzufügen",
+			"count": "Anzahl der Sitze",
 			"description": "Du wirst für die Anzahl der ausgewählten Sitze abgerechnet. Sitze passen sich automatisch an, wenn Teammitglieder beitreten oder verlassen."
 		},
 		"planInterval": "{plan} · {interval}",

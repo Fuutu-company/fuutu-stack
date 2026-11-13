@@ -1,7 +1,6 @@
 {
 	"webhooks": {
 		"title": "Webhooks",
-		"description": "Sende Echtzeit-Ereignisbenachrichtigungen an deine Dienste.",
 		"create": "Webhook hinzufügen",
 		"creating": "Erstelle…",
 		"empty": "Noch keine Webhooks",

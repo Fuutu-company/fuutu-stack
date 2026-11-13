@@ -1,7 +1,7 @@
 "use client";
 
 import { ContactStatusBadge } from "@app/crm/components/contact-status-badge";
-import { Button, Skeleton } from "@fuutu/ui";
+import { AreaIcon, Button, Skeleton } from "@fuutu/ui";
 import { Pencil, Trash2, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -46,7 +46,9 @@ export function ContactList({
 	if (contacts.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-				<Users className="size-8 text-muted-foreground" />
+				<AreaIcon area="users">
+					<Users />
+				</AreaIcon>
 				<p className="text-muted-foreground text-sm">{t("emptyContacts")}</p>
 				{onNew && <Button onClick={onNew}>{t("emptyContactsCta")}</Button>}
 			</div>
@@ -54,21 +56,31 @@ export function ContactList({
 	}
 
 	return (
-		<div className="overflow-hidden rounded-lg border">
+		<div className="-mx-6 -mb-6 overflow-x-auto border-t">
 			<table className="w-full text-sm">
 				<thead className="bg-muted/50">
 					<tr className="text-left">
-						<th className="p-3 font-medium">{t("name")}</th>
-						<th className="p-3 font-medium">{t("email")}</th>
-						<th className="p-3 font-medium">{t("company")}</th>
-						<th className="p-3 font-medium">{t("status")}</th>
-						<th className="p-3 text-right font-medium">{t("actions")}</th>
+						<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+							{t("name")}
+						</th>
+						<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+							{t("email")}
+						</th>
+						<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+							{t("company")}
+						</th>
+						<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
+							{t("status")}
+						</th>
+						<th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-muted-foreground text-xs">
+							{t("actions")}
+						</th>
 					</tr>
 				</thead>
 				<tbody className="divide-y">
 					{contacts.map((contact) => (
 						<tr key={contact.id} className="hover:bg-muted/30">
-							<td className="p-3">
+							<td className="px-4 py-3">
 								<div className="font-medium">{contact.name}</div>
 								{contact.phone && (
 									<div className="text-muted-foreground text-xs">
@@ -76,14 +88,16 @@ export function ContactList({
 									</div>
 								)}
 							</td>
-							<td className="p-3 text-muted-foreground">{contact.email}</td>
-							<td className="p-3 text-muted-foreground">
+							<td className="px-4 py-3 text-muted-foreground">
+								{contact.email}
+							</td>
+							<td className="px-4 py-3 text-muted-foreground">
 								{contact.company ?? t("notProvided")}
 							</td>
-							<td className="p-3">
+							<td className="px-4 py-3">
 								<ContactStatusBadge status={contact.status} />
 							</td>
-							<td className="p-3">
+							<td className="px-4 py-3">
 								<div className="flex justify-end gap-1">
 									<Button
 										size="sm"

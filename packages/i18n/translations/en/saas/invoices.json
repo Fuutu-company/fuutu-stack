@@ -1,7 +1,6 @@
 {
 	"invoices": {
 		"title": "Invoices",
-		"description": "View and download your billing history.",
 		"empty": "No invoices yet",
 		"emptyDescription": "Invoices will appear here once you have an active subscription.",
 		"emptyCta": "Choose a plan",

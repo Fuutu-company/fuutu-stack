@@ -63,6 +63,37 @@ test.describe("authenticated routes accessibility", () => {
 		expect(accessibilityScanResults.violations).toEqual([]);
 	});
 
+	test("/design has no critical a11y violations", async ({ page }) => {
+		await page.goto("/design");
+		await expect(
+			page.getByRole("heading", { level: 1, name: /^design system$/i }),
+		).toBeVisible({ timeout: 10_000 });
+		// Contrast badges are measured after hydration; wait so the scan sees
+		// the final DOM.
+		await expect(
+			page.locator("[data-testid='contrast-badge'][data-pass='pending']"),
+		).toHaveCount(0);
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.withTags(["wcag2a", "wcag2aa"])
+			.analyze();
+		expect(accessibilityScanResults.violations).toEqual([]);
+	});
+
+	test("/design has no critical a11y violations in dark mode", async ({
+		page,
+	}) => {
+		await page.addInitScript(() => localStorage.setItem("theme", "dark"));
+		await page.goto("/design");
+		await expect(page.locator("html")).toHaveClass(/dark/);
+		await expect(
+			page.locator("[data-testid='contrast-badge'][data-pass='pending']"),
+		).toHaveCount(0);
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.withTags(["wcag2a", "wcag2aa"])
+			.analyze();
+		expect(accessibilityScanResults.violations).toEqual([]);
+	});
+
 	test("/organizations has no critical a11y violations", async ({ page }) => {
 		await page.goto("/organizations");
 		const accessibilityScanResults = await new AxeBuilder({ page })

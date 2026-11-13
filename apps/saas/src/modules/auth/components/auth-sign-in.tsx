@@ -7,6 +7,7 @@ import { getTwoFactorPath, isTwoFactorRedirect } from "@fuutu/auth/two-factor";
 import { config } from "@fuutu/config";
 import { env } from "@fuutu/env/saas";
 import {
+	AreaBadge,
 	AuthCard,
 	Button,
 	Field,
@@ -17,13 +18,38 @@ import {
 	Input,
 } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
-import { Check, Fingerprint, Mail } from "lucide-react";
+import { Fingerprint, History, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 const MARKETING_URL = env.NEXT_PUBLIC_MARKETING_URL ?? "http://localhost:3001";
+
+/** Soft users-area ring on the button of the last used sign-in method. */
+const LAST_USED_RING = "ring-2 ring-area-users";
+
+/**
+ * "Last used" chip sitting on the top-right edge of a sign-in button. It is a
+ * sibling of the button (not inside it), so the button keeps its accessible
+ * name; the button points at it with `aria-describedby`.
+ */
+function LastUsedChip({ id, label }: { id: string; label: string }) {
+	return (
+		<span
+			id={id}
+			className="pointer-events-none absolute -top-2.5 right-3 z-10"
+		>
+			<AreaBadge
+				area="users"
+				className="h-5 gap-1 px-2 text-[11px] shadow-sm ring-2 ring-card [&>svg]:size-3"
+			>
+				<History aria-hidden="true" strokeWidth={2.5} />
+				{label}
+			</AreaBadge>
+		</span>
+	);
+}
 
 export function AuthSignIn({
 	methods,
@@ -57,6 +83,14 @@ export function AuthSignIn({
 	useEffect(() => {
 		setLastMethod(authClient.getLastUsedLoginMethod());
 	}, []);
+	const lastUsedId = useId();
+	const isLastUsed = (method: string) => lastMethod === method;
+	const lastUsedProps = (method: string) =>
+		isLastUsed(method) ? { "aria-describedby": lastUsedId } : {};
+	const lastUsedChip = (method: string) =>
+		isLastUsed(method) ? (
+			<LastUsedChip id={lastUsedId} label={t("signInForm.lastUsed")} />
+		) : null;
 
 	async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
@@ -149,12 +183,54 @@ export function AuthSignIn({
 	const hasSocial = methods.google || methods.github;
 	const hasCredentialForm = methods.emailPassword || methods.magicLink;
 
-	// Social + passkey buttons. Each is rendered only when the server
-	// registers that method (`getAuthMethods`, same predicate as the
-	// provider/plugin registration in @fuutu/auth).
+	// Passkey leads the card, social buttons follow the credential form. Each
+	// is rendered only when the server registers that method (`getAuthMethods`,
+	// same predicate as the provider/plugin registration in @fuutu/auth).
+	const passkeyOption = methods.passkey && (
+		<>
+			<Field>
+				<div className="relative">
+					<button
+						type="button"
+						disabled={isLoading}
+						onClick={handlePasskeySignIn}
+						{...lastUsedProps("passkey")}
+						className={cn(
+							"relative flex w-full items-center gap-3.5 rounded-2xl bg-area-ai p-4 text-left text-area-ai-foreground outline-none transition-[box-shadow,transform] duration-150 ease-out hover:shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100",
+							isLastUsed("passkey") && LAST_USED_RING,
+						)}
+					>
+						<span
+							aria-hidden="true"
+							className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card"
+						>
+							<Fingerprint className="size-5" />
+						</span>
+						<span className="flex min-w-0 flex-col gap-0.5">
+							<span className="font-bold text-sm">
+								{isLoading
+									? t("signInForm.passkeySigningIn")
+									: t("signInForm.passkeyButton")}
+							</span>
+							<span className="font-medium text-xs">
+								{t("signInForm.passkeyHint")}
+							</span>
+						</span>
+					</button>
+					{lastUsedChip("passkey")}
+				</div>
+			</Field>
+			{hasCredentialForm && (
+				<FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+					{t("signInForm.orUseEmail")}
+				</FieldSeparator>
+			)}
+		</>
+	);
+
 	const alternatives = (
 		<>
-			{hasCredentialForm && (hasSocial || methods.passkey) && (
+			{hasCredentialForm && hasSocial && (
 				<FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
 					{t("signInForm.orContinueWith")}
 				</FieldSeparator>
@@ -168,93 +244,66 @@ export function AuthSignIn({
 					)}
 				>
 					{methods.google && (
-						<Button
-							variant={lastMethod === "google" ? "default" : "outline"}
-							type="button"
-							disabled={isLoading}
-							onClick={() => handleSocialSignIn("google")}
-							className="relative"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								className="size-4"
+						<div className="relative">
+							<Button
+								variant="outline"
+								type="button"
+								disabled={isLoading}
+								onClick={() => handleSocialSignIn("google")}
+								{...lastUsedProps("google")}
+								className={cn("w-full", isLastUsed("google") && LAST_USED_RING)}
 							>
-								<title>Google</title>
-								<path
-									d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-									fill="#4285F4"
-								/>
-								<path
-									d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-									fill="#34A853"
-								/>
-								<path
-									d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-									fill="#FBBC05"
-								/>
-								<path
-									d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-									fill="#EA4335"
-								/>
-							</svg>
-							<span className="sr-only">{t("signInForm.socialGoogle")}</span>
-							{lastMethod === "google" && (
-								<span className="absolute -top-2 -right-1 inline-flex items-center gap-0.5 rounded-full bg-amber-500 px-1.5 py-0.5 font-medium text-[10px] text-white shadow-md ring-2 ring-amber-300/50">
-									<Check className="size-2.5" strokeWidth={3} />
-									{t("signInForm.lastUsed")}
-								</span>
-							)}
-						</Button>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									className="size-4"
+								>
+									<title>Google</title>
+									<path
+										d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+										fill="#4285F4"
+									/>
+									<path
+										d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+										fill="#34A853"
+									/>
+									<path
+										d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+										fill="#FBBC05"
+									/>
+									<path
+										d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+										fill="#EA4335"
+									/>
+								</svg>
+								<span className="sr-only">{t("signInForm.socialGoogle")}</span>
+							</Button>
+							{lastUsedChip("google")}
+						</div>
 					)}
 					{methods.github && (
-						<Button
-							variant={lastMethod === "github" ? "default" : "outline"}
-							type="button"
-							disabled={isLoading}
-							onClick={() => handleSocialSignIn("github")}
-							className="relative"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="currentColor"
+						<div className="relative">
+							<Button
+								variant="outline"
+								type="button"
+								disabled={isLoading}
+								onClick={() => handleSocialSignIn("github")}
+								{...lastUsedProps("github")}
+								className={cn("w-full", isLastUsed("github") && LAST_USED_RING)}
 							>
-								<title>GitHub</title>
-								<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-							</svg>
-							<span className="sr-only">{t("signInForm.socialGithub")}</span>
-							{lastMethod === "github" && (
-								<span className="absolute -top-2 -right-1 inline-flex items-center gap-0.5 rounded-full bg-amber-500 px-1.5 py-0.5 font-medium text-[10px] text-white shadow-md ring-2 ring-amber-300/50">
-									<Check className="size-2.5" strokeWidth={3} />
-									{t("signInForm.lastUsed")}
-								</span>
-							)}
-						</Button>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									fill="currentColor"
+								>
+									<title>GitHub</title>
+									<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+								</svg>
+								<span className="sr-only">{t("signInForm.socialGithub")}</span>
+							</Button>
+							{lastUsedChip("github")}
+						</div>
 					)}
-				</Field>
-			)}
-
-			{methods.passkey && (
-				<Field>
-					<Button
-						variant={lastMethod === "passkey" ? "default" : "outline"}
-						type="button"
-						disabled={isLoading}
-						onClick={handlePasskeySignIn}
-						className="relative w-full"
-					>
-						<Fingerprint className="size-4" />
-						{isLoading
-							? t("signInForm.passkeySigningIn")
-							: t("signInForm.passkeyButton")}
-						{lastMethod === "passkey" && (
-							<span className="absolute right-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 font-medium text-[11px] text-white shadow-sm ring-2 ring-amber-300/50">
-								<Check className="size-3" strokeWidth={3} />
-								{t("signInForm.lastUsed")}
-							</span>
-						)}
-					</Button>
 				</Field>
 			)}
 		</>
@@ -298,7 +347,7 @@ export function AuthSignIn({
 			{...props}
 		>
 			{magicLinkSent ? (
-				<div className="flex flex-col gap-4 text-center">
+				<div className="flex flex-col gap-4">
 					<p className="font-medium">{t("signInForm.magicLinkSuccess")}</p>
 					{methods.emailPassword && (
 						<Button
@@ -322,6 +371,8 @@ export function AuthSignIn({
 							</div>
 						)}
 
+						{passkeyOption}
+
 						<Field>
 							<FieldLabel htmlFor="email">{t("email")}</FieldLabel>
 							<Input
@@ -335,11 +386,23 @@ export function AuthSignIn({
 						</Field>
 
 						<Field>
-							<Button type="submit" disabled={isLoading} className="w-full">
-								{isLoading
-									? t("signInForm.sendingMagicLink")
-									: t("signInForm.magicLinkButton")}
-							</Button>
+							<div className="relative">
+								<Button
+									type="submit"
+									size="lg"
+									disabled={isLoading}
+									{...lastUsedProps("magic-link")}
+									className={cn(
+										"w-full",
+										isLastUsed("magic-link") && LAST_USED_RING,
+									)}
+								>
+									{isLoading
+										? t("signInForm.sendingMagicLink")
+										: t("signInForm.magicLinkButton")}
+								</Button>
+								{lastUsedChip("magic-link")}
+							</div>
 						</Field>
 
 						{methods.emailPassword ? (
@@ -347,7 +410,7 @@ export function AuthSignIn({
 								<button
 									type="button"
 									onClick={() => setIsMagicLinkMode(false)}
-									className="text-sm underline-offset-2 hover:underline"
+									className="text-sm underline underline-offset-4 hover:decoration-2"
 								>
 									{t("signInForm.usePassword")}
 								</button>
@@ -369,6 +432,8 @@ export function AuthSignIn({
 							</div>
 						)}
 
+						{passkeyOption}
+
 						{methods.emailPassword && (
 							<>
 								<Field>
@@ -388,7 +453,7 @@ export function AuthSignIn({
 										<FieldLabel htmlFor="password">{t("password")}</FieldLabel>
 										<Link
 											href="/auth/forgot-password"
-											className="ml-auto text-sm underline-offset-2 hover:underline"
+											className="ml-auto text-sm underline underline-offset-4 hover:decoration-2"
 										>
 											{t("signInForm.forgotPassword")}
 										</Link>
@@ -403,43 +468,46 @@ export function AuthSignIn({
 								</Field>
 
 								<Field>
-									<Button
-										type="submit"
-										disabled={isLoading}
-										className="relative w-full"
-									>
-										{isLoading
-											? t("signInForm.signingIn")
-											: t("signInForm.button")}
-										{lastMethod === "email" && (
-											<span className="absolute right-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 font-medium text-[11px] text-white shadow-sm ring-2 ring-amber-300/50">
-												<Check className="size-3" strokeWidth={3} />
-												{t("signInForm.lastUsed")}
-											</span>
-										)}
-									</Button>
+									<div className="relative">
+										<Button
+											type="submit"
+											size="lg"
+											disabled={isLoading}
+											{...lastUsedProps("email")}
+											className={cn(
+												"w-full",
+												isLastUsed("email") && LAST_USED_RING,
+											)}
+										>
+											{isLoading
+												? t("signInForm.signingIn")
+												: t("signInForm.button")}
+										</Button>
+										{lastUsedChip("email")}
+									</div>
 								</Field>
 							</>
 						)}
 
 						{methods.magicLink && (
 							<Field>
-								<Button
-									type="button"
-									variant="outline"
-									onClick={() => setIsMagicLinkMode(true)}
-									disabled={isLoading}
-									className="relative w-full"
-								>
-									<Mail className="size-4" />
-									{t("signInForm.useMagicLink")}
-									{lastMethod === "magic-link" && (
-										<span className="absolute right-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 font-medium text-[11px] text-white shadow-sm ring-2 ring-amber-300/50">
-											<Check className="size-3" strokeWidth={3} />
-											{t("signInForm.lastUsed")}
-										</span>
-									)}
-								</Button>
+								<div className="relative">
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => setIsMagicLinkMode(true)}
+										disabled={isLoading}
+										{...lastUsedProps("magic-link")}
+										className={cn(
+											"w-full",
+											isLastUsed("magic-link") && LAST_USED_RING,
+										)}
+									>
+										<Mail className="size-4" />
+										{t("signInForm.useMagicLink")}
+									</Button>
+									{lastUsedChip("magic-link")}
+								</div>
 							</Field>
 						)}
 

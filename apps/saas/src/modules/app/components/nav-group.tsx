@@ -24,6 +24,10 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { isNavItemActive, isPathWithin, type NavSubItem } from "./nav-config";
 
+/** Expanded groups mark the active leaf with the ink pill; the trigger stays soft. */
+const SOFT_ACTIVE =
+	"data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground";
+
 interface NavGroupProps {
 	/** Stable id used for the e2e hook (`data-nav-group`). */
 	id: string;
@@ -101,7 +105,11 @@ export function NavGroup({
 		>
 			<SidebarMenuItem data-nav-group={id}>
 				<CollapsibleTrigger asChild>
-					<SidebarMenuButton tooltip={label} isActive={groupActive}>
+					<SidebarMenuButton
+						tooltip={label}
+						isActive={groupActive}
+						className={SOFT_ACTIVE}
+					>
 						<Icon />
 						<span>{label}</span>
 						<ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />

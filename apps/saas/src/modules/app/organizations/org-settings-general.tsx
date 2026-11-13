@@ -17,8 +17,8 @@ import {
 	FieldGroup,
 	FieldLabel,
 	Input,
+	PageHeader,
 } from "@fuutu/ui";
-import { Building2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -104,23 +104,18 @@ export function OrgSettingsGeneral({ slug }: { slug: string }) {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center gap-3">
-				<div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-					<Building2 className="size-5" />
-				</div>
-				<div>
-					<h1 className="font-bold text-3xl tracking-tight">{org.name}</h1>
-					<p className="text-muted-foreground text-sm">/{org.slug}</p>
-				</div>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("organizations.settings.general")}
+			/>
 
 			<OrgLogoUpload slug={slug} />
 
-			<Card>
+			<Card className="py-0">
 				<CardContent className="p-6 md:p-8">
 					<form onSubmit={rename} className="space-y-5">
 						<div>
-							<h3 className="font-semibold text-lg">
+							<h3 className="font-bold font-heading text-lg tracking-heading">
 								{t("organizations.settings.general")}
 							</h3>
 							<p className="text-muted-foreground text-sm">

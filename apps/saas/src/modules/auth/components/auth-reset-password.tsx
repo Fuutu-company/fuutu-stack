@@ -81,7 +81,7 @@ export function AuthResetPassword({
 			{...props}
 		>
 			{success ? (
-				<div className="flex flex-col gap-3 text-center">
+				<div className="flex flex-col gap-3">
 					<p className="font-medium">{t("resetPassword.success")}</p>
 					<p className="text-muted-foreground text-sm">
 						{t("resetPassword.redirecting")}
@@ -122,6 +122,7 @@ export function AuthResetPassword({
 						<Field>
 							<Button
 								type="submit"
+								size="lg"
 								disabled={isLoading || !token}
 								className="w-full"
 							>

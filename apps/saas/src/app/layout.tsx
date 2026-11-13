@@ -5,12 +5,11 @@ import { config, KIT_GENERATOR_META } from "@fuutu/config";
 import type { Locale } from "@fuutu/i18n";
 import { getDirection } from "@fuutu/i18n";
 import { Toaster } from "@fuutu/ui";
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import type { PropsWithChildren } from "react";
 import { Providers } from "@/modules/shared/providers";
+import { fontVariables } from "./fonts";
 
 export const metadata = {
 	// Embeds `<meta name="generator" content="Fuutu-Stack x.y.z" />` in
@@ -42,7 +41,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 		<html
 			lang={locale}
 			dir={direction}
-			className={`${GeistSans.variable} ${GeistMono.variable}`}
+			className={fontVariables}
 			suppressHydrationWarning
 		>
 			<body className="antialiased">

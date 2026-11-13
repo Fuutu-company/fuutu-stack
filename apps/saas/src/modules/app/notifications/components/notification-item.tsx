@@ -66,7 +66,7 @@ export function NotificationItem({
 			type="button"
 			onClick={handleClick}
 			className={cn(
-				"flex w-full items-start gap-3 border-b p-4 text-left transition-colors hover:bg-muted/50",
+				"flex w-full items-start gap-3 border-b p-4 text-left outline-none transition-colors last:border-b-0 hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset",
 				isUnread && "bg-primary/5",
 			)}
 		>

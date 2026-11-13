@@ -75,6 +75,11 @@
 			"name": "review-code",
 			"source": "mcp",
 			"category": "workflow"
+		},
+		{
+			"name": "setup-brand",
+			"source": "mcp",
+			"category": "design"
 		}
 	]
 }

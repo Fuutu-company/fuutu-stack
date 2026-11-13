@@ -23,8 +23,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 				style={{
 					margin: 0,
 					fontFamily: "system-ui,-apple-system,Segoe UI,Roboto,sans-serif",
-					background: "#f6f6f7",
-					color: "#111",
+					background: "#f0f4f7",
+					color: "#151b24",
 				}}
 			>
 				{children}

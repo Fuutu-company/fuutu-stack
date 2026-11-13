@@ -143,15 +143,13 @@ test.describe("sidebar navigation", () => {
 		});
 		await trigger.click();
 
+		await expect(adminGroup.getByRole("link")).toHaveText([
+			/^users$/i,
+			/^audit logs$/i,
+		]);
 		await expect(
-			adminGroup.getByRole("link", { name: /^overview$/i }),
-		).toBeVisible();
-		await expect(
-			adminGroup.getByRole("link", { name: /^users$/i }),
-		).toBeVisible();
-		await expect(
-			adminGroup.getByRole("link", { name: /^audit logs$/i }),
-		).toBeVisible();
+			adminGroup.getByRole("link", { name: /overview/i }),
+		).toHaveCount(0);
 
 		await adminGroup.getByRole("link", { name: /^users$/i }).click();
 		await expect(page).toHaveURL(/\/admin\/users/);
@@ -197,5 +195,133 @@ test.describe("sidebar navigation", () => {
 			// The breadcrumb is a labelled <nav>; the removed tab nav had no label.
 			await expect(page.locator("main nav:not([aria-label])")).toHaveCount(0);
 		}
+	});
+
+	test("active nav item renders as ink pill", async ({ page, isMobile }) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+
+		/** Computed fill/ink of `el` and the resolved `--sidebar-primary(-foreground)` in the same scope. */
+		const inkOf = (el: Element) => {
+			const probe = document.createElement("div");
+			probe.style.backgroundColor = "var(--sidebar-primary)";
+			probe.style.color = "var(--sidebar-primary-foreground)";
+			el.parentElement?.appendChild(probe);
+			const expected = getComputedStyle(probe);
+			const actual = getComputedStyle(el);
+			const result = {
+				background: actual.backgroundColor,
+				color: actual.color,
+				primary: expected.backgroundColor,
+				primaryForeground: expected.color,
+				pill:
+					Number.parseFloat(actual.borderTopLeftRadius) >=
+					(el as HTMLElement).offsetHeight / 2,
+			};
+			probe.remove();
+			return result;
+		};
+
+		await page.goto("/dashboard");
+		const sidebar = page.locator("[data-sidebar='sidebar']");
+		const dashboard = sidebar.getByRole("link", { name: /^dashboard$/i });
+		await expect(dashboard).toHaveAttribute("data-active", "true", {
+			timeout: 10_000,
+		});
+		const active = await dashboard.evaluate(inkOf);
+		expect(active.background).toBe(active.primary);
+		expect(active.color).toBe(active.primaryForeground);
+		expect(active.pill).toBe(true);
+
+		const inactive = await sidebar
+			.getByRole("link", { name: /^notifications$/i })
+			.evaluate(inkOf);
+		expect(inactive.background).not.toBe(inactive.primary);
+
+		await page.goto("/settings?tab=security");
+		const security = page
+			.locator("[data-nav-group='account-settings']")
+			.getByRole("link", { name: /^security$/i });
+		await expect(security).toHaveAttribute("aria-current", "page", {
+			timeout: 10_000,
+		});
+		const sub = await security.evaluate(inkOf);
+		expect(sub.background).toBe(sub.primary);
+		expect(sub.color).toBe(sub.primaryForeground);
+		expect(sub.pill).toBe(true);
+	});
+
+	test("nav icons and sub-items are plain: no area circles, no marker dots", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		await page.goto("/organizations/acme/settings/members");
+
+		const sidebar = page.locator("[data-sidebar='sidebar']");
+		const settingsGroup = page.locator("[data-nav-group='org-settings']");
+		await expect(
+			settingsGroup.getByRole("link", { name: /^members$/i }),
+		).toHaveAttribute("aria-current", "page", { timeout: 10_000 });
+
+		await expect(sidebar.locator("[data-slot='area-icon']")).toHaveCount(0);
+		await expect(sidebar.locator("[data-slot='nav-area-dot']")).toHaveCount(0);
+
+		// Every top-level icon is a direct child of its button, same size and ink.
+		const names = [/^ai chat$/i, /^crm$/i, /^notifications$/i];
+		const icons = await Promise.all(
+			names.map((name) =>
+				sidebar
+					.getByRole("link", { name })
+					.locator(":scope > svg")
+					.evaluate((el) => {
+						const box = el.getBoundingClientRect();
+						return {
+							size: `${box.width}x${box.height}`,
+							color: getComputedStyle(el).color,
+							background: getComputedStyle(el.parentElement as Element)
+								.backgroundColor,
+						};
+					}),
+			),
+		);
+		expect(new Set(icons.map((i) => i.size)).size).toBe(1);
+		expect(new Set(icons.map((i) => i.color)).size).toBe(1);
+		expect(new Set(icons.map((i) => i.background)).size).toBe(1);
+
+		// Sub-items hold the label only — nothing in front of it.
+		const subLinks = settingsGroup.locator("[data-sidebar='menu-sub-button']");
+		await expect(subLinks).not.toHaveCount(0);
+		for (const link of await subLinks.all()) {
+			await expect(link.locator(":scope > *")).toHaveCount(1);
+		}
+	});
+
+	test("sidebar scroll area is soft: thin, borderless, no native track", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		await page.setViewportSize({ width: 1280, height: 420 });
+		await page.goto("/dashboard");
+		const content = page.locator("[data-sidebar='content']");
+		await expect(content).toBeVisible({ timeout: 10_000 });
+		await expect(content).toHaveClass(/scrollbar-soft/);
+		const style = await content.evaluate((el) => {
+			const cs = getComputedStyle(el);
+			const thumb = getComputedStyle(el, "::-webkit-scrollbar");
+			return {
+				borderLeft: cs.borderLeftWidth,
+				borderRight: cs.borderRightWidth,
+				overflowY: cs.overflowY,
+				thumbWidth: thumb.width,
+				scrollbarWidth: cs.scrollbarWidth,
+			};
+		});
+		expect(style.borderLeft).toBe("0px");
+		expect(style.borderRight).toBe("0px");
+		expect(style.overflowY).toBe("auto");
+		expect(["6px", "thin"]).toContain(
+			style.thumbWidth === "6px" ? "6px" : style.scrollbarWidth,
+		);
 	});
 });

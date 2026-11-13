@@ -39,7 +39,7 @@ export type AccountNavKey =
 	| "danger";
 
 /** Kit admin item keys — anchors for `AppAdminNavItem.after`. */
-export type AdminNavKey = "adminOverview" | "adminUsers" | "adminAuditLogs";
+export type AdminNavKey = "adminUsers" | "adminAuditLogs";
 
 interface AppNavItemBase<TAnchor extends string> {
 	/** i18n key under `navigation.*`; also the item's unique key. */
@@ -101,6 +101,8 @@ function mergeAppItems<T extends AppNavItemBase<string>>(
 
 export const ACCOUNT_SETTINGS_PATH = "/settings";
 export const ADMIN_PATH = "/admin";
+/** Where `/admin` redirects: the first admin item (groups have no overview page). */
+export const ADMIN_HOME = `${ADMIN_PATH}/users`;
 
 export function orgSettingsBase(slug: string): string {
 	return `/organizations/${slug}/settings`;
@@ -180,8 +182,7 @@ export function getAccountItems(): NavSubItem[] {
 export function getAdminItems(): NavSubItem[] {
 	return mergeAppItems(
 		[
-			{ titleKey: "adminOverview", href: ADMIN_PATH, exact: true },
-			{ titleKey: "adminUsers", href: `${ADMIN_PATH}/users` },
+			{ titleKey: "adminUsers", href: ADMIN_HOME },
 			{ titleKey: "adminAuditLogs", href: `${ADMIN_PATH}/audit-logs` },
 		],
 		appAdminNavItems,

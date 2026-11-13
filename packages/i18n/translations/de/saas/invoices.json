@@ -1,7 +1,6 @@
 {
 	"invoices": {
 		"title": "Rechnungen",
-		"description": "Deine Abrechnungshistorie ansehen und herunterladen.",
 		"empty": "Noch keine Rechnungen",
 		"emptyDescription": "Rechnungen erscheinen hier, sobald du ein aktives Abonnement hast.",
 		"emptyCta": "Plan wählen",

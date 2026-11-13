@@ -65,7 +65,7 @@ export function ApiKeyRevokeDialog({
 					<AlertDialogAction
 						onClick={revoke}
 						disabled={revoking}
-						className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						variant="destructive"
 					>
 						{revoking ? t("revokeDialog.revoking") : t("revokeDialog.confirm")}
 					</AlertDialogAction>

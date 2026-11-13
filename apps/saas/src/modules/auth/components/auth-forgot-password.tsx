@@ -52,7 +52,7 @@ export function AuthForgotPassword({
 			{...props}
 		>
 			{submitted ? (
-				<div className="flex flex-col gap-4 text-center">
+				<div className="flex flex-col gap-4">
 					<p className="font-medium">{t("forgotPasswordForm.success")}</p>
 					<Button asChild variant="outline" className="w-full">
 						<Link href="/auth/sign-in">{t("backToSignInArrow")}</Link>
@@ -83,7 +83,12 @@ export function AuthForgotPassword({
 						</Field>
 
 						<Field>
-							<Button type="submit" disabled={isLoading} className="w-full">
+							<Button
+								type="submit"
+								size="lg"
+								disabled={isLoading}
+								className="w-full"
+							>
 								{isLoading
 									? t("forgotPasswordForm.sending")
 									: t("forgotPasswordForm.button")}

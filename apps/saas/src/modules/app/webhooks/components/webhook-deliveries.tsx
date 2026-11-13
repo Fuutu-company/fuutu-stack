@@ -56,20 +56,20 @@ export function WebhookDeliveries({
 						{t("deliveries.empty")}
 					</p>
 				) : (
-					<div className="overflow-hidden rounded-lg border">
+					<div className="overflow-x-auto rounded-xl border">
 						<table className="w-full text-sm">
 							<thead className="bg-muted/50">
 								<tr className="text-left">
-									<th className="p-3 font-medium">
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 										{t("deliveries.col.event")}
 									</th>
-									<th className="p-3 font-medium">
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 										{t("deliveries.col.status")}
 									</th>
-									<th className="p-3 font-medium">
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 										{t("deliveries.col.responseCode")}
 									</th>
-									<th className="p-3 font-medium">
+									<th className="whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs">
 										{t("deliveries.col.timestamp")}
 									</th>
 								</tr>
@@ -77,10 +77,10 @@ export function WebhookDeliveries({
 							<tbody className="divide-y">
 								{deliveries.map((delivery) => (
 									<tr key={delivery.id}>
-										<td className="p-3 font-mono text-xs">
+										<td className="px-4 py-3 font-mono text-xs">
 											{delivery.eventType}
 										</td>
-										<td className="p-3">
+										<td className="px-4 py-3">
 											<Badge
 												variant={
 													delivery.status === "success"
@@ -91,10 +91,10 @@ export function WebhookDeliveries({
 												{t(`deliveries.status.${delivery.status}`)}
 											</Badge>
 										</td>
-										<td className="p-3 text-muted-foreground text-xs">
+										<td className="px-4 py-3 text-muted-foreground text-xs">
 											{delivery.responseCode ?? tCommon("notAvailable")}
 										</td>
-										<td className="p-3 text-muted-foreground text-xs">
+										<td className="px-4 py-3 text-muted-foreground text-xs">
 											{delivery.attemptedAt.toLocaleString(locale)}
 										</td>
 									</tr>

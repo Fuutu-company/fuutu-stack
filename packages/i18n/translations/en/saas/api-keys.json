@@ -1,7 +1,6 @@
 {
 	"apiKeys": {
 		"title": "API Keys",
-		"description": "Create and manage API keys for programmatic access.",
 		"create": "Create API key",
 		"creating": "Creating…",
 		"empty": "No API keys yet",

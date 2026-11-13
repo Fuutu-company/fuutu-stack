@@ -14,6 +14,7 @@ export const VISUAL_NOW = new Date("2030-01-01T12:00:00.000Z");
  * screenshot masks `[data-volatile]` — see `expectVisual`.
  */
 export const VOLATILE_SELECTOR = "[data-volatile]";
+
 const VOLATILE_PLACEHOLDER = "0000-00-00 00:00:00";
 
 type PageOptions = NonNullable<

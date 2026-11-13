@@ -53,7 +53,7 @@ function VerifyContent() {
 	return (
 		<AuthCard title={t("verify.title")}>
 			{status === "idle" && (
-				<div className="flex flex-col gap-4 text-center">
+				<div className="flex flex-col gap-4">
 					<p className="text-muted-foreground text-sm">{t("verify.idle")}</p>
 					<Button asChild variant="outline" className="w-full">
 						<Link href="/auth/sign-in">{t("backToSignIn")}</Link>
@@ -61,12 +61,10 @@ function VerifyContent() {
 				</div>
 			)}
 			{status === "verifying" && (
-				<p className="text-center text-muted-foreground text-sm">
-					{t("verify.verifying")}
-				</p>
+				<p className="text-muted-foreground text-sm">{t("verify.verifying")}</p>
 			)}
 			{status === "ok" && (
-				<div className="flex flex-col gap-4 text-center">
+				<div className="flex flex-col gap-4">
 					<p className="font-medium">{t("verify.ok")}</p>
 					<Button asChild className="w-full">
 						<Link href={authConfig.redirects.afterEmailVerification}>
@@ -76,7 +74,7 @@ function VerifyContent() {
 				</div>
 			)}
 			{status === "error" && (
-				<div className="flex flex-col gap-4 text-center">
+				<div className="flex flex-col gap-4">
 					<p className="text-destructive text-sm">{message}</p>
 					<Button asChild variant="outline" className="w-full">
 						<Link href="/auth/sign-in">{t("backToSignIn")}</Link>

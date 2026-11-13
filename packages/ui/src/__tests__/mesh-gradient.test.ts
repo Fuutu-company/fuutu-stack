@@ -6,7 +6,7 @@ import {
 	supportsWebGL2Context,
 	withCssFallback,
 } from "../components/mesh-gradient";
-import { parseColorToVec3 } from "../lib/color";
+import { parseColorToVec3, resolveColorInput } from "../lib/color";
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -53,7 +53,7 @@ describe("parseColorToVec3", () => {
 	});
 
 	it("converts oklch() to sRGB", () => {
-		// oklch(0.45 0.22 270) ≈ rgb(46, 58, 204) — the theme's light-mode --brand
+		// oklch(0.45 0.22 270) ≈ rgb(46, 58, 204) — a saturated indigo like the light-mode --primary
 		const [r, g, b] = parseColorToVec3("oklch(0.45 0.22 270)", FALLBACK);
 		expect(r).toBeCloseTo(0.18, 1);
 		expect(g).toBeCloseTo(0.23, 1);
@@ -75,11 +75,51 @@ describe("parseColorToVec3", () => {
 
 	it("returns the fallback for unresolvable input", () => {
 		expect(
-			parseColorToVec3("oklch(from var(--brand) l c h / 1)", FALLBACK),
+			parseColorToVec3("oklch(from var(--primary) l c h / 1)", FALLBACK),
 		).toEqual(FALLBACK);
 		expect(parseColorToVec3("", FALLBACK)).toEqual(FALLBACK);
 		expect(parseColorToVec3("var(--primary)", FALLBACK)).toEqual(FALLBACK);
 		expect(parseColorToVec3("not-a-color", FALLBACK)).toEqual(FALLBACK);
+	});
+});
+
+describe("resolveColorInput", () => {
+	function stubBrowser(computedColor: string, pixel: number[]) {
+		const ctx = {
+			canvas: { width: 0, height: 0 },
+			clearRect: vi.fn(),
+			fillRect: vi.fn(),
+			fillStyle: "",
+			getImageData: () => ({ data: pixel }),
+		};
+		vi.stubGlobal("document", {
+			body: { appendChild: vi.fn() },
+			createElement: (tag: string) =>
+				tag === "canvas"
+					? { getContext: () => ctx }
+					: { style: {}, remove: vi.fn() },
+		});
+		vi.stubGlobal("getComputedStyle", () => ({ color: computedColor }));
+	}
+
+	it("rasterizes a computed color the parser does not understand (lab) to rgb", () => {
+		stubBrowser("lab(88.6006 -12.0291 -17.1989)", [182, 230, 255, 255]);
+		const resolved = resolveColorInput("var(--area-users)");
+		expect(resolved).toBe("rgb(182 230 255)");
+		expect(parseColorToVec3(resolved, FALLBACK)).toEqual([
+			182 / 255,
+			230 / 255,
+			255 / 255,
+		]);
+	});
+
+	it("keeps a computed color the parser already understands", () => {
+		stubBrowser("oklch(0.9 0.06 230)", [0, 0, 0, 255]);
+		expect(resolveColorInput("var(--area-users)")).toBe("oklch(0.9 0.06 230)");
+	});
+
+	it("passes literal colors through", () => {
+		expect(resolveColorInput(" #b6e6ff ")).toBe("#b6e6ff");
 	});
 });
 

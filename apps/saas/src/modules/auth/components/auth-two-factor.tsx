@@ -121,6 +121,7 @@ export function AuthTwoFactor() {
 					<Field>
 						<Button
 							type="submit"
+							size="lg"
 							disabled={isLoading || code.length === 0}
 							className="w-full"
 						>
@@ -132,7 +133,7 @@ export function AuthTwoFactor() {
 						<button
 							type="button"
 							onClick={switchMode}
-							className="text-sm underline-offset-2 hover:underline"
+							className="text-sm underline underline-offset-4 hover:decoration-2"
 						>
 							{mode === "totp"
 								? t("twoFactor.useBackupCode")

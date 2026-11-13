@@ -1,245 +1,177 @@
 {
 	"home": {
-		"metaTitle": "Enterprise-grade. Ship in days.",
+		"metaTitle": "One calm workspace for your whole team",
 		"hero": {
-			"title": "Enterprise-grade.",
-			"titleHighlight": "Ship in days.",
-			"description": "The production stack built for AI-speed development. Every best practice pre-wired, every provider swappable — from idea to live in days, not months.",
+			"title": "Run your whole team from <mark>one calm</mark> workspace.",
+			"description": "Members, billing, an AI assistant and a CRM, beautifully connected. Set up in minutes, loved by everyone who opens it.",
 			"cta": {
-				"getStarted": "Get the stack",
-				"viewDocs": "See what's inside"
+				"start": "Start free",
+				"tour": "Take the tour"
 			},
-			"benefit": {
-				"openSource": "Fuutu Business License",
-				"typescript": "100% TypeScript, strict",
-				"edgeReady": "Provider-swappable"
-			},
-			"glassCard": {
-				"ready": "Ship-ready stack"
-			},
-			"stack": {
-				"nextjs": {
-					"name": "Next.js 16",
-					"description": "React framework — App Router, RSC, Turbopack.",
-					"detail": "Full-stack foundation: routing, SSR, API routes."
+			"note": "Free plan · No credit card · Passkey sign-in",
+			"screenshotAlt": "The {appName} dashboard with members, plan, AI credits and live team activity",
+			"floats": {
+				"joined": {
+					"title": "Mia joined Acme",
+					"meta": "Invitation accepted · just now"
 				},
-				"typescript": {
-					"name": "TypeScript",
-					"description": "Strict-mode TypeScript across every package.",
-					"detail": "No any. No escape hatches. End-to-end type safety."
+				"upgraded": {
+					"title": "Upgraded to {plan}",
+					"meta": "{price} {suffix} · invoice sent"
 				},
-				"better-auth": {
-					"name": "Better Auth",
-					"description": "Modern auth for Node.js.",
-					"detail": "OAuth, MFA, passkeys, sessions, RBAC — pre-wired."
+				"assistant": {
+					"title": "“Summarize this week’s new leads.”",
+					"meta": "AI assistant · {credits, number} credits"
 				},
-				"prisma": {
-					"name": "Prisma",
-					"description": "Type-safe ORM for PostgreSQL.",
-					"detail": "DB client in @fuutu/db — schema, migrations, seed."
-				},
-				"postgresql": {
-					"name": "PostgreSQL",
-					"description": "Production-grade relational database.",
-					"detail": "Primary store — users, sessions, orgs, audit logs."
-				},
-				"tailwind": {
-					"name": "Tailwind CSS v4",
-					"description": "Utility-first CSS with OKLCH color engine.",
-					"detail": "Theme tokens in theme.css, dark mode included."
-				},
-				"turborepo": {
-					"name": "Turborepo",
-					"description": "High-performance monorepo build system.",
-					"detail": "Orchestrates 15+ packages — incremental builds."
-				},
-				"hono": {
-					"name": "Hono",
-					"description": "Ultra-fast web framework for the edge.",
-					"detail": "API server at /api/[[...rest]] inside apps/saas."
-				}
-			},
-			"pillar": {
-				"auth": {
-					"title": "Auth & sessions",
-					"desc": "Sign-up, OAuth, MFA, RBAC — done"
-				},
-				"billing": {
-					"title": "Billing & plans",
-					"desc": "Creem-powered, plan catalog, webhooks"
-				},
-				"swappable": {
-					"title": "Provider-swappable",
-					"desc": "Mail, storage, payments — one line swap"
-				},
-				"speed": {
-					"title": "Ship in a week",
-					"desc": "Not a template — a production codebase"
+				"webhook": {
+					"title": "Webhook delivered",
+					"meta": "crm.sync · 200 OK · 84 ms"
 				}
 			}
 		},
-		"cta": {
-			"title": "Ready to ship?",
-			"description": "Clone the repo, configure your providers, and you're live in minutes.",
-			"getStarted": "Get started",
-			"viewDocs": "Read the docs"
-		},
-		"testimonials": {
-			"title": "Loved by builders",
-			"description": "Teams ship faster on Fuutu — here's what they say.",
-			"items": [
-				{
-					"quote": "Fuutu let us go from empty repo to paying customers in two weeks. The auth + payments wiring alone saved us a month.",
-					"author": "Sara Lindqvist",
-					"role": "Founder, Northwave Labs"
-				},
-				{
-					"quote": "I've shipped four SaaS products on bespoke stacks. This is the first one where I didn't reach for a single workaround.",
-					"author": "Daniel Okafor",
-					"role": "Staff Engineer, Mercator"
-				},
-				{
-					"quote": "The provider-pattern is exactly how I'd build it myself — except it already works on day one.",
-					"author": "Mei-Ling Tan",
-					"role": "CTO, Vellum AI"
-				}
-			]
-		},
-		"faq": {
-			"eyebrow": "FAQ",
-			"title": "Frequently asked questions",
-			"description": "Everything you need to know before you clone the repo.",
-			"categoryAria": "FAQ categories",
-			"categories": [
-				{
-					"key": "license",
-					"label": "Licensing",
-					"description": "License terms, free tier limits, and commercial use.",
-					"items": [
-						{
-							"q": "Do I need a license to use Fuutu?",
-							"a": "Free for individuals and companies with up to 10 employees and up to $250k annual revenue. Exceeding either threshold requires an Enterprise license. See LICENSE.md for the full terms."
-						},
-						{
-							"q": "What happens when I exceed the free tier limits?",
-							"a": "You have 30 days from crossing either threshold (more than 10 employees or more than $250k revenue) to obtain an Enterprise license. Until then, everything continues to work — no feature gating, no trial expiry."
-						},
-						{
-							"q": "Can I use Fuutu for commercial products?",
-							"a": "Yes. The free tier explicitly allows commercial use. Build, deploy, and sell your product — the same code runs in free and enterprise tiers."
-						},
-						{
-							"q": "Is the Enterprise license per-seat or per-company?",
-							"a": "Per legal entity, yearly. One license covers all employees and all projects within the same company. No per-seat counting, no usage tracking."
-						}
-					]
-				},
-				{
-					"key": "technical",
-					"label": "Technical",
-					"description": "Providers, databases, production readiness, and architecture.",
-					"items": [
-						{
-							"q": "Can I swap the payment / mail / storage provider?",
-							"a": "Yes. Every external dependency lives behind a provider interface — switch by changing one line of config and dropping in the SDK. Creem, Plunk and S3 ship active in v1; Stripe, Resend, R2 and others are skeletons."
-						},
-						{
-							"q": "Is the code production-ready?",
-							"a": "v1 ships with rate limiting, audit logging, CSRF, secure cookies, RBAC and Playwright E2E tests. Add your own monitoring + backups and you're production-ready."
-						},
-						{
-							"q": "Can I swap the database or ORM?",
-							"a": "The database layer is behind @fuutu/db which exports an ORM-agnostic query interface. Prisma is the default, but the query layer abstracts it. You can implement the interface for Drizzle or any other ORM."
-						},
-						{
-							"q": "Why next-intl over a custom i18n layer?",
-							"a": "Native App-Router support, type-safe message keys, ICU plurals and zero runtime cost. Locales live in @fuutu/i18n with a smart fallback chain."
-						}
-					]
-				},
-				{
-					"key": "development",
-					"label": "Development",
-					"description": "Updates, AI tooling, deployment, and what's in the box.",
-					"items": [
-						{
-							"q": "How do updates work?",
-							"a": "The kit is a git repository. You clone it, build your product on top, and pull updates from the upstream when new versions are released. Updates are free in all tiers."
-						},
-						{
-							"q": "Does the AI agent harness work with my tool?",
-							"a": "The codebase includes skills, subagent profiles, and rules that Cursor, Claude Code, Windsurf, and Devin understand natively. Your AI agents can navigate the monorepo, write code that follows the patterns, and verify their work."
-						},
-						{
-							"q": "Can I deploy on Vercel / Railway / self-hosted?",
-							"a": "Yes. The stack runs on any Node 20+ host. Vercel and Railway work out of the box. Self-hosting requires PostgreSQL 16+ and Node 20+. No vendor-specific runtime APIs are used."
-						},
-						{
-							"q": "What's included in the monorepo?",
-							"a": "23+ packages: auth, API (oRPC), database (Prisma), mail, payments, storage, analytics, i18n, RBAC, UI components, and more. Plus 4 apps: marketing, SaaS, docs, and mail preview."
-						}
-					]
-				}
-			]
+		"integrations": {
+			"title": "Plugs into the tools you already pay for"
 		},
 		"features": {
-			"expand": "Expand {label}",
-			"featureListAria": "Feature list",
-			"items": {
-				"dashboard": {
-					"label": "Dashboard",
-					"title": "Your whole product,\nready on day one.",
-					"description": "Fuutu Stack ships a fully functional SaaS dashboard: auth, billing, orgs, settings, API docs — all pre-wired and production-ready.",
-					"frameLabel": "Dashboard"
+			"title": "Built for the way small teams actually work.",
+			"description": "Every part of the product knows about the others. Invite someone and they get the right access, the right plan and the right language, instantly.",
+			"team": {
+				"title": "Your team, organized",
+				"description": "Invite people, give them a role, see who did what. Organizations keep clients and projects apart.",
+				"members": [
+					{
+						"initials": "LF",
+						"name": "Lena Fischer",
+						"detail": "lena@acme.io",
+						"role": "Owner"
+					},
+					{
+						"initials": "SO",
+						"name": "Sam Okafor",
+						"detail": "sam@acme.io",
+						"role": "Admin"
+					},
+					{
+						"initials": "MC",
+						"name": "Mia Chen",
+						"detail": "Invitation pending",
+						"role": "Member"
+					}
+				]
+			},
+			"billing": {
+				"title": "Billing that runs itself",
+				"description": "Monthly or yearly plans, seats and invoices. Upgrade in two clicks, cancel any time.",
+				"perSeat": "/ seat / year",
+				"invoice": "Invoice INV-0042 · paid today",
+				"paid": "Paid"
+			},
+			"ai": {
+				"title": "An assistant that knows your work",
+				"description": "Chat with your data. Credits included in every plan.",
+				"prompt": "Draft a follow-up for the Berlin leads",
+				"reply": "Done. 4 drafts ready, sorted by deal size."
+			},
+			"security": {
+				"title": "Secure by default",
+				"description": "Passkeys, two-factor and sessions you can see and revoke.",
+				"passkey": "Passkey · MacBook Pro",
+				"passkeyMeta": "Used 2 minutes ago",
+				"twoFactor": "Two-factor enabled",
+				"twoFactorMeta": "Authenticator app"
+			},
+			"connect": {
+				"title": "Connects to everything",
+				"description": "API keys, signed webhooks and an MCP server for AI agents.",
+				"delivered": "200 · 84 ms",
+				"retrying": "retry 2 / 5",
+				"live": "Live"
+			},
+			"languages": {
+				"title": "Speaks your customers’ language",
+				"description": "Every screen, email and invoice in your customers’ language, switchable per person. The browser language is picked up automatically.",
+				"listLabel": "Available languages",
+				"more": "More languages on the way"
+			}
+		},
+		"tour": {
+			"title": "See it before you sign up.",
+			"tabsLabel": "Product screens",
+			"tabs": {
+				"dashboard": "Dashboard",
+				"assistant": "AI assistant",
+				"team": "Team",
+				"dark": "Dark mode"
+			},
+			"alt": {
+				"dashboard": "The {appName} dashboard with members, plan, AI credits and live team activity",
+				"assistant": "The AI assistant in {appName}, chatting about the workspace",
+				"team": "The members page in {appName}, with roles and invitations",
+				"dark": "The {appName} dashboard in dark mode"
+			}
+		},
+		"security": {
+			"title": "Fast for your team. Boring for your security review.",
+			"description": "Rate limits, audit logs, signed webhooks and least-privilege roles are on from day one, so you never have to explain them later.",
+			"cta": "Talk to our team",
+			"facts": {
+				"twoFactor": {
+					"title": "2FA",
+					"description": "Passkeys & TOTP"
 				},
-				"auth": {
-					"label": "Auth & Security",
-					"title": "Auth in minutes,\nnot weeks.",
-					"description": "OAuth, magic links, passkeys, MFA, session management and RBAC — all pre-configured with Better Auth.",
-					"frameLabel": "Sign-in"
+				"roles": {
+					"title": "Roles",
+					"description": "Owner, admin, member"
 				},
-				"payments": {
-					"label": "Payments",
-					"title": "Billing that ships\nout of the box.",
-					"description": "Creem-powered subscriptions, one-time purchases and webhooks. Swap to Stripe by changing one config line.",
-					"frameLabel": "Choose plan"
-				},
-				"i18n": {
-					"label": "i18n",
-					"title": "Ship globally\nfrom the start.",
-					"description": "next-intl with EN + DE out of the box. Add a locale in one JSON file — every component picks it up automatically.",
-					"frameLabel": "Locale switch"
-				},
-				"rbac": {
-					"label": "RBAC & Orgs",
-					"title": "Fine-grained roles\nfor every team.",
-					"description": "owner → admin → member. Organisation invites, role changes and audit logs — wired into every API route.",
-					"frameLabel": "Team settings"
+				"audit": {
+					"title": "Audit",
+					"description": "Every action logged"
 				},
 				"api": {
-					"label": "Type-safe API",
-					"title": "oRPC + OpenAPI,\nzero boilerplate.",
-					"description": "Every route is fully typed end-to-end via oRPC. Auto-generated OpenAPI docs ship at /api/docs on day one.",
-					"frameLabel": "API docs"
-				},
-				"providers": {
-					"label": "Swappable Providers",
-					"title": "Swap any provider\nwithout touching routes.",
-					"description": "Every domain (mail, storage, analytics, payments) is a typed interface. Change the active provider in one config line.",
-					"frameLabel": "Provider config"
+					"title": "API",
+					"description": "Scoped, revocable keys"
 				}
-			},
-			"hero": {
-				"heading": "Your whole product,\nready on day one.",
-				"subheading": "Fuutu Stack ships a fully functional SaaS dashboard: auth, billing, orgs, settings, API docs — all pre-wired and production-ready."
-			},
-			"row": {
-				"heading": "Everything your SaaS needs."
-			},
-			"showcase": {
-				"heading": "Built to scale from day one.",
-				"subheading": "Every feature ships production-hardened — RBAC, type-safe API, swappable providers. Click a feature to see it in action."
 			}
+		},
+		"pricing": {
+			"title": "Simple plans that grow with you.",
+			"description": "Start free, upgrade when your team does. Every plan includes the AI assistant."
+		},
+		"faq": {
+			"title": "Questions, answered.",
+			"description": "The things teams ask before they sign up.",
+			"items": [
+				{
+					"q": "Is there a free plan, and what does it include?",
+					"a": "Yes. Free covers one workspace with up to 5 members, 2 API keys, 500 MB of storage and the AI assistant. No credit card needed, and it does not expire."
+				},
+				{
+					"q": "How do members and billing work?",
+					"a": "You are billed per workspace, monthly or yearly. Invite teammates as owner, admin or member, and each role only sees what it needs. Upgrade, downgrade or switch between monthly and yearly in billing at any time."
+				},
+				{
+					"q": "How is my data protected?",
+					"a": "Sign in with email, a social account or a passkey, and add two-factor authentication with an authenticator app. Sessions are revocable, every important action lands in the audit log, and roles keep access to the minimum."
+				},
+				{
+					"q": "What are AI credits, and what happens when they run out?",
+					"a": "Every plan includes a monthly AI credit allowance that resets each month. If you use it up, the assistant pauses and the rest of the app keeps working. Top up credits or move to a bigger plan to carry on right away."
+				},
+				{
+					"q": "Which languages does it speak?",
+					"a": "The whole app, your emails and this site are available in English and German. Everyone on your team picks their own language in settings."
+				},
+				{
+					"q": "Can I cancel, and what happens to my data?",
+					"a": "Cancel any time from billing. Your workspace moves to the Free plan at the end of the period and your data stays. You can delete your account in settings whenever you like, which permanently removes your data."
+				}
+			]
+		},
+		"cta": {
+			"title": "Your team’s new favorite tab.",
+			"description": "Set up your workspace in under a minute. Your first {members, plural, one {member is} other {# members are}} on us.",
+			"start": "Start free",
+			"signIn": "Open the app"
 		}
 	}
 }

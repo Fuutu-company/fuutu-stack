@@ -29,6 +29,7 @@
 		"groupOrganization": "Organization",
 		"groupAdministration": "Administration",
 		"notifications": "Notifications",
+		"design": "Design system",
 		"apiKeys": "API keys",
 		"webhooks": "Webhooks",
 		"auditLog": "Audit log",
@@ -67,11 +68,11 @@
 			"auditLog": "Audit log",
 			"invoices": "Invoices",
 			"notifications": "Notifications",
-			"credits": "Credits"
+			"credits": "Credits",
+			"design": "Design system"
 		},
 		"groupAccount": "Account",
 		"accountSettings": "Account settings",
-		"adminOverview": "Overview",
 		"credits": "Credits"
 	}
 }

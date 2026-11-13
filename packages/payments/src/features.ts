@@ -79,3 +79,20 @@ export function formatLimit(value: LimitValue): string {
 	if (value === "unlimited") return "∞";
 	return String(value);
 }
+
+export type UsagePercent =
+	| { kind: "unlimited" }
+	| { kind: "unavailable" }
+	| { kind: "percent"; value: number };
+
+/** Plan usage as a meter value: unlimited and disabled limits carry no percentage. */
+export function usagePercent(used: number, limit: LimitValue): UsagePercent {
+	if (limit === "unlimited") return { kind: "unlimited" };
+	if (limit === false) return { kind: "unavailable" };
+	if (used <= 0) return { kind: "percent", value: 0 };
+	if (limit <= 0) return { kind: "percent", value: 100 };
+	return {
+		kind: "percent",
+		value: Math.min(100, Math.round((used / limit) * 100)),
+	};
+}

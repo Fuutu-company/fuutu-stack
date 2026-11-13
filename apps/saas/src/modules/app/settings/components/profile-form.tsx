@@ -55,7 +55,9 @@ function ProfileFields({
 	return (
 		<form onSubmit={save} className="space-y-6">
 			<div>
-				<h3 className="font-semibold text-lg">{t("settings.profile.title")}</h3>
+				<h3 className="font-bold font-heading text-lg tracking-heading">
+					{t("settings.profile.title")}
+				</h3>
 				<p className="text-muted-foreground text-sm">
 					{t("settings.profile.description")}
 				</p>

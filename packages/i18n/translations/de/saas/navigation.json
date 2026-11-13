@@ -29,6 +29,7 @@
 		"groupOrganization": "Organisation",
 		"groupAdministration": "Administration",
 		"notifications": "Benachrichtigungen",
+		"design": "Designsystem",
 		"apiKeys": "API-Schlüssel",
 		"webhooks": "Webhooks",
 		"auditLog": "Audit-Log",
@@ -67,11 +68,11 @@
 			"auditLog": "Audit-Log",
 			"invoices": "Rechnungen",
 			"notifications": "Benachrichtigungen",
-			"credits": "Guthaben"
+			"credits": "Guthaben",
+			"design": "Designsystem"
 		},
 		"groupAccount": "Konto",
 		"accountSettings": "Kontoeinstellungen",
-		"adminOverview": "Übersicht",
 		"credits": "Guthaben"
 	}
 }

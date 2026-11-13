@@ -1,4 +1,5 @@
 import { appBreadcrumbLabels } from "../../../app-navigation";
+import { ADMIN_HOME, ADMIN_PATH } from "./nav-config";
 
 export interface BreadcrumbSegment {
 	/** i18n key under navigation.breadcrumb.*, or null for dynamic labels */
@@ -30,6 +31,7 @@ const routeMap: Record<string, string> = {
 	onboarding: "breadcrumb.onboarding",
 	"choose-plan": "breadcrumb.choosePlan",
 	notifications: "breadcrumb.notifications",
+	design: "breadcrumb.design",
 };
 
 const adminSubRoutes: Record<string, string> = {
@@ -90,7 +92,11 @@ export function buildBreadcrumbs(
 		const href = `/${segments.slice(0, i + 1).join("/")}`;
 
 		if (key) {
-			crumbs.push({ labelKey: key, href });
+			// Groups have no overview page: the Admin crumb opens its first item.
+			crumbs.push({
+				labelKey: key,
+				href: href === ADMIN_PATH ? ADMIN_HOME : href,
+			});
 		} else if (segments[0] === "admin" && adminLabel) {
 			crumbs.push({ labelKey: adminLabel, href });
 		} else if (inOrgRoute && i === orgSlugIndex + 1) {

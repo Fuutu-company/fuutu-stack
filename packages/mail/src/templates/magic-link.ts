@@ -1,5 +1,6 @@
 import { getMailStrings } from "../i18n";
 import type { TemplateRenderer } from "../types";
+import { MAIL_COLORS } from "./colors";
 import {
 	escapeAttr,
 	escapeHtml,
@@ -24,9 +25,9 @@ export const magicLinkTemplate: TemplateRenderer<"magic-link"> = ({
     <p>${escapeHtml(greeting)}</p>
     <p>${escapeHtml(t.intro)}</p>
     <p style="margin:24px 0;">${renderButton(magicLinkUrl, t.button)}</p>
-    <p style="color:#6b7280;font-size:13px;">${escapeHtml(t.orCopy)} <a href="${escapeAttr(safeHref(magicLinkUrl))}" style="color:#6b7280;">${escapeHtml(magicLinkUrl)}</a></p>
-    <p style="color:#6b7280;font-size:13px;">${escapeHtml(t.ignore)}</p>
-    <p style="margin-top:32px;color:#111;">${escapeHtml(s.signature)}</p>
+    <p style="color:${MAIL_COLORS.muted};font-size:13px;">${escapeHtml(t.orCopy)} <a href="${escapeAttr(safeHref(magicLinkUrl))}" style="color:${MAIL_COLORS.muted};">${escapeHtml(magicLinkUrl)}</a></p>
+    <p style="color:${MAIL_COLORS.muted};font-size:13px;">${escapeHtml(t.ignore)}</p>
+    <p style="margin-top:32px;color:${MAIL_COLORS.text};">${escapeHtml(s.signature)}</p>
     `,
 		{ locale, previewText: t.intro },
 	);

@@ -2,7 +2,6 @@
 	"payments": {
 		"choosePlan": {
 			"title": "Choose your plan",
-			"description": "Pick the plan that fits your stage. Upgrade or downgrade anytime.",
 			"redirecting": "Redirecting…",
 			"error": "Checkout failed",
 			"noOrganization": "Select an organization first — billing is attached to organizations.",
@@ -20,6 +19,9 @@
 			"perMonth": "/month",
 			"perYear": "/year",
 			"total": "Total",
+			"decrease": "Remove one seat",
+			"increase": "Add one seat",
+			"count": "Number of seats",
 			"description": "You'll be billed for the number of seats you select. Seats auto-adjust when team members join or leave."
 		},
 		"planInterval": "{plan} · {interval}",

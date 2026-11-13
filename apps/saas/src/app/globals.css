@@ -13,3 +13,41 @@
  * caches under .next/ inject corrupted candidates that break prod builds. */
 @source not "../../.next";
 @source not "../../.turbo";
+
+/* State preview for /design: `data-preview="hover focus-visible"` pins a
+ * state without interaction. Re-registering a core variant keeps its sort
+ * order and specificity, so these are inert everywhere else. */
+@custom-variant hover {
+	&:hover {
+		@media (hover: hover) {
+			@slot;
+		}
+	}
+	&[data-preview~="hover"] {
+		@slot;
+	}
+}
+@custom-variant focus {
+	&:focus {
+		@slot;
+	}
+	&[data-preview~="focus"] {
+		@slot;
+	}
+}
+@custom-variant focus-visible {
+	&:focus-visible {
+		@slot;
+	}
+	&[data-preview~="focus-visible"] {
+		@slot;
+	}
+}
+@custom-variant active {
+	&:active {
+		@slot;
+	}
+	&[data-preview~="active"] {
+		@slot;
+	}
+}

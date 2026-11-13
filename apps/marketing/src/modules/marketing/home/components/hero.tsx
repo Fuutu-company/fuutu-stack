@@ -1,122 +1,179 @@
-"use client";
-
-import { Button, type LogoItem, LogoRail, MediaFrame } from "@fuutu/ui";
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { config } from "@fuutu/config";
+import { PLANS } from "@fuutu/payments/config";
+import { type Area, Button } from "@fuutu/ui";
+import { cn } from "@fuutu/utils/cn";
+import { AreaCutoutIcon } from "@marketing/components/area-cutout-icon";
+import {
+	ArrowRight,
+	BadgeCheck,
+	type LucideIcon,
+	PlayCircle,
+	Sparkles,
+	UserPlus,
+	Webhook,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { CSSProperties, ReactNode } from "react";
 import { urls } from "@/lib/urls";
+import { enterStyle } from "./enter";
+import { INK_BUTTON, SOFT_BUTTON } from "./landing-styles";
+import { Screen, ScreenWindow } from "./screen-window";
+import { Blob } from "./section-heading";
 
-const STACK_LOGOS = [
-	{ id: "nextjs", logo: "/logo/nextjs.svg", logoAlt: "Next.js" },
-	{ id: "typescript", logo: "/logo/typescript.svg", logoAlt: "TypeScript" },
+type FloatKey = "joined" | "upgraded" | "assistant" | "webhook";
+
+/** Activity cards around the product window; only `upgraded` stays on small screens. */
+const FLOATS: {
+	key: FloatKey;
+	area: Area;
+	icon: LucideIcon;
+	className: string;
+	delay: string;
+}[] = [
 	{
-		id: "better-auth",
-		logo: "/logo/better-auth.svg",
-		logoAlt: "Better Auth",
+		key: "joined",
+		area: "users",
+		icon: UserPlus,
+		className: "hidden lg:flex lg:top-[7.5rem] lg:-left-6 xl:-left-10",
+		delay: "0s",
 	},
 	{
-		id: "prisma",
-		logo: "/logo/prisma.svg",
-		logoAlt: "Prisma",
-		invertInDark: true,
+		key: "upgraded",
+		area: "billing",
+		icon: BadgeCheck,
+		className:
+			"mx-auto -mt-8 w-fit sm:-mt-10 lg:top-[4.5rem] lg:-right-6 lg:mt-0 xl:-right-12",
+		delay: "-2s",
 	},
-	{ id: "postgresql", logo: "/logo/postgresql.svg", logoAlt: "PostgreSQL" },
 	{
-		id: "tailwind",
-		logo: "/logo/tailwindcss.svg",
-		logoAlt: "Tailwind CSS",
+		key: "assistant",
+		area: "ai",
+		icon: Sparkles,
+		className:
+			"hidden lg:flex lg:-right-4 lg:bottom-[5.5rem] lg:max-w-72 xl:-right-8",
+		delay: "-4s",
 	},
-	{ id: "turborepo", logo: "/logo/turborepo.svg", logoAlt: "Turborepo" },
-	{ id: "hono", logo: "/logo/hono.svg", logoAlt: "Hono" },
-] as const;
+	{
+		key: "webhook",
+		area: "api",
+		icon: Webhook,
+		className: "hidden lg:flex lg:bottom-[3.75rem] lg:-left-4 xl:-left-6",
+		delay: "-1s",
+	},
+];
+
+/** Area-colored marker behind the highlighted headline words (`.hero-marker`, globals.css). */
+function highlight(chunks: ReactNode) {
+	return <mark className="hero-marker">{chunks}</mark>;
+}
 
 export function Hero() {
 	const t = useTranslations("home.hero");
-	const stackLogos: LogoItem[] = STACK_LOGOS.map((item) => ({
-		...item,
-		name: t(`stack.${item.id}.name`),
-		description: t(`stack.${item.id}.description`),
-		detail: t(`stack.${item.id}.detail`),
-	}));
+	const tPlans = useTranslations("payments.plans");
+	const appName = config.app.name;
+	const screenshotAlt = t("screenshotAlt", { appName });
+
+	const floatMeta: Record<FloatKey, string> = {
+		joined: t("floats.joined.meta"),
+		upgraded: t("floats.upgraded.meta", {
+			price: PLANS.pro.displayPrice,
+			suffix: tPlans("pro.priceSuffix"),
+		}),
+		assistant: t("floats.assistant.meta", { credits: 1200 }),
+		webhook: t("floats.webhook.meta"),
+	};
+	const floatTitle: Record<FloatKey, string> = {
+		joined: t("floats.joined.title"),
+		upgraded: t("floats.upgraded.title", { plan: tPlans("pro.name") }),
+		assistant: t("floats.assistant.title"),
+		webhook: t("floats.webhook.title"),
+	};
+
 	return (
-		<section className="flex min-h-[calc(100svh-4.5rem)] items-center overflow-x-hidden px-4 py-14 sm:px-6 sm:py-16 lg:py-20">
-			<div className="mx-auto grid w-full max-w-screen-2xl items-center gap-12 lg:grid-cols-2 lg:gap-16 xl:gap-20">
-				{/* ── Left — Text content ── */}
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.55 }}
-					className="flex flex-col items-start"
+		<section
+			data-slot="hero"
+			className="relative isolate px-4 pt-12 sm:px-6 md:pt-20"
+		>
+			<Blob className="top-10 -left-32 h-[26rem] w-[32rem] bg-area-users" />
+			<Blob className="top-28 -right-32 h-96 w-[29rem] bg-area-ai" />
+			<Blob className="top-[35rem] left-[30%] h-[22rem] w-[32rem] bg-area-billing opacity-55" />
+
+			<div className="mx-auto flex max-w-6xl flex-col items-center text-center">
+				<h1
+					className="hero-enter relative isolate max-w-5xl text-balance break-words font-extrabold font-heading text-[clamp(3rem,8vw,6.5rem)] leading-[1.02] tracking-display"
+					style={enterStyle(0)}
 				>
-					{/* Headline */}
-					<h1 className="mb-5 font-bold text-5xl text-foreground tracking-tight sm:mb-6 sm:text-6xl md:text-7xl lg:text-7xl xl:text-8xl">
-						{t("title")}{" "}
-						<span className="text-primary">{t("titleHighlight")}</span>
-					</h1>
-
-					{/* Description */}
-					<p className="mb-8 max-w-lg text-balance text-base text-foreground/65 sm:mb-10 sm:max-w-xl sm:text-lg lg:text-xl">
-						{t("description")}
-					</p>
-
-					{/* CTAs */}
-					<div className="mb-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
-						<Button
-							size="lg"
-							className="h-12 w-full justify-center rounded-full px-8 text-sm sm:h-13 sm:w-auto sm:px-10 sm:text-base"
-							asChild
-						>
-							<a href={urls.auth.signUp}>
-								{t("cta.getStarted")}
-								<ArrowRight className="ml-2 size-5" />
-							</a>
-						</Button>
-						<Button
-							size="lg"
-							variant="outline"
-							className="h-12 w-full justify-center rounded-full px-8 text-sm sm:h-13 sm:w-auto sm:px-10 sm:text-base"
-							asChild
-						>
-							<a href={urls.docs} target="_blank" rel="noopener noreferrer">
-								{t("cta.viewDocs")}
-							</a>
-						</Button>
-					</div>
-
-					{/* Stack logo rail */}
-					<LogoRail items={stackLogos} />
-				</motion.div>
-
-				{/* ── Right — Layered mockup (Chrome + iPhone overlay) ── */}
-				<motion.div
-					initial={{ opacity: 0, y: 24 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.6, delay: 0.15 }}
-					className="relative w-full"
+					{t.rich("title", { mark: highlight })}
+				</h1>
+				<p
+					className="hero-enter mt-6 max-w-[39rem] text-balance text-lg text-muted-foreground leading-8 md:mt-7 md:text-xl"
+					style={enterStyle(1)}
 				>
-					{/* Chrome frame */}
-					<MediaFrame
-						chrome
-						variant="primary"
-						label={t("glassCard.ready")}
-						size="1280 × 720"
-						sizePosition="bottom-left"
-						width="100%"
+					{t("description")}
+				</p>
+				<div
+					className="hero-enter mt-8 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row md:mt-9"
+					style={enterStyle(2)}
+				>
+					<Button size="lg" className={INK_BUTTON} asChild>
+						<a href={urls.auth.signUp}>
+							{t("cta.start")}
+							<ArrowRight />
+						</a>
+					</Button>
+					<Button size="lg" variant="outline" className={SOFT_BUTTON} asChild>
+						<a href="#tour">
+							<PlayCircle />
+							{t("cta.tour")}
+						</a>
+					</Button>
+				</div>
+				<p
+					className="hero-enter mt-4 font-medium text-muted-foreground text-sm"
+					style={enterStyle(3)}
+				>
+					{t("note")}
+				</p>
+			</div>
+
+			<div
+				className="hero-enter relative mx-auto mt-12 max-w-[70rem] md:mt-[4.5rem]"
+				style={enterStyle(4)}
+			>
+				<ScreenWindow>
+					<Screen
+						id="dashboardLight"
+						alt={screenshotAlt}
+						eager
+						className="dark:hidden"
 					/>
-					{/* iPhone — positioned bottom-right, width is a % of the parent so it always scales correctly */}
+					<Screen
+						id="dashboardDark"
+						alt={screenshotAlt}
+						eager
+						className="hidden dark:block"
+					/>
+				</ScreenWindow>
+
+				{FLOATS.map(({ key, area, icon, className, delay }) => (
 					<div
-						className="absolute right-0 bottom-[-30%] drop-shadow-2xl"
-						style={{ width: "clamp(80px, 28%, 220px)" }}
+						key={key}
+						data-slot="hero-float"
+						className={cn(
+							"hero-float relative z-10 flex items-center gap-3 rounded-[1.25rem] bg-card py-3 pr-4 pl-3 text-left font-bold text-sm shadow-2xl lg:absolute",
+							className,
+						)}
+						style={{ "--float-delay": delay } as CSSProperties}
 					>
-						<MediaFrame
-							iphone
-							variant="primary"
-							label={t("glassCard.ready")}
-							size="390 × 844"
-							width="100%"
-						/>
+						<AreaCutoutIcon area={area} icon={icon} />
+						<span className="min-w-0">
+							{floatTitle[key]}
+							<span className="block font-medium text-[0.8rem] text-muted-foreground">
+								{floatMeta[key]}
+							</span>
+						</span>
 					</div>
-				</motion.div>
+				))}
 			</div>
 		</section>
 	);

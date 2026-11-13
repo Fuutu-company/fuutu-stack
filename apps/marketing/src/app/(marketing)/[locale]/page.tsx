@@ -1,8 +1,10 @@
 import { CTA } from "@marketing/home/components/cta";
 import { FAQ } from "@marketing/home/components/faq";
-import { Features } from "@marketing/home/components/features";
+import { FeatureBento } from "@marketing/home/components/feature-bento";
 import { Hero } from "@marketing/home/components/hero";
-import { Testimonials } from "@marketing/home/components/testimonials";
+import { IntegrationsStrip } from "@marketing/home/components/integrations-strip";
+import { ProductTour } from "@marketing/home/components/product-tour";
+import { SecurityBand } from "@marketing/home/components/security-band";
 import { PricingCardsHome } from "@marketing/pricing";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -34,9 +36,11 @@ export default async function HomePage({ params }: HomePageProps) {
 	return (
 		<>
 			<Hero />
-			<Features />
+			<IntegrationsStrip />
+			<FeatureBento />
+			<ProductTour />
+			<SecurityBand />
 			<PricingCardsHome />
-			<Testimonials />
 			<FAQ />
 			<CTA />
 		</>

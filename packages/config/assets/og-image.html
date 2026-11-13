@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  Source of packages/config/assets/og-image.png (1200 × 630).
+  Colors are the light Tactile tokens from packages/config/brand.css as hex values
+  (canvas, ink, and the four area fills and inks). Fonts are Schibsted Grotesk (display)
+  and Manrope (body) from Google Fonts, so rendering needs network access.
+  Render with any headless Chromium at a 1200 × 630 viewport (wait for document.fonts.ready),
+  save the screenshot as packages/config/assets/og-image.png, then run
+  `pnpm assets:sync --skip logo.svg,favicon.svg,favicon-96x96.png,apple-touch-icon.png,web-app-manifest-192x192.png,web-app-manifest-512x512.png`
+  to copy it into every app.
+  The facts on the tiles mirror the marketing hero (locales, plans, swappable domains, Pro seats).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Fuutu Stack — Open Graph image</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&amp;family=Schibsted+Grotesk:wght@700;800&amp;display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --canvas: #f0f4f7;
+    --card: #ffffff;
+    --text: #151b24;
+    --muted: #545b66;
+    --ink: #181f2e;
+    --ink-foreground: #f7f8fc;
+    --users: #b6e6ff;
+    --users-ink: #0d4768;
+    --billing: #b9f0d1;
+    --billing-ink: #0c4f33;
+    --ai: #e3d6fe;
+    --ai-ink: #552f86;
+    --api: #f8e8ab;
+    --api-ink: #61490c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    background: var(--canvas);
+    color: var(--text);
+    font-family: Manrope, system-ui, sans-serif;
+    padding: 64px 72px;
+    display: grid;
+    grid-template-columns: 1fr 436px;
+    gap: 56px;
+  }
+  .left { display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 14px; font-family: "Schibsted Grotesk", sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .brand svg { width: 40px; height: 40px; color: var(--ink); }
+  h1 { margin-top: 48px; font-family: "Schibsted Grotesk", sans-serif; font-size: 66px; line-height: 0.98; font-weight: 800; letter-spacing: -0.04em; }
+  .sub { margin-top: 28px; font-size: 24px; line-height: 1.45; font-weight: 500; color: var(--muted); max-width: 560px; }
+  .url { margin-top: auto; align-self: flex-start; background: var(--ink); color: var(--ink-foreground); border-radius: 999px; padding: 12px 26px; font-size: 24px; font-weight: 700; }
+  .tiles { align-self: center; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .tile { border-radius: 28px; padding: 22px 22px 20px; height: 214px; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgb(21 27 36 / 0.06), 0 8px 24px rgb(21 27 36 / 0.07); }
+  .tile .value { font-family: "Schibsted Grotesk", sans-serif; font-size: 68px; line-height: 1; font-weight: 800; letter-spacing: -0.04em; margin-top: auto; }
+  .tile .title { margin-top: 10px; font-size: 17px; white-space: nowrap; font-weight: 700; }
+  .tile .desc { margin-top: 4px; font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .users { background: var(--users); color: var(--users-ink); }
+  .billing { background: var(--billing); color: var(--billing-ink); }
+  .ai { background: var(--ai); color: var(--ai-ink); }
+  .api { background: var(--api); color: var(--api-ink); }
+  .tag { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brand">
+      <svg viewBox="0 0 1024 1024" aria-hidden="true"><path fill="currentColor" transform="matrix(1.8181818,0,0,1.8181818,-467.57024,-454.87603)" d="M 263.76364,256.78182 V 426.01259 H 432.99441 V 256.78182 Z m 190.38462,0 v 169.23077 h 66.32225 102.90851 21.15385 169.23077 V 256.78182 H 644.53287 623.37902 520.47051 Z M 263.76364,447.16644 V 616.3972 H 432.99441 V 447.16644 Z m 190.38462,0 V 616.3972 H 623.37902 V 447.16644 Z M 263.76364,637.55105 V 806.78182 H 432.99441 V 637.55105 Z"/></svg>
+      Fuutu Stack
+    </div>
+    <h1>Your SaaS, already working on day one.</h1>
+    <p class="sub">The production-grade TypeScript starter kit. Auth, billing, AI credits and an API, wired and tested.</p>
+    <div class="url">fuutustack.com</div>
+  </div>
+  <div class="tiles">
+    <div class="tile users"><span class="tag">Auth &amp; 2FA</span><span class="value">2</span><span class="title">Locales shipped</span><span class="desc">English · Deutsch</span></div>
+    <div class="tile billing"><span class="tag">Billing</span><span class="value">3</span><span class="title">Plans configured</span><span class="desc">Free · Pro · Enterprise</span></div>
+    <div class="tile ai"><span class="tag">AI &amp; credits</span><span class="value">6</span><span class="title">Swappable providers</span><span class="desc">One typed interface</span></div>
+    <div class="tile api"><span class="tag">API &amp; MCP</span><span class="value">50</span><span class="title">Seats on Pro</span><span class="desc">5 on the Free plan</span></div>
+  </div>
+</body>
+</html>

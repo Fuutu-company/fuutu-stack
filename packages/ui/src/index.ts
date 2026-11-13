@@ -1,6 +1,8 @@
 // shadcn/ui Components - Feedback
 export * from "./components/alert";
 export * from "./components/alert-dialog";
+// Tactile layout primitives
+export * from "./components/area";
 // shadcn/ui Components - Data Display
 export * from "./components/auth-card";
 export * from "./components/avatar";
@@ -24,6 +26,7 @@ export * from "./components/logo-rail";
 // Custom Components
 export * from "./components/media-frame";
 export * from "./components/mesh-gradient";
+export * from "./components/page-header";
 export * from "./components/pricing";
 export * from "./components/progress";
 export * from "./components/radio-group";
@@ -43,6 +46,21 @@ export * from "./components/tooltip";
 // Hooks
 export * from "./hooks/use-locale-theme-image";
 export * from "./hooks/use-mobile";
-
 // Utilities
+export {
+	compositeOver,
+	contrastRatio,
+	isInSrgbGamut,
+	type ParsedColor,
+	parseColor,
+	relativeLuminance,
+	WCAG_AA,
+} from "./lib/color";
+export { CONTRAST_PAIRS, type ContrastPair } from "./lib/contrast-pairs";
+export {
+	buildStackedBars,
+	type StackedBar,
+	type StackedBars,
+	type StackedSegment,
+} from "./lib/stacked-bars";
 export { cn } from "./lib/utils";

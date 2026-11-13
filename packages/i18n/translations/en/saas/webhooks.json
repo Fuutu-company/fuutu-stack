@@ -1,7 +1,6 @@
 {
 	"webhooks": {
 		"title": "Webhooks",
-		"description": "Send real-time event notifications to your services.",
 		"create": "Add webhook",
 		"creating": "Creating…",
 		"empty": "No webhooks yet",

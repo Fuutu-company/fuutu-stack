@@ -5,6 +5,7 @@ import chat from "./chat.json";
 import credits from "./credits.json";
 import crm from "./crm.json";
 import dashboard from "./dashboard.json";
+import designSystem from "./design-system.json";
 import invoices from "./invoices.json";
 import navigation from "./navigation.json";
 import notifications from "./notifications.json";
@@ -21,6 +22,7 @@ export default {
 	...credits,
 	...crm,
 	...dashboard,
+	...designSystem,
 	...invoices,
 	...navigation,
 	...notifications,

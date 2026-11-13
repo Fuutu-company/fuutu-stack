@@ -4,7 +4,7 @@ import { authClient } from "@fuutu/auth/client";
 import type { McpConsentRequest } from "@fuutu/auth/mcp-consent";
 import { config } from "@fuutu/config";
 import { createLogger } from "@fuutu/logs";
-import { AuthCard, Badge, Button } from "@fuutu/ui";
+import { AreaIcon, AuthCard, Badge, Button } from "@fuutu/ui";
 import { Check, KeyRound, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -52,9 +52,7 @@ export function OAuthConsent({
 	if (!request || error) {
 		return (
 			<AuthCard title={t("errorTitle")}>
-				<p className="text-center text-muted-foreground text-sm">
-					{t("error")}
-				</p>
+				<p className="text-muted-foreground text-sm">{t("error")}</p>
 			</AuthCard>
 		);
 	}
@@ -68,18 +66,18 @@ export function OAuthConsent({
 			description={t("description", { client, appName })}
 		>
 			<div className="space-y-6">
-				<div className="mx-auto flex size-12 items-center justify-center bg-primary/10 text-primary">
-					<KeyRound className="size-6" />
-				</div>
+				<AreaIcon area="api">
+					<KeyRound />
+				</AreaIcon>
 
 				{request.unverified && (
 					<div
-						className="space-y-1 border border-amber-500/40 bg-amber-500/10 p-3"
+						className="space-y-1 rounded-xl border border-warning/50 bg-warning/10 p-3"
 						data-testid="consent-unverified"
 					>
 						<Badge
 							variant="outline"
-							className="gap-1 border-amber-500/60 text-amber-700 dark:text-amber-400"
+							className="gap-1 border-transparent bg-warning text-warning-foreground"
 						>
 							<ShieldAlert className="size-3" />
 							{t("unverified")}

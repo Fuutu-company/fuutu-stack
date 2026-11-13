@@ -61,27 +61,11 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 			onMouseEnter={handleEnter}
 			onMouseLeave={handleLeave}
 		>
-			{/* Glow aura — fixed negative inset avoids layout overflow / scrollbar */}
-			<div
-				aria-hidden="true"
-				className={cn(
-					"pointer-events-none absolute -z-10 rounded-full transition-opacity duration-500",
-					hovered ? "opacity-100" : "opacity-0",
-				)}
-				style={{
-					inset: "-120%",
-					background:
-						"radial-gradient(ellipse at center, oklch(from var(--primary) l c h / 0.4) 0%, transparent 65%)",
-					filter: "blur(12px)",
-				}}
-			/>
 			{/* Logo pill */}
 			<div
 				className={cn(
-					"flex size-10 shrink-0 cursor-default items-center justify-center rounded-xl bg-background p-2 transition-all duration-300 sm:size-12 sm:p-2.5",
-					hovered
-						? "scale-[1.2] bg-primary/8 opacity-100 shadow-[0_0_0_1px_oklch(from_var(--primary)_l_c_h/0.3),0_0_16px_oklch(from_var(--primary)_l_c_h/0.15)]"
-						: "opacity-50",
+					"flex size-9 shrink-0 cursor-default items-center justify-center rounded-xl bg-card p-1.5 shadow-xs ring-1 ring-foreground/5 transition-[opacity,transform,box-shadow] duration-200 motion-reduce:transition-none sm:size-12 sm:p-2.5 dark:ring-foreground/10",
+					hovered ? "scale-110 opacity-100 shadow-sm" : "opacity-70",
 				)}
 			>
 				<img
@@ -102,7 +86,7 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 					aria-hidden={!hovered}
 					style={{ top: pos.top, left: pos.left }}
 					className={cn(
-						"pointer-events-none fixed z-9999 w-60 -translate-x-1/2 rounded-2xl border border-border bg-popover shadow-[0_8px_40px_-8px_rgba(0,0,0,0.35)] transition-all duration-150",
+						"pointer-events-none fixed z-9999 w-60 -translate-x-1/2 rounded-2xl bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/5 transition-all duration-150 dark:ring-foreground/10",
 						hovered
 							? "-translate-y-full opacity-100"
 							: "-translate-y-[calc(100%+8px)] opacity-0",
@@ -121,7 +105,9 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 								)}
 							/>
 						</div>
-						<p className="font-semibold text-foreground text-sm">{item.name}</p>
+						<p className="font-bold font-heading text-foreground text-sm">
+							{item.name}
+						</p>
 					</div>
 
 					{/* Body */}
@@ -130,14 +116,13 @@ export function LogoItemCard({ item }: LogoItemCardProps) {
 							{item.description}
 						</p>
 						{item.detail && (
-							<p className="mt-2 border-border border-t pt-2 font-mono text-[11px] text-foreground/50 leading-relaxed">
+							<p className="mt-2 border-border border-t pt-2 font-mono text-[11px] text-muted-foreground leading-relaxed">
 								{item.detail}
 							</p>
 						)}
 					</div>
 
 					{/* Arrow */}
-					<div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-border" />
 					<div className="absolute top-full left-1/2 -mt-px -translate-x-1/2 border-[5px] border-transparent border-t-popover" />
 				</div>
 			)}

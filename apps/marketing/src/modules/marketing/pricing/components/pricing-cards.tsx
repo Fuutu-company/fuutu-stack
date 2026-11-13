@@ -17,6 +17,7 @@ import {
 	PricingFull,
 	type PricingTier,
 } from "@fuutu/ui";
+import { SectionHeading } from "@marketing/home/components/section-heading";
 import { Building2, Rocket, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { urls } from "@/lib/urls";
@@ -129,19 +130,13 @@ export function PricingCardsHome() {
 	];
 
 	return (
-		<section className="py-24 md:py-32">
-			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-14 max-w-2xl">
-					<p className="mb-3 font-mono text-primary text-xs uppercase tracking-widest">
-						{t("pricing.eyebrow")}
-					</p>
-					<h2 className="mb-3 font-bold text-4xl tracking-tight md:text-5xl">
-						{t("pricing.title")}
-					</h2>
-					<p className="text-lg text-muted-foreground">
-						{t("pricing.description")}
-					</p>
-				</div>
+		<section id="pricing" className="scroll-mt-28 px-4 pt-24 sm:px-6 md:pt-32">
+			<div className="mx-auto max-w-6xl">
+				<SectionHeading
+					title={t("home.pricing.title")}
+					description={t("home.pricing.description")}
+					className="mb-12 md:mb-14"
+				/>
 				<PricingCompact
 					tiers={tiers}
 					popularLabel={t("payments.choosePlan.popular")}
@@ -164,12 +159,13 @@ export function PricingCardsPage() {
 	const { t, tiers, featureMatrix, featureGroupLabels } = usePricingData();
 
 	return (
-		<section className="py-16 md:py-24">
-			<div className="container mx-auto max-w-6xl px-4">
+		<section className="px-4 pt-12 sm:px-6 md:pt-16">
+			<div className="mx-auto max-w-6xl">
 				<PricingFull
 					tiers={tiers}
 					featureMatrix={featureMatrix}
 					featureGroupLabels={featureGroupLabels}
+					customPriceLabel={t("pricing.customPrice")}
 					popularLabel={t("payments.choosePlan.popular")}
 					LinkComponent={Link}
 					monthlyLabel={t("payments.choosePlan.monthly")}

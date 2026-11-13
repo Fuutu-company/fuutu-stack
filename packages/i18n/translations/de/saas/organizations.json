@@ -2,7 +2,6 @@
 	"organizations": {
 		"list": {
 			"title": "Organisationen",
-			"description": "Arbeite mit deinem Team über mehrere Workspaces hinweg.",
 			"create": "Organisation erstellen",
 			"createHeading": "Neue Organisation",
 			"name": "Organisationsname",
@@ -24,7 +23,6 @@
 			"generalDescription": "Aktualisiere den Anzeigenamen der Organisation.",
 			"name": "Name",
 			"members": "Teammitglieder",
-			"membersDescription": "Lade Teammitglieder ein und verwalte Rollen.",
 			"invitePlaceholder": "teammitglied@firma.de",
 			"roleMember": "Teammitglied",
 			"roleAdmin": "Admin",
@@ -43,14 +41,12 @@
 			"seatLimitHint": "Entferne ein Mitglied oder ziehe eine offene Einladung zurück, um einen Platz freizugeben, oder upgrade deinen Plan.",
 			"seatLimitCta": "Plan upgraden",
 			"danger": "Gefahrenzone",
-			"dangerDescription": "Lösche diese Organisation unwiderruflich.",
 			"deleteOrg": "Organisation löschen",
 			"deleteTitle": "Organisation wirklich löschen?",
 			"deleteDescription": "Alle Mitglieder verlieren Zugriff. Diese Aktion ist nicht umkehrbar.",
 			"deleteCta": "Ja, löschen",
 			"failed": "Aktion fehlgeschlagen.",
 			"billing": "Abrechnung",
-			"billingDescription": "Verwalte das Abonnement und die Zahlungsmethode deiner Organisation.",
 			"billingManageHint": "Upgrade oder ändere den Plan deiner Organisation jederzeit.",
 			"billingUpgrade": "Plan upgraden",
 			"billingCurrentPlan": "Aktueller Plan",
@@ -64,7 +60,6 @@
 			"credits": "Guthaben",
 			"auditLog": {
 				"title": "Audit-Log",
-				"description": "Sicherheitsrelevante Ereignisse für diese Organisation.",
 				"filterAll": "Alle Ereignisse",
 				"filterMember": "Mitgliederänderungen",
 				"filterBilling": "Abrechnung",

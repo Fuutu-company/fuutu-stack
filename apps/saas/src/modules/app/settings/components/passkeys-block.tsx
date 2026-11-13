@@ -62,7 +62,7 @@ export function PasskeysBlock() {
 		<div className="space-y-5">
 			<div className="flex items-start justify-between gap-4">
 				<div>
-					<h3 className="font-semibold text-lg">
+					<h3 className="font-bold font-heading text-lg tracking-heading">
 						{t("settings.passkeys.title")}
 					</h3>
 					<p className="text-muted-foreground text-sm">
@@ -88,7 +88,7 @@ export function PasskeysBlock() {
 					{t("settings.passkeys.none")}
 				</p>
 			) : (
-				<ul className="divide-y rounded-lg border">
+				<ul className="divide-y overflow-hidden rounded-xl border">
 					{keys.map((k) => (
 						<li
 							key={k.id}

@@ -25,27 +25,27 @@ export function ChatMessageBubble({ role, content }: ChatMessageBubbleProps) {
 		>
 			<div
 				className={cn(
-					"flex size-8 shrink-0 items-center justify-center rounded-full font-medium text-xs",
+					"flex size-8 shrink-0 items-center justify-center rounded-full font-bold text-xs",
 					isUser
 						? "bg-primary text-primary-foreground"
 						: isSystem
 							? "bg-muted text-muted-foreground"
-							: "bg-secondary text-secondary-foreground",
+							: "bg-area-ai text-area-ai-foreground",
 				)}
 			>
 				{label.charAt(0)}
 			</div>
 			<div
 				className={cn(
-					"max-w-[80%] rounded-lg px-4 py-2 text-sm",
+					"max-w-[80%] rounded-3xl px-4 py-2.5 text-sm leading-6",
 					isUser
 						? "bg-primary text-primary-foreground"
 						: isSystem
 							? "bg-muted text-muted-foreground"
-							: "bg-muted",
+							: "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/5 dark:ring-foreground/10",
 				)}
 			>
-				<div className="mb-1 font-medium text-xs opacity-70">{label}</div>
+				<div className="mb-0.5 font-bold text-xs opacity-75">{label}</div>
 				<div className="wrap-break-word whitespace-pre-wrap">{content}</div>
 			</div>
 		</div>

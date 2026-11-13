@@ -11,10 +11,12 @@ import {
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
 import {
+	AreaIcon,
 	Badge,
 	Button,
 	Card,
 	CardContent,
+	PageHeader,
 	PricingCompact,
 	SeatSelector,
 } from "@fuutu/ui";
@@ -230,22 +232,20 @@ export function OrgSettingsBilling({
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="font-bold text-3xl tracking-tight">
-					{t("organizations.settings.billing")}
-				</h1>
-				<p className="mt-2 text-muted-foreground text-sm">
-					{t("organizations.settings.billingDescription")}
-				</p>
-			</div>
+			<PageHeader
+				variant="compact"
+				title={t("organizations.settings.billing")}
+			/>
 
 			{/* Current plan summary */}
-			<Card>
+			<Card className="py-0">
 				<CardContent className="space-y-4 p-6 md:p-8">
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex items-center gap-3">
-							<CreditCard className="size-5 text-muted-foreground" />
-							<div>
+					<div className="flex flex-wrap items-center justify-between gap-4">
+						<div className="flex min-w-0 items-center gap-3">
+							<AreaIcon area="billing">
+								<CreditCard />
+							</AreaIcon>
+							<div className="min-w-0">
 								<p className="font-medium text-sm">{org.name}</p>
 								<p className="text-muted-foreground text-xs">
 									{activeSub
@@ -271,7 +271,7 @@ export function OrgSettingsBilling({
 					</div>
 
 					{activeSub && (
-						<div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+						<div className="flex flex-col gap-3 rounded-xl bg-muted/60 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
 								<p className="font-medium text-sm">
 									{t("organizations.settings.billingManagePortal")}
@@ -291,7 +291,7 @@ export function OrgSettingsBilling({
 
 			{/* Plan selection */}
 			<div>
-				<h2 className="font-semibold text-lg tracking-tight">
+				<h2 className="font-bold font-heading text-lg tracking-heading">
 					{t("organizations.settings.billingChoosePlan")}
 				</h2>
 				<p className="mt-1 text-muted-foreground text-sm">
@@ -321,6 +321,9 @@ export function OrgSettingsBilling({
 						perMonth: tp("seatSelector.perMonth"),
 						perYear: tp("seatSelector.perYear"),
 						description: tp("seatSelector.description"),
+						decrease: tp("seatSelector.decrease"),
+						increase: tp("seatSelector.increase"),
+						seatCount: tp("seatSelector.count"),
 					}}
 				/>
 			)}

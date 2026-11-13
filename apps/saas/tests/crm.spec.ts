@@ -12,7 +12,9 @@ test.describe("CRM contacts", () => {
 		});
 
 		await expect(
-			page.getByRole("button", { name: /new contact/i }),
+			page
+				.locator('[data-slot="page-header-actions"]')
+				.getByRole("button", { name: /new contact/i }),
 		).toBeVisible({ timeout: 10_000 });
 	});
 

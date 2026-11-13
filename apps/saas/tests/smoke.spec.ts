@@ -13,6 +13,9 @@ async function gotoStable(page: Page, url: string) {
 }
 
 test.describe("public surface", () => {
+	// Anonymous visitors — a signed-in one is sent on to the app.
+	test.use({ storageState: { cookies: [], origins: [] } });
+
 	test("/auth/sign-in renders the sign-in form", async ({ page }) => {
 		const response = await page.goto("/auth/sign-in");
 		expect(response?.status()).toBeLessThan(400);
