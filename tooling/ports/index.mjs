@@ -455,6 +455,9 @@ export function isE2eResetTarget(value, project) {
 	}
 }
 
+/** Set in every slot env so child commands don't re-apply it. */
+export const SLOT_ENV_MARKER = "FUUTU_SLOT_ENV";
+
 /**
  * Env for an app process of this project. Local URLs (unset or pointing at
  * localhost) follow the slot; explicit remote values (a tunnel, a cloud DB)
@@ -496,6 +499,7 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
 		}
 	}
 	out.FUUTU_AUTH_COOKIE_PREFIX = project.authCookiePrefix;
+	out[SLOT_ENV_MARKER] = "1";
 	return out;
 }
 
@@ -505,5 +509,8 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
  * this project's slot database — never another checkout's.
  */
 export function commandSlotEnv(root, project, env = process.env) {
+	// Already resolved by a parent (dev launcher, E2E reset → `<db>-e2e`):
+	// re-applying would point the command back at the dev database.
+	if (env[SLOT_ENV_MARKER]) return {};
 	return slotEnv(project, { ...readDotEnv(root), ...env });
 }

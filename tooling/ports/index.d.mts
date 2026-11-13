@@ -69,6 +69,7 @@ export function slotEnv(
 	opts?: { e2e?: boolean },
 ): Record<string, string>;
 /** slotEnv for a one-off command: root .env under the process env. */
+export const SLOT_ENV_MARKER: "FUUTU_SLOT_ENV";
 export function commandSlotEnv(
 	root: string,
 	project: Project,

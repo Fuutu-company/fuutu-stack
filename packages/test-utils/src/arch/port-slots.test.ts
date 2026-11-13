@@ -323,6 +323,19 @@ describe("db command environment", () => {
 		).toBeUndefined();
 	});
 
+	it("leaves an env that already carries the slot env untouched (E2E seed on <db>-e2e)", async () => {
+		await lib.ensureSlot(project("a"), { busy: idle });
+		const root = project("b");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		const e2e = lib.slotEnv(
+			p,
+			{ DATABASE_URL: "postgresql://u:p@localhost:5432/acme" },
+			{ e2e: true },
+		);
+		expect(e2e[lib.SLOT_ENV_MARKER]).toBe("1");
+		expect(lib.commandSlotEnv(root, p, { ...e2e })).toEqual({});
+	});
+
 	it("lets the process env win over .env", async () => {
 		await lib.ensureSlot(project("a"), { busy: idle });
 		const root = project("b");
