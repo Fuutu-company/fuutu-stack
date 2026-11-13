@@ -48,6 +48,12 @@ if [ "$APP" = "saas" ]; then
   } >> .env
 fi
 
+# `next build` only reads apps/<app>/.env — CI passes these as job env, so do
+# the same here (a build without BETTER_AUTH_SECRET/URL fails env validation).
+set -a
+. ./.env
+set +a
+
 pnpm install --frozen-lockfile || fail "pnpm install failed"
 if [ "$APP" = "saas" ]; then
   pnpm db:generate || fail "db:generate failed"
