@@ -71,6 +71,16 @@ test.describe("webhook bypass (security rule)", () => {
 });
 
 test.describe("API health", () => {
+	test("/robots.txt keeps the signed-in app out of search engines", async ({
+		request,
+	}) => {
+		const res = await request.get("/robots.txt", { maxRedirects: 0 });
+		expect(res.status()).toBe(200);
+		const body = await res.text();
+		expect(body).toMatch(/User-Agent: \*/i);
+		expect(body).toMatch(/Disallow: \/\s*$/m);
+	});
+
 	test("/api/health returns 200 JSON", async ({ request }) => {
 		const res = await request.get("/api/health");
 		expect(res.status()).toBe(200);

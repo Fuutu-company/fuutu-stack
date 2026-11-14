@@ -71,6 +71,9 @@ const PUBLIC_PREFIXES = [
 	"/.well-known",
 	"/auth",
 	"/image-proxy",
+	// reason: crawlers fetch robots.txt without a session; it only says
+	// "Disallow: /" (src/app/robots.ts).
+	"/robots.txt",
 	// reason: app-owned prefixes — each documented in proxy-public.ts
 	...APP_PUBLIC_PREFIXES,
 ];
