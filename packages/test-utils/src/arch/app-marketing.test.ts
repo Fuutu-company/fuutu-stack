@@ -133,8 +133,25 @@ describe("composeHomeSections", () => {
 	});
 });
 
+/** The `site-links` exports these tests read — typed here so tsc never follows the module. */
+type SiteLinksModule = {
+	NAV_ITEMS: { key: string }[];
+	NAV_DROPDOWNS: { key: string; items: { key: string }[] }[];
+	NAV_ORDER: { kind: string; key: string }[];
+	FOOTER_COLUMNS: { titleKey: string }[];
+	FOOTER_ACTIONS: { key: string; column: string }[];
+	FOOTER_TAGLINE_KEY: string;
+	FOOTER_AREA_LINE: { textKey: string; Mark: unknown } | null;
+	HEADER_BRAND: { Brand?: unknown };
+};
+
 describe("site links", () => {
-	const load = () => import("../../../../apps/marketing/src/lib/site-links");
+	// Non-literal path: app-site-links may import `.tsx` (footer actions),
+	// which this package's tsc must not follow.
+	const load = () =>
+		import(
+			/* @vite-ignore */ join(ROOT, "apps/marketing/src/lib/site-links.ts")
+		) as Promise<SiteLinksModule>;
 
 	it("keeps the kit nav items and footer columns without app extras", async () => {
 		const links = await load();

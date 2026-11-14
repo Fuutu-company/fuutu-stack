@@ -1,4 +1,7 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+
+const ROOT = join(import.meta.dirname, "../../../..");
 
 /**
  * The real `apps/marketing/src/app-site-links.ts` merged by the real
@@ -10,7 +13,14 @@ import { describe, expect, it } from "vitest";
 
 describe("app site links (real app file)", () => {
 	it("merges the app's links into the kit navigation without throwing", async () => {
-		const links = await import("../../../../apps/marketing/src/lib/site-links");
+		// Non-literal path: app-site-links may import `.tsx` (footer actions),
+		// which this package's tsc must not follow.
+		const links = (await import(
+			/* @vite-ignore */ join(ROOT, "apps/marketing/src/lib/site-links.ts")
+		)) as {
+			NAV_ORDER: { key: string }[];
+			FOOTER_COLUMNS: unknown[];
+		};
 		expect(links.NAV_ORDER.length).toBeGreaterThan(0);
 		const navKeys = links.NAV_ORDER.map((entry: { key: string }) => entry.key);
 		expect(new Set(navKeys).size).toBe(navKeys.length);
