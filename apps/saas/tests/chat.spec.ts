@@ -1,5 +1,8 @@
 import type { Page } from "@playwright/test";
+import { featureOff } from "./features";
 import { expect, test } from "./fixtures";
+
+test.skip(...featureOff("aiChat"));
 
 test.describe("AI chat", () => {
 	test("chat page renders with title and conversation sidebar", async ({

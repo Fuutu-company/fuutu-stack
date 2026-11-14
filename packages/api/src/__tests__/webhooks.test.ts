@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
 import { webhooksRouter } from "../modules/webhooks/router";
 
+// Kit suite: outgoing webhooks on — an app may ship config.features.webhooks off.
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			features: { ...actual.config.features, webhooks: true },
+		},
+	};
+});
+
 // Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
 // app's PLANS — an app that replaces its catalog keeps them meaningful.
 vi.mock("@fuutu/payments/config", async (importOriginal) => ({

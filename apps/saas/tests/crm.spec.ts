@@ -1,4 +1,7 @@
+import { featureOff } from "./features";
 import { expect, test } from "./fixtures";
+
+test.skip(...featureOff("crm"));
 
 test.describe("CRM contacts", () => {
 	test("crm page renders with title and new contact button", async ({

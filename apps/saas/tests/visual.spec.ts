@@ -1,5 +1,6 @@
 import { paymentsConfig } from "@fuutu/payments/config";
 import type { Page } from "@playwright/test";
+import { featureOff } from "./features";
 import {
 	expect,
 	expectVisual,
@@ -174,6 +175,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("settings credits matches baseline", async ({ page }) => {
+		test.skip(...featureOff("credits"));
 		await page.goto("/settings/credits");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "settings--credits.png", {
@@ -207,6 +209,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("chat matches baseline", async ({ page }) => {
+		test.skip(...featureOff("aiChat"));
 		await page.goto("/chat");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "core--chat.png", {
@@ -215,6 +218,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("crm matches baseline", async ({ page }) => {
+		test.skip(...featureOff("crm"));
 		await page.goto("/crm");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "core--crm.png", {
@@ -266,6 +270,7 @@ test.describe("visual regression — app pages", () => {
 
 test.describe("visual regression — overlays", () => {
 	test("webhook create dialog matches baseline", async ({ page }) => {
+		test.skip(...featureOff("webhooks"));
 		await page.goto("/organizations/acme/settings/webhooks");
 		await page.waitForLoadState("domcontentloaded");
 		await page.getByRole("button", { name: /add webhook/i }).click();
