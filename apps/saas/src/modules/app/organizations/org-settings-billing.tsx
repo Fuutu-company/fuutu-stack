@@ -47,6 +47,9 @@ type ActiveSubscription = {
 	id: string;
 	status: string;
 	productId: string;
+	/** Resolved on the server — covers no-trial products too. */
+	planId: PlanId | null;
+	interval: BillingInterval | null;
 	currentPeriodEnd?: Date;
 };
 
@@ -99,6 +102,8 @@ export function OrgSettingsBilling({
 					id: sub.id,
 					status: sub.status,
 					productId: sub.productId ?? "",
+					planId: sub.planId,
+					interval: sub.interval,
 					currentPeriodEnd: sub.currentPeriodEnd ?? undefined,
 				});
 			}
@@ -122,6 +127,12 @@ export function OrgSettingsBilling({
 		activePlanId: PlanId | undefined;
 		activeInterval: BillingInterval;
 	} => {
+		if (activeSub?.planId) {
+			return {
+				activePlanId: activeSub.planId,
+				activeInterval: activeSub.interval ?? "month",
+			};
+		}
 		if (activeSub?.productId) {
 			for (const id of Object.keys(PLANS) as PlanId[]) {
 				const ids = priceIds[id];

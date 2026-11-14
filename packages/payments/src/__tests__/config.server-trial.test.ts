@@ -40,6 +40,7 @@ vi.mock("@fuutu/env/saas", () => ({
 }));
 
 const {
+	getPlanForProductId,
 	getPlanIdForProductId,
 	getPlanNoTrialPriceId,
 	getPlanPriceId,
@@ -88,5 +89,26 @@ describe("no-trial products (Plan.noTrialPriceIdEnvVars)", () => {
 			pro: { monthly: "price-pro-monthly", yearly: undefined },
 			team: { monthly: "prod-team-trial", yearly: "prod-team-yearly" },
 		});
+	});
+});
+
+describe("getPlanForProductId()", () => {
+	it("resolves plan and interval, no-trial products included", () => {
+		expect(getPlanForProductId("prod-team-trial")).toEqual({
+			planId: "team",
+			interval: "month",
+		});
+		expect(getPlanForProductId("prod-team-yearly")).toEqual({
+			planId: "team",
+			interval: "year",
+		});
+		expect(getPlanForProductId("prod-team-notrial")).toEqual({
+			planId: "team",
+			interval: "month",
+		});
+	});
+
+	it("returns undefined for an unknown product", () => {
+		expect(getPlanForProductId("prod-unknown")).toBeUndefined();
 	});
 });

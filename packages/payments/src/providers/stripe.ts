@@ -74,6 +74,26 @@ function mapStripeStatusToPurchaseStatus(
 }
 
 /**
+ * Status of a live subscription, with a scheduled cancel
+ * (`cancel_at_period_end`, or a `cancel_at` date as the customer portal
+ * sets it) reported as SCHEDULED_CANCEL instead of ACTIVE/TRIALING.
+ */
+function stripeSubscriptionStatus(
+	subscription: Pick<
+		Stripe.Subscription,
+		"status" | "cancel_at_period_end" | "cancel_at"
+	>,
+): PurchaseStatusLiteral {
+	const status = mapStripeStatusToPurchaseStatus(subscription.status);
+	const scheduled =
+		subscription.cancel_at_period_end === true ||
+		subscription.cancel_at != null;
+	return scheduled && (status === "ACTIVE" || status === "TRIALING")
+		? "SCHEDULED_CANCEL"
+		: status;
+}
+
+/**
  * Extract the invoice fields the sync layer persists from a Stripe
  * Invoice object. Returns undefined when the payload has no id — without
  * a provider invoice id there is no dedup key and every redelivery would
@@ -191,7 +211,8 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 					customerId: subscription.customer as string,
 					productId: subscription.items.data[0]?.price.id,
 					units: toUnits(subscription.items.data[0]?.quantity),
-					status: mapStripeStatusToPurchaseStatus(subscription.status),
+					// A cancel scheduled for the period end must not read as ACTIVE.
+					status: stripeSubscriptionStatus(subscription),
 					currentPeriodEnd: subscription.items.data[0]?.current_period_end
 						? new Date(subscription.items.data[0].current_period_end * 1000)
 						: undefined,
@@ -380,7 +401,7 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	async getSubscriptionStatus(subscriptionId: string) {
 		const client = getClient();
 		const subscription = await client.subscriptions.retrieve(subscriptionId);
-		return mapStripeStatusToPurchaseStatus(subscription.status);
+		return stripeSubscriptionStatus(subscription);
 	},
 
 	async parseWebhook(request: Request): Promise<ProviderEvent[]> {

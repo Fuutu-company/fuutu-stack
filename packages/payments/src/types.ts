@@ -117,6 +117,14 @@ export interface CheckoutInput {
 	 * parameter, trials are configured on the Creem product.
 	 */
 	trialDays?: number;
+	/**
+	 * Whether this checkout starts a trial (the billing policy's decision).
+	 * `false`: no trial even when the product carries one — Polar sends
+	 * `allowTrial: false`; Creem trials live on the product, so the caller
+	 * picks a no-trial product instead (`Plan.noTrialPriceIdEnvVars`).
+	 * Omitted: the provider default.
+	 */
+	trial?: boolean;
 	successUrl?: string;
 	cancelUrl?: string;
 	customerEmail?: string;
@@ -137,9 +145,12 @@ export interface CustomerInput {
 
 /**
  * How a seat change is billed:
- * - "charge-immediately": the prorated difference is charged (or
- *   refunded) now
+ * - "charge-immediately": the prorated difference is settled now — an
+ *   increase is charged right away; for a decrease Creem applies its
+ *   proration rules and Stripe (`always_invoice`) leaves an account
+ *   credit on the customer balance for later invoices, not a refund
  * - "none": no proration — the new count is billed from the next period
+ * Polar ignores it (its organization setting applies; logged as a warning).
  */
 export type SeatProration = "charge-immediately" | "none";
 
@@ -148,8 +159,9 @@ export interface SetSeatsInput {
 	seats: number;
 	/**
 	 * Per-call billing of the change. Omitted: the provider default
-	 * (Creem `paymentsConfig.creemUpdateBehavior`, Stripe's account
-	 * setting). Polar always applies its organization setting.
+	 * (Creem `paymentsConfig.creemUpdateBehavior`, Stripe
+	 * `create_prorations`). Polar ignores it and applies its organization
+	 * setting.
 	 */
 	proration?: SeatProration;
 }

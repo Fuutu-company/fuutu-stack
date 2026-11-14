@@ -28,12 +28,19 @@ export const resumeSubscription = protectedProcedure
 		assertPaymentsEnabled();
 		try {
 			const provider = resolvePaymentProvider();
-			await requireSubscriptionAccess(
+			const purchase = await requireSubscriptionAccess(
 				provider,
 				input.subscriptionId,
 				context.user.id,
 				context,
 			);
+			// Only a cancel scheduled for the period end is resumable here —
+			// never a pause or a dunning state the merchant controls.
+			if (purchase.status !== "SCHEDULED_CANCEL") {
+				throw new ORPCError("PRECONDITION_FAILED", {
+					message: "Only a scheduled cancellation can be resumed",
+				});
+			}
 			if (!provider.resumeSubscription) {
 				throw new ORPCError("NOT_IMPLEMENTED", {
 					message: "Resuming a subscription is not supported by this provider",

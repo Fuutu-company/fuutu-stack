@@ -76,6 +76,16 @@ vi.mock("@fuutu/env/saas", () => ({
 	},
 }));
 
+// Providers by id for the provider status lookups (resume confirmation);
+// empty = no provider resolves, like the unknown "test-provider" id.
+const providers = vi.hoisted(() => ({
+	byId: {} as Record<string, unknown>,
+}));
+vi.mock("../resolve", () => ({
+	resolvePaymentProvider: () => providers.byId["test-provider"] ?? null,
+	resolvePaymentProviderById: (id: string) => providers.byId[id] ?? null,
+}));
+
 const { processWebhookEvents } = await import("../sync");
 const { onPurchaseChanged } = await import("../extensions");
 
@@ -1451,9 +1461,18 @@ describe("processWebhookEvents — onPurchaseChanged", () => {
 
 describe("leaving SCHEDULED_CANCEL (resume)", () => {
 	const PERIOD_END = new Date("2027-03-01T00:00:00.000Z");
+	const getSubscriptionStatus = vi.fn();
+
+	afterEach(() => {
+		providers.byId = {};
+	});
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		getSubscriptionStatus.mockReset().mockResolvedValue("ACTIVE");
+		providers.byId = {
+			[PROVIDER_ID]: { id: PROVIDER_ID, getSubscriptionStatus },
+		};
 		mockGetCreditBalance.mockReset().mockResolvedValue(null);
 		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
 			id: "purchase_1",
@@ -1466,16 +1485,44 @@ describe("leaving SCHEDULED_CANCEL (resume)", () => {
 
 	const writtenStatus = () => mockUpdatePurchase.mock.calls[0]?.[0]?.status;
 
-	it("a resume event reactivates a SCHEDULED_CANCEL row", async () => {
-		// Creem sends subscription.active when a scheduled cancel is resumed.
-		await processWebhookEvents(PROVIDER_ID, [
+	const samePeriodActivation = () =>
+		processWebhookEvents(PROVIDER_ID, [
 			makeSubscriptionEvent({
 				type: "subscription.activated",
 				status: "ACTIVE",
 				currentPeriodEnd: new Date(PERIOD_END),
 			}),
 		]);
+
+	it("a resume event reactivates a SCHEDULED_CANCEL row the provider reports ACTIVE", async () => {
+		// Creem sends subscription.active when a scheduled cancel is resumed.
+		await samePeriodActivation();
+		expect(getSubscriptionStatus).toHaveBeenCalledWith("sub_123");
 		expect(writtenStatus()).toBe("ACTIVE");
+	});
+
+	it("keeps SCHEDULED_CANCEL when the provider still reports SCHEDULED_CANCEL (redelivered activation)", async () => {
+		getSubscriptionStatus.mockResolvedValue("SCHEDULED_CANCEL");
+		await samePeriodActivation();
+		expect(mockUpdatePurchase).toHaveBeenCalledOnce();
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("keeps SCHEDULED_CANCEL when the status lookup fails", async () => {
+		getSubscriptionStatus.mockRejectedValue(new Error("provider down"));
+		await samePeriodActivation();
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("keeps SCHEDULED_CANCEL when the provider has no status lookup or does not resolve", async () => {
+		providers.byId = { [PROVIDER_ID]: { id: PROVIDER_ID } };
+		await samePeriodActivation();
+		expect(writtenStatus()).toBeUndefined();
+
+		mockUpdatePurchase.mockClear();
+		providers.byId = {};
+		await samePeriodActivation();
+		expect(writtenStatus()).toBeUndefined();
 	});
 
 	it("subscription.updated with ACTIVE reactivates it (Stripe, Polar)", async () => {
@@ -1485,7 +1532,7 @@ describe("leaving SCHEDULED_CANCEL (resume)", () => {
 		expect(writtenStatus()).toBe("ACTIVE");
 	});
 
-	it("an activation with a different period end keeps SCHEDULED_CANCEL", async () => {
+	it("an activation with a different period end keeps SCHEDULED_CANCEL without asking the provider", async () => {
 		await processWebhookEvents(PROVIDER_ID, [
 			makeSubscriptionEvent({
 				type: "subscription.activated",
@@ -1495,6 +1542,7 @@ describe("leaving SCHEDULED_CANCEL (resume)", () => {
 		]);
 		expect(mockUpdatePurchase).toHaveBeenCalledOnce();
 		expect(writtenStatus()).toBeUndefined();
+		expect(getSubscriptionStatus).not.toHaveBeenCalled();
 	});
 
 	it("an activation without an explicit ACTIVE status keeps SCHEDULED_CANCEL", async () => {

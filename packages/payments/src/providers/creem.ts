@@ -311,7 +311,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 	) {
 		// Without a mode Creem applies the store's configured default.
 		const response = await creemFetch(
-			`/subscriptions/${subscriptionId}/cancel`,
+			`/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
 			{
 				method: "POST",
 				...(options?.atPeriodEnd && {
@@ -329,7 +329,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 
 	async resumeSubscription(subscriptionId: string) {
 		const response = await creemFetch(
-			`/subscriptions/${subscriptionId}/resume`,
+			`/subscriptions/${encodeURIComponent(subscriptionId)}/resume`,
 			{ method: "POST" },
 		);
 
@@ -451,7 +451,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		const { subscriptionId, seats, proration } = input;
 
 		const getResponse = await creemFetch(
-			`/subscriptions?subscription_id=${subscriptionId}`,
+			`/subscriptions?subscription_id=${encodeURIComponent(subscriptionId)}`,
 			{
 				method: "GET",
 			},
@@ -497,7 +497,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		}
 
 		const updateResponse = await creemFetch(
-			`/subscriptions/${subscriptionId}`,
+			`/subscriptions/${encodeURIComponent(subscriptionId)}`,
 			{
 				method: "POST",
 				body: JSON.stringify({

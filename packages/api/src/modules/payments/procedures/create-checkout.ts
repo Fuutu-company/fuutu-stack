@@ -120,9 +120,7 @@ export const createCheckout = authProcedure({
 				customerEmail: context.user.email,
 				...(isOneTime
 					? { metadata: { mode: "payment" } }
-					: trialDays
-						? { trialDays }
-						: {}),
+					: { trial, ...(trialDays ? { trialDays } : {}) }),
 			});
 		} catch (err) {
 			throwIfPaymentsDisabled(err);

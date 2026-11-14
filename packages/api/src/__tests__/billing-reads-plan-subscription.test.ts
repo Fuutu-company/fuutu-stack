@@ -32,11 +32,19 @@ vi.mock("@fuutu/payments/config", async (importOriginal) => {
 	};
 });
 
-vi.mock("@fuutu/payments/config.server", () => ({
-	getPlanIdForProductId: (productId: string) =>
-		({ price_pro: "pro", price_seats: "proSeats" })[productId],
-	getOneTimePlanPriceIds: () => [],
-}));
+vi.mock("@fuutu/payments/config.server", () => {
+	const plans: Record<string, { planId: string; interval: "month" | "year" }> =
+		{
+			price_pro: { planId: "pro", interval: "month" },
+			price_pro_notrial: { planId: "pro", interval: "year" },
+			price_seats: { planId: "proSeats", interval: "month" },
+		};
+	return {
+		getPlanForProductId: (productId: string) => plans[productId],
+		getPlanIdForProductId: (productId: string) => plans[productId]?.planId,
+		getOneTimePlanPriceIds: () => [],
+	};
+});
 
 const mockPortal = vi.hoisted(() => vi.fn());
 vi.mock("@fuutu/payments", async (importOriginal) => ({
@@ -115,6 +123,29 @@ describe("billing reads with a stacked add-on", () => {
 		expect(db.getActiveSubscriptionsForOwner).toHaveBeenCalledWith({
 			userId: "user-addon",
 		});
+	});
+
+	it("payments.subscription.active resolves plan and interval on the server", async () => {
+		const result = await call(
+			paymentsRouter.subscription.active,
+			{},
+			{ context },
+		);
+		expect(result).toMatchObject({ planId: "pro", interval: "month" });
+	});
+
+	it("payments.subscription.active resolves a no-trial product to its plan", async () => {
+		vi.mocked(db.getActiveSubscriptionForUser).mockResolvedValueOnce({
+			...BASE,
+			productId: "price_pro_notrial",
+			priceId: "price_pro_notrial",
+		} as never);
+		const result = await call(
+			paymentsRouter.subscription.active,
+			{},
+			{ context },
+		);
+		expect(result).toMatchObject({ planId: "pro", interval: "year" });
 	});
 
 	it("payments.subscription.status returns the plan subscription", async () => {

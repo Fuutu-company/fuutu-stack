@@ -167,6 +167,19 @@ describe("payments.checkout.create — trials", () => {
 		expect(sent()).not.toHaveProperty("trialDays");
 	});
 
+	it("tells the provider whether the checkout carries a trial", async () => {
+		mockAssertCheckoutAllowed.mockResolvedValue({ trial: true });
+		await checkout();
+		expect(sent()?.trial).toBe(true);
+
+		vi.clearAllMocks();
+		mockProvider.createCheckoutLink.mockResolvedValue({ url: "https://x" });
+		mockProvider.trialsOnProduct = undefined;
+		mockAssertCheckoutAllowed.mockResolvedValue({ trial: false });
+		await checkout();
+		expect(sent()?.trial).toBe(false);
+	});
+
 	it("passes skipTrial to the billing policy", async () => {
 		noTrialPriceId.current = "price-pro-notrial";
 		mockAssertCheckoutAllowed.mockResolvedValue({ trial: false });

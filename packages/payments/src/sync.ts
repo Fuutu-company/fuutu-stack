@@ -551,7 +551,12 @@ async function updateExistingPurchase(
 		isProtected &&
 		isSubscriptionActivationType(event.type) &&
 		!isRecoveryTransition(event.type, currentStatusLit) &&
-		!isResumeTransition(event, currentStatusLit, stored.currentPeriodEnd)
+		!(await isResumeTransition(
+			providerId,
+			event,
+			currentStatusLit,
+			stored.currentPeriodEnd,
+		))
 	) {
 		// Keep the protected status — an activation-type event does not
 		// transition terminal or user-intent states.
@@ -826,22 +831,41 @@ function isRecoveryTransition(
  * Creem answers a resume with `subscription.active` (Stripe and Polar
  * send `subscription.updated`, which is never blocked). Only an explicit
  * ACTIVE status for the stored period qualifies — a renewal moves the
- * period end, so it cannot undo the cancel.
+ * period end — and the provider must confirm ACTIVE: a redelivered
+ * activation from before the cancel looks the same. Lookup errors, a
+ * provider without `getSubscriptionStatus` or any other status keep the
+ * scheduled cancel.
  */
-function isResumeTransition(
+async function isResumeTransition(
+	providerId: string,
 	event: ProviderEvent,
 	currentStatus: PurchaseStatusLiteral,
 	storedPeriodEnd: Date | null | undefined,
-): boolean {
-	return (
+): Promise<boolean> {
+	const candidate =
 		event.type === "subscription.activated" &&
 		currentStatus === "SCHEDULED_CANCEL" &&
 		event.status === "ACTIVE" &&
+		event.subscriptionId !== undefined &&
 		event.currentPeriodEnd !== undefined &&
 		storedPeriodEnd != null &&
 		new Date(event.currentPeriodEnd).getTime() ===
-			new Date(storedPeriodEnd).getTime()
-	);
+			new Date(storedPeriodEnd).getTime();
+	if (!candidate || !event.subscriptionId) return false;
+	const provider = resolvePaymentProviderById(providerId);
+	if (!provider?.getSubscriptionStatus) return false;
+	try {
+		return (
+			(await provider.getSubscriptionStatus(event.subscriptionId)) === "ACTIVE"
+		);
+	} catch (err) {
+		log.warn("resume confirmation lookup failed — keeping SCHEDULED_CANCEL", {
+			subscriptionId: event.subscriptionId,
+			provider: providerId,
+			err: String(err),
+		});
+		return false;
+	}
 }
 
 /**

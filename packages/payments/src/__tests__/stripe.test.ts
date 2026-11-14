@@ -706,6 +706,71 @@ describe("stripe provider — cancel at period end and resume", () => {
 	});
 });
 
+describe("stripe provider — scheduled cancel status", () => {
+	function parseEvent(event: unknown) {
+		webhooksConstructEventAsync.mockResolvedValueOnce(event as never);
+		return stripePaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "stripe-signature": "test" },
+				body: "{}",
+			}),
+		);
+	}
+
+	const subscription = (overrides: Record<string, unknown>) => ({
+		id: "sub_1",
+		customer: "cust_1",
+		status: "active",
+		metadata: {},
+		items: {
+			data: [{ price: { id: "price_1" }, current_period_end: 1_700_000_000 }],
+		},
+		...overrides,
+	});
+
+	it.each([
+		[{ cancel_at_period_end: true }, "SCHEDULED_CANCEL"],
+		[{ cancel_at: 1_700_000_000 }, "SCHEDULED_CANCEL"],
+		[{ cancel_at_period_end: false, cancel_at: null }, "ACTIVE"],
+	])("getSubscriptionStatus with %o reports %s", async (flags, expected) => {
+		subscriptionsRetrieve.mockResolvedValueOnce(subscription(flags));
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).resolves.toBe(expected);
+	});
+
+	it("customer.subscription.updated with cancel_at_period_end maps to SCHEDULED_CANCEL", async () => {
+		const events = await parseEvent({
+			type: "customer.subscription.updated",
+			id: "evt_sc",
+			data: { object: subscription({ cancel_at_period_end: true }) },
+		});
+		expect(events[0]).toMatchObject({
+			type: "subscription.updated",
+			status: "SCHEDULED_CANCEL",
+		});
+	});
+
+	it("customer.subscription.updated without a scheduled cancel stays ACTIVE (resume)", async () => {
+		const events = await parseEvent({
+			type: "customer.subscription.updated",
+			id: "evt_res",
+			data: { object: subscription({ cancel_at_period_end: false }) },
+		});
+		expect(events[0]?.status).toBe("ACTIVE");
+	});
+
+	it("a past-due subscription keeps PAST_DUE even with a scheduled cancel", async () => {
+		subscriptionsRetrieve.mockResolvedValueOnce(
+			subscription({ status: "past_due", cancel_at_period_end: true }),
+		);
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).resolves.toBe("PAST_DUE");
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("stripe", () => stripePaymentProvider, {
 	behavior: "shape",

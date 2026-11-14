@@ -19,13 +19,14 @@ export function assertPaymentsEnabled(): void {
 /**
  * The caller may change `subscriptionId`: it exists at `provider`, and
  * belongs to the caller or to an org where they hold PAYMENT.UPDATE.
+ * Returns the stored purchase.
  */
 export async function requireSubscriptionAccess(
 	provider: PaymentProvider,
 	subscriptionId: string,
 	userId: string,
 	access: OrgAccessContext,
-): Promise<void> {
+): Promise<{ status: string }> {
 	const purchase = await getPurchaseByProviderSubscriptionId(
 		provider.id,
 		subscriptionId,
@@ -43,4 +44,5 @@ export async function requireSubscriptionAccess(
 	} else if (purchase.userId !== userId) {
 		throw new ORPCError("FORBIDDEN", { message: "Not the owner" });
 	}
+	return purchase;
 }

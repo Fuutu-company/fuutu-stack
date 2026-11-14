@@ -1,4 +1,5 @@
 import { getPlanSubscription } from "@fuutu/payments";
+import { getPlanForProductId } from "@fuutu/payments/config.server";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
@@ -15,7 +16,7 @@ export const getActiveSubscription = protectedProcedure
 		tags: ["Payments"],
 		summary: "Get active subscription",
 		description:
-			"Returns the active subscription for the user or organization, or null.",
+			"Returns the active subscription for the user or organization, or null — with its plan and billing interval resolved on the server (`planId`/`interval`, null when the product maps to no plan).",
 	})
 	.input(activeSubscriptionSchema)
 	.handler(async ({ input, context }) => {
@@ -33,5 +34,14 @@ export const getActiveSubscription = protectedProcedure
 				? { organizationId: input.organizationId }
 				: { userId: context.user.id },
 		);
-		return subscription;
+		if (!subscription) return subscription;
+		// Resolved here: a client matching price IDs misses no-trial products.
+		const plan = getPlanForProductId(
+			subscription.productId ?? subscription.priceId,
+		);
+		return {
+			...subscription,
+			planId: plan?.planId ?? null,
+			interval: plan?.interval ?? null,
+		};
 	});

@@ -728,6 +728,43 @@ describe("creem provider — cancel at period end and resume", () => {
 		).rejects.toThrow("Failed to resume subscription");
 	});
 
+	it("encodes the subscription id in cancel and resume paths", async () => {
+		mockFetch
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) })
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.cancelSubscription("sub/../x?y", {
+			atPeriodEnd: true,
+		});
+		await creemPaymentProvider.resumeSubscription?.("sub/../x?y");
+		expect(call(0).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions/sub%2F..%2Fx%3Fy/cancel",
+		);
+		expect(call(1).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions/sub%2F..%2Fx%3Fy/resume",
+		);
+	});
+
+	it("encodes the subscription id in the seat update paths", async () => {
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					items: [{ id: "sitem_1", price_id: "pprice_1" }],
+				}),
+			})
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub/x&y",
+			seats: 2,
+		});
+		expect(call(0).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions?subscription_id=sub%2Fx%26y",
+		);
+		expect(call(1).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions/sub%2Fx%26y",
+		);
+	});
+
 	it("declares that its trials live on the product", () => {
 		expect(creemPaymentProvider.trialsOnProduct).toBe(true);
 	});

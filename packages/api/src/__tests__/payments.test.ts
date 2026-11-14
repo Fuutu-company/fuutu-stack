@@ -222,6 +222,7 @@ describe("payments.checkout.create", () => {
 			successUrl: undefined,
 			cancelUrl: undefined,
 			customerEmail: "test@fuutu.local",
+			trial: true,
 			trialDays: 14,
 		});
 		expect(result).toEqual({ url: "https://checkout.example.com" });
@@ -284,6 +285,7 @@ describe("payments.checkout.create", () => {
 			successUrl: undefined,
 			cancelUrl: undefined,
 			customerEmail: "test@fuutu.local",
+			trial: true,
 			trialDays: 14,
 		});
 	});
@@ -439,6 +441,7 @@ describe("payments.checkout.create", () => {
 			successUrl: "http://localhost:3000/success",
 			cancelUrl: "http://localhost:3000/cancel",
 			customerEmail: "test@fuutu.local",
+			trial: true,
 			trialDays: 14,
 		});
 	});
@@ -465,6 +468,7 @@ describe("payments.checkout.create", () => {
 			successUrl: "http://localhost:3000/",
 			cancelUrl: undefined,
 			customerEmail: "test@fuutu.local",
+			trial: true,
 			trialDays: 14,
 		});
 	});
@@ -961,6 +965,7 @@ describe("payments.subscription.resume", () => {
 			id: "purchase-r",
 			userId: "user-resume",
 			organizationId: null,
+			status: "SCHEDULED_CANCEL",
 		} as never);
 
 		await expect(resume()).resolves.toEqual({ success: true });
@@ -976,6 +981,7 @@ describe("payments.subscription.resume", () => {
 			id: "purchase-o",
 			userId: null,
 			organizationId: ORG_ID,
+			status: "SCHEDULED_CANCEL",
 		} as never);
 
 		orgWith("member");
@@ -992,6 +998,7 @@ describe("payments.subscription.resume", () => {
 			id: "purchase-o",
 			userId: null,
 			organizationId: ORG_ID,
+			status: "SCHEDULED_CANCEL",
 		} as never);
 		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
 			orgFixture as never,
@@ -1005,6 +1012,7 @@ describe("payments.subscription.resume", () => {
 			id: "purchase-x",
 			userId: "user-2",
 			organizationId: null,
+			status: "SCHEDULED_CANCEL",
 		} as never);
 		await expect(resume()).rejects.toMatchObject({ code: "FORBIDDEN" });
 		expect(resumeProvider.resumeSubscription).not.toHaveBeenCalled();
@@ -1025,6 +1033,7 @@ describe("payments.subscription.resume", () => {
 			id: "purchase-r",
 			userId: "user-resume",
 			organizationId: null,
+			status: "SCHEDULED_CANCEL",
 		} as never);
 		await expect(resume()).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
 	});
@@ -1034,6 +1043,7 @@ describe("payments.subscription.resume", () => {
 			id: "purchase-r",
 			userId: "user-resume",
 			organizationId: null,
+			status: "SCHEDULED_CANCEL",
 		} as never);
 		resumeProvider.resumeSubscription.mockRejectedValue(
 			new WebhookConfigError("CREEM_API_KEY is not set"),
@@ -1043,6 +1053,22 @@ describe("payments.subscription.resume", () => {
 			message: "Payments are not configured",
 		});
 	});
+
+	it.each(["ACTIVE", "PAUSED", "PAST_DUE", "CANCELED", "TRIALING"])(
+		"refuses with PRECONDITION_FAILED when the subscription is %s, not a scheduled cancel",
+		async (status) => {
+			vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+				id: "purchase-r",
+				userId: "user-resume",
+				organizationId: null,
+				status,
+			} as never);
+			await expect(resume()).rejects.toMatchObject({
+				code: "PRECONDITION_FAILED",
+			});
+			expect(resumeProvider.resumeSubscription).not.toHaveBeenCalled();
+		},
+	);
 
 	it("throws UNAUTHORIZED when unauthenticated", async () => {
 		await expect(resume("sub-1", unauthenticatedContext)).rejects.toMatchObject(

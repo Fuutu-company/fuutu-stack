@@ -31,14 +31,25 @@ const isEnvKey = (key: string): key is keyof typeof env => key in env;
  * The env var names are declared per plan in `PLANS[].priceIdEnvVars`.
  */
 export function getPlanIdForProductId(productId: string): PlanId | undefined {
+	return getPlanForProductId(productId)?.planId;
+}
+
+/**
+ * Plan and billing interval of a provider-side product/price ID — normal
+ * and no-trial products (`noTrialPriceIdEnvVars`) alike. Billing UIs get
+ * this from the server instead of matching price IDs on the client.
+ */
+export function getPlanForProductId(
+	productId: string,
+): { planId: PlanId; interval: "month" | "year" } | undefined {
 	for (const planId of PLAN_IDS) {
 		const { priceIdEnvVars, noTrialPriceIdEnvVars } = plans[planId];
-		for (const key of [
-			...Object.values(priceIdEnvVars ?? {}),
-			...Object.values(noTrialPriceIdEnvVars ?? {}),
-		]) {
-			if (isEnvKey(key) && env[key] === productId) {
-				return planId;
+		for (const vars of [priceIdEnvVars, noTrialPriceIdEnvVars]) {
+			for (const interval of ["month", "year"] as const) {
+				const key = vars?.[interval];
+				if (key && isEnvKey(key) && env[key] === productId) {
+					return { planId, interval };
+				}
 			}
 		}
 	}

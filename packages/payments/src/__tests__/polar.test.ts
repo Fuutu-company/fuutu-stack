@@ -57,6 +57,14 @@ vi.mock("@fuutu/env/saas", () => ({
 	},
 }));
 
+const mockLog = vi.hoisted(() => ({
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn(),
+	debug: vi.fn(),
+}));
+vi.mock("@fuutu/logs", () => ({ createLogger: () => mockLog }));
+
 const { polarPaymentProvider } = await import("../providers/polar");
 
 /** Feed a synthetic Polar payload through the mocked validateEvent. */
@@ -127,6 +135,34 @@ describe("polar provider — SDK integration", () => {
 		const params = checkoutsCreate.mock.calls[0]?.[0];
 		expect(params.trialInterval).toBe("day");
 		expect(params.trialIntervalCount).toBe(14);
+	});
+
+	it("createCheckoutLink disables the product's trial when no trial is wanted", async () => {
+		checkoutsCreate.mockClear();
+		await polarPaymentProvider.createCheckoutLink({
+			priceId: "prod_1",
+			userId: "user_1",
+			successUrl: "https://app.test/ok",
+			trial: false,
+		});
+		const params = checkoutsCreate.mock.calls[0]?.[0];
+		expect(params.allowTrial).toBe(false);
+		expect(params).not.toHaveProperty("trialInterval");
+	});
+
+	it("createCheckoutLink sends no allowTrial when a trial is wanted or unspecified", async () => {
+		for (const trial of [true, undefined]) {
+			checkoutsCreate.mockClear();
+			await polarPaymentProvider.createCheckoutLink({
+				priceId: "prod_1",
+				userId: "user_1",
+				successUrl: "https://app.test/ok",
+				trial,
+			});
+			expect(checkoutsCreate.mock.calls[0]?.[0]).not.toHaveProperty(
+				"allowTrial",
+			);
+		}
 	});
 
 	it("createCheckoutLink leaves the product's trial config alone without trialDays", async () => {
@@ -746,8 +782,9 @@ describe("polar provider — purchased units", () => {
 });
 
 describe("polar provider — per-call seat proration", () => {
-	it("keeps the organization's proration setting and ignores the input", async () => {
+	it("keeps the organization's proration setting, ignores the input and warns", async () => {
 		subscriptionsUpdate.mockClear();
+		mockLog.warn.mockClear();
 		await polarPaymentProvider.setSubscriptionSeats({
 			subscriptionId: "sub_123",
 			seats: 3,
@@ -757,6 +794,10 @@ describe("polar provider — per-call seat proration", () => {
 			id: "sub_123",
 			subscriptionUpdate: { seats: 3 },
 		});
+		expect(mockLog.warn).toHaveBeenCalledWith(
+			expect.stringContaining("proration"),
+			expect.objectContaining({ subscriptionId: "sub_123", proration: "none" }),
+		);
 	});
 });
 
@@ -788,6 +829,61 @@ describe("polar provider — cancel at period end and resume", () => {
 		expect(subscriptionsUpdate).toHaveBeenCalledWith({
 			id: "sub_123",
 			subscriptionUpdate: { cancelAtPeriodEnd: false },
+		});
+	});
+});
+
+describe("polar provider — scheduled cancel status", () => {
+	it.each([
+		[true, "SCHEDULED_CANCEL"],
+		[false, "ACTIVE"],
+	])(
+		"getSubscriptionStatus with cancelAtPeriodEnd %s reports %s",
+		async (cancelAtPeriodEnd, expected) => {
+			subscriptionsGet.mockResolvedValueOnce({
+				id: "sub_1",
+				status: "active",
+				cancelAtPeriodEnd,
+			});
+			await expect(
+				polarPaymentProvider.getSubscriptionStatus?.("sub_1"),
+			).resolves.toBe(expected);
+		},
+	);
+
+	it("subscription.updated with cancelAtPeriodEnd maps to SCHEDULED_CANCEL", async () => {
+		const events = await parsePayload({
+			type: "subscription.updated",
+			data: {
+				id: "sub_1",
+				status: "active",
+				cancelAtPeriodEnd: true,
+				customerId: "cust_1",
+				productId: "prod_1",
+				metadata: {},
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "subscription.updated",
+			status: "SCHEDULED_CANCEL",
+		});
+	});
+
+	it("subscription.uncanceled reports ACTIVE", async () => {
+		const events = await parsePayload({
+			type: "subscription.uncanceled",
+			data: {
+				id: "sub_1",
+				status: "active",
+				cancelAtPeriodEnd: false,
+				customerId: "cust_1",
+				productId: "prod_1",
+				metadata: {},
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "subscription.updated",
+			status: "ACTIVE",
 		});
 	});
 });

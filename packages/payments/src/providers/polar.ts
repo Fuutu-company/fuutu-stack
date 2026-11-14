@@ -155,6 +155,21 @@ function mapPolarStatus(status: string): PurchaseStatusLiteral {
 }
 
 /**
+ * Status of a subscription, with `cancelAtPeriodEnd` on a live one
+ * reported as SCHEDULED_CANCEL instead of ACTIVE/TRIALING.
+ */
+function polarSubscriptionStatus(subscription: {
+	status: string;
+	cancelAtPeriodEnd?: boolean | null;
+}): PurchaseStatusLiteral {
+	const status = mapPolarStatus(subscription.status);
+	return subscription.cancelAtPeriodEnd === true &&
+		(status === "ACTIVE" || status === "TRIALING")
+		? "SCHEDULED_CANCEL"
+		: status;
+}
+
+/**
  * Map a Polar event type + its payload data to the normalized event type.
  * Several Polar types need the payload to disambiguate (checkout.updated
  * status, order.paid billing_reason, canceled cancel_at_period_end).
@@ -267,10 +282,12 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 			),
 			externalCustomerId: input.userId ?? input.organizationId,
 			seats: input.seats,
-			// Without trialDays the product's own trial config applies.
+			// Without trialDays the product's own trial config applies —
+			// unless the caller wants no trial at all.
 			...(input.trialDays
 				? { trialInterval: "day" as const, trialIntervalCount: input.trialDays }
 				: {}),
+			...(input.trial === false ? { allowTrial: false } : {}),
 			metadata,
 		});
 		return { url: checkout.url };
@@ -387,7 +404,10 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 			} else if (eventType === "subscription.expired") {
 				providerEvent.status = "EXPIRED";
 			} else if (data?.status) {
-				providerEvent.status = mapPolarStatus(data.status);
+				providerEvent.status = polarSubscriptionStatus({
+					status: data.status,
+					cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+				});
 			}
 			// endsAt is the effective end for revoked/canceled subs;
 			// currentPeriodEnd is authoritative when present. The SDK
@@ -409,7 +429,7 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 	async getSubscriptionStatus(subscriptionId: string) {
 		const client = getClient();
 		const subscription = await client.subscriptions.get({ id: subscriptionId });
-		return mapPolarStatus(subscription.status);
+		return polarSubscriptionStatus(subscription);
 	},
 
 	async cancelSubscription(
@@ -447,7 +467,7 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		// prorationBehavior omitted — Polar applies the organization's
 		// configured default, matching the Stripe seat-update behavior.
 		if (proration) {
-			log.debug(
+			log.warn(
 				"per-call proration ignored — Polar uses its organization setting",
 				{
 					subscriptionId,
