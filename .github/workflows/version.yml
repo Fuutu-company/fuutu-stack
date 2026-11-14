@@ -11,7 +11,13 @@ run-name: ${{ vars.FUUTU_VERSIONING_ENABLED == 'true' && 'Version' || 'Versionin
 # On every push to main the conventional-commit subjects since the last
 # git tag are sent to POST <FUUTU_VERSIONING_API_URL>/api/versioning/next;
 # the returned nextVersion is written to the root package.json `version`
-# (= APP_VERSION), then committed and tagged by the bot.
+# (= APP_VERSION), then committed and tagged by the bot, published as a
+# GitHub release, and main is merged back into develop (if it exists).
+#
+# Protected main (rulesets requiring pull requests): add a write deploy key,
+# allow "Deploy keys" to bypass the main/develop rules, and store its private
+# key as the secret FUUTU_RELEASE_DEPLOY_KEY — the release commit is pushed
+# with it. Docs: "App releases".
 #
 # Merge strategy does not matter: merge, squash or rebase — only the
 # commit messages count. Commits from merged kit updates are excluded.
@@ -68,6 +74,10 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # full history for tag lookup + commit range
+          # Optional write deploy key allowed to bypass branch rules on main
+          # (and develop): a protected main rejects the release commit pushed
+          # with GITHUB_TOKEN. Empty → the default token is used.
+          ssh-key: ${{ secrets.FUUTU_RELEASE_DEPLOY_KEY }}
       - uses: ./.github/actions/setup
         with:
           db-generate: "false"
@@ -148,6 +158,7 @@ jobs:
           jq '{bump, nextVersion, rationale}' response.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Write version, commit and tag
+        id: release
         if: steps.commits.outputs.skip != '1' && steps.api.outputs.skip != '1'
         env:
           KIND: ${{ steps.target.outputs.kind }}
@@ -178,3 +189,31 @@ jobs:
           git commit -m "chore(release): $TAG$NEXT"
           git tag -a "$TAG$NEXT" -m "$TITLE"
           git push --follow-tags
+          echo "tag=$TAG$NEXT" >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        if: steps.release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          TITLE: ${{ steps.release.outputs.title }}
+        run: gh release create "$TAG" --title "$TITLE" --generate-notes --verify-tag
+
+      # Git Flow: keep develop up to date with the release commit, so the next
+      # develop → main pull request is not "behind". Skipped without develop.
+      - name: Merge main back into develop
+        if: steps.release.outputs.tag != ''
+        run: |
+          if ! git ls-remote --exit-code --heads origin develop >/dev/null; then
+            echo "no develop branch — nothing to back-merge"
+            exit 0
+          fi
+          git fetch origin develop
+          git checkout -B develop origin/develop
+          if git merge --no-ff --no-edit -m "Merge main into develop" "${GITHUB_REF_NAME}"; then
+            git push origin develop
+          else
+            git merge --abort
+            echo "::warning::Back-merge of main into develop conflicted — merge it manually."
+          fi
