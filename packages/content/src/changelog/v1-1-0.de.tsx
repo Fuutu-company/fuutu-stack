@@ -87,6 +87,11 @@ export default function ChangelogV110De() {
 					<code>/blog/&lt;slug&gt;</code>.
 				</li>
 				<li>
+					<code>appSlots.headerActions</code> zeigt App-UI in der
+					Desktop-Kopfleiste direkt vor der Benachrichtigungsglocke — vom
+					Server-Layout gerendert, also auch als Server-Komponente.
+				</li>
+				<li>
 					<code>authConfig.organizations.organizationLimit</code> begrenzt, in
 					wie vielen Organisationen ein Nutzer Mitglied sein darf und trotzdem
 					eine weitere anlegen kann (nicht gesetzt: keine Grenze).{" "}

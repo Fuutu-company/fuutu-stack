@@ -30,6 +30,12 @@ export interface AppSlots {
 		userId: string;
 		firstName: string | null;
 	}>;
+	/**
+	 * Desktop app top bar: right before the notification bell, on every
+	 * page of the signed-in shell. Rendered by the server layout, so it may
+	 * be a server component; the mobile header shows nothing here.
+	 */
+	headerActions?: ComponentType;
 }
 
 /**

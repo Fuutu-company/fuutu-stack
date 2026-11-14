@@ -84,6 +84,11 @@ export default function ChangelogV110() {
 					<code>/blog/&lt;slug&gt;</code> post.
 				</li>
 				<li>
+					<code>appSlots.headerActions</code> renders app UI in the desktop top
+					bar, right before the notification bell — rendered by the server
+					layout, so it may be a server component.
+				</li>
+				<li>
 					<code>authConfig.organizations.organizationLimit</code> caps how many
 					organizations a user may belong to and still create another one
 					(unset: no cap). <code>organizations.create</code> answers{" "}
