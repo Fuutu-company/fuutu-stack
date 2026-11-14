@@ -822,14 +822,14 @@ describe("creem provider — getSubscriptionSeats", () => {
 		expect((init as RequestInit).method).toBe("GET");
 	});
 
-	it("an item without units counts as one seat", async () => {
+	it("fails closed when the item reports no units (Creem always sends them)", async () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({ items: [{ id: "sitem_1", product_id: "p" }] }),
 		});
 		await expect(
 			creemPaymentProvider.getSubscriptionSeats?.("sub_1"),
-		).resolves.toBe(1);
+		).rejects.toThrow();
 	});
 
 	it("fails closed when Creem answers with an error or no item", async () => {

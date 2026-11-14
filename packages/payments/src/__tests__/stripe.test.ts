@@ -437,6 +437,41 @@ describe("stripe provider — SDK integration", () => {
 		});
 	});
 
+	it("invoice.paid carries the new period end from the subscription line, not the billed period", async () => {
+		// invoice.period_end is the end of the period just billed; the
+		// subscription line's period is the one the payment starts.
+		webhooksConstructEventAsync.mockResolvedValueOnce({
+			type: "invoice.paid",
+			id: "evt_inv_cycle",
+			data: {
+				object: {
+					id: "in_cycle",
+					customer: "cust_123",
+					status: "paid",
+					amount_paid: 1900,
+					currency: "usd",
+					created: 1_702_678_400,
+					period_start: 1_700_000_000,
+					period_end: 1_702_678_400,
+					lines: {
+						data: [{ period: { start: 1_702_678_400, end: 1_705_356_800 } }],
+					},
+					parent: {
+						type: "subscription_details",
+						subscription_details: { subscription: "sub_123" },
+					},
+				},
+			},
+		} as never);
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "stripe-signature": "test" },
+			body: "{}",
+		});
+		const events = await stripePaymentProvider.parseWebhook(request);
+		expect(events[0]?.currentPeriodEnd).toEqual(new Date(1_705_356_800 * 1000));
+	});
+
 	it("maps invoice.payment_failed to subscription.past_due carrying the open invoice", async () => {
 		webhooksConstructEventAsync.mockResolvedValueOnce({
 			type: "invoice.payment_failed",
@@ -811,14 +846,14 @@ describe("stripe provider — getSubscriptionSeats", () => {
 		expect(subscriptionsRetrieve).toHaveBeenLastCalledWith("sub_1");
 	});
 
-	it("an item without a quantity counts as one seat", async () => {
+	it("fails closed for an item without a quantity (metered prices have none)", async () => {
 		subscriptionsRetrieve.mockResolvedValueOnce({
 			id: "sub_1",
 			items: { data: [{ id: "item_1" }] },
 		});
 		await expect(
 			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
-		).resolves.toBe(1);
+		).rejects.toThrow();
 	});
 
 	it("fails closed when the lookup fails or the subscription has no item", async () => {

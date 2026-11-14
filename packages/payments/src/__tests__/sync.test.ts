@@ -1636,6 +1636,8 @@ describe("leaving SCHEDULED_CANCEL (resume)", () => {
 	});
 
 	it("a terminal row stays terminal on a same-period activation", async () => {
+		// A redelivered activation: the provider reports the row canceled.
+		getSubscriptionStatus.mockResolvedValue("CANCELED");
 		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
 			id: "purchase_1",
 			status: "CANCELED",
@@ -1672,14 +1674,25 @@ describe("status guards for late or out-of-order events", () => {
 		mockGetCreditBalance.mockReset().mockResolvedValue(null);
 	});
 
-	const stored = (status: string, currentPeriodEnd?: Date) =>
+	const stored = (
+		status: string,
+		currentPeriodEnd?: Date,
+		productId = "prod_123",
+	) =>
 		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
 			id: "purchase_1",
 			status,
 			currentPeriodEnd: currentPeriodEnd ?? null,
+			productId,
 			organizationId: "org_123",
 			userId: null,
 		});
+
+	const written = () => {
+		const call = mockUpdatePurchase.mock.calls[0]?.[0];
+		expect(call).toBeDefined();
+		return call;
+	};
 
 	const writtenStatus = () => {
 		const call = mockUpdatePurchase.mock.calls[0]?.[0];
@@ -1711,19 +1724,32 @@ describe("status guards for late or out-of-order events", () => {
 		expect(writtenStatus()).toBe("SCHEDULED_CANCEL");
 	});
 
+	it.each(["CANCELED", "EXPIRED"] as const)(
+		"a provider canceled webhook leaves a %s row CANCELED, never SCHEDULED_CANCEL",
+		async (storedStatus) => {
+			// e.g. a superseded row canceled locally, then the provider's
+			// canceled webhook with a period end still in the future.
+			stored(storedStatus);
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.canceled",
+					status: "CANCELED",
+					currentPeriodEnd: FUTURE,
+				}),
+			]);
+			expect(writtenStatus()).toBe("CANCELED");
+		},
+	);
+
 	it.each([
-		["CANCELED", "subscription.canceled", "CANCELED", FUTURE],
 		["CANCELED", "subscription.past_due", "PAST_DUE", undefined],
 		["CANCELED", "subscription.paused", "PAUSED", undefined],
 		["CANCELED", "subscription.scheduled_cancel", "SCHEDULED_CANCEL", FUTURE],
-		["EXPIRED", "subscription.canceled", "CANCELED", FUTURE],
 		["EXPIRED", "subscription.past_due", "PAST_DUE", undefined],
 		["EXPIRED", "subscription.scheduled_cancel", "SCHEDULED_CANCEL", FUTURE],
 	] as const)(
 		"a %s row stays terminal on %s",
 		async (storedStatus, type, status, currentPeriodEnd) => {
-			// e.g. a superseded row canceled locally, then the provider's
-			// canceled webhook with a period end still in the future.
 			stored(storedStatus);
 			await processWebhookEvents(PROVIDER_ID, [
 				makeSubscriptionEvent({ type, status, currentPeriodEnd }),
@@ -1806,18 +1832,8 @@ describe("status guards for late or out-of-order events", () => {
 		expect(writtenStatus()).toBe("PAST_DUE");
 	});
 
-	it("past_due downgrades when the lookup fails or the provider has none", async () => {
+	it("past_due downgrades only when the provider has no status lookup", async () => {
 		stored("ACTIVE", STORED_PERIOD_END);
-		getSubscriptionStatus.mockRejectedValue(new Error("provider down"));
-		await processWebhookEvents(PROVIDER_ID, [
-			makeSubscriptionEvent({
-				type: "subscription.past_due",
-				status: "PAST_DUE",
-			}),
-		]);
-		expect(writtenStatus()).toBe("PAST_DUE");
-
-		mockUpdatePurchase.mockClear();
 		providers.byId = { [PROVIDER_ID]: { id: PROVIDER_ID } };
 		await processWebhookEvents(PROVIDER_ID, [
 			makeSubscriptionEvent({
@@ -1828,8 +1844,23 @@ describe("status guards for late or out-of-order events", () => {
 		expect(writtenStatus()).toBe("PAST_DUE");
 	});
 
-	it("past_due for the stored period downgrades without asking the provider", async () => {
+	it("a failed status lookup fails the delivery instead of downgrading (the provider redelivers)", async () => {
 		stored("ACTIVE", STORED_PERIOD_END);
+		getSubscriptionStatus.mockRejectedValue(new Error("provider down"));
+		await expect(
+			processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.past_due",
+					status: "PAST_DUE",
+				}),
+			]),
+		).rejects.toThrow("1 webhook event(s) failed");
+		expect(mockUpdatePurchase).not.toHaveBeenCalled();
+	});
+
+	it("past_due for the stored period still asks the provider (a late one must not lock out a paying customer)", async () => {
+		stored("ACTIVE", STORED_PERIOD_END);
+		getSubscriptionStatus.mockResolvedValue("ACTIVE");
 		await processWebhookEvents(PROVIDER_ID, [
 			makeSubscriptionEvent({
 				type: "subscription.past_due",
@@ -1837,7 +1868,156 @@ describe("status guards for late or out-of-order events", () => {
 				currentPeriodEnd: new Date(STORED_PERIOD_END),
 			}),
 		]);
+		expect(getSubscriptionStatus).toHaveBeenCalledWith("sub_123");
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it.each(["TRIALING", "SCHEDULED_CANCEL"] as const)(
+		"a late past_due keeps a %s row the provider still reports granting",
+		async (status) => {
+			stored(status, FUTURE);
+			getSubscriptionStatus.mockResolvedValue(status);
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.past_due",
+					status: "PAST_DUE",
+				}),
+			]);
+			expect(writtenStatus()).toBeUndefined();
+		},
+	);
+
+	it("past_due on a SCHEDULED_CANCEL row past its period downgrades without asking", async () => {
+		stored("SCHEDULED_CANCEL", new Date("2020-01-01T00:00:00.000Z"));
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.past_due",
+				status: "PAST_DUE",
+			}),
+		]);
 		expect(getSubscriptionStatus).not.toHaveBeenCalled();
 		expect(writtenStatus()).toBe("PAST_DUE");
+	});
+
+	// Cancelling an unpaid subscription must not hand out the rest of the
+	// period for free: only a row that grants access keeps it.
+	it.each(["PAST_DUE", "PAUSED", "INCOMPLETE"] as const)(
+		"a canceled %s subscription is CANCELED, even with a future period end (Creem)",
+		async (status) => {
+			stored(status, FUTURE);
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.canceled",
+					status: "CANCELED",
+					currentPeriodEnd: FUTURE,
+				}),
+			]);
+			expect(writtenStatus()).toBe("CANCELED");
+		},
+	);
+
+	it("a revoked PAST_DUE Polar subscription is CANCELED (canceled with endsAt ahead)", async () => {
+		stored("PAST_DUE", STORED_PERIOD_END);
+		// Polar subscription.canceled without cancelAtPeriodEnd.
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.canceled",
+				status: "CANCELED",
+				currentPeriodEnd: FUTURE,
+			}),
+		]);
+		expect(writtenStatus()).toBe("CANCELED");
+	});
+
+	it("a canceled SCHEDULED_CANCEL row inside its period keeps the period", async () => {
+		stored("SCHEDULED_CANCEL", FUTURE);
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.canceled",
+				status: "CANCELED",
+				currentPeriodEnd: FUTURE,
+			}),
+		]);
+		expect(writtenStatus()).toBe("SCHEDULED_CANCEL");
+	});
+
+	it.each(["PAST_DUE", "PAUSED"] as const)(
+		"a scheduled cancel keeps an unpaid %s row as it is (Creem subscription.scheduled_cancel, Polar canceled at period end)",
+		async (status) => {
+			stored(status, FUTURE);
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.scheduled_cancel",
+					status: "SCHEDULED_CANCEL",
+					currentPeriodEnd: FUTURE,
+				}),
+			]);
+			expect(writtenStatus()).toBeUndefined();
+		},
+	);
+
+	it.each([
+		["EXPIRED", "subscription.renewed"],
+		["EXPIRED", "subscription.activated"],
+		["CANCELED", "subscription.updated"],
+	] as const)(
+		"a %s row revives on %s when the provider confirms ACTIVE (Creem: a retried charge succeeded)",
+		async (storedStatus, type) => {
+			stored(storedStatus);
+			getSubscriptionStatus.mockResolvedValue("ACTIVE");
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type,
+					status: "ACTIVE",
+					currentPeriodEnd: FUTURE,
+				}),
+			]);
+			expect(getSubscriptionStatus).toHaveBeenCalledWith("sub_123");
+			expect(writtenStatus()).toBe("ACTIVE");
+		},
+	);
+
+	it("a superseded CANCELED row stays CANCELED on a late activation (the provider reports it canceled)", async () => {
+		stored("CANCELED");
+		getSubscriptionStatus.mockResolvedValue("CANCELED");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.updated", status: "ACTIVE" }),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("a terminal row stays terminal when the revival lookup fails", async () => {
+		stored("EXPIRED");
+		getSubscriptionStatus.mockRejectedValue(new Error("provider down"));
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.renewed", status: "ACTIVE" }),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("an older period end never overwrites a newer one (Stripe invoice.paid after customer.subscription.updated)", async () => {
+		stored("ACTIVE", STORED_PERIOD_END);
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.renewed",
+				status: "ACTIVE",
+				currentPeriodEnd: new Date("2027-02-01T00:00:00.000Z"),
+			}),
+		]);
+		expect(written()).not.toHaveProperty("currentPeriodEnd");
+	});
+
+	it("a plan switch may move the period end back (yearly to monthly)", async () => {
+		stored("ACTIVE", STORED_PERIOD_END, "prod_yearly");
+		const monthly = new Date("2027-02-01T00:00:00.000Z");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.updated",
+				status: "ACTIVE",
+				productId: "prod_monthly",
+				currentPeriodEnd: monthly,
+			}),
+		]);
+		expect(written().currentPeriodEnd).toEqual(monthly);
 	});
 });

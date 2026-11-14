@@ -113,6 +113,11 @@ export default function ChangelogV110() {
 					and <code>CheckoutGuardContext</code> carries <code>trial</code> and{" "}
 					<code>skipTrial</code>.
 				</li>
+				<li>
+					On Creem, <code>payments.subscription.cancel</code> without{" "}
+					<code>atPeriodEnd</code> now cancels immediately instead of using the
+					store's default cancellation mode.
+				</li>
 			</ul>
 		</>
 	);

@@ -474,9 +474,12 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			CreemSubscriptionResponseSchema,
 			"Failed to get subscription",
 		);
-		const item = items?.[0];
-		if (!item) throw new Error("No subscription items found");
-		return Math.max(1, item.units ?? 1);
+		// Creem reports `units` on every subscription item (1 without seats).
+		const units = items?.[0]?.units;
+		if (units == null || units < 1) {
+			throw new Error("Creem subscription item has no unit count");
+		}
+		return units;
 	},
 
 	async setSubscriptionSeats(input: SetSeatsInput) {

@@ -256,9 +256,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 						subscriptionId,
 						customerId: invoice.customer as string,
 						status: "ACTIVE",
-						currentPeriodEnd: new Date(
-							(invoice.period_end ?? invoice.period_start) * 1000,
-						),
+						currentPeriodEnd: new Date(invoicePeriodEnd(invoice) * 1000),
 						invoice: toProviderInvoice(invoice, invoice.amount_paid),
 					},
 				];
@@ -293,6 +291,19 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 		default:
 			return [];
 	}
+}
+
+/**
+ * End of the period a paid invoice starts: the latest line period (the
+ * subscription line covers the new period). `invoice.period_end` is the
+ * end of the period just billed — the fallback when the payload has no
+ * lines.
+ */
+function invoicePeriodEnd(invoice: Stripe.Invoice): number {
+	const lineEnds = (invoice.lines?.data ?? [])
+		.map((line) => line.period?.end)
+		.filter((end): end is number => typeof end === "number");
+	return Math.max(invoice.period_end ?? invoice.period_start, ...lineEnds);
 }
 
 const STRIPE_PRORATION = {
@@ -444,11 +455,13 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	async getSubscriptionSeats(subscriptionId: string) {
 		const client = getClient();
 		const subscription = await client.subscriptions.retrieve(subscriptionId);
-		const firstItem = subscription.items.data[0];
-		if (!firstItem) {
-			throw new Error(`Subscription ${subscriptionId} has no items`);
+		// Licensed prices always carry a quantity (default 1); a metered
+		// price has none and cannot count seats.
+		const quantity = subscription.items.data[0]?.quantity;
+		if (quantity == null || quantity < 1) {
+			throw new Error(`Subscription ${subscriptionId} has no seat quantity`);
 		}
-		return Math.max(1, firstItem.quantity ?? 1);
+		return quantity;
 	},
 
 	async setSubscriptionSeats({

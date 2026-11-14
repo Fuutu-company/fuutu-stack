@@ -270,8 +270,13 @@ export interface PaymentProvider {
 export interface SeatAwarePaymentProvider extends PaymentProvider {
 	setSubscriptionSeats(input: SetSeatsInput): Promise<void>;
 	/**
-	 * Optional: the seats the provider bills for the subscription right
-	 * now. Throw when the lookup fails.
+	 * Optional provider capability for apps — the kit itself does not call
+	 * it: the seats the provider bills for the subscription right now (e.g.
+	 * to decide add vs remove against the provider instead of a possibly
+	 * stale `Purchase.quantity`). Creem: the item's `units`; Stripe: the
+	 * item's `quantity`; Polar: `seats` (1 for a subscription that is not
+	 * seat-based — Polar reports none). Throws when the lookup fails or the
+	 * provider reports no count.
 	 */
 	getSubscriptionSeats?(subscriptionId: string): Promise<number>;
 }
