@@ -48,12 +48,14 @@ import {
 } from "./config.server";
 import { notifyPurchaseChanged } from "./extensions";
 import { resolvePaymentProviderById } from "./resolve";
-import type {
-	PaymentProvider,
-	ProviderEvent,
-	ProviderEventType,
-	ProviderInvoiceData,
-	PurchaseStatusLiteral,
+import {
+	type PaymentProvider,
+	PaymentsDisabledError,
+	type ProviderEvent,
+	type ProviderEventType,
+	type ProviderInvoiceData,
+	type PurchaseStatusLiteral,
+	WebhookConfigError,
 } from "./types";
 
 const log = createLogger({ scope: "payments:sync" });
@@ -929,9 +931,15 @@ const GRANTING_STATUSES: PurchaseStatusLiteral[] = [
 	"SCHEDULED_CANCEL",
 ];
 
+/** Providers already warned about a lookup they cannot make (once each). */
+const unconfiguredLookupWarned = new Set<string>();
+
 /**
- * The provider's live status; `undefined` when the provider has no status
- * lookup. A failed lookup throws.
+ * The provider's live status; `undefined` when the provider cannot tell:
+ * no status lookup, or a configuration error (missing API key — the
+ * adapters throw `WebhookConfigError`; payments off) that a redelivery
+ * would hit forever. Any other failed lookup (network, 5xx, timeout)
+ * throws, so the delivery fails and the provider redelivers.
  */
 async function providerStatus(
 	providerId: string,
@@ -943,6 +951,19 @@ async function providerStatus(
 	try {
 		return await provider.getSubscriptionStatus(event.subscriptionId);
 	} catch (err) {
+		if (
+			err instanceof WebhookConfigError ||
+			err instanceof PaymentsDisabledError
+		) {
+			if (!unconfiguredLookupWarned.has(providerId)) {
+				unconfiguredLookupWarned.add(providerId);
+				log.warn("subscription status lookup not configured", {
+					provider: providerId,
+					err: String(err),
+				});
+			}
+			return undefined;
+		}
 		log.warn("subscription status lookup failed", {
 			subscriptionId: event.subscriptionId,
 			provider: providerId,

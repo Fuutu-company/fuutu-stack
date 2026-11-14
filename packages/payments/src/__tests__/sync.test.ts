@@ -89,7 +89,11 @@ vi.mock("../resolve", () => ({
 const { processWebhookEvents } = await import("../sync");
 const { onPurchaseChanged } = await import("../extensions");
 
-import type { ProviderEvent } from "../types";
+import {
+	PaymentsDisabledError,
+	type ProviderEvent,
+	WebhookConfigError,
+} from "../types";
 
 const PROVIDER_ID = "test-provider";
 
@@ -1844,9 +1848,43 @@ describe("status guards for late or out-of-order events", () => {
 		expect(writtenStatus()).toBe("PAST_DUE");
 	});
 
+	it.each([
+		[
+			"WebhookConfigError",
+			() => new WebhookConfigError("CREEM_API_KEY is not set"),
+		],
+		["PaymentsDisabledError", () => new PaymentsDisabledError("payments off")],
+	] as const)(
+		"a provider configuration error (%s) counts as no lookup: past_due downgrades, no throw",
+		async (_name, makeError) => {
+			// E2E and misconfigured deployments have no API key — the error is
+			// not transient, so redelivery would fail forever.
+			stored("ACTIVE", STORED_PERIOD_END);
+			getSubscriptionStatus.mockRejectedValue(makeError());
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.past_due",
+					status: "PAST_DUE",
+				}),
+			]);
+			expect(writtenStatus()).toBe("PAST_DUE");
+		},
+	);
+
+	it("a configuration error still blocks a revival (no confirmation)", async () => {
+		stored("EXPIRED");
+		getSubscriptionStatus.mockRejectedValue(
+			new WebhookConfigError("CREEM_API_KEY is not set"),
+		);
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.renewed", status: "ACTIVE" }),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+
 	it("a failed status lookup fails the delivery instead of downgrading (the provider redelivers)", async () => {
 		stored("ACTIVE", STORED_PERIOD_END);
-		getSubscriptionStatus.mockRejectedValue(new Error("provider down"));
+		getSubscriptionStatus.mockRejectedValue(new TypeError("fetch failed"));
 		await expect(
 			processWebhookEvents(PROVIDER_ID, [
 				makeSubscriptionEvent({
