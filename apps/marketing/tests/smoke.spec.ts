@@ -6,6 +6,7 @@ import {
 	localePrefix,
 	OTHER_LOCALES,
 } from "./locales";
+import { FIRST_POST_SLUG } from "./posts";
 
 /**
  * Smoke tests for the marketing site.
@@ -371,6 +372,37 @@ test.describe("page metadata", () => {
 			const html = await res.text();
 			expect(html).toMatch(/<title[^>]*>[^<]+<\/title>/i);
 			expect(html).toMatch(/<meta\s+name="description"/i);
+		});
+	}
+});
+
+// ── SEO defaults: no app sitemap exclusions, no robots meta ─────────────
+
+test.describe("SEO defaults", () => {
+	const paths = [
+		...PAGES.map(({ path }) => path),
+		...(FIRST_POST_SLUG ? [`/blog/${FIRST_POST_SLUG}`] : []),
+	];
+
+	test("/sitemap.xml lists every kit page, legal page and post per locale", async ({
+		request,
+	}) => {
+		const xml = await (await request.get("/sitemap.xml")).text();
+		const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+			([, loc]) => new URL(loc ?? "").pathname,
+		);
+		for (const locale of LOCALES) {
+			for (const path of paths) {
+				expect(locs).toContain(`${localePrefix(locale)}${path}` || "/");
+			}
+		}
+	});
+
+	for (const path of paths) {
+		test(`${path || "/"} sets no robots meta`, async ({ request }) => {
+			const res = await request.get(`/${DEFAULT_LOCALE}${path}`);
+			expect(res.status()).toBeLessThan(400);
+			expect(await res.text()).not.toMatch(/<meta\s+name="robots"/i);
 		});
 	}
 });

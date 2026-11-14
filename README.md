@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://docs.fuutustack.com/docs">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
+  💬 Community: sign in at <a href="https://app.fuutustack.com">app.fuutustack.com</a> (Support) · <a href="https://docs.fuutustack.com/docs">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
 </p>
 
 Fuutu Stack is a source-available engineering system for building B2B SaaS in TypeScript: a production-ready Next.js monorepo with tests, CI, visual regression, logs, security and an agent setup with the Fuutu MCP. The full kit is free for companies with up to 10 people and up to $250k annual revenue; MCP Plus adds rules, full skills and automatic versioning; larger companies need an Enterprise license (€2,000/year).

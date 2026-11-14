@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppPageMetadataFields } from "../../../../apps/marketing/src/lib/extensions";
 
 /**
  * App-owned marketing SEO and page-chrome extensions (`app-marketing.tsx`):
@@ -150,6 +151,25 @@ describe("page metadata", () => {
 		});
 	});
 
+	it("sets robots per page; kit pages set none, so the app value stands alone", async () => {
+		const noindex = {
+			robots: { index: false, follow: true },
+		} satisfies AppPageMetadataFields;
+		expect(await withAppMetadata(kit, noindex, "en")).toEqual({
+			...kit,
+			robots: { index: false, follow: true },
+		});
+		expect(
+			await withAppMetadata(
+				kit,
+				({ slug }: { locale: string; slug: string }) =>
+					slug === "imprint" ? { robots: "noindex" } : {},
+				"en",
+				{ slug: "privacy" },
+			),
+		).toEqual(kit);
+	});
+
 	it("passes extra page context (the legal slug) to a function override", async () => {
 		const result = await withAppMetadata(
 			kit,
@@ -177,6 +197,14 @@ describe("page metadata", () => {
 			read("apps/marketing/src/app/(marketing)/[locale]/legal/[slug]/page.tsx"),
 		).toMatch(
 			/withAppMetadata\(\s*\{[\s\S]*?\},\s*appMarketing\.metadata\?\.legal,\s*locale,\s*\{ slug \},?\s*\)/,
+		);
+	});
+
+	it("blog post pages pass their kit metadata through the app override, with the slug", () => {
+		expect(
+			read("apps/marketing/src/app/(marketing)/[locale]/blog/[slug]/page.tsx"),
+		).toMatch(
+			/withAppMetadata\(\s*\{[\s\S]*?\},\s*appMarketing\.metadata\?\.blogPost,\s*locale,\s*\{ slug \},?\s*\)/,
 		);
 	});
 
@@ -368,6 +396,71 @@ describe("sitemap", () => {
 			sitemapRoutes: [{ path: "/support" }, { path: "/support" }],
 		};
 		expect(() => sitemap()).toThrow(/duplicate sitemap path "\/support"/);
+	});
+
+	it("drops the entries the app excludes — kit pages, legal routes, posts and app routes", () => {
+		const exclude = vi.fn(
+			(route: { path: string; kind: string }) =>
+				route.kind === "legal" ||
+				route.path === "/blog/hello" ||
+				route.path === "/changelog" ||
+				route.path === "/sponsors",
+		);
+		app.appMarketing = {
+			sitemapExclude: exclude,
+			sitemapRoutes: [{ path: "/support" }, { path: "/sponsors" }],
+		};
+		expect(sitemap()).toEqual([
+			...page("", 1),
+			...page("/pricing", 0.7),
+			...page("/blog", 0.7),
+			...page("/contact", 0.7),
+			...page("/support", 0.7),
+		]);
+		expect(exclude).toHaveBeenCalledWith({
+			path: "/legal/privacy",
+			locale: "de",
+			kind: "legal",
+			lastModified: NOW,
+			changeFrequency: "weekly",
+			priority: 0.7,
+		});
+		expect(exclude).toHaveBeenCalledWith(
+			expect.objectContaining({ path: "/blog/hello", kind: "blog" }),
+		);
+	});
+
+	it("drops an excluded locale from the hreflang alternates of the entries it keeps", () => {
+		app.appMarketing = {
+			sitemapExclude: (route: { path: string; locale: string }) =>
+				route.path === "/pricing" && route.locale === "de",
+		};
+		const pricing = sitemap().filter((e) => e.url.endsWith("/pricing"));
+		expect(pricing).toEqual([
+			{
+				url: "https://site.test/pricing",
+				lastModified: NOW,
+				changeFrequency: "weekly",
+				priority: 0.7,
+				alternates: { languages: { en: "https://site.test/pricing" } },
+			},
+		]);
+	});
+
+	it("never passes an excluded entry to the per-route hook", () => {
+		const hook = vi.fn((_route: unknown) => undefined);
+		app.appMarketing = {
+			sitemapExclude: (route: { kind: string }) => route.kind !== "legal",
+			sitemap: hook,
+		};
+		expect(sitemap().map((e) => e.url)).toEqual([
+			"https://site.test/legal/privacy",
+			"https://site.test/de/legal/privacy",
+		]);
+		expect(hook.mock.calls.map(([route]) => route)).toEqual([
+			expect.objectContaining({ path: "/legal/privacy", locale: "en" }),
+			expect.objectContaining({ path: "/legal/privacy", locale: "de" }),
+		]);
 	});
 
 	it("applies the app's per-route values over the kit defaults", () => {
