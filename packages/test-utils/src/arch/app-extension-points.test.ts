@@ -116,6 +116,7 @@ const EXTENSION_POINTS: {
 			"apps/docs/src/app/llms-full.txt/route.ts",
 			"apps/docs/src/app/og/docs/[...slug]/route.tsx",
 			"apps/docs/src/app/sitemap.ts",
+			"apps/docs/src/app/robots.ts",
 		].map((file) => ({
 			file,
 			import: /\{ appDocs \} from "(\.\/|@\/)app-docs"/,
@@ -144,6 +145,7 @@ const EXTENSION_POINTS: {
 			"apps/marketing/src/app/(marketing)/[locale]/pricing/page.tsx",
 			"apps/marketing/src/modules/marketing/pricing/index.ts",
 			"apps/marketing/src/app/sitemap.ts",
+			"apps/marketing/src/app/robots.ts",
 		].map((file) => ({
 			file,
 			import: /\{ appMarketing \} from "@\/app-marketing"/,

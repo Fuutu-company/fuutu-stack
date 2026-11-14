@@ -10,8 +10,8 @@ export default function ChangelogV100() {
 				</li>
 				<li>
 					App extension points: <code>app-*.ts(x)</code> files for navigation,
-					onboarding, slots, marketing, docs, seed data and E2E exclusions —
-					customise without editing kit files, merge kit updates cleanly.
+					onboarding, slots and docs — customise without editing kit files,
+					merge kit updates cleanly.
 				</li>
 				<li>Multi-scope API keys: one key can carry several scopes.</li>
 				<li>

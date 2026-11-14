@@ -4,6 +4,7 @@ import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { processMarkdown } from "@/lib/app-docs-hooks";
 import { i18n } from "@/lib/i18n";
 import { openapi } from "@/lib/openapi";
+import { openapiLLMText } from "@/lib/openapi-llm-text";
 
 export const source = loader(
 	{
@@ -51,7 +52,11 @@ export async function getLLMText(
 
 async function kitLLMText(page: InferPageType<typeof source>) {
 	if (page.type === "openapi") {
-		return `# ${page.data.title}\n\n${page.data.description ?? ""}`;
+		return openapiLLMText({
+			title: page.data.title ?? "",
+			description: page.data.description,
+			props: page.data.getOpenAPIPageProps(),
+		});
 	}
 
 	const processed = await page.data.getText("processed");

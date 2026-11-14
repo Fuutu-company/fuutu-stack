@@ -19,10 +19,28 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { isAiCreditsExhausted } from "@/lib/api-error";
 import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { client, orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "chat-layout" });
+
+/** Text chunks as UTF-8 bytes; cancelling the stream stops the iterator. */
+function textByteStream(
+	chunks: AsyncIteratorObject<string, unknown, unknown>,
+): ReadableStream<Uint8Array> {
+	const encoder = new TextEncoder();
+	return new ReadableStream<Uint8Array>({
+		async pull(controller) {
+			const { done, value } = await chunks.next();
+			if (done) controller.close();
+			else controller.enqueue(encoder.encode(value));
+		},
+		async cancel() {
+			await chunks.return?.();
+		},
+	});
+}
 
 type Conversation = {
 	id: string;
@@ -153,29 +171,13 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 	const sendMessageMutation = useMutation({
 		mutationFn: async (content: string) => {
 			if (!activeConversationId) return null;
-			// TECH DEBT: raw fetch bypasses oRPC type safety — planned migration to oRPC SSE. Server-side validation via streamMessageSchema is the security boundary.
-			const response = await fetch("/api/rpc/chat/messages/stream", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({
-					json: {
-						conversationId: activeConversationId,
-						content,
-					},
-				}),
+			// oRPC streams the reply as an event iterator of text chunks;
+			// ChatStreamingText reads it as a byte stream.
+			const chunks = await client.chat.messages.stream({
+				conversationId: activeConversationId,
+				content,
 			});
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
-			}
-			const contentType = response.headers.get("content-type");
-			if (contentType && !contentType.includes("text/plain")) {
-				throw new Error(`Unexpected content-type: ${contentType}`);
-			}
-			if (!response.body) {
-				throw new Error("No response body");
-			}
-			return response.body as ReadableStream<Uint8Array>;
+			return textByteStream(chunks);
 		},
 		onSuccess: (body) => {
 			if (body) {
@@ -184,13 +186,18 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 		},
 		onError: (error) => {
 			log.error("send message failed", { error });
-			toast.error(t("sendError"));
+			toast.error(
+				isAiCreditsExhausted(error) ? t("creditsExhausted") : t("sendError"),
+			);
 		},
 	});
 
 	const handleStreamComplete = useCallback(
-		(fullText: string) => {
+		(fullText: string, error?: unknown) => {
 			setStream(null);
+			// A failed stream keeps its partial text (the server saved it too)
+			// but must not pass for a complete answer.
+			if (error) toast.error(t("sendError"));
 			if (activeConversationId && fullText) {
 				setMessages((prev) => [
 					...prev,
@@ -208,7 +215,7 @@ export function ChatLayout({ slug }: { slug?: string } = {}) {
 				});
 			}
 		},
-		[activeConversationId, queryClient, conversationsInput],
+		[activeConversationId, queryClient, conversationsInput, t],
 	);
 
 	const handleSend = useCallback(

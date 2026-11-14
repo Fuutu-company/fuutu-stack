@@ -14,7 +14,7 @@ interface DocsLayoutProps extends PropsWithChildren {
 export default async function Layout({ children, params }: DocsLayoutProps) {
 	const { locale } = await params;
 	setRequestLocale(locale);
-	const { SidebarBanner } = appDocs;
+	const { SidebarBanner, layoutSlots } = appDocs;
 
 	return (
 		<DocsLayout
@@ -27,6 +27,7 @@ export default async function Layout({ children, params }: DocsLayoutProps) {
 				: {})}
 			slots={{
 				languageSelect: { root: LanguageSelect, text: LanguageSelectText },
+				...layoutSlots,
 			}}
 		>
 			{children}

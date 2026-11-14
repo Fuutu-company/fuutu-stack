@@ -155,7 +155,7 @@
 				},
 				{
 					"q": "What are AI credits, and what happens when they run out?",
-					"a": "Every plan includes a monthly AI credit allowance that resets each month. If you use it up, the assistant pauses and the rest of the app keeps working. Top up credits or move to a bigger plan to carry on right away."
+					"a": "Every plan includes a monthly AI credit allowance that resets each month. If you use it up, the assistant pauses, unless your plan allows overage — then it keeps going and the overage is tracked. The rest of the app keeps working either way. Top up credits or move to a bigger plan to carry on right away."
 				},
 				{
 					"q": "Which languages does it speak?",

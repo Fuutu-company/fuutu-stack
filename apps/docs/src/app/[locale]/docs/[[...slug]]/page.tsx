@@ -13,12 +13,40 @@ import { appDocs } from "@/app-docs";
 import { LLMCopyButton, ViewOptions } from "@/components/ai/page-actions";
 import { OpenAPIPage } from "@/components/openapi/api-page";
 import { resolveOgImageUrl, resolveSourceUrl } from "@/lib/app-docs-hooks";
+import type { DocsPage as DocsPageData } from "@/lib/extensions";
 import { docsPageMetadata } from "@/lib/page-metadata";
 import { getPageImage, source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
 interface PageProps {
 	params: Promise<{ locale: string; slug?: string[] }>;
+}
+
+/** Copy Markdown / Open, then the app's `PageActions` — MDX and OpenAPI pages. */
+function DocsPageActions({
+	page,
+	locale,
+}: {
+	page: DocsPageData;
+	locale: string;
+}) {
+	const { PageActions } = appDocs;
+	return (
+		<div className="flex flex-row items-center gap-2 border-b pb-6">
+			<LLMCopyButton markdownUrl={`${page.url}.mdx`} />
+			<ViewOptions
+				markdownUrl={`${page.url}.mdx`}
+				githubUrl={resolveSourceUrl(page, appDocs.sourceUrl)}
+			/>
+			{PageActions && (
+				<PageActions
+					url={page.url}
+					markdownUrl={`${page.url}.mdx`}
+					locale={locale}
+				/>
+			)}
+		</div>
+	);
 }
 
 export default async function Page({ params }: PageProps) {
@@ -32,7 +60,10 @@ export default async function Page({ params }: PageProps) {
 		return (
 			<DocsPage full>
 				<DocsTitle>{page.data.title}</DocsTitle>
-				<DocsDescription>{page.data.description}</DocsDescription>
+				<DocsDescription className="mb-0">
+					{page.data.description}
+				</DocsDescription>
+				<DocsPageActions page={page} locale={locale} />
 				<DocsBody>
 					<OpenAPIPage {...page.data.getOpenAPIPageProps()} />
 				</DocsBody>
@@ -41,7 +72,6 @@ export default async function Page({ params }: PageProps) {
 	}
 
 	const MDX = page.data.body;
-	const { PageActions } = appDocs;
 
 	return (
 		<DocsPage toc={page.data.toc} full={page.data.full}>
@@ -49,20 +79,7 @@ export default async function Page({ params }: PageProps) {
 			<DocsDescription className="mb-0">
 				{page.data.description}
 			</DocsDescription>
-			<div className="flex flex-row items-center gap-2 border-b pb-6">
-				<LLMCopyButton markdownUrl={`${page.url}.mdx`} />
-				<ViewOptions
-					markdownUrl={`${page.url}.mdx`}
-					githubUrl={resolveSourceUrl(page, appDocs.sourceUrl)}
-				/>
-				{PageActions && (
-					<PageActions
-						url={page.url}
-						markdownUrl={`${page.url}.mdx`}
-						locale={locale}
-					/>
-				)}
-			</div>
+			<DocsPageActions page={page} locale={locale} />
 			<DocsBody>
 				<MDX
 					components={getMDXComponents({

@@ -11,14 +11,16 @@ const KIT_REPO = "https://github.com/Fuutu-company/fuutu-stack/blob/main";
 
 /**
  * "Open in GitHub" target: kit GitHub URL of the page file (under the
- * content dir), the app's URL, or `null` = no link.
+ * content dir), the app's URL, or `null` = no link. Generated OpenAPI
+ * pages have no content file: no kit link.
  */
-export function resolveSourceUrl<Page extends { path: string }>(
+export function resolveSourceUrl<Page extends { path: string; type?: string }>(
 	page: Page,
 	sourceUrl: ((page: Page) => string | null) | null | undefined,
 ): string | null {
 	if (sourceUrl === null) return null;
 	if (sourceUrl) return sourceUrl(page);
+	if (page.type === "openapi") return null;
 	return `${KIT_REPO}/apps/docs/${docsContentDir(appDocsSource)}/${page.path}`;
 }
 
@@ -40,4 +42,19 @@ export function resolveOgImageUrl<Page>(
 	hook: ((page: Page) => string) | undefined,
 ): string {
 	return hook ? hook(page) : kitUrl;
+}
+
+/**
+ * Fonts for the OG image (`appDocs.ogImage.fonts`): a list, or a loader
+ * called per image request (read font files lazily). Unset: none — the
+ * `next/og` default font.
+ */
+export async function resolveOgFonts<Font>(
+	fonts:
+		| readonly Font[]
+		| (() => readonly Font[] | Promise<readonly Font[]>)
+		| undefined,
+): Promise<Font[] | undefined> {
+	if (!fonts) return undefined;
+	return [...(typeof fonts === "function" ? await fonts() : fonts)];
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { readTextStream } from "@app/chat/lib/read-text-stream";
 import { createLogger } from "@fuutu/logs";
 import { useEffect, useRef, useState } from "react";
 
@@ -7,7 +8,8 @@ const log = createLogger({ scope: "chat-stream" });
 
 type ChatStreamingTextProps = {
 	stream: ReadableStream<Uint8Array> | null;
-	onComplete: (fullText: string) => void;
+	/** The reply text — with the error when the stream failed mid-way. */
+	onComplete: (fullText: string, error?: unknown) => void;
 };
 
 export function ChatStreamingText({
@@ -21,49 +23,17 @@ export function ChatStreamingText({
 		if (!stream) return;
 		setText("");
 		completedRef.current = false;
-
-		let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-		try {
-			reader = stream.getReader();
-		} catch {
-			return;
-		}
-		const decoder = new TextDecoder();
-		let full = "";
-		let cancelled = false;
-
-		async function pump(): Promise<void> {
-			if (!reader) return;
-			try {
-				const { done, value } = await reader.read();
-				if (cancelled) return;
-				if (done) {
-					if (!completedRef.current) {
-						completedRef.current = true;
-						onComplete(full);
-					}
-					return;
-				}
-				full += decoder.decode(value, { stream: true });
-				setText(full);
-				await pump();
-			} catch (e) {
-				if (cancelled) return;
-				log.error("stream pump failed", { err: e });
+		// StrictMode-safe reader (dev re-runs this effect once).
+		return readTextStream(stream, {
+			onText: setText,
+			onDone: (full, error) => {
+				if (error) log.error("stream pump failed", { err: error });
 				if (!completedRef.current) {
 					completedRef.current = true;
-					onComplete(full);
+					onComplete(full, error);
 				}
-			}
-		}
-		void pump();
-
-		return () => {
-			cancelled = true;
-			reader?.cancel().catch((err) => {
-				log.warn("stream reader cancelled", { err });
-			});
-		};
+			},
+		});
 	}, [stream, onComplete]);
 
 	return (

@@ -250,10 +250,10 @@ jobs:
           case "$head_msg" in
             chore\(visual\)*)
               echo "mode=compare" >> "$GITHUB_OUTPUT"
-              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --project=chromium --project=mobile-safari
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --project=chromium --project=mobile-safari
               ;;
             *)
-              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots --project=chromium --project=mobile-safari
               if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
                 echo "changed=1" >> $GITHUB_OUTPUT
               fi
@@ -289,13 +289,13 @@ jobs:
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
-        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots --project=chromium --project=mobile-safari
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
       - name: Update baselines (merge to main — all browsers)
         if: github.event_name == 'push' && github.ref_name == 'main'
-        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots
+        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots
         env:
           PLAYWRIGHT_USE_PROD: "1"
 

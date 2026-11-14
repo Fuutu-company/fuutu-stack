@@ -76,3 +76,25 @@ describe("OpenAPI spec (/api/spec.json)", () => {
 		}
 	});
 });
+
+describe("OpenAPI spec: AI chat streams", () => {
+	it.each(["/chat/messages/stream", "/ai/chat"])(
+		"describes %s as an event stream of text chunks",
+		async (path) => {
+			const spec = await fetchSpec();
+			const operation = (
+				spec.paths as Record<
+					string,
+					{ post?: { responses?: Record<string, { content?: unknown }> } }
+				>
+			)[path]?.post;
+			const content = operation?.responses?.["200"]?.content as
+				| Record<string, { schema?: unknown }>
+				| undefined;
+			expect(Object.keys(content ?? {})).toEqual(["text/event-stream"]);
+			expect(JSON.stringify(content?.["text/event-stream"]?.schema)).toContain(
+				'"type":"string"',
+			);
+		},
+	);
+});

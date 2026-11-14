@@ -4,6 +4,8 @@ import { PageIntro } from "@shared/components/page-intro";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { appMarketing } from "@/app-marketing";
+import { withAppMetadata } from "@/lib/page-metadata";
 
 interface LegalPageProps {
 	params: Promise<{ locale: string; slug: string }>;
@@ -22,10 +24,15 @@ export async function generateMetadata({
 		const t = await getTranslations({ locale, namespace: "notFound" });
 		return { title: t("title") };
 	}
-	return {
-		title: doc.frontmatter.title,
-		description: `${doc.frontmatter.title} — ${doc.frontmatter.updatedAt}`,
-	};
+	return withAppMetadata(
+		{
+			title: doc.frontmatter.title,
+			description: `${doc.frontmatter.title} — ${doc.frontmatter.updatedAt}`,
+		},
+		appMarketing.metadata?.legal,
+		locale,
+		{ slug },
+	);
 }
 
 export default async function LegalPage({ params }: LegalPageProps) {

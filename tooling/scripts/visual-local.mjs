@@ -232,7 +232,9 @@ async function nativeApp(app) {
 			"exec",
 			"playwright",
 			"test",
-			"tests/visual.spec.ts",
+			// By title, like CI — app-owned visual specs run too.
+			"--grep",
+			"visual regression",
 			"--update-snapshots",
 			"--project=chromium",
 			"--reporter=list",

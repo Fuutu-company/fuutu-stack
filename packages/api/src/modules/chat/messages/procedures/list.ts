@@ -3,6 +3,7 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { permissionProcedure } from "../../../../orpc/procedures";
+import { requireConversationAccess } from "../../conversation-access";
 import { conversationIdSchema } from "../../shared";
 
 const listMessagesSchema = conversationIdSchema.extend({
@@ -17,10 +18,16 @@ export const listMessagesProcedure = permissionProcedure(PERMISSIONS.CHAT.VIEW)
 		tags: ["Chat"],
 		summary: "List messages",
 		description:
-			"Returns paginated messages in a conversation. Only the conversation owner can access.",
+			"Returns paginated messages in a conversation. Only the conversation owner can access; an org conversation also requires current membership of the organization.",
 	})
 	.input(listMessagesSchema)
 	.handler(async ({ input, context }) => {
+		await requireConversationAccess(
+			input.conversationId,
+			context.user.id,
+			PERMISSIONS.CHAT.VIEW,
+			context,
+		);
 		const skip = (input.page - 1) * input.limit;
 		// Both queries enforce ownership themselves and return null for a
 		// missing or foreign conversation — no separate check needed.

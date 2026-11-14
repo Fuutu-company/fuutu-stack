@@ -56,3 +56,19 @@ export function isPaymentsUnavailable(err: unknown): boolean {
 		(err.code === "SERVICE_UNAVAILABLE" || err.code === "NOT_IMPLEMENTED")
 	);
 }
+
+/**
+ * True when the API refused an AI request because the caller's AI credit
+ * meter is used up (`PAYMENT_REQUIRED`, data `{ meterKey: "ai_tokens" }`).
+ */
+export function isAiCreditsExhausted(err: unknown): boolean {
+	if (!(err instanceof ORPCError) || err.code !== "PAYMENT_REQUIRED") {
+		return false;
+	}
+	const data: unknown = err.data;
+	return (
+		typeof data === "object" &&
+		data !== null &&
+		(data as Record<string, unknown>).meterKey === "ai_tokens"
+	);
+}

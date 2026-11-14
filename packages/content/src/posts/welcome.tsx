@@ -23,13 +23,16 @@ export default function WelcomePost() {
 				The kit ships with auth, payments, mail, storage, audit logging,
 				rate-limiting, RBAC, i18n, file-based content collections and Playwright
 				E2E tests — all wired against provider interfaces so you can swap any
-				external service with a single config change.
+				external service with a single config change. Background jobs run on the
+				built-in cron runner (<code>@fuutu/cron</code>, triggered through{" "}
+				<code>/api/cron</code>), and errors can drain to Sentry or Axiom through{" "}
+				<code>@fuutu/logs</code>.
 			</p>
-			<h2>What's not inside (yet)</h2>
+			<h2>What's not inside</h2>
 			<p>
-				Background jobs, real-time sockets, error-tracking and feature flags are
-				scheduled for v1.1. The provider interfaces are in place; only the
-				active adapters are missing.
+				Real-time sockets and a feature-flag service are not part of the kit —
+				add them behind your own provider interface when your product needs
+				them.
 			</p>
 			<h2>Replace this post</h2>
 			<p>

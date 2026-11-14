@@ -137,6 +137,49 @@ describe("page metadata", () => {
 		});
 	});
 
+	it("merges twitter one level deep, like openGraph", async () => {
+		expect(
+			await withAppMetadata(
+				{ ...kit, twitter: { card: "summary_large_image", site: "@kit" } },
+				{ twitter: { title: "App card" } },
+				"en",
+			),
+		).toEqual({
+			...kit,
+			twitter: { card: "summary_large_image", site: "@kit", title: "App card" },
+		});
+	});
+
+	it("passes extra page context (the legal slug) to a function override", async () => {
+		const result = await withAppMetadata(
+			kit,
+			({ locale, slug }: { locale: string; slug: string }) => ({
+				title: `${slug} (${locale})`,
+			}),
+			"de",
+			{ slug: "privacy" },
+		);
+		expect(result.title).toBe("privacy (de)");
+	});
+
+	it("blog, changelog, contact and legal pages pass their kit metadata through the app override", () => {
+		for (const key of ["blog", "changelog", "contact"]) {
+			expect(
+				read(`apps/marketing/src/app/(marketing)/[locale]/${key}/page.tsx`),
+				key,
+			).toMatch(
+				new RegExp(
+					`withAppMetadata\\(\\s*\\{[\\s\\S]*?\\},\\s*appMarketing\\.metadata\\?\\.${key},\\s*locale,?\\s*\\)`,
+				),
+			);
+		}
+		expect(
+			read("apps/marketing/src/app/(marketing)/[locale]/legal/[slug]/page.tsx"),
+		).toMatch(
+			/withAppMetadata\(\s*\{[\s\S]*?\},\s*appMarketing\.metadata\?\.legal,\s*locale,\s*\{ slug \},?\s*\)/,
+		);
+	});
+
 	it("home and pricing pages pass their kit metadata through the app override", () => {
 		expect(
 			read("apps/marketing/src/app/(marketing)/[locale]/page.tsx"),

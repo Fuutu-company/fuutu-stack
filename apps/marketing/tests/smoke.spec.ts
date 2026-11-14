@@ -162,6 +162,21 @@ test.describe("navigation", () => {
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 	});
 
+	// Regression: in production a `loading.tsx` above a `[slug]` page started
+	// the stream (status 200) before the page's `notFound()` ran.
+	for (const path of [
+		"/blog/this-post-does-not-exist",
+		"/legal/this-document-does-not-exist",
+	]) {
+		test(`unknown slug ${path} answers 404`, async ({ page }) => {
+			const res = await page.goto(`/${DEFAULT_LOCALE}${path}`);
+			expect(res?.status()).toBe(404);
+			await expect(
+				page.getByRole("heading", { level: 1 }).first(),
+			).toBeVisible();
+		});
+	}
+
 	test("404 page logs no console errors", async ({ page }) => {
 		const errors: string[] = [];
 		page.on("console", (msg) => {

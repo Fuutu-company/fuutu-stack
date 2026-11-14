@@ -59,6 +59,20 @@ describe("docs source link", () => {
 	});
 });
 
+describe("docs source link on OpenAPI pages", () => {
+	const apiPage = { ...page, type: "openapi", path: "virtual/api.json" };
+
+	it("has no default link (the page is generated, not a content file)", () => {
+		expect(hooks.resolveSourceUrl(apiPage, undefined)).toBeNull();
+	});
+
+	it("still uses the app's URL when one is set", () => {
+		expect(
+			hooks.resolveSourceUrl(apiPage, () => "https://git.example.test/api"),
+		).toBe("https://git.example.test/api");
+	});
+});
+
 describe("docs content dir", () => {
 	it("defaults to content/docs and takes the app override", () => {
 		expect(config.docsContentDir({})).toBe("content/docs");
@@ -90,6 +104,18 @@ describe("kit wiring", () => {
 		const cfg = read("apps/docs/source.config.ts");
 		expect(cfg).toMatch(/dir: docsContentDir\(appDocsSource\)/);
 		expect(cfg).toMatch(/\.\.\.appDocsSource\.frontmatter,?\s*\}\)/);
+	});
+
+	it("OpenAPI pages render the same page-actions row as MDX pages", () => {
+		const docsPage = read(
+			"apps/docs/src/app/[locale]/docs/[[...slug]]/page.tsx",
+		);
+		const openapi = docsPage.slice(
+			docsPage.indexOf('if (page.type === "openapi")'),
+			docsPage.indexOf("const MDX = page.data.body;"),
+		);
+		expect(openapi).toMatch(/<DocsPageActions\b[^>]*page=\{page\}/);
+		expect(docsPage.match(/<DocsPageActions\b/g)).toHaveLength(2);
 	});
 
 	it("the docs page and getLLMText go through the hooks", () => {

@@ -10,6 +10,8 @@
   <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://docs.fuutustack.com/docs">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
 </p>
 
+Fuutu Stack is a source-available TypeScript SaaS starter kit by Fuutu for building B2B products with AI coding agents. It ships a production-ready Next.js monorepo (auth, organizations, billing, API, i18n, tests) plus an agent setup (AGENTS.md, skills, an 8-role agent team) and the Fuutu MCP server with version-matched docs. It is free for companies with headcount ≤ 10 (employees and long-term contractors) and ≤ $250k annual revenue; larger companies need an Enterprise license (€2,000/year).
+
 ---
 
 ## Quick Start
@@ -61,13 +63,13 @@ Two independent identities. `KIT_NAME` and `KIT_VERSION` (`packages/config/index
 
 ## License
 
-Fuutu Stack is licensed under the **Fuutu Business License** (source-available). **Free for teams with ≤ 10 employees and ≤ $250k annual revenue.** Once you exceed either threshold, you need an Enterprise License.
+Fuutu Stack is licensed under the **Fuutu Business License** (source-available). **Free for teams with headcount ≤ 10 and ≤ $250k annual revenue.** Once you exceed either threshold, you need an Enterprise License.
 
 | Tier | Price | Who |
 |---|---|---|
-| **Small teams** | Free | ≤ 10 employees AND ≤ $250k annual revenue |
+| **Free** | Free | Headcount ≤ 10 AND ≤ $250k annual revenue |
 | **MCP Plus** | Subscription, billed yearly | Anyone who wants MCP rules, full skills + versioning API |
-| **Enterprise** | Yearly | Above either small-team threshold |
+| **Enterprise** | €2,000/year | Above either Free-tier threshold |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
 

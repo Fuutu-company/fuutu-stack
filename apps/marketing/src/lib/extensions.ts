@@ -46,22 +46,25 @@ export interface AppHomeSections {
 /** Metadata fields an app may set for a kit page. */
 export type AppPageMetadataFields = Pick<
 	Metadata,
-	"title" | "description" | "alternates" | "openGraph"
+	"title" | "description" | "alternates" | "openGraph" | "twitter"
 >;
 
 /**
  * Metadata for a kit page, merged over the kit's `generateMetadata` result:
- * app fields win, `undefined` keeps the kit value, `alternates` and
- * `openGraph` merge one level deep. A page-level `openGraph` replaces the
- * layout's (Next merges metadata per top-level key) — repeat `images` if
- * you set it. A function gets the request locale (translate with
- * `getTranslations({ locale, namespace })`).
+ * app fields win, `undefined` keeps the kit value, `alternates`,
+ * `openGraph` and `twitter` merge one level deep. A page-level `openGraph`
+ * / `twitter` replaces the layout's (Next merges metadata per top-level
+ * key) — repeat `images` if you set it. A function gets the request locale
+ * (translate with `getTranslations({ locale, namespace })`) and, per page,
+ * more context (legal pages: `slug`).
  */
-export type AppPageMetadata =
+export type AppPageMetadata<
+	Context extends { locale: string } = { locale: string },
+> =
 	| AppPageMetadataFields
-	| ((context: {
-			locale: string;
-	  }) => AppPageMetadataFields | Promise<AppPageMetadataFields>);
+	| ((
+			context: Context,
+	  ) => AppPageMetadataFields | Promise<AppPageMetadataFields>);
 
 /** One sitemap entry before the app hook, kit defaults filled in. */
 export interface SitemapRoute {
@@ -96,6 +99,29 @@ export type SitemapRouteOverride = Partial<
 	Pick<SitemapRoute, "lastModified" | "changeFrequency" | "priority">
 >;
 
+/**
+ * `/robots.txt` over the kit's (`*` may crawl `/`, sitemap
+ * `<site>/sitemap.xml`). An object replaces each field it sets: `rules`
+ * as a whole (one group or a list of `{ userAgent, allow, disallow,
+ * crawlDelay }` groups), `sitemap` (one URL or a list), `host`. A
+ * function gets the kit result and returns the final one.
+ */
+export type AppRobots =
+	| Partial<MetadataRoute.Robots>
+	| ((kit: MetadataRoute.Robots) => MetadataRoute.Robots);
+
+/**
+ * A section link on the 404 page (`appMarketing.notFoundLinks`): `href`
+ * an in-app path (locale-prefixed automatically) or an absolute URL with
+ * `external: true`; `labelKey` a full marketing translation key (like
+ * footer links, e.g. `nav.blog`).
+ */
+export interface AppNotFoundLink {
+	href: string;
+	labelKey: string;
+	external?: boolean;
+}
+
 export interface AppMarketing {
 	/** Home page (`/`) composition. */
 	homeSections?: AppHomeSections;
@@ -107,10 +133,18 @@ export interface AppMarketing {
 		Home?: ComponentType;
 		Page?: ComponentType;
 	};
-	/** Page metadata over the kit's: `home` = `/`, `pricing` = `/pricing`. */
+	/**
+	 * Page metadata over the kit's: `home` = `/`, `pricing` = `/pricing`,
+	 * `blog` = `/blog`, `changelog` = `/changelog`, `contact` = `/contact`,
+	 * `legal` = every `/legal/<slug>` page (the function form gets `slug`).
+	 */
 	metadata?: {
 		home?: AppPageMetadata;
 		pricing?: AppPageMetadata;
+		blog?: AppPageMetadata;
+		changelog?: AppPageMetadata;
+		contact?: AppPageMetadata;
+		legal?: AppPageMetadata<{ locale: string; slug: string }>;
 	};
 	/**
 	 * `/pricing` header: `{ title?, description? }` swaps the texts in the
@@ -143,4 +177,11 @@ export interface AppMarketing {
 	sitemapRoutes?:
 		| readonly AppSitemapRoute[]
 		| (() => readonly AppSitemapRoute[]);
+	/** `/robots.txt` rules, sitemap and host — see `AppRobots`. */
+	robots?: AppRobots;
+	/**
+	 * Section links under the home button on the 404 pages, in list order.
+	 * Unset or empty: only the kit's home button.
+	 */
+	notFoundLinks?: readonly AppNotFoundLink[];
 }

@@ -1,5 +1,7 @@
 import type {
+	AppFooter,
 	AppHeaderBrand,
+	AppNavDropdown,
 	AppNavDropdownItem,
 	AppNavItem,
 	FooterColumn,
@@ -57,3 +59,42 @@ export const appNavDropdownItems: readonly AppNavDropdownItem[] = [];
  * ```
  */
 export const appHeaderBrand: AppHeaderBrand = {};
+
+/**
+ * Top-level navbar dropdowns (a "Product" menu), `after` a nav item key
+ * (`home`, `features`, `pricing`, or an app item) or dropdown key
+ * (`resources`), appended when omitted. Labels resolve `nav.<key>`, items
+ * `nav.<item>` + `nav.descriptions.<item>`; `appNavDropdownItems` can add
+ * to them by `group`. A key that already exists throws.
+ *
+ * ```ts
+ * export const appNavDropdowns: AppNavDropdown[] = [
+ *   { key: "product", after: "features", items: [
+ *     { key: "agents", href: "/agents", icon: Bot },
+ *   ] },
+ * ];
+ * ```
+ */
+export const appNavDropdowns: readonly AppNavDropdown[] = [];
+
+/**
+ * Kit navbar entries to hide, by key: top-level items (`home`,
+ * `features`, `pricing`), dropdown groups (`resources`) or dropdown items
+ * (`blog`, `changelog`, `docs`). Applied after the app additions; an
+ * unknown key throws. Footer links are not affected.
+ *
+ * ```ts
+ * export const appNavRemove: readonly string[] = ["home", "features"];
+ * ```
+ */
+export const appNavRemove: readonly string[] = [];
+
+/**
+ * Footer overrides: `taglineKey` names an app-owned translation key for the
+ * line under the logo, so kit translation values stay untouched.
+ *
+ * ```ts
+ * export const appFooter: AppFooter = { taglineKey: "brand.footerTagline" };
+ * ```
+ */
+export const appFooter: AppFooter = {};

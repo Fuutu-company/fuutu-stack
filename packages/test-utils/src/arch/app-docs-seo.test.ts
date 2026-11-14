@@ -181,6 +181,25 @@ describe("docs OG image", () => {
 		).toBe("https://cdn.test/docs/a.png");
 	});
 
+	it("loads no fonts without a hook; takes a list or a (lazy) loader", async () => {
+		const font = { name: "Brand", data: new ArrayBuffer(8), weight: 700 };
+		expect(await hooks.resolveOgFonts(undefined)).toBeUndefined();
+		expect(await hooks.resolveOgFonts([font])).toEqual([font]);
+		const loader = vi.fn(async () => [font]);
+		expect(await hooks.resolveOgFonts(loader)).toEqual([font]);
+		expect(loader).toHaveBeenCalledTimes(1);
+	});
+
+	it("the OG route passes appDocs.ogImage.fonts to ImageResponse only when set", () => {
+		const route = read("apps/docs/src/app/og/docs/[...slug]/route.tsx");
+		expect(route).toMatch(
+			/const fonts = await resolveOgFonts\(appDocs\.ogImage\?\.fonts\);/,
+		);
+		expect(route).toMatch(
+			/width: 1200,\s*height: 630,\s*\.\.\.\(fonts \? \{ fonts \} : \{\}\),/,
+		);
+	});
+
 	it("the OG route renders appDocs.ogImage.Image in place of the fumadocs card", () => {
 		const route = read("apps/docs/src/app/og/docs/[...slug]/route.tsx");
 		expect(route).toMatch(/\{ appDocs \} from "@\/app-docs"/);

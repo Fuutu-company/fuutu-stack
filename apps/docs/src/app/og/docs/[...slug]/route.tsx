@@ -5,6 +5,7 @@ import { ImageResponse } from "next/og";
 
 import { appDocs } from "@/app-docs";
 import { defaultLocale, locales } from "@/i18n/config";
+import { resolveOgFonts } from "@/lib/app-docs-hooks";
 import { getPageImage, source } from "@/lib/source";
 
 export const revalidate = false;
@@ -24,6 +25,7 @@ export async function GET(
 	if (!page) notFound();
 
 	const Image = appDocs.ogImage?.Image;
+	const fonts = await resolveOgFonts(appDocs.ogImage?.fonts);
 	return new ImageResponse(
 		Image ? (
 			<Image
@@ -42,6 +44,7 @@ export async function GET(
 		{
 			width: 1200,
 			height: 630,
+			...(fonts ? { fonts } : {}),
 		},
 	);
 }

@@ -5,6 +5,8 @@ import { ArrowUpRight, GitBranch, Mail } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
+import { appMarketing } from "@/app-marketing";
+import { withAppMetadata } from "@/lib/page-metadata";
 
 interface ContactPageProps {
 	params: Promise<{ locale: string }>;
@@ -15,7 +17,11 @@ export async function generateMetadata({
 }: ContactPageProps): Promise<Metadata> {
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "contact" });
-	return { title: t("title"), description: t("description") };
+	return withAppMetadata(
+		{ title: t("title"), description: t("description") },
+		appMarketing.metadata?.contact,
+		locale,
+	);
 }
 
 function ContactCard({

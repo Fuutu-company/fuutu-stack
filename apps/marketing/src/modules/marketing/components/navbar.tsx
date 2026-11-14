@@ -21,6 +21,7 @@ import {
 	HEADER_BRAND,
 	NAV_DROPDOWNS,
 	NAV_ITEMS,
+	NAV_ORDER,
 	type NavDropdownItem,
 	type NavItem,
 } from "@/lib/site-links";
@@ -34,6 +35,10 @@ const DROPDOWN_GROUPS: Record<string, NavDropdownItem[]> = Object.fromEntries(
 );
 
 const DROPDOWN_ORDER = NAV_DROPDOWNS.map((group) => group.key);
+
+const ITEMS_BY_KEY: Record<string, NavItem> = Object.fromEntries(
+	NAV_ITEMS.map((item) => [item.key, item]),
+);
 
 function isActive(pathname: string, href: string, hash?: string): boolean {
 	if (href === "/") return pathname === "/" && !hash;
@@ -248,36 +253,40 @@ const NavLinks = memo(function NavLinks() {
 
 	return (
 		<div ref={navRef} className="hidden items-center gap-1 lg:flex">
-			{NAV_ITEMS.map((item) => (
-				<SiteLink
-					key={item.key}
-					item={item}
-					className={cn(
-						PILL_ITEM,
-						isActive(pathname, item.href, hash) ? PILL_ACTIVE : PILL_IDLE,
-					)}
-				>
-					{t(`nav.${item.key}`)}
-					{item.badgeKey && <NewBadge badgeKey={item.badgeKey} />}
-				</SiteLink>
-			))}
-
-			{DROPDOWN_ORDER.map((groupKey) => (
-				<MegaMenu
-					key={groupKey}
-					groupKey={groupKey}
-					items={DROPDOWN_GROUPS[groupKey]}
-					isOpen={openDropdown === groupKey}
-					active={isDropdownActive(pathname, DROPDOWN_GROUPS[groupKey], hash)}
-					onEnter={() => handleEnter(groupKey)}
-					onLeave={handleLeave}
-					onTriggerClick={() =>
-						setOpenDropdown((current) =>
-							current === groupKey ? null : groupKey,
-						)
-					}
-				/>
-			))}
+			{NAV_ORDER.map(({ kind, key }) => {
+				const item = ITEMS_BY_KEY[key];
+				if (kind === "item" && item) {
+					return (
+						<SiteLink
+							key={key}
+							item={item}
+							className={cn(
+								PILL_ITEM,
+								isActive(pathname, item.href, hash) ? PILL_ACTIVE : PILL_IDLE,
+							)}
+						>
+							{t(`nav.${key}`)}
+							{item.badgeKey && <NewBadge badgeKey={item.badgeKey} />}
+						</SiteLink>
+					);
+				}
+				const items = DROPDOWN_GROUPS[key];
+				if (kind !== "dropdown" || !items) return null;
+				return (
+					<MegaMenu
+						key={key}
+						groupKey={key}
+						items={items}
+						isOpen={openDropdown === key}
+						active={isDropdownActive(pathname, items, hash)}
+						onEnter={() => handleEnter(key)}
+						onLeave={handleLeave}
+						onTriggerClick={() =>
+							setOpenDropdown((current) => (current === key ? null : key))
+						}
+					/>
+				);
+			})}
 		</div>
 	);
 });

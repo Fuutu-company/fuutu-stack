@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@fuutu/ui";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
 	createContext,
@@ -91,6 +92,8 @@ export function ConsentBanner() {
 	const t = useTranslations("consent");
 	const { status, hydrated, grant, deny } = useConsent();
 	const bannerRef = useRef<HTMLDivElement>(null);
+	const spacerRef = useRef<HTMLDivElement>(null);
+	const pathname = usePathname();
 	const [reservedPx, setReservedPx] = useState(0);
 	// Defer the first paint until we've checked the consent cookie client-side —
 	// otherwise the banner flashes on reload for users who already decided.
@@ -99,7 +102,12 @@ export function ConsentBanner() {
 	// The banner floats over the bottom of the viewport. Reserve that strip
 	// while it is shown: `scroll-padding-bottom` keeps focused / scrolled-to
 	// elements (plan CTAs, form fields) above it, and the spacer below lets
-	// the end of the page scroll clear of it.
+	// the end of the page scroll clear of it. Pages that fit the viewport get
+	// no spacer: it would only add blank scroll room that disappears again
+	// once consent is given. The banner lives in the layout and survives
+	// client-side navigation, so the decision is redone whenever the page
+	// changes size (new route, late-loading content) or the route changes.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` only re-runs the measurement after a client-side navigation.
 	useEffect(() => {
 		const el = bannerRef.current;
 		if (!visible || !el) return;
@@ -112,25 +120,31 @@ export function ConsentBanner() {
 				0,
 				Math.ceil(window.innerHeight - el.getBoundingClientRect().top) + 1,
 			);
-			setReservedPx(px);
+			const pageHeight =
+				root.scrollHeight - (spacerRef.current?.offsetHeight ?? 0);
+			setReservedPx(pageHeight > window.innerHeight ? px : 0);
 			root.style.scrollPaddingBottom = `${px}px`;
 		};
 		update();
+		// The spacer's own height changes body/html too; `update` subtracts
+		// it, so the follow-up call settles on the same value.
 		const observer = new ResizeObserver(update);
 		observer.observe(el);
+		observer.observe(document.body);
+		observer.observe(root);
 		window.addEventListener("resize", update);
 		return () => {
 			observer.disconnect();
 			window.removeEventListener("resize", update);
 			root.style.scrollPaddingBottom = "";
 		};
-	}, [visible]);
+	}, [visible, pathname]);
 
 	if (!visible) return null;
 
 	return (
 		<>
-			<div aria-hidden="true" style={{ height: reservedPx }} />
+			<div ref={spacerRef} aria-hidden="true" style={{ height: reservedPx }} />
 			<div
 				ref={bannerRef}
 				role="dialog"

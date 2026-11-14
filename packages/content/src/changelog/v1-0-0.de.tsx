@@ -10,9 +10,8 @@ export default function ChangelogV100De() {
 				</li>
 				<li>
 					App-Erweiterungspunkte: <code>app-*.ts(x)</code>-Dateien für
-					Navigation, Onboarding, Slots, Marketing, Docs, Seed-Daten und
-					E2E-Ausnahmen — anpassen, ohne Kit-Dateien zu ändern, Kit-Updates
-					sauber mergen.
+					Navigation, Onboarding, Slots und Docs — anpassen, ohne Kit-Dateien zu
+					ändern, Kit-Updates sauber mergen.
 				</li>
 				<li>Multi-Scope-API-Keys: ein Key kann mehrere Scopes tragen.</li>
 				<li>

@@ -15,7 +15,7 @@ type ChatMessage = {
 type ChatMessageListProps = {
 	messages: ChatMessage[];
 	stream: ReadableStream<Uint8Array> | null;
-	onStreamComplete: (fullText: string) => void;
+	onStreamComplete: (fullText: string, error?: unknown) => void;
 };
 
 export function ChatMessageList({

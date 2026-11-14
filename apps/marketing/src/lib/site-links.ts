@@ -3,10 +3,13 @@ import type { LucideIcon } from "lucide-react";
 import { BookOpen, Rss, Terminal } from "lucide-react";
 import type { ComponentType } from "react";
 import {
+	appFooter,
 	appFooterColumns,
 	appHeaderBrand,
 	appNavDropdownItems,
+	appNavDropdowns,
 	appNavItems,
+	appNavRemove,
 } from "../app-site-links";
 import { urls } from "./urls";
 
@@ -67,6 +70,21 @@ export type AppHeaderBrand = {
 	After?: ComponentType;
 };
 
+/**
+ * App dropdown group (`app-site-links.ts`): a top-level navbar dropdown,
+ * `after` a nav item or dropdown key, or appended after the kit dropdowns.
+ */
+export type AppNavDropdown = NavDropdown & { after?: string };
+
+/** Top-level navbar entry: a link (`NAV_ITEMS`) or a dropdown (`NAV_DROPDOWNS`). */
+export type NavEntry = { kind: "item" | "dropdown"; key: string };
+
+/**
+ * Footer overrides (`app-site-links.ts`): `taglineKey` = full translation
+ * key of the line under the logo (an app-owned key; unset: `footer.tagline`).
+ */
+export type AppFooter = { taglineKey?: string };
+
 /** Navbar brand: the app's parts (`appHeaderBrand`), else the kit logo + name. */
 export const HEADER_BRAND: AppHeaderBrand = appHeaderBrand;
 
@@ -88,6 +106,16 @@ export const NAV_DROPDOWNS: NavDropdown[] = [
 		],
 	},
 ];
+
+/**
+ * Desktop navbar top level, left to right: `NAV_ITEMS`, then
+ * `NAV_DROPDOWNS` — app dropdowns may sit between items. The mobile menu
+ * lists the links first, then every dropdown group.
+ */
+export const NAV_ORDER: NavEntry[] = [];
+
+/** Translation key of the footer tagline. */
+export const FOOTER_TAGLINE_KEY = appFooter.taglineKey ?? "footer.tagline";
 
 /** Footer link columns (titles resolve `footer.<titleKey>`). */
 export const FOOTER_COLUMNS: FooterColumn[] = [
@@ -127,6 +155,38 @@ NAV_ITEMS.splice(
 		(item) => item.key,
 	),
 );
+NAV_ORDER.push(
+	...insertAfter<NavEntry>(
+		[
+			...NAV_ITEMS.map((item) => ({ kind: "item" as const, key: item.key })),
+			...NAV_DROPDOWNS.map((group) => ({
+				kind: "dropdown" as const,
+				key: group.key,
+			})),
+		],
+		appNavDropdowns.map(({ after, key }) => ({
+			after,
+			item: { kind: "dropdown", key },
+		})),
+		(entry) => entry.key,
+	),
+);
+const allDropdowns: NavDropdown[] = [
+	...NAV_DROPDOWNS,
+	...appNavDropdowns.map(({ after: _after, ...group }) => ({
+		...group,
+		items: [...group.items],
+	})),
+];
+NAV_DROPDOWNS.splice(
+	0,
+	NAV_DROPDOWNS.length,
+	...NAV_ORDER.flatMap((entry) =>
+		allDropdowns.filter(
+			(group) => entry.kind === "dropdown" && group.key === entry.key,
+		),
+	),
+);
 for (const extra of appNavDropdownItems) {
 	if (!NAV_DROPDOWNS.some((g) => g.key === extra.group)) {
 		throw new Error(
@@ -142,6 +202,28 @@ for (const group of NAV_DROPDOWNS) {
 			.map(({ group: _group, after, ...item }) => ({ after, item })),
 		(item) => item.key,
 	);
+}
+// Removals last, so app entries anchored on a removed key keep its spot.
+if (appNavRemove.length > 0) {
+	const remove = new Set(appNavRemove);
+	for (const key of remove) {
+		const known =
+			NAV_ORDER.some((entry) => entry.key === key) ||
+			NAV_DROPDOWNS.some((group) => group.items.some((i) => i.key === key));
+		if (!known) {
+			throw new Error(
+				`app-site-links: unknown nav key "${key}" in appNavRemove`,
+			);
+		}
+	}
+	for (const group of NAV_DROPDOWNS) {
+		group.items = group.items.filter((item) => !remove.has(item.key));
+	}
+	const keep = <T extends { key: string }>(list: T[]) =>
+		list.splice(0, list.length, ...list.filter((e) => !remove.has(e.key)));
+	keep(NAV_ITEMS);
+	keep(NAV_DROPDOWNS);
+	keep(NAV_ORDER);
 }
 for (const column of appFooterColumns) {
 	if (FOOTER_COLUMNS.some((c) => c.titleKey === column.titleKey)) {

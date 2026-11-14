@@ -19,6 +19,9 @@ const app = vi.hoisted(() => ({
 	appFooterColumns: [] as unknown[],
 	appNavDropdownItems: [] as unknown[],
 	appHeaderBrand: {} as Record<string, unknown>,
+	appNavDropdowns: [] as unknown[],
+	appNavRemove: [] as string[],
+	appFooter: {} as Record<string, unknown>,
 	appMarketing: {} as Record<string, unknown>,
 }));
 
@@ -34,6 +37,15 @@ vi.mock("../../../../apps/marketing/src/app-site-links", () => ({
 	},
 	get appHeaderBrand() {
 		return app.appHeaderBrand;
+	},
+	get appNavDropdowns() {
+		return app.appNavDropdowns;
+	},
+	get appNavRemove() {
+		return app.appNavRemove;
+	},
+	get appFooter() {
+		return app.appFooter;
 	},
 }));
 vi.mock("@/app-marketing", () => ({
@@ -70,6 +82,9 @@ beforeEach(() => {
 	app.appFooterColumns = [];
 	app.appNavDropdownItems = [];
 	app.appHeaderBrand = {};
+	app.appNavDropdowns = [];
+	app.appNavRemove = [];
+	app.appFooter = {};
 	app.appMarketing = {};
 	vi.resetModules();
 });
@@ -210,12 +225,118 @@ describe("site links", () => {
 		await expect(load()).rejects.toThrow(/duplicate key "blog"/);
 	});
 
+	const order = (links: { NAV_ORDER: { kind: string; key: string }[] }) =>
+		links.NAV_ORDER.map((e) => `${e.kind}:${e.key}`);
+
+	it("orders the top-level navbar as kit items, then kit dropdowns", async () => {
+		expect(order(await load())).toEqual([
+			"item:home",
+			"item:features",
+			"item:pricing",
+			"dropdown:resources",
+		]);
+	});
+
+	it("places app dropdown groups after a nav or dropdown key, or appended", async () => {
+		const Icon = () => null;
+		app.appNavDropdowns = [
+			{
+				key: "product",
+				after: "features",
+				items: [{ key: "agents", href: "/agents", icon: Icon }],
+			},
+			{ key: "company", items: [{ key: "about", href: "/about", icon: Icon }] },
+		];
+		app.appNavDropdownItems = [
+			{ group: "product", key: "compare", href: "/compare", icon: Icon },
+		];
+		const links = await load();
+		expect(order(links)).toEqual([
+			"item:home",
+			"item:features",
+			"dropdown:product",
+			"item:pricing",
+			"dropdown:resources",
+			"dropdown:company",
+		]);
+		// Same order for the mobile menu, which lists every group after the links.
+		expect(dropdownKeys(links)).toEqual([
+			["product", ["agents", "compare"]],
+			["resources", ["blog", "changelog", "docs"]],
+			["company", ["about"]],
+		]);
+	});
+
+	it("throws on an app dropdown reusing an existing key", async () => {
+		app.appNavDropdowns = [{ key: "pricing", items: [] }];
+		await expect(load()).rejects.toThrow(/duplicate key "pricing"/);
+	});
+
+	it("removes kit nav items, dropdown items and whole groups by key", async () => {
+		app.appNavRemove = ["home", "features", "changelog"];
+		let links = await load();
+		expect(links.NAV_ITEMS.map((i: { key: string }) => i.key)).toEqual([
+			"pricing",
+		]);
+		expect(order(links)).toEqual(["item:pricing", "dropdown:resources"]);
+		expect(dropdownKeys(links)).toEqual([["resources", ["blog", "docs"]]]);
+
+		vi.resetModules();
+		app.appNavRemove = ["resources"];
+		links = await load();
+		expect(order(links)).toEqual([
+			"item:home",
+			"item:features",
+			"item:pricing",
+		]);
+		expect(dropdownKeys(links)).toEqual([]);
+	});
+
+	it("keeps an app item anchored on a removed kit item at its position", async () => {
+		app.appNavItems = [{ key: "product", href: "/product", after: "features" }];
+		app.appNavRemove = ["features"];
+		const links = await load();
+		expect(links.NAV_ITEMS.map((i: { key: string }) => i.key)).toEqual([
+			"home",
+			"product",
+			"pricing",
+		]);
+	});
+
+	it("throws on a remove key that names nothing", async () => {
+		app.appNavRemove = ["feautres"];
+		await expect(load()).rejects.toThrow(/unknown nav key "feautres"/);
+	});
+
+	it("uses the kit footer tagline key unless the app names its own", async () => {
+		expect((await load()).FOOTER_TAGLINE_KEY).toBe("footer.tagline");
+		vi.resetModules();
+		app.appFooter = { taglineKey: "platform.footerTagline" };
+		expect((await load()).FOOTER_TAGLINE_KEY).toBe("platform.footerTagline");
+	});
+
 	it("exposes the app header brand to the navbar (kit brand when unset)", async () => {
 		expect((await load()).HEADER_BRAND).toEqual({});
 		vi.resetModules();
 		const Brand = () => null;
 		app.appHeaderBrand = { Brand };
 		expect((await load()).HEADER_BRAND.Brand).toBe(Brand);
+	});
+});
+
+describe("navbar order and footer tagline wiring", () => {
+	const read = (file: string) =>
+		readFileSync(join(ROOT, "apps/marketing/src", file), "utf8");
+
+	it("the desktop navbar renders the top level in NAV_ORDER", () => {
+		const navbar = read("modules/marketing/components/navbar.tsx");
+		expect(navbar).toMatch(/NAV_ORDER\.map\(/);
+	});
+
+	it("the footer renders the tagline from FOOTER_TAGLINE_KEY", () => {
+		const footer = read("modules/marketing/components/footer.tsx");
+		expect(footer).toMatch(/t\(FOOTER_TAGLINE_KEY\)/);
+		expect(footer).not.toMatch(/t\("footer\.tagline"\)/);
 	});
 });
 

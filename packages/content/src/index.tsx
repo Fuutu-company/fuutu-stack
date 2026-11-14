@@ -5,7 +5,13 @@ import ChangelogV010 from "./changelog/v0-1-0";
 import ChangelogV010De from "./changelog/v0-1-0.de";
 import ChangelogV100 from "./changelog/v1-0-0";
 import ChangelogV100De from "./changelog/v1-0-0.de";
-import { type ChangelogFrontmatter, changelogMeta } from "./changelog-meta";
+import ChangelogV110 from "./changelog/v1-1-0";
+import ChangelogV110De from "./changelog/v1-1-0.de";
+import {
+	type ChangelogFrontmatter,
+	changelogDraftMeta,
+	changelogMeta,
+} from "./changelog-meta";
 import { isoDate } from "./iso-date";
 import ImprintDe, {
 	frontmatter as imprintDeFrontmatter,
@@ -55,6 +61,7 @@ export interface PostFrontmatter {
 export {
 	type ChangelogFrontmatter,
 	type ChangelogMeta,
+	changelogDraftMeta,
 	changelogFrontmatterSchema,
 	changelogMeta,
 } from "./changelog-meta";
@@ -126,11 +133,21 @@ export const posts: readonly PostEntry[] = Object.freeze(
 
 /** Changelog bodies per slug — frontmatter lives in `changelog/<slug>.meta.ts`. */
 const CHANGELOG_BODIES: Record<string, Record<string, ComponentType>> = {
+	"v1-1-0": { en: ChangelogV110, de: ChangelogV110De },
 	"v1-0-0": { en: ChangelogV100, de: ChangelogV100De },
 	"v0-1-0": { en: ChangelogV010, de: ChangelogV010De },
 };
 
-/** Newest first — order and frontmatter come from `changelogMeta`. */
+for (const { slug } of changelogDraftMeta) {
+	if (!Object.hasOwn(CHANGELOG_BODIES, slug)) {
+		throw new Error(`Changelog draft "${slug}" has no bodies`);
+	}
+}
+
+/**
+ * Released entries, newest first — order and frontmatter come from
+ * `changelogMeta`; drafts (`changelogDraftMeta`) are left out.
+ */
 export const changelog: readonly ChangelogEntry[] = Object.freeze(
 	changelogMeta.map(({ slug, frontmatter }) => {
 		const bodies = Object.hasOwn(CHANGELOG_BODIES, slug)

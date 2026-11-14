@@ -75,6 +75,13 @@ export const getConversation = async (
 	return owned;
 };
 
+/** The caller's conversation without messages — id + org scope, or null. */
+export const getConversationScope = (id: string, userId: string) =>
+	db.chatConversation.findFirst({
+		where: { id, userId },
+		select: { id: true, organizationId: true },
+	});
+
 export const deleteConversation = async (id: string, userId: string) => {
 	const owned = await db.chatConversation.findFirst({
 		where: { id, userId },

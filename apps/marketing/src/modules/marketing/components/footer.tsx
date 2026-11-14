@@ -2,7 +2,7 @@ import { config } from "@fuutu/config";
 import { AREA_CLASSES, AREAS, BrandLogo } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
 import { useTranslations } from "next-intl";
-import { FOOTER_COLUMNS } from "@/lib/site-links";
+import { FOOTER_COLUMNS, FOOTER_TAGLINE_KEY } from "@/lib/site-links";
 import { Link } from "@/navigation";
 
 const LINK_CLASS =
@@ -37,7 +37,7 @@ export function MarketingFooter() {
 							</p>
 						</div>
 						<p className="max-w-xs text-muted-foreground text-sm leading-6">
-							{t("footer.tagline")}
+							{t(FOOTER_TAGLINE_KEY)}
 						</p>
 					</div>
 					{FOOTER_COLUMNS.map((column) => (
