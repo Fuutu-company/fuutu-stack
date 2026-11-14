@@ -21,6 +21,20 @@ vi.mock("../config", async (importOriginal) => {
 			showInMarketing: false,
 			priceIdEnvVars: { month: "PAYMENTS_PRO_SEATS_PRICE_ID" },
 		},
+		// One trial per owner.
+		team: {
+			amount: 900,
+			currency: "usd",
+			billingType: "subscription",
+			interval: "month",
+			trialDays: 14,
+			trialOnce: true,
+			displayPrice: "$9",
+			showInSaas: true,
+			showInMarketing: true,
+			priceIdEnvVars: { month: "PAYMENTS_TEAM_PRICE_ID" },
+			noTrialPriceIdEnvVars: { month: "PAYMENTS_TEAM_NOTRIAL_PRICE_ID" },
+		},
 	};
 	return { ...actual, PLANS, PLAN_IDS: Object.keys(PLANS) };
 });
@@ -30,6 +44,8 @@ vi.mock("@fuutu/env/saas", () => ({
 		NODE_ENV: "test",
 		PAYMENTS_PRO_PRICE_ID: "price_pro",
 		PAYMENTS_PRO_SEATS_PRICE_ID: "price_pro_seats",
+		PAYMENTS_TEAM_PRICE_ID: "price_team",
+		PAYMENTS_TEAM_NOTRIAL_PRICE_ID: "price_team_notrial",
 	},
 }));
 
@@ -46,7 +62,9 @@ vi.mock("@fuutu/db", () => ({
 const { assertCheckoutAllowed, ADDON_REQUIRES_BASE } = await import(
 	"../billing-policy"
 );
-const { registerCheckoutGuard } = await import("../extensions");
+const { registerCheckoutGuard, registerTrialEligibilityPolicy } = await import(
+	"../extensions"
+);
 const { CheckoutRejectedError } = await import("../types");
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -68,7 +86,7 @@ const purchase = (
 	currentPeriodEnd,
 });
 
-const orgCheckout = (planId: FixturePlanId | "proSeats") => ({
+const orgCheckout = (planId: FixturePlanId | "proSeats" | "team") => ({
 	owner: { organizationId: "org_1" },
 	userId: "user_1",
 	// Ids of this test's catalog (fixture + `proSeats`), not the app's —
@@ -87,6 +105,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	for (const fn of unsubscribe.splice(0)) fn();
+	registerTrialEligibilityPolicy(null);
 });
 
 describe("assertCheckoutAllowed — add-on needs its base", () => {
@@ -119,7 +138,7 @@ describe("assertCheckoutAllowed — add-on needs its base", () => {
 		]);
 		await expect(
 			assertCheckoutAllowed(orgCheckout("proSeats")),
-		).resolves.toBeUndefined();
+		).resolves.toEqual({ trial: false });
 	});
 
 	it("loads the purchases of a personal owner", async () => {
@@ -132,9 +151,9 @@ describe("assertCheckoutAllowed — add-on needs its base", () => {
 	});
 
 	it("allows a plain plan checkout without guards", async () => {
-		await expect(
-			assertCheckoutAllowed(orgCheckout("pro")),
-		).resolves.toBeUndefined();
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: true,
+		});
 	});
 });
 
@@ -155,6 +174,8 @@ describe("registerCheckoutGuard", () => {
 			planId: "pro",
 			interval: "month",
 			seats: 3,
+			trial: true,
+			skipTrial: false,
 			existingPurchases: [
 				expect.objectContaining({
 					subscriptionId: "sub_price_pro",
@@ -181,9 +202,9 @@ describe("registerCheckoutGuard", () => {
 				owner: { userId: "user_1" },
 			}),
 		).rejects.toMatchObject({ reason: "organization_required" });
-		await expect(
-			assertCheckoutAllowed(orgCheckout("pro")),
-		).resolves.toBeUndefined();
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: true,
+		});
 	});
 
 	it("runs the kit add-on rule before app guards, and guards in order", async () => {
@@ -213,5 +234,161 @@ describe("registerCheckoutGuard", () => {
 		off();
 		await assertCheckoutAllowed(orgCheckout("pro"));
 		expect(guard).not.toHaveBeenCalled();
+	});
+});
+
+describe("assertCheckoutAllowed — trial decision", () => {
+	it("plans without trialOnce grant their trial on every checkout, as before", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "CANCELED"),
+		]);
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: true,
+		});
+	});
+
+	it("a plan without trialDays has trial false", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "ACTIVE"),
+		]);
+		await expect(
+			assertCheckoutAllowed(orgCheckout("proSeats")),
+		).resolves.toEqual({ trial: false });
+	});
+
+	it("trialOnce: the first checkout of the plan has the trial", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "ACTIVE"),
+		]);
+		await expect(assertCheckoutAllowed(orgCheckout("team"))).resolves.toEqual({
+			trial: true,
+		});
+	});
+
+	it.each(["CANCELED", "EXPIRED", "ACTIVE", "TRIALING"])(
+		"trialOnce: a second checkout of the plan has trial false (earlier purchase %s)",
+		async (status) => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				purchase("price_team", status),
+			]);
+			await expect(assertCheckoutAllowed(orgCheckout("team"))).resolves.toEqual(
+				{ trial: false },
+			);
+		},
+	);
+
+	it("trialOnce: an earlier purchase through the no-trial product counts too", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_team_notrial", "CANCELED"),
+		]);
+		await expect(assertCheckoutAllowed(orgCheckout("team"))).resolves.toEqual({
+			trial: false,
+		});
+	});
+
+	it("skipTrial forces trial false", async () => {
+		await expect(
+			assertCheckoutAllowed({ ...orgCheckout("pro"), skipTrial: true }),
+		).resolves.toEqual({ trial: false });
+		await expect(
+			assertCheckoutAllowed({ ...orgCheckout("team"), skipTrial: true }),
+		).resolves.toEqual({ trial: false });
+	});
+
+	it("a registered policy can deny the trial", async () => {
+		registerTrialEligibilityPolicy(() => false);
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: false,
+		});
+	});
+
+	it("a policy builds on the defaults and sees the request and purchases", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_team", "CANCELED"),
+		]);
+		const policy = vi.fn(
+			async (
+				ctx: { userId: string },
+				defaults: () => boolean,
+			): Promise<boolean> => defaults() || ctx.userId === "user_vip",
+		);
+		registerTrialEligibilityPolicy(policy);
+
+		await expect(assertCheckoutAllowed(orgCheckout("team"))).resolves.toEqual({
+			trial: false,
+		});
+		await expect(
+			assertCheckoutAllowed({ ...orgCheckout("team"), userId: "user_vip" }),
+		).resolves.toEqual({ trial: true });
+
+		expect(policy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				owner: { organizationId: "org_1" },
+				planId: "team",
+				skipTrial: false,
+				existingPurchases: [
+					expect.objectContaining({ planId: "team", grantsAccess: false }),
+				],
+			}),
+			expect.any(Function),
+		);
+	});
+
+	it("a policy never grants a trial the plan does not offer or the caller skipped", async () => {
+		const policy = vi.fn(() => true);
+		registerTrialEligibilityPolicy(policy);
+		await expect(
+			assertCheckoutAllowed({ ...orgCheckout("pro"), skipTrial: true }),
+		).resolves.toEqual({ trial: false });
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "ACTIVE"),
+		]);
+		await expect(
+			assertCheckoutAllowed(orgCheckout("proSeats")),
+		).resolves.toEqual({ trial: false });
+		expect(policy).not.toHaveBeenCalled();
+	});
+
+	it("null restores the default decision", async () => {
+		registerTrialEligibilityPolicy(() => false);
+		registerTrialEligibilityPolicy(null);
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: true,
+		});
+	});
+
+	it("guards receive ctx.trial", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_team", "CANCELED"),
+		]);
+		const seen: boolean[] = [];
+		unsubscribe.push(
+			registerCheckoutGuard((ctx) => {
+				seen.push(ctx.trial);
+			}),
+		);
+		await assertCheckoutAllowed(orgCheckout("team"));
+		await assertCheckoutAllowed(orgCheckout("pro"));
+		expect(seen).toEqual([false, true]);
+	});
+
+	it("a guard can refuse based on the trial", async () => {
+		unsubscribe.push(
+			registerCheckoutGuard(({ trial, seats }) => {
+				if (trial && (seats ?? 1) > 1) {
+					throw new CheckoutRejectedError("trial_single_seat");
+				}
+			}),
+		);
+		await expect(
+			assertCheckoutAllowed({ ...orgCheckout("pro"), seats: 3 }),
+		).rejects.toMatchObject({ reason: "trial_single_seat" });
+		await expect(
+			assertCheckoutAllowed({
+				...orgCheckout("pro"),
+				seats: 3,
+				skipTrial: true,
+			}),
+		).resolves.toEqual({ trial: false });
 	});
 });

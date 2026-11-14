@@ -42,6 +42,7 @@ interface ExtensionRegistry {
 	purchaseChangedHandlers: Set<PurchaseChangedHandler>;
 	supersedePolicy?: SupersedePolicy | null;
 	checkoutGuards?: Set<CheckoutGuard>;
+	trialEligibilityPolicy?: TrialEligibilityPolicy | null;
 }
 
 const REGISTRY_KEY = Symbol.for("fuutu.payments.extensions");
@@ -180,6 +181,13 @@ export type CheckoutGuardContext = {
 	planId: PlanId;
 	interval: "month" | "year";
 	seats?: number;
+	/** The caller asked to buy now, without the plan's trial. */
+	skipTrial: boolean;
+	/**
+	 * Whether this checkout gets the plan's trial (`Plan.trialDays`,
+	 * `Plan.trialOnce`, `skipTrial`, `registerTrialEligibilityPolicy`).
+	 */
+	trial: boolean;
 	/** Every purchase of `owner`, newest first. */
 	existingPurchases: readonly OwnerPurchase[];
 };
@@ -209,4 +217,38 @@ export function registerCheckoutGuard(guard: CheckoutGuard): () => void {
 
 export function getCheckoutGuards(): CheckoutGuard[] {
 	return [...(registry().checkoutGuards ?? [])];
+}
+
+// ─── Trial eligibility ────────────────────────────────────────────────────────
+
+/** The checkout being decided — the guard context without its outcome. */
+export type TrialEligibilityContext = Omit<CheckoutGuardContext, "trial">;
+
+/**
+ * `true` = this checkout gets the plan's trial. `defaults` returns the kit
+ * decision: no earlier purchase of the plan by the owner when the plan
+ * sets `trialOnce`, else always. Consulted only when the plan has
+ * `trialDays` and the caller did not pass `skipTrial` — it can deny a
+ * trial, never add one the plan does not offer.
+ */
+export type TrialEligibilityPolicy = (
+	ctx: TrialEligibilityContext,
+	defaults: () => boolean,
+) => boolean | Promise<boolean>;
+
+/**
+ * Decide which plan checkouts get the trial (e.g. once per user across
+ * their organizations). Runs before the checkout guards, which see the
+ * result as `ctx.trial`. One policy at a time; `null` restores the kit
+ * default. Throwing `CheckoutRejectedError` refuses the checkout like a
+ * guard; any other error fails it generically (500).
+ */
+export function registerTrialEligibilityPolicy(
+	policy: TrialEligibilityPolicy | null,
+): void {
+	registry().trialEligibilityPolicy = policy;
+}
+
+export function getTrialEligibilityPolicy(): TrialEligibilityPolicy | null {
+	return registry().trialEligibilityPolicy ?? null;
 }

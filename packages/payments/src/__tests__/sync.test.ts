@@ -1448,3 +1448,105 @@ describe("processWebhookEvents — onPurchaseChanged", () => {
 		expect(handler).not.toHaveBeenCalled();
 	});
 });
+
+describe("leaving SCHEDULED_CANCEL (resume)", () => {
+	const PERIOD_END = new Date("2027-03-01T00:00:00.000Z");
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockGetCreditBalance.mockReset().mockResolvedValue(null);
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "SCHEDULED_CANCEL",
+			currentPeriodEnd: new Date(PERIOD_END),
+			organizationId: "org_123",
+			userId: null,
+		});
+	});
+
+	const writtenStatus = () => mockUpdatePurchase.mock.calls[0]?.[0]?.status;
+
+	it("a resume event reactivates a SCHEDULED_CANCEL row", async () => {
+		// Creem sends subscription.active when a scheduled cancel is resumed.
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.activated",
+				status: "ACTIVE",
+				currentPeriodEnd: new Date(PERIOD_END),
+			}),
+		]);
+		expect(writtenStatus()).toBe("ACTIVE");
+	});
+
+	it("subscription.updated with ACTIVE reactivates it (Stripe, Polar)", async () => {
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.updated", status: "ACTIVE" }),
+		]);
+		expect(writtenStatus()).toBe("ACTIVE");
+	});
+
+	it("an activation with a different period end keeps SCHEDULED_CANCEL", async () => {
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.activated",
+				status: "ACTIVE",
+				currentPeriodEnd: new Date("2027-04-01T00:00:00.000Z"),
+			}),
+		]);
+		expect(mockUpdatePurchase).toHaveBeenCalledOnce();
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("an activation without an explicit ACTIVE status keeps SCHEDULED_CANCEL", async () => {
+		for (const status of [undefined, "TRIALING"] as const) {
+			mockUpdatePurchase.mockClear();
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.activated",
+					status,
+					currentPeriodEnd: new Date(PERIOD_END),
+				}),
+			]);
+			expect(writtenStatus(), String(status)).toBeUndefined();
+		}
+	});
+
+	it("an activation without a period end keeps SCHEDULED_CANCEL", async () => {
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.activated",
+				status: "ACTIVE",
+			}),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("a renewal with the same period end keeps SCHEDULED_CANCEL", async () => {
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.renewed",
+				status: "ACTIVE",
+				currentPeriodEnd: new Date(PERIOD_END),
+			}),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("a terminal row stays terminal on a same-period activation", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "CANCELED",
+			currentPeriodEnd: new Date(PERIOD_END),
+			organizationId: "org_123",
+			userId: null,
+		});
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.activated",
+				status: "ACTIVE",
+				currentPeriodEnd: new Date(PERIOD_END),
+			}),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+});

@@ -745,6 +745,53 @@ describe("polar provider — purchased units", () => {
 	});
 });
 
+describe("polar provider — per-call seat proration", () => {
+	it("keeps the organization's proration setting and ignores the input", async () => {
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_123",
+			seats: 3,
+			proration: "none",
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { seats: 3 },
+		});
+	});
+});
+
+describe("polar provider — cancel at period end and resume", () => {
+	it("cancel with atPeriodEnd sets cancelAtPeriodEnd instead of revoking", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123", {
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { cancelAtPeriodEnd: true },
+		});
+		expect(subscriptionsRevoke).not.toHaveBeenCalled();
+	});
+
+	it("cancel without options revokes immediately, as before", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123");
+		expect(subscriptionsRevoke).toHaveBeenCalledWith({ id: "sub_123" });
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("resumeSubscription clears cancelAtPeriodEnd", async () => {
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.resumeSubscription?.("sub_123");
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { cancelAtPeriodEnd: false },
+		});
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("polar", () => polarPaymentProvider, {
 	behavior: "shape",

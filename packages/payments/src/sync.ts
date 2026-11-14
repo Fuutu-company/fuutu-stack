@@ -67,7 +67,8 @@ const DEFAULT_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
  *   - Terminal (CANCELED, EXPIRED): a real resubscribe creates a new
  *     subscriptionId — a late activation must never resurrect a dead sub.
  *   - User-intent (SCHEDULED_CANCEL): a renewal must not undo a scheduled
- *     cancel; un-cancel arrives via subscription.updated on all providers.
+ *     cancel; un-cancel arrives via subscription.updated, or as a
+ *     same-period ACTIVE activation (Creem resume, see isResumeTransition).
  *   - Recoverable (PAST_DUE, PAUSED): payment recovery / resume arrives as
  *     subscription.activated or subscription.renewed — blocking it would
  *     keep a paying customer gated out forever (see RECOVERABLE_STATUSES).
@@ -223,7 +224,7 @@ async function processSingleEvent(
 			providerId,
 			existing.id,
 			event,
-			existing.status,
+			existing,
 			resolvedUserId,
 			resolvedOrganizationId,
 			userIdToSet,
@@ -525,13 +526,16 @@ async function updateExistingPurchase(
 	providerId: string,
 	purchaseId: string,
 	event: ProviderEvent,
-	currentStatus: PurchaseStatusLiteral | string | null,
+	stored: {
+		status: PurchaseStatusLiteral | string | null;
+		currentPeriodEnd?: Date | null;
+	},
 	userId: string | null,
 	organizationId: string | null,
 	userIdToSet: string | null = null,
 ): Promise<void> {
 	// Protected statuses: don't let a renewal event undo a scheduled cancel
-	const currentStatusLit = currentStatus as PurchaseStatusLiteral;
+	const currentStatusLit = stored.status as PurchaseStatusLiteral;
 	const isProtected = PROTECTED_STATUSES.includes(currentStatusLit);
 
 	// For canceled events, respect currentPeriodEnd
@@ -546,7 +550,8 @@ async function updateExistingPurchase(
 	if (
 		isProtected &&
 		isSubscriptionActivationType(event.type) &&
-		!isRecoveryTransition(event.type, currentStatusLit)
+		!isRecoveryTransition(event.type, currentStatusLit) &&
+		!isResumeTransition(event, currentStatusLit, stored.currentPeriodEnd)
 	) {
 		// Keep the protected status — an activation-type event does not
 		// transition terminal or user-intent states.
@@ -813,6 +818,29 @@ function isRecoveryTransition(
 	return (
 		(type === "subscription.activated" || type === "subscription.renewed") &&
 		RECOVERABLE_STATUSES.includes(currentStatus)
+	);
+}
+
+/**
+ * True when an activation is a resumed scheduled cancel, not a renewal:
+ * Creem answers a resume with `subscription.active` (Stripe and Polar
+ * send `subscription.updated`, which is never blocked). Only an explicit
+ * ACTIVE status for the stored period qualifies — a renewal moves the
+ * period end, so it cannot undo the cancel.
+ */
+function isResumeTransition(
+	event: ProviderEvent,
+	currentStatus: PurchaseStatusLiteral,
+	storedPeriodEnd: Date | null | undefined,
+): boolean {
+	return (
+		event.type === "subscription.activated" &&
+		currentStatus === "SCHEDULED_CANCEL" &&
+		event.status === "ACTIVE" &&
+		event.currentPeriodEnd !== undefined &&
+		storedPeriodEnd != null &&
+		new Date(event.currentPeriodEnd).getTime() ===
+			new Date(storedPeriodEnd).getTime()
 	);
 }
 

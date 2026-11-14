@@ -2,8 +2,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
-import { paymentsConfig } from "../config";
+import { type CreemUpdateBehavior, paymentsConfig } from "../config";
 import type {
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PortalInput,
@@ -11,6 +12,7 @@ import type {
 	ProviderEventType,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
+	SeatProration,
 	SetSeatsInput,
 } from "../types";
 import { WebhookConfigError, WebhookSignatureError } from "../types";
@@ -69,6 +71,11 @@ function requireAbsoluteUrl(
 	}
 	return url;
 }
+
+const CREEM_PRORATION = {
+	"charge-immediately": "proration-charge-immediately",
+	none: "proration-none",
+} as const satisfies Record<SeatProration, CreemUpdateBehavior>;
 
 function mapCreemStatus(status: string): PurchaseStatusLiteral {
 	switch (status) {
@@ -205,6 +212,8 @@ async function parseCreemResponse<T extends z.ZodType>(
 export const creemPaymentProvider: SeatAwarePaymentProvider = {
 	id: "creem",
 	ownsSeatSync: false,
+	// Creem's checkout API has no trial parameter — trials are a product setting.
+	trialsOnProduct: true,
 
 	async createCheckoutLink(input: CheckoutInput) {
 		// Note: Creem's checkout API does not accept a cancel_url parameter —
@@ -296,11 +305,18 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		return { customerId: id };
 	},
 
-	async cancelSubscription(subscriptionId: string) {
+	async cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	) {
+		// Without a mode Creem applies the store's configured default.
 		const response = await creemFetch(
 			`/subscriptions/${subscriptionId}/cancel`,
 			{
 				method: "POST",
+				...(options?.atPeriodEnd && {
+					body: JSON.stringify({ mode: "scheduled" }),
+				}),
 			},
 		);
 
@@ -308,6 +324,19 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			const error = await readErrorBody(response);
 			log.error("Failed to cancel subscription", error);
 			throw new Error("Failed to cancel subscription");
+		}
+	},
+
+	async resumeSubscription(subscriptionId: string) {
+		const response = await creemFetch(
+			`/subscriptions/${subscriptionId}/resume`,
+			{ method: "POST" },
+		);
+
+		if (!response.ok) {
+			const error = await readErrorBody(response);
+			log.error("Failed to resume subscription", error);
+			throw new Error("Failed to resume subscription");
 		}
 	},
 
@@ -419,7 +448,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 	},
 
 	async setSubscriptionSeats(input: SetSeatsInput) {
-		const { subscriptionId, seats } = input;
+		const { subscriptionId, seats, proration } = input;
 
 		const getResponse = await creemFetch(
 			`/subscriptions?subscription_id=${subscriptionId}`,
@@ -473,7 +502,9 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 				method: "POST",
 				body: JSON.stringify({
 					items: [{ id: firstItem.id, ...itemRef, units: seats }],
-					update_behavior: paymentsConfig.creemUpdateBehavior,
+					update_behavior: proration
+						? CREEM_PRORATION[proration]
+						: paymentsConfig.creemUpdateBehavior,
 				}),
 			},
 		);

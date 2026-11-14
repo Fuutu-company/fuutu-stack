@@ -272,6 +272,20 @@ export interface Plan {
 	 * checkoutable plan without a mapping fails closed at checkout.
 	 */
 	priceIdEnvVars?: { month?: string; year?: string };
+	/**
+	 * Grant `trialDays` once per owner: a checkout of an owner with any
+	 * earlier purchase of this plan (any status) gets no trial. Refine it
+	 * with `registerTrialEligibilityPolicy` (`./extensions`).
+	 */
+	trialOnce?: boolean;
+	/**
+	 * Env var names of provider products WITHOUT the trial, per billing
+	 * interval — for providers whose trials live on the product (Creem,
+	 * `PaymentProvider.trialsOnProduct`). Checkouts without a trial use
+	 * them; webhooks map them back to this plan. Never listed by
+	 * `getPlanPriceIds`.
+	 */
+	noTrialPriceIdEnvVars?: { month?: string; year?: string };
 }
 
 export const PLANS = {

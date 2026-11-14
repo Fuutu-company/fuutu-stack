@@ -2,6 +2,7 @@ import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import Stripe from "stripe";
 import type {
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PortalInput,
@@ -9,6 +10,7 @@ import type {
 	ProviderInvoiceData,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
+	SeatProration,
 	SetSeatsInput,
 } from "../types";
 import { WebhookConfigError, WebhookSignatureError } from "../types";
@@ -268,6 +270,14 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 	}
 }
 
+const STRIPE_PRORATION = {
+	"charge-immediately": "always_invoice",
+	none: "none",
+} as const satisfies Record<
+	SeatProration,
+	Stripe.SubscriptionUpdateParams.ProrationBehavior
+>;
+
 export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	id: "stripe",
 	ownsSeatSync: false,
@@ -343,10 +353,28 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		return { customerId: customer.id };
 	},
 
-	async cancelSubscription(subscriptionId: string) {
+	async cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	) {
 		const client = getClient();
+		if (options?.atPeriodEnd) {
+			await client.subscriptions.update(subscriptionId, {
+				cancel_at_period_end: true,
+			});
+			log.info("scheduled subscription cancel", { subscriptionId });
+			return;
+		}
 		await client.subscriptions.cancel(subscriptionId);
 		log.info("cancelled subscription", { subscriptionId });
+	},
+
+	async resumeSubscription(subscriptionId: string) {
+		const client = getClient();
+		await client.subscriptions.update(subscriptionId, {
+			cancel_at_period_end: false,
+		});
+		log.info("resumed subscription", { subscriptionId });
 	},
 
 	async getSubscriptionStatus(subscriptionId: string) {
@@ -388,7 +416,11 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		}
 	},
 
-	async setSubscriptionSeats({ subscriptionId, seats }: SetSeatsInput) {
+	async setSubscriptionSeats({
+		subscriptionId,
+		seats,
+		proration,
+	}: SetSeatsInput) {
 		const client = getClient();
 		const subscription = await client.subscriptions.retrieve(subscriptionId);
 		const firstItem = subscription.items.data[0];
@@ -399,6 +431,10 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		}
 		await client.subscriptions.update(subscriptionId, {
 			items: [{ id: firstItem.id, quantity: seats }],
+			// Omitted: the account default (create_prorations).
+			...(proration && {
+				proration_behavior: STRIPE_PRORATION[proration],
+			}),
 		});
 		log.info("updated subscription seats", { subscriptionId, seats });
 	},

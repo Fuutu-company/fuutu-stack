@@ -135,9 +135,33 @@ export interface CustomerInput {
 	metadata?: Record<string, unknown>;
 }
 
+/**
+ * How a seat change is billed:
+ * - "charge-immediately": the prorated difference is charged (or
+ *   refunded) now
+ * - "none": no proration — the new count is billed from the next period
+ */
+export type SeatProration = "charge-immediately" | "none";
+
 export interface SetSeatsInput {
 	subscriptionId: string;
 	seats: number;
+	/**
+	 * Per-call billing of the change. Omitted: the provider default
+	 * (Creem `paymentsConfig.creemUpdateBehavior`, Stripe's account
+	 * setting). Polar always applies its organization setting.
+	 */
+	proration?: SeatProration;
+}
+
+export interface CancelSubscriptionOptions {
+	/**
+	 * `true`: cancel when the current period ends — the subscription keeps
+	 * granting access until then and can be resumed
+	 * (`resumeSubscription`). Default: cancel now (Creem: the store's
+	 * configured cancellation mode).
+	 */
+	atPeriodEnd?: boolean;
 }
 
 // ─── PaymentProvider interface ────────────────────────────────────────────────
@@ -153,6 +177,13 @@ export interface PaymentProvider {
 	 * to avoid races / double mutations. Defaults to `false`.
 	 */
 	readonly ownsSeatSync?: boolean;
+	/**
+	 * When `true`, trials are configured on the provider product, not per
+	 * checkout (Creem) — `CheckoutInput.trialDays` is ignored, so a
+	 * checkout without a trial needs a product without one
+	 * (`Plan.noTrialPriceIdEnvVars`).
+	 */
+	readonly trialsOnProduct?: boolean;
 
 	/** Create a provider-hosted checkout URL and redirect the user there. */
 	createCheckoutLink(input: CheckoutInput): Promise<{ url: string }>;
@@ -169,9 +200,19 @@ export interface PaymentProvider {
 
 	/**
 	 * Cancel a subscription at the provider. Called from org-delete
-	 * automation — not user-facing (users cancel via the portal).
+	 * automation and `payments.subscription.cancel`.
 	 */
-	cancelSubscription(subscriptionId: string): Promise<void>;
+	cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	): Promise<void>;
+
+	/**
+	 * Optional: undo a cancellation scheduled for the period end
+	 * (`cancelSubscription(id, { atPeriodEnd: true })`). Providers without
+	 * it answer `payments.subscription.resume` with NOT_IMPLEMENTED.
+	 */
+	resumeSubscription?(subscriptionId: string): Promise<void>;
 
 	/**
 	 * Optional: the subscription's current status at the provider. Webhook

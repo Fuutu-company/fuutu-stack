@@ -617,6 +617,122 @@ describe("creem provider — purchased units", () => {
 	});
 });
 
+describe("creem provider — per-call seat proration", () => {
+	const defaultBehavior = paymentsConfig.creemUpdateBehavior;
+
+	beforeEach(() => {
+		mockFetch.mockReset();
+		paymentsConfig.creemUpdateBehavior = defaultBehavior;
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					items: [{ id: "sitem_1", price_id: "pprice_1" }],
+				}),
+			})
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+	});
+
+	const sentBehavior = () =>
+		JSON.parse(
+			String((mockFetch.mock.calls[1]?.[1] as RequestInit | undefined)?.body),
+		).update_behavior;
+
+	it("setSubscriptionSeats sends proration-none when asked", async () => {
+		paymentsConfig.creemUpdateBehavior = "proration-charge-immediately";
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 2,
+			proration: "none",
+		});
+		expect(sentBehavior()).toBe("proration-none");
+	});
+
+	it("setSubscriptionSeats sends proration-charge-immediately when asked", async () => {
+		paymentsConfig.creemUpdateBehavior = "proration-none";
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 4,
+			proration: "charge-immediately",
+		});
+		expect(sentBehavior()).toBe("proration-charge-immediately");
+	});
+
+	it("without proration it sends the configured default", async () => {
+		paymentsConfig.creemUpdateBehavior = "proration-none";
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 3,
+		});
+		expect(sentBehavior()).toBe("proration-none");
+	});
+});
+
+describe("creem provider — cancel at period end and resume", () => {
+	beforeEach(() => {
+		mockFetch.mockReset();
+	});
+
+	const call = (index = 0) => {
+		const [url, init] = mockFetch.mock.calls[index] ?? [];
+		const request = init as RequestInit | undefined;
+		return {
+			url: String(url),
+			method: request?.method,
+			body:
+				request?.body === undefined
+					? undefined
+					: JSON.parse(String(request.body)),
+		};
+	};
+
+	it("cancel with atPeriodEnd sends the scheduled mode", async () => {
+		mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.cancelSubscription("sub_1", {
+			atPeriodEnd: true,
+		});
+		expect(call()).toEqual({
+			url: "https://test-api.creem.io/v1/subscriptions/sub_1/cancel",
+			method: "POST",
+			body: { mode: "scheduled" },
+		});
+	});
+
+	it("cancel without options sends no body (store default, as before)", async () => {
+		mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.cancelSubscription("sub_1");
+		expect(call()).toEqual({
+			url: "https://test-api.creem.io/v1/subscriptions/sub_1/cancel",
+			method: "POST",
+			body: undefined,
+		});
+	});
+
+	it("resumeSubscription posts to the resume endpoint", async () => {
+		mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.resumeSubscription?.("sub_1");
+		expect(call()).toEqual({
+			url: "https://test-api.creem.io/v1/subscriptions/sub_1/resume",
+			method: "POST",
+			body: undefined,
+		});
+	});
+
+	it("resumeSubscription throws when Creem refuses", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			json: async () => ({ message: "not scheduled" }),
+		});
+		await expect(
+			creemPaymentProvider.resumeSubscription?.("sub_1"),
+		).rejects.toThrow("Failed to resume subscription");
+	});
+
+	it("declares that its trials live on the product", () => {
+		expect(creemPaymentProvider.trialsOnProduct).toBe(true);
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("creem", () => creemPaymentProvider, {
 	behavior: "shape",

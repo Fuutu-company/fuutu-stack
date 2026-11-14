@@ -8,6 +8,7 @@ import {
 } from "@polar-sh/sdk/webhooks";
 import { z } from "zod";
 import type {
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PortalInput,
@@ -411,16 +412,49 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		return mapPolarStatus(subscription.status);
 	},
 
-	async cancelSubscription(subscriptionId: string) {
+	async cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	) {
 		const client = getClient();
+		if (options?.atPeriodEnd) {
+			await client.subscriptions.update({
+				id: subscriptionId,
+				subscriptionUpdate: { cancelAtPeriodEnd: true },
+			});
+			log.info("scheduled subscription cancel", { subscriptionId });
+			return;
+		}
 		await client.subscriptions.revoke({ id: subscriptionId });
 		log.info("cancelled subscription", { subscriptionId });
 	},
 
-	async setSubscriptionSeats({ subscriptionId, seats }: SetSeatsInput) {
+	async resumeSubscription(subscriptionId: string) {
+		const client = getClient();
+		await client.subscriptions.update({
+			id: subscriptionId,
+			subscriptionUpdate: { cancelAtPeriodEnd: false },
+		});
+		log.info("resumed subscription", { subscriptionId });
+	},
+
+	async setSubscriptionSeats({
+		subscriptionId,
+		seats,
+		proration,
+	}: SetSeatsInput) {
 		const client = getClient();
 		// prorationBehavior omitted — Polar applies the organization's
 		// configured default, matching the Stripe seat-update behavior.
+		if (proration) {
+			log.debug(
+				"per-call proration ignored — Polar uses its organization setting",
+				{
+					subscriptionId,
+					proration,
+				},
+			);
+		}
 		await client.subscriptions.update({
 			id: subscriptionId,
 			subscriptionUpdate: { seats },

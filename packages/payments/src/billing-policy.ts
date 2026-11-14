@@ -20,7 +20,9 @@ import {
 	type ExistingSubscription,
 	getCheckoutGuards,
 	getSupersedePolicy,
+	getTrialEligibilityPolicy,
 	type OwnerPurchase,
+	type TrialEligibilityContext,
 } from "./extensions";
 import { CheckoutRejectedError } from "./types";
 
@@ -89,17 +91,50 @@ function grantsAccess(
 	);
 }
 
-export type CheckoutRequest = Omit<CheckoutGuardContext, "existingPurchases">;
+export type CheckoutRequest = Omit<
+	CheckoutGuardContext,
+	"existingPurchases" | "trial" | "skipTrial"
+> & {
+	/** Buy now without the plan's trial. Default false. */
+	skipTrial?: boolean;
+};
+
+/** What an allowed checkout gets. */
+export type CheckoutDecision = {
+	/** Start the plan's trial (`Plan.trialDays`) with this checkout. */
+	trial: boolean;
+};
+
+/** Kit trial rule: `Plan.trialOnce` = no earlier purchase of the plan. */
+function defaultTrialEligible(ctx: TrialEligibilityContext): boolean {
+	const plan = plans[ctx.planId];
+	return (
+		!plan?.trialOnce ||
+		!ctx.existingPurchases.some((p) => p.planId === ctx.planId)
+	);
+}
+
+async function decideTrial(ctx: TrialEligibilityContext): Promise<boolean> {
+	const plan = plans[ctx.planId];
+	const trialDays = plan?.billingType === "subscription" ? plan.trialDays : 0;
+	if (!trialDays || trialDays <= 0 || ctx.skipTrial) {
+		return false;
+	}
+	const policy = getTrialEligibilityPolicy();
+	const defaults = () => defaultTrialEligible(ctx);
+	return policy ? await policy(ctx, defaults) : defaults();
+}
 
 /**
- * Run the kit's checkout rules, then every registered guard. Throws
+ * Run the kit's checkout rules, decide the trial, then run every
+ * registered guard (they see the decision as `ctx.trial`). Throws
  * `CheckoutRejectedError` when the checkout must not start:
  * - `addon_requires_base`: the plan is an add-on (`Plan.addonOf`) and the
  *   owner holds no access-granting purchase of its base plan.
  */
 export async function assertCheckoutAllowed(
 	request: CheckoutRequest,
-): Promise<void> {
+): Promise<CheckoutDecision> {
 	const { owner } = request;
 	const stored =
 		"organizationId" in owner
@@ -120,8 +155,15 @@ export async function assertCheckoutAllowed(
 		throw new CheckoutRejectedError(ADDON_REQUIRES_BASE);
 	}
 
-	const ctx: CheckoutGuardContext = { ...request, existingPurchases };
+	const trialCtx: TrialEligibilityContext = {
+		...request,
+		skipTrial: request.skipTrial ?? false,
+		existingPurchases,
+	};
+	const trial = await decideTrial(trialCtx);
+	const ctx: CheckoutGuardContext = { ...trialCtx, trial };
 	for (const guard of getCheckoutGuards()) {
 		await guard(ctx);
 	}
+	return { trial };
 }

@@ -7,6 +7,7 @@ import { createBillingPortal } from "./procedures/create-billing-portal";
 import { createCheckout } from "./procedures/create-checkout";
 import { createTopupCheckout } from "./procedures/create-topup-checkout";
 import { getTopupPackages } from "./procedures/get-topup-packages";
+import { resumeSubscription } from "./procedures/resume-subscription";
 import { subscriptionsRouter } from "./subscriptions/router";
 
 export const paymentsRouter = {
@@ -28,6 +29,7 @@ export const paymentsRouter = {
 	subscription: {
 		...subscriptionsRouter,
 		cancel: cancelSubscription,
+		resume: resumeSubscription,
 	},
 	invoices: invoicesRouter,
 };

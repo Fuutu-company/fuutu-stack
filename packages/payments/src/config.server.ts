@@ -32,7 +32,11 @@ const isEnvKey = (key: string): key is keyof typeof env => key in env;
  */
 export function getPlanIdForProductId(productId: string): PlanId | undefined {
 	for (const planId of PLAN_IDS) {
-		for (const key of Object.values(plans[planId].priceIdEnvVars ?? {})) {
+		const { priceIdEnvVars, noTrialPriceIdEnvVars } = plans[planId];
+		for (const key of [
+			...Object.values(priceIdEnvVars ?? {}),
+			...Object.values(noTrialPriceIdEnvVars ?? {}),
+		]) {
 			if (isEnvKey(key) && env[key] === productId) {
 				return planId;
 			}
@@ -41,17 +45,41 @@ export function getPlanIdForProductId(productId: string): PlanId | undefined {
 	return undefined;
 }
 
+function envValue(key: string | undefined): string | undefined {
+	if (!key || !isEnvKey(key)) return undefined;
+	const value = env[key];
+	return typeof value === "string" && value ? value : undefined;
+}
+
+/**
+ * The plan's product WITHOUT a trial for `interval`
+ * (`PLANS[].noTrialPriceIdEnvVars`), `undefined` when none is configured.
+ */
+export function getPlanNoTrialPriceId(
+	planId: PlanId,
+	interval: "month" | "year",
+): string | undefined {
+	return envValue(plans[planId].noTrialPriceIdEnvVars?.[interval]);
+}
+
 /**
  * Resolve the provider-side price/product ID for a plan + billing interval.
  * The env var names are declared per plan in `PLANS[].priceIdEnvVars`
  * (same pattern as `CREDIT_TOPUPS[].priceIdEnvVar`). Returns undefined when
  * the plan has no mapping for the interval or the env var is unset —
- * callers fail closed.
+ * callers fail closed. `{ trial: false }` prefers the plan's no-trial
+ * product (`getPlanNoTrialPriceId`) and falls back to the normal one.
  */
 export function getPlanPriceId(
 	planId: PlanId,
 	interval: "month" | "year",
+	opts?: { trial?: boolean },
 ): string | undefined {
+	// No trial: the no-trial product when one is configured.
+	if (opts?.trial === false) {
+		const noTrial = getPlanNoTrialPriceId(planId, interval);
+		if (noTrial) return noTrial;
+	}
 	const key = plans[planId].priceIdEnvVars?.[interval];
 	if (!key || !isEnvKey(key)) return undefined;
 	const value = env[key];

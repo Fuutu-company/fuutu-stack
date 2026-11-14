@@ -644,6 +644,68 @@ describe("stripe provider — purchased units", () => {
 	);
 });
 
+describe("stripe provider — per-call seat proration", () => {
+	it.each([
+		["charge-immediately", "always_invoice"],
+		["none", "none"],
+	] as const)(
+		"proration %s sends proration_behavior %s",
+		async (proration, expected) => {
+			subscriptionsUpdate.mockClear();
+			await stripePaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_123",
+				seats: 5,
+				proration,
+			});
+			expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+				items: [{ id: "item_123", quantity: 5 }],
+				proration_behavior: expected,
+			});
+		},
+	);
+
+	it("without proration it keeps the account default (no proration_behavior)", async () => {
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_123",
+			seats: 5,
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			items: [{ id: "item_123", quantity: 5 }],
+		});
+	});
+});
+
+describe("stripe provider — cancel at period end and resume", () => {
+	it("cancel with atPeriodEnd sets cancel_at_period_end instead of canceling", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123", {
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			cancel_at_period_end: true,
+		});
+		expect(subscriptionsCancel).not.toHaveBeenCalled();
+	});
+
+	it("cancel without options cancels immediately, as before", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123");
+		expect(subscriptionsCancel).toHaveBeenCalledWith("sub_123");
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("resumeSubscription clears cancel_at_period_end", async () => {
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.resumeSubscription?.("sub_123");
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			cancel_at_period_end: false,
+		});
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("stripe", () => stripePaymentProvider, {
 	behavior: "shape",

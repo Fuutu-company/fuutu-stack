@@ -1,15 +1,17 @@
-import { getPurchaseByProviderSubscriptionId } from "@fuutu/db";
-import { isPaymentsEnabled, resolvePaymentProvider } from "@fuutu/payments";
-import { PERMISSIONS } from "@fuutu/rbac";
-import { ORPCError } from "@orpc/server";
+import { resolvePaymentProvider } from "@fuutu/payments";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { protectedProcedure } from "../../../orpc/procedures";
 import { throwIfPaymentsDisabled } from "../shared";
+import {
+	assertPaymentsEnabled,
+	requireSubscriptionAccess,
+} from "./subscription-access";
 
 const cancelSubscriptionSchema = z.object({
 	subscriptionId: z.string().min(1).max(200),
+	/** Cancel when the current period ends (resumable) instead of now. */
+	atPeriodEnd: z.boolean().optional(),
 });
 
 export const cancelSubscription = protectedProcedure
@@ -19,39 +21,27 @@ export const cancelSubscription = protectedProcedure
 		path: "/payments/subscription/cancel",
 		tags: ["Payments"],
 		summary: "Cancel subscription",
-		description: "Cancels an active subscription via the payment provider.",
+		description:
+			"Cancels an active subscription via the payment provider — now, or at the end of the current period with `atPeriodEnd`.",
 	})
 	.input(cancelSubscriptionSchema)
 	.handler(async ({ input, context }) => {
-		// Disabled installs must surface 501 — the noop provider id would
-		// otherwise miss the purchase lookup and masquerade as NOT_FOUND.
-		if (!isPaymentsEnabled()) {
-			throw new ORPCError("NOT_IMPLEMENTED", {
-				message: "Payments are not enabled on this deployment",
-			});
-		}
+		assertPaymentsEnabled();
 		try {
 			const provider = resolvePaymentProvider();
-			const purchase = await getPurchaseByProviderSubscriptionId(
-				provider.id,
+			await requireSubscriptionAccess(
+				provider,
 				input.subscriptionId,
+				context.user.id,
+				context,
 			);
-			if (!purchase) {
-				throw new ORPCError("NOT_FOUND", {
-					message: "Subscription not found",
+			if (input.atPeriodEnd) {
+				await provider.cancelSubscription(input.subscriptionId, {
+					atPeriodEnd: true,
 				});
+			} else {
+				await provider.cancelSubscription(input.subscriptionId);
 			}
-			if (purchase.organizationId) {
-				await requireOrgPermissionAccess(
-					purchase.organizationId,
-					context.user.id,
-					PERMISSIONS.PAYMENT.UPDATE,
-					context,
-				);
-			} else if (purchase.userId !== context.user.id) {
-				throw new ORPCError("FORBIDDEN", { message: "Not the owner" });
-			}
-			await provider.cancelSubscription(input.subscriptionId);
 			return { success: true };
 		} catch (err) {
 			throwIfPaymentsDisabled(err);

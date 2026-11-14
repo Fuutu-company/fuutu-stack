@@ -74,7 +74,8 @@ vi.mock("@fuutu/payments", async () => {
 			"organizationId" in owner
 				? db.getActiveSubscriptionForOrganization(owner.organizationId)
 				: db.getActiveSubscriptionForUser(owner.userId),
-		assertCheckoutAllowed: vi.fn().mockResolvedValue(undefined),
+		// The kit default for a plan with a trial.
+		assertCheckoutAllowed: vi.fn().mockResolvedValue({ trial: true }),
 		CheckoutRejectedError: class CheckoutRejectedError extends Error {},
 		resolvePaymentProvider: vi.fn(),
 		isPaymentsEnabled: vi.fn().mockReturnValue(true),
@@ -873,6 +874,177 @@ describe("payments.subscription.cancel", () => {
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
+	});
+});
+
+describe("payments.subscription.cancel — at period end", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(isPaymentsEnabled).mockReturnValue(true);
+	});
+
+	it("passes atPeriodEnd to the provider", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-1",
+			userId: "user-1",
+			organizationId: null,
+		} as never);
+		mockProvider.cancelSubscription.mockResolvedValue(undefined);
+
+		await call(
+			paymentsRouter.subscription.cancel,
+			{ subscriptionId: "sub-1", atPeriodEnd: true },
+			{ context: authenticatedContext },
+		);
+
+		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1", {
+			atPeriodEnd: true,
+		});
+	});
+
+	it("atPeriodEnd false cancels immediately, as without it", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-1",
+			userId: "user-1",
+			organizationId: null,
+		} as never);
+		mockProvider.cancelSubscription.mockResolvedValue(undefined);
+
+		await call(
+			paymentsRouter.subscription.cancel,
+			{ subscriptionId: "sub-1", atPeriodEnd: false },
+			{ context: authenticatedContext },
+		);
+
+		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1");
+	});
+});
+
+describe("payments.subscription.resume", () => {
+	// Own user: these cases do not eat the shared paymentsMutation budget.
+	const resumeContext = makeSession<Context>(makeUser({ id: "user-resume" }));
+	const resumeProvider = {
+		...mockProvider,
+		resumeSubscription: vi.fn(),
+	};
+	const ORG_ID = "12345678-1234-1234-8123-123456789abc";
+
+	const resume = (subscriptionId = "sub-1", context = resumeContext) =>
+		call(paymentsRouter.subscription.resume, { subscriptionId }, { context });
+
+	const orgWith = (role: string) =>
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [{ userId: "user-resume", role, id: "member-r" }],
+		} as never);
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(isPaymentsEnabled).mockReturnValue(true);
+		vi.mocked(resolvePaymentProvider).mockReturnValue(resumeProvider as never);
+		resumeProvider.resumeSubscription.mockResolvedValue(undefined);
+	});
+
+	it("throws NOT_IMPLEMENTED when payments are disabled", async () => {
+		vi.mocked(isPaymentsEnabled).mockReturnValue(false);
+		await expect(resume()).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
+		expect(getPurchaseByProviderSubscriptionId).not.toHaveBeenCalled();
+	});
+
+	it("resumes a subscription owned by the user", async () => {
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-r",
+			userId: "user-resume",
+			organizationId: null,
+		} as never);
+
+		await expect(resume()).resolves.toEqual({ success: true });
+		expect(getPurchaseByProviderSubscriptionId).toHaveBeenCalledWith(
+			"polar",
+			"sub-1",
+		);
+		expect(resumeProvider.resumeSubscription).toHaveBeenCalledWith("sub-1");
+	});
+
+	it("resume checks org PAYMENT.UPDATE", async () => {
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-o",
+			userId: null,
+			organizationId: ORG_ID,
+		} as never);
+
+		orgWith("member");
+		await expect(resume()).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(resumeProvider.resumeSubscription).not.toHaveBeenCalled();
+
+		orgWith("admin");
+		await expect(resume()).resolves.toEqual({ success: true });
+		expect(resumeProvider.resumeSubscription).toHaveBeenCalledWith("sub-1");
+	});
+
+	it("throws FORBIDDEN for a non-member of the owning org", async () => {
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-o",
+			userId: null,
+			organizationId: ORG_ID,
+		} as never);
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		await expect(resume()).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(resumeProvider.resumeSubscription).not.toHaveBeenCalled();
+	});
+
+	it("throws FORBIDDEN when the subscription belongs to another user", async () => {
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-x",
+			userId: "user-2",
+			organizationId: null,
+		} as never);
+		await expect(resume()).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(resumeProvider.resumeSubscription).not.toHaveBeenCalled();
+	});
+
+	it("throws NOT_FOUND when the subscription is unknown", async () => {
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue(
+			null as never,
+		);
+		await expect(resume("sub-missing")).rejects.toMatchObject({
+			code: "NOT_FOUND",
+		});
+	});
+
+	it("resume NOT_IMPLEMENTED without provider support", async () => {
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-r",
+			userId: "user-resume",
+			organizationId: null,
+		} as never);
+		await expect(resume()).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
+	});
+
+	it("maps a provider misconfiguration to SERVICE_UNAVAILABLE", async () => {
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-r",
+			userId: "user-resume",
+			organizationId: null,
+		} as never);
+		resumeProvider.resumeSubscription.mockRejectedValue(
+			new WebhookConfigError("CREEM_API_KEY is not set"),
+		);
+		await expect(resume()).rejects.toMatchObject({
+			code: "SERVICE_UNAVAILABLE",
+			message: "Payments are not configured",
+		});
+	});
+
+	it("throws UNAUTHORIZED when unauthenticated", async () => {
+		await expect(resume("sub-1", unauthenticatedContext)).rejects.toMatchObject(
+			{ code: "UNAUTHORIZED" },
+		);
 	});
 });
 

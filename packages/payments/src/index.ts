@@ -12,6 +12,7 @@
 export {
 	ADDON_REQUIRES_BASE,
 	assertCheckoutAllowed,
+	type CheckoutDecision,
 	type CheckoutRequest,
 	getPlanSubscription,
 	isAddonPlan,
@@ -67,7 +68,10 @@ export {
 	registerCheckoutGuard,
 	registerEntitlementResolver,
 	registerSupersedePolicy,
+	registerTrialEligibilityPolicy,
 	type SupersedePolicy,
+	type TrialEligibilityContext,
+	type TrialEligibilityPolicy,
 } from "./extensions";
 export {
 	type CatalogFeature,
@@ -105,6 +109,7 @@ export {
 } from "./seats";
 export { getActivePlanId, processWebhookEvents } from "./sync";
 export type {
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PaymentProvider,
@@ -114,6 +119,7 @@ export type {
 	ProviderEventType,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
+	SeatProration,
 	SetSeatsInput,
 } from "./types";
 export {
