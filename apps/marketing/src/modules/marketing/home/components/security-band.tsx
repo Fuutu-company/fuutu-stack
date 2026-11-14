@@ -24,14 +24,14 @@ export function SecurityBand() {
 					<h2 className="text-balance font-extrabold font-heading text-[clamp(2.25rem,4.6vw,3.5rem)] leading-[1.02] tracking-display">
 						{t("title")}
 					</h2>
-					<p className="mt-4 max-w-xl text-lg text-primary-foreground/75 leading-8">
+					<p className="mt-4 max-w-xl text-lg text-primary-foreground leading-8">
 						{t("description")}
 					</p>
 					<Button
 						size="lg"
 						className={cn(
 							PILL_BUTTON,
-							"mt-7 bg-primary-foreground text-primary hover:bg-primary-foreground/90",
+							"mt-7 bg-primary-foreground text-primary hover:bg-primary-foreground",
 						)}
 						asChild
 					>
@@ -47,7 +47,7 @@ export function SecurityBand() {
 							<span className="block font-extrabold font-heading text-[2.125rem] leading-tight tracking-display">
 								{t(`facts.${key}.title`)}
 							</span>
-							<span className="mt-1 flex items-center gap-2 text-primary-foreground/75 text-sm">
+							<span className="mt-1 flex items-center gap-2 text-primary-foreground text-sm">
 								<span
 									aria-hidden="true"
 									className={cn(

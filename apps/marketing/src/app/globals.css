@@ -48,9 +48,10 @@
 /* Hero headline marker: a rounded area-colored band from just above the cap
  * height to just below the descenders, per wrapped line (clone). A plain
  * background would fill the whole inline box, which is taller than the tight
- * line-height and would cover the line above. Stops are in em, tuned to the
- * heading font (cap top ≈ 0.28em, descender bottom ≈ 1.18em from the box top);
- * a band of ≈ 1em leaves a hairline gap between lines at leading 1.02. */
+ * line-height and would cover the line above. Fallback stops are in em,
+ * tuned to the default heading font (cap top ≈ 0.28em, descender bottom ≈
+ * 1.18em from the box top); engines with `text-box` trimming use the trimmed
+ * box below instead and need no per-font tuning. */
 @layer components {
 	.hero-marker {
 		--marker: var(--area-billing);
@@ -87,6 +88,23 @@
 			left var(--marker-radius) top var(--marker-top);
 		-webkit-box-decoration-break: clone;
 		box-decoration-break: clone;
+	}
+
+	/* Font-independent marker: trimming the inline box to the cap line and
+	 * the baseline, then padding 0.055em above and 0.24em (descender depth)
+	 * below, makes a plain rounded fill span cap height to descenders for any
+	 * heading font, so no per-font em stops are needed. Height stays under
+	 * the 1.02 leading, so wrapped lines keep a hairline gap.
+	 * The gradient shape above stays as the fallback for engines without
+	 * `text-box` trimming on inline boxes. */
+	@supports (text-box: trim-both cap alphabetic) {
+		.hero-marker {
+			text-box: trim-both cap alphabetic;
+			padding-block: 0.055em 0.24em;
+			border-radius: var(--marker-radius);
+			background-color: var(--marker);
+			background-image: none;
+		}
 	}
 }
 

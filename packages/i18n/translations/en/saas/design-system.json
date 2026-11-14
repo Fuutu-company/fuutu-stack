@@ -79,6 +79,10 @@
 						"title": "Primary hover fill",
 						"description": "The default button hover renders primary at 90% over the page. Measured as rendered."
 					},
+					"primaryBand": {
+						"title": "Primary band tile",
+						"description": "The marketing security band sets text on a tile of 8% primary-foreground over primary. Measured as rendered."
+					},
 					"focusRing": {
 						"title": "Focus ring",
 						"description": "Components draw focus as the ring at 50% over the surface. Measured as rendered. Needs 3:1."

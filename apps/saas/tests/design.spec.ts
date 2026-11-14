@@ -2,6 +2,7 @@ import { config } from "@fuutu/config";
 import { CONTRAST_PAIRS } from "@fuutu/ui/color";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
+import { expectedFontFamily } from "./font-families";
 
 // The style guide is optional: buyers turn it off before launch.
 test.skip(!config.features.designSystem, "config.features.designSystem is off");
@@ -348,16 +349,16 @@ test.describe("/design", () => {
 			const cs = getComputedStyle(el);
 			return { family: cs.fontFamily, weight: cs.fontWeight };
 		});
-		expect(display800.family).toMatch(/schibsted/i);
+		expect(display800.family).toMatch(expectedFontFamily("heading"));
 		expect(display800.weight).toBe("800");
 		const body = section.locator("[data-type-role='body'] p").last();
 		expect(
 			await body.evaluate((el) => getComputedStyle(el).fontFamily),
-		).toMatch(/manrope/i);
+		).toMatch(expectedFontFamily("sans"));
 		const mono = section.locator("[data-type-role='mono'] p").last();
 		expect(
 			await mono.evaluate((el) => getComputedStyle(el).fontFamily),
-		).toMatch(/geist mono/i);
+		).toMatch(expectedFontFamily("mono"));
 	});
 
 	test("scales show radius sm to 4xl and shadows 2xs to 2xl", async ({

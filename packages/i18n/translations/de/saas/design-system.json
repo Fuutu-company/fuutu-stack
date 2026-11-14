@@ -79,6 +79,10 @@
 						"title": "Primär-Hover-Füllung",
 						"description": "Der Standard-Button-Hover rendert Primär mit 90 % Deckkraft über der Seite. Gemessen wie gerendert."
 					},
+					"primaryBand": {
+						"title": "Primary-Band-Kachel",
+						"description": "Das Security-Band setzt Text auf eine Kachel aus 8 % Primary-Foreground über Primary. Gemessen wie dargestellt."
+					},
 					"focusRing": {
 						"title": "Fokusring",
 						"description": "Komponenten zeichnen den Fokus als Ring mit 50 % Deckkraft über der Fläche. Gemessen wie gerendert. Erfordert 3:1."
