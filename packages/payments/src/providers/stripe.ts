@@ -13,7 +13,11 @@ import type {
 	SeatProration,
 	SetSeatsInput,
 } from "../types";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	resolveCancelMode,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const log = createLogger({ scope: "payments:stripe" });
 
@@ -379,7 +383,7 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		options?: CancelSubscriptionOptions,
 	) {
 		const client = getClient();
-		if (options?.atPeriodEnd) {
+		if (resolveCancelMode(options) === "period_end") {
 			await client.subscriptions.update(subscriptionId, {
 				cancel_at_period_end: true,
 			});
@@ -435,6 +439,16 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 			log.error("stripe webhook handler failed", { err: String(err) });
 			throw err;
 		}
+	},
+
+	async getSubscriptionSeats(subscriptionId: string) {
+		const client = getClient();
+		const subscription = await client.subscriptions.retrieve(subscriptionId);
+		const firstItem = subscription.items.data[0];
+		if (!firstItem) {
+			throw new Error(`Subscription ${subscriptionId} has no items`);
+		}
+		return Math.max(1, firstItem.quantity ?? 1);
 	},
 
 	async setSubscriptionSeats({

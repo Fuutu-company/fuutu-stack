@@ -207,6 +207,7 @@ describe("activation supersedes other subscriptions (default policy)", () => {
 		expect(provider.current?.cancelSubscription).toHaveBeenCalledTimes(1);
 		expect(provider.current?.cancelSubscription).toHaveBeenCalledWith(
 			"sub_old_base",
+			{ mode: "immediate" },
 		);
 		expect(canceledIds()).toEqual(["purchase_sub_old_base"]);
 	});
@@ -220,6 +221,7 @@ describe("activation supersedes other subscriptions (default policy)", () => {
 
 		expect(provider.current?.cancelSubscription).toHaveBeenCalledWith(
 			"sub_old",
+			{ mode: "immediate" },
 		);
 		expect(canceledIds()).toEqual(["purchase_sub_old"]);
 	});

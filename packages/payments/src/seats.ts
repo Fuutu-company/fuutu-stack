@@ -130,7 +130,9 @@ export async function cancelAllSubscriptionsForOrganization(
 			continue;
 		}
 		try {
-			await provider.cancelSubscription(p.subscriptionId);
+			await provider.cancelSubscription(p.subscriptionId, {
+				mode: "immediate",
+			});
 		} catch (err) {
 			log.error("cancelSubscription failed", {
 				organizationId,

@@ -538,13 +538,48 @@ async function updateExistingPurchase(
 	const currentStatusLit = stored.status as PurchaseStatusLiteral;
 	const isProtected = PROTECTED_STATUSES.includes(currentStatusLit);
 
-	// For canceled events, respect currentPeriodEnd
+	// For canceled events, respect currentPeriodEnd — except for a trial:
+	// it has no paid period to honour (Creem's canceled payload still
+	// carries a future period end).
 	let resolvedStatus = event.status ?? DEFAULT_STATUS_FOR_TYPE[event.type];
-	if (event.type === "subscription.canceled" && event.currentPeriodEnd) {
-		const periodEnd = new Date(event.currentPeriodEnd);
-		if (periodEnd > new Date()) {
+	if (event.type === "subscription.canceled") {
+		if (currentStatusLit === "TRIALING") {
+			resolvedStatus = "CANCELED";
+		} else if (
+			event.currentPeriodEnd &&
+			new Date(event.currentPeriodEnd) > new Date()
+		) {
 			resolvedStatus = "SCHEDULED_CANCEL";
 		}
+	}
+
+	if (
+		resolvedStatus &&
+		(await isLateRevival(providerId, event, currentStatusLit, resolvedStatus))
+	) {
+		log.info("keeping status on a late event", {
+			purchaseId,
+			eventType: event.type,
+			currentStatus: currentStatusLit,
+			eventStatus: resolvedStatus,
+		});
+		resolvedStatus = undefined;
+	}
+
+	// A late past_due describes an older period: neither its status nor
+	// its period end may overwrite the recovered row.
+	let periodEnd = event.currentPeriodEnd;
+	if (
+		resolvedStatus === "PAST_DUE" &&
+		(await isLatePastDue(providerId, event, currentStatusLit, stored))
+	) {
+		log.info("keeping a recovered subscription on a late past_due", {
+			purchaseId,
+			eventType: event.type,
+			currentStatus: currentStatusLit,
+		});
+		resolvedStatus = undefined;
+		periodEnd = undefined;
 	}
 
 	if (
@@ -582,9 +617,7 @@ async function updateExistingPurchase(
 		id: purchaseId,
 		...(userIdToSet && { userId: userIdToSet }),
 		...(resolvedStatus && { status: resolvedStatus }),
-		...(event.currentPeriodEnd !== undefined && {
-			currentPeriodEnd: event.currentPeriodEnd,
-		}),
+		...(periodEnd !== undefined && { currentPeriodEnd: periodEnd }),
 		...productFields(event),
 		...(event.customerId !== undefined && { customerId: event.customerId }),
 		...(event.units !== undefined && { quantity: event.units }),
@@ -693,7 +726,9 @@ async function cancelOldSubscriptionsForOwner(
 			try {
 				// Cancel at the provider first — otherwise the customer
 				// keeps getting billed for the old subscription.
-				await provider.cancelSubscription(old.subscriptionId);
+				await provider.cancelSubscription(old.subscriptionId, {
+					mode: "immediate",
+				});
 				log.info("canceled old subscription at provider", {
 					oldSubscriptionId: old.subscriptionId,
 					newSubscriptionId,
@@ -808,6 +843,86 @@ function isSubscriptionActivationType(type: ProviderEventType): boolean {
 		type === "subscription.renewed" ||
 		type === "checkout.completed"
 	);
+}
+
+const TERMINAL_STATUSES: PurchaseStatusLiteral[] = ["CANCELED", "EXPIRED"];
+
+/**
+ * True when an event would revive a subscription it must not: a terminal
+ * one (CANCELED, EXPIRED) never leaves its status, whatever the event (a
+ * real resubscribe creates a new subscriptionId; a locally canceled,
+ * superseded row stays CANCELED when the provider's canceled webhook
+ * arrives later with a future period end). A PAST_DUE one goes back to
+ * ACTIVE/TRIALING on subscription.updated only when the provider confirms
+ * that status — updates can arrive late (provider retries, hours after
+ * the failed charge); recovery otherwise comes with a payment signal, an
+ * activation-type event (Creem subscription.paid/active, Stripe
+ * invoice.paid, Polar subscription.active).
+ */
+async function isLateRevival(
+	providerId: string,
+	event: ProviderEvent,
+	stored: PurchaseStatusLiteral,
+	sent: PurchaseStatusLiteral,
+): Promise<boolean> {
+	if (TERMINAL_STATUSES.includes(stored)) {
+		return !TERMINAL_STATUSES.includes(sent);
+	}
+	if (
+		event.type !== "subscription.updated" ||
+		stored !== "PAST_DUE" ||
+		!ACTIVE_STATUSES.includes(sent)
+	) {
+		return false;
+	}
+	return (await providerStatus(providerId, event)) !== sent;
+}
+
+/**
+ * True when a PAST_DUE event is older than the stored recovery: the row is
+ * ACTIVE/TRIALING for a period the event does not show (Stripe
+ * `invoice.payment_failed` carries none; a late update carries an older
+ * one) and the provider still reports it active. Stripe can deliver
+ * invoice.paid before a delayed payment_failed — without the check a
+ * paying customer loses access for a whole period. A failed or missing
+ * lookup downgrades, as before.
+ */
+async function isLatePastDue(
+	providerId: string,
+	event: ProviderEvent,
+	stored: PurchaseStatusLiteral,
+	row: { currentPeriodEnd?: Date | null },
+): Promise<boolean> {
+	if (!ACTIVE_STATUSES.includes(stored) || row.currentPeriodEnd == null) {
+		return false;
+	}
+	const storedEnd = new Date(row.currentPeriodEnd).getTime();
+	const eventOlder =
+		event.currentPeriodEnd === undefined ||
+		new Date(event.currentPeriodEnd).getTime() < storedEnd;
+	if (!eventOlder) return false;
+	const status = await providerStatus(providerId, event);
+	return status !== undefined && ACTIVE_STATUSES.includes(status);
+}
+
+/** The provider's live status, `undefined` when it cannot tell. */
+async function providerStatus(
+	providerId: string,
+	event: ProviderEvent,
+): Promise<PurchaseStatusLiteral | undefined> {
+	if (!event.subscriptionId) return undefined;
+	const provider = resolvePaymentProviderById(providerId);
+	if (!provider?.getSubscriptionStatus) return undefined;
+	try {
+		return await provider.getSubscriptionStatus(event.subscriptionId);
+	} catch (err) {
+		log.warn("subscription status lookup failed", {
+			subscriptionId: event.subscriptionId,
+			provider: providerId,
+			err: String(err),
+		});
+		return undefined;
+	}
 }
 
 /**

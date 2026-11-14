@@ -107,8 +107,12 @@ describe("cancelActiveSubscriptionsForUser()", () => {
 		await cancelActiveSubscriptionsForUser("user-1");
 
 		expect(cancelSubscription).toHaveBeenCalledTimes(2);
-		expect(cancelSubscription).toHaveBeenCalledWith("sub_active");
-		expect(cancelSubscription).toHaveBeenCalledWith("sub_trial");
+		expect(cancelSubscription).toHaveBeenCalledWith("sub_active", {
+			mode: "immediate",
+		});
+		expect(cancelSubscription).toHaveBeenCalledWith("sub_trial", {
+			mode: "immediate",
+		});
 	});
 
 	it("does not throw on a partial provider rejection and logs it", async () => {
@@ -146,7 +150,9 @@ describe("cancelActiveSubscriptionsForUser() — provider per purchase", () => {
 			sub({ provider: "polar", subscriptionId: "sub_polar" }),
 		]);
 		await cancelActiveSubscriptionsForUser("user-1");
-		expect(polarCancel).toHaveBeenCalledWith("sub_polar");
+		expect(polarCancel).toHaveBeenCalledWith("sub_polar", {
+			mode: "immediate",
+		});
 		expect(cancelSubscription).not.toHaveBeenCalled();
 	});
 

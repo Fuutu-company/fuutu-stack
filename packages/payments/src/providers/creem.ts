@@ -4,6 +4,7 @@ import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
 import { type CreemUpdateBehavior, paymentsConfig } from "../config";
 import type {
+	CancelMode,
 	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
@@ -15,7 +16,11 @@ import type {
 	SeatProration,
 	SetSeatsInput,
 } from "../types";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	resolveCancelMode,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const log = createLogger({ scope: "payments:creem" });
 
@@ -71,6 +76,11 @@ function requireAbsoluteUrl(
 	}
 	return url;
 }
+
+const CREEM_CANCEL_MODE = {
+	immediate: "immediate",
+	period_end: "scheduled",
+} as const satisfies Record<CancelMode, string>;
 
 const CREEM_PRORATION = {
 	"charge-immediately": "proration-charge-immediately",
@@ -183,6 +193,7 @@ const CreemSubscriptionResponseSchema = z.object({
 				id: z.string(),
 				product_id: z.string().nullish(),
 				price_id: z.string().nullish(),
+				units: z.number().int().nullish(),
 			}),
 		)
 		.optional(),
@@ -310,12 +321,13 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		options?: CancelSubscriptionOptions,
 	) {
 		// Without a mode Creem applies the store's configured default.
+		const mode = resolveCancelMode(options);
 		const response = await creemFetch(
 			`/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
 			{
 				method: "POST",
-				...(options?.atPeriodEnd && {
-					body: JSON.stringify({ mode: "scheduled" }),
+				...(mode && {
+					body: JSON.stringify({ mode: CREEM_CANCEL_MODE[mode] }),
 				}),
 			},
 		);
@@ -445,6 +457,26 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		};
 
 		return [event];
+	},
+
+	async getSubscriptionSeats(subscriptionId: string) {
+		const response = await creemFetch(
+			`/subscriptions?subscription_id=${encodeURIComponent(subscriptionId)}`,
+			{ method: "GET" },
+		);
+		if (!response.ok) {
+			const error = await readErrorBody(response);
+			log.error("Failed to get subscription", error);
+			throw new Error("Failed to get subscription");
+		}
+		const { items } = await parseCreemResponse(
+			response,
+			CreemSubscriptionResponseSchema,
+			"Failed to get subscription",
+		);
+		const item = items?.[0];
+		if (!item) throw new Error("No subscription items found");
+		return Math.max(1, item.units ?? 1);
 	},
 
 	async setSubscriptionSeats(input: SetSeatsInput) {

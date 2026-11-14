@@ -64,6 +64,25 @@ describe("payments.checkout.create — checkout guards", () => {
 		});
 	});
 
+	it("passes only a string reason to the client", async () => {
+		// A branded rejection from another bundle may carry anything.
+		mockAssertCheckoutAllowed.mockRejectedValue(
+			Object.assign(new CheckoutRejectedError("x"), {
+				reason: { secret: "sk_live_x" },
+			}),
+		);
+
+		const error = await call(
+			paymentsRouter.checkout.create,
+			{ planId: fixturePlanId<PlanId>("pro") },
+			{ context },
+		).catch((err: unknown) => err);
+
+		expect(error).toMatchObject({ code: "PRECONDITION_FAILED" });
+		expect((error as { data?: unknown }).data).toEqual({});
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+
 	it("a denying guard returns PRECONDITION_FAILED with data.reason and never calls the provider", async () => {
 		mockAssertCheckoutAllowed.mockRejectedValue(
 			new CheckoutRejectedError("addon_requires_base"),

@@ -168,12 +168,25 @@ export interface SetSeatsInput {
 
 export interface CancelSubscriptionOptions {
 	/**
-	 * `true`: cancel when the current period ends — the subscription keeps
-	 * granting access until then and can be resumed
-	 * (`resumeSubscription`). Default: cancel now (Creem: the store's
-	 * configured cancellation mode).
+	 * - "immediate": end the subscription now
+	 * - "period_end": cancel when the current period ends — it keeps
+	 *   granting access until then and can be resumed (`resumeSubscription`)
+	 * Omitted: `atPeriodEnd`, else cancel now (Creem: the store's
+	 * configured cancellation mode). Pass it whenever the outcome matters.
 	 */
+	mode?: CancelMode;
+	/** Alias of `mode: "period_end"`; `mode` wins when both are set. */
 	atPeriodEnd?: boolean;
+}
+
+export type CancelMode = "immediate" | "period_end";
+
+/** The requested cancel mode; `undefined` leaves it to the provider default. */
+export function resolveCancelMode(
+	options: CancelSubscriptionOptions | undefined,
+): CancelMode | undefined {
+	if (options?.mode) return options.mode;
+	return options?.atPeriodEnd ? "period_end" : undefined;
 }
 
 // ─── PaymentProvider interface ────────────────────────────────────────────────
@@ -256,6 +269,11 @@ export interface PaymentProvider {
  */
 export interface SeatAwarePaymentProvider extends PaymentProvider {
 	setSubscriptionSeats(input: SetSeatsInput): Promise<void>;
+	/**
+	 * Optional: the seats the provider bills for the subscription right
+	 * now. Throw when the lookup fails.
+	 */
+	getSubscriptionSeats?(subscriptionId: string): Promise<number>;
 }
 
 /**
@@ -308,6 +326,8 @@ export class WebhookConfigError extends Error {
 	}
 }
 
+const CHECKOUT_REJECTED = Symbol.for("fuutu.payments.CheckoutRejectedError");
+
 /**
  * A checkout guard refused the plan checkout (`registerCheckoutGuard`).
  * `reason` is a stable, app-defined code (e.g. `"addon_requires_base"`)
@@ -316,9 +336,29 @@ export class WebhookConfigError extends Error {
  */
 export class CheckoutRejectedError extends Error {
 	readonly reason: string;
+	readonly [CHECKOUT_REJECTED] = true;
 	constructor(reason: string, message?: string) {
 		super(message ?? `Checkout rejected: ${reason}`);
 		this.name = "CheckoutRejectedError";
 		this.reason = reason;
+	}
+
+	/**
+	 * Guards are registered in one bundle (server start) and run in
+	 * another (the API route): Next.js evaluates this module once per
+	 * bundle, so `instanceof` checks a global brand, not class identity.
+	 * Subclasses inherit this method; they keep the prototype check.
+	 */
+	static [Symbol.hasInstance](value: unknown): boolean {
+		// biome-ignore lint/complexity/noThisInStatic: `this` is the class `instanceof` asks about — a subclass must not match by the shared brand.
+		if (this !== CheckoutRejectedError) {
+			// biome-ignore lint/complexity/noThisInStatic: as above.
+			return Function.prototype[Symbol.hasInstance].call(this, value);
+		}
+		return (
+			typeof value === "object" &&
+			value !== null &&
+			(value as { [CHECKOUT_REJECTED]?: unknown })[CHECKOUT_REJECTED] === true
+		);
 	}
 }

@@ -77,7 +77,9 @@ export async function cancelActiveSubscriptionsForUser(
 					);
 					return Promise.resolve();
 				}
-				return provider.cancelSubscription(p.subscriptionId);
+				return provider.cancelSubscription(p.subscriptionId, {
+					mode: "immediate",
+				});
 			}),
 	);
 	for (const r of results) {

@@ -15,13 +15,16 @@ import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
 import { sanitizePaymentUrl, throwIfPaymentsDisabled } from "../shared";
 
+/** Upper bound for a checkout's seat count. */
+const MAX_CHECKOUT_SEATS = 1000;
+
 const checkoutSchema = z.object({
 	planId: z.enum(PLAN_IDS),
 	interval: z.enum(["month", "year"]).optional(),
 	organizationId: z.string().min(1).optional(),
 	successUrl: z.string().optional(),
 	cancelUrl: z.string().optional(),
-	seats: z.number().int().min(1).optional(),
+	seats: z.number().int().min(1).max(MAX_CHECKOUT_SEATS).optional(),
 	/** Buy now without the plan's trial. */
 	skipTrial: z.boolean().optional(),
 });
@@ -51,6 +54,10 @@ export const createCheckout = authProcedure({
 			});
 		}
 		const interval = input.interval ?? plan.interval ?? "month";
+		// Only a seat-based plan is bought per seat — any other plan is one
+		// unit, whatever the client sent.
+		const seatBased = plan.seatBased === true;
+		const seats = seatBased ? input.seats : undefined;
 		// Billing rules: an add-on (`Plan.addonOf`) needs an active base,
 		// plus every app guard (`registerCheckoutGuard`). The owner mirrors
 		// the webhook's: the organization when one is passed (its access
@@ -64,14 +71,16 @@ export const createCheckout = authProcedure({
 				userId: context.user.id,
 				planId: input.planId,
 				interval,
-				seats: input.seats,
+				seats: seatBased ? seats : 1,
 				skipTrial: input.skipTrial,
 			}));
 		} catch (err) {
 			if (err instanceof CheckoutRejectedError) {
+				// The brand matches across bundles, so the shape is not
+				// guaranteed: only a string reason reaches the client.
 				throw new ORPCError("PRECONDITION_FAILED", {
 					message: "This plan can't be purchased right now",
-					data: { reason: err.reason },
+					data: typeof err.reason === "string" ? { reason: err.reason } : {},
 				});
 			}
 			throw err;
@@ -107,14 +116,15 @@ export const createCheckout = authProcedure({
 					data: { reason: TRIAL_UNAVAILABLE },
 				});
 			}
-			// seats is used for seat-based plans (quantity on Stripe, units on Creem)
+			// seats only for seat-based plans (quantity on Stripe, units on
+			// Creem, seats on Polar); omitted, the provider bills one unit.
 			return await provider.createCheckoutLink({
 				priceId,
 				userId: context.user.id,
 				organizationId: input.organizationId,
 				successUrl: sanitizePaymentUrl(input.successUrl),
 				cancelUrl: sanitizePaymentUrl(input.cancelUrl),
-				seats: input.seats,
+				seats,
 				// Session email, not client input — providers pre-fill the
 				// checkout form with it.
 				customerEmail: context.user.email,

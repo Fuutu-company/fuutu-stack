@@ -815,6 +815,30 @@ describe("polar provider — cancel at period end and resume", () => {
 		expect(subscriptionsRevoke).not.toHaveBeenCalled();
 	});
 
+	it("cancel with mode period_end sets cancelAtPeriodEnd", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123", {
+			mode: "period_end",
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { cancelAtPeriodEnd: true },
+		});
+		expect(subscriptionsRevoke).not.toHaveBeenCalled();
+	});
+
+	it("cancel with mode immediate revokes now, whatever atPeriodEnd says", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123", {
+			mode: "immediate",
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsRevoke).toHaveBeenCalledWith({ id: "sub_123" });
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
 	it("cancel without options revokes immediately, as before", async () => {
 		subscriptionsRevoke.mockClear();
 		subscriptionsUpdate.mockClear();
@@ -891,4 +915,28 @@ describe("polar provider — scheduled cancel status", () => {
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("polar", () => polarPaymentProvider, {
 	behavior: "shape",
+});
+
+describe("polar provider — getSubscriptionSeats", () => {
+	it("reads the subscription's seats", async () => {
+		subscriptionsGet.mockResolvedValueOnce({ id: "sub_1", seats: 5 });
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(5);
+		expect(subscriptionsGet).toHaveBeenLastCalledWith({ id: "sub_1" });
+	});
+
+	it("a subscription that is not seat-based counts as one seat", async () => {
+		subscriptionsGet.mockResolvedValueOnce({ id: "sub_1", seats: null });
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(1);
+	});
+
+	it("throws when the lookup fails", async () => {
+		subscriptionsGet.mockRejectedValueOnce(new Error("polar down"));
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow("polar down");
+	});
 });

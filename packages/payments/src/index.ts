@@ -109,6 +109,7 @@ export {
 } from "./seats";
 export { getActivePlanId, processWebhookEvents } from "./sync";
 export type {
+	CancelMode,
 	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,

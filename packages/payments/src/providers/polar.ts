@@ -18,7 +18,11 @@ import type {
 	SeatAwarePaymentProvider,
 	SetSeatsInput,
 } from "../types";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	resolveCancelMode,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const log = createLogger({ scope: "payments:polar" });
 
@@ -432,12 +436,18 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		return polarSubscriptionStatus(subscription);
 	},
 
+	async getSubscriptionSeats(subscriptionId: string) {
+		const client = getClient();
+		const subscription = await client.subscriptions.get({ id: subscriptionId });
+		return Math.max(1, subscription.seats ?? 1);
+	},
+
 	async cancelSubscription(
 		subscriptionId: string,
 		options?: CancelSubscriptionOptions,
 	) {
 		const client = getClient();
-		if (options?.atPeriodEnd) {
+		if (resolveCancelMode(options) === "period_end") {
 			await client.subscriptions.update({
 				id: subscriptionId,
 				subscriptionUpdate: { cancelAtPeriodEnd: true },

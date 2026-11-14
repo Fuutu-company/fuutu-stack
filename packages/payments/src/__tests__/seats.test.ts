@@ -273,8 +273,12 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 		await cancelAllSubscriptionsForOrganization("org_1");
 
 		expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
-		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_a");
-		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_b");
+		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_a", {
+			mode: "immediate",
+		});
+		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_b", {
+			mode: "immediate",
+		});
 	});
 
 	it("cancels each subscription through the provider that owns it", async () => {
@@ -297,7 +301,9 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 
 		await cancelAllSubscriptionsForOrganization("org_1");
 
-		expect(mockOtherCancel).toHaveBeenCalledWith("sub_other");
+		expect(mockOtherCancel).toHaveBeenCalledWith("sub_other", {
+			mode: "immediate",
+		});
 		expect(mockCancelSubscription).not.toHaveBeenCalled();
 		expect(mockWarn).toHaveBeenCalled();
 	});

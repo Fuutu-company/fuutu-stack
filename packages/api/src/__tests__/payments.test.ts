@@ -118,6 +118,7 @@ vi.mock("@fuutu/ai", () => ({
 }));
 
 const {
+	assertCheckoutAllowed,
 	resolvePaymentProvider,
 	PaymentsDisabledError,
 	WebhookConfigError,
@@ -486,6 +487,73 @@ describe("payments.checkout.create", () => {
 	});
 });
 
+describe("payments.checkout.create — seats", () => {
+	// Own user so these cases do not eat the shared paymentsMutation
+	// rate-limit budget of `authenticatedContext`.
+	const seatsContext = makeSession<Context>(makeUser({ id: "user-seats" }));
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		proPlanOverrides.current = {};
+		envOverrides.PAYMENTS_PRO_PRICE_ID = "price-pro-monthly";
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCheckoutLink.mockResolvedValue({
+			url: "https://checkout.example.com",
+		});
+	});
+
+	it("forwards the seat count of a seat-based plan to the guards and the provider", async () => {
+		await call(
+			paymentsRouter.checkout.create,
+			{ planId: fixturePlanId<PlanId>("pro"), seats: 5 },
+			{ context: seatsContext },
+		);
+
+		expect(vi.mocked(assertCheckoutAllowed).mock.calls[0]?.[0].seats).toBe(5);
+		expect(mockProvider.createCheckoutLink.mock.calls[0]?.[0].seats).toBe(5);
+	});
+
+	it("never forwards seats for a plan that is not seat-based", async () => {
+		proPlanOverrides.current = { seatBased: undefined };
+
+		await call(
+			paymentsRouter.checkout.create,
+			{ planId: fixturePlanId<PlanId>("pro"), seats: 40 },
+			{ context: seatsContext },
+		);
+
+		expect(vi.mocked(assertCheckoutAllowed).mock.calls[0]?.[0].seats).toBe(1);
+		// No seat count for a flat price: Stripe and Creem bill one unit,
+		// Polar takes seats for seat-based pricing only.
+		const input = mockProvider.createCheckoutLink.mock.calls[0]?.[0];
+		expect(input).toBeDefined();
+		expect(input.seats).toBeUndefined();
+	});
+
+	it("accepts up to 1000 seats", async () => {
+		await call(
+			paymentsRouter.checkout.create,
+			{ planId: fixturePlanId<PlanId>("pro"), seats: 1000 },
+			{ context: seatsContext },
+		);
+
+		expect(mockProvider.createCheckoutLink.mock.calls[0]?.[0].seats).toBe(1000);
+	});
+
+	it("rejects more than 1000 seats before any guard or provider call", async () => {
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: fixturePlanId<PlanId>("pro"), seats: 1001 },
+				{ context: seatsContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+		expect(assertCheckoutAllowed).not.toHaveBeenCalled();
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+});
+
 describe("payments.topupPackages.list", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -795,7 +863,9 @@ describe("payments.subscription.cancel", () => {
 			{ context: authenticatedContext },
 		);
 
-		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1");
+		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1", {
+			mode: "immediate",
+		});
 		expect(result).toEqual({ success: true });
 	});
 
@@ -815,7 +885,9 @@ describe("payments.subscription.cancel", () => {
 			{ context: authenticatedContext },
 		);
 
-		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-2");
+		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-2", {
+			mode: "immediate",
+		});
 		expect(result).toEqual({ success: true });
 	});
 
@@ -906,7 +978,7 @@ describe("payments.subscription.cancel — at period end", () => {
 		);
 
 		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1", {
-			atPeriodEnd: true,
+			mode: "period_end",
 		});
 	});
 
@@ -925,7 +997,9 @@ describe("payments.subscription.cancel — at period end", () => {
 			{ context: authenticatedContext },
 		);
 
-		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1");
+		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1", {
+			mode: "immediate",
+		});
 	});
 });
 

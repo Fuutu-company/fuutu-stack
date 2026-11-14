@@ -704,6 +704,61 @@ describe("processWebhookEvents", () => {
 		},
 	);
 
+	// A late subscription.updated (a delivery retried hours later, sent
+	// before the cancel or the failed charge) must never restore access:
+	// terminal statuses stay terminal, and PAST_DUE recovers only on a
+	// payment signal (Creem subscription.paid/active, Stripe invoice.paid,
+	// Polar subscription.active — all activation-type events).
+	it.each([
+		["CANCELED", "ACTIVE"],
+		["CANCELED", "SCHEDULED_CANCEL"],
+		["CANCELED", "PAST_DUE"],
+		["EXPIRED", "ACTIVE"],
+		["EXPIRED", "TRIALING"],
+		["PAST_DUE", "ACTIVE"],
+		["PAST_DUE", "TRIALING"],
+	] as const)(
+		"a late subscription.updated keeps %s (event says %s)",
+		async (stored, sent) => {
+			mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+				id: "purchase_1",
+				status: stored,
+			});
+			mockUpdatePurchase.mockClear();
+
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({
+					type: "subscription.updated",
+					status: sent,
+					units: 4,
+				}),
+			]);
+
+			const call = mockUpdatePurchase.mock.calls[0]?.[0];
+			expect(call).toBeDefined();
+			expect(call.status).toBeUndefined();
+			// The rest of the update still lands.
+			expect(call.quantity).toBe(4);
+		},
+	);
+
+	it.each(["SCHEDULED_CANCEL", "CANCELED"] as const)(
+		"subscription.updated still ends a PAST_DUE subscription (%s)",
+		async (sent) => {
+			mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+				id: "purchase_1",
+				status: "PAST_DUE",
+			});
+			mockUpdatePurchase.mockClear();
+
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({ type: "subscription.updated", status: sent }),
+			]);
+
+			expect(mockUpdatePurchase.mock.calls[0]?.[0].status).toBe(sent);
+		},
+	);
+
 	it.each(["PAST_DUE", "PAUSED"] as const)(
 		"recovers a %s subscription on subscription.activated",
 		async (status) => {
@@ -1596,5 +1651,193 @@ describe("leaving SCHEDULED_CANCEL (resume)", () => {
 			}),
 		]);
 		expect(writtenStatus()).toBeUndefined();
+	});
+});
+
+describe("status guards for late or out-of-order events", () => {
+	const STORED_PERIOD_END = new Date("2027-03-01T00:00:00.000Z");
+	const FUTURE = new Date("2099-01-01T00:00:00.000Z");
+	const getSubscriptionStatus = vi.fn();
+
+	afterEach(() => {
+		providers.byId = {};
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		getSubscriptionStatus.mockReset();
+		providers.byId = {
+			[PROVIDER_ID]: { id: PROVIDER_ID, getSubscriptionStatus },
+		};
+		mockGetCreditBalance.mockReset().mockResolvedValue(null);
+	});
+
+	const stored = (status: string, currentPeriodEnd?: Date) =>
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status,
+			currentPeriodEnd: currentPeriodEnd ?? null,
+			organizationId: "org_123",
+			userId: null,
+		});
+
+	const writtenStatus = () => {
+		const call = mockUpdatePurchase.mock.calls[0]?.[0];
+		expect(call).toBeDefined();
+		return call.status;
+	};
+
+	it("a canceled trial is CANCELED, even with a future period end (Creem)", async () => {
+		stored("TRIALING");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.canceled",
+				status: "CANCELED",
+				currentPeriodEnd: FUTURE,
+			}),
+		]);
+		expect(writtenStatus()).toBe("CANCELED");
+	});
+
+	it("a canceled paid subscription keeps its period (SCHEDULED_CANCEL)", async () => {
+		stored("ACTIVE");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.canceled",
+				status: "CANCELED",
+				currentPeriodEnd: FUTURE,
+			}),
+		]);
+		expect(writtenStatus()).toBe("SCHEDULED_CANCEL");
+	});
+
+	it.each([
+		["CANCELED", "subscription.canceled", "CANCELED", FUTURE],
+		["CANCELED", "subscription.past_due", "PAST_DUE", undefined],
+		["CANCELED", "subscription.paused", "PAUSED", undefined],
+		["CANCELED", "subscription.scheduled_cancel", "SCHEDULED_CANCEL", FUTURE],
+		["EXPIRED", "subscription.canceled", "CANCELED", FUTURE],
+		["EXPIRED", "subscription.past_due", "PAST_DUE", undefined],
+		["EXPIRED", "subscription.scheduled_cancel", "SCHEDULED_CANCEL", FUTURE],
+	] as const)(
+		"a %s row stays terminal on %s",
+		async (storedStatus, type, status, currentPeriodEnd) => {
+			// e.g. a superseded row canceled locally, then the provider's
+			// canceled webhook with a period end still in the future.
+			stored(storedStatus);
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({ type, status, currentPeriodEnd }),
+			]);
+			expect(writtenStatus()).toBeUndefined();
+			expect(getSubscriptionStatus).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each(["ACTIVE", "TRIALING"] as const)(
+		"subscription.updated moves PAST_DUE to %s when the provider confirms it",
+		async (status) => {
+			stored("PAST_DUE");
+			getSubscriptionStatus.mockResolvedValue(status);
+			await processWebhookEvents(PROVIDER_ID, [
+				makeSubscriptionEvent({ type: "subscription.updated", status }),
+			]);
+			expect(getSubscriptionStatus).toHaveBeenCalledWith("sub_123");
+			expect(writtenStatus()).toBe(status);
+		},
+	);
+
+	it("subscription.updated keeps PAST_DUE when the provider still reports it", async () => {
+		stored("PAST_DUE");
+		getSubscriptionStatus.mockResolvedValue("PAST_DUE");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.updated", status: "ACTIVE" }),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("subscription.updated keeps PAST_DUE when the status lookup fails", async () => {
+		stored("PAST_DUE");
+		getSubscriptionStatus.mockRejectedValue(new Error("provider down"));
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({ type: "subscription.updated", status: "ACTIVE" }),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("a late past_due keeps a recovered ACTIVE row the provider reports ACTIVE (Stripe: invoice.paid before payment_failed)", async () => {
+		stored("ACTIVE", STORED_PERIOD_END);
+		getSubscriptionStatus.mockResolvedValue("ACTIVE");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.past_due",
+				status: "PAST_DUE",
+			}),
+		]);
+		expect(getSubscriptionStatus).toHaveBeenCalledWith("sub_123");
+		expect(writtenStatus()).toBeUndefined();
+	});
+
+	it("a late subscription.updated past_due from an older period keeps a recovered ACTIVE row", async () => {
+		stored("ACTIVE", STORED_PERIOD_END);
+		getSubscriptionStatus.mockResolvedValue("ACTIVE");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.updated",
+				status: "PAST_DUE",
+				currentPeriodEnd: new Date("2027-02-01T00:00:00.000Z"),
+			}),
+		]);
+		expect(writtenStatus()).toBeUndefined();
+		// Nor does the older period end roll the stored one back.
+		expect(mockUpdatePurchase.mock.calls[0]?.[0]).not.toHaveProperty(
+			"currentPeriodEnd",
+		);
+	});
+
+	it("past_due downgrades when the provider confirms it", async () => {
+		stored("ACTIVE", STORED_PERIOD_END);
+		getSubscriptionStatus.mockResolvedValue("PAST_DUE");
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.past_due",
+				status: "PAST_DUE",
+			}),
+		]);
+		expect(writtenStatus()).toBe("PAST_DUE");
+	});
+
+	it("past_due downgrades when the lookup fails or the provider has none", async () => {
+		stored("ACTIVE", STORED_PERIOD_END);
+		getSubscriptionStatus.mockRejectedValue(new Error("provider down"));
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.past_due",
+				status: "PAST_DUE",
+			}),
+		]);
+		expect(writtenStatus()).toBe("PAST_DUE");
+
+		mockUpdatePurchase.mockClear();
+		providers.byId = { [PROVIDER_ID]: { id: PROVIDER_ID } };
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.past_due",
+				status: "PAST_DUE",
+			}),
+		]);
+		expect(writtenStatus()).toBe("PAST_DUE");
+	});
+
+	it("past_due for the stored period downgrades without asking the provider", async () => {
+		stored("ACTIVE", STORED_PERIOD_END);
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.past_due",
+				status: "PAST_DUE",
+				currentPeriodEnd: new Date(STORED_PERIOD_END),
+			}),
+		]);
+		expect(getSubscriptionStatus).not.toHaveBeenCalled();
+		expect(writtenStatus()).toBe("PAST_DUE");
 	});
 });

@@ -96,6 +96,7 @@ describe("upgrade across a provider switch", () => {
 
 		expect(providers.byId.polar?.cancelSubscription).toHaveBeenCalledWith(
 			"sub_polar",
+			{ mode: "immediate" },
 		);
 		expect(providers.byId.stripe?.cancelSubscription).not.toHaveBeenCalled();
 		expect(mockUpdatePurchase).toHaveBeenCalledWith({
@@ -113,6 +114,7 @@ describe("upgrade across a provider switch", () => {
 
 		expect(providers.byId.stripe?.cancelSubscription).toHaveBeenCalledWith(
 			"sub_stripe_old",
+			{ mode: "immediate" },
 		);
 	});
 

@@ -35,13 +35,10 @@ export const cancelSubscription = protectedProcedure
 				context.user.id,
 				context,
 			);
-			if (input.atPeriodEnd) {
-				await provider.cancelSubscription(input.subscriptionId, {
-					atPeriodEnd: true,
-				});
-			} else {
-				await provider.cancelSubscription(input.subscriptionId);
-			}
+			// Explicit mode — never the provider's store default.
+			await provider.cancelSubscription(input.subscriptionId, {
+				mode: input.atPeriodEnd ? "period_end" : "immediate",
+			});
 			return { success: true };
 		} catch (err) {
 			throwIfPaymentsDisabled(err);

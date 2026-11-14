@@ -689,6 +689,29 @@ describe("stripe provider — cancel at period end and resume", () => {
 		expect(subscriptionsCancel).not.toHaveBeenCalled();
 	});
 
+	it("cancel with mode period_end sets cancel_at_period_end", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123", {
+			mode: "period_end",
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			cancel_at_period_end: true,
+		});
+		expect(subscriptionsCancel).not.toHaveBeenCalled();
+	});
+
+	it("cancel with mode immediate cancels now, whatever atPeriodEnd says", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123", {
+			mode: "immediate",
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsCancel).toHaveBeenCalledWith("sub_123");
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
 	it("cancel without options cancels immediately, as before", async () => {
 		subscriptionsCancel.mockClear();
 		subscriptionsUpdate.mockClear();
@@ -774,4 +797,42 @@ describe("stripe provider — scheduled cancel status", () => {
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("stripe", () => stripePaymentProvider, {
 	behavior: "shape",
+});
+
+describe("stripe provider — getSubscriptionSeats", () => {
+	it("reads the quantity of the subscription's item", async () => {
+		subscriptionsRetrieve.mockResolvedValueOnce({
+			id: "sub_1",
+			items: { data: [{ id: "item_1", quantity: 7 }] },
+		});
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(7);
+		expect(subscriptionsRetrieve).toHaveBeenLastCalledWith("sub_1");
+	});
+
+	it("an item without a quantity counts as one seat", async () => {
+		subscriptionsRetrieve.mockResolvedValueOnce({
+			id: "sub_1",
+			items: { data: [{ id: "item_1" }] },
+		});
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(1);
+	});
+
+	it("fails closed when the lookup fails or the subscription has no item", async () => {
+		subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow("stripe down");
+
+		subscriptionsRetrieve.mockResolvedValueOnce({
+			id: "sub_1",
+			items: { data: [] },
+		});
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow();
+	});
 });
