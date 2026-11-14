@@ -1,3 +1,4 @@
+import { fixturePlanId } from "@fuutu/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 // The tier is declared on the plan and the order is one exported
@@ -30,8 +31,8 @@ const { meetsTier } = await import("../plan-resolver");
 
 describe("tier on the plan", () => {
 	it("planIdToTier reads the tier the plan declares", () => {
-		expect(planIdToTier("pro")).toBe("enterprise");
-		expect(planIdToTier("enterprise")).toBe("pro");
+		expect(planIdToTier(fixturePlanId("pro"))).toBe("enterprise");
+		expect(planIdToTier(fixturePlanId("enterprise"))).toBe("pro");
 	});
 
 	it("a plan without a declared tier counts as free (custom plans keep working)", () => {
@@ -39,7 +40,7 @@ describe("tier on the plan", () => {
 		const saved = plans.pro?.tier;
 		delete (plans.pro as { tier?: string }).tier;
 		try {
-			expect(planIdToTier("pro")).toBe("free");
+			expect(planIdToTier(fixturePlanId("pro"))).toBe("free");
 		} finally {
 			(plans.pro as { tier?: string }).tier = saved;
 		}

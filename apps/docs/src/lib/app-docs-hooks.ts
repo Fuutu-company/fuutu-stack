@@ -2,8 +2,8 @@ import { appDocsSource } from "../../app-docs-source";
 import { docsContentDir } from "./docs-source-config";
 
 /**
- * Kit side of `appDocs.sourceUrl` / `appDocs.processMarkdown`
- * (`src/app-docs.tsx`). Generic over the page so it stays free of the
+ * Kit side of `appDocs.sourceUrl` / `appDocs.processMarkdown` /
+ * `appDocs.ogImage.url` (`src/app-docs.tsx`). Generic over the page so it stays free of the
  * fumadocs loader; unset hooks reproduce the kit behaviour.
  */
 
@@ -31,4 +31,13 @@ export async function processMarkdown<Page>(
 		| undefined,
 ): Promise<string> {
 	return hook ? await hook(markdown, page) : markdown;
+}
+
+/** OG image URL of a page: the kit's `/og/docs/…` route, or the app's. */
+export function resolveOgImageUrl<Page>(
+	page: Page,
+	kitUrl: string,
+	hook: ((page: Page) => string) | undefined,
+): string {
+	return hook ? hook(page) : kitUrl;
 }

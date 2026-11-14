@@ -12,6 +12,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { appMarketing } from "@/app-marketing";
 import { locales } from "@/i18n/config";
 import type { HomeSection, HomeSectionKey } from "@/lib/extensions";
+import { withAppMetadata } from "@/lib/page-metadata";
 
 /** Kit home sections, top to bottom — apps compose them in `app-marketing.tsx`. */
 const KIT_HOME_SECTIONS: HomeSection<HomeSectionKey>[] = [
@@ -38,10 +39,14 @@ export async function generateMetadata({
 }: HomePageProps): Promise<Metadata> {
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "home" });
-	return {
-		title: t("metaTitle"),
-		description: t("hero.description"),
-	};
+	return withAppMetadata(
+		{
+			title: t("metaTitle"),
+			description: t("hero.description"),
+		},
+		appMarketing.metadata?.home,
+		locale,
+	);
 }
 
 export default async function HomePage({ params }: HomePageProps) {

@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * App-owned marketing extensions: home-section composition
- * (`app-marketing.tsx` → `composeHomeSections`), extra nav items / footer
- * columns (`app-site-links.ts` → `lib/site-links.ts`) and the pricing-cards
+ * (`app-marketing.tsx` → `composeHomeSections`), extra nav items, dropdown
+ * items, footer columns and the header brand (`app-site-links.ts` →
+ * `lib/site-links.ts`) and the pricing-cards
  * override (`app-marketing.tsx` → `modules/marketing/pricing`). The app
  * files are mocked so each test controls the extras; empty extras must
  * reproduce the kit output exactly.
@@ -16,6 +17,8 @@ const ROOT = join(import.meta.dirname, "../../../..");
 const app = vi.hoisted(() => ({
 	appNavItems: [] as unknown[],
 	appFooterColumns: [] as unknown[],
+	appNavDropdownItems: [] as unknown[],
+	appHeaderBrand: {} as Record<string, unknown>,
 	appMarketing: {} as Record<string, unknown>,
 }));
 
@@ -25,6 +28,12 @@ vi.mock("../../../../apps/marketing/src/app-site-links", () => ({
 	},
 	get appFooterColumns() {
 		return app.appFooterColumns;
+	},
+	get appNavDropdownItems() {
+		return app.appNavDropdownItems;
+	},
+	get appHeaderBrand() {
+		return app.appHeaderBrand;
 	},
 }));
 vi.mock("@/app-marketing", () => ({
@@ -59,6 +68,8 @@ const keys = (sections: { key: string }[]) => sections.map((s) => s.key);
 beforeEach(() => {
 	app.appNavItems = [];
 	app.appFooterColumns = [];
+	app.appNavDropdownItems = [];
+	app.appHeaderBrand = {};
 	app.appMarketing = {};
 	vi.resetModules();
 });
@@ -145,6 +156,84 @@ describe("site links", () => {
 		expect(
 			links.FOOTER_COLUMNS.map((c: { titleKey: string }) => c.titleKey),
 		).toEqual(["product", "resources", "companyAndLegal", "community"]);
+	});
+
+	const dropdownKeys = (links: {
+		NAV_DROPDOWNS: { key: string; items: { key: string }[] }[];
+	}) => links.NAV_DROPDOWNS.map((g) => [g.key, g.items.map((i) => i.key)]);
+
+	it("keeps the kit dropdown groups without app items", async () => {
+		expect(dropdownKeys(await load())).toEqual([
+			["resources", ["blog", "changelog", "docs"]],
+		]);
+	});
+
+	it("places app dropdown items in their group, after their anchor or appended", async () => {
+		const Icon = () => null;
+		app.appNavDropdownItems = [
+			{ group: "resources", key: "guides", href: "/guides", icon: Icon },
+			{
+				group: "resources",
+				key: "community",
+				href: "https://discord.test",
+				external: true,
+				after: "blog",
+				icon: Icon,
+			},
+		];
+		const links = await load();
+		expect(dropdownKeys(links)).toEqual([
+			["resources", ["blog", "community", "changelog", "docs", "guides"]],
+		]);
+		const community = links.NAV_DROPDOWNS[0]?.items[1] as Record<
+			string,
+			unknown
+		>;
+		expect(community).toEqual({
+			key: "community",
+			href: "https://discord.test",
+			external: true,
+			icon: Icon,
+		});
+	});
+
+	it("throws on an unknown dropdown group and on a duplicate item key", async () => {
+		const Icon = () => null;
+		app.appNavDropdownItems = [
+			{ group: "company", key: "about", href: "/about", icon: Icon },
+		];
+		await expect(load()).rejects.toThrow(/unknown dropdown group "company"/);
+		vi.resetModules();
+		app.appNavDropdownItems = [
+			{ group: "resources", key: "blog", href: "/b", icon: Icon },
+		];
+		await expect(load()).rejects.toThrow(/duplicate key "blog"/);
+	});
+
+	it("exposes the app header brand to the navbar (kit brand when unset)", async () => {
+		expect((await load()).HEADER_BRAND).toEqual({});
+		vi.resetModules();
+		const Brand = () => null;
+		app.appHeaderBrand = { Brand };
+		expect((await load()).HEADER_BRAND.Brand).toBe(Brand);
+	});
+});
+
+describe("navbar brand", () => {
+	const navbar = readFileSync(
+		join(ROOT, "apps/marketing/src/modules/marketing/components/navbar.tsx"),
+		"utf8",
+	);
+
+	it("renders the app Brand in place of the kit logo + name, else the kit brand", () => {
+		expect(navbar).toMatch(/HEADER_BRAND/);
+		expect(navbar).toMatch(
+			/\{Brand \? \(\s*<Brand \/>\s*\) : \(\s*<>\s*<BrandLogo[\s\S]*?\{config\.app\.name\}\s*<\/span>\s*<\/>\s*\)\}/,
+		);
+	});
+
+	it("renders the app After component behind the brand inside the home link", () => {
+		expect(navbar).toMatch(/\{After && <After \/>\}\s*<\/Link>/);
 	});
 });
 

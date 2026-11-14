@@ -6,6 +6,7 @@ import { Providers } from "@shared/providers";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
+import { appMarketing } from "@/app-marketing";
 import { locales } from "@/i18n/config";
 
 export function generateStaticParams() {
@@ -24,6 +25,7 @@ export default async function MarketingLayout({
 	setRequestLocale(locale);
 
 	const messages = await getMessages();
+	const { LayoutSlot } = appMarketing;
 
 	return (
 		<NextIntlClientProvider locale={locale} messages={messages}>
@@ -37,6 +39,7 @@ export default async function MarketingLayout({
 				</div>
 				<ConsentBanner />
 				<AnalyticsScript />
+				{LayoutSlot && <LayoutSlot locale={locale} />}
 			</Providers>
 		</NextIntlClientProvider>
 	);

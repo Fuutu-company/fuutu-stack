@@ -34,8 +34,9 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "@better-auth/utils/password";
 import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
-import { appSeed } from "./app-seed";
+import { appSeed, appSeedConfig } from "./app-seed";
 import { db } from "./client";
+import { seedInvoiceCurrency } from "./seed-context";
 
 // Dashboard demo data. Marked rows (`metadata.seed`) are inserted only while
 // none exist, so re-runs stay idempotent and real audit rows never block them.
@@ -47,6 +48,9 @@ const DEMO_PLAN_ID = "pro";
 // payments; seed-demo-data-guard keeps the two aligned.
 const DEMO_AI_TOKENS_GRANTED = 500_000;
 const DAY_MS = 1000 * 60 * 60 * 24;
+// = BILLING_CURRENCY (@fuutu/payments/config) — kit default or the app's
+// `appSeedConfig.invoiceCurrency`; seed-currency-guard keeps them aligned.
+const INVOICE_CURRENCY = seedInvoiceCurrency(appSeedConfig);
 
 // [days ago, minutes before the seed time, actor, kit-emitted action]
 const DEMO_AUDIT_ACTIVITY: [number, number, "admin" | "member", string][] = [
@@ -410,7 +414,7 @@ async function main() {
 					url: "https://billing.acme.dev/invoices/001",
 					pdfUrl: "https://billing.acme.dev/invoices/001.pdf",
 					amount: 49.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "paid",
 					issuedAt: days(30),
 					paidAt: days(29),
@@ -422,7 +426,7 @@ async function main() {
 					url: "https://billing.acme.dev/invoices/002",
 					pdfUrl: "https://billing.acme.dev/invoices/002.pdf",
 					amount: 49.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "paid",
 					issuedAt: days(60),
 					paidAt: days(59),
@@ -433,7 +437,7 @@ async function main() {
 					providerInvoiceId: "seed_inv_003",
 					url: "https://billing.acme.dev/invoices/003",
 					amount: 149.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "open",
 					issuedAt: days(1),
 				},
@@ -442,7 +446,7 @@ async function main() {
 					userId: admin.id,
 					providerInvoiceId: "seed_inv_004",
 					amount: 49.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "void",
 					issuedAt: days(45),
 				},

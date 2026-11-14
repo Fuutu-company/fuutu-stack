@@ -1,5 +1,6 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { appMarketing } from "@/app-marketing";
+import { PageIntro } from "../../shared/components/page-intro";
 import {
 	PricingCardsHome as KitPricingCardsHome,
 	PricingCardsPage as KitPricingCardsPage,
@@ -16,4 +17,29 @@ export function PricingCardsHome() {
 
 export function PricingCardsPage() {
 	return createElement(appMarketing.PricingCards?.Page ?? KitPricingCardsPage);
+}
+
+/**
+ * `/pricing` header: the kit intro with the kit texts, the app's texts, or
+ * the app's component (`appMarketing.pricingHeader`). Resolved at render
+ * time, like the cards.
+ */
+export function PricingPageHeader({
+	title,
+	description,
+}: {
+	title: ReactNode;
+	description: ReactNode;
+}) {
+	const header = appMarketing.pricingHeader;
+	if (typeof header === "function") return createElement(header);
+	return createElement(
+		"div",
+		{ className: "mx-auto max-w-6xl px-4 pt-12 sm:px-6 md:pt-20" },
+		createElement(PageIntro, {
+			align: "center",
+			title: header?.title ?? title,
+			description: header?.description ?? description,
+		}),
+	);
 }

@@ -1,7 +1,8 @@
-import { PricingCardsPage } from "@marketing/pricing";
-import { PageIntro } from "@shared/components/page-intro";
+import { PricingCardsPage, PricingPageHeader } from "@marketing/pricing";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { appMarketing } from "@/app-marketing";
+import { withAppMetadata } from "@/lib/page-metadata";
 
 interface PricingPageProps {
 	params: Promise<{ locale: string }>;
@@ -12,7 +13,11 @@ export async function generateMetadata({
 }: PricingPageProps): Promise<Metadata> {
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "pricing" });
-	return { title: t("title"), description: t("description") };
+	return withAppMetadata(
+		{ title: t("title"), description: t("description") },
+		appMarketing.metadata?.pricing,
+		locale,
+	);
 }
 
 export default async function PricingPage({ params }: PricingPageProps) {
@@ -22,13 +27,7 @@ export default async function PricingPage({ params }: PricingPageProps) {
 
 	return (
 		<>
-			<div className="mx-auto max-w-6xl px-4 pt-12 sm:px-6 md:pt-20">
-				<PageIntro
-					align="center"
-					title={t("title")}
-					description={t("description")}
-				/>
-			</div>
+			<PricingPageHeader title={t("title")} description={t("description")} />
 			<PricingCardsPage />
 		</>
 	);

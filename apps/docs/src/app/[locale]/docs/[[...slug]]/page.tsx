@@ -12,8 +12,8 @@ import { setRequestLocale } from "next-intl/server";
 import { appDocs } from "@/app-docs";
 import { LLMCopyButton, ViewOptions } from "@/components/ai/page-actions";
 import { OpenAPIPage } from "@/components/openapi/api-page";
-import { defaultLocale, locales } from "@/i18n/config";
-import { resolveSourceUrl } from "@/lib/app-docs-hooks";
+import { resolveOgImageUrl, resolveSourceUrl } from "@/lib/app-docs-hooks";
+import { docsPageMetadata } from "@/lib/page-metadata";
 import { getPageImage, source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
@@ -85,31 +85,21 @@ export async function generateMetadata({
 	const page = source.getPage(slug, locale);
 	if (!page) notFound();
 
-	// Build hreflang alternates — all locales point to the same docs slug.
+	// hreflang alternates — all locales point to the same docs slug.
 	// `page.url` includes the locale prefix (e.g. `/de/docs`), so we rebuild
 	// the base path from slugs to avoid double-prefixing.
-	const basePath = `/docs${page.slugs.length > 0 ? `/${page.slugs.join("/")}` : ""}`;
-	const languages: Record<string, string> = {};
-	for (const loc of locales) {
-		languages[loc] = loc === defaultLocale ? basePath : `/${loc}${basePath}`;
-	}
-
-	return {
-		title: page.data.title,
-		description: page.data.description,
-		alternates: {
-			languages,
-		},
-		openGraph: {
+	return docsPageMetadata(
+		{
 			title: page.data.title,
 			description: page.data.description,
 			locale,
-			images: getPageImage(page).url,
+			path: `/docs${page.slugs.length > 0 ? `/${page.slugs.join("/")}` : ""}`,
+			image: resolveOgImageUrl(
+				page,
+				getPageImage(page).url,
+				appDocs.ogImage?.url,
+			),
 		},
-		twitter: {
-			card: "summary_large_image",
-			title: page.data.title,
-			description: page.data.description,
-		},
-	};
+		appDocs.metadata,
+	);
 }

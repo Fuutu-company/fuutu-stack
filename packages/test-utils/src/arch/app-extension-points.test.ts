@@ -114,6 +114,8 @@ const EXTENSION_POINTS: {
 			"apps/docs/src/app/[locale]/docs/[[...slug]]/page.tsx",
 			"apps/docs/src/app/llms.mdx/[locale]/docs/[[...slug]]/route.ts",
 			"apps/docs/src/app/llms-full.txt/route.ts",
+			"apps/docs/src/app/og/docs/[...slug]/route.tsx",
+			"apps/docs/src/app/sitemap.ts",
 		].map((file) => ({
 			file,
 			import: /\{ appDocs \} from "(\.\/|@\/)app-docs"/,
@@ -137,19 +139,24 @@ const EXTENSION_POINTS: {
 		file: "apps/marketing/src/app-marketing.tsx",
 		exports: ["appMarketing"],
 		wiredInto: [
-			{
-				file: "apps/marketing/src/app/(marketing)/[locale]/page.tsx",
-				import: /\{ appMarketing \} from "@\/app-marketing"/,
-			},
-			{
-				file: "apps/marketing/src/modules/marketing/pricing/index.ts",
-				import: /\{ appMarketing \} from "@\/app-marketing"/,
-			},
-		],
+			"apps/marketing/src/app/(marketing)/[locale]/page.tsx",
+			"apps/marketing/src/app/(marketing)/[locale]/layout.tsx",
+			"apps/marketing/src/app/(marketing)/[locale]/pricing/page.tsx",
+			"apps/marketing/src/modules/marketing/pricing/index.ts",
+			"apps/marketing/src/app/sitemap.ts",
+		].map((file) => ({
+			file,
+			import: /\{ appMarketing \} from "@\/app-marketing"/,
+		})),
 	},
 	{
 		file: "apps/marketing/src/app-site-links.ts",
-		exports: ["appNavItems", "appFooterColumns"],
+		exports: [
+			"appNavItems",
+			"appNavDropdownItems",
+			"appFooterColumns",
+			"appHeaderBrand",
+		],
 		wiredInto: [
 			{
 				file: "apps/marketing/src/lib/site-links.ts",
@@ -158,12 +165,22 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "apps/marketing/src/app-urls.ts",
+		exports: ["appUrls"],
+		wiredInto: [
+			{
+				file: "apps/marketing/src/lib/urls.ts",
+				import: /\{ appUrls \} from "\.\.\/app-urls"/,
+			},
+		],
+	},
+	{
 		file: "packages/db/prisma/app-seed.ts",
-		exports: ["appSeed"],
+		exports: ["appSeed", "appSeedConfig"],
 		wiredInto: [
 			{
 				file: "packages/db/prisma/seed.ts",
-				import: /\{ appSeed \} from "\.\/app-seed"/,
+				import: /\{ appSeed, appSeedConfig \} from "\.\/app-seed"/,
 			},
 		],
 	},

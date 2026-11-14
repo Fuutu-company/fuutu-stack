@@ -1,4 +1,9 @@
-import type { AppNavItem, FooterColumn } from "./lib/site-links";
+import type {
+	AppHeaderBrand,
+	AppNavDropdownItem,
+	AppNavItem,
+	FooterColumn,
+} from "./lib/site-links";
 
 /**
  * App-owned — the kit never changes this file's content after release;
@@ -28,3 +33,27 @@ import type { AppNavItem, FooterColumn } from "./lib/site-links";
 export const appNavItems: readonly AppNavItem[] = [];
 
 export const appFooterColumns: readonly FooterColumn[] = [];
+
+/**
+ * Items in a kit navbar dropdown `group` (`resources`), `after` an item key
+ * of that group (`blog`, `changelog`, `docs`) or appended. Labels resolve
+ * `nav.<key>` + `nav.descriptions.<key>`; an unknown group or an existing
+ * key throws.
+ *
+ * ```ts
+ * export const appNavDropdownItems: AppNavDropdownItem[] = [
+ *   { group: "resources", key: "guides", href: "/guides", icon: Compass, after: "blog" },
+ * ];
+ * ```
+ */
+export const appNavDropdownItems: readonly AppNavDropdownItem[] = [];
+
+/**
+ * Navbar brand, inside the home link: `Brand` replaces the kit logo mark +
+ * app name, `After` renders behind them (a badge). Client components.
+ *
+ * ```ts
+ * export const appHeaderBrand: AppHeaderBrand = { After: BetaBadge };
+ * ```
+ */
+export const appHeaderBrand: AppHeaderBrand = {};

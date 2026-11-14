@@ -3,6 +3,7 @@ import { generate as DefaultImage } from "fumadocs-ui/og";
 import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 
+import { appDocs } from "@/app-docs";
 import { defaultLocale, locales } from "@/i18n/config";
 import { getPageImage, source } from "@/lib/source";
 
@@ -22,12 +23,22 @@ export async function GET(
 	const page = source.getPage(slugs, locale);
 	if (!page) notFound();
 
+	const Image = appDocs.ogImage?.Image;
 	return new ImageResponse(
-		<DefaultImage
-			title={page.data.title}
-			description={page.data.description}
-			site={config.app.name}
-		/>,
+		Image ? (
+			<Image
+				page={page}
+				title={page.data.title}
+				description={page.data.description}
+				site={config.app.name}
+			/>
+		) : (
+			<DefaultImage
+				title={page.data.title}
+				description={page.data.description}
+				site={config.app.name}
+			/>
+		),
 		{
 			width: 1200,
 			height: 630,

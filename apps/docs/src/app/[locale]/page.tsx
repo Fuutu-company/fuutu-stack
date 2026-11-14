@@ -4,8 +4,9 @@ import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-se
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { LanguageSelect } from "@/components/language-select";
-import { defaultLocale, locales } from "@/i18n/config";
+import { locales } from "@/i18n/config";
 import { baseOptions } from "@/lib/layout.shared";
+import { hreflangLanguages } from "@/lib/page-metadata";
 import { Link } from "@/navigation";
 
 interface HomePageProps {
@@ -22,17 +23,13 @@ export async function generateMetadata({
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "home" });
 
-	const languages: Record<string, string> = {};
-	for (const loc of locales) {
-		languages[loc] = loc === defaultLocale ? "/" : `/${loc}`;
-	}
+	// hreflang alternates — none while i18n is disabled.
+	const languages = hreflangLanguages("");
 
 	return {
 		title: t("metaTitle", { appName: config.app.name }),
 		description: t("metaDescription"),
-		alternates: {
-			languages,
-		},
+		...(languages ? { alternates: { languages } } : {}),
 		openGraph: {
 			title: t("metaTitle", { appName: config.app.name }),
 			description: t("metaDescription"),

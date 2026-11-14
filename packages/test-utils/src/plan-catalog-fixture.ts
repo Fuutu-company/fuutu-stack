@@ -158,6 +158,26 @@ const FEATURE_CATALOG = {
 	},
 } as const;
 
+/** Plan ids of `planCatalogFixture` (`"free" | "pro" | "enterprise"`). */
+export type FixturePlanId = keyof typeof PLANS;
+
+/**
+ * A fixture plan id where the code under test expects the app's `PlanId`.
+ * Kit tests run against `planCatalogFixture`, so its ids are valid at
+ * runtime under any app catalog; this keeps them type-checking too (a
+ * bare `"pro"` fails `check-types` once the app's `PlanId` drops it).
+ * `Id` is inferred from a `PlanId`-typed parameter; pass it where the
+ * call site is generic (oRPC `call` input):
+ *
+ * ```ts
+ * getPlanPriceId(fixturePlanId("pro"), "month");
+ * call(router.checkout.create, { planId: fixturePlanId<PlanId>("pro") }, opts);
+ * ```
+ */
+export function fixturePlanId<Id extends string>(id: FixturePlanId): Id {
+	return id as string as Id;
+}
+
 export const planCatalogFixture = {
 	BILLING_CURRENCY,
 	PLANS,

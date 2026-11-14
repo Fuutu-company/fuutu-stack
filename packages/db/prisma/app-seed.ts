@@ -1,4 +1,4 @@
-import type { AppSeedContext } from "./seed-context";
+import type { AppSeedConfig, AppSeedContext } from "./seed-context";
 
 /**
  * App-owned — the kit never changes this file's content after release;
@@ -22,3 +22,16 @@ import type { AppSeedContext } from "./seed-context";
  * ```
  */
 export async function appSeed(_ctx: AppSeedContext): Promise<void> {}
+
+/**
+ * Options for the kit seed (contract: `seed-context.ts`):
+ *
+ * - `invoiceCurrency`: currency of the demo invoices — set it to your
+ *   `BILLING_CURRENCY` (@fuutu/payments/config) when you change that;
+ *   `seed-currency-guard` fails until they match.
+ *
+ * ```ts
+ * export const appSeedConfig: AppSeedConfig = { invoiceCurrency: "EUR" };
+ * ```
+ */
+export const appSeedConfig: AppSeedConfig = {};

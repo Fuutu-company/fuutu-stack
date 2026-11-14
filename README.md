@@ -61,13 +61,13 @@ Two independent identities. `KIT_NAME` and `KIT_VERSION` (`packages/config/index
 
 ## License
 
-**Free for teams with ≤ 10 employees and ≤ $250k annual revenue.** Once you exceed either threshold, you need an Enterprise License.
+Fuutu Stack is licensed under the **Fuutu Business License** (source-available). **Free for teams with ≤ 10 employees and ≤ $250k annual revenue.** Once you exceed either threshold, you need an Enterprise License.
 
 | Tier | Price | Who |
 |---|---|---|
-| **OSS** | Free | ≤ 10 employees AND ≤ $250k revenue |
-| **MCP Plus** | Monthly | Anyone who wants MCP rules, full skills + versioning API |
-| **Enterprise** | Yearly | Above either OSS threshold |
+| **Small teams** | Free | ≤ 10 employees AND ≤ $250k annual revenue |
+| **MCP Plus** | Subscription, billed yearly | Anyone who wants MCP rules, full skills + versioning API |
+| **Enterprise** | Yearly | Above either small-team threshold |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
 

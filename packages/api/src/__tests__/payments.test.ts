@@ -1,5 +1,5 @@
 import type { PlanId } from "@fuutu/payments/config";
-import { makeSession, makeUser } from "@fuutu/test-utils";
+import { fixturePlanId, makeSession, makeUser } from "@fuutu/test-utils";
 import { call } from "@orpc/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
@@ -195,7 +195,7 @@ describe("payments.checkout.create", () => {
 
 		const result = await call(
 			paymentsRouter.checkout.create,
-			{ planId: "pro" },
+			{ planId: fixturePlanId<PlanId>("pro") },
 			{ context: authenticatedContext },
 		);
 
@@ -220,7 +220,7 @@ describe("payments.checkout.create", () => {
 
 		await call(
 			paymentsRouter.checkout.create,
-			{ planId: "pro" },
+			{ planId: fixturePlanId<PlanId>("pro") },
 			{ context: authenticatedContext },
 		);
 
@@ -237,7 +237,7 @@ describe("payments.checkout.create", () => {
 
 		await call(
 			paymentsRouter.checkout.create,
-			{ planId: "pro" },
+			{ planId: fixturePlanId<PlanId>("pro") },
 			{ context: authenticatedContext },
 		);
 
@@ -257,7 +257,7 @@ describe("payments.checkout.create", () => {
 
 		await call(
 			paymentsRouter.checkout.create,
-			{ planId: "pro", interval: "year" },
+			{ planId: fixturePlanId<PlanId>("pro"), interval: "year" },
 			{ context: authenticatedContext },
 		);
 
@@ -279,7 +279,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "pro", interval: "year" },
+				{ planId: fixturePlanId<PlanId>("pro"), interval: "year" },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
@@ -290,7 +290,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "free" },
+				{ planId: fixturePlanId<PlanId>("free") },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -301,7 +301,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "enterprise" },
+				{ planId: fixturePlanId<PlanId>("enterprise") },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -327,7 +327,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "pro" },
+				{ planId: fixturePlanId<PlanId>("pro") },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
@@ -343,7 +343,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "pro" },
+				{ planId: fixturePlanId<PlanId>("pro") },
 				{ context: authenticatedContext },
 			),
 		).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
@@ -357,7 +357,7 @@ describe("payments.checkout.create", () => {
 
 		const error = await call(
 			paymentsRouter.checkout.create,
-			{ planId: "pro" },
+			{ planId: fixturePlanId<PlanId>("pro") },
 			{ context: configErrorContext },
 		).catch((err: unknown) => err);
 
@@ -378,7 +378,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "pro" },
+				{ planId: fixturePlanId<PlanId>("pro") },
 				{ context: configErrorContext },
 			),
 		).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
@@ -392,7 +392,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "pro" },
+				{ planId: fixturePlanId<PlanId>("pro") },
 				{ context: configErrorContext },
 			),
 		).rejects.toBe(boom);
@@ -408,7 +408,7 @@ describe("payments.checkout.create", () => {
 		await call(
 			paymentsRouter.checkout.create,
 			{
-				planId: "pro",
+				planId: fixturePlanId<PlanId>("pro"),
 				organizationId: "12345678-1234-1234-8123-123456789abc",
 				successUrl: "/success",
 				cancelUrl: "/cancel",
@@ -435,7 +435,10 @@ describe("payments.checkout.create", () => {
 
 		await call(
 			paymentsRouter.checkout.create,
-			{ planId: "pro", successUrl: "https://evil.com/steal" },
+			{
+				planId: fixturePlanId<PlanId>("pro"),
+				successUrl: "https://evil.com/steal",
+			},
 			{ context: authenticatedContext },
 		);
 
@@ -454,7 +457,7 @@ describe("payments.checkout.create", () => {
 		await expect(
 			call(
 				paymentsRouter.checkout.create,
-				{ planId: "pro" },
+				{ planId: fixturePlanId<PlanId>("pro") },
 				{
 					context: unauthenticatedContext,
 				},

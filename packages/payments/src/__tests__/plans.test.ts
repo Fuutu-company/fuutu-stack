@@ -1,6 +1,11 @@
+import {
+	type FixturePlanId,
+	fixturePlanId,
+	planCatalogFixture,
+} from "@fuutu/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { LIMITS, PLANS, type PlanId } from "../config";
+import type { PlanId } from "../config";
 import {
 	formatLimit,
 	getFeaturesForTier,
@@ -17,7 +22,10 @@ vi.mock("../config", async (importOriginal) => ({
 	...(await import("@fuutu/test-utils")).planCatalogFixture,
 }));
 
-const ALL_PLAN_IDS: PlanId[] = ["free", "pro", "enterprise"];
+// The mocked config exposes these very objects; read through the fixture
+// so the ids type-check under any app catalog.
+const { LIMITS, PLANS } = planCatalogFixture;
+const ALL_PLAN_IDS: FixturePlanId[] = ["free", "pro", "enterprise"];
 const ALL_LIMIT_KEYS: LimitKey[] = [
 	"organizations",
 	"membersPerOrg",
@@ -194,7 +202,7 @@ describe("buildPricingTiers()", () => {
 		const tiers = buildPricingTiers({
 			audience: "saas",
 			t: mockTranslations,
-			loadingId: "pro",
+			loadingId: fixturePlanId("pro"),
 		});
 		const proTier = tiers.find((t) => t.id === "pro");
 		expect(proTier?.disabled).toBe(true);
@@ -268,7 +276,7 @@ describe("getLimit()", () => {
 	for (const planId of ALL_PLAN_IDS) {
 		for (const limitKey of ALL_LIMIT_KEYS) {
 			it(`returns correct value for ${planId}.${limitKey}`, () => {
-				const result = getLimit(planId, limitKey);
+				const result = getLimit(fixturePlanId(planId), limitKey);
 				expect(result).toBe(LIMITS[planId][limitKey]);
 			});
 		}
@@ -279,7 +287,9 @@ describe("getLimit()", () => {
 	});
 
 	it("returns 'unlimited' for enterprise.organizations", () => {
-		expect(getLimit("enterprise", "organizations")).toBe("unlimited");
+		expect(getLimit(fixturePlanId("enterprise"), "organizations")).toBe(
+			"unlimited",
+		);
 	});
 });
 
@@ -305,14 +315,14 @@ describe("formatLimit()", () => {
 
 describe("planIdToTier()", () => {
 	it("maps free to free", () => {
-		expect(planIdToTier("free")).toBe("free");
+		expect(planIdToTier(fixturePlanId("free"))).toBe("free");
 	});
 
 	it("maps pro to pro", () => {
-		expect(planIdToTier("pro")).toBe("pro");
+		expect(planIdToTier(fixturePlanId("pro"))).toBe("pro");
 	});
 
 	it("maps enterprise to enterprise", () => {
-		expect(planIdToTier("enterprise")).toBe("enterprise");
+		expect(planIdToTier(fixturePlanId("enterprise"))).toBe("enterprise");
 	});
 });

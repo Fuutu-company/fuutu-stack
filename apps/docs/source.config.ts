@@ -6,7 +6,7 @@ import {
 } from "fumadocs-mdx/config";
 import { z } from "zod";
 import { appDocsSource } from "./app-docs-source";
-import { docsContentDir } from "./src/lib/docs-source-config";
+import { docsContentDir, docsMdxOptions } from "./src/lib/docs-source-config";
 
 export const docs = defineDocs({
 	dir: docsContentDir(appDocsSource),
@@ -27,5 +27,5 @@ export const docs = defineDocs({
 });
 
 export default defineConfig({
-	mdxOptions: {},
+	mdxOptions: docsMdxOptions(appDocsSource),
 });

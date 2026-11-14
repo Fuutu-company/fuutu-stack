@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import ChangelogV010 from "./changelog/v0-1-0";
 import ChangelogV010De from "./changelog/v0-1-0.de";
+import ChangelogV100 from "./changelog/v1-0-0";
+import ChangelogV100De from "./changelog/v1-0-0.de";
 import { type ChangelogFrontmatter, changelogMeta } from "./changelog-meta";
 import { isoDate } from "./iso-date";
 import ImprintDe, {
@@ -124,6 +126,7 @@ export const posts: readonly PostEntry[] = Object.freeze(
 
 /** Changelog bodies per slug — frontmatter lives in `changelog/<slug>.meta.ts`. */
 const CHANGELOG_BODIES: Record<string, Record<string, ComponentType>> = {
+	"v1-0-0": { en: ChangelogV100, de: ChangelogV100De },
 	"v0-1-0": { en: ChangelogV010, de: ChangelogV010De },
 };
 

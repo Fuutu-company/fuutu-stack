@@ -1,7 +1,13 @@
 import { insertAfter } from "@fuutu/utils/insert-after";
 import type { LucideIcon } from "lucide-react";
 import { BookOpen, Rss, Terminal } from "lucide-react";
-import { appFooterColumns, appNavItems } from "../app-site-links";
+import type { ComponentType } from "react";
+import {
+	appFooterColumns,
+	appHeaderBrand,
+	appNavDropdownItems,
+	appNavItems,
+} from "../app-site-links";
 import { urls } from "./urls";
 
 /**
@@ -41,6 +47,28 @@ export type FooterColumn = { titleKey: string; links: FooterLink[] };
 
 /** App navbar item (`app-site-links.ts`): `after` a nav key, or appended. */
 export type AppNavItem = NavItem & { after?: string };
+
+/**
+ * App dropdown item (`app-site-links.ts`): into the kit dropdown `group`
+ * (`resources`), `after` an item key of that group, or appended.
+ */
+export type AppNavDropdownItem = NavDropdownItem & {
+	group: string;
+	after?: string;
+};
+
+/**
+ * Navbar brand (`app-site-links.ts`), inside the home link: `Brand`
+ * replaces the kit logo mark + app name, `After` renders behind them (a
+ * badge, a second mark). Client components; unset keeps the kit brand.
+ */
+export type AppHeaderBrand = {
+	Brand?: ComponentType;
+	After?: ComponentType;
+};
+
+/** Navbar brand: the app's parts (`appHeaderBrand`), else the kit logo + name. */
+export const HEADER_BRAND: AppHeaderBrand = appHeaderBrand;
 
 /** Top-level navbar links, left to right. */
 export const NAV_ITEMS: NavItem[] = [
@@ -99,6 +127,22 @@ NAV_ITEMS.splice(
 		(item) => item.key,
 	),
 );
+for (const extra of appNavDropdownItems) {
+	if (!NAV_DROPDOWNS.some((g) => g.key === extra.group)) {
+		throw new Error(
+			`app-site-links: unknown dropdown group "${extra.group}" (item "${extra.key}")`,
+		);
+	}
+}
+for (const group of NAV_DROPDOWNS) {
+	group.items = insertAfter(
+		group.items,
+		appNavDropdownItems
+			.filter((extra) => extra.group === group.key)
+			.map(({ group: _group, after, ...item }) => ({ after, item })),
+		(item) => item.key,
+	);
+}
 for (const column of appFooterColumns) {
 	if (FOOTER_COLUMNS.some((c) => c.titleKey === column.titleKey)) {
 		throw new Error(

@@ -144,6 +144,20 @@ describe("Content collections - changelog", () => {
 		expect(entry?.slug).toBe("v0-1-0");
 	});
 
+	it("changelog versions are unique (they are the entries' anchor ids)", () => {
+		const versions = changelog.map((c) => c.frontmatter.version);
+		expect(new Set(versions).size).toBe(versions.length);
+	});
+
+	it("lists the kit 1.0.0 release first, dated like the kit-v1.0.0 tag, in en + de", () => {
+		const entry = getChangelogEntry("v1-0-0");
+		expect(entry?.frontmatter.version).toBe("1.0.0");
+		expect(entry?.frontmatter.publishedAt).toBe("2026-11-14");
+		expect(changelog[0]?.slug).toBe("v1-0-0");
+		expect(entry && getChangelogBody(entry, "de")).not.toBe(entry?.bodies.en);
+		expect(getChangelogEntry("v0-1-0")?.frontmatter.version).toBe("0.1.0");
+	});
+
 	it("getChangelogEntry returns undefined for unknown slug", () => {
 		const entry = getChangelogEntry("nonexistent");
 		expect(entry).toBeUndefined();

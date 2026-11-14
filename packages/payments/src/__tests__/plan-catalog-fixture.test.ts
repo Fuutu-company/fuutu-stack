@@ -1,10 +1,11 @@
-import { planCatalogFixture } from "@fuutu/test-utils";
+import { fixturePlanId, planCatalogFixture } from "@fuutu/test-utils";
 import { describe, expect, it } from "vitest";
 import type {
 	CreditTopupPackage,
 	FeatureEntry,
 	LimitValue,
 	Plan,
+	PlanId,
 } from "../config";
 
 /**
@@ -56,5 +57,20 @@ describe("planCatalogFixture", () => {
 		for (const plan of Object.values(typed.PLANS)) {
 			expect(typed.TIER_ORDER).toContain(plan.tier);
 		}
+	});
+});
+
+describe("fixturePlanId()", () => {
+	it("returns the fixture id, typed as the catalog's PlanId", () => {
+		// Assignable to the app's PlanId whatever its union — kit tests pass
+		// fixture ids to catalog-typed APIs without failing check-types.
+		const id: PlanId = fixturePlanId("pro");
+		expect(id).toBe("pro");
+		expect(fixturePlanId("enterprise")).toBe("enterprise");
+	});
+
+	it("only accepts ids of the fixture catalog", () => {
+		// @ts-expect-error — not a planCatalogFixture plan id
+		expect(fixturePlanId("starter")).toBe("starter");
 	});
 });

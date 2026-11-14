@@ -1,6 +1,6 @@
 import { config } from "@fuutu/config";
 import { i18nConfig } from "@fuutu/i18n/config";
-import { PLANS } from "@fuutu/payments/config";
+import { PLAN_IDS, PLANS, type Plan } from "@fuutu/payments/config";
 import {
 	FEATURE_GROUPS,
 	formatLimit,
@@ -84,9 +84,15 @@ export async function Patterns() {
 	};
 	const tooltips = rawFeatures.tooltips as Record<string, string>;
 	const groups = rawFeatures.groups as Record<string, string>;
-	const featureMatrix: FeatureMatrixRow[] = getPricingFeaturesForPlan(
-		"enterprise",
-	).map((feature) => ({
+	// Matrix rows: every feature of the contact-sales (custom) plan — the
+	// top of the catalog — else of the last plan.
+	const matrixPlanId =
+		PLAN_IDS.find((id) => (PLANS[id] as Plan).billingType === "custom") ??
+		PLAN_IDS.at(-1);
+	const matrixFeatures = matrixPlanId
+		? getPricingFeaturesForPlan(matrixPlanId)
+		: [];
+	const featureMatrix: FeatureMatrixRow[] = matrixFeatures.map((feature) => ({
 		id: feature.id,
 		label: featureLabel(feature.id),
 		group: feature.group,

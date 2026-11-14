@@ -21,6 +21,7 @@ const FILES = [
 	"apps/marketing/src/modules/marketing/home/components/feature-bento.tsx",
 	"apps/marketing/src/modules/marketing/home/components/cta.tsx",
 	"apps/saas/src/modules/app/design-system/components/pricing-parts.tsx",
+	"apps/saas/src/modules/app/design-system/components/patterns.tsx",
 ];
 
 /** `"free"` there is a tier name (`TIER_ORDER`), so only `LIMITS.<id>` is checked. */

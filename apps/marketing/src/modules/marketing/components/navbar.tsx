@@ -18,6 +18,7 @@ import {
 } from "react";
 import { defaultLocale } from "@/i18n/config";
 import {
+	HEADER_BRAND,
 	NAV_DROPDOWNS,
 	NAV_ITEMS,
 	type NavDropdownItem,
@@ -334,6 +335,7 @@ export function MarketingNavbar() {
 		setOpen(false);
 	}, [pathname]);
 
+	const { Brand, After } = HEADER_BRAND;
 	const close = () => setOpen(false);
 	const mobileLinkClass = (href: string) =>
 		cn(
@@ -355,14 +357,21 @@ export function MarketingNavbar() {
 					href="/"
 					className="flex w-fit shrink-0 items-center gap-2.5 rounded-full"
 				>
-					<BrandLogo
-						size="xl"
-						alt={config.app.name}
-						className="size-[1.625rem] dark:invert"
-					/>
-					<span className="font-extrabold font-heading text-[1.0625rem] text-foreground tracking-heading">
-						{config.app.name}
-					</span>
+					{Brand ? (
+						<Brand />
+					) : (
+						<>
+							<BrandLogo
+								size="xl"
+								alt={config.app.name}
+								className="size-[1.625rem] dark:invert"
+							/>
+							<span className="font-extrabold font-heading text-[1.0625rem] text-foreground tracking-heading">
+								{config.app.name}
+							</span>
+						</>
+					)}
+					{After && <After />}
 				</Link>
 
 				<NavLinks />
