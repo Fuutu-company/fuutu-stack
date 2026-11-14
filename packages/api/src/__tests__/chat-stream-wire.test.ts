@@ -55,6 +55,9 @@ vi.mock("../orpc/router", async () => {
 
 const { rpcHandler } = await import("../orpc/handler");
 
+// Kit suite: the credits module on — an app may ship config.features.credits off.
+(await import("@fuutu/payments/config")).paymentsConfig.creditsEnabled = true;
+
 const context = makeSession<Context>(makeUser({ id: "user-1" }));
 
 function textStream(...chunks: string[]): ReadableStream<Uint8Array> {

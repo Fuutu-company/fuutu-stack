@@ -49,7 +49,9 @@ const { disabledFeatureForPath } = await import(
 	"../../../../apps/saas/src/lib/feature-routes"
 );
 
-const creditsEnabled = paymentsConfig.creditsEnabled;
+// Kit default, on unless a test turns it off — an app may ship it off.
+const creditsEnabled = true;
+paymentsConfig.creditsEnabled = creditsEnabled;
 const billingAttachedTo = paymentsConfig.billingAttachedTo;
 // Every gated feature starts on: personal billing is on while billing is
 // attached to the user (the kit default "on" org mode attaches it to orgs).

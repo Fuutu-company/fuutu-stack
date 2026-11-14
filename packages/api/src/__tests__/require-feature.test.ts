@@ -49,7 +49,9 @@ const ORG_ID = "12345678-1234-1234-8123-123456789abc";
 /** The gate's answer — distinct from a procedure's own NOT_FOUND. */
 const GATED = { code: "NOT_FOUND", message: "Not found" };
 
-const creditsEnabled = paymentsConfig.creditsEnabled;
+// Kit default, on unless a test turns it off — an app may ship it off.
+const creditsEnabled = true;
+paymentsConfig.creditsEnabled = creditsEnabled;
 afterEach(() => {
 	flags.aiChat = true;
 	flags.crm = true;

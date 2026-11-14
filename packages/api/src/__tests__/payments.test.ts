@@ -137,6 +137,9 @@ const {
 
 const { auth } = await import("@fuutu/auth");
 
+// Kit suite: the credits module on — an app may ship config.features.credits off.
+(await import("@fuutu/payments/config")).paymentsConfig.creditsEnabled = true;
+
 const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
 // Own user so these cases do not eat the shared paymentsMutation
