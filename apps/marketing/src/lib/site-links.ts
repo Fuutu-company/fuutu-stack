@@ -1,7 +1,7 @@
 import { insertAfter } from "@fuutu/utils/insert-after";
 import type { LucideIcon } from "lucide-react";
 import { BookOpen, Rss, Terminal } from "lucide-react";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactElement } from "react";
 import {
 	appFooter,
 	appFooterColumns,
@@ -89,6 +89,25 @@ export type NavEntry = { kind: "item" | "dropdown"; key: string };
 export type AppFooter = {
 	taglineKey?: string;
 	areaLine?: false | { textKey?: string; Mark?: ComponentType | null };
+	/** Footer entries that open UI (a dialog) instead of navigating. */
+	actions?: readonly AppFooterAction[];
+};
+
+/**
+ * A footer button in a column, after its links. The kit renders the
+ * trigger — a `<button type="button">` styled like the footer links,
+ * labelled `t(labelKey)` — and hands it to `Component`, a client
+ * component that wires it up, e.g.
+ * `<Dialog><DialogTrigger asChild>{trigger}</DialogTrigger>…</Dialog>`.
+ */
+export type AppFooterAction = {
+	/** Unique among the actions (React key). */
+	key: string;
+	/** Column `titleKey` — a kit column (`product`, `resources`, `companyAndLegal`) or an app column. */
+	column: string;
+	/** Full translation key of the button label. */
+	labelKey: string;
+	Component: ComponentType<{ trigger: ReactElement }>;
 };
 
 /** Footer area line: `Mark` undefined = the kit area mark, `null` = none. */
@@ -253,4 +272,20 @@ for (const column of appFooterColumns) {
 		);
 	}
 	FOOTER_COLUMNS.push(column);
+}
+
+/** App footer buttons (`appFooter.actions`), rendered after their column's links. */
+export const FOOTER_ACTIONS: AppFooterAction[] = [];
+for (const action of appFooter.actions ?? []) {
+	if (!FOOTER_COLUMNS.some((c) => c.titleKey === action.column)) {
+		throw new Error(
+			`app-site-links: unknown footer column "${action.column}" (action "${action.key}")`,
+		);
+	}
+	if (FOOTER_ACTIONS.some((a) => a.key === action.key)) {
+		throw new Error(
+			`app-site-links: duplicate footer action key "${action.key}"`,
+		);
+	}
+	FOOTER_ACTIONS.push(action);
 }

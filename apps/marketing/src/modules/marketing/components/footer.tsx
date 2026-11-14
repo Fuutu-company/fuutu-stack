@@ -3,14 +3,15 @@ import { AREA_CLASSES, AREAS, BrandLogo } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
 import { useTranslations } from "next-intl";
 import {
+	FOOTER_ACTIONS,
 	FOOTER_AREA_LINE,
 	FOOTER_COLUMNS,
 	FOOTER_TAGLINE_KEY,
 } from "@/lib/site-links";
 import { Link } from "@/navigation";
+import { FOOTER_LINK_CLASS, FooterActionItem } from "./footer-action";
 
-const LINK_CLASS =
-	"text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4";
+const LINK_CLASS = FOOTER_LINK_CLASS;
 
 /** The four product areas as a 2×2 mark — the kit's signature in one glyph. */
 function AreaMark() {
@@ -71,6 +72,15 @@ export function MarketingFooter() {
 											</Link>
 										)}
 									</li>
+								))}
+								{FOOTER_ACTIONS.filter(
+									(action) => action.column === column.titleKey,
+								).map((action) => (
+									<FooterActionItem
+										key={action.key}
+										action={action}
+										label={t(action.labelKey)}
+									/>
 								))}
 							</ul>
 						</div>

@@ -103,6 +103,19 @@ test.describe("navigation", () => {
 		expect(count).toBeGreaterThan(0);
 	});
 
+	test("footer action buttons are named, non-submitting buttons", async ({
+		page,
+	}) => {
+		// App footer actions (`appFooter.actions`) render as buttons; the kit
+		// footer alone has none. Whatever the app adds must stay accessible.
+		await page.goto("/");
+		const buttons = page.locator("footer").first().locator("button");
+		for (const button of await buttons.all()) {
+			await expect(button).toHaveAttribute("type", "button");
+			await expect(button).toHaveAccessibleName(/\S/);
+		}
+	});
+
 	test("footer links are present", async ({ page }) => {
 		await page.goto("/");
 		const footer = page.locator("footer").first();

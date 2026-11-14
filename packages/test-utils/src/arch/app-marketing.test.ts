@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -342,6 +343,66 @@ describe("site links", () => {
 		expect((await load()).FOOTER_AREA_LINE).toBeNull();
 	});
 
+	it("has no footer actions without app extras (kit footer unchanged)", async () => {
+		expect((await load()).FOOTER_ACTIONS).toEqual([]);
+	});
+
+	it("keeps app footer actions in declaration order, in kit or app columns", async () => {
+		const Gate = () => null;
+		app.appFooterColumns = [{ titleKey: "community", links: [] }];
+		app.appFooter = {
+			actions: [
+				{
+					key: "joinDiscord",
+					column: "community",
+					labelKey: "footer.join",
+					Component: Gate,
+				},
+				{
+					key: "feedback",
+					column: "companyAndLegal",
+					labelKey: "footer.fb",
+					Component: Gate,
+				},
+			],
+		};
+		const links = await load();
+		expect(
+			links.FOOTER_ACTIONS.map((a: { key: string; column: string }) => [
+				a.key,
+				a.column,
+			]),
+		).toEqual([
+			["joinDiscord", "community"],
+			["feedback", "companyAndLegal"],
+		]);
+	});
+
+	it("throws on a footer action in an unknown column", async () => {
+		app.appFooter = {
+			actions: [
+				{
+					key: "join",
+					column: "nope",
+					labelKey: "footer.join",
+					Component: () => null,
+				},
+			],
+		};
+		await expect(load()).rejects.toThrow(/unknown footer column "nope"/);
+	});
+
+	it("throws on a duplicate footer action key", async () => {
+		const action = {
+			key: "join",
+			column: "resources",
+			labelKey: "footer.join",
+			Component: () => null,
+		};
+		app.appFooter = { actions: [action, action] };
+		await expect(load()).rejects.toThrow(/duplicate footer action key "join"/);
+	});
+
 	it("exposes the app header brand to the navbar (kit brand when unset)", async () => {
 		expect((await load()).HEADER_BRAND).toEqual({});
 		vi.resetModules();
@@ -374,6 +435,69 @@ describe("navbar order and footer tagline wiring", () => {
 			/FOOTER_AREA_LINE\.Mark === undefined\s*\?\s*AreaMark\s*:\s*FOOTER_AREA_LINE\.Mark/,
 		);
 		expect(footer).not.toMatch(/t\("footer\.areas"\)/);
+	});
+});
+
+describe("footer action rendering", () => {
+	const MARKETING = join(ROOT, "apps/marketing");
+	const requireFromMarketing = createRequire(join(MARKETING, "package.json"));
+	type El = { type: unknown; props: Record<string, unknown> };
+	const { createElement } = requireFromMarketing("react") as {
+		createElement: (
+			type: unknown,
+			props: unknown,
+			...children: unknown[]
+		) => El;
+	};
+	const { renderToStaticMarkup } = requireFromMarketing("react-dom/server") as {
+		renderToStaticMarkup: (element: El) => string;
+	};
+
+	it("renders the app component around a kit-styled <button> with the label", async () => {
+		// Non-literal path: a `.tsx` module this package's tsc must not follow.
+		const { FooterActionItem, FOOTER_LINK_CLASS } = (await import(
+			/* @vite-ignore */ join(
+				MARKETING,
+				"src/modules/marketing/components/footer-action.tsx",
+			)
+		)) as { FooterActionItem: unknown; FOOTER_LINK_CLASS: string };
+		const Gate = ({ trigger }: { trigger: unknown }) =>
+			createElement("span", { "data-gate": "" }, trigger);
+		const html = renderToStaticMarkup(
+			createElement(
+				"ul",
+				null,
+				createElement(FooterActionItem, {
+					action: {
+						key: "join",
+						column: "resources",
+						labelKey: "footer.join",
+						Component: Gate,
+					},
+					label: "Join the community",
+				}),
+			),
+		);
+		expect(html).toBe(
+			`<ul><li><span data-gate=""><button type="button" class="${FOOTER_LINK_CLASS} cursor-pointer">Join the community</button></span></li></ul>`,
+		);
+	});
+
+	it("the footer renders each column's actions after its links, labels via t()", () => {
+		const footer = readFileSync(
+			join(ROOT, "apps/marketing/src/modules/marketing/components/footer.tsx"),
+			"utf8",
+		);
+		expect(footer).toMatch(
+			/FOOTER_ACTIONS\.filter\(\s*\(action\) => action\.column === column\.titleKey,?\s*\)/,
+		);
+		expect(footer).toMatch(
+			/<FooterActionItem[\s\S]*?label=\{t\(action\.labelKey\)\}/,
+		);
+		// Links stay before actions inside the column list.
+		expect(footer.indexOf("column.links.map")).toBeLessThan(
+			footer.indexOf("FOOTER_ACTIONS.filter"),
+		);
 	});
 });
 

@@ -1,4 +1,39 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+/**
+ * Post tests run on fixture posts, not on what the app publishes: the app
+ * may hide the kit's demo posts (`appContent.hidePosts`) and ship none of
+ * its own. The mock hides every kit post and injects two fixtures through
+ * `extraPosts`, so the suite holds under any `app-content.ts`.
+ */
+const fixtures = vi.hoisted(() => {
+	const body = (name: string) => {
+		const Body = () => null;
+		Body.displayName = name;
+		return Body;
+	};
+	return {
+		newer: {
+			slug: "fixture-newer",
+			frontmatter: { title: "Newer fixture", publishedAt: "2026-06-01" },
+			bodies: { en: body("NewerEn"), de: body("NewerDe") },
+		},
+		older: {
+			slug: "fixture-older",
+			frontmatter: { title: "Older fixture", publishedAt: "2026-01-15" },
+			bodies: { en: body("OlderEn"), de: body("OlderDe") },
+		},
+	};
+});
+
+vi.mock("../app-content", () => ({
+	appContent: {
+		hidePosts: () => true,
+		// Declared oldest first — the collection must sort them.
+		extraPosts: [fixtures.older, fixtures.newer],
+	},
+}));
+
 import {
 	changelog,
 	changelogFrontmatterSchema,
@@ -20,6 +55,10 @@ describe("Content collections - posts", () => {
 
 	it("posts array has at least one entry", () => {
 		expect(posts.length).toBeGreaterThan(0);
+		expect(posts.map((p) => p.slug)).toEqual([
+			"fixture-newer",
+			"fixture-older",
+		]);
 	});
 
 	it("each post has required fields", () => {
@@ -53,9 +92,10 @@ describe("Content collections - posts", () => {
 	});
 
 	it("getPost returns correct post by slug", () => {
-		const post = getPost("welcome");
+		const post = getPost("fixture-older");
 		expect(post).toBeDefined();
-		expect(post?.slug).toBe("welcome");
+		expect(post?.slug).toBe("fixture-older");
+		expect(post?.frontmatter.title).toBe("Older fixture");
 	});
 
 	it("getPost returns undefined for unknown slug", () => {
