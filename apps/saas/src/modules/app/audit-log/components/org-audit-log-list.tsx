@@ -87,8 +87,8 @@ export function OrgAuditLogList({
 				<CardContent className="space-y-4 p-6">
 					{logs.length === 0 ? (
 						<div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-							<span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-								<ScrollText className="size-[1.125rem]" />
+							<span className="flex items-center justify-center text-muted-foreground">
+								<ScrollText className="size-6" />
 							</span>
 							<p className="text-muted-foreground text-sm">{labels.empty}</p>
 						</div>

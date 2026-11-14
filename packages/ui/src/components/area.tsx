@@ -123,18 +123,15 @@ export function AreaIcon({
 	size = "md",
 	className,
 }: AreaIconProps) {
-	const { fill, ink } = AREA_CLASSES[area];
+	const { ink } = AREA_CLASSES[area];
 	return (
 		<span
 			data-slot="area-icon"
 			data-area={area}
 			aria-hidden="true"
 			className={cn(
-				"inline-flex shrink-0 items-center justify-center rounded-lg",
-				size === "sm"
-					? "size-6 [&>svg]:size-3.5"
-					: "size-9 [&>svg]:size-[1.125rem]",
-				fill,
+				"inline-flex shrink-0 items-center justify-center",
+				size === "sm" ? "[&>svg]:size-4" : "[&>svg]:size-5",
 				ink,
 				className,
 			)}

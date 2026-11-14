@@ -1,8 +1,7 @@
 import { config } from "@fuutu/config";
 import { getShowcasePlan } from "@fuutu/payments/plans";
-import { type Area, Button } from "@fuutu/ui";
+import { type Area, AreaIcon, Button } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
-import { AreaCutoutIcon } from "@marketing/components/area-cutout-icon";
 import {
 	ArrowRight,
 	BadgeCheck,
@@ -161,7 +160,7 @@ export function Hero() {
 				</ScreenWindow>
 
 				{FLOATS.filter(({ key }) => key !== "upgraded" || showcase).map(
-					({ key, area, icon, className, delay }) => (
+					({ key, area, icon: Icon, className, delay }) => (
 						<div
 							key={key}
 							data-slot="hero-float"
@@ -171,7 +170,9 @@ export function Hero() {
 							)}
 							style={{ "--float-delay": delay } as CSSProperties}
 						>
-							<AreaCutoutIcon area={area} icon={icon} />
+							<AreaIcon area={area} className="[&>svg]:size-6">
+								<Icon />
+							</AreaIcon>
 							<span className="min-w-0">
 								{floatTitle[key]}
 								<span className="block font-medium text-[0.8rem] text-muted-foreground">

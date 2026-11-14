@@ -105,8 +105,8 @@ export function SessionsBlock() {
 								className="flex items-center justify-between gap-4 p-4"
 							>
 								<div className="flex items-center gap-3">
-									<div className="flex size-9 items-center justify-center rounded-md bg-muted">
-										<Icon className="size-4 text-muted-foreground" />
+									<div className="flex shrink-0 items-center justify-center">
+										<Icon className="size-5 text-muted-foreground" />
 									</div>
 									<div className="space-y-0.5">
 										<div className="flex items-center gap-2 font-medium text-sm">
