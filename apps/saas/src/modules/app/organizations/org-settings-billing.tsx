@@ -2,12 +2,16 @@
 
 import { createLogger } from "@fuutu/logs";
 import {
+	BILLING_CURRENCY,
 	type BillingInterval,
 	PLANS,
+	type Plan,
 	type PlanId,
 } from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
+	getFreePlanId,
+	getSeatPlan,
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
 import {
@@ -74,8 +78,10 @@ export function OrgSettingsBilling({
 	const [error, setError] = useState<string | null>(null);
 	const [seatCount, setSeatCount] = useState(1);
 
-	// Check if any plan is seat-based
-	const hasSeatBasedPlan = Object.values(PLANS).some((plan) => plan.seatBased);
+	// The seat-priced plan (first `seatBased` plan) prices the selector.
+	const seatPlan = getSeatPlan()?.plan;
+	// Orgs without a matching subscription are on the free plan.
+	const freePlanId = getFreePlanId();
 
 	const loadSubscription = useCallback(async () => {
 		if (!orgId || !paymentsEnabled) {
@@ -113,7 +119,7 @@ export function OrgSettingsBilling({
 	// A yearly subscription carries the yearly price ID — check both so a
 	// yearly sub resolves to its plan (and the correct interval label).
 	const { activePlanId, activeInterval } = ((): {
-		activePlanId: PlanId;
+		activePlanId: PlanId | undefined;
 		activeInterval: BillingInterval;
 	} => {
 		if (activeSub?.productId) {
@@ -127,7 +133,7 @@ export function OrgSettingsBilling({
 				}
 			}
 		}
-		return { activePlanId: "free", activeInterval: "month" };
+		return { activePlanId: freePlanId, activeInterval: "month" };
 	})();
 
 	async function checkout(planId: PlanId, interval?: BillingInterval) {
@@ -135,7 +141,7 @@ export function OrgSettingsBilling({
 		setCheckoutLoading(planId);
 		setError(null);
 		try {
-			const plan = PLANS[planId];
+			const plan: Plan = PLANS[planId];
 			const seats = plan.seatBased ? seatCount : undefined;
 			const result = await orpc.payments.checkout.create.call({
 				planId,
@@ -207,7 +213,8 @@ export function OrgSettingsBilling({
 		onCtaClick: checkout,
 		loadingId: checkoutLoading,
 		allDisabled: checkoutLoading !== null,
-		seatCountFor: (id) => (PLANS[id].seatBased ? seatCount : undefined),
+		seatCountFor: (id) =>
+			(PLANS[id] as Plan).seatBased ? seatCount : undefined,
 	});
 
 	// Mark current plan as disabled (can't "upgrade" to current plan)
@@ -215,20 +222,19 @@ export function OrgSettingsBilling({
 		...tier,
 		disabled:
 			tier.disabled ||
-			(activePlanId === tier.id && tier.id !== "free") ||
-			(tier.id === "free" && (!activeSub || activePlanId === "free")),
+			(activePlanId === tier.id && tier.id !== freePlanId) ||
+			(tier.id === freePlanId && (!activeSub || activePlanId === freePlanId)),
 		onCtaClick: activePlanId === tier.id ? undefined : tier.onCtaClick,
 	}));
 
-	// Get the Pro plan for seat selector (it's the seat-based plan)
-	const proPlan = PLANS.pro;
+	const seatCurrency = seatPlan?.currency ?? BILLING_CURRENCY;
 	const currencySymbol =
 		new Intl.NumberFormat(locale, {
 			style: "currency",
-			currency: proPlan.currency,
+			currency: seatCurrency,
 		})
 			.formatToParts(0)
-			.find((part) => part.type === "currency")?.value ?? proPlan.currency;
+			.find((part) => part.type === "currency")?.value ?? seatCurrency;
 
 	return (
 		<div className="space-y-6">
@@ -248,7 +254,7 @@ export function OrgSettingsBilling({
 							<div className="min-w-0">
 								<p className="font-medium text-sm">{org.name}</p>
 								<p className="text-muted-foreground text-xs">
-									{activeSub
+									{activeSub && activePlanId
 										? tp("planInterval", {
 												plan: tp(`plans.${activePlanId}.name`),
 												interval: tp(
@@ -266,7 +272,11 @@ export function OrgSettingsBilling({
 								{t("organizations.settings.billingCurrentPlan")}
 							</Badge>
 						) : (
-							<Badge variant="outline">{tp("plans.free.name")}</Badge>
+							freePlanId && (
+								<Badge variant="outline">
+									{tp(`plans.${freePlanId}.name`)}
+								</Badge>
+							)
 						)}
 					</div>
 
@@ -305,15 +315,15 @@ export function OrgSettingsBilling({
 				</div>
 			)}
 
-			{hasSeatBasedPlan && proPlan && (
+			{seatPlan && (
 				<SeatSelector
 					seatCount={seatCount}
 					onChange={setSeatCount}
-					pricePerSeat={proPlan.amount}
-					currency={proPlan.currency}
+					pricePerSeat={seatPlan.amount}
+					currency={seatPlan.currency}
 					currencySymbol={currencySymbol}
 					locale={locale}
-					interval={proPlan.interval}
+					interval={seatPlan.interval}
 					translations={{
 						title: tp("seatSelector.title"),
 						seat: tp("seatSelector.seat"),

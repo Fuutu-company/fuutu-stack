@@ -10,6 +10,7 @@ import {
 	type LimitValue,
 	PLANS,
 	type PlanId,
+	type PlanLimits,
 	type PlanTier,
 	TIER_ORDER,
 } from "./config";
@@ -18,7 +19,7 @@ export type { FeatureEntry, LimitValue, PlanTier };
 
 export type FeatureGroup = keyof typeof FEATURE_CATALOG;
 
-export type LimitKey = keyof typeof LIMITS.free;
+export type LimitKey = keyof PlanLimits;
 
 export { FEATURE_CATALOG };
 

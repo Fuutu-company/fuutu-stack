@@ -24,6 +24,7 @@
  *   - 4 demo invoices for the acme org (2 paid, 1 open, 1 void)
  *   - 2 demo webhooks for the acme org (active + inactive)
  *   - 4 demo notifications for the admin (read/unread, mixed types)
+ *   - your app's demo data: `prisma/app-seed.ts` runs last
  *
  * Safety: the script refuses `NODE_ENV === "production"` and any non-local
  * `DATABASE_URL` host. Production seeding is an explicit, ticketed operation —
@@ -33,11 +34,15 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "@better-auth/utils/password";
 import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
+import { appSeed } from "./app-seed";
 import { db } from "./client";
 
 // Dashboard demo data. Marked rows (`metadata.seed`) are inserted only while
 // none exist, so re-runs stay idempotent and real audit rows never block them.
 const DEMO_ACTIVITY_MARKER = "demo-activity";
+// The plan Acme is seeded on — seed-demo-data-guard checks its CREDITS and
+// price env var against @fuutu/payments/config (skipped once PLANS drop it).
+const DEMO_PLAN_ID = "pro";
 // = CREDITS.pro.ai_tokens (@fuutu/payments/config) — the seed cannot import
 // payments; seed-demo-data-guard keeps the two aligned.
 const DEMO_AI_TOKENS_GRANTED = 500_000;
@@ -293,7 +298,8 @@ async function main() {
 	// Acme's purchase (below) uses the Pro price id the app resolves plans from
 	// (`PLANS.pro.priceIdEnvVars.month`). Unset env falls back to a placeholder
 	// that the app maps to Free.
-	const proPriceId = env.PAYMENTS_PRO_PRICE_ID ?? "seed_product_pro";
+	const proPriceId =
+		env.PAYMENTS_PRO_PRICE_ID ?? `seed_product_${DEMO_PLAN_ID}`;
 	const acmeOnPro = Boolean(env.PAYMENTS_PRO_PRICE_ID);
 
 	// Demo AI usage — the org's ai_tokens balance (pro grant) plus the usage
@@ -523,6 +529,14 @@ async function main() {
 			],
 		});
 	}
+
+	// App demo data (prisma/app-seed.ts) — last, so it can reference the kit rows.
+	await appSeed({
+		db,
+		users: { admin, member },
+		orgs: { acme },
+		now: seedStart,
+	});
 
 	console.log("✓ Seed complete.");
 	console.log("  admin@fuutu.local / DevPassword!2345");

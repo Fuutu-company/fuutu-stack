@@ -5,14 +5,17 @@ import {
 	metaSchema,
 } from "fumadocs-mdx/config";
 import { z } from "zod";
+import { appDocsSource } from "./app-docs-source";
+import { docsContentDir } from "./src/lib/docs-source-config";
 
 export const docs = defineDocs({
-	dir: "content/docs",
+	dir: docsContentDir(appDocsSource),
 	docs: {
 		schema: frontmatterSchema.extend({
 			tags: z.array(z.string()).optional(),
 			author: z.string().optional(),
 			draft: z.boolean().optional(),
+			...appDocsSource.frontmatter,
 		}),
 		postprocess: {
 			includeProcessedMarkdown: true,

@@ -137,6 +137,39 @@ export function buildPricingTiers(
 	});
 }
 
+/**
+ * The plan priced per seat — the first `seatBased` plan in `PLANS` order.
+ * The seat selector shows its price; undefined when no plan has seats.
+ */
+export function getSeatPlan(): { id: PlanId; plan: Plan } | undefined {
+	const id = PLAN_IDS.find((planId) => (PLANS[planId] as Plan).seatBased);
+	return id === undefined ? undefined : { id, plan: PLANS[id] as Plan };
+}
+
+/**
+ * The plan marketing visuals showcase — the seat plan, else the first paid
+ * (`subscription` / `one_time`) plan; undefined when the catalog has none.
+ */
+export function getShowcasePlan(): { id: PlanId; plan: Plan } | undefined {
+	const seat = getSeatPlan();
+	if (seat) return seat;
+	const id = PLAN_IDS.find((planId) => {
+		const { billingType } = PLANS[planId] as Plan;
+		return billingType === "subscription" || billingType === "one_time";
+	});
+	return id === undefined ? undefined : { id, plan: PLANS[id] as Plan };
+}
+
+/**
+ * The plan an org without a matching subscription is on — the first plan
+ * with `billingType: "free"`; undefined when the catalog has none.
+ */
+export function getFreePlanId(): PlanId | undefined {
+	return PLAN_IDS.find(
+		(planId) => (PLANS[planId] as Plan).billingType === "free",
+	);
+}
+
 export type { PlanId } from "./config";
 /** Re-export so consumers can use a single `@fuutu/payments/plans` import. */
 export { getPricingFeaturesForPlan, planIdToTier } from "./features";

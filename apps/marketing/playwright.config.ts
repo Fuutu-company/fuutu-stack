@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { excludedTestsConfig } from "../../tooling/scripts/playwright-excluded.mjs";
+import { appExcludedTests } from "./tests/app-excluded";
 
 /** This project's port slot (`pnpm ports`) — assigned on first use. */
 function localProject(): { ports: Record<string, number> } {
@@ -36,6 +38,8 @@ const COVERAGE = process.env.COVERAGE === "1";
 
 export default defineConfig({
 	testDir: "./tests",
+	// App-excluded kit specs (`tests/app-excluded.ts`); empty → no change.
+	...excludedTestsConfig(appExcludedTests),
 	// Baselines are committed to the repo (.fuutu/visual-baselines/<app>) —
 	// CI refreshes them per PR and commits the diff onto the branch.
 	// `pnpm test:visual:local` points this at a scratch dir so committed baselines stay untouched.

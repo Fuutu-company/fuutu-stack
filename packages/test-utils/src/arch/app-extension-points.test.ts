@@ -112,11 +112,71 @@ const EXTENSION_POINTS: {
 			"apps/docs/src/mdx-components.tsx",
 			"apps/docs/src/app/[locale]/docs/layout.tsx",
 			"apps/docs/src/app/[locale]/docs/[[...slug]]/page.tsx",
+			"apps/docs/src/app/llms.mdx/[locale]/docs/[[...slug]]/route.ts",
+			"apps/docs/src/app/llms-full.txt/route.ts",
 		].map((file) => ({
 			file,
 			import: /\{ appDocs \} from "(\.\/|@\/)app-docs"/,
 		})),
 	},
+	{
+		file: "apps/docs/app-docs-source.ts",
+		exports: ["appDocsSource"],
+		wiredInto: [
+			{
+				file: "apps/docs/source.config.ts",
+				import: /\{ appDocsSource \} from "\.\/app-docs-source"/,
+			},
+			{
+				file: "apps/docs/src/lib/app-docs-hooks.ts",
+				import: /\{ appDocsSource \} from "\.\.\/\.\.\/app-docs-source"/,
+			},
+		],
+	},
+	{
+		file: "apps/marketing/src/app-marketing.tsx",
+		exports: ["appMarketing"],
+		wiredInto: [
+			{
+				file: "apps/marketing/src/app/(marketing)/[locale]/page.tsx",
+				import: /\{ appMarketing \} from "@\/app-marketing"/,
+			},
+			{
+				file: "apps/marketing/src/modules/marketing/pricing/index.ts",
+				import: /\{ appMarketing \} from "@\/app-marketing"/,
+			},
+		],
+	},
+	{
+		file: "apps/marketing/src/app-site-links.ts",
+		exports: ["appNavItems", "appFooterColumns"],
+		wiredInto: [
+			{
+				file: "apps/marketing/src/lib/site-links.ts",
+				import: /from "\.\.\/app-site-links"/,
+			},
+		],
+	},
+	{
+		file: "packages/db/prisma/app-seed.ts",
+		exports: ["appSeed"],
+		wiredInto: [
+			{
+				file: "packages/db/prisma/seed.ts",
+				import: /\{ appSeed \} from "\.\/app-seed"/,
+			},
+		],
+	},
+	...["apps/saas", "apps/marketing"].map((app) => ({
+		file: `${app}/tests/app-excluded.ts`,
+		exports: ["appExcludedTests"],
+		wiredInto: [
+			{
+				file: `${app}/playwright.config.ts`,
+				import: /\{ appExcludedTests \} from "\.\/tests\/app-excluded"/,
+			},
+		],
+	})),
 	{
 		file: "apps/docs/app-redirects.ts",
 		exports: ["appRedirects"],

@@ -1,6 +1,7 @@
 import { docs } from "fumadocs-mdx:collections/server";
 import { type InferPageType, loader } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
+import { processMarkdown } from "@/lib/app-docs-hooks";
 import { i18n } from "@/lib/i18n";
 import { openapi } from "@/lib/openapi";
 
@@ -33,7 +34,22 @@ export function getPageImage(page: InferPageType<typeof source>) {
 	};
 }
 
-export async function getLLMText(page: InferPageType<typeof source>) {
+/**
+ * Page Markdown for the llms routes. The routes pass `appDocs.processMarkdown`
+ * so this module never imports `@/app-docs` (which app overrides may
+ * import back from here — a cycle).
+ */
+export async function getLLMText(
+	page: InferPageType<typeof source>,
+	hook?: (
+		markdown: string,
+		page: InferPageType<typeof source>,
+	) => string | Promise<string>,
+) {
+	return processMarkdown(await kitLLMText(page), page, hook);
+}
+
+async function kitLLMText(page: InferPageType<typeof source>) {
 	if (page.type === "openapi") {
 		return `# ${page.data.title}\n\n${page.data.description ?? ""}`;
 	}

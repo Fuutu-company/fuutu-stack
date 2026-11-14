@@ -1,5 +1,7 @@
+import { insertAfter } from "@fuutu/utils/insert-after";
 import type { LucideIcon } from "lucide-react";
 import { BookOpen, Rss, Terminal } from "lucide-react";
+import { appFooterColumns, appNavItems } from "../app-site-links";
 import { urls } from "./urls";
 
 /**
@@ -11,6 +13,8 @@ import { urls } from "./urls";
  * to every enabled locale under `packages/i18n/translations/<locale>/marketing/`.
  * `href`: in-app path (locale-prefixed automatically), `#hash` link with
  * `hash: true`, or an absolute URL with `external: true`.
+ * App-only links go in `src/app-site-links.ts` (merged at the end of this
+ * file).
  */
 
 export type NavItem = {
@@ -34,6 +38,9 @@ export type NavDropdown = { key: string; items: NavDropdownItem[] };
 export type FooterLink = { href: string; labelKey: string; external?: boolean };
 
 export type FooterColumn = { titleKey: string; links: FooterLink[] };
+
+/** App navbar item (`app-site-links.ts`): `after` a nav key, or appended. */
+export type AppNavItem = NavItem & { after?: string };
 
 /** Top-level navbar links, left to right. */
 export const NAV_ITEMS: NavItem[] = [
@@ -81,3 +88,22 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
 		],
 	},
 ];
+
+// ─── App links (`src/app-site-links.ts`) — merged in place, kit links stay ───
+NAV_ITEMS.splice(
+	0,
+	NAV_ITEMS.length,
+	...insertAfter(
+		NAV_ITEMS,
+		appNavItems.map(({ after, ...item }) => ({ after, item })),
+		(item) => item.key,
+	),
+);
+for (const column of appFooterColumns) {
+	if (FOOTER_COLUMNS.some((c) => c.titleKey === column.titleKey)) {
+		throw new Error(
+			`app-site-links: duplicate footer titleKey "${column.titleKey}"`,
+		);
+	}
+	FOOTER_COLUMNS.push(column);
+}

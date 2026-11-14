@@ -13,6 +13,7 @@ import { appDocs } from "@/app-docs";
 import { LLMCopyButton, ViewOptions } from "@/components/ai/page-actions";
 import { OpenAPIPage } from "@/components/openapi/api-page";
 import { defaultLocale, locales } from "@/i18n/config";
+import { resolveSourceUrl } from "@/lib/app-docs-hooks";
 import { getPageImage, source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
@@ -41,11 +42,6 @@ export default async function Page({ params }: PageProps) {
 
 	const MDX = page.data.body;
 	const { PageActions } = appDocs;
-	const gitConfig = {
-		user: "Fuutu-company",
-		repo: "fuutu-stack",
-		branch: "main",
-	};
 
 	return (
 		<DocsPage toc={page.data.toc} full={page.data.full}>
@@ -57,7 +53,7 @@ export default async function Page({ params }: PageProps) {
 				<LLMCopyButton markdownUrl={`${page.url}.mdx`} />
 				<ViewOptions
 					markdownUrl={`${page.url}.mdx`}
-					githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/apps/docs/content/docs/${page.path}`}
+					githubUrl={resolveSourceUrl(page, appDocs.sourceUrl)}
 				/>
 				{PageActions && (
 					<PageActions

@@ -1,5 +1,5 @@
 import { config } from "@fuutu/config";
-import { PLANS } from "@fuutu/payments/config";
+import { getShowcasePlan } from "@fuutu/payments/plans";
 import { type Area, Button } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
 import { AreaCutoutIcon } from "@marketing/components/area-cutout-icon";
@@ -70,21 +70,26 @@ function highlight(chunks: ReactNode) {
 export function Hero() {
 	const t = useTranslations("home.hero");
 	const tPlans = useTranslations("payments.plans");
+	const showcase = getShowcasePlan();
 	const appName = config.app.name;
 	const screenshotAlt = t("screenshotAlt", { appName });
 
 	const floatMeta: Record<FloatKey, string> = {
 		joined: t("floats.joined.meta"),
-		upgraded: t("floats.upgraded.meta", {
-			price: PLANS.pro.displayPrice,
-			suffix: tPlans("pro.priceSuffix"),
-		}),
+		upgraded: showcase
+			? t("floats.upgraded.meta", {
+					price: showcase.plan.displayPrice,
+					suffix: tPlans(`${showcase.id}.priceSuffix`),
+				})
+			: "",
 		assistant: t("floats.assistant.meta", { credits: 1200 }),
 		webhook: t("floats.webhook.meta"),
 	};
 	const floatTitle: Record<FloatKey, string> = {
 		joined: t("floats.joined.title"),
-		upgraded: t("floats.upgraded.title", { plan: tPlans("pro.name") }),
+		upgraded: showcase
+			? t("floats.upgraded.title", { plan: tPlans(`${showcase.id}.name`) })
+			: "",
 		assistant: t("floats.assistant.title"),
 		webhook: t("floats.webhook.title"),
 	};
@@ -155,25 +160,27 @@ export function Hero() {
 					/>
 				</ScreenWindow>
 
-				{FLOATS.map(({ key, area, icon, className, delay }) => (
-					<div
-						key={key}
-						data-slot="hero-float"
-						className={cn(
-							"hero-float relative z-10 flex items-center gap-3 rounded-[1.25rem] bg-card py-3 pr-4 pl-3 text-left font-bold text-sm shadow-2xl lg:absolute",
-							className,
-						)}
-						style={{ "--float-delay": delay } as CSSProperties}
-					>
-						<AreaCutoutIcon area={area} icon={icon} />
-						<span className="min-w-0">
-							{floatTitle[key]}
-							<span className="block font-medium text-[0.8rem] text-muted-foreground">
-								{floatMeta[key]}
+				{FLOATS.filter(({ key }) => key !== "upgraded" || showcase).map(
+					({ key, area, icon, className, delay }) => (
+						<div
+							key={key}
+							data-slot="hero-float"
+							className={cn(
+								"hero-float relative z-10 flex items-center gap-3 rounded-[1.25rem] bg-card py-3 pr-4 pl-3 text-left font-bold text-sm shadow-2xl lg:absolute",
+								className,
+							)}
+							style={{ "--float-delay": delay } as CSSProperties}
+						>
+							<AreaCutoutIcon area={area} icon={icon} />
+							<span className="min-w-0">
+								{floatTitle[key]}
+								<span className="block font-medium text-[0.8rem] text-muted-foreground">
+									{floatMeta[key]}
+								</span>
 							</span>
-						</span>
-					</div>
-				))}
+						</div>
+					),
+				)}
 			</div>
 		</section>
 	);

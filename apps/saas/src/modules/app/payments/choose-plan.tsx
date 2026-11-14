@@ -3,13 +3,16 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
+	BILLING_CURRENCY,
 	type BillingInterval,
 	PLANS,
+	type Plan,
 	type PlanId,
 	paymentsConfig,
 } from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
+	getSeatPlan,
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
 import { PricingCompact, SeatSelector } from "@fuutu/ui";
@@ -36,8 +39,9 @@ export function ChoosePlan() {
 	// When billing is attached to "organization", the seat selector lives
 	// in the org billing settings page, not here.
 	const isOrgBilling = paymentsConfig.billingAttachedTo === "organization";
-	const showSeatSelector =
-		!isOrgBilling && Object.values(PLANS).some((plan) => plan.seatBased);
+	// The seat-priced plan (first `seatBased` plan) prices the selector.
+	const seatPlan = getSeatPlan()?.plan;
+	const showSeatSelector = !isOrgBilling && seatPlan !== undefined;
 
 	async function checkout(planId: PlanId, interval?: BillingInterval) {
 		// Organization billing: the purchase belongs to the active org — a
@@ -49,7 +53,7 @@ export function ChoosePlan() {
 		setLoading(planId);
 		setError(null);
 		try {
-			const plan = PLANS[planId];
+			const plan: Plan = PLANS[planId];
 			const seats = plan.seatBased ? seatCount : undefined;
 			const result = await orpc.payments.checkout.create.call({
 				planId,
@@ -91,18 +95,18 @@ export function ChoosePlan() {
 		loadingId: loading,
 		// Org billing needs the active org id — wait until it has loaded.
 		allDisabled: loading !== null || (isOrgBilling && activeOrgPending),
-		seatCountFor: (id) => (PLANS[id].seatBased ? seatCount : undefined),
+		seatCountFor: (id) =>
+			(PLANS[id] as Plan).seatBased ? seatCount : undefined,
 	});
 
-	// Get the Pro plan for seat selector (it's the seat-based plan)
-	const proPlan = PLANS.pro;
+	const seatCurrency = seatPlan?.currency ?? BILLING_CURRENCY;
 	const currencySymbol =
 		new Intl.NumberFormat(locale, {
 			style: "currency",
-			currency: proPlan.currency,
+			currency: seatCurrency,
 		})
 			.formatToParts(0)
-			.find((part) => part.type === "currency")?.value ?? proPlan.currency;
+			.find((part) => part.type === "currency")?.value ?? seatCurrency;
 
 	return (
 		<div className="space-y-6">
@@ -112,15 +116,15 @@ export function ChoosePlan() {
 				</div>
 			)}
 
-			{showSeatSelector && proPlan && (
+			{showSeatSelector && seatPlan && (
 				<SeatSelector
 					seatCount={seatCount}
 					onChange={setSeatCount}
-					pricePerSeat={proPlan.amount}
-					currency={proPlan.currency}
+					pricePerSeat={seatPlan.amount}
+					currency={seatPlan.currency}
 					currencySymbol={currencySymbol}
 					locale={locale}
-					interval={proPlan.interval}
+					interval={seatPlan.interval}
 					translations={{
 						title: t("seatSelector.title"),
 						seat: t("seatSelector.seat"),
