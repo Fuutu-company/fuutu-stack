@@ -1,4 +1,4 @@
-import { fixturePlanId } from "@fuutu/test-utils";
+import { fixturePlanId, fixtureTier } from "@fuutu/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 // The tier is declared on the plan and the order is one exported
@@ -47,12 +47,16 @@ describe("tier on the plan", () => {
 	});
 
 	it("meetsTier follows the exported TIER_ORDER", () => {
-		expect(meetsTier("pro", "enterprise")).toBe(true);
-		expect(meetsTier("enterprise", "pro")).toBe(false);
+		expect(meetsTier(fixtureTier("pro"), fixtureTier("enterprise"))).toBe(true);
+		expect(meetsTier(fixtureTier("enterprise"), fixtureTier("pro"))).toBe(
+			false,
+		);
 	});
 
 	it("getFeaturesForTier follows the exported TIER_ORDER", () => {
-		const enterpriseIds = getFeaturesForTier("enterprise").map((f) => f.id);
+		const enterpriseIds = getFeaturesForTier(fixtureTier("enterprise")).map(
+			(f) => f.id,
+		);
 		// "auth_passkeys" is a pro-tier feature — pro now ranks above enterprise.
 		expect(enterpriseIds).toContain("auth_sso");
 		expect(enterpriseIds).not.toContain("auth_passkeys");

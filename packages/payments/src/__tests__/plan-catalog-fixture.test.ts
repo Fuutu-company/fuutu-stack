@@ -1,4 +1,8 @@
-import { fixturePlanId, planCatalogFixture } from "@fuutu/test-utils";
+import {
+	fixturePlanId,
+	fixtureTier,
+	planCatalogFixture,
+} from "@fuutu/test-utils";
 import { describe, expect, it } from "vitest";
 import type {
 	CreditTopupPackage,
@@ -6,6 +10,7 @@ import type {
 	LimitValue,
 	Plan,
 	PlanId,
+	PlanTier,
 } from "../config";
 
 /**
@@ -57,6 +62,19 @@ describe("planCatalogFixture", () => {
 		for (const plan of Object.values(typed.PLANS)) {
 			expect(typed.TIER_ORDER).toContain(plan.tier);
 		}
+	});
+});
+
+describe("fixtureTier()", () => {
+	it("returns the fixture tier, typed as the catalog's PlanTier", () => {
+		const tier: PlanTier = fixtureTier("pro");
+		expect(tier).toBe("pro");
+		expect(fixtureTier("enterprise")).toBe("enterprise");
+	});
+
+	it("only accepts tiers of the fixture catalog", () => {
+		// @ts-expect-error — not a planCatalogFixture tier
+		expect(fixtureTier("starter")).toBe("starter");
 	});
 });
 

@@ -178,6 +178,22 @@ export function fixturePlanId<Id extends string>(id: FixturePlanId): Id {
 	return id as string as Id;
 }
 
+/** Tiers of `planCatalogFixture` (`"free" | "pro" | "enterprise"`). */
+export type FixtureTier = (typeof TIER_ORDER)[number];
+
+/**
+ * A fixture tier where the code under test expects the app's `PlanTier`.
+ * Same idea as `fixturePlanId`: the fixture's tiers are valid at runtime,
+ * this keeps them type-checking when the app's tiers differ.
+ *
+ * ```ts
+ * meetsTier(fixtureTier("pro"), fixtureTier("free"));
+ * ```
+ */
+export function fixtureTier<Tier extends string>(tier: FixtureTier): Tier {
+	return tier as string as Tier;
+}
+
 export const planCatalogFixture = {
 	BILLING_CURRENCY,
 	PLANS,

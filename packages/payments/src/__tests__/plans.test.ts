@@ -1,6 +1,7 @@
 import {
 	type FixturePlanId,
 	fixturePlanId,
+	fixtureTier,
 	planCatalogFixture,
 } from "@fuutu/test-utils";
 import { describe, expect, it, vi } from "vitest";
@@ -232,7 +233,7 @@ describe("buildPricingTiers()", () => {
 
 describe("getFeaturesForTier()", () => {
 	it("returns features for free tier", () => {
-		const features = getFeaturesForTier("free");
+		const features = getFeaturesForTier(fixtureTier("free"));
 		expect(features.length).toBeGreaterThan(0);
 		for (const f of features) {
 			expect(f.tier).toBe("free");
@@ -240,22 +241,22 @@ describe("getFeaturesForTier()", () => {
 	});
 
 	it("returns more features for pro than free", () => {
-		const freeFeatures = getFeaturesForTier("free");
-		const proFeatures = getFeaturesForTier("pro");
+		const freeFeatures = getFeaturesForTier(fixtureTier("free"));
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
 		expect(proFeatures.length).toBeGreaterThan(freeFeatures.length);
 	});
 
 	it("returns most features for enterprise", () => {
-		const proFeatures = getFeaturesForTier("pro");
-		const enterpriseFeatures = getFeaturesForTier("enterprise");
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
+		const enterpriseFeatures = getFeaturesForTier(fixtureTier("enterprise"));
 		expect(enterpriseFeatures.length).toBeGreaterThanOrEqual(
 			proFeatures.length,
 		);
 	});
 
 	it("free features are subset of pro features", () => {
-		const freeFeatures = getFeaturesForTier("free");
-		const proFeatures = getFeaturesForTier("pro");
+		const freeFeatures = getFeaturesForTier(fixtureTier("free"));
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
 		const proIds = new Set(proFeatures.map((f) => f.id));
 		for (const f of freeFeatures) {
 			expect(proIds.has(f.id)).toBe(true);
@@ -263,8 +264,8 @@ describe("getFeaturesForTier()", () => {
 	});
 
 	it("pro features are subset of enterprise features", () => {
-		const proFeatures = getFeaturesForTier("pro");
-		const enterpriseFeatures = getFeaturesForTier("enterprise");
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
+		const enterpriseFeatures = getFeaturesForTier(fixtureTier("enterprise"));
 		const enterpriseIds = new Set(enterpriseFeatures.map((f) => f.id));
 		for (const f of proFeatures) {
 			expect(enterpriseIds.has(f.id)).toBe(true);
