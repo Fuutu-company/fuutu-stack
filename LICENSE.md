@@ -1,6 +1,6 @@
 # Fuutu Business License
 
-**Version 1.0 — Effective 2026**
+**Version 1.1 — Effective 2026**
 
 Copyright © 2026 Fuutu and the Fuutu Stack contributors. All rights reserved.
 
@@ -29,23 +29,33 @@ out below. If you do not agree, you must not use the Software.
 The full terms in sections 2–14 are binding. This summary is provided for
 convenience and does **not** override the binding text.
 
-- **Three tiers.** OSS (free), **MCP Plus** (paid monthly — adds
-  authenticated access to the Fuutu MCP server's rules and skills and to
-  the versioning API; the public documentation tools are free), and
-  **Enterprise License** (paid yearly — required above the Eligibility
-  Thresholds, includes MCP). Current prices live at
-  https://fuutustack.com/pricing.
+- **Three tiers.** OSS (free); **MCP Plus** (a yearly subscription per
+  Seat; adds authenticated access to the Fuutu MCP server's rules and
+  skills and to the versioning API; the public documentation tools are
+  free); and **Enterprise License** (a yearly subscription per legal
+  entity, required above the Eligibility Thresholds, includes MCP Plus
+  for five persons). MCP Plus and Enterprise are independent
+  subscriptions, each with its own renewal date. Prices are net of VAT
+  and are published at https://fuutustack.com/pricing.
 - **Free for small teams.** You may use the Kit at no charge if you qualify
   as an *Eligible User* under section 3.
 - **Paid for larger organisations.** Once you exceed the Eligibility
   Thresholds you must obtain a **Fuutu Enterprise License** under section 4.
+- **Agencies and client work.** Whoever operates an application needs a
+  license for it. Building or running an application for a client that
+  exceeds the Eligibility Thresholds requires an Enterprise License,
+  even for a small agency (section 3a).
 - **No reselling as a competitor.** You may not redistribute the Kit, or a
   Derivative Work, as a competing starter-kit, boilerplate, template,
   scaffold, or generator — whether free or paid, whether under MIT or
   any other license (sections 6 and 6a).
 - **Keep the fingerprint.** The `Fuutu-Stack` kit name, the kit version
   constant, the `X-Framework` HTTP response header and the telemetry
-  ping must remain functionally intact (section 7).
+  ping must remain functionally intact. Telemetry carries license data
+  only and may be switched off only on local development and
+  non-production instances (section 7).
+- **Per version.** Each Kit version is governed by the license text
+  shipped with it (section 14).
 - **No warranty.** The Software is provided "AS IS" (section 12).
 
 If anything in this summary appears to conflict with the binding text, the
@@ -63,24 +73,40 @@ binding text controls.
   Kit (in source or compiled form), or that is created by running, scaffolding
   or templating from the Kit.
 - **"Production Application"** — a software product, service, internal tool
-  or website built using the Kit and made available to the Licensee, the
-  Licensee's employees, or the Licensee's end-users.
+  or website built using the Kit and made available to the Operator, its
+  employees or its end users.
+- **"Operator"** — the legal entity that controls the production
+  environment of a Production Application. It holds the hosting or
+  infrastructure account or contract, or decides on deployment, and it
+  makes the application available to users.
+  - Performing technical administration for another entity as a
+    contractor does not make a person or entity the Operator.
+  - End users and customers of a Production Application are not
+    Operators.
+- **"Client"** — a third party for which a Licensee develops or maintains
+  a Production Application under contract.
+- **"Affiliate"** — any entity that controls, is controlled by, or is
+  under common control with the Licensee. "Control" means owning more
+  than 50% of the voting rights, or the power to direct management.
 - **"Annual Revenue"** — the total worldwide gross revenue, in any
   currency normalised to USD using the European Central Bank reference
-  rate, recognised by the Licensee and any entity controlling, controlled
-  by or under common control with the Licensee, in the most recently
-  completed fiscal year.
+  rate, recognised by the Licensee and its Affiliates in the most
+  recently completed fiscal year.
 - **"Headcount"** — the total number of natural persons employed by, or
   acting as long-term contractor for (≥ 20 hours / week, ≥ 90 days), the
-  Licensee and its affiliates, regardless of role.
+  Licensee and its Affiliates, regardless of role.
 - **"Eligibility Thresholds"** — Annual Revenue **≤ 250,000 USD** *and*
   Headcount **≤ 10**.
+- **"Eligible User"** — a Licensee within the Eligibility Thresholds.
 - **"Fuutu"** — the legal entity publishing the Kit and holding the
   copyright and trademarks referenced in section 8.
 - **"MCP Plus"** — the recurring paid subscription described in
   section 4a, granting authenticated access to the Fuutu MCP server
   (mounted under `app.fuutustack.com/api/mcp`) and to the Fuutu
   versioning API.
+- **"Seat"** — the MCP Plus access of one natural person, either as an
+  MCP Plus subscription or as one of the persons included in an
+  Enterprise License.
 - **"Released Application"** — a Production Application (or any portion
   thereof) that the Licensee has published or made available to third
   parties under an open-source, source-available, public-domain or any
@@ -114,6 +140,61 @@ Derivative Work created under this section 3.
 
 ---
 
+## 3a. Agencies and Client Work
+
+1. **Operators need a license.** The Operator of a Production Application
+   needs a license under this License for it: the free grant under
+   section 3, or a Fuutu Enterprise License under section 4. The
+   Eligibility Thresholds are assessed for the Operator together with its
+   Affiliates.
+2. **Development and maintenance for a Client.** A Licensee that develops
+   or maintains a Production Application for a Client that is its
+   Operator uses the Kit for that work under its own license (section 3
+   or 4). The Client, as the Operator, needs its own license under item 1:
+   the free grant if it is an Eligible User, otherwise a Fuutu Enterprise
+   License.
+3. **Agency-operated applications.** If a Licensee develops a Production
+   Application for a Client and remains its Operator (it hosts and runs
+   the application), the Licensee's license covers that application, and
+   the Client needs no license of its own to use it. Item 4 applies on
+   top.
+4. **Large Clients.** A Licensee that builds, hosts or offers a
+   Production Application for a Client that, together with its
+   Affiliates, exceeds an Eligibility Threshold needs its own Fuutu
+   Enterprise License, even if the Licensee itself is within the
+   Eligibility Thresholds. This applies under items 2 and 3 alike. For
+   example, a three-person studio earning €500 a month that builds and
+   hosts a service for a multinational corporation needs an Enterprise
+   License.
+5. **Handover.** If the Licensee hands over a Production Application,
+   including Kit-derived source code, to a Client and the Client becomes
+   its Operator:
+   (a) the Client receives its rights directly from Fuutu under this
+   License. The Licensee grants no sublicense;
+   (b) license keys are personal to the entity they were issued to and
+   are not transferable. The Licensee must remove its keys from the
+   handed-over application;
+   (c) the Client needs a valid license under section 3 or 4 from the
+   moment it becomes the Operator. The 30-day period of section 3 applies
+   only if the Client was an Eligible User at that moment and later
+   exceeds a threshold;
+   (d) sections 6, 6a and 7 bind the Client;
+   (e) the Licensee must inform the Client about this License before or
+   at handover.
+6. **Limits.** This section 3a does not permit:
+   (a) delivering the same application, or a template derived from it,
+   to several Clients as a reusable product. That is competing
+   redistribution under section 6(1);
+   (b) hosting whose subject is the Kit itself or a generic deployment of
+   the Kit for third parties. That remains prohibited under section 6(3).
+
+   Within these limits, handing over a Client's own Production
+   Application is not redistribution, sale or sublicensing under
+   section 6(1) or 6(2), and hosting and running it for the Client is not
+   a managed or hosted version of the Kit under section 6(3).
+
+---
+
 ## 4a. MCP Plus (optional, paid)
 
 Independently of sections 3 and 4, the Licensee may purchase a recurring
@@ -125,10 +206,14 @@ Independently of sections 3 and 4, the Licensee may purchase a recurring
 - such additional Fuutu-hosted developer services as Fuutu publishes from
   time to time at `https://fuutustack.com/pricing`.
 
-The subscription is sold per natural-person subscriber. The current
-price, subscription period and any volume terms are published at
-`https://fuutustack.com/pricing` and form part of this License by
-reference at the moment of purchase.
+The subscription is sold per Seat: one subscription gives one natural
+person MCP Plus access. The current price, subscription period and any
+volume terms are published at `https://fuutustack.com/pricing` and form
+part of this License by reference at the moment of purchase.
+
+Prices published at `https://fuutustack.com/pricing` are net prices and
+exclude value-added tax and similar taxes, which are added where
+applicable. Subscriptions are billed yearly in advance.
 
 MCP Plus is **not** a license to the Kit itself: it does
 not lift the Eligibility Thresholds in section 3, does not grant
@@ -142,9 +227,18 @@ subject to fair-use rate limits. They are provided as-is and Fuutu may
 change, limit or discontinue them at any time.
 
 A valid MCP Plus subscription is identified by an MCP API key issued by Fuutu;
-the Kit reports `licenseMode = "mcp"` once a valid key is verified. The
-Fuutu Enterprise License (section 4) **includes** MCP access at no
-additional cost.
+the Kit reports `licenseMode = "mcp"` once a valid key is verified.
+
+A Fuutu Enterprise License (section 4) includes MCP Plus access for five
+persons (five Seats) for as long as the Enterprise License is active.
+Additional persons need their own MCP Plus subscriptions (Seats). MCP
+Plus subscriptions and Enterprise Licenses are independent
+subscriptions: each is purchased, renewed and cancelled separately and
+has its own renewal date. A cancelled subscription ends at the end of
+the paid term. Included Seats end with the Enterprise License. The holder
+assigns its included Seats to persons in its Fuutu account. If both a
+valid Enterprise key and a valid MCP Plus key are present, the
+Enterprise key takes precedence.
 
 ---
 
@@ -155,11 +249,15 @@ Thresholds, or use that falls outside the scope of section 3, requires a
 **Fuutu Enterprise License**.
 
 The Fuutu Enterprise License is sold by Fuutu and entitles the holder to
-the rights of section 3 plus enterprise terms (priority support, indemnity
-options, license-key issuance, optional removal of telemetry).
+the rights of section 3 regardless of the Eligibility Thresholds,
+prioritized private support, license-key issuance, and MCP Plus access
+for five persons as described in section 4a.
 
-The Fuutu Enterprise License is sold per legal entity. The current
-price, subscription period and any volume terms are published at
+The Fuutu Enterprise License is granted per legal entity. Each legal
+entity that operates a Production Application or otherwise uses the Kit
+needs its own Enterprise License if its Annual Revenue and Headcount,
+together with its Affiliates, exceed an Eligibility Threshold. The
+current price, subscription period and any volume terms are published at
 **https://fuutustack.com/pricing** and form part of this License by
 reference at the moment of purchase. Contact `license@fuutustack.com` to
 obtain a license key.
@@ -168,10 +266,10 @@ A valid Fuutu Enterprise License is identified by a license key issued by
 Fuutu and configured via the `FUUTU_LICENSE_KEY` environment variable. The
 Kit will report `licenseMode = "enterprise"` once a valid key is verified.
 
-*Order of precedence between sections 4 and 4a:* a single key may grant
-both Enterprise rights and MCP access; in that case the Kit reports
-`licenseMode = "enterprise"` and MCP access is included as described
-above.
+*Keys and license modes:* Enterprise Licenses and MCP Plus subscriptions
+are identified by separate keys. Where a valid Enterprise key is
+verified, the Kit reports `licenseMode = "enterprise"`; where only a
+valid MCP Plus key is verified, it reports `licenseMode = "mcp"`.
 
 ---
 
@@ -205,9 +303,11 @@ signed by Fuutu:
    parties;
 4. **Use Fuutu trademarks** to imply endorsement of, or affiliation with,
    any product not produced by Fuutu (see section 8);
-5. **Disable, bypass, falsify or strip** the kit fingerprint, the
-   `X-Framework` response header, the telemetry ping, or the
-   license-mode reporting (see section 7).
+5. **Remove, patch, block, bypass, falsify or strip** the kit
+   fingerprint, the `X-Framework` response header, the telemetry ping or
+   the license-mode reporting, or switch the telemetry ping off for a
+   Production Application in use. Switching it off is permitted only as
+   described in section 7.
 
 Building and selling a Production Application that *uses* the Kit is
 expressly permitted under sections 3 and 4 and is **not** considered
@@ -289,20 +389,32 @@ The Kit emits two integrity signals that must remain functional:
    page response.
 2. **Telemetry ping** — non-blocking, fail-soft HTTPS requests sent
    at build time, at each API process start, and hourly once the
-   built-in cron trigger is configured and enabled, transmitting:
-   - the Kit name and Kit version,
-   - a one-way hash of the configured license key (or `"oss"` if none),
-   - the configured public application URL (or `null` if none),
-   - the Node.js runtime version and operating-system platform,
-   - a flat list of enabled top-level feature names (empty in
-     build-time pings), and
-   - the send timestamp (no user data, no PII).
+   built-in cron trigger is configured and enabled. Its only purpose is
+   license compliance. Each ping transmits exactly these fields:
+   - `kitName`: the Kit name,
+   - `kitVersion`: the Kit version,
+   - `licenseKeyHash`: a one-way hash of the configured license key, or
+     `"oss"` if none is configured,
+   - `appUrl`: the configured public application URL, or `null` if none,
+   - `kind`: `"build"` for the build-time ping, `"runtime"` for pings
+     from a running application.
 
-The ping has a 5-second timeout, fails silently on network error, and can
-be disabled by setting `FUUTU_TELEMETRY_DISABLED=1`. Disabling telemetry
-is permitted; **falsifying** telemetry (sending data that misrepresents
-the Kit identity, the license mode or the deploying entity) is **not** and
-constitutes a material breach of this License.
+   The ping contains no data of your application's end users; the
+   license-key hash and application URL identify the Licensee's
+   installation.
+
+The ping has a 5-second timeout and fails silently on network error.
+
+**Switching telemetry off.** Setting `FUUTU_TELEMETRY_DISABLED=1` switches
+the ping off. This is permitted only for local development and for
+non-production instances, such as development, staging, CI and preview
+environments. A Production Application in use must keep telemetry
+enabled.
+
+Removing, patching, blocking or stripping the telemetry code or the Kit
+fingerprint is never permitted. **Falsifying** telemetry (sending data
+that misrepresents the Kit identity, the license mode or the deploying
+entity) constitutes a material breach of this License.
 
 The privacy notice for the telemetry endpoint is published at
 `https://fuutustack.com/legal/telemetry`.
@@ -375,10 +487,17 @@ the cap for claims arising from use of the Kit under sections 3 or 4.
 
 ---
 
-## 14. Termination, Governing Law, Severability
+## 14. Termination, License Versions, Governing Law, Severability
 
 This License terminates automatically upon any material breach by the
 Licensee. Sections 6, 6a, 7, 8, 10, 12 and 13 survive termination.
+
+**License versions.** The license text distributed with a Kit version
+governs the use of that version. Later changes to this License apply only
+to Kit versions released after the change: a Licensee who stays on an
+older Kit version keeps the terms shipped with it. Once a Licensee merges
+or installs a newer Kit version, the license text shipped with that
+version applies from then on.
 
 This License is governed by the laws of the **Federal Republic of
 Germany**, excluding its conflict-of-laws rules. Exclusive venue for any

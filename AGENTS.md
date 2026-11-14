@@ -96,7 +96,7 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 
 ## 8 · Kit-owned — do not modify
 
-License-relevant (`LICENSE.md` §6(5), §7): `KIT_NAME` / `KIT_VERSION` / `KIT_FINGERPRINT_*` / `KIT_GENERATOR_META` in `packages/config/index.ts`, the `X-Framework` header emitters (`packages/api/src/app.ts`, `apps/*/next.config.ts`, `apps/*/src/proxy.ts`), `metadata.generator` in `apps/*/src/app/layout.tsx`, and `packages/telemetry` (opt-out via `FUUTU_TELEMETRY_DISABLED=1` is allowed).
+License-relevant (`LICENSE.md` §6(5), §7): `KIT_NAME` / `KIT_VERSION` / `KIT_FINGERPRINT_*` / `KIT_GENERATOR_META` in `packages/config/index.ts`, the `X-Framework` header emitters (`packages/api/src/app.ts`, `apps/*/next.config.ts`, `apps/*/src/proxy.ts`), `metadata.generator` in `apps/*/src/app/layout.tsx`, and `packages/telemetry` (`FUUTU_TELEMETRY_DISABLED=1` only for local development and non-production instances — a Production Application keeps telemetry on, `LICENSE.md` §7).
 
 ## 9 · Testing
 

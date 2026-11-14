@@ -4,7 +4,8 @@
  *
  * Invoked from the root `prebuild` script. Standalone (no TS imports)
  * so it runs under bare Node without a transpile step. The payload
- * shape mirrors `packages/telemetry/src/ping.ts` — keep them in sync.
+ * mirrors `packages/telemetry/src/ping.ts` with `kind: "build"` — license
+ * compliance only, exactly the fields of LICENSE.md §7 (tests enforce it).
  *
  * Non-blocking: 5 s timeout, silent on failure, always exits 0.
  * Opt-out: `FUUTU_TELEMETRY_DISABLED=1`.
@@ -35,16 +36,8 @@ const payload = {
 	kitName: KIT_NAME,
 	kitVersion: KIT_VERSION,
 	licenseKeyHash: hashKey(process.env.FUUTU_LICENSE_KEY),
-	appUrl: process.env.NEXT_PUBLIC_SAAS_URL ?? null,
-	nodeVersion: process.version,
-	platform: process.platform,
-	// Build-time: we cannot read `config.features` without a TS transpile
-	// step, so we ship an empty list and let the runtime `pingTelemetry()`
-	// (called from boot/admin paths) carry the authoritative feature
-	// snapshot. Inventing a static list here would falsify telemetry
-	// (LICENSE.md §7).
-	features: [],
-	sentAt: new Date().toISOString(),
+	appUrl: process.env.NEXT_PUBLIC_SAAS_URL || null,
+	kind: "build",
 };
 
 const endpoint = process.env.FUUTU_TELEMETRY_ENDPOINT ?? DEFAULT_ENDPOINT;

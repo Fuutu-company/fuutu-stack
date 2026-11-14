@@ -68,32 +68,32 @@ describe("buildTelemetryPayload()", () => {
 		expect(payload).toHaveProperty("appUrl");
 	});
 
-	it("includes features as an array", () => {
+	it("contains exactly the license-compliance fields", () => {
 		const payload = buildTelemetryPayload();
-		expect(Array.isArray(payload.features)).toBe(true);
+		expect(Object.keys(payload).sort()).toEqual([
+			"appUrl",
+			"kind",
+			"kitName",
+			"kitVersion",
+			"licenseKeyHash",
+		]);
 	});
 
-	it("features contains only enabled feature names", () => {
-		const payload = buildTelemetryPayload();
-		for (const feature of payload.features) {
-			expect(typeof feature).toBe("string");
+	it("marks the ping as a runtime ping", () => {
+		expect(buildTelemetryPayload().kind).toBe("runtime");
+	});
+
+	it("appUrl is the public app URL, or null", () => {
+		expect(buildTelemetryPayload().appUrl).toBeNull();
+		envStub.NEXT_PUBLIC_SAAS_URL = "https://app.example.com";
+		expect(buildTelemetryPayload().appUrl).toBe("https://app.example.com");
+	});
+
+	it("sends no runtime, platform, feature or timestamp data", () => {
+		const payload: Record<string, unknown> = buildTelemetryPayload();
+		for (const key of ["nodeVersion", "platform", "features", "sentAt"]) {
+			expect(payload, key).not.toHaveProperty(key);
 		}
-	});
-
-	it("includes sentAt ISO timestamp", () => {
-		const payload = buildTelemetryPayload();
-		expect(payload.sentAt).toBeDefined();
-		expect(() => new Date(payload.sentAt).toISOString()).not.toThrow();
-	});
-
-	it("includes nodeVersion", () => {
-		const payload = buildTelemetryPayload();
-		expect(payload.nodeVersion).toBe(process.version);
-	});
-
-	it("includes platform", () => {
-		const payload = buildTelemetryPayload();
-		expect(payload.platform).toBe(process.platform);
 	});
 
 	it("does not include PII or secrets", () => {

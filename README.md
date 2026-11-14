@@ -68,8 +68,8 @@ Fuutu Stack is licensed under the **Fuutu Business License** (source-available).
 | Tier | Price | Who |
 |---|---|---|
 | **Free** | Free | Headcount ≤ 10 AND ≤ $250k annual revenue |
-| **MCP Plus** | Subscription, billed yearly | Anyone who wants MCP rules, full skills + versioning API |
-| **Enterprise** | €2,000/year | Above either Free-tier threshold |
+| **MCP Plus** | Yearly subscription per seat | Anyone who wants MCP rules, full skills + versioning API |
+| **Enterprise** | €2,000/year, excl. VAT, includes 5 MCP Plus seats | Above either Free-tier threshold |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
 
