@@ -1,4 +1,8 @@
-import { resolvePaymentProvider } from "@fuutu/payments";
+import {
+	assertCheckoutAllowed,
+	CheckoutRejectedError,
+	resolvePaymentProvider,
+} from "@fuutu/payments";
 import { PLAN_IDS, PLANS, type Plan } from "@fuutu/payments/config";
 import { getPlanPriceId } from "@fuutu/payments/config.server";
 import { PERMISSIONS } from "@fuutu/rbac";
@@ -38,14 +42,35 @@ export const createCheckout = authProcedure({
 				message: "This plan is not available for checkout",
 			});
 		}
+		const interval = input.interval ?? plan.interval ?? "month";
+		// Billing rules: an add-on (`Plan.addonOf`) needs an active base,
+		// plus every app guard (`registerCheckoutGuard`). The owner mirrors
+		// the webhook's: the organization when one is passed (its access
+		// was checked by authProcedure), else the signed-in user.
+		try {
+			await assertCheckoutAllowed({
+				owner: input.organizationId
+					? { organizationId: input.organizationId }
+					: { userId: context.user.id },
+				userId: context.user.id,
+				planId: input.planId,
+				interval,
+				seats: input.seats,
+			});
+		} catch (err) {
+			if (err instanceof CheckoutRejectedError) {
+				throw new ORPCError("PRECONDITION_FAILED", {
+					message: "This plan can't be purchased right now",
+					data: { reason: err.reason },
+				});
+			}
+			throw err;
+		}
 		// Provider-side price/product IDs are resolved server-side from env —
 		// clients must never pick the catalog price themselves. The env var
 		// names are declared per plan in `PLANS[].priceIdEnvVars`; a
 		// checkoutable plan without a mapping (or unset env var) fails closed.
-		const priceId = getPlanPriceId(
-			input.planId,
-			input.interval ?? plan.interval ?? "month",
-		);
+		const priceId = getPlanPriceId(input.planId, interval);
 		if (!priceId) {
 			throw new ORPCError("PRECONDITION_FAILED", {
 				message: "Checkout is not configured for this plan",

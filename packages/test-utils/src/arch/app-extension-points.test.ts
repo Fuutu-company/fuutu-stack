@@ -47,6 +47,16 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "apps/saas/src/app-main-nav.ts",
+		exports: ["appMainNavItems"],
+		wiredInto: [
+			{
+				file: "apps/saas/src/modules/app/components/nav-config.ts",
+				import: /\{ appMainNavItems \} from "\.\.\/\.\.\/\.\.\/app-main-nav"/,
+			},
+		],
+	},
+	{
 		file: "apps/saas/src/app-onboarding.tsx",
 		exports: ["appOnboardingSteps"],
 		wiredInto: [
@@ -93,6 +103,16 @@ const EXTENSION_POINTS: {
 		wiredInto: [
 			{ file: "packages/env/src/saas.ts", import: /from "\.\/app-env"/ },
 			{ file: "packages/env/src/public.ts", import: /from "\.\/app-env"/ },
+		],
+	},
+	{
+		file: "packages/content/src/app-content.ts",
+		exports: ["appContent"],
+		wiredInto: [
+			{
+				file: "packages/content/src/index.tsx",
+				import: /\{ appContent \} from "\.\/app-content"/,
+			},
 		],
 	},
 	{

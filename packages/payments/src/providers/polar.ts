@@ -405,6 +405,12 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		return [providerEvent];
 	},
 
+	async getSubscriptionStatus(subscriptionId: string) {
+		const client = getClient();
+		const subscription = await client.subscriptions.get({ id: subscriptionId });
+		return mapPolarStatus(subscription.status);
+	},
+
 	async cancelSubscription(subscriptionId: string) {
 		const client = getClient();
 		await client.subscriptions.revoke({ id: subscriptionId });

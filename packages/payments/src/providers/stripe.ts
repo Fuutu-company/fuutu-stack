@@ -349,6 +349,12 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		log.info("cancelled subscription", { subscriptionId });
 	},
 
+	async getSubscriptionStatus(subscriptionId: string) {
+		const client = getClient();
+		const subscription = await client.subscriptions.retrieve(subscriptionId);
+		return mapStripeStatusToPurchaseStatus(subscription.status);
+	},
+
 	async parseWebhook(request: Request): Promise<ProviderEvent[]> {
 		if (!env.STRIPE_WEBHOOK_SECRET) {
 			log.error("STRIPE_WEBHOOK_SECRET missing — rejecting webhook");

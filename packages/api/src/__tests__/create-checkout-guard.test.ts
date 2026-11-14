@@ -1,0 +1,102 @@
+import type { PlanId } from "@fuutu/payments/config";
+import { fixturePlanId, makeSession, makeUser } from "@fuutu/test-utils";
+import { call } from "@orpc/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Context } from "../context";
+
+vi.mock("@fuutu/payments/config", async (importOriginal) => ({
+	// Fixed kit plan catalog (@fuutu/test-utils), not the app's PLANS.
+	...(await importOriginal<typeof import("@fuutu/payments/config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
+vi.mock("@fuutu/payments/config.server", () => ({
+	getPlanPriceId: vi.fn().mockReturnValue("price-pro-monthly"),
+}));
+
+const mockAssertCheckoutAllowed = vi.hoisted(() => vi.fn());
+const mockProvider = vi.hoisted(() => ({
+	id: "creem",
+	createCheckoutLink: vi.fn(),
+}));
+
+vi.mock("@fuutu/payments", () => ({
+	assertCheckoutAllowed: mockAssertCheckoutAllowed,
+	CheckoutRejectedError: class CheckoutRejectedError extends Error {
+		readonly reason: string;
+		constructor(reason: string) {
+			super(reason);
+			this.reason = reason;
+		}
+	},
+	resolvePaymentProvider: () => mockProvider,
+	PaymentsDisabledError: class PaymentsDisabledError extends Error {},
+	WebhookConfigError: class WebhookConfigError extends Error {},
+}));
+
+vi.mock("@fuutu/db", () => ({}));
+vi.mock("@fuutu/ai", () => ({ resolveAIProvider: vi.fn() }));
+
+const { CheckoutRejectedError } = await import("@fuutu/payments");
+const { paymentsRouter } = await import("../modules/payments/router");
+
+const context = makeSession<Context>(makeUser({ id: "user-guard" }));
+
+describe("payments.checkout.create — checkout guards", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockProvider.createCheckoutLink.mockResolvedValue({
+			url: "https://checkout.example.com",
+		});
+	});
+
+	it("a denying guard returns PRECONDITION_FAILED with data.reason and never calls the provider", async () => {
+		mockAssertCheckoutAllowed.mockRejectedValue(
+			new CheckoutRejectedError("addon_requires_base"),
+		);
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: fixturePlanId<PlanId>("pro") },
+				{ context },
+			),
+		).rejects.toMatchObject({
+			code: "PRECONDITION_FAILED",
+			data: { reason: "addon_requires_base" },
+		});
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+
+	it("passes the owner, acting user, plan, interval and seats to the guards", async () => {
+		mockAssertCheckoutAllowed.mockResolvedValue(undefined);
+
+		await call(
+			paymentsRouter.checkout.create,
+			{ planId: fixturePlanId<PlanId>("pro"), interval: "year", seats: 4 },
+			{ context },
+		);
+
+		expect(mockAssertCheckoutAllowed).toHaveBeenCalledWith({
+			owner: { userId: "user-guard" },
+			userId: "user-guard",
+			planId: "pro",
+			interval: "year",
+			seats: 4,
+		});
+		expect(mockProvider.createCheckoutLink).toHaveBeenCalledOnce();
+	});
+
+	it("a guard's unexpected error fails the request without reaching the provider", async () => {
+		mockAssertCheckoutAllowed.mockRejectedValue(new Error("db down"));
+
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: fixturePlanId<PlanId>("pro") },
+				{ context },
+			),
+		).rejects.not.toMatchObject({ code: "PRECONDITION_FAILED" });
+		expect(mockProvider.createCheckoutLink).not.toHaveBeenCalled();
+	});
+});

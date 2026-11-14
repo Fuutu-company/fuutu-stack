@@ -26,6 +26,7 @@ vi.mock("@fuutu/db", () => ({
 	getActiveSubscriptionForOrganization:
 		mockGetActiveSubscriptionForOrganization,
 	getPurchasesByOrganizationId: mockGetPurchasesByOrganizationId,
+	getActiveSubscriptionsForOwner: vi.fn().mockResolvedValue([]),
 }));
 
 const mockWarn = vi.fn();
@@ -71,6 +72,15 @@ vi.mock("../resolve", () => ({
 				: null,
 }));
 
+// Pass-through spy: lets a test stand in for the plan-subscription lookup
+// (add-on filtering is covered in sync-supersede.test.ts).
+const mockGetPlanSubscription = vi.hoisted(() => vi.fn());
+vi.mock("../billing-policy", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../billing-policy")>();
+	mockGetPlanSubscription.mockImplementation(actual.getPlanSubscription);
+	return { ...actual, getPlanSubscription: mockGetPlanSubscription };
+});
+
 const {
 	updateSeatsInOrganizationSubscription,
 	cancelAllSubscriptionsForOrganization,
@@ -98,6 +108,37 @@ describe("updateSeatsInOrganizationSubscription", () => {
 	it("calls setSubscriptionSeats with the active subscription's id", async () => {
 		await updateSeatsInOrganizationSubscription("org_1", 5);
 
+		expect(mockSetSubscriptionSeats).toHaveBeenCalledWith({
+			subscriptionId: "sub_123",
+			seats: 5,
+		});
+	});
+
+	it("syncs seats on the plan subscription, never on a newer add-on", async () => {
+		// The newest active row is an add-on (e.g. a seat pack) — seat sync
+		// must target the base plan's subscription.
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue({
+			id: "purchase_addon",
+			provider: "test-provider",
+			subscriptionId: "sub_addon",
+			productId: "price-addon",
+			priceId: "price-addon",
+			status: "ACTIVE",
+		});
+		mockGetPlanSubscription.mockResolvedValueOnce({
+			id: "purchase_1",
+			provider: "test-provider",
+			subscriptionId: "sub_123",
+			productId: "price-pro",
+			priceId: "price-pro",
+			status: "ACTIVE",
+		});
+
+		await updateSeatsInOrganizationSubscription("org_1", 5);
+
+		expect(mockGetPlanSubscription).toHaveBeenCalledWith({
+			organizationId: "org_1",
+		});
 		expect(mockSetSubscriptionSeats).toHaveBeenCalledWith({
 			subscriptionId: "sub_123",
 			seats: 5,

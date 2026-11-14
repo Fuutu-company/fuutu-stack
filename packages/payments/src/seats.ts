@@ -1,8 +1,6 @@
-import {
-	getActiveSubscriptionForOrganization,
-	getPurchasesByOrganizationId,
-} from "@fuutu/db";
+import { getPurchasesByOrganizationId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
+import { getPlanSubscription } from "./billing-policy";
 import { PLANS } from "./config";
 import { getPlanIdForProductId } from "./config.server";
 import { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
@@ -48,8 +46,8 @@ export async function updateSeatsInOrganizationSubscription(
 		return;
 	}
 
-	const subscription =
-		await getActiveSubscriptionForOrganization(organizationId);
+	// The plan subscription — an add-on (`Plan.addonOf`) keeps its own quantity.
+	const subscription = await getPlanSubscription({ organizationId });
 	if (!subscription?.subscriptionId) {
 		log.info("no active subscription — skipping seat sync", {
 			organizationId,

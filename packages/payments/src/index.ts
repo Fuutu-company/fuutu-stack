@@ -8,6 +8,14 @@
  *   `@fuutu/payments/plans`   — buildPricingTiers()
  *   `@fuutu/payments/features`— feature/limit helpers
  */
+
+export {
+	ADDON_REQUIRES_BASE,
+	assertCheckoutAllowed,
+	type CheckoutRequest,
+	getPlanSubscription,
+	isAddonPlan,
+} from "./billing-policy";
 export {
 	type AudienceId,
 	type BillingAttachedTo,
@@ -16,6 +24,7 @@ export {
 	CREDIT_TOPUPS,
 	CREDITS,
 	type CreditTopupPackage,
+	type CreemUpdateBehavior,
 	FEATURE_CATALOG,
 	type FeatureEntry,
 	getSeatUpgradeUrl,
@@ -46,11 +55,19 @@ export {
 	hasFeature,
 } from "./entitlements";
 export {
+	type ActivatedSubscription,
+	type CheckoutGuard,
+	type CheckoutGuardContext,
 	type EntitlementResolver,
 	type EntitlementResolverFn,
+	type ExistingSubscription,
+	type OwnerPurchase,
 	onPurchaseChanged,
 	type PurchaseChangedHandler,
+	registerCheckoutGuard,
 	registerEntitlementResolver,
+	registerSupersedePolicy,
+	type SupersedePolicy,
 } from "./extensions";
 export {
 	type CatalogFeature,
@@ -100,6 +117,7 @@ export type {
 	SetSeatsInput,
 } from "./types";
 export {
+	CheckoutRejectedError,
 	isSeatAware,
 	PaymentsDisabledError,
 	WebhookConfigError,

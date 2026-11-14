@@ -1,3 +1,4 @@
+import { featureRouter } from "../../orpc/middleware/require-feature";
 import { invoicesRouter } from "./invoices/router";
 import { orgPlansRouter } from "./org-plans/router";
 import { plansRouter } from "./plans/router";
@@ -14,12 +15,13 @@ export const paymentsRouter = {
 	checkout: {
 		create: createCheckout,
 	},
-	topupCheckout: {
+	// Credit top-ups are part of the credits module (`config.features.credits`).
+	topupCheckout: featureRouter("credits", {
 		create: createTopupCheckout,
-	},
-	topupPackages: {
+	}),
+	topupPackages: featureRouter("credits", {
 		list: getTopupPackages,
-	},
+	}),
 	portal: {
 		open: createBillingPortal,
 	},

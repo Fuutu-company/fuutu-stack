@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
+import { paymentsConfig } from "../config";
 import type {
 	CheckoutInput,
 	CustomerInput,
@@ -76,6 +77,9 @@ function mapCreemStatus(status: string): PurchaseStatusLiteral {
 		case "trialing":
 			return "TRIALING";
 		case "past_due":
+		// Payment collection failed for good — the kit has no separate
+		// unpaid state; Creem says to treat it like past_due.
+		case "unpaid":
 			return "PAST_DUE";
 		case "scheduled_cancel":
 			return "SCHEDULED_CANCEL";
@@ -101,6 +105,7 @@ function mapCreemEvent(eventType: string): ProviderEventType | null {
 		case "subscription.update":
 			return "subscription.updated";
 		case "subscription.past_due":
+		case "subscription.unpaid":
 			return "subscription.past_due";
 		case "subscription.paused":
 			return "subscription.paused";
@@ -164,7 +169,16 @@ const CreemPortalResponseSchema = z.object({
 });
 const CreemCustomerResponseSchema = z.object({ id: z.string() });
 const CreemSubscriptionResponseSchema = z.object({
-	items: z.array(z.object({ id: z.string() })).optional(),
+	product: z.union([z.string(), z.object({ id: z.string() })]).optional(),
+	items: z
+		.array(
+			z.object({
+				id: z.string(),
+				product_id: z.string().nullish(),
+				price_id: z.string().nullish(),
+			}),
+		)
+		.optional(),
 });
 
 const ErrorBodySchema = z.record(z.string(), z.unknown());
@@ -297,6 +311,24 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		}
 	},
 
+	async getSubscriptionStatus(subscriptionId: string) {
+		const response = await creemFetch(
+			`/subscriptions?subscription_id=${encodeURIComponent(subscriptionId)}`,
+			{ method: "GET" },
+		);
+		if (!response.ok) {
+			const error = await readErrorBody(response);
+			log.error("Failed to get subscription status", error);
+			throw new Error("Failed to get subscription status");
+		}
+		const { status } = await parseCreemResponse(
+			response,
+			z.object({ status: z.string() }),
+			"Failed to get subscription status",
+		);
+		return mapCreemStatus(status);
+	},
+
 	async parseWebhook(request: Request) {
 		const signature = request.headers.get("creem-signature");
 
@@ -402,7 +434,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			throw new Error("Failed to get subscription");
 		}
 
-		const { items } = await parseCreemResponse(
+		const { items, product } = await parseCreemResponse(
 			getResponse,
 			CreemSubscriptionResponseSchema,
 			"Failed to get subscription",
@@ -417,17 +449,31 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			throw new Error("No subscription items found");
 		}
 
+		// UpsertSubscriptionItemEntity: { id, price_id | product_id, units } —
+		// Creem resolves the item through its price or product and answers
+		// 404 "Could not find product or price" without one.
+		const subscriptionProductId =
+			typeof product === "string" ? product : product?.id;
+		const itemRef = firstItem.price_id
+			? { price_id: firstItem.price_id }
+			: firstItem.product_id
+				? { product_id: firstItem.product_id }
+				: subscriptionProductId
+					? { product_id: subscriptionProductId }
+					: null;
+		if (!itemRef) {
+			throw new Error(
+				"Creem subscription item has no product or price — cannot update seats",
+			);
+		}
+
 		const updateResponse = await creemFetch(
 			`/subscriptions/${subscriptionId}`,
 			{
 				method: "POST",
 				body: JSON.stringify({
-					items: [
-						{
-							id: firstItem.id,
-							quantity: seats,
-						},
-					],
+					items: [{ id: firstItem.id, ...itemRef, units: seats }],
+					update_behavior: paymentsConfig.creemUpdateBehavior,
 				}),
 			},
 		);

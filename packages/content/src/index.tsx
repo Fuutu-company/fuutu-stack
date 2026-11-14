@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { z } from "zod";
-
+import { appContent } from "./app-content";
 import ChangelogV010 from "./changelog/v0-1-0";
 import ChangelogV010De from "./changelog/v0-1-0.de";
 import ChangelogV100 from "./changelog/v1-0-0";
@@ -12,6 +12,7 @@ import {
 	changelogDraftMeta,
 	changelogMeta,
 } from "./changelog-meta";
+import { applyAppContent } from "./content-extensions";
 import { isoDate } from "./iso-date";
 import ImprintDe, {
 	frontmatter as imprintDeFrontmatter,
@@ -27,6 +28,7 @@ import PrivacyEn, {
 } from "./legal/privacy.en";
 import TermsDe, { frontmatter as termsDeFrontmatter } from "./legal/terms.de";
 import TermsEn, { frontmatter as termsEnFrontmatter } from "./legal/terms.en";
+import { postFrontmatterSchema } from "./post-frontmatter";
 import WelcomePost, {
 	frontmatter as welcomeFrontmatter,
 } from "./posts/welcome";
@@ -91,14 +93,7 @@ export interface LegalDocument {
 	body: ComponentType;
 }
 
-export const postFrontmatterSchema = z.object({
-	title: z.string().min(1),
-	description: z.string().optional(),
-	publishedAt: isoDate,
-	draft: z.boolean().optional(),
-	authors: z.array(z.string()).optional(),
-	tags: z.array(z.string()).optional(),
-});
+export { postFrontmatterSchema } from "./post-frontmatter";
 
 export const legalDocumentFrontmatterSchema = z.object({
 	title: z.string().min(1),
@@ -117,18 +112,22 @@ function resolveBody(
 	return resolved;
 }
 
-export const posts: readonly PostEntry[] = Object.freeze(
-	[
-		{
-			slug: "welcome",
-			frontmatter: postFrontmatterSchema.parse(welcomeFrontmatter),
-			bodies: { en: WelcomePost, de: WelcomePostDe },
-		},
-	].sort(
-		(a, b) =>
-			new Date(b.frontmatter.publishedAt).getTime() -
-			new Date(a.frontmatter.publishedAt).getTime(),
-	),
+const kitPosts: PostEntry[] = [
+	{
+		slug: "welcome",
+		frontmatter: postFrontmatterSchema.parse(welcomeFrontmatter),
+		bodies: { en: WelcomePost, de: WelcomePostDe },
+	},
+];
+
+/**
+ * Blog posts, newest first: the kit's demo posts with `appContent`
+ * applied (`./app-content.ts` — hide kit posts, add your own). Listing,
+ * post pages, static params and the sitemap all read this collection.
+ */
+export const posts: readonly PostEntry[] = applyAppContent(
+	kitPosts,
+	appContent,
 );
 
 /** Changelog bodies per slug — frontmatter lives in `changelog/<slug>.meta.ts`. */

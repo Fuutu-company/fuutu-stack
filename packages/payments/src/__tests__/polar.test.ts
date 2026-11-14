@@ -193,6 +193,21 @@ describe("polar provider — SDK integration", () => {
 		expect(customersCreate).toHaveBeenCalledOnce();
 	});
 
+	it.each([
+		["canceled", "CANCELED"],
+		["active", "ACTIVE"],
+		["incomplete_expired", "EXPIRED"],
+	])(
+		"getSubscriptionStatus maps a %s subscription to %s",
+		async (status, expected) => {
+			subscriptionsGet.mockResolvedValueOnce({ id: "sub_1", status });
+			await expect(
+				polarPaymentProvider.getSubscriptionStatus?.("sub_1"),
+			).resolves.toBe(expected);
+			expect(subscriptionsGet).toHaveBeenLastCalledWith({ id: "sub_1" });
+		},
+	);
+
 	it("cancelSubscription calls subscriptions.revoke", async () => {
 		subscriptionsRevoke.mockClear();
 		await polarPaymentProvider.cancelSubscription("sub_123");

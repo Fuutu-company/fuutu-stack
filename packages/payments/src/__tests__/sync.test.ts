@@ -143,6 +143,70 @@ describe("processWebhookEvents", () => {
 		expect(mockCreatePurchase).not.toHaveBeenCalled();
 	});
 
+	it("subscription.updated with a new product id updates productId and priceId", async () => {
+		// Plan switch inside one subscription (Creem portal product switch,
+		// Stripe price change): plan resolution reads productId first, so a
+		// stale productId would keep the old plan.
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+		});
+		mockUpdatePurchase.mockClear();
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.updated",
+				productId: "prod_new",
+			}),
+		]);
+
+		expect(mockUpdatePurchase).toHaveBeenCalledWith(
+			expect.objectContaining({
+				id: "purchase_1",
+				productId: "prod_new",
+				priceId: "prod_new",
+			}),
+		);
+	});
+
+	it("keeps productId in sync while a protected status is kept", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "SCHEDULED_CANCEL",
+		});
+		mockUpdatePurchase.mockClear();
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.renewed",
+				productId: "prod_new",
+			}),
+		]);
+
+		const call = mockUpdatePurchase.mock.calls[0]?.[0];
+		expect(call).toMatchObject({ productId: "prod_new", priceId: "prod_new" });
+		expect(call.status).toBeUndefined();
+	});
+
+	it("leaves productId untouched when the event reports no product", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue({
+			id: "purchase_1",
+			status: "ACTIVE",
+		});
+		mockUpdatePurchase.mockClear();
+
+		await processWebhookEvents(PROVIDER_ID, [
+			makeSubscriptionEvent({
+				type: "subscription.updated",
+				productId: undefined,
+			}),
+		]);
+
+		const call = mockUpdatePurchase.mock.calls[0]?.[0];
+		expect(call).not.toHaveProperty("productId");
+		expect(call).not.toHaveProperty("priceId");
+	});
+
 	it("does not overwrite SCHEDULED_CANCEL with ACTIVE on renewal", async () => {
 		const existing = { id: "purchase_1", status: "SCHEDULED_CANCEL" };
 		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue(existing);

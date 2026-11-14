@@ -511,6 +511,27 @@ describe("stripe provider — SDK integration", () => {
 	});
 });
 
+describe("stripe provider — getSubscriptionStatus", () => {
+	it.each([
+		["canceled", "CANCELED"],
+		["active", "ACTIVE"],
+		["past_due", "PAST_DUE"],
+	])("maps a %s subscription to %s", async (status, expected) => {
+		subscriptionsRetrieve.mockResolvedValueOnce({ id: "sub_1", status });
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).resolves.toBe(expected);
+		expect(subscriptionsRetrieve).toHaveBeenLastCalledWith("sub_1");
+	});
+
+	it("throws when the lookup fails", async () => {
+		subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).rejects.toThrow("stripe down");
+	});
+});
+
 describe("stripe provider — purchased units", () => {
 	function parseEvent(event: unknown) {
 		webhooksConstructEventAsync.mockResolvedValueOnce(event as never);

@@ -78,14 +78,16 @@ export function getPlanPriceIds(): Partial<Record<PlanId, PlanPriceIds>> {
 
 /**
  * Provider-side price/product IDs of every `billingType: "one_time"` plan
- * (all intervals, unset env vars skipped). An active one-time purchase of
- * one of these grants its plan for life — see `getActivePlanId`.
+ * (all intervals, unset env vars skipped; add-ons excluded). An active
+ * one-time purchase of one of these grants its plan for life — see
+ * `getActivePlanId`.
  */
 export function getOneTimePlanPriceIds(): string[] {
 	const ids: string[] = [];
 	for (const planId of PLAN_IDS) {
 		const plan = plans[planId];
-		if (plan.billingType !== "one_time") continue;
+		// An add-on (`addonOf`) never stands for a plan — not even for life.
+		if (plan.billingType !== "one_time" || plan.addonOf) continue;
 		for (const key of Object.values(plan.priceIdEnvVars ?? {})) {
 			if (!isEnvKey(key)) continue;
 			const value = env[key];

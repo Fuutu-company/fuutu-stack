@@ -64,21 +64,33 @@ vi.mock("@fuutu/payments/config", async (importOriginal) => {
 	};
 });
 
-vi.mock("@fuutu/payments", () => ({
-	resolvePaymentProvider: vi.fn(),
-	isPaymentsEnabled: vi.fn().mockReturnValue(true),
-	PaymentsDisabledError: class PaymentsDisabledError extends Error {},
-	WebhookConfigError: class WebhookConfigError extends Error {},
-	CREDIT_TOPUPS: [
-		{
-			id: "ai_tokens_100k",
-			meterKey: "ai_tokens",
-			amount: 100_000,
-			displayPrice: "$10",
-			priceIdEnvVar: "CREDITS_AI_TOKENS_100K_PRICE_ID",
-		},
-	],
-}));
+vi.mock("@fuutu/payments", async () => {
+	const db = await import("@fuutu/db");
+	return {
+		// Same lookup the kit does for a catalog without add-ons.
+		getPlanSubscription: (
+			owner: { userId: string } | { organizationId: string },
+		) =>
+			"organizationId" in owner
+				? db.getActiveSubscriptionForOrganization(owner.organizationId)
+				: db.getActiveSubscriptionForUser(owner.userId),
+		assertCheckoutAllowed: vi.fn().mockResolvedValue(undefined),
+		CheckoutRejectedError: class CheckoutRejectedError extends Error {},
+		resolvePaymentProvider: vi.fn(),
+		isPaymentsEnabled: vi.fn().mockReturnValue(true),
+		PaymentsDisabledError: class PaymentsDisabledError extends Error {},
+		WebhookConfigError: class WebhookConfigError extends Error {},
+		CREDIT_TOPUPS: [
+			{
+				id: "ai_tokens_100k",
+				meterKey: "ai_tokens",
+				amount: 100_000,
+				displayPrice: "$10",
+				priceIdEnvVar: "CREDITS_AI_TOKENS_100K_PRICE_ID",
+			},
+		],
+	};
+});
 
 vi.mock("@fuutu/payments/config.server", async (importOriginal) => {
 	const actual =

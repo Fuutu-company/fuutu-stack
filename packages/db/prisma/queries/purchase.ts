@@ -35,17 +35,41 @@ const accessGatingWhere = (): Prisma.PurchaseWhereInput => ({
 	],
 });
 
+/**
+ * Newest first: with several access-gating subscriptions (a base plan
+ * plus an add-on, or an upgrade whose old-subscription cancel failed at
+ * the provider) the latest one wins deterministically.
+ */
+const NEWEST_FIRST: Prisma.PurchaseOrderByWithRelationInput[] = [
+	{ createdAt: "desc" },
+	{ id: "asc" },
+];
+
 export const getActiveSubscriptionForUser = (userId: string) =>
 	db.purchase.findFirst({
 		where: { userId, ...accessGatingWhere() },
+		orderBy: NEWEST_FIRST,
 	});
 
 export const getActiveSubscriptionForOrganization = (organizationId: string) =>
 	db.purchase.findFirst({
 		where: { organizationId, ...accessGatingWhere() },
+		orderBy: NEWEST_FIRST,
 	});
 
 export type PurchaseOwner = { userId: string } | { organizationId: string };
+
+/** Every access-gating subscription of one owner, newest first. */
+export const getActiveSubscriptionsForOwner = (owner: PurchaseOwner) =>
+	db.purchase.findMany({
+		where: {
+			...("organizationId" in owner
+				? { organizationId: owner.organizationId }
+				: { userId: owner.userId }),
+			...accessGatingWhere(),
+		},
+		orderBy: NEWEST_FIRST,
+	});
 
 /**
  * Lifetime access: an ACTIVE one-time purchase of a plan product

@@ -1,6 +1,15 @@
+import { config } from "@fuutu/config";
 import { paymentsConfig } from "@fuutu/payments/config";
 import type { KnownPermission } from "@fuutu/rbac";
 import { insertAfter } from "@fuutu/utils/insert-after";
+import {
+	Bell,
+	LayoutDashboard,
+	type LucideIcon,
+	MessageSquare,
+	Users,
+} from "lucide-react";
+import { appMainNavItems } from "../../../app-main-nav";
 import {
 	appAccountNavItems,
 	appAdminNavItems,
@@ -16,6 +25,18 @@ export interface NavSubItem {
 	/** Active when the `tab` query is absent (account page default tab). */
 	isDefaultTab?: boolean;
 }
+
+/** Top-level item of the Platform group (`NavMain`). */
+export interface MainNavItem {
+	titleKey: string;
+	url: string;
+	icon: LucideIcon;
+	/** Match the path exactly instead of as a prefix. */
+	exact?: boolean;
+}
+
+/** Kit Platform-group item keys — anchors for `AppMainNavItem.after`. */
+export type MainNavKey = "dashboard" | "aiChat" | "crm" | "notifications";
 
 /** Kit org-settings item keys — anchors for `AppOrgSettingsNavItem.after`. */
 export type OrgSettingsNavKey =
@@ -68,6 +89,38 @@ export interface AppOrgSettingsNavItem
 	permission?: KnownPermission;
 }
 
+/** Where an app main-nav item links — exactly one of the three. */
+type AppMainNavTarget =
+	| {
+			/** Scoped like the kit items: `/<segment>`, in an org `/organizations/<slug>/<segment>`. */
+			segment: string;
+			orgSegment?: never;
+			href?: never;
+	  }
+	| {
+			/** `/organizations/<slug>/<orgSegment>`; hidden outside org routes. */
+			orgSegment: string;
+			segment?: never;
+			href?: never;
+	  }
+	| {
+			/** Absolute path, the same everywhere. */
+			href: string;
+			segment?: never;
+			orgSegment?: never;
+	  };
+
+/** App item in the Platform group (top-level sidebar items). */
+export type AppMainNavItem = AppNavItemBase<MainNavKey> &
+	AppMainNavTarget & {
+		icon: LucideIcon;
+		/**
+		 * Shown only inside an org whose viewer role has this permission —
+		 * outside org routes a permission-gated item is hidden (no role).
+		 */
+		permission?: KnownPermission;
+	};
+
 /** App item in the account-settings group. */
 export interface AppAccountNavItem extends AppNavItemBase<AccountNavKey> {
 	/** Absolute path, e.g. `/settings/integrations`. */
@@ -104,6 +157,59 @@ function mergeAppItems<T extends AppNavItemBase<string>>(
 			})),
 		(item) => item.titleKey,
 	);
+}
+
+/**
+ * Platform group: kit items (demo modules per `config.features`) merged
+ * with `appMainNavItems`. `orgSlug` null = personal routes; `can` checks
+ * the viewer's org role for permission-gated app items (fail closed).
+ */
+export function getMainItems(
+	orgSlug: string | null,
+	can?: (permission: KnownPermission) => boolean,
+): MainNavItem[] {
+	const base = orgSlug ? `/organizations/${orgSlug}` : "";
+	const items: MainNavItem[] = [
+		{ titleKey: "dashboard", url: `${base}/dashboard`, icon: LayoutDashboard },
+	];
+	if (config.features.aiChat) {
+		items.push({
+			titleKey: "aiChat",
+			url: `${base}/chat`,
+			icon: MessageSquare,
+		});
+	}
+	if (config.features.crm) {
+		items.push({ titleKey: "crm", url: `${base}/crm`, icon: Users });
+	}
+	items.push({ titleKey: "notifications", url: "/notifications", icon: Bell });
+
+	const urlOf = (item: AppMainNavItem): string | null => {
+		if (item.href !== undefined) return item.href;
+		if (item.orgSegment !== undefined) {
+			return orgSlug ? `${base}/${item.orgSegment}` : null;
+		}
+		return `${base}/${item.segment}`;
+	};
+	const extras = appMainNavItems.flatMap((item) => {
+		const url = urlOf(item);
+		if (item.enabled === false || url === null) return [];
+		if (item.permission && !(orgSlug && (can?.(item.permission) ?? false))) {
+			return [];
+		}
+		return [
+			{
+				after: item.after,
+				item: {
+					titleKey: item.titleKey,
+					url,
+					icon: item.icon,
+					...(item.exact ? { exact: true } : {}),
+				},
+			},
+		];
+	});
+	return insertAfter(items, extras, (item) => item.titleKey);
 }
 
 export const ACCOUNT_SETTINGS_PATH = "/settings";

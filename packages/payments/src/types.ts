@@ -174,6 +174,16 @@ export interface PaymentProvider {
 	cancelSubscription(subscriptionId: string): Promise<void>;
 
 	/**
+	 * Optional: the subscription's current status at the provider. Webhook
+	 * sync calls it after a failed `cancelSubscription` to tell "already
+	 * canceled" (row may be closed) from a transient failure (row stays
+	 * active). Throw when the lookup itself fails.
+	 */
+	getSubscriptionStatus?(
+		subscriptionId: string,
+	): Promise<PurchaseStatusLiteral>;
+
+	/**
 	 * Verify the webhook signature and parse the raw request into
 	 * normalized `ProviderEvent[]`. One webhook delivery may contain
 	 * multiple events (e.g. Stripe batches). The shared `webhookHandler`
@@ -242,5 +252,20 @@ export class WebhookConfigError extends Error {
 	constructor(message?: string) {
 		super(message);
 		this.name = "WebhookConfigError";
+	}
+}
+
+/**
+ * A checkout guard refused the plan checkout (`registerCheckoutGuard`).
+ * `reason` is a stable, app-defined code (e.g. `"addon_requires_base"`)
+ * the client may branch on; it reaches the caller as
+ * `PRECONDITION_FAILED` with `data.reason`, so it must not carry secrets.
+ */
+export class CheckoutRejectedError extends Error {
+	readonly reason: string;
+	constructor(reason: string, message?: string) {
+		super(message ?? `Checkout rejected: ${reason}`);
+		this.name = "CheckoutRejectedError";
+		this.reason = reason;
 	}
 }
