@@ -43,10 +43,14 @@ export interface AppHomeSections {
 	remove?: readonly HomeSectionKey[];
 }
 
-/** Metadata fields an app may set for a kit page. */
+/**
+ * Metadata fields an app may set for a kit page. Kit pages set no
+ * `robots`, so the app value is the page's whole robots meta (e.g.
+ * `{ index: false, follow: true }`).
+ */
 export type AppPageMetadataFields = Pick<
 	Metadata,
-	"title" | "description" | "alternates" | "openGraph" | "twitter"
+	"title" | "description" | "alternates" | "openGraph" | "twitter" | "robots"
 >;
 
 /**
@@ -56,7 +60,7 @@ export type AppPageMetadataFields = Pick<
  * / `twitter` replaces the layout's (Next merges metadata per top-level
  * key) — repeat `images` if you set it. A function gets the request locale
  * (translate with `getTranslations({ locale, namespace })`) and, per page,
- * more context (legal pages: `slug`).
+ * more context (legal and blog post pages: `slug`).
  */
 export type AppPageMetadata<
 	Context extends { locale: string } = { locale: string },
@@ -136,7 +140,8 @@ export interface AppMarketing {
 	/**
 	 * Page metadata over the kit's: `home` = `/`, `pricing` = `/pricing`,
 	 * `blog` = `/blog`, `changelog` = `/changelog`, `contact` = `/contact`,
-	 * `legal` = every `/legal/<slug>` page (the function form gets `slug`).
+	 * `legal` = every `/legal/<slug>` page, `blogPost` = every
+	 * `/blog/<slug>` post (the function forms get `slug`).
 	 */
 	metadata?: {
 		home?: AppPageMetadata;
@@ -145,6 +150,7 @@ export interface AppMarketing {
 		changelog?: AppPageMetadata;
 		contact?: AppPageMetadata;
 		legal?: AppPageMetadata<{ locale: string; slug: string }>;
+		blogPost?: AppPageMetadata<{ locale: string; slug: string }>;
 	};
 	/**
 	 * `/pricing` header: `{ title?, description? }` swaps the texts in the
@@ -168,6 +174,13 @@ export interface AppMarketing {
 	 * `lastModified`) or `undefined` to keep them.
 	 */
 	sitemap?: (route: SitemapRoute) => SitemapRouteOverride | undefined;
+	/**
+	 * Entries to leave out of `/sitemap.xml` — called for every path and
+	 * locale (kit pages, legal pages, blog posts, `sitemapRoutes`) with the
+	 * kit defaults, before `sitemap`; `true` drops the entry and its
+	 * hreflang alternate on the entries kept.
+	 */
+	sitemapExclude?: (route: SitemapRoute) => boolean;
 	/**
 	 * App pages for `/sitemap.xml` (a list, or a function returning one),
 	 * appended after the kit routes. Each is listed for every routable

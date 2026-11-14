@@ -7,10 +7,10 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/fF7fgQ7jZ3">💬 Discord</a> · <a href="https://docs.fuutustack.com/docs">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
+  💬 Community: sign in at <a href="https://app.fuutustack.com">app.fuutustack.com</a> (Support) · <a href="https://docs.fuutustack.com/docs">📄 Docs</a> · <a href="https://github.com/Fuutu-company/fuutu-stack/issues">🐛 Issues</a> · <a href="./LICENSE.md">⚖ License</a>
 </p>
 
-Fuutu Stack is a source-available engineering system for building B2B SaaS in TypeScript: a production-ready Next.js monorepo with tests, CI, visual regression, logs, security and an agent setup with the Fuutu MCP. The full kit is free for companies with up to 10 people and up to $250k annual revenue; MCP Plus adds rules, full skills and automatic versioning; larger companies need an Enterprise license (€2,000/year).
+Fuutu Stack is a source-available engineering system for building B2B SaaS in TypeScript: a production-ready Next.js monorepo with tests, CI, visual regression, logs, security and an agent setup with the Fuutu MCP. The full kit is free for companies with up to 10 people and up to $250k annual revenue; MCP Plus ($15/seat/month, billed yearly: $180/year) adds rules, full skills and automatic versioning; larger companies need an Enterprise license ($2,000/year).
 
 ---
 
@@ -68,8 +68,8 @@ Fuutu Stack is licensed under the **Fuutu Business License** (source-available).
 | Tier | Price | Who |
 |---|---|---|
 | **Free** | Free | Headcount ≤ 10 AND ≤ $250k annual revenue |
-| **MCP Plus** | Yearly subscription per seat | Anyone who wants MCP rules, full skills + versioning API |
-| **Enterprise** | €2,000/year, excl. VAT, includes 5 MCP Plus seats | Above either Free-tier threshold |
+| **MCP Plus** | $15/seat/month, billed yearly ($180/year) | Anyone who wants MCP rules, full skills + versioning API |
+| **Enterprise** | $2,000/year, excl. VAT, includes 5 MCP Plus seats | Above either Free-tier threshold |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
 

@@ -75,6 +75,29 @@ export default function ChangelogV110() {
 					<code>appContent.legal</code> replaces kit legal documents per slug
 					and locale or publishes new <code>/legal/&lt;slug&gt;</code> pages.
 				</li>
+				<li>
+					<code>appMarketing.sitemapExclude</code> drops entries from{" "}
+					<code>/sitemap.xml</code> per path and locale — kit pages, legal
+					pages, blog posts and app routes — together with their hreflang
+					alternates. Page metadata overrides take <code>robots</code>, and{" "}
+					<code>metadata.blogPost</code> covers every{" "}
+					<code>/blog/&lt;slug&gt;</code> post.
+				</li>
+				<li>
+					<code>appSlots.headerActions</code> renders app UI in the desktop top
+					bar, right before the notification bell — rendered by the server
+					layout, so it may be a server component.
+				</li>
+				<li>
+					<code>authConfig.organizations.organizationLimit</code> caps how many
+					organizations a user may belong to and still create another one
+					(unset: no cap). <code>organizations.create</code> answers{" "}
+					<code>FORBIDDEN</code> at the cap instead of a 500.
+				</li>
+				<li>
+					Community help moved into the app: README, contributing guide and
+					issue templates point to <code>app.fuutustack.com</code> (Support).
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>

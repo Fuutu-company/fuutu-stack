@@ -87,6 +87,12 @@ export const authConfig = {
 		//  "none"  — org creation fully disabled; users join via invitation
 		//            only (orgs provisioned externally, e.g. seed/admin API).
 		allowUserToCreateOrganization: "all" as "all" | "admin" | "none",
+		// Most organizations a user may belong to and still create another
+		// (Better Auth `organizationLimit`; created and joined orgs both
+		// count, invitations stay open). Unset = no cap. Applies to every
+		// plan, on top of the per-plan `LIMITS.organizations`
+		// (@fuutu/payments/config); system admins are capped too.
+		organizationLimit: undefined as number | undefined,
 	},
 	// OAuth 2.1 sign-in for MCP clients (Claude.ai, ChatGPT, Claude Code,
 	// Cursor, VS Code) — Better Auth acts as the authorization server for

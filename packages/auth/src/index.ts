@@ -500,6 +500,7 @@ const authOptions = {
 								? (user) => (user as { role?: string }).role === "admin"
 								: authConfig.organizations.allowUserToCreateOrganization ===
 									"all",
+						organizationLimit: authConfig.organizations.organizationLimit,
 						async sendInvitationEmail({ email, id, organization, inviter }) {
 							const inviteUrl = `${saasBaseUrl}/auth/accept-invitation?id=${id}`;
 							try {

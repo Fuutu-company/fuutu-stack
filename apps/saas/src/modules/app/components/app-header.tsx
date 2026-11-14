@@ -35,7 +35,12 @@ function BreadcrumbLabel({
 	return <>{crumbs.labelKey ? t(crumbs.labelKey) : crumbs.label}</>;
 }
 
-export function AppHeader() {
+export interface AppHeaderProps {
+	/** `appSlots.headerActions`, rendered by the server layout — before the bell. */
+	actions?: React.ReactNode;
+}
+
+export function AppHeader({ actions }: AppHeaderProps) {
 	const t = useTranslations("navigation");
 	const crumbs = useBreadcrumbs();
 
@@ -76,6 +81,7 @@ export function AppHeader() {
 				</BreadcrumbList>
 			</Breadcrumb>
 			<div className="ml-auto flex items-center gap-1">
+				{actions}
 				<NotificationBell />
 				<LocaleSwitcher />
 				<ThemeToggle />

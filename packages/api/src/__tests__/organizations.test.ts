@@ -197,6 +197,53 @@ describe("organizations.create", () => {
 		expect(result).toEqual(orgFixture);
 	});
 
+	it("surfaces the per-user organization cap as FORBIDDEN, not a 500", async () => {
+		vi.mocked(auth.api.createOrganization).mockRejectedValue(
+			Object.assign(
+				new Error("You have reached the maximum number of organizations"),
+				{
+					name: "APIError",
+					status: "FORBIDDEN",
+					statusCode: 403,
+					body: {
+						code: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
+						message: "You have reached the maximum number of organizations",
+					},
+				},
+			),
+		);
+
+		await expect(
+			call(
+				organizationsRouter.create,
+				{ name: "Acme", slug: "acme" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({
+			code: "FORBIDDEN",
+			status: 403,
+			message: "Organization limit reached",
+		});
+	});
+
+	it("passes other Better Auth errors through unchanged", async () => {
+		const taken = Object.assign(new Error("Organization already exists"), {
+			name: "APIError",
+			status: "BAD_REQUEST",
+			statusCode: 400,
+			body: { code: "ORGANIZATION_ALREADY_EXISTS" },
+		});
+		vi.mocked(auth.api.createOrganization).mockRejectedValue(taken);
+
+		await expect(
+			call(
+				organizationsRouter.create,
+				{ name: "Acme", slug: "acme" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toBe(taken);
+	});
+
 	it("rejects empty name", async () => {
 		await expect(
 			call(

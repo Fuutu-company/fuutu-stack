@@ -78,6 +78,31 @@ export default function ChangelogV110De() {
 					und Sprache oder veröffentlicht neue <code>/legal/&lt;slug&gt;</code>
 					-Seiten.
 				</li>
+				<li>
+					<code>appMarketing.sitemapExclude</code> nimmt Einträge pro Pfad und
+					Sprache aus <code>/sitemap.xml</code> — Kit-Seiten, Rechtstexte,
+					Blogposts und App-Routen — samt ihrer hreflang-Alternativen.
+					Metadaten-Overrides nehmen <code>robots</code> an, und{" "}
+					<code>metadata.blogPost</code> gilt für jeden Post unter{" "}
+					<code>/blog/&lt;slug&gt;</code>.
+				</li>
+				<li>
+					<code>appSlots.headerActions</code> zeigt App-UI in der
+					Desktop-Kopfleiste direkt vor der Benachrichtigungsglocke — vom
+					Server-Layout gerendert, also auch als Server-Komponente.
+				</li>
+				<li>
+					<code>authConfig.organizations.organizationLimit</code> begrenzt, in
+					wie vielen Organisationen ein Nutzer Mitglied sein darf und trotzdem
+					eine weitere anlegen kann (nicht gesetzt: keine Grenze).{" "}
+					<code>organizations.create</code> antwortet an der Grenze mit{" "}
+					<code>FORBIDDEN</code> statt mit einem 500.
+				</li>
+				<li>
+					Community-Hilfe gibt es jetzt in der App: README, Contributing-Guide
+					und Issue-Templates verweisen auf <code>app.fuutustack.com</code>{" "}
+					(Support).
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
