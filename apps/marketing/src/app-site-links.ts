@@ -92,9 +92,16 @@ export const appNavRemove: readonly string[] = [];
 /**
  * Footer overrides: `taglineKey` names an app-owned translation key for the
  * line under the logo, so kit translation values stay untouched.
+ * `areaLine` changes the bottom-row "Four areas, one product." line and its
+ * 4-dot area mark: `false` removes both, `textKey` names an app-owned key
+ * for the text, `Mark` a client-safe component for the mark (`null` drops
+ * the mark). Unset keeps the kit line.
  *
  * ```ts
- * export const appFooter: AppFooter = { taglineKey: "brand.footerTagline" };
+ * export const appFooter: AppFooter = {
+ *   taglineKey: "brand.footerTagline",
+ *   areaLine: { textKey: "brand.footerLine", Mark: BrandDot },
+ * };
  * ```
  */
 export const appFooter: AppFooter = {};

@@ -62,6 +62,17 @@ describe("renderTemplate", () => {
 		},
 	);
 
+	// Light-only design: dark-mode clients must not auto-invert the colors.
+	it.each(templateNames)("renders %s as a light-only email", (name) => {
+		const { html } = renderTemplate(name, fixtures[name]);
+		const head = html.slice(0, html.indexOf("</head>"));
+		expect(head).toContain('<meta name="color-scheme" content="light" />');
+		expect(head).toContain(
+			'<meta name="supported-color-schemes" content="light" />',
+		);
+		expect(html).toMatch(/<html [^>]*style="[^"]*color-scheme:light;/);
+	});
+
 	it("escapes a <script> payload in the notification template", () => {
 		const xss = '<script>alert("xss")</script>';
 		const rendered = renderTemplate("notification", {

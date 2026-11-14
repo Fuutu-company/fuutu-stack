@@ -39,6 +39,7 @@ export const TOOL_OFFSETS = {
 	mailPreview: 3,
 	e2eSaas: 50,
 	e2eMarketing: 51,
+	e2eDocs: 52,
 	browser: 99,
 };
 
@@ -77,6 +78,7 @@ export function slotPorts(slot) {
 		mailPreview: tools + TOOL_OFFSETS.mailPreview,
 		e2eSaas: tools + TOOL_OFFSETS.e2eSaas,
 		e2eMarketing: tools + TOOL_OFFSETS.e2eMarketing,
+		e2eDocs: tools + TOOL_OFFSETS.e2eDocs,
 		browser: tools + TOOL_OFFSETS.browser,
 	};
 }
@@ -198,12 +200,33 @@ export function describeProject(root, slot, dotEnv = readDotEnv(root)) {
 	};
 }
 
+/**
+ * The recorded project. A file written for another port layout (a kit
+ * update added a port) is rewritten for the same slot first.
+ */
 export function readProject(root) {
+	let project;
 	try {
-		return JSON.parse(readFileSync(join(root, PROJECT_FILE), "utf8"));
+		project = JSON.parse(readFileSync(join(root, PROJECT_FILE), "utf8"));
 	} catch {
 		return null;
 	}
+	if (!Number.isInteger(project?.slot)) return project;
+	let current;
+	try {
+		current = slotPorts(project.slot);
+	} catch {
+		return project;
+	}
+	const recorded = project.ports ?? {};
+	const keys = Object.keys(current);
+	const same =
+		keys.length === Object.keys(recorded).length &&
+		keys.every((key) => recorded[key] === current[key]);
+	if (same) return project;
+	const refreshed = describeProject(root, project.slot);
+	writeProject(root, refreshed);
+	return refreshed;
 }
 
 function writeProject(root, project) {
@@ -461,13 +484,13 @@ export const SLOT_ENV_MARKER = "FUUTU_SLOT_ENV";
 /**
  * Env for an app process of this project. Local URLs (unset or pointing at
  * localhost) follow the slot; explicit remote values (a tunnel, a cloud DB)
- * are never touched. `e2e` points SaaS/Marketing at the slot's E2E ports.
+ * are never touched. `e2e` points SaaS/Marketing/Docs at the slot's E2E ports.
  */
 export function slotEnv(project, env = process.env, { e2e = false } = {}) {
 	const { ports } = project;
 	const saas = `http://localhost:${e2e ? ports.e2eSaas : ports.saas}`;
 	const marketing = `http://localhost:${e2e ? ports.e2eMarketing : ports.marketing}`;
-	const docs = `http://localhost:${ports.docs}`;
+	const docs = `http://localhost:${e2e ? ports.e2eDocs : ports.docs}`;
 	const out = {};
 	const set = (key, value) => {
 		if (isLocal(env[key])) out[key] = value;

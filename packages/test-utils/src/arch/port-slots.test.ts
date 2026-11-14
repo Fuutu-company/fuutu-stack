@@ -40,6 +40,7 @@ describe("slot layout", () => {
 			mailPreview: 4003,
 			e2eSaas: 4050,
 			e2eMarketing: 4051,
+			e2eDocs: 4052,
 			browser: 4099,
 		});
 		expect(lib.slotPorts(1).saas).toBe(3100);
@@ -71,6 +72,20 @@ describe("slot assignment", () => {
 		expect(b.slot).toBe(1);
 		// Nothing is running, yet a third project never reuses 0 or 1.
 		expect((await lib.ensureSlot(project("c"), { busy: idle })).slot).toBe(2);
+	});
+
+	it("refreshes a project file written before a kit update added a port", async () => {
+		const root = project("a");
+		await lib.ensureSlot(project("other"), { busy: idle });
+		const first = await lib.ensureSlot(root, { busy: idle });
+		const file = join(root, ".fuutu", "project.json");
+		const { e2eDocs: _added, ...oldPorts } = first.ports;
+		writeFileSync(file, JSON.stringify({ ...first, ports: oldPorts }));
+		const read = lib.readProject(root);
+		expect(read?.slot).toBe(1);
+		expect(read?.ports.e2eDocs).toBe(4152);
+		expect(JSON.parse(readFileSync(file, "utf8")).ports.e2eDocs).toBe(4152);
+		expect((await lib.ensureSlot(root, { busy: idle })).slot).toBe(1);
 	});
 
 	it("keeps the slot on every start", async () => {
@@ -287,8 +302,12 @@ describe("slot environment", () => {
 
 	it("uses the E2E ports for E2E servers", async () => {
 		const p = await lib.ensureSlot(project("a"), { busy: idle });
-		expect(lib.slotEnv(p, {}, { e2e: true }).BETTER_AUTH_URL).toBe(
-			"http://localhost:4050",
+		const env = lib.slotEnv(p, {}, { e2e: true });
+		expect(env.BETTER_AUTH_URL).toBe("http://localhost:4050");
+		expect(env.NEXT_PUBLIC_MARKETING_URL).toBe("http://localhost:4051");
+		expect(env.NEXT_PUBLIC_DOCS_URL).toBe("http://localhost:4052");
+		expect(lib.slotEnv(p, {}).NEXT_PUBLIC_DOCS_URL).toBe(
+			"http://localhost:4000",
 		);
 	});
 });

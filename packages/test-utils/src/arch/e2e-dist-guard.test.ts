@@ -14,16 +14,15 @@ const read = (...p: string[]) => readFileSync(join(REPO_ROOT, ...p), "utf8");
 const launcher = read("tooling", "scripts", "next.mjs");
 const e2eApps = Object.keys(
 	JSON.parse(
-		(launcher.match(/const E2E_PORT = (\{[^}]*\})/)?.[1] ?? "{}").replace(
-			/(\w+):/g,
-			'"$1":',
-		),
+		(launcher.match(/const E2E_PORT = (\{[^}]*\})/)?.[1] ?? "{}")
+			.replace(/(\w+):/g, '"$1":')
+			.replace(/,\s*\}$/, "}"),
 	),
 );
 
 describe("E2E build output guard", () => {
 	it("finds the E2E apps in the launcher", () => {
-		expect(e2eApps.sort()).toEqual(["marketing", "saas"]);
+		expect(e2eApps.sort()).toEqual(["docs", "marketing", "saas"]);
 	});
 
 	it("the launcher's e2e env sets NEXT_DIST_DIR", () => {
@@ -45,6 +44,14 @@ describe("E2E build output guard", () => {
 		expect(restoreAfterBuild).toBeLessThan(failCheck);
 		expect(flow.indexOf("restoreNextEnv()", failCheck)).toBeGreaterThan(-1);
 		expect(flow.indexOf("restoreNextEnv()", failCheck)).toBeLessThan(start);
+	});
+
+	it("skips the E2E database reset for apps without a database (docs)", () => {
+		const flow = launcher.slice(launcher.indexOf("if (e2e) {"));
+		expect(launcher).toMatch(/const E2E_NO_DB = new Set\(\[[^\]]*"docs"/);
+		expect(flow).toMatch(
+			/const reset = E2E_NO_DB\.has\(app\) \? 0 : resetE2eDatabase\(\);/,
+		);
 	});
 
 	it.each(e2eApps)("apps/%s/next.config.ts honours it", (app) => {

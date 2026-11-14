@@ -62,7 +62,7 @@ pnpm dev | dev:saas | dev:marketing | dev:docs
 pnpm check            # Biome format + lint (--write)
 pnpm check-types      # tsc across workspaces
 pnpm test             # Vitest
-pnpm test:e2e:saas | test:e2e:marketing
+pnpm test:e2e:saas | test:e2e:marketing | test:e2e:docs
 pnpm db:start | db:migrate | db:push | db:seed | db:studio
 ```
 

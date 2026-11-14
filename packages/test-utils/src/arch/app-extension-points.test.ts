@@ -186,7 +186,7 @@ const EXTENSION_POINTS: {
 			},
 		],
 	},
-	...["apps/saas", "apps/marketing"].map((app) => ({
+	...["apps/saas", "apps/marketing", "apps/docs"].map((app) => ({
 		file: `${app}/tests/app-excluded.ts`,
 		exports: ["appExcludedTests"],
 		wiredInto: [

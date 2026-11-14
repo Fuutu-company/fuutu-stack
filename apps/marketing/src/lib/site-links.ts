@@ -82,8 +82,20 @@ export type NavEntry = { kind: "item" | "dropdown"; key: string };
 /**
  * Footer overrides (`app-site-links.ts`): `taglineKey` = full translation
  * key of the line under the logo (an app-owned key; unset: `footer.tagline`).
+ * `areaLine` = the bottom-row line next to the 4-dot area mark: `false`
+ * removes it, `textKey` replaces its text (unset: `footer.areas`), `Mark`
+ * replaces the mark (a client-safe component) or `null` drops it.
  */
-export type AppFooter = { taglineKey?: string };
+export type AppFooter = {
+	taglineKey?: string;
+	areaLine?: false | { textKey?: string; Mark?: ComponentType | null };
+};
+
+/** Footer area line: `Mark` undefined = the kit area mark, `null` = none. */
+export type FooterAreaLine = {
+	textKey: string;
+	Mark: ComponentType | null | undefined;
+};
 
 /** Navbar brand: the app's parts (`appHeaderBrand`), else the kit logo + name. */
 export const HEADER_BRAND: AppHeaderBrand = appHeaderBrand;
@@ -116,6 +128,15 @@ export const NAV_ORDER: NavEntry[] = [];
 
 /** Translation key of the footer tagline. */
 export const FOOTER_TAGLINE_KEY = appFooter.taglineKey ?? "footer.tagline";
+
+/** Footer bottom-row area line; `null` when the app removed it. */
+export const FOOTER_AREA_LINE: FooterAreaLine | null =
+	appFooter.areaLine === false
+		? null
+		: {
+				textKey: appFooter.areaLine?.textKey ?? "footer.areas",
+				Mark: appFooter.areaLine?.Mark,
+			};
 
 /** Footer link columns (titles resolve `footer.<titleKey>`). */
 export const FOOTER_COLUMNS: FooterColumn[] = [

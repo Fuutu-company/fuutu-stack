@@ -27,10 +27,12 @@ export function renderLayout(body: string, opts: LayoutOptions = {}): string {
 		? `<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">${escapeHtml(opts.previewText)}</div>`
 		: "";
 	return `<!doctype html>
-<html lang="${opts.locale ?? "en"}" dir="${direction}">
+<html lang="${opts.locale ?? "en"}" dir="${direction}" style="color-scheme:light;supported-color-schemes:light;">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
     <title>Fuutu</title><!-- intentional: kit's own demo branding -->
   </head>
   <body style="margin:0;padding:24px;background:${MAIL_COLORS.page};font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;color:${MAIL_COLORS.text};">

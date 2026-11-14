@@ -5,6 +5,7 @@ export type SlotPorts = {
 	mailPreview: number;
 	e2eSaas: number;
 	e2eMarketing: number;
+	e2eDocs: number;
 	browser: number;
 };
 

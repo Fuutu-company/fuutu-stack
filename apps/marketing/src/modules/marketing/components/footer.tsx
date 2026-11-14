@@ -2,7 +2,11 @@ import { config } from "@fuutu/config";
 import { AREA_CLASSES, AREAS, BrandLogo } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
 import { useTranslations } from "next-intl";
-import { FOOTER_COLUMNS, FOOTER_TAGLINE_KEY } from "@/lib/site-links";
+import {
+	FOOTER_AREA_LINE,
+	FOOTER_COLUMNS,
+	FOOTER_TAGLINE_KEY,
+} from "@/lib/site-links";
 import { Link } from "@/navigation";
 
 const LINK_CLASS =
@@ -21,6 +25,10 @@ function AreaMark() {
 		</span>
 	);
 }
+
+const AreaLineMark =
+	FOOTER_AREA_LINE &&
+	(FOOTER_AREA_LINE.Mark === undefined ? AreaMark : FOOTER_AREA_LINE.Mark);
 
 export function MarketingFooter() {
 	const t = useTranslations();
@@ -73,10 +81,12 @@ export function MarketingFooter() {
 						© <span data-volatile>{new Date().getFullYear()}</span>{" "}
 						{config.app.name}. {t("footer.rights")}
 					</p>
-					<p className="flex items-center gap-2.5">
-						<AreaMark />
-						{t("footer.areas")}
-					</p>
+					{FOOTER_AREA_LINE && (
+						<p className="flex items-center gap-2.5">
+							{AreaLineMark && <AreaLineMark />}
+							{t(FOOTER_AREA_LINE.textKey)}
+						</p>
+					)}
 				</div>
 			</div>
 		</footer>

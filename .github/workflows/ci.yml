@@ -366,6 +366,47 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  # Docs E2E — same container, build and production server as the e2e
+  # matrix above, non-visual only (docs has no visual baselines), so the
+  # matrix keeps its baseline steps and check names. No database: docs
+  # reads only public env.
+  e2e-docs:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && vars.FUUTU_CI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Must match the pinned catalog @playwright/test version exactly — bump both together.
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    env:
+      SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
+      HOME: /tmp/pw-home
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+    steps:
+      - run: mkdir -p "$HOME"
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Create .env for dotenv-cli
+        run: |
+          cat > .env << 'EOF'
+          NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
+          FUUTU_TELEMETRY_DISABLED=1
+          EOF
+      - name: Build docs
+        run: pnpm -F @fuutu/docs build
+      - name: Run non-visual tests (must pass, chromium only)
+        run: pnpm -F @fuutu/docs exec playwright test --grep-invert "visual regression" --project=chromium
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-docs-report
+          path: |
+            apps/docs/playwright-report
+            apps/docs/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
   # Publishes the visual reports of this run (both apps in one deploy).
   # Same-repo PRs and pushes only — fork PRs get no Pages permissions.
   pages:

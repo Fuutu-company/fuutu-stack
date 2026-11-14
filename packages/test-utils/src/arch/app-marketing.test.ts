@@ -315,6 +315,33 @@ describe("site links", () => {
 		expect((await load()).FOOTER_TAGLINE_KEY).toBe("platform.footerTagline");
 	});
 
+	it("keeps the kit footer area line + mark unless the app changes it", async () => {
+		expect((await load()).FOOTER_AREA_LINE).toEqual({
+			textKey: "footer.areas",
+			Mark: undefined,
+		});
+	});
+
+	it("replaces the footer area line text and mark, or removes the mark", async () => {
+		const Mark = () => null;
+		app.appFooter = { areaLine: { textKey: "platform.footerArea", Mark } };
+		expect((await load()).FOOTER_AREA_LINE).toEqual({
+			textKey: "platform.footerArea",
+			Mark,
+		});
+		vi.resetModules();
+		app.appFooter = { areaLine: { Mark: null } };
+		expect((await load()).FOOTER_AREA_LINE).toEqual({
+			textKey: "footer.areas",
+			Mark: null,
+		});
+	});
+
+	it("removes the footer area line with areaLine: false", async () => {
+		app.appFooter = { areaLine: false };
+		expect((await load()).FOOTER_AREA_LINE).toBeNull();
+	});
+
 	it("exposes the app header brand to the navbar (kit brand when unset)", async () => {
 		expect((await load()).HEADER_BRAND).toEqual({});
 		vi.resetModules();
@@ -337,6 +364,16 @@ describe("navbar order and footer tagline wiring", () => {
 		const footer = read("modules/marketing/components/footer.tsx");
 		expect(footer).toMatch(/t\(FOOTER_TAGLINE_KEY\)/);
 		expect(footer).not.toMatch(/t\("footer\.tagline"\)/);
+	});
+
+	it("the footer renders the area line from FOOTER_AREA_LINE (kit mark when Mark is unset)", () => {
+		const footer = read("modules/marketing/components/footer.tsx");
+		expect(footer).toMatch(/\{FOOTER_AREA_LINE && \(/);
+		expect(footer).toMatch(/t\(FOOTER_AREA_LINE\.textKey\)/);
+		expect(footer).toMatch(
+			/FOOTER_AREA_LINE\.Mark === undefined\s*\?\s*AreaMark\s*:\s*FOOTER_AREA_LINE\.Mark/,
+		);
+		expect(footer).not.toMatch(/t\("footer\.areas"\)/);
 	});
 });
 
