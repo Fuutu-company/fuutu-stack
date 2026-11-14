@@ -134,6 +134,8 @@ describe("AreaIcon, AreaBadge, AreaBackdrop", () => {
 			);
 			const classes = classesOf(html, "area-icon");
 			expect(classes).toContain("text-area-billing-foreground");
+			// Never stretched by a column parent: the icon keeps its own width.
+			expect(classes).toContain("w-fit");
 			expect(classes.filter((c) => c.startsWith("bg-"))).toEqual([]);
 			expect(classes.filter((c) => /^rounded/.test(c))).toEqual([]);
 		}

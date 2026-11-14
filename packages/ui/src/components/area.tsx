@@ -130,7 +130,7 @@ export function AreaIcon({
 			data-area={area}
 			aria-hidden="true"
 			className={cn(
-				"inline-flex shrink-0 items-center justify-center",
+				"inline-flex w-fit shrink-0 items-center justify-center",
 				size === "sm" ? "[&>svg]:size-4" : "[&>svg]:size-5",
 				ink,
 				className,
