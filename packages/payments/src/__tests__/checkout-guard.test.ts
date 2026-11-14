@@ -1,4 +1,6 @@
+import type { FixturePlanId } from "@fuutu/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PlanId } from "../config";
 
 // Kit catalog fixture plus an add-on plan (`proSeats` stacks on `pro`).
 vi.mock("../config", async (importOriginal) => {
@@ -66,11 +68,12 @@ const purchase = (
 	currentPeriodEnd,
 });
 
-const orgCheckout = (planId: string) => ({
+const orgCheckout = (planId: FixturePlanId | "proSeats") => ({
 	owner: { organizationId: "org_1" },
 	userId: "user_1",
-	// The add-on plan only exists in this test's catalog.
-	planId: planId as "pro",
+	// Ids of this test's catalog (fixture + `proSeats`), not the app's —
+	// typed as the app's PlanId so the suite compiles under any catalog.
+	planId: planId as string as PlanId,
 	interval: "month" as const,
 });
 

@@ -1,5 +1,6 @@
+import type { PlanId } from "@fuutu/payments/config";
 import { paymentsConfig } from "@fuutu/payments/config";
-import { makeSession, makeUser } from "@fuutu/test-utils";
+import { fixturePlanId, makeSession, makeUser } from "@fuutu/test-utils";
 import { call } from "@orpc/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
@@ -29,6 +30,12 @@ vi.mock("@fuutu/config", async (importOriginal) => {
 		},
 	};
 });
+
+// Fixed kit plan catalog (@fuutu/test-utils), not the app's PLANS.
+vi.mock("@fuutu/payments/config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@fuutu/payments/config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
 
 vi.mock("@fuutu/db", () => ({}));
 vi.mock("@fuutu/ai", () => ({ resolveAIProvider: vi.fn() }));
@@ -183,7 +190,7 @@ describe("credits disabled (config.features.credits → paymentsConfig.creditsEn
 		await expect(
 			call(
 				appRouter.payments.checkout.create,
-				{ planId: "pro" },
+				{ planId: fixturePlanId<PlanId>("pro") },
 				{ context: anonymous },
 			),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
