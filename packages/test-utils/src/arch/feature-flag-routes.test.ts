@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * `config.features` flags gate the module's routes, not only its sidebar
@@ -22,6 +22,7 @@ const flags = vi.hoisted(() => ({
 	aiChat: true,
 	crm: true,
 	designSystem: true,
+	webhooks: true,
 }));
 
 vi.mock("@fuutu/config", async (importOriginal) => {
@@ -49,16 +50,34 @@ const { disabledFeatureForPath } = await import(
 );
 
 const creditsEnabled = paymentsConfig.creditsEnabled;
+const billingAttachedTo = paymentsConfig.billingAttachedTo;
+// Every gated feature starts on: personal billing is on while billing is
+// attached to the user (the kit default "on" org mode attaches it to orgs).
+beforeEach(() => {
+	paymentsConfig.billingAttachedTo = "user";
+});
 afterEach(() => {
 	flags.aiChat = true;
 	flags.crm = true;
 	flags.designSystem = true;
+	flags.webhooks = true;
 	paymentsConfig.creditsEnabled = creditsEnabled;
+	paymentsConfig.billingAttachedTo = billingAttachedTo;
 });
 
-const off = (feature: "aiChat" | "crm" | "designSystem" | "credits") => {
+const off = (
+	feature:
+		| "aiChat"
+		| "crm"
+		| "designSystem"
+		| "webhooks"
+		| "credits"
+		| "personalBilling",
+) => {
 	if (feature === "credits") paymentsConfig.creditsEnabled = false;
-	else flags[feature] = false;
+	else if (feature === "personalBilling") {
+		paymentsConfig.billingAttachedTo = "organization";
+	} else flags[feature] = false;
 };
 
 const ROUTES = {
@@ -66,6 +85,11 @@ const ROUTES = {
 	crm: ["/crm", "/organizations/acme/crm"],
 	credits: ["/settings/credits", "/organizations/acme/settings/credits"],
 	designSystem: ["/design"],
+	webhooks: [
+		"/organizations/acme/settings/webhooks",
+		"/organizations/acme/settings/webhooks/x",
+	],
+	personalBilling: ["/settings/billing"],
 } as const;
 
 describe("disabledFeatureForPath", () => {
@@ -95,14 +119,39 @@ describe("disabledFeatureForPath", () => {
 			"/crm-export",
 			"/designs",
 			"/settings",
-			"/settings/billing",
+			"/settings/billing-export",
+			"/settings/api-keys",
 			"/organizations/acme/dashboard",
+			"/organizations/acme/settings/billing",
+			"/organizations/acme/settings/webhooks-archive",
 			"/organizations/acme/settings/credits-report",
 			"/organizations/chat",
 			"/notifications",
 		]) {
 			expect(disabledFeatureForPath(path), path).toBeNull();
 		}
+	});
+});
+
+describe("disabledFeatureForPath — org-scoped and personal-only routes", () => {
+	it("/organizations/acme/settings/webhooks is a disabled path when webhooks is off", () => {
+		off("webhooks");
+		expect(
+			disabledFeatureForPath("/organizations/acme/settings/webhooks"),
+		).toBe("webhooks");
+		expect(
+			disabledFeatureForPath("/organizations/acme/settings/members"),
+		).toBeNull();
+	});
+
+	it("/settings/billing is disabled while billing is org-attached, org billing stays reachable", () => {
+		paymentsConfig.billingAttachedTo = "organization";
+		expect(disabledFeatureForPath("/settings/billing")).toBe("personalBilling");
+		expect(
+			disabledFeatureForPath("/organizations/acme/settings/billing"),
+		).toBeNull();
+		paymentsConfig.billingAttachedTo = "user";
+		expect(disabledFeatureForPath("/settings/billing")).toBeNull();
 	});
 });
 
@@ -129,6 +178,10 @@ describe("route guards in the pages", () => {
 			/if \(!paymentsConfig\.creditsEnabled\) notFound\(\);/,
 		"app/(app)/design/page.tsx":
 			/if \(!config\.features\.designSystem\) notFound\(\);/,
+		"app/(app)/organizations/[slug]/settings/webhooks/page.tsx":
+			/if \(!config\.features\.webhooks\) notFound\(\);/,
+		"app/(app)/settings/billing/page.tsx":
+			/if \(paymentsConfig\.billingAttachedTo !== "user"\) notFound\(\);/,
 	};
 
 	for (const [page, guard] of Object.entries(PAGES)) {

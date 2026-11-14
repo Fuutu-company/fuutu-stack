@@ -20,6 +20,18 @@ const FEATURE_ROUTES = {
 		routes: ["/design"],
 		personalOnly: true,
 	},
+	// Org-scoped page: matches `/organizations/<slug>/settings/webhooks`.
+	webhooks: {
+		enabled: () => config.features.webhooks,
+		routes: ["/settings/webhooks"],
+	},
+	// Personal billing only exists while billing is attached to users;
+	// `/organizations/<slug>/settings/billing` stays reachable.
+	personalBilling: {
+		enabled: () => paymentsConfig.billingAttachedTo === "user",
+		routes: ["/settings/billing"],
+		personalOnly: true,
+	},
 } satisfies Record<
 	string,
 	{ enabled: () => boolean; routes: string[]; personalOnly?: boolean }

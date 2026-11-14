@@ -1,12 +1,13 @@
-import { processPendingDeliveries } from "@fuutu/webhooks";
+import { isWebhooksEnabled, processPendingDeliveries } from "@fuutu/webhooks";
 import { cronConfig } from "../config";
 import type { CronJob, CronJobResult } from "../types";
 
 export const webhookRetryJob: CronJob = {
 	name: "webhook-retry",
 	schedule: "*/5 * * * *",
+	// Off with the outgoing-webhooks module (`config.features.webhooks`).
 	get enabled() {
-		return cronConfig.jobs.webhookRetry;
+		return cronConfig.jobs.webhookRetry && isWebhooksEnabled();
 	},
 	async run(): Promise<CronJobResult> {
 		const errors: string[] = [];

@@ -6,6 +6,7 @@ vi.mock("@fuutu/webhooks", () => ({
 		succeeded: 2,
 		failed: 1,
 	}),
+	isWebhooksEnabled: () => true,
 }));
 
 vi.mock("@fuutu/db", () => ({

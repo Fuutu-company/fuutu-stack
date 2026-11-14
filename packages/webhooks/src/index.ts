@@ -1,6 +1,7 @@
 export { webhooksConfig } from "./config";
 export { deliverWebhook } from "./deliver";
 export { type DispatchEventInput, dispatchEvent } from "./dispatch";
+export { isWebhooksEnabled } from "./enabled";
 export { WEBHOOK_EVENTS, type WebhookEventType } from "./events";
 export { processPendingDeliveries } from "./process";
 export { calculateNextRetry } from "./retry";

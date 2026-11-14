@@ -21,7 +21,25 @@ vi.mock("@fuutu/db", () => ({
 	recordDelivery: (...args: unknown[]) => recordDeliveryMock(...args),
 }));
 
+const flags = vi.hoisted(() => ({ webhooks: true }));
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			features: new Proxy(actual.config.features, {
+				get: (target, prop, receiver) =>
+					prop in flags
+						? flags[prop as keyof typeof flags]
+						: Reflect.get(target, prop, receiver),
+			}),
+		},
+	};
+});
+
 import { dispatchEvent } from "../dispatch";
+import { isWebhooksEnabled } from "../enabled";
 
 describe("dispatchEvent", () => {
 	beforeEach(() => {
@@ -212,5 +230,45 @@ describe("dispatchEvent", () => {
 
 		expect(result.enqueued).toBe(2);
 		expect(recordDeliveryMock).toHaveBeenCalledTimes(3);
+	});
+});
+
+describe("dispatchEvent — config.features.webhooks", () => {
+	beforeEach(() => {
+		recordDeliveryMock.mockReset();
+		listActiveWebhooksByOrgMock.mockReset();
+		listOrganizationsForUserMock.mockReset();
+		flags.webhooks = true;
+	});
+
+	it("dispatchEvent does nothing while webhooks is off", async () => {
+		flags.webhooks = false;
+		listActiveWebhooksByOrgMock.mockResolvedValue([{ id: "wh-1" }]);
+		listOrganizationsForUserMock.mockResolvedValue([{ id: "org-1" }]);
+
+		await expect(
+			dispatchEvent({
+				event: "organization.updated",
+				organizationId: "org-1",
+				payload: { organizationId: "org-1" },
+			}),
+		).resolves.toEqual({ enqueued: 0 });
+		await expect(
+			dispatchEvent({
+				event: "user.updated",
+				userId: "user-1",
+				payload: { userId: "user-1" },
+			}),
+		).resolves.toEqual({ enqueued: 0 });
+
+		expect(listActiveWebhooksByOrgMock).not.toHaveBeenCalled();
+		expect(listOrganizationsForUserMock).not.toHaveBeenCalled();
+		expect(recordDeliveryMock).not.toHaveBeenCalled();
+	});
+
+	it("isWebhooksEnabled follows the flag at call time", () => {
+		expect(isWebhooksEnabled()).toBe(true);
+		flags.webhooks = false;
+		expect(isWebhooksEnabled()).toBe(false);
 	});
 });

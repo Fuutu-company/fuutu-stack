@@ -1,4 +1,5 @@
 import { config } from "@fuutu/config";
+import { paymentsConfig } from "@fuutu/payments/config";
 import { expect, test } from "./fixtures";
 
 /**
@@ -19,7 +20,9 @@ const COMPACT_ROUTES = [
 	"/settings?tab=danger",
 	"/settings/api-keys",
 	"/settings/credits",
-	"/settings/billing",
+	// Personal billing exists only while billing is attached to users; the
+	// org invoice list below covers the org-attached default.
+	...(paymentsConfig.billingAttachedTo === "user" ? ["/settings/billing"] : []),
 	"/organizations",
 	"/organizations/acme/settings/general",
 	"/organizations/acme/settings/members",

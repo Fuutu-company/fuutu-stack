@@ -112,6 +112,12 @@ export const config = {
 		aiChat: true,
 		crm: true,
 		/**
+		 * Outgoing webhooks: org settings page, `webhooks.*` API, delivery
+		 * retry job, event dispatch. Incoming provider webhooks
+		 * (`/api/webhooks/payments`) are never affected.
+		 */
+		webhooks: true,
+		/**
 		 * Live design-system page at `/design`: the link under "Administration"
 		 * in the sidebar and the route itself. Off: link hidden, route 404s.
 		 * A selling point of the demo — turn it off before you launch.

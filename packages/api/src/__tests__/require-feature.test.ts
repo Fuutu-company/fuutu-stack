@@ -13,7 +13,7 @@ import type { Context } from "../context";
  * for the anonymous caller used here).
  */
 
-const flags = vi.hoisted(() => ({ aiChat: true, crm: true }));
+const flags = vi.hoisted(() => ({ aiChat: true, crm: true, webhooks: true }));
 
 vi.mock("@fuutu/config", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@fuutu/config")>();
@@ -53,6 +53,7 @@ const creditsEnabled = paymentsConfig.creditsEnabled;
 afterEach(() => {
 	flags.aiChat = true;
 	flags.crm = true;
+	flags.webhooks = true;
 	paymentsConfig.creditsEnabled = creditsEnabled;
 });
 
@@ -136,6 +137,36 @@ const CREDITS: Case[] = [
 	],
 ];
 
+const WEBHOOKS: Case[] = [
+	[
+		"webhooks.list",
+		(c) =>
+			call(appRouter.webhooks.list, { organizationId: ORG_ID }, { context: c }),
+	],
+	[
+		"webhooks.create",
+		(c) =>
+			call(
+				appRouter.webhooks.create,
+				{
+					organizationId: ORG_ID,
+					url: "https://hooks.example.com/in",
+					events: ["organization.updated"],
+				},
+				{ context: c },
+			),
+	],
+	[
+		"webhooks.deliveries.list",
+		(c) =>
+			call(
+				appRouter.webhooks.deliveries.list,
+				{ organizationId: ORG_ID, webhookId: ORG_ID },
+				{ context: c },
+			),
+	],
+];
+
 describe("config.features.aiChat = false", () => {
 	it.each(CHAT)("%s answers NOT_FOUND", async (_name, run) => {
 		flags.aiChat = false;
@@ -191,6 +222,37 @@ describe("credits disabled (config.features.credits → paymentsConfig.creditsEn
 			call(
 				appRouter.payments.checkout.create,
 				{ planId: fixturePlanId<PlanId>("pro") },
+				{ context: anonymous },
+			),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+	});
+});
+
+describe("config.features.webhooks = false", () => {
+	it.each(WEBHOOKS)(
+		"webhooks procedures answer NOT_FOUND when config.features.webhooks is false (%s)",
+		async (_name, run) => {
+			flags.webhooks = false;
+			await expect(run(signedIn)).rejects.toMatchObject(GATED);
+			await expect(run(anonymous)).rejects.toMatchObject(GATED);
+		},
+	);
+
+	it.each(WEBHOOKS)(
+		"%s is reachable when the flag is on",
+		async (_name, run) => {
+			await expect(run(anonymous)).rejects.toMatchObject({
+				code: "UNAUTHORIZED",
+			});
+		},
+	);
+
+	it("leaves the payments module alone", async () => {
+		flags.webhooks = false;
+		await expect(
+			call(
+				appRouter.payments.subscription.cancel,
+				{ subscriptionId: "sub-1" },
 				{ context: anonymous },
 			),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });

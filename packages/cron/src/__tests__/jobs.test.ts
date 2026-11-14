@@ -11,8 +11,10 @@ vi.mock("@fuutu/logs", () => ({
 	createLogger: () => mockLog,
 }));
 
+const webhooksFlag = vi.hoisted(() => ({ on: true }));
 vi.mock("@fuutu/webhooks", () => ({
 	processPendingDeliveries: vi.fn(),
+	isWebhooksEnabled: () => webhooksFlag.on,
 }));
 
 vi.mock("@fuutu/db", () => ({
@@ -92,6 +94,16 @@ describe("webhookRetryJob", () => {
 		const result = await webhookRetryJob.run();
 		expect(result.success).toBe(false);
 		expect(result.errors).toContain("db down");
+	});
+
+	it("is disabled while config.features.webhooks is off", () => {
+		expect(webhookRetryJob.enabled).toBe(true);
+		webhooksFlag.on = false;
+		try {
+			expect(webhookRetryJob.enabled).toBe(false);
+		} finally {
+			webhooksFlag.on = true;
+		}
 	});
 });
 

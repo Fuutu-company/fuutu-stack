@@ -23,7 +23,7 @@ vi.mock("../../../../apps/saas/src/app-main-nav", () => mainExtras);
 
 // Kit demo flags, fixed: an app that switches the demo modules off keeps
 // these tests meaningful.
-const flags = vi.hoisted(() => ({ aiChat: true, crm: true }));
+const flags = vi.hoisted(() => ({ aiChat: true, crm: true, webhooks: true }));
 vi.mock("@fuutu/config", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@fuutu/config")>();
 	return {
@@ -52,6 +52,7 @@ const keys = (items: { titleKey: string }[]) => items.map((i) => i.titleKey);
 beforeEach(() => {
 	flags.aiChat = true;
 	flags.crm = true;
+	flags.webhooks = true;
 	mainExtras.appMainNavItems = [];
 	extras.appOrgSettingsNavItems = [];
 	extras.appAccountNavItems = [];
@@ -239,6 +240,33 @@ describe("org settings extras", () => {
 			"members",
 		]);
 		expect(keys(nav.getOrgSettingsItems("acme", true)).at(-1)).toBe("danger");
+	});
+});
+
+describe("org settings — webhooks flag", () => {
+	it("org settings show Webhooks while the flag is on", () => {
+		const items = nav.getOrgSettingsItems("acme", true);
+		expect(keys(items)).toContain("webhooks");
+		expect(items.find((i) => i.titleKey === "webhooks")?.href).toBe(
+			"/organizations/acme/settings/webhooks",
+		);
+	});
+
+	it("org settings hide Webhooks when the flag is off", () => {
+		flags.webhooks = false;
+		const k = keys(nav.getOrgSettingsItems("acme", true));
+		expect(k).not.toContain("webhooks");
+		expect(k.at(-1)).toBe("danger");
+	});
+
+	it("an app item anchored after webhooks is appended while the flag is off", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "usage", segment: "usage", after: "webhooks" },
+		];
+		const on = keys(nav.getOrgSettingsItems("acme", true));
+		expect(on[on.indexOf("webhooks") + 1]).toBe("usage");
+		flags.webhooks = false;
+		expect(keys(nav.getOrgSettingsItems("acme", true)).at(-1)).toBe("usage");
 	});
 });
 

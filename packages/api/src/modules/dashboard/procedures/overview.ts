@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { getCreditBalanceSummary } from "@fuutu/credits";
 import {
 	countApiKeys,
@@ -127,7 +128,8 @@ export const dashboardOverviewProcedure = authProcedure({
 		const canCredits =
 			paymentsConfig.creditsEnabled && can(PERMISSIONS.CREDIT.VIEW);
 		const canApi = can(PERMISSIONS.API_KEY.VIEW);
-		const canWebhooks = Boolean(org) && can(PERMISSIONS.WEBHOOK.VIEW);
+		const canWebhooks =
+			config.features.webhooks && Boolean(org) && can(PERMISSIONS.WEBHOOK.VIEW);
 
 		const [
 			entitlement,

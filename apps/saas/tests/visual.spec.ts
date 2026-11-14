@@ -1,3 +1,4 @@
+import { paymentsConfig } from "@fuutu/payments/config";
 import type { Page } from "@playwright/test";
 import {
 	expect,
@@ -159,6 +160,12 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("settings billing matches baseline", async ({ page }) => {
+		// 404 while billing is org-attached (kit default) — the org invoice
+		// list is covered by "org invoices matches baseline".
+		test.skip(
+			paymentsConfig.billingAttachedTo !== "user",
+			"Personal billing is off while billing is org-attached",
+		);
 		await page.goto("/settings/billing");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "settings--billing.png", {

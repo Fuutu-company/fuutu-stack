@@ -245,10 +245,10 @@ export function getOrgSettingsItems(
 	if (paymentsConfig.creditsEnabled) {
 		items.push({ titleKey: "credits", href: `${base}/credits` });
 	}
-	items.push(
-		{ titleKey: "apiKeys", href: `${base}/api-keys` },
-		{ titleKey: "webhooks", href: `${base}/webhooks` },
-	);
+	items.push({ titleKey: "apiKeys", href: `${base}/api-keys` });
+	if (config.features.webhooks) {
+		items.push({ titleKey: "webhooks", href: `${base}/webhooks` });
+	}
 	// Audit log requires AUDIT_LOG.VIEW (admin+) — hide rather than link to a
 	// redirect dead-end for plain members.
 	if (canViewAuditLog) {
