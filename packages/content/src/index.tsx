@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import { z } from "zod";
 import { appContent } from "./app-content";
 import ChangelogV010 from "./changelog/v0-1-0";
 import ChangelogV010De from "./changelog/v0-1-0.de";
@@ -12,8 +11,7 @@ import {
 	changelogDraftMeta,
 	changelogMeta,
 } from "./changelog-meta";
-import { applyAppContent } from "./content-extensions";
-import { isoDate } from "./iso-date";
+import { applyAppContent, applyAppLegal } from "./content-extensions";
 import ImprintDe, {
 	frontmatter as imprintDeFrontmatter,
 } from "./legal/imprint.de";
@@ -28,6 +26,7 @@ import PrivacyEn, {
 } from "./legal/privacy.en";
 import TermsDe, { frontmatter as termsDeFrontmatter } from "./legal/terms.de";
 import TermsEn, { frontmatter as termsEnFrontmatter } from "./legal/terms.en";
+import { legalDocumentFrontmatterSchema } from "./legal-frontmatter";
 import { postFrontmatterSchema } from "./post-frontmatter";
 import WelcomePost, {
 	frontmatter as welcomeFrontmatter,
@@ -93,12 +92,8 @@ export interface LegalDocument {
 	body: ComponentType;
 }
 
+export { legalDocumentFrontmatterSchema } from "./legal-frontmatter";
 export { postFrontmatterSchema } from "./post-frontmatter";
-
-export const legalDocumentFrontmatterSchema = z.object({
-	title: z.string().min(1),
-	updatedAt: isoDate,
-});
 
 function resolveBody(
 	bodies: Record<string, ComponentType>,
@@ -157,7 +152,7 @@ export const changelog: readonly ChangelogEntry[] = Object.freeze(
 	}),
 );
 
-const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
+const KIT_LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 	privacy: {
 		en: {
 			slug: "privacy",
@@ -201,6 +196,13 @@ const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 		},
 	},
 };
+
+/**
+ * Legal documents per slug and locale: the kit's with `appContent.legal`
+ * applied (`./app-content.ts` — replace a kit document, add a page). The
+ * legal pages, their static params and the sitemap read it.
+ */
+const LEGAL_REGISTRY = applyAppLegal(KIT_LEGAL_REGISTRY, appContent.legal);
 
 export const legal: readonly LegalDocument[] = Object.freeze(
 	Object.values(LEGAL_REGISTRY).flatMap((byLocale) => Object.values(byLocale)),

@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { describe, expect, it } from "vitest";
-import { applyAppContent } from "../content-extensions";
-import type { PostEntry } from "../index";
+import { applyAppContent, applyAppLegal } from "../content-extensions";
+import type { LegalDocument, PostEntry } from "../index";
 
 const Body: ComponentType = () => null;
 
@@ -85,5 +85,97 @@ describe("applyAppContent", () => {
 
 	it("returns a frozen collection", () => {
 		expect(Object.isFrozen(applyAppContent(KIT, {}))).toBe(true);
+	});
+});
+
+describe("applyAppLegal", () => {
+	const KitPrivacy: ComponentType = () => null;
+	const KitPrivacyDe: ComponentType = () => null;
+	const KitTerms: ComponentType = () => null;
+	const AppBody: ComponentType = () => null;
+
+	const doc = (
+		slug: string,
+		locale: string,
+		body: ComponentType = AppBody,
+		updatedAt = "2026-11-01",
+	): LegalDocument => ({
+		slug,
+		locale,
+		frontmatter: { title: `${slug} (${locale})`, updatedAt },
+		body,
+	});
+
+	const kit = () => ({
+		privacy: {
+			en: doc("privacy", "en", KitPrivacy),
+			de: doc("privacy", "de", KitPrivacyDe),
+		},
+		terms: { en: doc("terms", "en", KitTerms) },
+	});
+
+	it("keeps the kit documents without app legal documents", () => {
+		expect(applyAppLegal(kit(), undefined)).toEqual(kit());
+		expect(applyAppLegal(kit(), [])).toEqual(kit());
+	});
+
+	it("an app legal document replaces the kit one for its slug and locale", () => {
+		const result = applyAppLegal(kit(), [doc("privacy", "en")]);
+		expect(result.privacy?.en?.body).toBe(AppBody);
+		// The other locale of the slug and the other slugs stay the kit's.
+		expect(result.privacy?.de?.body).toBe(KitPrivacyDe);
+		expect(result.terms?.en?.body).toBe(KitTerms);
+	});
+
+	it("a new slug is published", () => {
+		const result = applyAppLegal(kit(), [
+			doc("telemetry", "en"),
+			doc("telemetry", "de"),
+		]);
+		expect(Object.keys(result)).toEqual(["privacy", "terms", "telemetry"]);
+		expect(result.telemetry?.de).toMatchObject({
+			slug: "telemetry",
+			locale: "de",
+		});
+	});
+
+	it("a new locale for a kit slug is added next to the kit ones", () => {
+		const result = applyAppLegal(kit(), [doc("terms", "de")]);
+		expect(result.terms?.en?.body).toBe(KitTerms);
+		expect(result.terms?.de?.body).toBe(AppBody);
+	});
+
+	it("invalid frontmatter throws", () => {
+		expect(() =>
+			applyAppLegal(kit(), [doc("privacy", "en", AppBody, "not-a-date")]),
+		).toThrow();
+		expect(() =>
+			applyAppLegal(kit(), [
+				{
+					...doc("privacy", "en"),
+					frontmatter: { title: "", updatedAt: "2026-11-01" },
+				},
+			]),
+		).toThrow();
+	});
+
+	it("a slug that is not URL-safe throws", () => {
+		for (const slug of ["", "Privacy", "../etc", "a b"]) {
+			expect(() => applyAppLegal(kit(), [doc(slug, "en")]), slug).toThrow(
+				/slug/,
+			);
+		}
+	});
+
+	it("two app documents for one slug and locale throw", () => {
+		expect(() =>
+			applyAppLegal(kit(), [doc("telemetry", "en"), doc("telemetry", "en")]),
+		).toThrow(/telemetry/);
+	});
+
+	it("does not mutate the kit registry", () => {
+		const registry = kit();
+		applyAppLegal(registry, [doc("privacy", "en"), doc("telemetry", "en")]);
+		expect(registry).toEqual(kit());
 	});
 });
