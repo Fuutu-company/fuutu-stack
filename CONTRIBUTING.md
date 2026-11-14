@@ -1,6 +1,6 @@
 # Contributing to Fuutu Stack
 
-Thanks for your interest! Fuutu Stack is a commercial open-source project under the [Fuutu Business License](./LICENSE.md), and community contributions are welcome. Stuck? Open a support ticket in `#help` on [Discord](https://discord.gg/fF7fgQ7jZ3).
+Thanks for your interest! Fuutu Stack is source-available under the [Fuutu Business License](./LICENSE.md), and community contributions are welcome. Stuck? Open a support ticket in `#help` on [Discord](https://discord.gg/fF7fgQ7jZ3).
 
 **Full contributing guide** (branching, hotfix flow, commit types, PR process, provider swaps): [docs.fuutustack.com/docs/support/contributing](https://docs.fuutustack.com/docs/support/contributing)
 
