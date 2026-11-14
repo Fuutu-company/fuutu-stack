@@ -48,6 +48,33 @@ export default function ChangelogV110() {
 					The SaaS app's <code>/robots.txt</code> disallows crawling instead of
 					redirecting to sign-in.
 				</li>
+				<li>
+					Trials once per owner: <code>Plan.trialOnce</code>,{" "}
+					<code>Plan.noTrialPriceIdEnvVars</code> (products without the trial,
+					for Creem), <code>registerTrialEligibilityPolicy</code> and{" "}
+					<code>skipTrial</code> on <code>payments.checkout.create</code>.
+					Checkout guards see the decision as <code>ctx.trial</code>; a checkout
+					that must skip a product-level trial without a no-trial product
+					answers <code>trial_unavailable</code>.
+				</li>
+				<li>
+					Cancel at the period end and resume:{" "}
+					<code>payments.subscription.cancel</code> takes{" "}
+					<code>atPeriodEnd</code>, <code>payments.subscription.resume</code>{" "}
+					undoes it (Creem, Stripe, Polar). Seat changes take a per-call{" "}
+					<code>proration</code> (<code>"charge-immediately"</code> or{" "}
+					<code>"none"</code>) on Creem and Stripe.
+				</li>
+				<li>
+					<code>config.features.webhooks</code> switches outgoing webhooks off:
+					the org settings page and its sidebar item, the{" "}
+					<code>webhooks.*</code> API, the retry job, event dispatch and the
+					dashboard count. Incoming payment webhooks are not affected.
+				</li>
+				<li>
+					<code>appContent.legal</code> replaces kit legal documents per slug
+					and locale or publishes new <code>/legal/&lt;slug&gt;</code> pages.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -77,6 +104,14 @@ export default function ChangelogV110() {
 					: one <code>message</code> event per text chunk (JSON string data),
 					then a final <code>done</code> event; a failure mid-stream arrives as
 					an <code>error</code> event. <code>/api/docs</code> describes it.
+				</li>
+				<li>
+					<code>/settings/billing</code> answers 404 while billing is attached
+					to organizations (the kit default) — billing lives on{" "}
+					<code>/organizations/&lt;slug&gt;/settings/billing</code>.{" "}
+					<code>assertCheckoutAllowed</code> returns <code>{"{ trial }"}</code>,
+					and <code>CheckoutGuardContext</code> carries <code>trial</code> and{" "}
+					<code>skipTrial</code>.
 				</li>
 			</ul>
 		</>

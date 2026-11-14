@@ -49,6 +49,35 @@ export default function ChangelogV110De() {
 					<code>/robots.txt</code> der SaaS-App verbietet das Crawlen, statt auf
 					die Anmeldung umzuleiten.
 				</li>
+				<li>
+					Testphase einmal pro Besitzer: <code>Plan.trialOnce</code>,{" "}
+					<code>Plan.noTrialPriceIdEnvVars</code> (Produkte ohne Testphase, für
+					Creem), <code>registerTrialEligibilityPolicy</code> und{" "}
+					<code>skipTrial</code> bei <code>payments.checkout.create</code>.
+					Checkout-Guards sehen die Entscheidung als <code>ctx.trial</code>; ein
+					Checkout, der eine Testphase auf Produktebene überspringen muss, aber
+					kein Produkt ohne Testphase hat, antwortet mit{" "}
+					<code>trial_unavailable</code>.
+				</li>
+				<li>
+					Kündigen zum Periodenende und fortsetzen:{" "}
+					<code>payments.subscription.cancel</code> nimmt{" "}
+					<code>atPeriodEnd</code>, <code>payments.subscription.resume</code>{" "}
+					macht es rückgängig (Creem, Stripe, Polar). Sitzänderungen nehmen pro
+					Aufruf eine <code>proration</code> (<code>"charge-immediately"</code>{" "}
+					oder <code>"none"</code>) bei Creem und Stripe.
+				</li>
+				<li>
+					<code>config.features.webhooks</code> schaltet ausgehende Webhooks ab:
+					die Org-Einstellungsseite samt Sidebar-Eintrag, die{" "}
+					<code>webhooks.*</code>-API, den Retry-Job, den Event-Versand und die
+					Anzahl im Dashboard. Eingehende Zahlungs-Webhooks bleiben unberührt.
+				</li>
+				<li>
+					<code>appContent.legal</code> ersetzt Rechtstexte des Kits pro Slug
+					und Sprache oder veröffentlicht neue <code>/legal/&lt;slug&gt;</code>
+					-Seiten.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -79,6 +108,14 @@ export default function ChangelogV110De() {
 					zum Schluss ein <code>done</code>-Event; ein Fehler mitten im Stream
 					kommt als <code>error</code>-Event. <code>/api/docs</code> beschreibt
 					das.
+				</li>
+				<li>
+					<code>/settings/billing</code> antwortet mit 404, solange die
+					Abrechnung an Organisationen hängt (Kit-Standard) — sie liegt unter{" "}
+					<code>/organizations/&lt;slug&gt;/settings/billing</code>.{" "}
+					<code>assertCheckoutAllowed</code> gibt <code>{"{ trial }"}</code>{" "}
+					zurück, und <code>CheckoutGuardContext</code> enthält{" "}
+					<code>trial</code> und <code>skipTrial</code>.
 				</li>
 			</ul>
 		</>
