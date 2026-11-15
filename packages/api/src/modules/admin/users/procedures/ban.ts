@@ -5,7 +5,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { runAuditedAdminAction } from "../../audit";
 import {
 	adminIdSchema,
 	assertNotAdmin,
@@ -48,23 +48,26 @@ export const banUserProcedure = systemAdminProcedure(PERMISSIONS.USER.UPDATE)
 			}
 		}
 
-		await withAuthErrors(() =>
-			auth.api.banUser({
-				body: {
-					userId: target.id,
-					banReason: input.reason,
-					...(banExpiresIn ? { banExpiresIn } : {}),
-				},
-				headers: context.headers,
-			}),
+		await runAuditedAdminAction(
+			context,
+			{
+				action: "admin.user.ban",
+				targetUserId: target.id,
+				reason: input.reason,
+			},
+			() =>
+				withAuthErrors(() =>
+					auth.api.banUser({
+						body: {
+							userId: target.id,
+							banReason: input.reason,
+							...(banExpiresIn ? { banExpiresIn } : {}),
+						},
+						headers: context.headers,
+					}),
+				),
 		);
 		// Better Auth ends the sessions; MCP refresh tokens outlive them.
 		await revokeOAuthTokensForUser(target.id);
-
-		await recordAdminAction(context, {
-			action: "admin.user.ban",
-			targetUserId: target.id,
-			reason: input.reason,
-		});
 		return { success: true };
 	});

@@ -5,7 +5,11 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import {
+	type AdminAuditEntry,
+	recordAdminAction,
+	runAuditedAdminAction,
+} from "../../audit";
 import {
 	adminIdSchema,
 	assertNotSelf,
@@ -40,18 +44,37 @@ export const setUserRoleProcedure = systemAdminProcedure(
 			"You cannot change your own role",
 		);
 		const target = await loadTargetUser(input.userId);
-		// Last-admin check and role write share one Serializable transaction.
-		const result = await adminSetSystemRole({
-			userId: target.id,
-			role: input.role,
-		});
-		if (result.status === "not_found") {
-			throw new ORPCError("NOT_FOUND", { message: "User not found" });
-		}
-		if (result.status === "last_admin") {
-			throw new ORPCError("CONFLICT", {
-				message: "The last admin cannot be demoted",
+		// Decided before the write: an unchanged role is not audited.
+		const changes = target.isAdmin !== (input.role === "admin");
+		const setRole = async () => {
+			// Last-admin check and role write share one Serializable transaction.
+			const result = await adminSetSystemRole({
+				userId: target.id,
+				role: input.role,
 			});
+			if (result.status === "not_found") {
+				throw new ORPCError("NOT_FOUND", { message: "User not found" });
+			}
+			if (result.status === "last_admin") {
+				throw new ORPCError("CONFLICT", {
+					message: "The last admin cannot be demoted",
+				});
+			}
+			return result;
+		};
+		const audited: AdminAuditEntry = {
+			action: "admin.user.set_role",
+			targetUserId: target.id,
+			reason: input.reason,
+			changedFields: ["role"],
+		};
+		const result = changes
+			? await runAuditedAdminAction(context, audited, setRole)
+			: await setRole();
+		if (!changes && result.status === "updated") {
+			// The role changed between the read and the write: audited late,
+			// never not at all.
+			await recordAdminAction(context, audited);
 		}
 		// Also on an unchanged demotion: idempotent, and a retry after a
 		// failed revoke must still end the sessions.
@@ -64,15 +87,5 @@ export const setUserRoleProcedure = systemAdminProcedure(
 			);
 			await deleteSessionsImpersonatedBy(target.id);
 		}
-		if (result.status === "unchanged") {
-			return { success: true, changed: false };
-		}
-
-		await recordAdminAction(context, {
-			action: "admin.user.set_role",
-			targetUserId: target.id,
-			reason: input.reason,
-			changedFields: ["role"],
-		});
-		return { success: true, changed: true };
+		return { success: true, changed: result.status !== "unchanged" };
 	});

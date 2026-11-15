@@ -464,6 +464,21 @@ describe("admin.auditLogs.list filters", () => {
 
 // ─── Audit shape ────────────────────────────────────────────────────────────
 
+function auditedActions(): string[] {
+	return audit.record.mock.calls.map(([event]) => event.action);
+}
+
+/** The audit row was written before `action` first ran. */
+function expectAuditedBefore(action: {
+	mock: { invocationCallOrder: number[] };
+}) {
+	const auditedAt = audit.record.mock.invocationCallOrder[0];
+	const ranAt = action.mock.invocationCallOrder[0];
+	expect(auditedAt).toBeDefined();
+	expect(ranAt).toBeDefined();
+	expect(auditedAt ?? 0).toBeLessThan(ranAt ?? 0);
+}
+
 function lastAudit() {
 	return audit.record.mock.calls.at(-1)?.[0];
 }
@@ -619,6 +634,16 @@ describe("admin.users.ban", () => {
 		expectAudit("admin.user.ban", { targetUserId: "user-2", reason: REASON });
 	});
 
+	it("writes the audit row before the ban", async () => {
+		await call(
+			users.ban,
+			{ userId: "user-2", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(auditedActions()).toEqual(["admin.user.ban"]);
+		expectAuditedBefore(vi.mocked(auth.api.banUser));
+	});
+
 	it("turns an expiry date into Better Auth's banExpiresIn seconds", async () => {
 		vi.useFakeTimers({ now: new Date("2026-06-01T12:00:00Z") });
 		try {
@@ -674,6 +699,7 @@ describe("admin.users.ban", () => {
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
 		expect(auth.api.banUser).not.toHaveBeenCalled();
+		expect(audit.record).not.toHaveBeenCalled();
 	});
 
 	it("refuses to ban another admin (demote first)", async () => {
@@ -701,7 +727,16 @@ describe("admin.users.ban", () => {
 				{ context: adminContext() },
 			),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
-		expect(audit.record).not.toHaveBeenCalled();
+		// Audited before the call; the failed row says no ban came of it.
+		expect(auditedActions()).toEqual([
+			"admin.user.ban",
+			"admin.user.ban_failed",
+		]);
+		expectAudit("admin.user.ban_failed", {
+			targetUserId: "user-2",
+			reason: REASON,
+		});
+		expect(db.revokeOAuthTokensForUser).not.toHaveBeenCalled();
 	});
 });
 
@@ -736,6 +771,38 @@ describe("admin.users.setRole", () => {
 		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
 		expect(db.deleteSessionsImpersonatedBy).not.toHaveBeenCalled();
 		expectAudit("admin.user.set_role", {
+			targetUserId: "user-2",
+			reason: REASON,
+			changedFields: ["role"],
+		});
+	});
+
+	it("writes the audit row before the role changes", async () => {
+		await call(
+			users.setRole,
+			{ userId: "admin-2", role: "user", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(auditedActions()).toEqual(["admin.user.set_role"]);
+		expectAuditedBefore(vi.mocked(db.adminSetSystemRole));
+	});
+
+	it("records set_role_failed when the role write fails", async () => {
+		vi.mocked(db.adminSetSystemRole).mockRejectedValueOnce(
+			new Error("serialization failure"),
+		);
+		await expect(
+			call(
+				users.setRole,
+				{ userId: "user-2", role: "admin", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow();
+		expect(auditedActions()).toEqual([
+			"admin.user.set_role",
+			"admin.user.set_role_failed",
+		]);
+		expectAudit("admin.user.set_role_failed", {
 			targetUserId: "user-2",
 			reason: REASON,
 			changedFields: ["role"],
@@ -780,7 +847,10 @@ describe("admin.users.setRole", () => {
 		).rejects.toMatchObject({ code: "CONFLICT" });
 		expect(auth.api.setRole).not.toHaveBeenCalled();
 		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
-		expect(audit.record).not.toHaveBeenCalled();
+		expect(auditedActions()).toEqual([
+			"admin.user.set_role",
+			"admin.user.set_role_failed",
+		]);
 	});
 
 	it("refuses to change your own role", async () => {
@@ -819,6 +889,29 @@ describe("admin.users.setRole", () => {
 			{ context: adminContext() },
 		);
 		expect(auth.api.setRole).not.toHaveBeenCalled();
+		expect(audit.record).not.toHaveBeenCalled();
+	});
+
+	it("still audits a change the pre-read missed (role changed in between)", async () => {
+		vi.mocked(db.adminSetSystemRole).mockResolvedValueOnce({
+			status: "updated",
+			previousRole: "admin",
+		});
+		const result = await call(
+			users.setRole,
+			{ userId: "user-2", role: "user", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(result).toEqual({ success: true, changed: true });
+		expect(auditedActions()).toEqual(["admin.user.set_role"]);
+	});
+
+	it("writes no audit row for an unchanged promotion either", async () => {
+		await call(
+			users.setRole,
+			{ userId: "admin-2", role: "admin", reason: REASON },
+			{ context: adminContext() },
+		);
 		expect(audit.record).not.toHaveBeenCalled();
 	});
 
@@ -976,6 +1069,30 @@ describe("admin.users.delete", () => {
 		});
 	});
 
+	it("writes the audit row before cancelling or deleting anything", async () => {
+		await call(users.delete, input, { context: adminContext() });
+		expect(auditedActions()).toEqual(["admin.user.delete"]);
+		expectAuditedBefore(vi.mocked(support.supportCancelUserSubscriptions));
+		expectAuditedBefore(vi.mocked(auth.api.removeUser));
+	});
+
+	it("records delete_failed when Better Auth cannot remove the user", async () => {
+		vi.mocked(auth.api.removeUser).mockRejectedValueOnce(
+			new Error("database down"),
+		);
+		await expect(
+			call(users.delete, input, { context: adminContext() }),
+		).rejects.toThrow();
+		expect(auditedActions()).toEqual([
+			"admin.user.delete",
+			"admin.user.delete_failed",
+		]);
+		expectAudit("admin.user.delete_failed", {
+			targetUserId: "user-2",
+			reason: REASON,
+		});
+	});
+
 	it("cancels the user's subscriptions strictly before deleting", async () => {
 		const order: string[] = [];
 		vi.mocked(support.supportCancelUserSubscriptions).mockImplementationOnce(
@@ -1004,7 +1121,10 @@ describe("admin.users.delete", () => {
 			call(users.delete, input, { context: adminContext() }),
 		).rejects.toMatchObject({ code: "BAD_GATEWAY", status: 502 });
 		expect(auth.api.removeUser).not.toHaveBeenCalled();
-		expect(audit.record).not.toHaveBeenCalled();
+		expect(auditedActions()).toEqual([
+			"admin.user.delete",
+			"admin.user.delete_failed",
+		]);
 	});
 
 	it("refuses when the confirmation is not the user's email", async () => {
@@ -1016,6 +1136,7 @@ describe("admin.users.delete", () => {
 			),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 		expect(auth.api.removeUser).not.toHaveBeenCalled();
+		expect(audit.record).not.toHaveBeenCalled();
 	});
 
 	it("refuses while the user is the sole owner of an organization", async () => {
@@ -1029,6 +1150,7 @@ describe("admin.users.delete", () => {
 			data: { organizations: [{ id: "org-1", slug: "acme" }] },
 		});
 		expect(auth.api.removeUser).not.toHaveBeenCalled();
+		expect(audit.record).not.toHaveBeenCalled();
 	});
 
 	it("refuses to delete yourself", async () => {

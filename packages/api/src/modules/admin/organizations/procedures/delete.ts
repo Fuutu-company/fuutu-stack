@@ -4,7 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { runAuditedAdminAction } from "../../audit";
 import { reasonSchema, withSubscriptionCancellation } from "../../shared";
 import { loadTargetOrganization, organizationIdSchema } from "../shared";
 
@@ -35,16 +35,23 @@ export const deleteOrganizationProcedure = systemAdminProcedure(
 				message: "Confirmation does not match the organization's slug",
 			});
 		}
-		const deleted = await withSubscriptionCancellation(() =>
-			supportDeleteOrganization(org.id),
+		await runAuditedAdminAction(
+			context,
+			{
+				action: "admin.org.delete",
+				targetOrganizationId: org.id,
+				reason: input.reason,
+			},
+			async () => {
+				const deleted = await withSubscriptionCancellation(() =>
+					supportDeleteOrganization(org.id),
+				);
+				if (!deleted) {
+					throw new ORPCError("NOT_FOUND", {
+						message: "Organization not found",
+					});
+				}
+			},
 		);
-		if (!deleted) {
-			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
-		}
-		await recordAdminAction(context, {
-			action: "admin.org.delete",
-			targetOrganizationId: org.id,
-			reason: input.reason,
-		});
 		return { success: true };
 	});

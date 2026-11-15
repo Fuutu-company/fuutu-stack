@@ -911,7 +911,35 @@ describe("admin.organizations.delete", () => {
 		await expect(
 			call(orgs.delete, input, { context: adminContext() }),
 		).rejects.toMatchObject({ code: "BAD_GATEWAY", status: 502 });
-		expect(audit.record).not.toHaveBeenCalled();
+		// Audited before the delete started; the failed row says nothing came of it.
+		expect(audit.record.mock.calls.map(([event]) => event.action)).toEqual([
+			"admin.org.delete",
+			"admin.org.delete_failed",
+		]);
+		expectAudit("admin.org.delete_failed", {
+			targetOrganizationId: ORG_ID,
+			reason: REASON,
+		});
+	});
+
+	it("writes the audit row before anything is deleted", async () => {
+		await call(orgs.delete, input, { context: adminContext() });
+		expect(audit.record).toHaveBeenCalledOnce();
+		expect(audit.record.mock.invocationCallOrder[0]).toBeLessThan(
+			vi.mocked(support.supportDeleteOrganization).mock
+				.invocationCallOrder[0] ?? 0,
+		);
+	});
+
+	it("records delete_failed when the organization is gone by delete time", async () => {
+		vi.mocked(support.supportDeleteOrganization).mockResolvedValueOnce(false);
+		await expect(
+			call(orgs.delete, input, { context: adminContext() }),
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
+		expect(audit.record.mock.calls.map(([event]) => event.action)).toEqual([
+			"admin.org.delete",
+			"admin.org.delete_failed",
+		]);
 	});
 
 	it("refuses when the confirmation is not the organization's slug", async () => {
@@ -923,6 +951,7 @@ describe("admin.organizations.delete", () => {
 			),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 		expect(support.supportDeleteOrganization).not.toHaveBeenCalled();
+		expect(audit.record).not.toHaveBeenCalled();
 	});
 
 	it("refuses the organization's name in place of its slug", async () => {

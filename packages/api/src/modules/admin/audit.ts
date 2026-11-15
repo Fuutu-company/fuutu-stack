@@ -42,3 +42,25 @@ export async function recordAdminAction(
 		metadata,
 	});
 }
+
+/**
+ * Runs an irreversible support action audited first — no effect may exist
+ * without its row. When `run` throws, a `<action>_failed` row with the same
+ * details says nothing (or not all) came of it; the error is rethrown.
+ */
+export async function runAuditedAdminAction<T>(
+	context: { user: { id: string }; headers: Headers },
+	entry: AdminAuditEntry,
+	run: () => Promise<T>,
+): Promise<T> {
+	await recordAdminAction(context, entry);
+	try {
+		return await run();
+	} catch (err) {
+		await recordAdminAction(context, {
+			...entry,
+			action: `${entry.action}_failed`,
+		});
+		throw err;
+	}
+}

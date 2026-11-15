@@ -6,7 +6,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { runAuditedAdminAction } from "../../audit";
 import {
 	adminIdSchema,
 	assertNotAdmin,
@@ -55,21 +55,25 @@ export const deleteUserProcedure = systemAdminProcedure(PERMISSIONS.USER.DELETE)
 			});
 		}
 
-		// Better Auth's delete hook cancels too, but only logs a failure.
-		await withSubscriptionCancellation(() =>
-			supportCancelUserSubscriptions(target.id),
+		await runAuditedAdminAction(
+			context,
+			{
+				action: "admin.user.delete",
+				targetUserId: target.id,
+				reason: input.reason,
+			},
+			async () => {
+				// Better Auth's delete hook cancels too, but only logs a failure.
+				await withSubscriptionCancellation(() =>
+					supportCancelUserSubscriptions(target.id),
+				);
+				await withAuthErrors(() =>
+					auth.api.removeUser({
+						body: { userId: target.id },
+						headers: context.headers,
+					}),
+				);
+			},
 		);
-		await withAuthErrors(() =>
-			auth.api.removeUser({
-				body: { userId: target.id },
-				headers: context.headers,
-			}),
-		);
-
-		await recordAdminAction(context, {
-			action: "admin.user.delete",
-			targetUserId: target.id,
-			reason: input.reason,
-		});
 		return { success: true };
 	});
