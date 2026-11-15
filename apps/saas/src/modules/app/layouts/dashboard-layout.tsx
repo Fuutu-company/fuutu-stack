@@ -35,7 +35,7 @@ export async function DashboardLayout({ children }: DashboardLayoutProps) {
 			<Suspense>
 				<ErrorToast />
 			</Suspense>
-			<SidebarInset>
+			<SidebarInset className="min-w-0">
 				<MobileHeader />
 				{headerActions ? <AppHeader actions={headerActions} /> : <AppHeader />}
 				{/* The document scrolls, not this column: `overflow-x-clip` contains wide content without becoming a scroll container, so `position: sticky` inside pages works. */}
