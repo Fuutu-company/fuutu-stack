@@ -32,7 +32,7 @@ import {
 } from "../admin-badges";
 import { KIT_USER_TAB_KEYS, resolveAdminSections } from "../admin-sections";
 import { initials, isAdminRole } from "../admin-user-utils";
-import { UserActions, useRevokeSession } from "./user-actions";
+import { UserActions } from "./user-actions";
 import { UserActivity } from "./user-activity";
 import {
 	ApiKeysSection,
@@ -41,6 +41,7 @@ import {
 	OverviewSection,
 	SessionsSection,
 } from "./user-sections";
+import { useRevokeSession } from "./user-session-actions";
 
 export function AdminUserDetail({
 	userId,
