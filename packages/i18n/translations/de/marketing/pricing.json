@@ -8,11 +8,11 @@
 		"customPrice": "Individuell",
 		"enterprise": {
 			"dedicated_support": "Dedizierter Support",
-			"dedicated_support_desc": "Ein fester Engineer für dein Team.",
+			"dedicated_support_desc": "Ein direkter Ansprechpartner für dein Team, wie im Vertrag vereinbart.",
 			"dedicated_app": "Dedizierte Instanz",
 			"dedicated_app_desc": "Isoliertes Deployment — deine Daten nie geteilt.",
-			"sla": "SLA-Garantie",
-			"sla_desc": "99,9% Uptime mit Response-Time-Zusagen.",
+			"sla": "Service-Level",
+			"sla_desc": "Uptime- und Reaktionszeit-Ziele, wie im Vertrag vereinbart.",
 			"custom_integrations": "Custom Integrationen",
 			"custom_integrations_desc": "Wir bauen die Konnektoren, die du brauchst."
 		}
