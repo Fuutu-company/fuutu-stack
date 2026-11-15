@@ -37,7 +37,7 @@
     <text x="56" y="332">· Admin panel (ban, override)</text>
     <text x="56" y="356">· Invitation-only signup</text>
     <text x="56" y="380">· Rate limiting (per-endpoint)</text>
-    <text x="56" y="404">· Audit logs (immutable, org-scoped)</text>
+    <text x="56" y="404">· Audit logs (append-only, org-scoped)</text>
   </g>
 
   <!-- ===== 2. API & BACKEND (6 items) ===== -->

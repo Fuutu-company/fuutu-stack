@@ -41,7 +41,7 @@ It is also built for working with AI coding agents from the first prompt. Archit
 
 ## Features
 
-- **Auth & security**: email/password, magic link, OAuth, 2FA (TOTP) and passkeys, invitation-only sign-up, admin panel, rate limiting, CSP/HSTS, open-redirect guard, immutable audit logs. [Security overview](https://docs.fuutustack.com/docs/security)
+- **Auth & security**: email/password, magic link, OAuth, 2FA (TOTP) and passkeys, invitation-only sign-up, admin panel, rate limiting, CSP/HSTS, open-redirect guard, an append-only audit log. [Security overview](https://docs.fuutustack.com/docs/security)
 - **API**: Hono + oRPC with auto-generated OpenAPI, Zod on every input, scoped and revocable API keys, signed outbound webhooks with retry, cron jobs, and an MCP server for your own app (`/api/mcp`). [API docs](https://docs.fuutustack.com/docs/api)
 - **Payments**: Creem, Stripe or Polar (alpha) behind one interface, per-seat billing, credit metering and top-ups, plans and limits in one config. [Payments](https://docs.fuutustack.com/docs/payments)
 - **Organizations & RBAC**: multi-tenant orgs, invitations, seat limits, granular roles and permissions. [Organizations](https://docs.fuutustack.com/docs/organizations)
@@ -67,8 +67,8 @@ Fuutu Stack is licensed under the **Fuutu Business License** (source-available).
 
 | Tier | Price | Who |
 |---|---|---|
-| **Free** | Free | Headcount ≤ 10 AND ≤ $250k annual revenue |
-| **Fuutu Pro** | $15/seat/month, billed yearly ($180/year) | Anyone who wants MCP rules, full skills + versioning API |
+| **Free** | Free | Headcount ≤ 10 AND ≤ $250k annual revenue, including affiliates |
+| **Fuutu Pro** | $15/seat/month, billed yearly ($180/year), excl. VAT | Anyone who wants MCP rules, full skills + versioning API |
 | **Enterprise** | $2,000/year, excl. VAT, includes 5 Pro seats | Above either Free-tier threshold |
 
 Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing](https://fuutustack.com/pricing)**
@@ -84,9 +84,9 @@ Full terms: **[LICENSE.md](./LICENSE.md)** · Pricing: **[fuutustack.com/pricing
 
 ---
 
-## Top Sponsors
+## Sponsors
 
-<!-- Top-5 sponsor slots — the 5 largest sponsors by tier/size.
+<!-- Gold sponsor slots only, as on the sponsoring page (paid placement).
      Replace each placeholder with the sponsor logo + name.
      Updated manually on sponsorship changes. -->
 <p align="center">
