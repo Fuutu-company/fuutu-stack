@@ -1,3 +1,4 @@
+import { isBanActive } from "@fuutu/auth/types";
 import { getOrganizationMemberRole, verifyApiKeyWithOwner } from "@fuutu/db";
 import { toSystemRole } from "@fuutu/rbac";
 import { API_KEY_ADMIN_SCOPES } from "../../api-key-scopes";
@@ -16,7 +17,7 @@ export type ApiKeyCredential = VerifiedKey & {
  * `requireApiKey` and the MCP principal. Re-checks the owner on every use
  * and fails closed (`null` → 401) when:
  *  - the key is unknown, revoked or expired, or its owner is gone
- *  - the owner is banned
+ *  - the owner is banned (a temporary ban only until `banExpires`)
  *  - the key carries an admin scope (`API_KEY_ADMIN_SCOPES`) and the owner
  *    is no longer a system admin
  *  - it is an org key and the owner is no longer a member of that org
@@ -28,7 +29,7 @@ export async function verifyApiKeyCredential(
 	rawKey: string,
 ): Promise<ApiKeyCredential | null> {
 	const verified = await verifyApiKeyWithOwner(rawKey);
-	if (!verified || verified.user.banned) return null;
+	if (!verified || isBanActive(verified.user)) return null;
 	const { apiKey, user } = verified;
 
 	const needsSystemAdmin = apiKey.scopes.some((scope) =>

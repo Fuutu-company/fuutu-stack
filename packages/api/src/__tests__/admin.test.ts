@@ -11,6 +11,14 @@ vi.mock("@fuutu/ai", () => ({
 vi.mock("@fuutu/db", () => ({
 	listAuditLogs: vi.fn(),
 	countAuditLogs: vi.fn(),
+	// adminProcedure re-reads the caller's role and ban from the database.
+	getUserAccessState: vi.fn(async (id: string) => ({
+		id,
+		email: "admin@fuutu.local",
+		role: "admin",
+		banned: false,
+		banExpires: null,
+	})),
 }));
 
 const { listAuditLogs, countAuditLogs } = await import("@fuutu/db");

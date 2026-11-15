@@ -40,7 +40,7 @@
  */
 
 import { auth } from "@fuutu/auth";
-import type { UserWithRole } from "@fuutu/auth/types";
+import { isBanActive, type UserWithRole } from "@fuutu/auth/types";
 import { getOrganizationWithMembers } from "@fuutu/db";
 import {
 	checkLimit,
@@ -189,6 +189,12 @@ export function entitledLimit(
 export type AuthorizeOptions = {
 	/** Require a specific system-level permission (checked against SYSTEM_POLICY). */
 	systemPermission?: KnownPermission;
+	/**
+	 * Reject impersonation sessions (`session.impersonatedBy` set) — for
+	 * actions support must never take as the user: money, credentials,
+	 * deleting or leaving organizations.
+	 */
+	denyImpersonation?: boolean;
 	/** Resolve org from input, verify membership, check org-level permission. */
 	org?: {
 		/** Permission to check against ORG_POLICY. Mutually exclusive with minRole. */
@@ -232,6 +238,23 @@ export type AuthorizeOptions = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
+ * Throws FORBIDDEN for an impersonation session (Better Auth admin plugin
+ * sets `session.impersonatedBy` to the impersonating admin's id).
+ */
+export function assertNotImpersonating(
+	context: Pick<Context, "session">,
+): void {
+	const inner = context.session?.session as
+		| { impersonatedBy?: string | null }
+		| undefined;
+	if (inner?.impersonatedBy) {
+		throw new ORPCError("FORBIDDEN", {
+			message: "Not allowed while impersonating a user",
+		});
+	}
+}
+
+/**
  * Safely extract a string field from raw (possibly unparsed) input.
  * Returns undefined when input is null/undefined or the field is absent.
  */
@@ -259,9 +282,13 @@ export async function runAuthorize(
 	const user = context.session.user as UserWithRole;
 	// Banned users are rejected even if a session is still valid —
 	// banUser() revokes sessions, but a ban applied directly in the DB
-	// (or a stale session cache) must not grant API access.
-	if (user.banned) {
+	// (or a stale session cache) must not grant API access. An expired
+	// temporary ban (`banExpires` passed) no longer counts.
+	if (isBanActive(user)) {
 		throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
+	}
+	if (options.denyImpersonation) {
+		assertNotImpersonating(context);
 	}
 	const systemRole = toSystemRole(user.role);
 

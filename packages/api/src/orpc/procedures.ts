@@ -1,4 +1,5 @@
-import type { UserWithRole } from "@fuutu/auth/types";
+import { isBanActive, type UserWithRole } from "@fuutu/auth/types";
+import { getUserAccessState } from "@fuutu/db";
 import {
 	hasSystemPermission,
 	type KnownPermission,
@@ -13,7 +14,11 @@ export { PERMISSIONS } from "@fuutu/rbac";
 import { type EvlogOrpcContext, evlog } from "@fuutu/logs/orpc";
 import { ORPCError, os } from "@orpc/server";
 import type { Context } from "../context";
-import { type AuthorizeOptions, runAuthorize } from "./middleware/authorize";
+import {
+	type AuthorizeOptions,
+	assertNotImpersonating,
+	runAuthorize,
+} from "./middleware/authorize";
 
 // System AC — checks the user's SYSTEM role (Better-Auth admin plugin: "admin"/"user")
 const systemAC = new SystemAccessControl(SYSTEM_POLICY);
@@ -59,7 +64,8 @@ export const protectedProcedure = publicProcedure.use(
 		const user = context.session.user as UserWithRole;
 		// Reject banned users even with a still-valid session —
 		// mirrors the check in runAuthorize (middleware/authorize.ts).
-		if (user.banned) {
+		// An expired temporary ban (`banExpires` passed) no longer counts.
+		if (isBanActive(user)) {
 			throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
 		}
 		// Org-scoped API keys are pinned to their org. They may only reach
@@ -86,10 +92,23 @@ export const protectedProcedure = publicProcedure.use(
 );
 
 /**
- * Admin-only procedure
- * Requires authenticated user with VIEW_ADMIN permission (system-level).
+ * Admin-only procedure — `systemAdminProcedure(PERMISSIONS.VIEW_ADMIN)`:
+ * a system admin with an interactive session (no API key, not an
+ * impersonation session), role re-read from the database.
  */
-export const adminProcedure = permissionProcedure(PERMISSIONS.VIEW_ADMIN);
+export const adminProcedure = systemAdminProcedure(PERMISSIONS.VIEW_ADMIN);
+
+/**
+ * Rejects impersonation sessions — for `protectedProcedure`-based
+ * procedures that must not run while support acts as the user (the
+ * `authProcedure` equivalent is `denyImpersonation: true`).
+ */
+export const denyImpersonation = os
+	.$context<Pick<Context, "session">>()
+	.middleware(({ context, next }) => {
+		assertNotImpersonating(context);
+		return next();
+	});
 
 /**
  * Procedure that requires a specific SYSTEM permission.
@@ -109,6 +128,44 @@ export function permissionProcedure(permission: KnownPermission) {
 			});
 		}
 		return next({ context: { user: context.user, role } });
+	});
+}
+
+/**
+ * System-admin (back office) procedure for `admin.*`. On top of
+ * `permissionProcedure(permission)`:
+ *  - interactive sessions only — API keys (even an admin's) are rejected
+ *  - never an impersonation session
+ *  - role and ban are re-read from the database on every call, so a
+ *    demotion or ban applies before the cookie-cached session expires
+ *
+ * Built on `permissionProcedure`, not `authProcedure`: an `organizationId`
+ * in the input must never switch the check to org scope.
+ */
+export function systemAdminProcedure(permission: KnownPermission) {
+	return permissionProcedure(permission).use(async ({ context, next }) => {
+		if (context.apiKey || !context.session?.session) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Admin actions require a signed-in session",
+			});
+		}
+		assertNotImpersonating(context);
+		const state = await getUserAccessState(context.user.id);
+		if (!state) {
+			throw new ORPCError("UNAUTHORIZED");
+		}
+		if (isBanActive(state)) {
+			throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
+		}
+		const role = toSystemRole(state.role);
+		if (!hasSystemPermission(systemAC, role, permission)) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Insufficient permissions",
+			});
+		}
+		return next({
+			context: { user: { ...context.user, role: state.role }, role },
+		});
 	});
 }
 

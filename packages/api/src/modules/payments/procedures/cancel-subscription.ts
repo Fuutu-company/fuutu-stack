@@ -1,7 +1,10 @@
 import { resolvePaymentProvider } from "@fuutu/payments";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { protectedProcedure } from "../../../orpc/procedures";
+import {
+	denyImpersonation,
+	protectedProcedure,
+} from "../../../orpc/procedures";
 import { throwIfPaymentsDisabled } from "../shared";
 import {
 	assertPaymentsEnabled,
@@ -15,6 +18,7 @@ const cancelSubscriptionSchema = z.object({
 });
 
 export const cancelSubscription = protectedProcedure
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",

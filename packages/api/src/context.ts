@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { isImpersonationExpired } from "@fuutu/auth/impersonation";
 import { API_KEY_PREFIX } from "@fuutu/db";
 import type { Context as HonoContext } from "hono";
 import { API_SCOPE } from "./api-key-scopes";
@@ -69,6 +70,11 @@ const isAllowedOnApi = (scopes: readonly string[]): boolean =>
 export async function createContext({ context }: CreateContextOptions) {
 	const headers = context.req.raw.headers as Headers;
 	let session = await auth.api.getSession({ headers });
+	// A support impersonation ends after authConfig.admin.impersonationMinutes
+	// even though Better Auth still holds the session row and cookies.
+	if (session && isImpersonationExpired(session.session)) {
+		session = null;
+	}
 	let apiKey: ApiKeyAuth | null = null;
 	let apiKeyUpgradeRequired: MissingScopeFeature | null = null;
 	let preAuthRateLimited: PreAuthRateLimited | null = null;
@@ -126,4 +132,10 @@ export type Context = {
 	apiKeyUpgradeRequired?: MissingScopeFeature | null;
 	/** Set when a presented API key was refused by the pre-auth throttle. */
 	preAuthRateLimited?: PreAuthRateLimited | null;
+	/**
+	 * Response headers of the current call, injected by oRPC's
+	 * `ResponseHeadersPlugin` (orpc/handler.ts) — e.g. Better Auth
+	 * Set-Cookie headers for impersonation. Absent under `call()`.
+	 */
+	resHeaders?: Headers;
 };

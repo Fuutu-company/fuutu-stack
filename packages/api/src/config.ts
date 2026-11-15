@@ -92,6 +92,16 @@ export const apiConfig = {
 				maxRequests: 60,
 				windowMs: 60 * 1000,
 			},
+			// System-admin reads (admin.*) — generous for paging/search
+			adminRead: {
+				maxRequests: 120,
+				windowMs: 60 * 1000,
+			},
+			// System-admin mutations (admin.*) — strict
+			adminMutation: {
+				maxRequests: 30,
+				windowMs: 60 * 1000,
+			},
 		},
 	},
 	/**
