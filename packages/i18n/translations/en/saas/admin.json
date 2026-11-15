@@ -460,6 +460,10 @@
 			}
 		},
 		"auditLogs": {
+			"sinkNotice": {
+				"title": "Audit events are not stored",
+				"description": "The audit sink is \"console\" (the default), so audit events — admin support actions included — are only written to the server log. Set LOG_AUDIT_SINK=db to keep them in the database and list them here."
+			},
 			"title": "Audit logs",
 			"col": {
 				"time": "Time",

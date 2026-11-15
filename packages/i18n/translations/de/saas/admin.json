@@ -460,6 +460,10 @@
 			}
 		},
 		"auditLogs": {
+			"sinkNotice": {
+				"title": "Audit-Ereignisse werden nicht gespeichert",
+				"description": "Der Audit-Sink ist „console“ (Standard): Audit-Ereignisse, auch Support-Aktionen von Admins, landen nur im Server-Log. Setze LOG_AUDIT_SINK=db, um sie in der Datenbank zu speichern und hier aufzulisten."
+			},
 			"title": "Audit-Logs",
 			"col": {
 				"time": "Zeit",
