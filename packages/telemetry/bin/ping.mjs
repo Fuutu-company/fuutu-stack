@@ -8,6 +8,9 @@
  * compliance only, exactly the fields of LICENSE.md §7 (tests enforce it).
  *
  * Non-blocking: 5 s timeout, silent on failure, always exits 0.
+ * Only sent from CI (`CI` truthy) or a production build
+ * (`NODE_ENV=production`) — never from a plain local build on a developer
+ * machine.
  * Opt-out: `FUUTU_TELEMETRY_DISABLED=1`.
  * Endpoint override: `FUUTU_TELEMETRY_ENDPOINT`.
  */
@@ -28,7 +31,10 @@ const disabled = ["1", "true"].includes(
 	(process.env.FUUTU_TELEMETRY_DISABLED ?? "").toLowerCase(),
 );
 
-if (disabled) {
+const ci = !["", "0", "false"].includes((process.env.CI ?? "").toLowerCase());
+const production = process.env.NODE_ENV === "production";
+
+if (disabled || !(ci || production)) {
 	process.exit(0);
 }
 

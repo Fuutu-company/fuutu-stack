@@ -67,6 +67,11 @@ export async function pingTelemetry(
 	if (env.FUUTU_TELEMETRY_DISABLED) {
 		return { sent: false, reason: "disabled" };
 	}
+	// A dev server on a developer machine never pings; a running
+	// production app always does (LICENSE.md §7).
+	if (env.NODE_ENV !== "production") {
+		return { sent: false, reason: "not-production" };
+	}
 
 	const payload = buildTelemetryPayload();
 

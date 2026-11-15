@@ -29,7 +29,13 @@ function capturePing(env: NodeJS.ProcessEnv): Record<string, unknown> {
 		process.execPath,
 		["--import", capturePath, binPath],
 		{
-			env: { ...process.env, FUUTU_TELEMETRY_DISABLED: "", ...env },
+			env: {
+				...process.env,
+				FUUTU_TELEMETRY_DISABLED: "",
+				// A build ping only goes out from CI or a production build.
+				CI: "1",
+				...env,
+			},
 			encoding: "utf8",
 			timeout: 15_000,
 		},
@@ -40,7 +46,41 @@ function capturePing(env: NodeJS.ProcessEnv): Record<string, unknown> {
 	return (JSON.parse(line.slice(5)) as { body: Record<string, unknown> }).body;
 }
 
+/** Whether the bin sends a ping in this environment (fetch stubbed). */
+function pingSent(env: NodeJS.ProcessEnv): boolean {
+	const result = spawnSync(
+		process.execPath,
+		["--import", capturePath, binPath],
+		{
+			env: { ...process.env, FUUTU_TELEMETRY_DISABLED: "", ...env },
+			encoding: "utf8",
+			timeout: 15_000,
+		},
+	);
+	expect(result.status).toBe(0);
+	return result.stdout.split("\n").some((l) => l.startsWith("PING "));
+}
+
 describe("bin/ping.mjs", () => {
+	it("sends nothing from a plain local build (no CI, no production)", () => {
+		expect(pingSent({ CI: "", NODE_ENV: "" })).toBe(false);
+		expect(pingSent({ CI: "", NODE_ENV: "development" })).toBe(false);
+		expect(pingSent({ CI: "false", NODE_ENV: "" })).toBe(false);
+	});
+
+	it("sends from CI", () => {
+		expect(pingSent({ CI: "1", NODE_ENV: "" })).toBe(true);
+		expect(pingSent({ CI: "true", NODE_ENV: "" })).toBe(true);
+	});
+
+	it("sends from a production build", () => {
+		expect(pingSent({ CI: "", NODE_ENV: "production" })).toBe(true);
+	});
+
+	it("still honours FUUTU_TELEMETRY_DISABLED in CI", () => {
+		expect(pingSent({ CI: "1", FUUTU_TELEMETRY_DISABLED: "1" })).toBe(false);
+	});
+
 	it("sends exactly the license-compliance fields, as a build ping", () => {
 		const body = capturePing({
 			FUUTU_LICENSE_KEY: "",
@@ -103,4 +143,19 @@ describe("bin/ping.mjs", () => {
 		expect(binVersion).toBeDefined();
 		expect(binVersion).toBe(configVersion);
 	});
+});
+
+describe("Docker builds", () => {
+	it.each(["saas", "marketing", "docs"])(
+		"apps/%s/Dockerfile runs the build ping as a production build",
+		(app) => {
+			const dockerfile = readFileSync(
+				resolve(here, `../../../../apps/${app}/Dockerfile`),
+				"utf8",
+			);
+			expect(dockerfile).toMatch(
+				/NODE_ENV=production node packages\/telemetry\/bin\/ping\.mjs/,
+			);
+		},
+	);
 });

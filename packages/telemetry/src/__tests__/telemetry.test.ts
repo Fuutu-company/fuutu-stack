@@ -5,6 +5,7 @@ const envStub = {
 	FUUTU_TELEMETRY_ENDPOINT: undefined as string | undefined,
 	FUUTU_TELEMETRY_DISABLED: false as boolean | undefined,
 	NEXT_PUBLIC_SAAS_URL: undefined as string | undefined,
+	NODE_ENV: "production" as "development" | "production" | "test",
 };
 
 vi.mock("@fuutu/env/saas", () => ({
@@ -27,6 +28,7 @@ beforeEach(() => {
 	envStub.FUUTU_TELEMETRY_ENDPOINT = undefined;
 	envStub.FUUTU_TELEMETRY_DISABLED = false;
 	envStub.NEXT_PUBLIC_SAAS_URL = undefined;
+	envStub.NODE_ENV = "production";
 });
 
 afterEach(() => {
@@ -36,6 +38,7 @@ afterEach(() => {
 	envStub.FUUTU_TELEMETRY_ENDPOINT = undefined;
 	envStub.FUUTU_TELEMETRY_DISABLED = false;
 	envStub.NEXT_PUBLIC_SAAS_URL = undefined;
+	envStub.NODE_ENV = "production";
 });
 
 describe("buildTelemetryPayload()", () => {
@@ -161,6 +164,18 @@ describe("pingTelemetry()", () => {
 		expect(result.sent).toBe(false);
 		expect(mockFetch).not.toHaveBeenCalled();
 	});
+
+	it.each(["development", "test"] as const)(
+		"skips the runtime ping outside production (NODE_ENV=%s)",
+		async (nodeEnv) => {
+			envStub.NODE_ENV = nodeEnv;
+			const mockFetch = vi.fn();
+			globalThis.fetch = mockFetch;
+			const result = await pingTelemetry("https://test.example.com/ping");
+			expect(result).toEqual({ sent: false, reason: "not-production" });
+			expect(mockFetch).not.toHaveBeenCalled();
+		},
+	);
 
 	it("does not skip when FUUTU_TELEMETRY_DISABLED is not set", async () => {
 		const mockFetch = vi
