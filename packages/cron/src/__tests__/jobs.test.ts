@@ -479,6 +479,17 @@ describe("telemetryPingJob", () => {
 		expect(result.errors).toEqual([]);
 	});
 
+	it("records a skip (not an error) outside production", async () => {
+		vi.mocked(pingTelemetry).mockResolvedValue({
+			sent: false,
+			reason: "not-production",
+		});
+		const result = await telemetryPingJob.run();
+		expect(result.success).toBe(true);
+		expect(result.skipped).toBe(true);
+		expect(result.errors).toEqual([]);
+	});
+
 	it("returns failure when the ping fails (e.g. network error)", async () => {
 		vi.mocked(pingTelemetry).mockResolvedValue({
 			sent: false,
