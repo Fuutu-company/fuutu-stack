@@ -1,6 +1,6 @@
 /**
  * Support impersonation must not change who owns the account, spend the
- * user's money or hand third parties access. This `hooks.before` guard
+ * user's money, hand third parties access or switch sessions. This `hooks.before` guard
  * rejects those Better Auth endpoints for a session started by
  * `admin.users.impersonate` (`session.impersonatedBy` set) — HTTP and
  * server-side `auth.api.*` calls alike. oRPC procedures opt in with
@@ -20,6 +20,18 @@ const GUARDED_PATHS: ReadonlySet<string> = new Set([
 	"/oauth2/create-client",
 	"/organization/leave",
 	"/organization/delete",
+	"/organization/invite-member",
+	"/organization/accept-invitation",
+	// Provider tokens of the user's linked accounts.
+	"/get-access-token",
+	"/refresh-token",
+	"/account-info",
+	"/oauth2/client/rotate-secret",
+	"/oauth2/update-client",
+	// Switching device sessions would leave the impersonation without the
+	// audited stop (`admin.impersonation.stop`).
+	"/multi-session/set-active",
+	"/multi-session/revoke",
 ]);
 
 const GUARDED_PREFIXES = ["/delete-user", "/two-factor/", "/passkey/"];

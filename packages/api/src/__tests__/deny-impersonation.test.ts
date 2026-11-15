@@ -28,10 +28,20 @@ const { createTopupCheckout } = await import(
 const { deleteOrganization } = await import(
 	"../modules/organizations/procedures/delete"
 );
+const { inviteMember } = await import(
+	"../modules/organizations/members/procedures/invite"
+);
+const { createWebhookProcedure } = await import(
+	"../modules/webhooks/procedures/create"
+);
+const { updateWebhookProcedure } = await import(
+	"../modules/webhooks/procedures/update"
+);
 
 /**
  * Support may look around as the user, but never spend their money, mint
- * credentials or delete their organization. Leaving an organization and
+ * credentials, invite people, point webhooks at new endpoints or delete
+ * their organization. Leaving an organization and
  * account/credential changes are blocked in Better Auth's hooks.before
  * (@fuutu/auth hooks/impersonation-guard).
  */
@@ -43,6 +53,25 @@ const DENIED = [
 	["payments.subscription.resume", resumeSubscription, { subscriptionId: "s" }],
 	["payments.topupCheckout.create", createTopupCheckout, { topupId: "t" }],
 	["organizations.delete", deleteOrganization, { organizationId: "org-1" }],
+	[
+		"organizations.members.invite",
+		inviteMember,
+		{ organizationId: "org-1", email: "new@fuutu.local" },
+	],
+	[
+		"webhooks.create",
+		createWebhookProcedure,
+		{
+			organizationId: "org-1",
+			url: "https://example.com/hook",
+			events: ["member.removed"],
+		},
+	],
+	[
+		"webhooks.update",
+		updateWebhookProcedure,
+		{ id: "wh-1", organizationId: "org-1", url: "https://example.com/hook" },
+	],
 ] as const;
 
 function impersonatedContext(): Context {

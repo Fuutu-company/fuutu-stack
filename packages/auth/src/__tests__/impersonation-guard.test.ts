@@ -29,6 +29,17 @@ const GUARDED_PATHS = [
 	"/oauth2/create-client",
 	"/organization/leave",
 	"/organization/delete",
+	"/organization/invite-member",
+	"/organization/accept-invitation",
+	"/get-access-token",
+	"/refresh-token",
+	"/account-info",
+	"/oauth2/client/rotate-secret",
+	"/oauth2/update-client",
+	// Switching to (or revoking into) another device session would leave
+	// impersonation without the audited stop.
+	"/multi-session/set-active",
+	"/multi-session/revoke",
 ];
 
 describe("assertNotImpersonating (hooks.before)", () => {
