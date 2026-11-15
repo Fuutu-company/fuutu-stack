@@ -70,6 +70,7 @@ import { saasBaseUrl } from "./lib/saas-url";
 import { MCP_ORG_CLAIM, mcpOAuth } from "./mcp-oauth";
 import { getSocialCredentials, isSocialProviderActive } from "./methods";
 import { mcpConnectedApps } from "./plugins/mcp-connected-apps";
+import { readOnlyRateLimitRules } from "./rate-limit-rules";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
 // Postgres `AuditLog` table — but only when LOG_AUDIT_SINK=db (the default is
@@ -153,6 +154,7 @@ const authOptions = {
 		enabled: authConfig.rateLimiting.enabled && !env.FUUTU_DISABLE_RATE_LIMIT,
 		window: authConfig.rateLimiting.window,
 		max: authConfig.rateLimiting.max,
+		customRules: readOnlyRateLimitRules(),
 		storage: "database",
 	},
 

@@ -1,6 +1,15 @@
 import { env } from "@fuutu/env/saas";
+import { AlreadyCanceledSubscription } from "@polar-sh/sdk/models/errors/alreadycanceledsubscription.js";
+import { ConnectionError } from "@polar-sh/sdk/models/errors/httpclienterrors.js";
+import { ResourceNotFound } from "@polar-sh/sdk/models/errors/resourcenotfound.js";
+import { SDKError } from "@polar-sh/sdk/models/errors/sdkerror.js";
+import { SubscriptionLocked } from "@polar-sh/sdk/models/errors/subscriptionlocked.js";
 import { describe, expect, it, vi } from "vitest";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	isProviderRequestError,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const checkoutsCreate = vi
 	.fn()
@@ -938,5 +947,129 @@ describe("polar provider — getSubscriptionSeats", () => {
 		await expect(
 			polarPaymentProvider.getSubscriptionSeats?.("sub_1"),
 		).rejects.toThrow("polar down");
+	});
+});
+
+describe("polar provider — typed API failures", () => {
+	const httpMeta = (status: number) => ({
+		response: new Response("{}", { status }),
+		request: new Request("https://sandbox-api.polar.sh/v1/subscriptions/x"),
+		body: "{}",
+	});
+
+	it.each([
+		[
+			"an unknown subscription",
+			"not_found",
+			new ResourceNotFound(
+				{ error: "ResourceNotFound", detail: "Not found" },
+				httpMeta(404),
+			),
+		],
+		[
+			"an already canceled subscription (Polar answers 403)",
+			"invalid_state",
+			new AlreadyCanceledSubscription(
+				{
+					error: "AlreadyCanceledSubscription",
+					detail: "This subscription is already canceled.",
+				},
+				httpMeta(403),
+			),
+		],
+		[
+			"a locked subscription",
+			"invalid_state",
+			new SubscriptionLocked(
+				{ error: "SubscriptionLocked", detail: "Locked" },
+				httpMeta(409),
+			),
+		],
+		[
+			"a request Polar refuses",
+			"rejected",
+			new SDKError("API error occurred", httpMeta(400)),
+		],
+		[
+			"a Polar outage",
+			"unavailable",
+			new SDKError("API error occurred", httpMeta(503)),
+		],
+		[
+			"a network failure",
+			"unavailable",
+			new ConnectionError("Unable to make request"),
+		],
+	] as const)(
+		"%s is a ProviderRequestError of kind %s",
+		async (_, kind, err) => {
+			subscriptionsRevoke.mockRejectedValueOnce(err);
+			const failure = await polarPaymentProvider
+				.cancelSubscription("sub_1")
+				.catch((e: unknown) => e);
+			expect(isProviderRequestError(failure)).toBe(true);
+			expect(failure).toMatchObject({
+				kind,
+				message: "Failed to cancel subscription",
+			});
+		},
+	);
+
+	it.each([401, 403])(
+		"HTTP %i (rejected access token) is a configuration error",
+		async (status) => {
+			subscriptionsUpdate.mockRejectedValueOnce(
+				new SDKError("API error occurred", httpMeta(status)),
+			);
+			await expect(
+				polarPaymentProvider.resumeSubscription?.("sub_1"),
+			).rejects.toBeInstanceOf(WebhookConfigError);
+		},
+	);
+
+	it("every Polar call classifies its failure", async () => {
+		const missing = () =>
+			new ResourceNotFound(
+				{ error: "ResourceNotFound", detail: "Not found" },
+				httpMeta(404),
+			);
+		checkoutsCreate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.createCheckoutLink({ priceId: "prod_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		customerSessionsCreate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.createCustomerPortalLink({ customerId: "cus_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		customersCreate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.createCustomer({
+				userId: "u",
+				email: "u@example.com",
+			}),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsGet.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.getSubscriptionStatus?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsGet.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsUpdate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_x",
+				seats: 2,
+			}),
+		).rejects.toMatchObject({ kind: "not_found" });
+	});
+
+	it("an error that is not from Polar is rethrown unchanged", async () => {
+		const own = new Error("boom");
+		subscriptionsRevoke.mockRejectedValueOnce(own);
+		await expect(polarPaymentProvider.cancelSubscription("sub_1")).rejects.toBe(
+			own,
+		);
 	});
 });

@@ -25,6 +25,13 @@
 			"description": "Du wirst für die Anzahl der ausgewählten Sitze abgerechnet. Sitze passen sich automatisch an, wenn Teammitglieder beitreten oder verlassen."
 		},
 		"planInterval": "{plan} · {interval}",
+		"errors": {
+			"providerNotFound": "Der Zahlungsanbieter kennt dieses Abonnement oder diesen Kunden nicht. Es gehört eventuell zu einem anderen Konto oder zum Testmodus.",
+			"providerStateConflict": "Dieses Abonnement hat sich beim Zahlungsanbieter geändert. Lade die Seite neu und versuche es noch einmal.",
+			"providerRejected": "Der Zahlungsanbieter hat diese Anfrage abgelehnt.",
+			"providerUnavailable": "Der Zahlungsanbieter ist gerade nicht erreichbar. Versuche es gleich noch einmal.",
+			"portal": "Das Abrechnungsportal konnte nicht geöffnet werden."
+		},
 		"features": {
 			"groups": {
 				"auth": "Authentifizierung",

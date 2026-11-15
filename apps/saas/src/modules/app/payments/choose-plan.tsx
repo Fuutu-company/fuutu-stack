@@ -19,7 +19,7 @@ import { PricingCompact, SeatSelector } from "@fuutu/ui";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { isPaymentsUnavailable } from "@/lib/api-error";
+import { paymentsErrorKey } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "choose-plan" });
@@ -68,11 +68,7 @@ export function ChoosePlan() {
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
-			setError(
-				isPaymentsUnavailable(e)
-					? t("choosePlan.unavailable")
-					: t("choosePlan.error"),
-			);
+			setError(t(paymentsErrorKey(e) ?? "choosePlan.error"));
 		} finally {
 			setLoading(null);
 		}

@@ -14,6 +14,8 @@ import type {
 	SetSeatsInput,
 } from "../types";
 import {
+	failureKindForStatus,
+	ProviderRequestError,
 	resolveCancelMode,
 	WebhookConfigError,
 	WebhookSignatureError,
@@ -55,6 +57,59 @@ function requireAbsoluteUrl(
 		);
 	}
 	return url;
+}
+
+/** Stripe's message for a change a canceled subscription refuses. */
+const CANCELED_SUBSCRIPTION = /\bcancel(l)?ed subscription\b/i;
+
+/**
+ * A Stripe SDK error as a typed payments error: a rejected key (401/403)
+ * is our configuration, a connection / API / rate-limit error
+ * `unavailable`, `resource_missing` `not_found`, a change a canceled
+ * subscription refuses `invalid_state`, anything else by its status.
+ * Stripe's message goes to the log only. Errors not from Stripe pass
+ * through unchanged.
+ */
+function stripeFailure(err: unknown, failure: string): unknown {
+	if (!(err instanceof Stripe.errors.StripeError)) return err;
+	const { statusCode: status, code, message } = err;
+	log.error(failure, { status, code, type: err.type, err: message });
+	if (
+		err instanceof Stripe.errors.StripeAuthenticationError ||
+		err instanceof Stripe.errors.StripePermissionError
+	) {
+		return new WebhookConfigError(
+			`[payments:stripe] ${failure}: Stripe rejected the API key (HTTP ${status}). Check STRIPE_SECRET_KEY.`,
+		);
+	}
+	const kind =
+		err instanceof Stripe.errors.StripeConnectionError ||
+		err instanceof Stripe.errors.StripeAPIError ||
+		err instanceof Stripe.errors.StripeRateLimitError
+			? "unavailable"
+			: code === "resource_missing"
+				? "not_found"
+				: CANCELED_SUBSCRIPTION.test(message)
+					? "invalid_state"
+					: failureKindForStatus(status);
+	return new ProviderRequestError(failure, kind, {
+		status,
+		detail: message,
+		cause: err,
+	});
+}
+
+/** Run one Stripe API call; its failure becomes a typed payments error. */
+async function stripeCall<T>(
+	failure: string,
+	run: (client: Stripe) => Promise<T>,
+): Promise<T> {
+	const client = getClient();
+	try {
+		return await run(client);
+	} catch (err) {
+		throw stripeFailure(err, failure);
+	}
 }
 
 function mapStripeStatusToPurchaseStatus(
@@ -321,7 +376,6 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	ownsSeatSync: false,
 
 	async createCheckoutLink(input: CheckoutInput) {
-		const client = getClient();
 		const mode: "subscription" | "payment" =
 			input.metadata?.mode === "payment" ? "payment" : "subscription";
 		// Stripe metadata values must be strings; `mode` is a control key
@@ -359,7 +413,9 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 				...(input.trialDays ? { trial_period_days: input.trialDays } : {}),
 			};
 		}
-		const session = await client.checkout.sessions.create(sessionParams);
+		const session = await stripeCall("Failed to create checkout link", (c) =>
+			c.checkout.sessions.create(sessionParams),
+		);
 		if (!session.url) {
 			throw new Error("Stripe checkout session created without URL");
 		}
@@ -367,27 +423,32 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {
-		const client = getClient();
-		const session = await client.billingPortal.sessions.create({
-			customer: input.customerId,
-			return_url: requireAbsoluteUrl(
-				input.returnUrl ?? env.NEXT_PUBLIC_SAAS_URL,
-				"portal return URL (input.returnUrl or NEXT_PUBLIC_SAAS_URL)",
-			),
-		});
+		const returnUrl = requireAbsoluteUrl(
+			input.returnUrl ?? env.NEXT_PUBLIC_SAAS_URL,
+			"portal return URL (input.returnUrl or NEXT_PUBLIC_SAAS_URL)",
+		);
+		const session = await stripeCall(
+			"Failed to create customer portal link",
+			(c) =>
+				c.billingPortal.sessions.create({
+					customer: input.customerId,
+					return_url: returnUrl,
+				}),
+		);
 		return { url: session.url };
 	},
 
 	async createCustomer(input: CustomerInput) {
-		const client = getClient();
-		const customer = await client.customers.create({
-			email: input.email,
-			name: input.name,
-			metadata: {
-				...input.metadata,
-				fuutu_user_id: input.userId,
-			},
-		});
+		const customer = await stripeCall("Failed to create customer", (c) =>
+			c.customers.create({
+				email: input.email,
+				name: input.name,
+				metadata: {
+					...input.metadata,
+					fuutu_user_id: input.userId,
+				},
+			}),
+		);
 		return { customerId: customer.id };
 	},
 
@@ -395,29 +456,35 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		subscriptionId: string,
 		options?: CancelSubscriptionOptions,
 	) {
-		const client = getClient();
 		if (resolveCancelMode(options) === "period_end") {
-			await client.subscriptions.update(subscriptionId, {
-				cancel_at_period_end: true,
-			});
+			await stripeCall("Failed to cancel subscription", (c) =>
+				c.subscriptions.update(subscriptionId, {
+					cancel_at_period_end: true,
+				}),
+			);
 			log.info("scheduled subscription cancel", { subscriptionId });
 			return;
 		}
-		await client.subscriptions.cancel(subscriptionId);
+		await stripeCall("Failed to cancel subscription", (c) =>
+			c.subscriptions.cancel(subscriptionId),
+		);
 		log.info("cancelled subscription", { subscriptionId });
 	},
 
 	async resumeSubscription(subscriptionId: string) {
-		const client = getClient();
-		await client.subscriptions.update(subscriptionId, {
-			cancel_at_period_end: false,
-		});
+		await stripeCall("Failed to resume subscription", (c) =>
+			c.subscriptions.update(subscriptionId, {
+				cancel_at_period_end: false,
+			}),
+		);
 		log.info("resumed subscription", { subscriptionId });
 	},
 
 	async getSubscriptionStatus(subscriptionId: string) {
-		const client = getClient();
-		const subscription = await client.subscriptions.retrieve(subscriptionId);
+		const subscription = await stripeCall(
+			"Failed to get subscription status",
+			(c) => c.subscriptions.retrieve(subscriptionId),
+		);
 		return stripeSubscriptionStatus(subscription);
 	},
 
@@ -455,8 +522,9 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	},
 
 	async getSubscriptionSeats(subscriptionId: string) {
-		const client = getClient();
-		const subscription = await client.subscriptions.retrieve(subscriptionId);
+		const subscription = await stripeCall("Failed to get subscription", (c) =>
+			c.subscriptions.retrieve(subscriptionId),
+		);
 		// Licensed prices always carry a quantity (default 1); a metered
 		// price has none and cannot count seats.
 		const quantity = subscription.items.data[0]?.quantity;
@@ -471,21 +539,24 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		seats,
 		proration,
 	}: SetSeatsInput) {
-		const client = getClient();
-		const subscription = await client.subscriptions.retrieve(subscriptionId);
+		const subscription = await stripeCall("Failed to get subscription", (c) =>
+			c.subscriptions.retrieve(subscriptionId),
+		);
 		const firstItem = subscription.items.data[0];
 		if (!firstItem) {
 			throw new Error(
 				`Subscription ${subscriptionId} has no items to update seats`,
 			);
 		}
-		await client.subscriptions.update(subscriptionId, {
-			items: [{ id: firstItem.id, quantity: seats }],
-			// Omitted: the account default (create_prorations).
-			...(proration && {
-				proration_behavior: STRIPE_PRORATION[proration],
+		await stripeCall("Failed to update subscription seats", (c) =>
+			c.subscriptions.update(subscriptionId, {
+				items: [{ id: firstItem.id, quantity: seats }],
+				// Omitted: the account default (create_prorations).
+				...(proration && {
+					proration_behavior: STRIPE_PRORATION[proration],
+				}),
 			}),
-		});
+		);
 		log.info("updated subscription seats", { subscriptionId, seats });
 	},
 };

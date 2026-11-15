@@ -30,7 +30,9 @@ export const authConfig = {
 		// Global per-path budget. Credential endpoints (/sign-in/*, /sign-up/*,
 		// /change-password, /change-email, reset/verify paths) are covered by
 		// Better-Auth's built-in special rules (max 3/10s) — this limit only
-		// governs the rest, including read-heavy paths like /get-session.
+		// governs the rest. GET /get-session and /organization/list are
+		// exempt, GET /organization/get-full-organization is 30/2s
+		// (rate-limit-rules.ts).
 		// These built-in rules are version-pinned behavior — re-verify after
 		// any better-auth bump (if defaults are removed, brute-force
 		// protection silently weakens).

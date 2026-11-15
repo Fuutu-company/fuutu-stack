@@ -1,6 +1,11 @@
 import { env } from "@fuutu/env/saas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	isProviderRequestError,
+	ProviderRequestError,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -849,5 +854,140 @@ describe("creem provider — getSubscriptionSeats", () => {
 		await expect(
 			creemPaymentProvider.getSubscriptionSeats?.("sub_1"),
 		).rejects.toThrow();
+	});
+});
+
+describe("creem provider — typed API failures", () => {
+	beforeEach(() => {
+		mockFetch.mockReset();
+	});
+
+	const creemError = (status: number, message: string | readonly string[]) => ({
+		ok: false,
+		status,
+		json: async () => ({
+			trace_id: "t",
+			status,
+			error: "Bad Request",
+			message,
+		}),
+	});
+
+	it.each([
+		// What Creem test mode answers (probed 2026-11-15).
+		[404, ["Subscription does not exist"], "not_found"],
+		[400, "Subscription does not exist", "not_found"],
+		[404, ["Customer was not found"], "not_found"],
+		[
+			400,
+			"Subscription cannot be canceled in state: canceled",
+			"invalid_state",
+		],
+		[400, "Cannot resume subscription in active status", "invalid_state"],
+		[400, ["units must be a positive number"], "rejected"],
+		[500, ["Internal error"], "unavailable"],
+		[429, ["Too many requests"], "unavailable"],
+	] as const)(
+		"HTTP %i %j is a ProviderRequestError of kind %s",
+		async (status, message, kind) => {
+			mockFetch.mockResolvedValueOnce(creemError(status, message));
+			const failure = await creemPaymentProvider
+				.cancelSubscription("sub_1", { atPeriodEnd: true })
+				.catch((err: unknown) => err);
+			expect(failure).toBeInstanceOf(ProviderRequestError);
+			expect(failure).toMatchObject({ kind, status });
+			expect(isProviderRequestError(failure)).toBe(true);
+		},
+	);
+
+	it("keeps the provider's own messages out of the error message", async () => {
+		mockFetch.mockResolvedValueOnce(
+			creemError(400, ["Subscription cannot be canceled in state: canceled"]),
+		);
+		const failure = await creemPaymentProvider
+			.cancelSubscription("sub_1")
+			.catch((err: unknown) => err);
+		expect(failure).toMatchObject({
+			message: "Failed to cancel subscription",
+			detail: "Subscription cannot be canceled in state: canceled",
+		});
+	});
+
+	it.each([401, 403])(
+		"HTTP %i (wrong or missing API key) is a configuration error",
+		async (status) => {
+			mockFetch.mockResolvedValueOnce(creemError(status, ["Invalid API Key"]));
+			await expect(
+				creemPaymentProvider.resumeSubscription?.("sub_1"),
+			).rejects.toBeInstanceOf(WebhookConfigError);
+		},
+	);
+
+	it("a network failure is unavailable, not a raw TypeError", async () => {
+		mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+		await expect(
+			creemPaymentProvider.createCustomerPortalLink({ customerId: "cus_1" }),
+		).rejects.toMatchObject({
+			name: "ProviderRequestError",
+			kind: "unavailable",
+		});
+	});
+
+	it("an error body that is not JSON still classifies by status", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			status: 502,
+			json: async () => {
+				throw new SyntaxError("Unexpected token <");
+			},
+		});
+		await expect(
+			creemPaymentProvider.createCheckoutLink({ priceId: "prod_1" }),
+		).rejects.toMatchObject({ kind: "unavailable", status: 502 });
+	});
+
+	it("every Creem call classifies its failure (portal, seats lookup, seat update)", async () => {
+		mockFetch.mockResolvedValueOnce(
+			creemError(404, ["Customer was not found"]),
+		);
+		await expect(
+			creemPaymentProvider.createCustomerPortalLink({ customerId: "cus_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		mockFetch.mockResolvedValueOnce(
+			creemError(404, ["Subscription does not exist"]),
+		);
+		await expect(
+			creemPaymentProvider.getSubscriptionSeats?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		mockFetch.mockResolvedValueOnce(
+			creemError(404, ["Subscription does not exist"]),
+		);
+		await expect(
+			creemPaymentProvider.getSubscriptionStatus?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					items: [{ id: "item_1", price_id: "pprice_1", units: 1 }],
+				}),
+			})
+			.mockResolvedValueOnce(
+				creemError(400, ["units must be a positive number"]),
+			);
+		await expect(
+			creemPaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_1",
+				seats: 2,
+			}),
+		).rejects.toMatchObject({ kind: "rejected" });
+	});
+});
+
+describe("creem provider — trials", () => {
+	it("declares that a cancel ends a trial now (no cancel at trial end)", () => {
+		// Creem test mode, 2026-11-15: POST /subscriptions/{id}/cancel with
+		// mode "scheduled" on a trialing subscription answers "canceled".
+		expect(creemPaymentProvider.cancelEndsTrial).toBe(true);
 	});
 });

@@ -26,7 +26,7 @@ export async function requireSubscriptionAccess(
 	subscriptionId: string,
 	userId: string,
 	access: OrgAccessContext,
-): Promise<{ status: string }> {
+): Promise<{ status: string; currentPeriodEnd: Date | null }> {
 	const purchase = await getPurchaseByProviderSubscriptionId(
 		provider.id,
 		subscriptionId,
