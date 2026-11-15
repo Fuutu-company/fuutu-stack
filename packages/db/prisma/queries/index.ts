@@ -1,3 +1,4 @@
+export * from "./admin";
 export * from "./api-key";
 export * from "./audit-log";
 export * from "./auth-retention";
