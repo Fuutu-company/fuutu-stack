@@ -31,6 +31,27 @@ const { deleteOrganization } = await import(
 const { inviteMember } = await import(
 	"../modules/organizations/members/procedures/invite"
 );
+const { updateOrganization } = await import(
+	"../modules/organizations/procedures/update"
+);
+const { removeMember } = await import(
+	"../modules/organizations/members/procedures/remove"
+);
+const { updateMemberRole } = await import(
+	"../modules/organizations/members/procedures/update-role"
+);
+const { revokeInvitation } = await import(
+	"../modules/organizations/invitations/procedures/revoke"
+);
+const { deleteWebhookProcedure } = await import(
+	"../modules/webhooks/procedures/delete"
+);
+const { revokeApiKeyProcedure } = await import(
+	"../modules/api-keys/procedures/revoke"
+);
+const { deleteApiKeyProcedure } = await import(
+	"../modules/api-keys/procedures/delete"
+);
 const { createWebhookProcedure } = await import(
 	"../modules/webhooks/procedures/create"
 );
@@ -40,19 +61,41 @@ const { updateWebhookProcedure } = await import(
 
 /**
  * Support may look around as the user, but never spend their money, mint
- * credentials, invite people, point webhooks at new endpoints or delete
- * their organization. Leaving an organization and
+ * or revoke credentials, change who is in an organization or with which
+ * role, rename it, touch its webhooks or delete it. Leaving an organization and
  * account/credential changes are blocked in Better Auth's hooks.before
  * (@fuutu/auth hooks/impersonation-guard).
  */
 const DENIED = [
 	["apiKeys.create", createApiKeyProcedure, { name: "CI" }],
+	["apiKeys.revoke", revokeApiKeyProcedure, { id: "key-1" }],
+	["apiKeys.delete", deleteApiKeyProcedure, { id: "key-1" }],
 	["payments.checkout.create", createCheckout, { planId: "pro" }],
 	["payments.portal.open", createBillingPortal, {}],
 	["payments.subscription.cancel", cancelSubscription, { subscriptionId: "s" }],
 	["payments.subscription.resume", resumeSubscription, { subscriptionId: "s" }],
 	["payments.topupCheckout.create", createTopupCheckout, { topupId: "t" }],
 	["organizations.delete", deleteOrganization, { organizationId: "org-1" }],
+	[
+		"organizations.update",
+		updateOrganization,
+		{ organizationId: "org-1", name: "Renamed" },
+	],
+	[
+		"organizations.members.remove",
+		removeMember,
+		{ organizationId: "org-1", memberIdOrEmail: "member-1" },
+	],
+	[
+		"organizations.members.updateRole",
+		updateMemberRole,
+		{ organizationId: "org-1", memberId: "member-1", role: "admin" },
+	],
+	[
+		"organizations.invitations.revoke",
+		revokeInvitation,
+		{ invitationId: "inv-1" },
+	],
 	[
 		"organizations.members.invite",
 		inviteMember,
@@ -66,6 +109,11 @@ const DENIED = [
 			url: "https://example.com/hook",
 			events: ["member.removed"],
 		},
+	],
+	[
+		"webhooks.delete",
+		deleteWebhookProcedure,
+		{ id: "wh-1", organizationId: "org-1" },
 	],
 	[
 		"webhooks.update",

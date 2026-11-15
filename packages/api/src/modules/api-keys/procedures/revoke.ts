@@ -3,7 +3,10 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { permissionProcedure } from "../../../orpc/procedures";
+import {
+	denyImpersonation,
+	permissionProcedure,
+} from "../../../orpc/procedures";
 import { assertSessionCaller } from "../assert-session-caller";
 import { requireOrgApiKeyManageAccess } from "../org-key-access";
 
@@ -14,6 +17,7 @@ const apiKeyIdSchema = z.object({
 export const revokeApiKeyProcedure = permissionProcedure(
 	PERMISSIONS.API_KEY.DELETE,
 )
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",

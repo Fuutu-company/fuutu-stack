@@ -17,6 +17,7 @@ const removeMemberSchema = z.object({
 
 export const removeMember = authProcedure({
 	org: { permission: PERMISSIONS.REMOVE_MEMBER },
+	denyImpersonation: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({

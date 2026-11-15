@@ -5,13 +5,17 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
-import { protectedProcedure } from "../../../../orpc/procedures";
+import {
+	denyImpersonation,
+	protectedProcedure,
+} from "../../../../orpc/procedures";
 
 const revokeInvitationSchema = z.object({
 	invitationId: z.string().min(1),
 });
 
 export const revokeInvitation = protectedProcedure
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
 		method: "DELETE",
