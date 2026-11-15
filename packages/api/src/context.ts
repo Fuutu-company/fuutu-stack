@@ -1,6 +1,17 @@
 import { auth } from "@fuutu/auth";
-import { isImpersonationExpired } from "@fuutu/auth/impersonation";
-import { API_KEY_PREFIX } from "@fuutu/db";
+import {
+	type ImpersonationSessionLike,
+	isImpersonationExpired,
+} from "@fuutu/auth/impersonation";
+import { isBanActive } from "@fuutu/auth/types";
+import { API_KEY_PREFIX, getUserAccessState } from "@fuutu/db";
+import {
+	hasSystemPermission,
+	PERMISSIONS,
+	SYSTEM_POLICY,
+	SystemAccessControl,
+	toSystemRole,
+} from "@fuutu/rbac";
 import type { Context as HonoContext } from "hono";
 import { API_SCOPE } from "./api-key-scopes";
 import {
@@ -67,12 +78,39 @@ const extractApiKey = (headers: Headers): string | null => {
 const isAllowedOnApi = (scopes: readonly string[]): boolean =>
 	scopes.length === 0 || scopes.includes(API_SCOPE);
 
+const systemAC = new SystemAccessControl(SYSTEM_POLICY);
+
+/**
+ * An impersonation lasts only while the impersonating admin may still
+ * impersonate — a demotion, ban or deletion ends it at once, not when the
+ * cookie-cached session runs out. One DB read, impersonation sessions only.
+ */
+async function hasImpersonatorLostAccess({
+	impersonatedBy,
+}: ImpersonationSessionLike): Promise<boolean> {
+	if (!impersonatedBy) return false;
+	const impersonator = await getUserAccessState(impersonatedBy);
+	return (
+		!impersonator ||
+		isBanActive(impersonator) ||
+		!hasSystemPermission(
+			systemAC,
+			toSystemRole(impersonator.role),
+			PERMISSIONS.IMPERSONATE_USER,
+		)
+	);
+}
+
 export async function createContext({ context }: CreateContextOptions) {
 	const headers = context.req.raw.headers as Headers;
 	let session = await auth.api.getSession({ headers });
 	// A support impersonation ends after authConfig.admin.impersonationMinutes
 	// even though Better Auth still holds the session row and cookies.
-	if (session && isImpersonationExpired(session.session)) {
+	if (
+		session &&
+		(isImpersonationExpired(session.session) ||
+			(await hasImpersonatorLostAccess(session.session)))
+	) {
 		session = null;
 	}
 	let apiKey: ApiKeyAuth | null = null;

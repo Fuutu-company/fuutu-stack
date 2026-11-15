@@ -26,6 +26,7 @@ import {
 	adminResetTwoFactor,
 	adminRevokeUserSession,
 	countAdminUsers,
+	deleteSessionsImpersonatedBy,
 	getUserAccessState,
 	isEmailTaken,
 	listSoleOwnedOrganizations,
@@ -377,6 +378,18 @@ describe("adminRevokeUserSession", () => {
 		).toBe(1);
 		expect(db.session.deleteMany).toHaveBeenCalledWith({
 			where: { id: "s1", userId: "u1" },
+		});
+	});
+});
+
+describe("deleteSessionsImpersonatedBy", () => {
+	it("ends every impersonation session the admin started", async () => {
+		vi.mocked(db.session.deleteMany).mockResolvedValueOnce({
+			count: 2,
+		} as never);
+		expect(await deleteSessionsImpersonatedBy("admin-2")).toBe(2);
+		expect(db.session.deleteMany).toHaveBeenCalledWith({
+			where: { impersonatedBy: "admin-2" },
 		});
 	});
 });

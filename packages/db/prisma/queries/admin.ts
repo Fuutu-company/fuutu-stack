@@ -288,6 +288,20 @@ export async function adminRevokeUserSession(input: {
 }
 
 /**
+ * Ends every impersonation session `adminUserId` started — they belong to
+ * the impersonated users, so revoking the admin's own sessions misses
+ * them. Returns the number of sessions removed.
+ */
+export async function deleteSessionsImpersonatedBy(
+	adminUserId: string,
+): Promise<number> {
+	const { count } = await db.session.deleteMany({
+		where: { impersonatedBy: adminUserId },
+	});
+	return count;
+}
+
+/**
  * Turns two-factor authentication off: deletes the TOTP secrets and
  * backup codes and clears `twoFactorEnabled`. Returns the removed rows.
  */

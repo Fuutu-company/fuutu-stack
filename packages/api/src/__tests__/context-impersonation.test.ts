@@ -9,9 +9,11 @@ vi.mock("@fuutu/db", () => ({
 	API_KEY_PREFIX: "futu_sk_",
 	verifyApiKeyWithOwner: vi.fn(),
 	getOrganizationMemberRole: vi.fn(),
+	getUserAccessState: vi.fn(),
 }));
 
 const { auth } = await import("@fuutu/auth");
+const { getUserAccessState } = await import("@fuutu/db");
 const { authConfig } = await import("@fuutu/auth/config");
 const { createContext } = await import("../context");
 
@@ -33,8 +35,19 @@ function sessionStartedAgo(ms: number, impersonatedBy: string | null) {
 	};
 }
 
+const IMPERSONATOR = {
+	id: "admin-1",
+	email: "admin@fuutu.local",
+	role: "admin",
+	banned: false,
+	banExpires: null,
+};
+
 describe("createContext — impersonation time limit", () => {
-	beforeEach(() => vi.clearAllMocks());
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(getUserAccessState).mockResolvedValue(IMPERSONATOR);
+	});
 
 	it("keeps an impersonation session inside its window", async () => {
 		const session = sessionStartedAgo(WINDOW_MS - 60_000, "admin-1");
@@ -63,5 +76,41 @@ describe("createContext — impersonation time limit", () => {
 			context: fakeHonoContext(new Headers()),
 		});
 		expect(ctx.session).toBe(session);
+	});
+});
+
+describe("createContext — impersonator must still be an admin", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	async function contextFor(impersonator: unknown) {
+		vi.mocked(getUserAccessState).mockResolvedValue(impersonator as never);
+		vi.mocked(auth.api.getSession).mockResolvedValue(
+			sessionStartedAgo(60_000, "admin-1") as never,
+		);
+		return createContext({ context: fakeHonoContext(new Headers()) });
+	}
+
+	it("keeps the session while the impersonator is an admin", async () => {
+		const ctx = await contextFor(IMPERSONATOR);
+		expect(getUserAccessState).toHaveBeenCalledWith("admin-1");
+		expect(ctx.session).not.toBeNull();
+	});
+
+	it.each([
+		["was demoted", { ...IMPERSONATOR, role: "user" }],
+		["is banned", { ...IMPERSONATOR, banned: true }],
+		["was deleted", null],
+	])("signs out when the impersonator %s", async (_label, impersonator) => {
+		const ctx = await contextFor(impersonator);
+		expect(ctx.session).toBeNull();
+		expect(ctx.apiKey).toBeNull();
+	});
+
+	it("never reads the database for a user's own session", async () => {
+		vi.mocked(auth.api.getSession).mockResolvedValue(
+			sessionStartedAgo(60_000, null) as never,
+		);
+		await createContext({ context: fakeHonoContext(new Headers()) });
+		expect(getUserAccessState).not.toHaveBeenCalled();
 	});
 });

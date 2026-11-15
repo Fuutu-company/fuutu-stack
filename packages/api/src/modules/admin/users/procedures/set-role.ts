@@ -1,5 +1,5 @@
 import { auth } from "@fuutu/auth";
-import { countAdminUsers } from "@fuutu/db";
+import { countAdminUsers, deleteSessionsImpersonatedBy } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
@@ -30,7 +30,7 @@ export const setUserRoleProcedure = systemAdminProcedure(
 		tags: ["Admin"],
 		summary: "Set system role",
 		description:
-			"Makes a user a system admin or demotes an admin to user (their sessions end). Not your own role; the last admin stays. System admin only.",
+			"Makes a user a system admin or demotes an admin to user (their sessions and running impersonations end). Not your own role; the last admin stays. System admin only.",
 	})
 	.input(setRoleInput)
 	.handler(async ({ input, context }) => {
@@ -63,6 +63,7 @@ export const setUserRoleProcedure = systemAdminProcedure(
 					headers: context.headers,
 				}),
 			);
+			await deleteSessionsImpersonatedBy(target.id);
 		}
 
 		await recordAdminAction(context, {

@@ -1,5 +1,8 @@
 import { auth } from "@fuutu/auth";
-import { revokeOAuthTokensForUser } from "@fuutu/db";
+import {
+	deleteSessionsImpersonatedBy,
+	revokeOAuthTokensForUser,
+} from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
@@ -22,7 +25,7 @@ export const revokeAllUserSessionsProcedure = systemAdminProcedure(
 		tags: ["Admin"],
 		summary: "Revoke all user sessions",
 		description:
-			"Signs the user out everywhere and revokes their OAuth (MCP) grants. System admin only.",
+			"Signs the user out everywhere, ends impersonations they run and revokes their OAuth (MCP) grants. System admin only.",
 	})
 	.input(z.object({ userId: adminIdSchema, reason: reasonSchema.optional() }))
 	.handler(async ({ input, context }) => {
@@ -34,6 +37,8 @@ export const revokeAllUserSessionsProcedure = systemAdminProcedure(
 			}),
 		);
 		await revokeOAuthTokensForUser(target.id);
+		// An admin's impersonation sessions belong to the impersonated users.
+		await deleteSessionsImpersonatedBy(target.id);
 		await recordAdminAction(context, {
 			action: "admin.user.sessions_revoke_all",
 			targetUserId: target.id,

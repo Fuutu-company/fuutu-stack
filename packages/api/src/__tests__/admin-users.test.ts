@@ -36,6 +36,7 @@ vi.mock("@fuutu/db", () => ({
 	listSoleOwnedOrganizations: vi.fn(),
 	isEmailTaken: vi.fn(),
 	adminRevokeUserSession: vi.fn(),
+	deleteSessionsImpersonatedBy: vi.fn(),
 	adminResetTwoFactor: vi.fn(),
 	revokeOAuthTokensForUser: vi.fn(),
 	listAuditLogs: vi.fn(),
@@ -142,6 +143,7 @@ beforeEach(() => {
 	vi.mocked(db.listSoleOwnedOrganizations).mockResolvedValue([]);
 	vi.mocked(db.isEmailTaken).mockResolvedValue(false);
 	vi.mocked(db.adminRevokeUserSession).mockResolvedValue(1);
+	vi.mocked(db.deleteSessionsImpersonatedBy).mockResolvedValue(0);
 	vi.mocked(db.adminResetTwoFactor).mockResolvedValue(1);
 	vi.mocked(db.revokeOAuthTokensForUser).mockResolvedValue({
 		accessTokens: 0,
@@ -691,6 +693,7 @@ describe("admin.users.setRole", () => {
 			headers: expect.any(Headers),
 		});
 		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
+		expect(db.deleteSessionsImpersonatedBy).not.toHaveBeenCalled();
 		expectAudit("admin.user.set_role", {
 			targetUserId: "user-2",
 			reason: REASON,
@@ -711,6 +714,15 @@ describe("admin.users.setRole", () => {
 			body: { userId: "admin-2" },
 			headers: expect.any(Headers),
 		});
+	});
+
+	it("ends the impersonations the demoted admin is running", async () => {
+		await call(
+			users.setRole,
+			{ userId: "admin-2", role: "user", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(db.deleteSessionsImpersonatedBy).toHaveBeenCalledWith("admin-2");
 	});
 
 	it("never demotes the last admin", async () => {
@@ -806,6 +818,7 @@ describe("admin.users.revokeAllSessions", () => {
 			headers: expect.any(Headers),
 		});
 		expect(db.revokeOAuthTokensForUser).toHaveBeenCalledWith("user-2");
+		expect(db.deleteSessionsImpersonatedBy).toHaveBeenCalledWith("user-2");
 		expectAudit("admin.user.sessions_revoke_all", {
 			targetUserId: "user-2",
 			reason: REASON,
