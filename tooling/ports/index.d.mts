@@ -86,6 +86,7 @@ export function isSlotRunning(
 	slot: number,
 	busy?: (port: number) => Promise<boolean>,
 ): Promise<boolean>;
+export function checkoutKind(path: string): "main" | "worktree";
 export function projectGone(path: string): PruneCandidate["reason"] | null;
 export function pruneRegistry(opts?: {
 	apply?: boolean;
