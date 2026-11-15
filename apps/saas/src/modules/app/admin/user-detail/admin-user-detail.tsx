@@ -22,6 +22,7 @@ import { Ban } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
+import { appAdminUserSections } from "@/app-admin";
 import { orpc } from "@/utils/orpc";
 import {
 	BanBadge,
@@ -29,6 +30,7 @@ import {
 	TwoFactorBadge,
 	VerifiedBadge,
 } from "../admin-badges";
+import { KIT_USER_TAB_KEYS, resolveAdminSections } from "../admin-sections";
 import { initials, isAdminRole } from "../admin-user-utils";
 import { UserActions, useRevokeSession } from "./user-actions";
 import { UserActivity } from "./user-activity";
@@ -48,6 +50,7 @@ export function AdminUserDetail({
 	currentUserId: string;
 }) {
 	const t = useTranslations("admin.userDetail");
+	const tSections = useTranslations("admin.sections");
 	const format = useFormatter();
 	const [revokeAllOpen, setRevokeAllOpen] = useState(false);
 	const query = useQuery(
@@ -91,6 +94,10 @@ export function AdminUserDetail({
 
 	const banned = isBanActive(user);
 	const admin = isAdminRole(user.role);
+	const appSections = resolveAdminSections(
+		KIT_USER_TAB_KEYS,
+		appAdminUserSections,
+	);
 
 	return (
 		<div className="space-y-6">
@@ -167,6 +174,11 @@ export function AdminUserDetail({
 						{t("tabs.apiKeys", { count: user.apiKeys.length })}
 					</TabsTrigger>
 					<TabsTrigger value="activity">{t("tabs.activity")}</TabsTrigger>
+					{appSections.map((section) => (
+						<TabsTrigger key={section.key} value={section.key}>
+							{tSections(section.titleKey)}
+						</TabsTrigger>
+					))}
 				</TabsList>
 				<TabsContent value="overview">
 					<OverviewSection user={user} />
@@ -191,6 +203,11 @@ export function AdminUserDetail({
 				<TabsContent value="activity">
 					<UserActivity userId={user.id} />
 				</TabsContent>
+				{appSections.map((section) => (
+					<TabsContent key={section.key} value={section.key}>
+						<section.Component userId={user.id} />
+					</TabsContent>
+				))}
 			</Tabs>
 		</div>
 	);
