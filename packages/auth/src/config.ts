@@ -59,6 +59,9 @@ export const authConfig = {
 		defaultBanReason: "Violation of terms of service",
 		bannedUserMessage:
 			"Your account has been suspended. Please contact support if you believe this is an error.",
+		// How long a support impersonation session lasts, counted from its
+		// start (`isImpersonationExpired`) — refreshes never extend it.
+		impersonationMinutes: 60,
 	},
 	features: {
 		emailPassword: true,

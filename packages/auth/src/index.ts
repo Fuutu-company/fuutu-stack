@@ -32,6 +32,7 @@ import {
 	restoreActiveOrganization,
 } from "./hooks/active-organization";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
+import { assertNotImpersonating } from "./hooks/impersonation-guard";
 import { assertInvitationForSignup } from "./hooks/invitation-only";
 import {
 	assertRegistrationWithinLimits,
@@ -202,6 +203,10 @@ const authOptions = {
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
 			assertPasswordPolicy(ctx.path, ctx.body);
+			await assertNotImpersonating({
+				path: ctx.path,
+				getSession: () => getSessionFromCtx(ctx),
+			});
 			if (!mcpOAuth.active) return;
 
 			// MCP OAuth guards — see hooks/mcp-oauth-guards.ts.
@@ -445,6 +450,10 @@ const authOptions = {
 									: null,
 							ipAddress: session.ipAddress,
 							userAgent: session.userAgent,
+							impersonatedBy:
+								typeof session.impersonatedBy === "string"
+									? session.impersonatedBy
+									: null,
 						});
 					} catch (err) {
 						log.warn("session audit log failed", { err: String(err) });
@@ -561,6 +570,7 @@ const authOptions = {
 		admin({
 			defaultBanReason: authConfig.admin.defaultBanReason,
 			bannedUserMessage: authConfig.admin.bannedUserMessage,
+			impersonationSessionDuration: authConfig.admin.impersonationMinutes * 60,
 		}),
 
 		multiSession(),

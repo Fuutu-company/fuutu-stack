@@ -22,6 +22,8 @@ export type AuditableSession = {
 	activeOrganizationId?: string | null;
 	ipAddress?: string | null;
 	userAgent?: string | null;
+	/** Set on sessions started by `admin.users.impersonate` (admin user id). */
+	impersonatedBy?: string | null;
 };
 
 /**
@@ -52,5 +54,8 @@ export async function logSessionCreated(
 		action: "auth.session_created",
 		ip: session.ipAddress ?? null,
 		userAgent: session.userAgent ?? null,
+		...(session.impersonatedBy
+			? { metadata: { impersonatedBy: session.impersonatedBy } }
+			: {}),
 	});
 }
