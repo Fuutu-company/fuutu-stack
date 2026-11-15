@@ -28,7 +28,7 @@ import { CreditCard, ExternalLink } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { isPaymentsUnavailable } from "@/lib/api-error";
+import { paymentsErrorKey } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 import {
 	useFullOrganization,
@@ -167,11 +167,7 @@ export function OrgSettingsBilling({
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
-			setError(
-				isPaymentsUnavailable(e)
-					? tp("choosePlan.unavailable")
-					: tp("choosePlan.error"),
-			);
+			setError(tp(paymentsErrorKey(e) ?? "choosePlan.error"));
 		} finally {
 			setCheckoutLoading(null);
 		}
@@ -179,6 +175,7 @@ export function OrgSettingsBilling({
 
 	async function openPortal() {
 		if (!org) return;
+		setError(null);
 		try {
 			const result = await orpc.payments.portal.open.call({
 				organizationId: org.id,
@@ -189,6 +186,7 @@ export function OrgSettingsBilling({
 			}
 		} catch (err) {
 			log.warn("portal failed", { err });
+			setError(tp(paymentsErrorKey(err) ?? "errors.portal"));
 		}
 	}
 
