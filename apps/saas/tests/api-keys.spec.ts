@@ -1,5 +1,6 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { DIALOG_VIEWPORTS, expectContentInsideDialog } from "./dialog-geometry";
+import { featureOff } from "./features";
 import { expect, test } from "./fixtures";
 import { apiKeyScopeLabel, defaultApiKeyScopes } from "./kit-catalog";
 
@@ -243,6 +244,8 @@ test.describe("API keys — shown-once dialog behaviour", () => {
 });
 
 test.describe("Webhooks — signing secret", () => {
+	test.skip(...featureOff("webhooks"));
+
 	test("the secret is shown in full in the shared shown-once dialog", async ({
 		page,
 		request,
