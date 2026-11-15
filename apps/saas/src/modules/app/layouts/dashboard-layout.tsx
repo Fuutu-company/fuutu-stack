@@ -5,6 +5,7 @@ import { type ReactNode, Suspense } from "react";
 import { appSlots } from "@/app-slots";
 import { AppHeader } from "../components/app-header";
 import { ErrorToast } from "../components/error-toast";
+import { ImpersonationBanner } from "../components/impersonation-banner";
 import { MobileHeader } from "../components/mobile-header";
 import { AppSidebar } from "../components/sidebar";
 import { renderSlot } from "../slots";
@@ -36,6 +37,7 @@ export async function DashboardLayout({ children }: DashboardLayoutProps) {
 				<ErrorToast />
 			</Suspense>
 			<SidebarInset className="min-w-0">
+				<ImpersonationBanner />
 				<MobileHeader />
 				{headerActions ? <AppHeader actions={headerActions} /> : <AppHeader />}
 				{/* The document scrolls, not this column: `overflow-x-clip` contains wide content without becoming a scroll container, so `position: sticky` inside pages works. */}

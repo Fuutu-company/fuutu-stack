@@ -99,6 +99,8 @@ export function buildBreadcrumbs(
 			});
 		} else if (segments[0] === "admin" && adminLabel) {
 			crumbs.push({ labelKey: adminLabel, href });
+		} else if (segments[0] === "admin" && segments[1] === "users" && i === 2) {
+			crumbs.push({ labelKey: "breadcrumb.userDetail", href });
 		} else if (inOrgRoute && i === orgSlugIndex + 1) {
 			// Dynamic org slug
 			crumbs.push({

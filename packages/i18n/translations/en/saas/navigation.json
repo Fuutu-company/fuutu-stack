@@ -69,7 +69,8 @@
 			"invoices": "Invoices",
 			"notifications": "Notifications",
 			"credits": "Credits",
-			"design": "Design system"
+			"design": "Design system",
+			"userDetail": "User details"
 		},
 		"groupAccount": "Account",
 		"accountSettings": "Account settings",

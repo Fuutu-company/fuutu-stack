@@ -64,7 +64,12 @@ export type AccountNavKey =
  * `"adminOverview"` is deprecated (the admin group has no overview item any
  * more) and resolves to the first admin item.
  */
-export type AdminNavKey = "adminUsers" | "adminAuditLogs" | "adminOverview";
+export type AdminNavKey =
+	| "adminUsers"
+	| "adminAuditLogs"
+	| "adminOverview"
+	| "adminOrganizations"
+	| "adminSystem";
 
 /** Deprecated anchor kept for existing `after:` values; see `AdminNavKey`. */
 const DEPRECATED_ADMIN_OVERVIEW = "adminOverview";

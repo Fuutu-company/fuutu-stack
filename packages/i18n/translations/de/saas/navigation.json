@@ -69,7 +69,8 @@
 			"invoices": "Rechnungen",
 			"notifications": "Benachrichtigungen",
 			"credits": "Guthaben",
-			"design": "Designsystem"
+			"design": "Designsystem",
+			"userDetail": "Benutzerdetails"
 		},
 		"groupAccount": "Konto",
 		"accountSettings": "Kontoeinstellungen",
