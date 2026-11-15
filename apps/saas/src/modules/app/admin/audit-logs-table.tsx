@@ -13,6 +13,7 @@ import {
 	auditTargetUserId,
 } from "./admin-audit-utils";
 import { AdminPagination } from "./admin-pagination";
+import { useDebouncedCommit } from "./use-debounced-commit";
 
 const FILTER_KEYS = [
 	"action",
@@ -25,7 +26,6 @@ const FILTER_KEYS = [
 type FilterKey = (typeof FILTER_KEYS)[number];
 
 const PAGE_SIZE = 50;
-const FILTER_DEBOUNCE_MS = 300;
 const SHORT_ID_LENGTH = 8;
 
 const th =
@@ -62,12 +62,7 @@ function FilterField({
 	const [draft, setDraft] = useState(value);
 	// Follow the URL when it changes elsewhere (clear filters, back button).
 	useEffect(() => setDraft(value), [value]);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `onCommit` is rebuilt every render; only the typed text and URL value matter.
-	useEffect(() => {
-		if (!debounce || draft.trim() === value) return;
-		const timer = setTimeout(() => onCommit(draft.trim()), FILTER_DEBOUNCE_MS);
-		return () => clearTimeout(timer);
-	}, [draft, value, debounce]);
+	useDebouncedCommit(draft, value, onCommit, debounce);
 
 	return (
 		<div className="space-y-2">

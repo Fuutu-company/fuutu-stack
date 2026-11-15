@@ -13,16 +13,15 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { orpc } from "@/utils/orpc";
 import { AdminPagination } from "./admin-pagination";
 import { initials } from "./admin-user-utils";
 import { OrgPlan } from "./org-plan";
+import { useDebouncedCommit } from "./use-debounced-commit";
 
 const SORT_KEYS = ["createdAt", "name", "members"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
-
-const SEARCH_DEBOUNCE_MS = 300;
 
 function parseSort(value: string | null): SortKey {
 	return SORT_KEYS.find((key) => key === value) ?? "createdAt";
@@ -57,15 +56,9 @@ export function AdminOrganizationsTable() {
 	}
 
 	const [search, setSearch] = useState(q);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `update` is rebuilt every render; only the typed text and URL value matter.
-	useEffect(() => {
-		if (search.trim() === q) return;
-		const timer = setTimeout(
-			() => update({ q: search.trim() || undefined, page: undefined }),
-			SEARCH_DEBOUNCE_MS,
-		);
-		return () => clearTimeout(timer);
-	}, [search, q]);
+	useDebouncedCommit(search, q, (value) =>
+		update({ q: value || undefined, page: undefined }),
+	);
 
 	const query = useQuery({
 		...orpc.admin.organizations.list.queryOptions({
