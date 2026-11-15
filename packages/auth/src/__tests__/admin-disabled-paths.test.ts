@@ -48,6 +48,9 @@ vi.mock("../hooks/impersonation-guard", () => ({
 
 const IMPORT_TIMEOUT = 30_000;
 
+/** `authConfig.mcpOAuth.enabled: false` registers no JWT/OAuth plugins. */
+const MCP_OAUTH_OFF = "MCP OAuth inactive (authConfig.mcpOAuth.enabled)";
+
 type AuthModule = typeof import("../index");
 let auth: AuthModule["auth"];
 let mcpOAuthActive: boolean;
@@ -128,20 +131,26 @@ describe("other plugins' /admin/* endpoints", () => {
 			);
 	}
 
-	it("keeps the JWT /token route disabled next to the admin paths", () => {
-		expect(mcpOAuthActive).toBe(true);
+	it("keeps the JWT /token route disabled next to the admin paths", ({
+		skip,
+	}) => {
+		skip(!mcpOAuthActive, MCP_OAUTH_OFF);
 		expect(auth.options.disabledPaths).toContain("/token");
 	});
 
-	it("exposes the OAuth provider's admin endpoints to check", () => {
+	it("exposes the OAuth provider's admin endpoints to check", ({ skip }) => {
+		skip(!mcpOAuthActive, MCP_OAUTH_OFF);
 		const paths = otherAdminEndpoints().map((endpoint) => endpoint.path);
 		expect(paths.length).toBeGreaterThanOrEqual(8);
 		expect(paths).toContain("/admin/oauth2/create-client");
 		expect(paths).toContain("/admin/oauth2/update-client");
 	});
 
-	it("never serves them over HTTP (SERVER_ONLY, 404)", async () => {
-		// Same request shape reaches a served route — the 404s below are real.
+	it("serves the same request shape on a non-admin OAuth route", async ({
+		skip,
+	}) => {
+		skip(!mcpOAuthActive, MCP_OAUTH_OFF);
+		// Control for the next test — its 404s are real, not a bad request.
 		const served = await auth.handler(
 			new Request("http://localhost:3000/api/auth/oauth2/update-client", {
 				method: "POST",
@@ -150,6 +159,9 @@ describe("other plugins' /admin/* endpoints", () => {
 			}),
 		);
 		expect(served.status).not.toBe(404);
+	});
+
+	it("never serves them over HTTP (SERVER_ONLY, 404)", async () => {
 		for (const endpoint of otherAdminEndpoints()) {
 			expect(endpoint.options?.metadata?.SERVER_ONLY, endpoint.path).toBe(true);
 			const path = String(endpoint.path).replace(/:\w+/g, "x");
@@ -204,7 +216,8 @@ describe("authConfig.admin.exposeAuthEndpoints", () => {
 			expect(disabled.some((path) => path.startsWith("/admin/"))).toBe(false);
 		});
 
-		it("keeps the JWT /token route disabled", () => {
+		it("keeps the JWT /token route disabled", ({ skip }) => {
+			skip(!mcpOAuthActive, MCP_OAUTH_OFF);
 			expect(exposed.options.disabledPaths).toContain("/token");
 		});
 
