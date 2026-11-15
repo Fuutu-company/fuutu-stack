@@ -1,6 +1,12 @@
 import { auth } from "@fuutu/auth";
+import { authConfig } from "@fuutu/auth/config";
+import { isImpersonationExpired } from "@fuutu/auth/impersonation";
 import { getSignedInRedirect } from "@fuutu/auth/redirect";
-import { type UserWithRole, userHasPermission } from "@fuutu/auth/types";
+import {
+	isBanActive,
+	type UserWithRole,
+	userHasPermission,
+} from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
 import { countOrganizationsForUser, getOrganizationBySlug } from "@fuutu/db";
 import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
@@ -10,20 +16,37 @@ import { cache } from "react";
 
 const ac = new SystemAccessControl(SYSTEM_POLICY);
 
-/**
- * Get the current session (cached per request)
- */
-export const getSession = cache(async () => {
+const readSession = cache(async () => {
 	return await auth.api.getSession({
 		headers: await headers(),
 	});
 });
 
 /**
+ * Get the current session (cached per request). An impersonation past
+ * `authConfig.admin.impersonationMinutes` counts as signed out.
+ */
+export const getSession = cache(async () => {
+	const session = await readSession();
+	return session && isImpersonationExpired(session.session) ? null : session;
+});
+
+/**
  * Require authentication - redirect to sign-in if not authenticated
- * Use this in server components/layouts that need authentication
+ * Use this in server components/layouts that need authentication.
+ * An expired impersonation is signed out first.
  */
 export async function requireAuth() {
+	const current = await readSession();
+	if (current && isImpersonationExpired(current.session)) {
+		try {
+			await auth.api.signOut({ headers: await headers() });
+		} catch {
+			// Already gone — the request is signed out either way.
+		}
+		redirect(authConfig.redirects.afterSignOut);
+	}
+
 	const session = await getSession();
 
 	if (!session) {
@@ -31,7 +54,7 @@ export async function requireAuth() {
 	}
 
 	const user = session.user as UserWithRole;
-	if (user?.banned) {
+	if (isBanActive(user)) {
 		redirect("/auth/suspended");
 	}
 
@@ -63,6 +86,10 @@ export async function requireAdmin() {
 	if (
 		!userHasPermission(ac, session.user as UserWithRole, PERMISSIONS.VIEW_ADMIN)
 	) {
+		redirect("/dashboard?error=forbidden");
+	}
+	// Support acting as a user never reaches the admin area.
+	if ((session.session as { impersonatedBy?: string | null }).impersonatedBy) {
 		redirect("/dashboard?error=forbidden");
 	}
 
