@@ -53,7 +53,7 @@ packages/*              domain logic — config, env, db, auth, api, ui, i18n, m
                         utils, content, license, telemetry, webhooks, mcp, ai, test-utils
 ```
 
-\* Slot 0. Every project and git worktree on a machine gets its own **port slot** (ports, local DB, buckets, login cookie, session browser) — `pnpm ports` shows them, `.fuutu/project.json` holds them; a team pins one with `pnpm ports pin` (`fuutu.preferredSlot` in `package.json`). Never hard-code a port: apps start through `tooling/scripts/next.mjs`, URLs follow the slot.
+\* Slot 0. Every project and git worktree on a machine gets its own **port slot** (ports, local DB, buckets, login cookie, session browser) — `pnpm ports` shows them, `.fuutu/project.json` holds them; a team pins one with `pnpm ports pin` (`fuutu.preferredSlot` in `package.json`); `pnpm ports prune` frees the slots of removed worktrees. Never hard-code a port: apps start through `tooling/scripts/next.mjs`, URLs follow the slot.
 
 ## 5 · Commands
 
