@@ -103,6 +103,31 @@ export default function ChangelogV110De() {
 					und Issue-Templates verweisen auf <code>app.fuutustack.com</code>{" "}
 					(Support).
 				</li>
+				<li>
+					Das Consent-Banner hat zwei Modi. Provider, die ohne Einwilligung
+					tracken (Umami), zeigen einen Hinweis — anonyme, cookielose Analytics
+					laufen bereits — mit „OK“ und „Widersprechen“; der Widerspruch wird
+					gespeichert und stoppt auch ein bereits geladenes Script. Provider,
+					die eine Einwilligung brauchen, und{" "}
+					<code>NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT=true</code> behalten
+					Akzeptieren / Ablehnen. Ein Link „Datenschutz-Einstellungen“ öffnet
+					das Banner erneut: im Marketing-Footer, im SaaS-Nutzermenü und auf den
+					Auth-Seiten sowie in der Docs-Sidebar und auf der Docs-Startseite. Das
+					Umami-Script lädt mit <code>data-do-not-track="true"</code>.
+				</li>
+				<li>
+					<code>appMail.legalFooter</code> (
+					<code>packages/mail/src/app-mail.ts</code>) fügt Firmenangaben — z. B.
+					die Pflichtangaben nach § 35a GmbHG — unter jeder Transaktions-E-Mail
+					ein, im HTML- und im Textteil. Ein String, eine Liste von Zeilen oder
+					eine Funktion der Empfänger-Locale; nicht gesetzt, bleiben die E-Mails
+					unverändert.
+				</li>
+				<li>
+					<code>authConfig.session</code> dokumentiert die Session-Dauer für die
+					Datenschutzerklärung: 30 Tage, höchstens einmal täglich verlängert, 5
+					Minuten Session-Cookie-Cache.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -146,6 +171,12 @@ export default function ChangelogV110De() {
 					Bei Creem kündigt <code>payments.subscription.cancel</code> ohne{" "}
 					<code>atPeriodEnd</code> jetzt sofort, statt den im Store
 					eingestellten Kündigungsmodus zu verwenden.
+				</li>
+				<li>
+					Eigene Consent-UIs auf Basis von <code>useConsent()</code>: das Banner
+					zeigen, solange <code>open</code> wahr ist (deckt das erneute Öffnen
+					und die neue Hinweis-Antwort <code>"acknowledged"</code> ab), statt{" "}
+					<code>status === "unknown"</code> zu prüfen.
 				</li>
 			</ul>
 		</>

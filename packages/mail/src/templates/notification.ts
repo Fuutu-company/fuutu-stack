@@ -7,6 +7,7 @@ import {
 	renderButton,
 	renderLayout,
 	safeHref,
+	withLegalFooterText,
 } from "./layout";
 
 /**
@@ -44,5 +45,9 @@ export const notificationTemplate: TemplateRenderer<"notification"> = ({
 		{ locale, previewText: title },
 	);
 
-	return { subject: title, text, html };
+	return {
+		subject: title,
+		text: withLegalFooterText(text, locale),
+		html,
+	};
 };

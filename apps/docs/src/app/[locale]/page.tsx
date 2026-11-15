@@ -1,3 +1,4 @@
+import { PrivacySettingsButton } from "@fuutu/analytics/consent";
 import { config } from "@fuutu/config";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-select";
@@ -5,7 +6,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { LanguageSelect } from "@/components/language-select";
 import { locales } from "@/i18n/config";
-import { baseOptions } from "@/lib/layout.shared";
+import { baseOptions, PRIVACY_LINK_CLASS } from "@/lib/layout.shared";
 import { hreflangLanguages } from "@/lib/page-metadata";
 import { Link } from "@/navigation";
 
@@ -76,6 +77,9 @@ export default async function HomePage({ params }: HomePageProps) {
 					</a>
 				</div>
 			</div>
+			<footer className="flex justify-center pb-8">
+				<PrivacySettingsButton className={PRIVACY_LINK_CLASS} />
+			</footer>
 		</HomeLayout>
 	);
 }

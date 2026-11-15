@@ -126,6 +126,16 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "packages/mail/src/app-mail.ts",
+		exports: ["appMail"],
+		wiredInto: [
+			{
+				file: "packages/mail/src/templates/layout.ts",
+				import: /\{ appMail \} from "\.\.\/app-mail"/,
+			},
+		],
+	},
+	{
 		file: "apps/docs/src/app-docs.tsx",
 		exports: ["appDocs"],
 		wiredInto: [

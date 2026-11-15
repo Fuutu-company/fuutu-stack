@@ -24,6 +24,7 @@ const app = vi.hoisted(() => ({
 	appNavRemove: [] as string[],
 	appFooter: {} as Record<string, unknown>,
 	appMarketing: {} as Record<string, unknown>,
+	consentBannerVisible: true,
 }));
 
 vi.mock("../../../../apps/marketing/src/app-site-links", () => ({
@@ -54,6 +55,13 @@ vi.mock("@/app-marketing", () => ({
 		return app.appMarketing;
 	},
 }));
+vi.mock("../../../../packages/analytics/src/index.ts", () => ({
+	consentBannerVisible: () => app.consentBannerVisible,
+}));
+vi.mock(
+	"../../../../apps/marketing/src/modules/marketing/components/privacy-settings-action",
+	() => ({ PrivacySettingsAction: () => null }),
+);
 vi.mock("../../../../apps/marketing/src/lib/urls", () => ({
 	urls: { docs: "https://docs.example.test" },
 }));
@@ -87,6 +95,7 @@ beforeEach(() => {
 	app.appNavRemove = [];
 	app.appFooter = {};
 	app.appMarketing = {};
+	app.consentBannerVisible = true;
 	vi.resetModules();
 });
 
@@ -360,7 +369,17 @@ describe("site links", () => {
 		expect((await load()).FOOTER_AREA_LINE).toBeNull();
 	});
 
-	it("has no footer actions without app extras (kit footer unchanged)", async () => {
+	const actionKeys = (links: SiteLinksModule) =>
+		links.FOOTER_ACTIONS.map((a) => [a.key, a.column]);
+
+	it("has only the kit Privacy settings action without app extras", async () => {
+		expect(actionKeys(await load())).toEqual([
+			["privacySettings", "companyAndLegal"],
+		]);
+	});
+
+	it("drops the Privacy settings action while the consent banner is off", async () => {
+		app.consentBannerVisible = false;
 		expect((await load()).FOOTER_ACTIONS).toEqual([]);
 	});
 
@@ -383,13 +402,8 @@ describe("site links", () => {
 				},
 			],
 		};
-		const links = await load();
-		expect(
-			links.FOOTER_ACTIONS.map((a: { key: string; column: string }) => [
-				a.key,
-				a.column,
-			]),
-		).toEqual([
+		expect(actionKeys(await load())).toEqual([
+			["privacySettings", "companyAndLegal"],
 			["joinDiscord", "community"],
 			["feedback", "companyAndLegal"],
 		]);

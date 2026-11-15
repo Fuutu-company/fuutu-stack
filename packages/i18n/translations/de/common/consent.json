@@ -3,6 +3,13 @@
 		"title": "Wir nutzen datenschutzfreundliche Analytics",
 		"description": "Hilf uns, dieses Produkt zu verbessern, indem du Nutzungsstatistiken erlaubst. Keine Cookies, und die Statistikdaten enthalten keine IP-Adressen oder anderen personenbezogenen Daten. Du kannst deine Wahl jederzeit ändern.",
 		"accept": "Akzeptieren",
-		"deny": "Ablehnen"
+		"deny": "Ablehnen",
+		"privacySettings": "Datenschutz-Einstellungen",
+		"notice": {
+			"label": "Datenschutzfreundliche Analytics",
+			"description": "Wir nutzen datenschutzfreundliche, cookielose Analytics (keine personenbezogenen Daten), um diese Seite zu verbessern. Du kannst jederzeit widersprechen.",
+			"ok": "OK",
+			"optOut": "Widersprechen"
+		}
 	}
 }

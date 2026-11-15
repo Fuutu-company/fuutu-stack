@@ -1,3 +1,4 @@
+import { consentBannerVisible } from "@fuutu/analytics";
 import { insertAfter } from "@fuutu/utils/insert-after";
 import type { LucideIcon } from "lucide-react";
 import { BookOpen, Rss, Terminal } from "lucide-react";
@@ -11,6 +12,7 @@ import {
 	appNavItems,
 	appNavRemove,
 } from "../app-site-links";
+import { PrivacySettingsAction } from "../modules/marketing/components/privacy-settings-action";
 import { urls } from "./urls";
 
 /**
@@ -274,8 +276,21 @@ for (const column of appFooterColumns) {
 	FOOTER_COLUMNS.push(column);
 }
 
-/** App footer buttons (`appFooter.actions`), rendered after their column's links. */
-export const FOOTER_ACTIONS: AppFooterAction[] = [];
+/**
+ * Footer buttons, rendered after their column's links: the kit's "Privacy
+ * settings" (reopens the consent banner; only while the banner is on),
+ * then the app's (`appFooter.actions`).
+ */
+export const FOOTER_ACTIONS: AppFooterAction[] = consentBannerVisible()
+	? [
+			{
+				key: "privacySettings",
+				column: "companyAndLegal",
+				labelKey: "consent.privacySettings",
+				Component: PrivacySettingsAction,
+			},
+		]
+	: [];
 for (const action of appFooter.actions ?? []) {
 	if (!FOOTER_COLUMNS.some((c) => c.titleKey === action.column)) {
 		throw new Error(

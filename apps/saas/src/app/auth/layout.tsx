@@ -1,3 +1,4 @@
+import { PrivacySettingsButton } from "@fuutu/analytics/consent";
 import { config } from "@fuutu/config";
 import { AreaBackdrop, BrandLogo } from "@fuutu/ui";
 import { NextIntlClientProvider } from "next-intl";
@@ -25,6 +26,7 @@ export default async function AuthLayout({
 						{config.app.name}
 					</a>
 					{children}
+					<PrivacySettingsButton className="cursor-pointer self-center text-muted-foreground text-xs hover:text-foreground hover:underline hover:underline-offset-4" />
 				</div>
 			</div>
 		</NextIntlClientProvider>

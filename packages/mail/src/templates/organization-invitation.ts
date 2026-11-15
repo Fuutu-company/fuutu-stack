@@ -7,6 +7,7 @@ import {
 	renderButton,
 	renderLayout,
 	safeHref,
+	withLegalFooterText,
 } from "./layout";
 
 export const organizationInvitationTemplate: TemplateRenderer<
@@ -29,5 +30,9 @@ export const organizationInvitationTemplate: TemplateRenderer<
 		{ locale, previewText: headline },
 	);
 
-	return { subject: t.subject(organizationName), text, html };
+	return {
+		subject: t.subject(organizationName),
+		text: withLegalFooterText(text, locale),
+		html,
+	};
 };

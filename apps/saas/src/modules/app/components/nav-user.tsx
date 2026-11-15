@@ -1,5 +1,7 @@
 "use client";
 
+import { consentBannerVisible } from "@fuutu/analytics";
+import { openConsentBanner } from "@fuutu/analytics/consent";
 import { authClient } from "@fuutu/auth/client";
 import { authConfig } from "@fuutu/auth/config";
 import type { UserWithRole } from "@fuutu/auth/types";
@@ -26,6 +28,7 @@ import {
 	ChevronsUpDown,
 	CreditCard,
 	LogOut,
+	ShieldCheck,
 	Sparkles,
 } from "lucide-react";
 import Link from "next/link";
@@ -42,6 +45,7 @@ function getInitials(name: string, email: string): string {
 
 export function NavUser() {
 	const t = useTranslations("navigation");
+	const tConsent = useTranslations("consent");
 	const router = useRouter();
 	const pathname = usePathname();
 	const { isMobile } = useSidebar();
@@ -170,6 +174,12 @@ export function NavUser() {
 								<DropdownMenuItem disabled>
 									<CreditCard />
 									{t("billingSelectOrg")}
+								</DropdownMenuItem>
+							)}
+							{consentBannerVisible() && (
+								<DropdownMenuItem onSelect={openConsentBanner}>
+									<ShieldCheck />
+									{tConsent("privacySettings")}
 								</DropdownMenuItem>
 							)}
 						</DropdownMenuGroup>

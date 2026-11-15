@@ -7,6 +7,7 @@ import {
 	renderButton,
 	renderLayout,
 	safeHref,
+	withLegalFooterText,
 } from "./layout";
 
 export const magicLinkTemplate: TemplateRenderer<"magic-link"> = ({
@@ -32,5 +33,9 @@ export const magicLinkTemplate: TemplateRenderer<"magic-link"> = ({
 		{ locale, previewText: t.intro },
 	);
 
-	return { subject: t.subject, text, html };
+	return {
+		subject: t.subject,
+		text: withLegalFooterText(text, locale),
+		html,
+	};
 };

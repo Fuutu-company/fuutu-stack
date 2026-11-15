@@ -98,6 +98,29 @@ export default function ChangelogV110() {
 					Community help moved into the app: README, contributing guide and
 					issue templates point to <code>app.fuutustack.com</code> (Support).
 				</li>
+				<li>
+					The consent banner has two modes. Providers that track without consent
+					(Umami) get a notice — anonymous, cookieless analytics already run —
+					with "OK" and "Opt out"; the opt-out is remembered and also stops an
+					already-loaded script. Providers that need consent, and{" "}
+					<code>NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT=true</code>, keep Accept /
+					Decline. A "Privacy settings" link reopens the banner: in the
+					marketing footer, the SaaS user menu and auth pages, and the docs
+					sidebar and home page. The Umami script loads with{" "}
+					<code>data-do-not-track="true"</code>.
+				</li>
+				<li>
+					<code>appMail.legalFooter</code> (
+					<code>packages/mail/src/app-mail.ts</code>) adds company details —
+					e.g. what § 35a GmbHG requires — under every transactional email, in
+					the HTML and the plain-text part. A string, a list of lines or a
+					function of the recipient locale; unset, the emails are unchanged.
+				</li>
+				<li>
+					<code>authConfig.session</code> documents the session lifetime for
+					your privacy policy: 30 days, extended at most once a day, a 5-minute
+					session cookie cache.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -140,6 +163,12 @@ export default function ChangelogV110() {
 					On Creem, <code>payments.subscription.cancel</code> without{" "}
 					<code>atPeriodEnd</code> now cancels immediately instead of using the
 					store's default cancellation mode.
+				</li>
+				<li>
+					Custom consent UIs built on <code>useConsent()</code>: show the banner
+					while <code>open</code> is true (it covers the reopen and the new
+					notice answer <code>"acknowledged"</code>) instead of checking{" "}
+					<code>status === "unknown"</code>.
 				</li>
 			</ul>
 		</>

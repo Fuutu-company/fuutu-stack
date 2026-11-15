@@ -18,6 +18,8 @@ export function AnalyticsScript() {
 	const [granted, setGranted] = useState(false);
 
 	useEffect(() => {
+		// Before the script loads: an opt-out must also stop a loaded script.
+		resolveAnalyticsProvider().installConsentGate?.(hasTrackingConsent);
 		const read = () => {
 			setGranted(hasTrackingConsent());
 		};

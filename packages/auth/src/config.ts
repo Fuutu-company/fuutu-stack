@@ -9,6 +9,13 @@
  */
 
 export const authConfig = {
+	/**
+	 * Session lifetime, in seconds — document it in your privacy policy.
+	 * `expiresIn`: a session — and the `better-auth.session_token` cookie's
+	 * max-age — ends 30 days after it was last extended; `updateAge`: use
+	 * extends it, at most once a day. `cookieCache.maxAge`: the signed
+	 * `better-auth.session_data` cookie caches the session for 5 minutes.
+	 */
 	session: {
 		expiresIn: 60 * 60 * 24 * 30, // 30 days
 		updateAge: 60 * 60 * 24, // 1 day

@@ -2,6 +2,10 @@ import { config } from "@fuutu/config";
 import { BrandLogo } from "@fuutu/ui";
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
+/** The "Privacy settings" button in the docs sidebar footer and on the docs home. */
+export const PRIVACY_LINK_CLASS =
+	"cursor-pointer text-fd-muted-foreground text-xs hover:text-fd-foreground hover:underline hover:underline-offset-4";
+
 export function baseOptions(): BaseLayoutProps {
 	return {
 		nav: {

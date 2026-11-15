@@ -121,3 +121,45 @@ test.describe("consent banner scroll room", () => {
 		await expect.poll(() => overflow(page)).toBeLessThanOrEqual(1);
 	});
 });
+
+/** Answers the banner (OK in notice mode, Accept in consent mode). */
+async function decide(page: Page) {
+	await banner(page)
+		.getByRole("button", { name: /^(ok|accept)$/i })
+		.click();
+	await expect(banner(page)).toBeHidden();
+}
+
+test.describe("privacy settings", () => {
+	test.describe("signed out", () => {
+		test.use({ storageState: { cookies: [], origins: [] } });
+
+		test("the auth pages' footer link reopens the banner", async ({ page }) => {
+			await page.goto("/auth/sign-in");
+			test.skip(
+				!(await bannerShown(page)),
+				"Consent banner disabled in this environment",
+			);
+			await decide(page);
+
+			await page.getByRole("button", { name: /^privacy settings$/i }).click();
+			await expect(banner(page)).toBeVisible();
+		});
+	});
+
+	test("the user menu reopens the banner", async ({ page, isMobile }) => {
+		test.skip(isMobile, "Opens the desktop sidebar user menu");
+		await page.goto("/dashboard");
+		test.skip(
+			!(await bannerShown(page)),
+			"Consent banner disabled in this environment",
+		);
+		await decide(page);
+
+		const footer = page.locator("[data-sidebar='footer']");
+		await expect(footer.getByText(/@/)).toBeVisible({ timeout: 10_000 });
+		await footer.getByRole("button").click();
+		await page.getByRole("menuitem", { name: /^privacy settings$/i }).click();
+		await expect(banner(page)).toBeVisible();
+	});
+});

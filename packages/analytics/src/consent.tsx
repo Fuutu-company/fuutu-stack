@@ -13,31 +13,66 @@ import {
 	useState,
 } from "react";
 import { analyticsConfig } from "./config";
-import { readConsentCookie, writeConsentCookie } from "./consent-cookie";
-import { consentBannerVisible } from "./index";
+import {
+	type ConsentCookieValue,
+	readConsentCookie,
+	writeConsentCookie,
+} from "./consent-cookie";
+import {
+	type ConsentBannerMode,
+	consentBannerMode,
+	consentBannerVisible,
+	consentDecisionNeeded,
+} from "./index";
 
 export { readConsentCookie } from "./consent-cookie";
 
-type ConsentStatus = "unknown" | "granted" | "denied";
+type ConsentStatus = "unknown" | ConsentCookieValue;
 
 interface ConsentContextValue {
 	status: ConsentStatus;
+	/** `"consent"` (Accept / Decline) or `"notice"` (OK / Opt out). */
+	mode: ConsentBannerMode;
 	/**
 	 * `true` once the client has read the consent cookie. Used to suppress
 	 * the SSR → client flash of the banner on reload after the user
 	 * already made a choice.
 	 */
 	hydrated: boolean;
+	/** Whether the banner is on screen: no decision yet, or reopened. */
+	open: boolean;
 	grant: () => void;
 	deny: () => void;
+	/** The OK on the notice banner — tracking continues, no consent stored. */
+	acknowledge: () => void;
+	/** Show the banner again ("Privacy settings"), in either mode. */
+	reopen: () => void;
 }
 
 const ConsentContext = createContext<ConsentContextValue | null>(null);
 
-function dispatchChange() {
+const OPEN_EVENT = `${analyticsConfig.consentEventName}:open`;
+
+function dispatch(name: string) {
 	if (typeof window !== "undefined") {
-		window.dispatchEvent(new CustomEvent(analyticsConfig.consentEventName));
+		window.dispatchEvent(new CustomEvent(name));
 	}
+}
+
+function readStatus(): ConsentStatus {
+	const value = readConsentCookie();
+	return value === "granted" || value === "denied" || value === "acknowledged"
+		? value
+		: "unknown";
+}
+
+/**
+ * Reopen the consent banner from anywhere (a footer link, a settings
+ * page). Window event, so it reaches the provider that renders the banner
+ * even from inside a nested <ConsentProvider>.
+ */
+export function openConsentBanner() {
+	dispatch(OPEN_EVENT);
 }
 
 /**
@@ -45,32 +80,57 @@ function dispatchChange() {
  * (host-scoped by default, cross-subdomain opt-in via
  * `analyticsConfig.consentCookieDomain`) so the choice survives reloads
  * and — with a shared domain — sibling apps. Emits a `fuutu:consent`
- * window event so <AnalyticsScript /> can react.
+ * window event so <AnalyticsScript /> and nested providers react.
  */
 export function ConsentProvider({ children }: { children: ReactNode }) {
 	const [status, setStatus] = useState<ConsentStatus>("unknown");
 	const [hydrated, setHydrated] = useState(false);
+	const [reopened, setReopened] = useState(false);
 
 	useEffect(() => {
-		const value = readConsentCookie();
-		if (value === "granted" || value === "denied") setStatus(value);
+		setStatus(readStatus());
 		setHydrated(true);
+		const onChange = () => {
+			setStatus(readStatus());
+			setReopened(false);
+		};
+		const onOpen = () => setReopened(true);
+		window.addEventListener(analyticsConfig.consentEventName, onChange);
+		window.addEventListener(OPEN_EVENT, onOpen);
+		return () => {
+			window.removeEventListener(analyticsConfig.consentEventName, onChange);
+			window.removeEventListener(OPEN_EVENT, onOpen);
+		};
 	}, []);
 
-	const grant = useCallback(() => {
-		writeConsentCookie("granted");
-		setStatus("granted");
-		dispatchChange();
+	const decide = useCallback((value: ConsentCookieValue) => {
+		writeConsentCookie(value);
+		setStatus(value);
+		setReopened(false);
+		dispatch(analyticsConfig.consentEventName);
 	}, []);
+	const grant = useCallback(() => decide("granted"), [decide]);
+	const deny = useCallback(() => decide("denied"), [decide]);
+	const acknowledge = useCallback(() => decide("acknowledged"), [decide]);
 
-	const deny = useCallback(() => {
-		writeConsentCookie("denied");
-		setStatus("denied");
-		dispatchChange();
-	}, []);
+	const open =
+		hydrated &&
+		consentBannerVisible() &&
+		(reopened || consentDecisionNeeded(status === "unknown" ? null : status));
 
 	return (
-		<ConsentContext.Provider value={{ status, hydrated, grant, deny }}>
+		<ConsentContext.Provider
+			value={{
+				status,
+				mode: consentBannerMode(),
+				hydrated,
+				open,
+				grant,
+				deny,
+				acknowledge,
+				reopen: openConsentBanner,
+			}}
+		>
 			{children}
 		</ConsentContext.Provider>
 	);
@@ -83,21 +143,37 @@ export function useConsent(): ConsentContextValue {
 }
 
 /**
- * Minimal, unstyled GDPR banner. Apps can replace this with their
- * own UI by reading `useConsent()` directly. Hidden once the user
- * has made a decision, or when the active provider requires no
- * consent and doesn't opt into the transparency banner.
+ * "Privacy settings" button — reopens the banner. Renders nothing while
+ * the banner is switched off (`consentBannerVisible()`), so footers can
+ * mount it unconditionally. Needs a <ConsentProvider> above it.
+ */
+export function PrivacySettingsButton({ className }: { className?: string }) {
+	const t = useTranslations("consent");
+	if (!consentBannerVisible()) return null;
+	return (
+		<button type="button" className={className} onClick={openConsentBanner}>
+			{t("privacySettings")}
+		</button>
+	);
+}
+
+/**
+ * Minimal GDPR banner. Apps can replace this with their own UI by
+ * reading `useConsent()` directly. Two modes (`consentBannerMode()`):
+ * `"consent"` asks before tracking (Accept / Decline), `"notice"` tells
+ * the user that cookieless analytics already run (OK / Opt out). Hidden
+ * once the user has decided — until reopened via `openConsentBanner()` —
+ * or when the banner is switched off (`consentBannerVisible()`).
  */
 export function ConsentBanner() {
 	const t = useTranslations("consent");
-	const { status, hydrated, grant, deny } = useConsent();
+	// `open` waits for the client-side cookie read — otherwise the banner
+	// flashes on reload for users who already decided.
+	const { mode, open: visible, grant, deny, acknowledge } = useConsent();
 	const bannerRef = useRef<HTMLDivElement>(null);
 	const spacerRef = useRef<HTMLDivElement>(null);
 	const pathname = usePathname();
 	const [reservedPx, setReservedPx] = useState(0);
-	// Defer the first paint until we've checked the consent cookie client-side —
-	// otherwise the banner flashes on reload for users who already decided.
-	const visible = consentBannerVisible() && hydrated && status === "unknown";
 
 	// The banner floats over the bottom of the viewport. Reserve that strip
 	// while it is shown: `scroll-padding-bottom` keeps focused / scrolled-to
@@ -148,19 +224,27 @@ export function ConsentBanner() {
 			<div
 				ref={bannerRef}
 				role="dialog"
-				aria-label={t("title")}
+				aria-label={mode === "notice" ? t("notice.label") : t("title")}
 				className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-2xl flex-col gap-3 rounded-xl border bg-background p-4 shadow-lg sm:flex-row sm:items-center sm:gap-4"
 			>
-				<div className="flex-1 text-sm">
-					<p className="font-medium">{t("title")}</p>
-					<p className="text-muted-foreground">{t("description")}</p>
-				</div>
+				{mode === "notice" ? (
+					<p className="flex-1 text-sm">{t("notice.description")}</p>
+				) : (
+					<div className="flex-1 text-sm">
+						<p className="font-medium">{t("title")}</p>
+						<p className="text-muted-foreground">{t("description")}</p>
+					</div>
+				)}
 				<div className="flex gap-2">
 					<Button type="button" variant="outline" size="sm" onClick={deny}>
-						{t("deny")}
+						{mode === "notice" ? t("notice.optOut") : t("deny")}
 					</Button>
-					<Button type="button" size="sm" onClick={grant}>
-						{t("accept")}
+					<Button
+						type="button"
+						size="sm"
+						onClick={mode === "notice" ? acknowledge : grant}
+					>
+						{mode === "notice" ? t("notice.ok") : t("accept")}
 					</Button>
 				</div>
 			</div>

@@ -13,6 +13,9 @@ interface UmamiGlobal {
 	) => void;
 }
 
+/** Global the script calls before each send (`data-before-send`). */
+const BEFORE_SEND_GLOBAL = "__fuutuUmamiBeforeSend";
+
 function getUmami(): UmamiGlobal | undefined {
 	return (globalThis as { umami?: UmamiGlobal }).umami;
 }
@@ -23,8 +26,10 @@ function getUmami(): UmamiGlobal | undefined {
  *
  * `requiresConsent: false` — Umami is cookieless and collects no personal
  * data, so it is designed to track without waiting for consent.
- * `showConsentBanner: true` — the banner still renders as a transparency
- * notice; an explicit decline is honored via `hasTrackingConsent()`.
+ * `showConsentBanner: true` — the banner renders as a notice with an
+ * opt-out; the opt-out is honored via `hasTrackingConsent()` and, for the
+ * loaded script, the `data-before-send` gate. `data-do-not-track` skips
+ * browsers that send Do Not Track.
  * Kit owners can hide the banner or force the gate via `analyticsConfig`.
  */
 export const umamiAnalyticsProvider: AnalyticsProvider = {
@@ -60,8 +65,18 @@ export const umamiAnalyticsProvider: AnalyticsProvider = {
 			attributes: {
 				"data-website-id": analyticsConfig.websiteId,
 				"data-auto-track": "true",
+				"data-do-not-track": "true",
+				"data-before-send": BEFORE_SEND_GLOBAL,
 			},
 		};
+	},
+
+	installConsentGate(hasConsent) {
+		// Returning null makes the script drop the send.
+		(globalThis as Record<string, unknown>)[BEFORE_SEND_GLOBAL] = (
+			_type: string,
+			payload: unknown,
+		) => (hasConsent() ? payload : null);
 	},
 
 	getCspOrigins(): AnalyticsCspOrigins {
