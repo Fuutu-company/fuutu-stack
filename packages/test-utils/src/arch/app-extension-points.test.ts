@@ -57,6 +57,20 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "apps/saas/src/app-admin.tsx",
+		exports: ["appAdminUserSections", "appAdminOrganizationSections"],
+		wiredInto: [
+			{
+				file: "apps/saas/src/modules/app/admin/user-detail/admin-user-detail.tsx",
+				import: /\{ appAdminUserSections \} from "@\/app-admin"/,
+			},
+			{
+				file: "apps/saas/src/modules/app/admin/org-detail/admin-organization-detail.tsx",
+				import: /\{ appAdminOrganizationSections \} from "@\/app-admin"/,
+			},
+		],
+	},
+	{
 		file: "apps/saas/src/app-onboarding.tsx",
 		exports: ["appOnboardingSteps"],
 		wiredInto: [

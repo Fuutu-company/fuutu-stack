@@ -253,18 +253,237 @@
 				}
 			}
 		},
+		"organizations": {
+			"title": "Organizations",
+			"searchPlaceholder": "Search by name, slug or ID…",
+			"searchLabel": "Search organizations",
+			"loading": "Loading organizations…",
+			"loadError": "Organizations could not be loaded.",
+			"empty": "No organizations found.",
+			"organization": "Organization",
+			"members": "Members",
+			"invitations": "Invitations",
+			"plan": "Plan",
+			"createdAt": "Created",
+			"noPlan": "No subscription",
+			"otherPlan": "Other plan"
+		},
+		"organizationDetail": {
+			"title": "Organization details",
+			"notFound": "This organization does not exist.",
+			"loadError": "The organization could not be loaded.",
+			"retry": "Retry",
+			"back": "Back to organizations",
+			"slug": "Slug: {slug}",
+			"memberCount": "{count, plural, one {# member} other {# members}}",
+			"created": "Created {date}",
+			"tabs": {
+				"members": "Members ({count})",
+				"invitations": "Invitations ({count})",
+				"billing": "Billing",
+				"apiKeys": "API keys ({count})",
+				"activity": "Activity"
+			},
+			"members": {
+				"description": "Members and their organization roles. Open a user to manage the account itself.",
+				"empty": "No members.",
+				"truncated": "Showing the first {shown} of {total} members.",
+				"user": "User",
+				"role": "Role",
+				"joined": "Joined",
+				"actions": "Actions",
+				"menu": "Actions for {name}",
+				"changeRole": "Change role",
+				"makeOwner": "Make owner",
+				"remove": "Remove from organization",
+				"alreadyOwner": "Already the only owner."
+			},
+			"invitations": {
+				"description": "Pending invitations. Expired ones can be sent again.",
+				"empty": "No pending invitations.",
+				"email": "Email",
+				"role": "Role",
+				"status": "Status",
+				"expires": "Expires",
+				"inviter": "Invited by",
+				"actions": "Actions",
+				"pending": "Pending",
+				"expired": "Expired",
+				"unknownInviter": "—",
+				"resend": "Resend",
+				"cancel": "Cancel"
+			},
+			"billing": {
+				"summary": "{members, plural, one {# member} other {# members}} · {seats, plural, one {# seat} other {# seats}}",
+				"summaryNoSeats": "{members, plural, one {# member} other {# members}} · no active subscription",
+				"purchases": "Subscriptions and purchases",
+				"noPurchases": "No purchases.",
+				"type": "Type",
+				"status": "Status",
+				"provider": "Provider",
+				"plan": "Plan",
+				"seats": "Seats",
+				"periodEnd": "Current period ends",
+				"none": "—",
+				"otherPlan": "Other",
+				"credits": "Credit balances",
+				"noCredits": "No credit balances.",
+				"meter": "Meter",
+				"remaining": "Remaining",
+				"remainingValue": "{remaining} of {granted}",
+				"resets": "Resets"
+			},
+			"apiKeys": {
+				"empty": "No API keys.",
+				"name": "Name",
+				"key": "Key",
+				"scopes": "Scopes",
+				"lastUsed": "Last used",
+				"status": "Status",
+				"allScopes": "All scopes",
+				"never": "Never",
+				"revoked": "Revoked",
+				"expired": "Expired",
+				"active": "Active"
+			},
+			"activity": {
+				"loadError": "The activity could not be loaded.",
+				"empty": "No activity yet.",
+				"by": "By {actor}",
+				"reason": "Reason: {reason}"
+			},
+			"actions": {
+				"menu": "Actions",
+				"rename": "Rename organization",
+				"delete": "Delete organization"
+			},
+			"toast": {
+				"renamed": "Organization renamed.",
+				"deleted": "Organization deleted.",
+				"roleChanged": "Role changed.",
+				"memberRemoved": "Member removed.",
+				"ownershipTransferred": "Ownership transferred.",
+				"invitationResent": "Invitation sent again.",
+				"invitationResentNoEmail": "The invitation was extended, but the email could not be sent.",
+				"invitationCanceled": "Invitation canceled."
+			},
+			"dialog": {
+				"rename": {
+					"title": "Rename organization",
+					"description": "Changes the display name. The slug and URLs stay the same.",
+					"name": "Name",
+					"confirm": "Save name"
+				},
+				"delete": {
+					"title": "Delete organization",
+					"description": "Permanently deletes {name} with its members, invitations, API keys and billing records. Active subscriptions are canceled first. This cannot be undone.",
+					"confirmLabel": "Type {slug} to confirm",
+					"confirm": "Delete organization"
+				},
+				"role": {
+					"title": "Change role",
+					"description": "Sets the organization role of {name}. An organization always keeps at least one owner.",
+					"role": "Role",
+					"confirm": "Change role"
+				},
+				"removeMember": {
+					"title": "Remove member",
+					"description": "{name} loses access to the organization. Their organization API keys are revoked and seats are updated.",
+					"confirm": "Remove member"
+				},
+				"transferOwnership": {
+					"title": "Make owner",
+					"description": "{name} becomes the owner. Every current owner becomes an admin.",
+					"confirm": "Make owner"
+				},
+				"cancelInvitation": {
+					"title": "Cancel invitation",
+					"description": "The invitation link for {email} stops working.",
+					"confirm": "Cancel invitation"
+				}
+			}
+		},
+		"system": {
+			"title": "System",
+			"loadError": "The system status could not be loaded.",
+			"retry": "Retry",
+			"refresh": "Refresh",
+			"database": {
+				"title": "Database",
+				"ok": "Reachable",
+				"down": "Unreachable",
+				"latency": "Latency",
+				"latencyValue": "{ms} ms",
+				"status": "Status"
+			},
+			"providers": {
+				"title": "Providers",
+				"description": "The active provider per domain. Credentials are never shown.",
+				"configured": "Configured",
+				"notConfigured": "Not configured",
+				"domain": {
+					"mail": "Email",
+					"payments": "Payments",
+					"storage": "Storage",
+					"analytics": "Analytics",
+					"logs": "Logs",
+					"ai": "AI"
+				}
+			},
+			"cron": {
+				"title": "Scheduled jobs",
+				"description": "Last run per job as recorded by the scheduler.",
+				"empty": "No jobs registered.",
+				"job": "Job",
+				"schedule": "Schedule",
+				"lastRun": "Last run",
+				"status": "Status",
+				"neverRun": "Never run",
+				"disabled": "Disabled",
+				"statusValue": {
+					"success": "Success",
+					"error": "Failed",
+					"skipped": "Skipped",
+					"running": "Running"
+				}
+			},
+			"features": {
+				"title": "Feature flags",
+				"description": "Read from the app configuration. Change them in code, not here.",
+				"on": "On",
+				"off": "Off"
+			},
+			"versions": {
+				"title": "Versions",
+				"app": "App version",
+				"kit": "Kit version"
+			}
+		},
 		"auditLogs": {
 			"title": "Audit logs",
 			"col": {
 				"time": "Time",
 				"action": "Action",
 				"user": "User",
-				"ip": "IP"
+				"ip": "IP",
+				"target": "Target"
 			},
-			"prev": "Previous",
-			"next": "Next",
-			"page": "Page {page} · {total}",
-			"empty": "No audit logs."
-		}
+			"empty": "No audit logs.",
+			"filters": {
+				"actionPrefix": "Action starts with",
+				"actionPrefixPlaceholder": "e.g. admin.user.",
+				"actor": "Actor user ID",
+				"targetUser": "Target user ID",
+				"targetOrganization": "Target organization ID",
+				"from": "From",
+				"to": "To",
+				"clear": "Clear filters"
+			},
+			"loadError": "The audit logs could not be loaded.",
+			"user": "User",
+			"organization": "Organization",
+			"reason": "Reason: {reason}"
+		},
+		"sections": {}
 	}
 }

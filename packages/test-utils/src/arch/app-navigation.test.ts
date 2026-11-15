@@ -414,7 +414,9 @@ describe("account + admin extras", () => {
 		expect(keys(nav.getAdminItems())).toEqual([
 			"adminUsers",
 			"adminTenants",
+			"adminOrganizations",
 			"adminAuditLogs",
+			"adminSystem",
 		]);
 	});
 
@@ -431,14 +433,18 @@ describe("account + admin extras", () => {
 			"adminUsers",
 			"adminTenants",
 			"adminPlans",
+			"adminOrganizations",
 			"adminAuditLogs",
+			"adminSystem",
 		]);
 	});
 
 	it("returns the kit admin list without extras — no overview self-link", () => {
 		expect(nav.getAdminItems()).toEqual([
 			{ titleKey: "adminUsers", href: "/admin/users" },
+			{ titleKey: "adminOrganizations", href: "/admin/organizations" },
 			{ titleKey: "adminAuditLogs", href: "/admin/audit-logs" },
+			{ titleKey: "adminSystem", href: "/admin/system" },
 		]);
 	});
 
@@ -519,6 +525,22 @@ describe("breadcrumb extras", () => {
 		]);
 	});
 
+	it("labels the admin organization routes", () => {
+		expect(buildBreadcrumbs("/admin/organizations", null)).toEqual([
+			{ labelKey: "breadcrumb.admin", href: "/admin/users" },
+			{ labelKey: "breadcrumb.organizations", href: "/admin/organizations" },
+		]);
+		expect(buildBreadcrumbs("/admin/organizations/org-1", null)).toEqual([
+			{ labelKey: "breadcrumb.admin", href: "/admin/users" },
+			{ labelKey: "breadcrumb.organizations", href: "/admin/organizations" },
+			{ labelKey: "breadcrumb.orgDetail", href: "/admin/organizations/org-1" },
+		]);
+		expect(buildBreadcrumbs("/admin/system", null).at(-1)).toEqual({
+			labelKey: "breadcrumb.system",
+			href: "/admin/system",
+		});
+	});
+
 	it("skips segments nobody labels", () => {
 		expect(buildBreadcrumbs("/projects/123", null)).toEqual([]);
 	});
@@ -578,7 +600,12 @@ describe("the shipped app lists (apps/saas/src/app-navigation.ts, app-main-nav.t
 			"apiKeys",
 			"danger",
 		],
-		appAdminNavItems: ["adminUsers", "adminAuditLogs"],
+		appAdminNavItems: [
+			"adminUsers",
+			"adminOrganizations",
+			"adminAuditLogs",
+			"adminSystem",
+		],
 	} as const;
 
 	const loadShipped = async () => ({

@@ -37,6 +37,7 @@ const routeMap: Record<string, string> = {
 const adminSubRoutes: Record<string, string> = {
 	users: "breadcrumb.users",
 	"audit-logs": "breadcrumb.auditLogs",
+	system: "breadcrumb.system",
 };
 
 const settingsTabMap: Record<string, string> = {
@@ -101,6 +102,12 @@ export function buildBreadcrumbs(
 			crumbs.push({ labelKey: adminLabel, href });
 		} else if (segments[0] === "admin" && segments[1] === "users" && i === 2) {
 			crumbs.push({ labelKey: "breadcrumb.userDetail", href });
+		} else if (
+			segments[0] === "admin" &&
+			segments[1] === "organizations" &&
+			i === 2
+		) {
+			crumbs.push({ labelKey: "breadcrumb.orgDetail", href });
 		} else if (inOrgRoute && i === orgSlugIndex + 1) {
 			// Dynamic org slug
 			crumbs.push({

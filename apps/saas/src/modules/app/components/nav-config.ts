@@ -389,7 +389,9 @@ export function getAccountItems(): NavSubItem[] {
 export function getAdminItems(): NavSubItem[] {
 	const items: NavSubItem[] = [
 		{ titleKey: "adminUsers", href: ADMIN_HOME },
+		{ titleKey: "adminOrganizations", href: `${ADMIN_PATH}/organizations` },
 		{ titleKey: "adminAuditLogs", href: `${ADMIN_PATH}/audit-logs` },
+		{ titleKey: "adminSystem", href: `${ADMIN_PATH}/system` },
 	];
 	const first = items[0]?.titleKey;
 	return mergeAppItems(

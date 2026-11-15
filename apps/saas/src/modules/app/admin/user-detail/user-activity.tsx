@@ -5,15 +5,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { orpc } from "@/utils/orpc";
+import { auditReason } from "../admin-audit-utils";
 import { AdminPagination } from "../admin-pagination";
 
 const PAGE_SIZE = 10;
-
-function reasonOf(metadata: unknown): string | null {
-	if (typeof metadata !== "object" || metadata === null) return null;
-	const reason = (metadata as Record<string, unknown>).reason;
-	return typeof reason === "string" ? reason : null;
-}
 
 export function UserActivity({ userId }: { userId: string }) {
 	const t = useTranslations("admin.userDetail.activity");
@@ -43,7 +38,7 @@ export function UserActivity({ userId }: { userId: string }) {
 					<>
 						<ol className="space-y-4">
 							{data.items.map((log) => {
-								const reason = reasonOf(log.metadata);
+								const reason = auditReason(log.metadata);
 								return (
 									<li key={log.id} className="space-y-1 border-l-2 pl-4">
 										<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
