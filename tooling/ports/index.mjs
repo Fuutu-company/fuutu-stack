@@ -257,11 +257,89 @@ const slotPortList = (slot) => {
 	return [p.saas, p.marketing, p.docs, p.mailPreview, p.browser];
 };
 
-/** Registered projects whose folder is gone free their slot. */
-function prune(registry, keep) {
-	for (const path of Object.keys(registry.projects)) {
-		if (path !== keep && !existsSync(path)) delete registry.projects[path];
+/** Every port a slot owns — apps, docs/tools, E2E servers, session browser. */
+const allSlotPorts = (slot) => Object.values(slotPorts(slot));
+
+/** True when any of the slot's ports answers — a session is running on it. */
+export async function isSlotRunning(slot, busy = isPortBusy) {
+	const used = await Promise.all(allSlotPorts(slot).map((p) => busy(p)));
+	return used.some(Boolean);
+}
+
+/**
+ * Why a registered path no longer holds a project: "missing" (folder gone),
+ * "not-a-project" (no pnpm-workspace.yaml) or "orphaned-worktree" (its .git
+ * file points at a worktree git no longer knows). null = still a project.
+ */
+export function projectGone(path) {
+	if (!existsSync(path)) return "missing";
+	if (!existsSync(join(path, "pnpm-workspace.yaml"))) return "not-a-project";
+	try {
+		const git = join(path, ".git");
+		if (statSync(git).isFile()) {
+			const gitdir = /^gitdir:\s*(.+)$/m.exec(readFileSync(git, "utf8"))?.[1];
+			if (gitdir && !existsSync(resolve(path, gitdir.trim()))) {
+				return "orphaned-worktree";
+			}
+		}
+	} catch {}
+	return null;
+}
+
+/**
+ * Why an entry must keep its slot: a running session, or — while its folder
+ * exists — slot 0 or a pinned slot.
+ */
+async function protectedReason(path, entry, busy) {
+	if (existsSync(path)) {
+		if (entry.slot === 0) return "slot 0";
+		if (readPreferredSlot(path) === entry.slot) {
+			return "pinned (fuutu.preferredSlot)";
+		}
 	}
+	if (await isSlotRunning(entry.slot, busy)) return "running";
+	return null;
+}
+
+/**
+ * Registry entries that no longer hold a project. `apply` drops the ones
+ * that are not protected; without it nothing changes (dry run). `missingOnly`
+ * limits it to deleted folders (the automatic prune on start).
+ */
+export async function pruneRegistry({
+	apply = false,
+	busy = isPortBusy,
+	keep,
+	missingOnly = false,
+} = {}) {
+	const run = async () => {
+		const registry = readRegistry();
+		const found = [];
+		for (const [path, entry] of Object.entries(registry.projects)) {
+			if (path === keep) continue;
+			const reason = projectGone(path);
+			if (!reason || (missingOnly && reason !== "missing")) continue;
+			const kept = await protectedReason(path, entry, busy);
+			found.push({ path, ...entry, reason, kept });
+			if (apply && !kept) delete registry.projects[path];
+		}
+		if (apply && found.some((f) => !f.kept)) writeRegistry(registry);
+		return found;
+	};
+	return apply ? withRegistryLock(run) : run();
+}
+
+/** The automatic prune on start: deleted folders only, never data. */
+async function pruneLocked(root, busy) {
+	const registry = readRegistry();
+	let changed = false;
+	for (const [path, entry] of Object.entries(registry.projects)) {
+		if (path === root || projectGone(path) !== "missing") continue;
+		if (await protectedReason(path, entry, busy)) continue;
+		delete registry.projects[path];
+		changed = true;
+	}
+	if (changed) writeRegistry(registry);
 }
 
 export function staleProjects(registry, now = Date.now()) {
@@ -283,8 +361,8 @@ export async function ensureSlot(
 	{ busy = isPortBusy, touch = true } = {},
 ) {
 	return withRegistryLock(async () => {
+		await pruneLocked(root, busy);
 		const registry = readRegistry();
-		prune(registry, root);
 		const taken = new Map(
 			Object.entries(registry.projects)
 				.filter(([path]) => path !== root)
@@ -341,9 +419,11 @@ export async function ensureSlot(
 				`all ${MAX_SLOT + 1} port slots are taken. Free one with \`pnpm ports release <path>\`.${stale ? `\nNot started for ${STALE_DAYS}+ days:\n${stale}` : ""}`,
 			);
 		}
+		const project = describeProject(root, slot);
 		registry.projects[root] = {
 			slot,
 			name: basename(root),
+			database: project.database,
 			registeredAt:
 				registry.projects[root]?.registeredAt ?? new Date().toISOString(),
 			lastStarted: touch
@@ -351,7 +431,6 @@ export async function ensureSlot(
 				: (registry.projects[root]?.lastStarted ?? null),
 		};
 		writeRegistry(registry);
-		const project = describeProject(root, slot);
 		writeProject(root, project);
 		return notice ? { ...project, notice } : project;
 	});
@@ -420,12 +499,57 @@ export async function pinSlot(root, slot) {
 	writeFileSync(file, `${JSON.stringify(pkg, null, indent)}\n`);
 }
 
-export async function releaseSlot(path) {
-	await withRegistryLock(async () => {
+/**
+ * Frees a project's slot in the registry. Never a running slot; slot 0 and
+ * a pinned slot only when the folder is gone. Data is left alone — the
+ * result names what belonged to the slot (see slotData).
+ */
+export async function releaseSlot(path, { busy = isPortBusy } = {}) {
+	const abs = resolve(path);
+	return withRegistryLock(async () => {
 		const registry = readRegistry();
-		delete registry.projects[resolve(path)];
+		const entry = registry.projects[abs];
+		if (!entry) throw new Error(`${abs} has no slot on this machine`);
+		const kept = await protectedReason(abs, entry, busy);
+		if (kept === "running") {
+			throw new Error(
+				`slot ${entry.slot} is running (its ports answer) — stop it first`,
+			);
+		}
+		if (kept && existsSync(abs)) {
+			throw new Error(
+				`slot ${entry.slot} is never released while its project exists (${kept}) — move it with \`pnpm ports set\` or \`pnpm ports unpin\``,
+			);
+		}
+		delete registry.projects[abs];
 		writeRegistry(registry);
+		const database =
+			(existsSync(abs) ? readProject(abs)?.database : undefined) ??
+			entry.database ??
+			null;
+		return { path: abs, ...entry, database };
 	});
+}
+
+/**
+ * What local data a released slot leaves behind, limited to names that can
+ * only be that slot's: `<db>-s<N>` (+ `-e2e`) and buckets `s<N>-…`. Nothing
+ * for slot 0, an unknown database name, or a slot another project now holds.
+ */
+export function slotData(released, registry = readRegistry()) {
+	const { slot } = released;
+	if (!Number.isInteger(slot) || slot === 0) return null;
+	const owners = Object.values(registry.projects);
+	if (owners.some((p) => p.slot === slot)) return null;
+	const db = released.database;
+	const safeDb =
+		typeof db === "string" &&
+		db.endsWith(`-s${slot}`) &&
+		!owners.some((p) => p.database === db);
+	return {
+		databases: safeDb ? [db, `${db}-e2e`] : [],
+		bucketPrefix: `s${slot}-`,
+	};
 }
 
 // ── environment ─────────────────────────────────────────────────────────
