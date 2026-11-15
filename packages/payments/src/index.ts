@@ -118,6 +118,7 @@ export type {
 	PortalInput,
 	ProviderEvent,
 	ProviderEventType,
+	ProviderFailureKind,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
 	SeatProration,
@@ -125,8 +126,11 @@ export type {
 } from "./types";
 export {
 	CheckoutRejectedError,
+	failureKindForStatus,
+	isProviderRequestError,
 	isSeatAware,
 	PaymentsDisabledError,
+	ProviderRequestError,
 	WebhookConfigError,
 	WebhookSignatureError,
 } from "./types";
