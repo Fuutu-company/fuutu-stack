@@ -1,6 +1,6 @@
 import { auth } from "@fuutu/auth";
 import { isImpersonationExpired } from "@fuutu/auth/impersonation";
-import { hasImpersonatorLostAccess } from "@fuutu/auth/impersonation-access";
+import { endImpersonationIfAccessLost } from "@fuutu/auth/impersonation-access";
 import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
 import { API_KEY_PREFIX } from "@fuutu/db";
 import type { Context as HonoContext } from "hono";
@@ -78,7 +78,7 @@ export async function createContext({ context }: CreateContextOptions) {
 		await endExpiredImpersonation(session.session);
 		session = null;
 	}
-	if (session && (await hasImpersonatorLostAccess(session.session))) {
+	if (session && (await endImpersonationIfAccessLost(session.session))) {
 		session = null;
 	}
 	let apiKey: ApiKeyAuth | null = null;

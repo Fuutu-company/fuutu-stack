@@ -12,7 +12,7 @@ vi.mock("../../prisma/client", () => ({
 		},
 		account: { findMany: vi.fn() },
 		member: { findMany: vi.fn() },
-		session: { deleteMany: vi.fn() },
+		session: { deleteMany: vi.fn(), findFirst: vi.fn() },
 		twoFactor: { deleteMany: vi.fn() },
 		auditLog: { findMany: vi.fn(), count: vi.fn() },
 	},
@@ -30,6 +30,7 @@ import {
 	deleteSessionsImpersonatedBy,
 	getUserAccessState,
 	isEmailTaken,
+	isUserSessionLive,
 	listSoleOwnedOrganizations,
 } from "../../prisma/queries/admin";
 import {
@@ -383,6 +384,28 @@ describe("adminRevokeUserSession", () => {
 		expect(db.session.deleteMany).toHaveBeenCalledWith({
 			where: { id: "s1", userId: "u1" },
 		});
+	});
+});
+
+describe("isUserSessionLive", () => {
+	it("is true while the session row of that user exists", async () => {
+		vi.mocked(db.session.findFirst).mockResolvedValueOnce({
+			id: "s1",
+		} as never);
+		expect(await isUserSessionLive({ userId: "u1", sessionId: "s1" })).toBe(
+			true,
+		);
+		expect(db.session.findFirst).toHaveBeenCalledWith({
+			where: { id: "s1", userId: "u1" },
+			select: { id: true },
+		});
+	});
+
+	it("is false once the row is gone", async () => {
+		vi.mocked(db.session.findFirst).mockResolvedValueOnce(null);
+		expect(await isUserSessionLive({ userId: "u1", sessionId: "s1" })).toBe(
+			false,
+		);
 	});
 });
 

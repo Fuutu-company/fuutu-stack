@@ -11,7 +11,9 @@ vi.mock("@fuutu/logs", async (importOriginal) => ({
 }));
 
 const { adminRevokeUserSession } = await import("@fuutu/db");
-const { endExpiredImpersonation } = await import("../impersonation-expiry");
+const { endExpiredImpersonation, endImpersonation } = await import(
+	"../impersonation-expiry"
+);
 
 const EXPIRED = {
 	id: "sess-1",
@@ -64,5 +66,39 @@ describe("endExpiredImpersonation", () => {
 		);
 		await expect(endExpiredImpersonation(EXPIRED)).resolves.toBeUndefined();
 		expect(audit.record).not.toHaveBeenCalled();
+	});
+});
+
+describe("endImpersonation (lost access)", () => {
+	it("deletes only that session row of the user", async () => {
+		await endImpersonation(EXPIRED, "lost_access");
+		expect(adminRevokeUserSession).toHaveBeenCalledWith({
+			userId: "user-2",
+			sessionId: "sess-1",
+		});
+	});
+
+	it("audits the lost access with the impersonating admin as actor", async () => {
+		await endImpersonation(EXPIRED, "lost_access");
+		expect(audit.record).toHaveBeenCalledOnce();
+		expect(audit.record).toHaveBeenCalledWith({
+			action: "admin.user.impersonate_ended_lost_access",
+			userId: "admin-1",
+			organizationId: null,
+			metadata: { targetUserId: "user-2" },
+		});
+	});
+
+	it("audits once: a second detector finds no row and records nothing", async () => {
+		vi.mocked(adminRevokeUserSession).mockResolvedValue(0);
+		await endImpersonation(EXPIRED, "lost_access");
+		expect(audit.record).not.toHaveBeenCalled();
+	});
+
+	it("keeps the expired reason on its own audit action", async () => {
+		await endImpersonation(EXPIRED, "expired");
+		expect(audit.record).toHaveBeenCalledWith(
+			expect.objectContaining({ action: "admin.user.impersonate_expired" }),
+		);
 	});
 });

@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => ({
 	getSession: vi.fn(),
 	signOut: vi.fn(),
 	endExpiredImpersonation: vi.fn(),
-	hasImpersonatorLostAccess: vi.fn(),
+	endImpersonationIfAccessLost: vi.fn(),
 }));
 
 type AuthServer = {
@@ -44,7 +44,7 @@ beforeAll(async () => {
 		endExpiredImpersonation: mocks.endExpiredImpersonation,
 	}));
 	vi.doMock(resolveFromApp("@fuutu/auth/impersonation-access"), () => ({
-		hasImpersonatorLostAccess: mocks.hasImpersonatorLostAccess,
+		endImpersonationIfAccessLost: mocks.endImpersonationIfAccessLost,
 	}));
 	vi.doMock(resolveFromApp("@fuutu/db"), () => ({
 		countOrganizationsForUser: vi.fn(),
@@ -97,7 +97,7 @@ beforeEach(() => {
 	mocks.getSession.mockReset();
 	mocks.signOut.mockReset();
 	mocks.endExpiredImpersonation.mockReset();
-	mocks.hasImpersonatorLostAccess.mockReset().mockResolvedValue(false);
+	mocks.endImpersonationIfAccessLost.mockReset().mockResolvedValue(false);
 });
 
 const EXPIRED_IMPERSONATION = {
@@ -167,6 +167,33 @@ describe("requireAuth", () => {
 		);
 	});
 
+	it("signs a lost-access impersonation out like an expired one", async () => {
+		mocks.getSession.mockResolvedValue(
+			session({}, { impersonatedBy: "admin-1", createdAt: new Date() }),
+		);
+		mocks.endImpersonationIfAccessLost.mockResolvedValue(true);
+		expect(await redirectOf(authServer.requireAuth)).toBe(
+			authConfig.redirects.afterSignOut,
+		);
+		expect(mocks.signOut).toHaveBeenCalledWith({
+			headers: expect.any(Headers),
+		});
+		expect(
+			mocks.endImpersonationIfAccessLost.mock.invocationCallOrder[0],
+		).toBeLessThan(mocks.signOut.mock.invocationCallOrder[0] ?? 0);
+	});
+
+	it("still redirects a lost-access impersonation when sign-out fails", async () => {
+		mocks.getSession.mockResolvedValue(
+			session({}, { impersonatedBy: "admin-1", createdAt: new Date() }),
+		);
+		mocks.endImpersonationIfAccessLost.mockResolvedValue(true);
+		mocks.signOut.mockRejectedValue(new Error("session not found"));
+		expect(await redirectOf(authServer.requireAuth)).toBe(
+			authConfig.redirects.afterSignOut,
+		);
+	});
+
 	it("keeps an impersonation inside its window", async () => {
 		mocks.getSession.mockResolvedValue(
 			session({}, { impersonatedBy: "admin-1", createdAt: new Date() }),
@@ -213,12 +240,12 @@ describe("getSession", () => {
 			{ impersonatedBy: "admin-1", createdAt: new Date() },
 		);
 		mocks.getSession.mockResolvedValue(current);
-		mocks.hasImpersonatorLostAccess.mockResolvedValue(true);
+		mocks.endImpersonationIfAccessLost.mockResolvedValue(true);
 		expect(await authServer.getSession()).toBeNull();
-		expect(mocks.hasImpersonatorLostAccess).toHaveBeenCalledWith(
+		// Ends it (row deleted, audited once) — a restored role cannot revive it.
+		expect(mocks.endImpersonationIfAccessLost).toHaveBeenCalledWith(
 			current.session,
 		);
-		expect(await redirectOf(authServer.requireAuth)).toBe("/auth/sign-in");
 	});
 });
 

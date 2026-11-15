@@ -7,6 +7,7 @@ vi.mock("@fuutu/auth", () => ({
 
 vi.mock("@fuutu/auth/impersonation-expiry", () => ({
 	endExpiredImpersonation: vi.fn(),
+	endImpersonation: vi.fn(),
 }));
 
 vi.mock("@fuutu/db", () => ({
@@ -14,11 +15,12 @@ vi.mock("@fuutu/db", () => ({
 	verifyApiKeyWithOwner: vi.fn(),
 	getOrganizationMemberRole: vi.fn(),
 	getUserAccessState: vi.fn(),
+	isUserSessionLive: vi.fn(),
 }));
 
 const { auth } = await import("@fuutu/auth");
-const { getUserAccessState } = await import("@fuutu/db");
-const { endExpiredImpersonation } = await import(
+const { getUserAccessState, isUserSessionLive } = await import("@fuutu/db");
+const { endExpiredImpersonation, endImpersonation } = await import(
 	"@fuutu/auth/impersonation-expiry"
 );
 const { authConfig } = await import("@fuutu/auth/config");
@@ -55,6 +57,7 @@ describe("createContext — impersonation time limit", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(getUserAccessState).mockResolvedValue(IMPERSONATOR);
+		vi.mocked(isUserSessionLive).mockResolvedValue(true);
 	});
 
 	it("keeps an impersonation session inside its window", async () => {
@@ -97,7 +100,10 @@ describe("createContext — impersonation time limit", () => {
 });
 
 describe("createContext — impersonator must still be an admin", () => {
-	beforeEach(() => vi.clearAllMocks());
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(isUserSessionLive).mockResolvedValue(true);
+	});
 
 	async function contextFor(impersonator: unknown) {
 		vi.mocked(getUserAccessState).mockResolvedValue(impersonator as never);
@@ -111,6 +117,7 @@ describe("createContext — impersonator must still be an admin", () => {
 		const ctx = await contextFor(IMPERSONATOR);
 		expect(getUserAccessState).toHaveBeenCalledWith("admin-1");
 		expect(ctx.session).not.toBeNull();
+		expect(endImpersonation).not.toHaveBeenCalled();
 	});
 
 	it.each([
@@ -121,6 +128,26 @@ describe("createContext — impersonator must still be an admin", () => {
 		const ctx = await contextFor(impersonator);
 		expect(ctx.session).toBeNull();
 		expect(ctx.apiKey).toBeNull();
+		// Deleted (scoped to the session and user) — a restored role cannot revive it.
+		expect(endImpersonation).toHaveBeenCalledWith(
+			expect.objectContaining({
+				id: "sess-1",
+				userId: "user-2",
+				impersonatedBy: "admin-1",
+			}),
+			"lost_access",
+		);
+	});
+
+	it("signs out a cookie-cached impersonation whose session row is gone", async () => {
+		vi.mocked(isUserSessionLive).mockResolvedValue(false);
+		const ctx = await contextFor(IMPERSONATOR);
+		expect(ctx.session).toBeNull();
+		expect(ctx.apiKey).toBeNull();
+		expect(isUserSessionLive).toHaveBeenCalledWith({
+			userId: "user-2",
+			sessionId: "sess-1",
+		});
 	});
 
 	it("never reads the database for a user's own session", async () => {
@@ -129,5 +156,6 @@ describe("createContext — impersonator must still be an admin", () => {
 		);
 		await createContext({ context: fakeHonoContext(new Headers()) });
 		expect(getUserAccessState).not.toHaveBeenCalled();
+		expect(isUserSessionLive).not.toHaveBeenCalled();
 	});
 });

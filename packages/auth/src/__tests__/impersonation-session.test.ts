@@ -9,14 +9,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@fuutu/db", () => ({
 	getUserAccessState: vi.fn(),
+	isUserSessionLive: vi.fn(),
 }));
 
 vi.mock("../impersonation-expiry", () => ({
 	endExpiredImpersonation: vi.fn(),
+	endImpersonation: vi.fn(),
 }));
 
-const { getUserAccessState } = await import("@fuutu/db");
-const { endExpiredImpersonation } = await import("../impersonation-expiry");
+const { getUserAccessState, isUserSessionLive } = await import("@fuutu/db");
+const { endExpiredImpersonation, endImpersonation } = await import(
+	"../impersonation-expiry"
+);
 const { authConfig } = await import("../config");
 const { hasImpersonatorLostAccess } = await import("../impersonation-access");
 const { assertImpersonationActive, isEndedImpersonationResult } = await import(
@@ -51,6 +55,7 @@ const lookup = (session: unknown) => vi.fn(async () => session as never);
 beforeEach(() => {
 	vi.clearAllMocks();
 	vi.mocked(getUserAccessState).mockResolvedValue(IMPERSONATOR as never);
+	vi.mocked(isUserSessionLive).mockResolvedValue(true);
 });
 
 describe("hasImpersonatorLostAccess", () => {
@@ -88,6 +93,7 @@ describe("assertImpersonationActive (hooks.before, every path)", () => {
 				getSession: lookup(sessionStartedAgo(60_000, "admin-1")),
 			}),
 		).resolves.toBeUndefined();
+		expect(endImpersonation).not.toHaveBeenCalled();
 	});
 
 	it("ends an expired impersonation and rejects with 401", async () => {
@@ -113,6 +119,25 @@ describe("assertImpersonationActive (hooks.before, every path)", () => {
 			}),
 		).rejects.toMatchObject({ statusCode: 401 });
 		expect(endExpiredImpersonation).not.toHaveBeenCalled();
+		expect(endImpersonation).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "sess-1", impersonatedBy: "admin-1" }),
+			"lost_access",
+		);
+	});
+
+	it("rejects a cookie-cached impersonation whose session row is gone", async () => {
+		vi.mocked(isUserSessionLive).mockResolvedValue(false);
+		await expect(
+			assertImpersonationActive({
+				path: "/list-sessions",
+				getSession: lookup(sessionStartedAgo(60_000, "admin-1")),
+			}),
+		).rejects.toMatchObject({ statusCode: 401 });
+		expect(isUserSessionLive).toHaveBeenCalledWith({
+			userId: "user-2",
+			sessionId: "sess-1",
+		});
+		expect(endImpersonation).not.toHaveBeenCalled();
 	});
 
 	it("keeps /admin/stop-impersonating working while the impersonation is valid", async () => {
@@ -162,6 +187,20 @@ describe("isEndedImpersonationResult (hooks.after, /get-session)", () => {
 			...IMPERSONATOR,
 			role: "user",
 		} as never);
+		await expect(
+			isEndedImpersonationResult({
+				path: "/get-session",
+				returned: sessionStartedAgo(60_000, "admin-1"),
+			}),
+		).resolves.toBe(true);
+		expect(endImpersonation).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "sess-1", impersonatedBy: "admin-1" }),
+			"lost_access",
+		);
+	});
+
+	it("is true for a cookie-cached impersonation whose session row is gone", async () => {
+		vi.mocked(isUserSessionLive).mockResolvedValue(false);
 		await expect(
 			isEndedImpersonationResult({
 				path: "/get-session",

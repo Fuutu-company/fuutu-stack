@@ -1,7 +1,7 @@
 import { auth } from "@fuutu/auth";
 import { authConfig } from "@fuutu/auth/config";
 import { isImpersonationExpired } from "@fuutu/auth/impersonation";
-import { hasImpersonatorLostAccess } from "@fuutu/auth/impersonation-access";
+import { endImpersonationIfAccessLost } from "@fuutu/auth/impersonation-access";
 import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
 import { getSignedInRedirect } from "@fuutu/auth/redirect";
 import {
@@ -25,32 +25,38 @@ const readSession = cache(async () => {
 });
 
 /**
- * Get the current session (cached per request). An impersonation past
- * `authConfig.admin.impersonationMinutes` counts as signed out; its
- * session row is deleted and the expiry audited (once). So does one whose
- * impersonating admin lost the permission.
+ * The current session (cached per request). An impersonation past
+ * `authConfig.admin.impersonationMinutes` ends (row deleted, expiry
+ * audited once), so does one whose admin lost the permission
+ * (`impersonate_ended_lost_access`) or whose row is already gone —
+ * `endedImpersonation` then tells `requireAuth` to sign out.
  */
-export const getSession = cache(async () => {
+const resolveSession = cache(async () => {
 	const session = await readSession();
 	if (session && isImpersonationExpired(session.session)) {
 		await endExpiredImpersonation(session.session);
-		return null;
+		return { session: null, endedImpersonation: true };
 	}
-	if (session && (await hasImpersonatorLostAccess(session.session))) {
-		return null;
+	if (session && (await endImpersonationIfAccessLost(session.session))) {
+		return { session: null, endedImpersonation: true };
 	}
-	return session;
+	return { session, endedImpersonation: false };
 });
+
+/**
+ * Get the current session (cached per request). An ended impersonation
+ * (expired, admin lost access, row gone) counts as signed out.
+ */
+export const getSession = cache(async () => (await resolveSession()).session);
 
 /**
  * Require authentication - redirect to sign-in if not authenticated
  * Use this in server components/layouts that need authentication.
- * An expired impersonation is signed out first.
+ * An ended impersonation is signed out first.
  */
 export async function requireAuth() {
-	const current = await readSession();
-	if (current && isImpersonationExpired(current.session)) {
-		await endExpiredImpersonation(current.session);
+	const { session, endedImpersonation } = await resolveSession();
+	if (endedImpersonation) {
 		try {
 			await auth.api.signOut({ headers: await headers() });
 		} catch {
@@ -58,8 +64,6 @@ export async function requireAuth() {
 		}
 		redirect(authConfig.redirects.afterSignOut);
 	}
-
-	const session = await getSession();
 
 	if (!session) {
 		redirect("/auth/sign-in");

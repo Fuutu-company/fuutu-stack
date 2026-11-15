@@ -3,7 +3,7 @@
  * impersonate — shared by Better Auth's `hooks.before`, the API context and
  * the app's server guards. Server-only (reads the database).
  */
-import { getUserAccessState } from "@fuutu/db";
+import { getUserAccessState, isUserSessionLive } from "@fuutu/db";
 import {
 	hasSystemPermission,
 	PERMISSIONS,
@@ -12,6 +12,10 @@ import {
 	toSystemRole,
 } from "@fuutu/rbac";
 import type { ImpersonationSessionLike } from "./impersonation";
+import {
+	type ExpiredImpersonationSession,
+	endImpersonation,
+} from "./impersonation-expiry";
 import { isBanActive } from "./types";
 
 const systemAC = new SystemAccessControl(SYSTEM_POLICY);
@@ -35,4 +39,27 @@ export async function hasImpersonatorLostAccess({
 			PERMISSIONS.IMPERSONATE_USER,
 		)
 	);
+}
+
+/**
+ * The detectors' path (Better Auth's hooks, the API context, the app's
+ * server guards): true when an impersonation must count as signed out —
+ * its session row is gone (the cookie cache may still hold it for up to
+ * 5 minutes) or the impersonator lost access. Lost access deletes the row
+ * and records `admin.user.impersonate_ended_lost_access` (once, by the
+ * detector that removed it), so a restored role never revives it. Cost:
+ * two primary-key reads, impersonation sessions only.
+ */
+export async function endImpersonationIfAccessLost(
+	session: ExpiredImpersonationSession & ImpersonationSessionLike,
+): Promise<boolean> {
+	if (!session.impersonatedBy) return false;
+	const [live, lostAccess] = await Promise.all([
+		isUserSessionLive({ userId: session.userId, sessionId: session.id }),
+		hasImpersonatorLostAccess(session),
+	]);
+	if (!live) return true;
+	if (!lostAccess) return false;
+	await endImpersonation(session, "lost_access");
+	return true;
 }

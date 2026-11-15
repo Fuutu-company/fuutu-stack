@@ -8,7 +8,7 @@
  */
 import { APIError } from "better-auth/api";
 import { isImpersonationExpired } from "../impersonation";
-import { hasImpersonatorLostAccess } from "../impersonation-access";
+import { endImpersonationIfAccessLost } from "../impersonation-access";
 import { endExpiredImpersonation } from "../impersonation-expiry";
 
 type ImpersonationSession = {
@@ -31,7 +31,8 @@ const UNCHECKED_PATHS: ReadonlySet<string> = new Set([
 
 /**
  * True when `session` is an impersonation that must count as signed out.
- * An expired one is ended (row deleted, audited once). Cost: only
+ * An expired one, or one whose admin lost access, is ended (row deleted,
+ * audited once). Cost: only
  * impersonation sessions pay the extra DB read (the impersonator).
  */
 async function isEndedImpersonation(
@@ -42,7 +43,7 @@ async function isEndedImpersonation(
 		await endExpiredImpersonation(session);
 		return true;
 	}
-	return hasImpersonatorLostAccess(session);
+	return endImpersonationIfAccessLost(session);
 }
 
 /**

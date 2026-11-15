@@ -332,6 +332,21 @@ export async function adminRevokeUserSession(input: {
 }
 
 /**
+ * True while the session row of `userId` exists — read from the database,
+ * not the (up to 5 minutes) cookie-cached session.
+ */
+export async function isUserSessionLive(input: {
+	userId: string;
+	sessionId: string;
+}): Promise<boolean> {
+	const row = await db.session.findFirst({
+		where: { id: input.sessionId, userId: input.userId },
+		select: { id: true },
+	});
+	return row !== null;
+}
+
+/**
  * Ends every impersonation session `adminUserId` started — they belong to
  * the impersonated users, so revoking the admin's own sessions misses
  * them. Returns the number of sessions removed.
