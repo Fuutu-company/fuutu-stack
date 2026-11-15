@@ -135,9 +135,10 @@ const authOptions = {
 	// Every admin-plugin endpoint is closed to direct HTTP too: support
 	// actions run through the audited oRPC procedures, which call
 	// `auth.api.*` server-side (not affected by `disabledPaths`).
+	// `authConfig.admin.exposeAuthEndpoints` opts back in.
 	disabledPaths: [
 		...(mcpOAuth.active ? ["/token"] : []),
-		...adminEndpointPaths,
+		...(authConfig.admin.exposeAuthEndpoints ? [] : adminEndpointPaths),
 	],
 
 	// Rate limiting: Prevent brute-force attacks and email spam.

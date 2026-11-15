@@ -62,6 +62,10 @@ export const authConfig = {
 		// How long a support impersonation session lasts, counted from its
 		// start (`isImpersonationExpired`) — refreshes never extend it.
 		impersonationMinutes: 60,
+		// `true` serves Better Auth's own `/api/auth/admin/*` endpoints
+		// (`authClient.admin.*`) again — they bypass the audited `admin.*`
+		// oRPC procedures (reason, audit row, peer and impersonation guards).
+		exposeAuthEndpoints: false as boolean,
 	},
 	features: {
 		emailPassword: true,

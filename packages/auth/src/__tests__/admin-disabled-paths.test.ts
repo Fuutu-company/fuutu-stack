@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 /**
  * Direct HTTP access to the Better Auth admin plugin is closed: every admin
@@ -165,5 +165,55 @@ describe("other plugins' /admin/* endpoints", () => {
 				expect(res.status, `${method} ${endpoint.path}`).toBe(404);
 			}
 		}
+	});
+});
+
+describe("authConfig.admin.exposeAuthEndpoints", () => {
+	it("is off by default", async () => {
+		const { authConfig } = await import("../config");
+		expect(authConfig.admin.exposeAuthEndpoints).toBe(false);
+	});
+
+	describe("when opted in", () => {
+		let exposed: AuthModule["auth"];
+
+		beforeAll(async () => {
+			vi.resetModules();
+			vi.doMock("../config", async (importOriginal) => {
+				const actual = await importOriginal<typeof import("../config")>();
+				return {
+					...actual,
+					authConfig: {
+						...actual.authConfig,
+						admin: { ...actual.authConfig.admin, exposeAuthEndpoints: true },
+					},
+				};
+			});
+			({ auth: exposed } = await import("../index"));
+		}, IMPORT_TIMEOUT);
+
+		afterAll(() => {
+			vi.doUnmock("../config");
+			vi.resetModules();
+		});
+
+		it("leaves the admin endpoints out of disabledPaths", () => {
+			const disabled = exposed.options.disabledPaths ?? [];
+			expect(disabled).not.toContain("/admin/list-users");
+			expect(disabled).not.toContain("/admin/impersonate-user");
+			expect(disabled.some((path) => path.startsWith("/admin/"))).toBe(false);
+		});
+
+		it("keeps the JWT /token route disabled", () => {
+			expect(exposed.options.disabledPaths).toContain("/token");
+		});
+
+		it("serves the admin endpoints over HTTP again", async () => {
+			const res = await exposed.handler(
+				new Request("http://localhost:3000/api/auth/admin/list-users"),
+			);
+			// No session: the endpoint answers itself instead of a 404.
+			expect(res.status).not.toBe(404);
+		});
 	});
 });
