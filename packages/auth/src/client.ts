@@ -3,7 +3,6 @@ import { passkeyClient } from "@better-auth/passkey/client";
 import { config } from "@fuutu/config";
 import type { BetterAuthClientOptions } from "better-auth";
 import {
-	adminClient,
 	inferAdditionalFields,
 	lastLoginMethodClient,
 	magicLinkClient,
@@ -25,7 +24,6 @@ import type { auth } from "./index";
  *
  * Plugins must match the server-side auth configuration:
  * - inferAdditionalFields: Syncs custom user fields with server
- * - adminClient: Admin features
  * - magicLinkClient: Magic link authentication (gated on features.magicLink)
  * - multiSessionClient: Multiple device sessions
  * - organizationClient: Organization management (gated on organizationsMode)
@@ -37,7 +35,6 @@ import type { auth } from "./index";
 const authClientOptions = {
 	plugins: [
 		inferAdditionalFields<typeof auth>(),
-		adminClient(),
 		multiSessionClient(),
 		usernameClient(),
 		lastLoginMethodClient(),

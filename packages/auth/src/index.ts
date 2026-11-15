@@ -103,6 +103,17 @@ const getErrorPageUrl = (context: {
 	options: { onAPIError?: { errorURL?: string } };
 }) => context.options.onAPIError?.errorURL || `${context.baseURL}/error`;
 
+const adminPlugin = admin({
+	defaultBanReason: authConfig.admin.defaultBanReason,
+	bannedUserMessage: authConfig.admin.bannedUserMessage,
+	impersonationSessionDuration: authConfig.admin.impersonationMinutes * 60,
+});
+
+/** HTTP paths of every admin-plugin endpoint (closed via `disabledPaths`). */
+const adminEndpointPaths = Object.values(adminPlugin.endpoints).map(
+	(endpoint) => endpoint.path,
+);
+
 const authOptions = {
 	database: prismaAdapter(db, {
 		provider: "postgresql",
@@ -120,7 +131,14 @@ const authOptions = {
 
 	// The JWT plugin's session-to-JWT route would mint tokens signed with
 	// the same key as MCP access tokens — disabled per the oauth-provider docs.
-	...(mcpOAuth.active ? { disabledPaths: ["/token"] } : {}),
+	//
+	// Every admin-plugin endpoint is closed to direct HTTP too: support
+	// actions run through the audited oRPC procedures, which call
+	// `auth.api.*` server-side (not affected by `disabledPaths`).
+	disabledPaths: [
+		...(mcpOAuth.active ? ["/token"] : []),
+		...adminEndpointPaths,
+	],
 
 	// Rate limiting: Prevent brute-force attacks and email spam.
 	// Disabled when FUUTU_DISABLE_RATE_LIMIT is set (CI E2E).
@@ -558,11 +576,7 @@ const authOptions = {
 				]
 			: []),
 
-		admin({
-			defaultBanReason: authConfig.admin.defaultBanReason,
-			bannedUserMessage: authConfig.admin.bannedUserMessage,
-			impersonationSessionDuration: authConfig.admin.impersonationMinutes * 60,
-		}),
+		adminPlugin,
 
 		multiSession(),
 
