@@ -11,7 +11,9 @@
  *   release / prune --yes then offer to drop the slot's local database and
  *   buckets: asked interactively, kept without a terminal. --keep-data never
  *   asks, --drop-data drops without asking. Slot 0, pinned and running slots
- *   are never released.
+ *   are never released. A slot whose data was kept is handed out last.
+ *   Postgres and MinIO settings come from .env — in a worktree without one,
+ *   from the main checkout's .env.
  * pnpm ports pin [slot]      make a slot the team's preferred slot (default: the
  *                            current one) — written to package.json, commit it
  * pnpm ports unpin           remove the preferred slot
@@ -19,22 +21,25 @@
  * Writes .fuutu/project.json (per project) and ~/.fuutu/projects.json (per
  * machine). Both are generated — change them only through these commands.
  */
-import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
+	clearKeptData,
 	ensureSlot,
 	findRoot,
 	isLocal,
 	isPortBusy,
+	legacySlotDatabases,
+	mainCheckoutRoot,
+	minioCredentials,
 	pinSlot,
 	pruneRegistry,
-	readDotEnv,
 	readPreferredSlot,
 	readProject,
 	readRegistry,
 	releaseSlot,
+	serviceEnv,
 	setSlot,
 	slotData,
 	staleProjects,
@@ -45,47 +50,68 @@ const argv = process.argv.slice(2);
 const flags = new Set(argv.filter((a) => a.startsWith("--")));
 const [command = "list", arg] = argv.filter((a) => !a.startsWith("--"));
 const out = (s = "") => process.stdout.write(`${s}\n`);
-const localEnv = () => ({ ...readDotEnv(root), ...process.env });
+const mainRoot = mainCheckoutRoot(root);
 
-/** Drops databases on this project's local Postgres — never a remote one. */
-function dropDatabases(names) {
-	const url = localEnv().DATABASE_URL;
+/** Postgres client for a local DATABASE_URL, via @fuutu/db's `pg`. */
+async function withPostgres(fn) {
+	const { env, source } = serviceEnv(root, "DATABASE_URL", { mainRoot });
+	const url = env.DATABASE_URL;
 	if (!url || !isLocal(url)) {
-		out("  database: no local DATABASE_URL in .env — kept");
-		return;
+		out(`  database: no local DATABASE_URL (${source}) — kept`);
+		return undefined;
 	}
 	const maintenance = new URL(url);
 	maintenance.pathname = "/postgres";
-	const sql = names
-		.map(
-			(n) =>
-				`DROP DATABASE IF EXISTS "${n.replaceAll('"', '""')}" WITH (FORCE);`,
-		)
-		.join("\n");
-	const { status } = spawnSync(
-		"pnpm",
-		["--filter", "@fuutu/db", "exec", "prisma", "db", "execute", "--stdin"],
-		{
-			cwd: root,
-			input: sql,
-			stdio: ["pipe", "ignore", "inherit"],
-			env: { ...process.env, DATABASE_URL: maintenance.toString() },
-		},
-	);
-	out(
-		status === 0
-			? `  dropped databases ${names.join(", ")}`
-			: "  database drop failed — is Postgres running (`pnpm db:start`)?",
-	);
+	const require = createRequire(join(root, "packages/db/package.json"));
+	const { Client } = require("pg");
+	const client = new Client({ connectionString: maintenance.toString() });
+	try {
+		await client.connect();
+		return await fn(client);
+	} catch (err) {
+		out(
+			`  database: ${err.message} (DATABASE_URL from ${source}) — is Postgres running (\`pnpm db:start\`)?`,
+		);
+		return undefined;
+	} finally {
+		await client.end().catch(() => {});
+	}
 }
+
+const listDatabases = () =>
+	withPostgres(async (client) => {
+		const { rows } = await client.query(
+			"SELECT datname FROM pg_database WHERE NOT datistemplate",
+		);
+		return rows.map((r) => r.datname);
+	});
+
+/** Drops databases on the local Postgres — never a remote one. */
+const dropDatabases = (names) =>
+	withPostgres(async (client) => {
+		for (const name of names) {
+			await client.query(
+				`DROP DATABASE IF EXISTS "${name.replaceAll('"', '""')}" WITH (FORCE)`,
+			);
+		}
+		out(`  dropped databases ${names.join(", ")}`);
+		return true;
+	});
+
+const CREDENTIAL_ERRORS = new Set([
+	"InvalidAccessKeyId",
+	"SignatureDoesNotMatch",
+	"AccessDenied",
+]);
 
 /** Empties and deletes the local MinIO buckets with the slot's prefix. */
 async function dropBuckets(prefix) {
-	const env = localEnv();
+	const { env, source } = serviceEnv(root, "S3_ENDPOINT", { mainRoot });
 	if (!env.S3_ENDPOINT || !isLocal(env.S3_ENDPOINT)) {
-		out("  buckets: no local S3_ENDPOINT in .env — kept");
-		return;
+		out(`  buckets: no local S3_ENDPOINT (${source}) — kept`);
+		return false;
 	}
+	const credentials = minioCredentials(env);
 	try {
 		const require = createRequire(join(root, "packages/storage/package.json"));
 		const s3sdk = require("@aws-sdk/client-s3");
@@ -94,8 +120,8 @@ async function dropBuckets(prefix) {
 			region: env.S3_REGION ?? "us-east-1",
 			forcePathStyle: true,
 			credentials: {
-				accessKeyId: env.S3_ACCESS_KEY_ID ?? "",
-				secretAccessKey: env.S3_SECRET_ACCESS_KEY ?? "",
+				accessKeyId: credentials.accessKeyId,
+				secretAccessKey: credentials.secretAccessKey,
 			},
 		});
 		const { Buckets = [] } = await s3.send(new s3sdk.ListBucketsCommand({}));
@@ -123,8 +149,14 @@ async function dropBuckets(prefix) {
 				? `  dropped buckets ${names.join(", ")}`
 				: `  no buckets with prefix ${prefix}`,
 		);
+		return true;
 	} catch (err) {
-		out(`  bucket drop failed (${err.message}) — is MinIO running?`);
+		out(
+			CREDENTIAL_ERRORS.has(err.name)
+				? `  buckets: MinIO rejected access key "${credentials.accessKeyId}" (${credentials.from}, ${source}) — the compose MinIO accepts MINIO_ROOT_USER / MINIO_ROOT_PASSWORD from packages/db/.env, default minioadmin; set S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY to match`
+				: `  bucket drop failed (${err.message}) — is MinIO running?`,
+		);
+		return false;
 	}
 }
 
@@ -141,17 +173,26 @@ async function confirm(question) {
 async function handleData(released) {
 	const data = slotData(released);
 	if (!data) return;
+	let { databases } = data;
+	if (!databases.length) {
+		// Registered before the database name was recorded: every local
+		// `<name>-sN(-e2e)` no registered project uses.
+		databases = legacySlotDatabases(
+			released.slot,
+			(await listDatabases()) ?? [],
+		);
+		if (databases.length) {
+			out(
+				`  database name of slot ${released.slot} not recorded — matched by suffix`,
+			);
+		}
+	}
 	const what = [
-		data.databases.length ? `databases ${data.databases.join(", ")}` : null,
+		databases.length ? `databases ${databases.join(", ")}` : null,
 		`buckets ${data.bucketPrefix}*`,
 	]
 		.filter(Boolean)
 		.join(" and ");
-	if (!data.databases.length) {
-		out(
-			`  database name of slot ${released.slot} unknown — left alone, drop it by hand if needed`,
-		);
-	}
 	if (flags.has("--keep-data")) return out(`  kept ${what}`);
 	const drop =
 		flags.has("--drop-data") ||
@@ -161,8 +202,9 @@ async function handleData(released) {
 			`  kept ${what} — no terminal to confirm; drop it by hand if unneeded (--drop-data drops without asking)`,
 		);
 	}
-	if (data.databases.length) dropDatabases(data.databases);
-	await dropBuckets(data.bucketPrefix);
+	const dbOk = databases.length ? await dropDatabases(databases) : true;
+	const bucketsOk = await dropBuckets(data.bucketPrefix);
+	if (dbOk && bucketsOk) await clearKeptData(released.slot);
 }
 
 async function list() {
@@ -193,6 +235,16 @@ async function list() {
 				? "  (not started for 90+ days)"
 				: "";
 		out(` ${mark} slot ${String(p.slot).padEnd(4)} ${path}${note}`);
+	}
+	const kept = Object.entries(registry.keptData ?? {});
+	if (kept.length) {
+		out("");
+		out("Free slots still holding a released project's data (taken last):");
+		for (const [slot, k] of kept) {
+			out(
+				`   slot ${String(slot).padEnd(4)} ${k.database ?? "database unknown"} — from ${k.path}`,
+			);
+		}
 	}
 }
 

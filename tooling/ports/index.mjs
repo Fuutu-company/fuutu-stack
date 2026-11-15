@@ -16,6 +16,8 @@
  *
  * Local development only: deployments use fixed container ports.
  */
+
+import { spawnSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -99,10 +101,38 @@ const registryPath = () => join(fuutuHome(), "projects.json");
 export function readRegistry() {
 	try {
 		const data = JSON.parse(readFileSync(registryPath(), "utf8"));
-		return { version: 1, projects: {}, ...data };
+		return { version: 1, projects: {}, keptData: {}, ...data };
 	} catch {
-		return { version: 1, projects: {} };
+		return { version: 1, projects: {}, keptData: {} };
 	}
+}
+
+/**
+ * Removes a project from the registry. Its slot's local data stays behind
+ * until dropped (clearKeptData), so allocation prefers other slots.
+ */
+function forget(registry, path) {
+	const entry = registry.projects[path];
+	delete registry.projects[path];
+	if (!entry || !Number.isInteger(entry.slot) || entry.slot === 0) return;
+	registry.keptData = {
+		...registry.keptData,
+		[entry.slot]: {
+			path,
+			database: entry.database ?? null,
+			keptAt: new Date().toISOString(),
+		},
+	};
+}
+
+/** The slot's local data was dropped — it counts as clean again. */
+export async function clearKeptData(slot) {
+	await withRegistryLock(async () => {
+		const registry = readRegistry();
+		if (!registry.keptData?.[slot]) return;
+		delete registry.keptData[slot];
+		writeRegistry(registry);
+	});
 }
 
 function writeRegistry(registry) {
@@ -324,7 +354,7 @@ export async function pruneRegistry({
 			if (!reason || (missingOnly && reason !== "missing")) continue;
 			const kept = await protectedReason(path, entry, busy);
 			found.push({ path, ...entry, reason, kept });
-			if (apply && !kept) delete registry.projects[path];
+			if (apply && !kept) forget(registry, path);
 		}
 		if (apply && found.some((f) => !f.kept)) writeRegistry(registry);
 		return found;
@@ -339,7 +369,7 @@ async function pruneLocked(root, busy) {
 	for (const [path, entry] of Object.entries(registry.projects)) {
 		if (path === root || projectGone(path) !== "missing") continue;
 		if (await protectedReason(path, entry, busy)) continue;
-		delete registry.projects[path];
+		forget(registry, path);
 		changed = true;
 	}
 	if (changed) writeRegistry(registry);
@@ -405,9 +435,14 @@ export async function ensureSlot(
 		) {
 			slot = recorded;
 		}
-		if (slot === undefined) {
+		// Clean slots first; a slot whose released data was kept only when
+		// no clean one is left.
+		const kept = registry.keptData ?? {};
+		for (const allowKept of [false, true]) {
+			if (slot !== undefined) break;
 			for (let s = 0; s <= MAX_SLOT; s++) {
 				if (taken.has(s) || !isSlotAllowed(s)) continue;
+				if (!allowKept && kept[s]) continue;
 				const used = await Promise.all(slotPortList(s).map((p) => busy(p)));
 				if (used.some(Boolean)) continue;
 				slot = s;
@@ -421,6 +456,14 @@ export async function ensureSlot(
 			throw new Error(
 				`all ${MAX_SLOT + 1} port slots are taken. Free one with \`pnpm ports release <path>\`.${stale ? `\nNot started for ${STALE_DAYS}+ days:\n${stale}` : ""}`,
 			);
+		}
+		const leftover = kept[slot];
+		if (leftover) {
+			if (leftover.path !== root) {
+				const warning = `slot ${slot} still holds data kept from ${leftover.path}${leftover.database ? ` (database ${leftover.database})` : ""} — no clean slot was left; drop it or reset this project's database`;
+				notice = notice ? `${notice}; ${warning}` : warning;
+			}
+			delete registry.keptData[slot];
 		}
 		const project = describeProject(root, slot);
 		registry.projects[root] = {
@@ -453,7 +496,8 @@ export async function setSlot(root, slot, opts = {}) {
 			);
 			if (owner) throw new Error(`slot ${slot} belongs to ${owner[0]}`);
 		}
-		delete registry.projects[root];
+		if (registry.projects[root]?.slot === slot) delete registry.projects[root];
+		else forget(registry, root);
 		if (slot !== undefined) {
 			registry.projects[root] = {
 				slot,
@@ -524,12 +568,13 @@ export async function releaseSlot(path, { busy = isPortBusy } = {}) {
 				`slot ${entry.slot} is never released while its project exists (${kept}) — move it with \`pnpm ports set\` or \`pnpm ports unpin\``,
 			);
 		}
-		delete registry.projects[abs];
-		writeRegistry(registry);
 		const database =
 			(existsSync(abs) ? readProject(abs)?.database : undefined) ??
 			entry.database ??
 			null;
+		registry.projects[abs] = { ...entry, database };
+		forget(registry, abs);
+		writeRegistry(registry);
 		return { path: abs, ...entry, database };
 	});
 }
@@ -542,16 +587,120 @@ export async function releaseSlot(path, { busy = isPortBusy } = {}) {
 export function slotData(released, registry = readRegistry()) {
 	const { slot } = released;
 	if (!Number.isInteger(slot) || slot === 0) return null;
-	const owners = Object.values(registry.projects);
-	if (owners.some((p) => p.slot === slot)) return null;
+	if (Object.values(registry.projects).some((p) => p.slot === slot)) {
+		return null;
+	}
 	const db = released.database;
-	const safeDb =
-		typeof db === "string" &&
-		db.endsWith(`-s${slot}`) &&
-		!owners.some((p) => p.database === db);
+	const inUse = databasesInUse(registry);
+	const safeDb = typeof db === "string" && db.endsWith(`-s${slot}`);
 	return {
-		databases: safeDb ? [db, `${db}-e2e`] : [],
+		databases: safeDb
+			? [db, `${db}-e2e`].filter((name) => !inUse.has(name))
+			: [],
 		bucketPrefix: `s${slot}-`,
+	};
+}
+
+/**
+ * Every database name a registered project may use: recorded in the
+ * registry, in its .fuutu/project.json, or derived from its .env now —
+ * each with its `-e2e` twin.
+ */
+export function databasesInUse(registry = readRegistry()) {
+	const names = new Set();
+	for (const [path, entry] of Object.entries(registry.projects)) {
+		const found = [entry.database];
+		if (existsSync(path)) {
+			try {
+				found.push(
+					JSON.parse(readFileSync(join(path, PROJECT_FILE), "utf8")).database,
+				);
+			} catch {}
+			if (Number.isInteger(entry.slot)) {
+				try {
+					found.push(describeProject(path, entry.slot).database);
+				} catch {}
+			}
+		}
+		for (const name of found) {
+			if (typeof name !== "string" || !name) continue;
+			names.add(name);
+			names.add(`${name}-e2e`);
+		}
+	}
+	return names;
+}
+
+/**
+ * For a released slot whose database name was never recorded: the local
+ * databases that can only be that slot's (`<name>-s<N>` or `<name>-s<N>-e2e`),
+ * minus every name a registered project uses.
+ */
+export function legacySlotDatabases(slot, names, inUse = databasesInUse()) {
+	if (!Number.isInteger(slot) || slot === 0) return [];
+	const pattern = new RegExp(`^.+-s${slot}(-e2e)?$`);
+	return names.filter((name) => pattern.test(name) && !inUse.has(name));
+}
+
+/**
+ * The main checkout of a git worktree (parent of `git rev-parse
+ * --git-common-dir`), or null for the main checkout itself / no git.
+ */
+export function mainCheckoutRoot(root) {
+	const res = spawnSync("git", ["rev-parse", "--git-common-dir"], {
+		cwd: root,
+		encoding: "utf8",
+	});
+	if (res.status !== 0) return null;
+	const main = dirname(resolve(root, res.stdout.trim()));
+	return main !== resolve(root) && existsSync(join(main, "pnpm-workspace.yaml"))
+		? main
+		: null;
+}
+
+/**
+ * Env for a local service the CLI talks to (Postgres, MinIO), taken whole
+ * from the first source that sets `key`: the process env, this checkout's
+ * .env, or — in a fresh worktree without one — the main checkout's .env.
+ */
+export function serviceEnv(root, key, { env = process.env, mainRoot } = {}) {
+	if (env[key])
+		return { env: { ...readDotEnv(root), ...env }, source: "process env" };
+	const own = readDotEnv(root);
+	if (own[key]) return { env: own, source: join(root, ".env") };
+	if (mainRoot) {
+		const main = readDotEnv(mainRoot);
+		if (main[key]) return { env: main, source: join(mainRoot, ".env") };
+	}
+	return {
+		env: {},
+		source: `${key} not set in the process env, .env${mainRoot ? " or the main checkout's .env" : ""}`,
+	};
+}
+
+/**
+ * MinIO credentials: S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY, else the
+ * MINIO_ROOT_* pair, else the compose default (minioadmin).
+ */
+export function minioCredentials(env) {
+	if (env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY) {
+		return {
+			accessKeyId: env.S3_ACCESS_KEY_ID,
+			secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+			from: "S3_ACCESS_KEY_ID",
+		};
+	}
+	if (env.MINIO_ROOT_USER && env.MINIO_ROOT_PASSWORD) {
+		return {
+			accessKeyId: env.MINIO_ROOT_USER,
+			secretAccessKey: env.MINIO_ROOT_PASSWORD,
+			from: "MINIO_ROOT_USER",
+		};
+	}
+	return {
+		accessKeyId: "minioadmin",
+		secretAccessKey: "minioadmin",
+		from: "compose default",
 	};
 }
 

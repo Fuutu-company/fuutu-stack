@@ -51,6 +51,11 @@ export function readRegistry(): {
 			lastStarted: string | null;
 		}
 	>;
+	/** Slots whose released project's local data was kept (not dropped). */
+	keptData?: Record<
+		string,
+		{ path: string; database: string | null; keptAt: string }
+	>;
 };
 export function staleProjects(
 	registry: ReturnType<typeof readRegistry>,
@@ -92,6 +97,26 @@ export function releaseSlot(
 	path: string,
 	opts?: { busy?: (port: number) => Promise<boolean> },
 ): Promise<ReleasedSlot>;
+export function clearKeptData(slot: number): Promise<void>;
+export function databasesInUse(
+	registry?: ReturnType<typeof readRegistry>,
+): Set<string>;
+export function legacySlotDatabases(
+	slot: number,
+	names: string[],
+	inUse?: Set<string>,
+): string[];
+export function mainCheckoutRoot(root: string): string | null;
+export function serviceEnv(
+	root: string,
+	key: string,
+	opts?: { env?: Record<string, string | undefined>; mainRoot?: string | null },
+): { env: Record<string, string | undefined>; source: string };
+export function minioCredentials(env: Record<string, string | undefined>): {
+	accessKeyId: string;
+	secretAccessKey: string;
+	from: "S3_ACCESS_KEY_ID" | "MINIO_ROOT_USER" | "compose default";
+};
 export function slotData(
 	released: { slot: number; database?: string | null },
 	registry?: ReturnType<typeof readRegistry>,
