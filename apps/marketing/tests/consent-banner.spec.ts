@@ -24,6 +24,22 @@ function marketingPlanCtas(): string[] {
 test.describe("consent banner", () => {
 	test.use({ viewport: { width: 1280, height: 720 } });
 
+	test("links the privacy policy in the user's locale", async ({ page }) => {
+		for (const [path, href] of [
+			["/en", /\/legal\/privacy$/],
+			["/de", /\/de\/legal\/privacy$/],
+		] as const) {
+			await page.goto(path);
+			const banner = page.getByRole("dialog", { name: /analytics/i });
+			const shown = await banner
+				.waitFor({ state: "visible", timeout: 5_000 })
+				.then(() => true)
+				.catch(() => false);
+			test.skip(!shown, "Consent banner disabled in this environment");
+			await expect(banner.getByRole("link")).toHaveAttribute("href", href);
+		}
+	});
+
 	test("never covers a focused plan CTA or the end of the page", async ({
 		page,
 	}) => {

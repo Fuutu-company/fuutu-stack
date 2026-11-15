@@ -158,14 +158,38 @@ export function PrivacySettingsButton({ className }: { className?: string }) {
 }
 
 /**
+ * The banner's Privacy Policy link. Renders nothing without `href`, so an
+ * app that has no privacy page simply passes none.
+ */
+export function ConsentPrivacyLink({
+	href,
+	label,
+}: {
+	href: string | undefined;
+	label: string;
+}) {
+	if (!href) return null;
+	return (
+		<a
+			href={href}
+			className="text-foreground underline underline-offset-4 hover:no-underline"
+		>
+			{label}
+		</a>
+	);
+}
+
+/**
  * Minimal GDPR banner. Apps can replace this with their own UI by
  * reading `useConsent()` directly. Two modes (`consentBannerMode()`):
  * `"consent"` asks before tracking (Accept / Decline), `"notice"` tells
  * the user that cookieless analytics already run (OK / Opt out). Hidden
  * once the user has decided — until reopened via `openConsentBanner()` —
  * or when the banner is switched off (`consentBannerVisible()`).
+ * `privacyHref`: URL of the privacy policy, linked inside the banner —
+ * unset, no link.
  */
-export function ConsentBanner() {
+export function ConsentBanner({ privacyHref }: { privacyHref?: string } = {}) {
 	const t = useTranslations("consent");
 	// `open` waits for the client-side cookie read — otherwise the banner
 	// flashes on reload for users who already decided.
@@ -228,11 +252,20 @@ export function ConsentBanner() {
 				className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-2xl flex-col gap-3 rounded-xl border bg-background p-4 shadow-lg sm:flex-row sm:items-center sm:gap-4"
 			>
 				{mode === "notice" ? (
-					<p className="flex-1 text-sm">{t("notice.description")}</p>
+					<p className="flex-1 text-sm">
+						{t("notice.description")}{" "}
+						<ConsentPrivacyLink href={privacyHref} label={t("privacyPolicy")} />
+					</p>
 				) : (
 					<div className="flex-1 text-sm">
 						<p className="font-medium">{t("title")}</p>
-						<p className="text-muted-foreground">{t("description")}</p>
+						<p className="text-muted-foreground">
+							{t("description")}{" "}
+							<ConsentPrivacyLink
+								href={privacyHref}
+								label={t("privacyPolicy")}
+							/>
+						</p>
 					</div>
 				)}
 				<div className="flex gap-2">
