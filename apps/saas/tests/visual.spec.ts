@@ -200,9 +200,47 @@ test.describe("visual regression — app pages", () => {
 		});
 	});
 
+	test("admin organizations matches baseline", async ({ page }) => {
+		await page.goto("/admin/organizations");
+		await page.waitForLoadState("domcontentloaded");
+		await expect(
+			page.getByRole("main").getByRole("link", { name: /acme/i }).first(),
+		).toBeVisible({ timeout: 10_000 });
+		await expectVisual(page, "admin--organizations.png", {
+			fullPage: true,
+		});
+	});
+
+	test("admin organization detail matches baseline", async ({ page }) => {
+		await page.goto("/admin/organizations?q=acme");
+		await page
+			.getByRole("main")
+			.getByRole("link", { name: /acme/i })
+			.first()
+			.click();
+		await expect(
+			page.getByRole("main").getByText("member@fuutu.local"),
+		).toBeVisible({ timeout: 10_000 });
+		await expectVisual(page, "admin--organization-detail.png", {
+			fullPage: true,
+		});
+	});
+
+	test("admin system matches baseline", async ({ page }) => {
+		await page.goto("/admin/system");
+		await page.waitForLoadState("domcontentloaded");
+		await expect(page.getByText("Feature flags")).toBeVisible({
+			timeout: 10_000,
+		});
+		await expectVisual(page, "admin--system.png", { fullPage: true });
+	});
+
 	test("admin audit-logs matches baseline", async ({ page }) => {
 		await page.goto("/admin/audit-logs");
 		await page.waitForLoadState("domcontentloaded");
+		await expect(page.getByRole("row").nth(1)).toBeVisible({
+			timeout: 10_000,
+		});
 		await expectVisual(page, "admin--audit-logs.png", {
 			fullPage: true,
 		});

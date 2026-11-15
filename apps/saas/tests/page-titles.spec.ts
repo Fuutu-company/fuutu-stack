@@ -35,7 +35,9 @@ const COMPACT_ROUTES = [
 	"/organizations/acme/settings/danger",
 	"/organizations/acme/invoices",
 	"/admin/users",
+	"/admin/organizations",
 	"/admin/audit-logs",
+	"/admin/system",
 	"/choose-plan",
 ];
 

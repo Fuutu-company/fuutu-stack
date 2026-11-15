@@ -161,6 +161,12 @@ test.describe("admin user management", () => {
 	test("impersonation shows the banner and stop returns to the user detail", async ({
 		page,
 	}) => {
+		// A refetch of admin queries with the impersonated cookie would answer
+		// 403 before the navigation — nothing may fail on the way.
+		const forbidden: string[] = [];
+		page.on("response", (response) => {
+			if (response.status() === 403) forbidden.push(response.url());
+		});
 		await page.goto("/admin/users?q=member@");
 		await page.getByRole("link", { name: /member@fuutu\.local/ }).click();
 		await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/);
@@ -181,6 +187,7 @@ test.describe("admin user management", () => {
 		});
 		await expect(banner).toBeVisible({ timeout: 10_000 });
 		await expect(banner).toContainText(MEMBER_EMAIL);
+		expect(forbidden).toEqual([]);
 
 		// The admin area stays closed while impersonating.
 		await page.goto("/admin/users");
@@ -201,5 +208,144 @@ test.describe("admin user management", () => {
 	}) => {
 		const res = await request.post("/api/auth/admin/list-users", { data: {} });
 		expect(res.status()).toBe(404);
+	});
+});
+
+test.describe("admin organizations", () => {
+	test("lists organizations and searches them via the URL", async ({
+		page,
+	}) => {
+		await page.goto("/admin/organizations");
+		await expect(page).not.toHaveURL(/\/auth\/sign-in/);
+		await expect(
+			page.getByRole("columnheader", { name: /organization/i }),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(page.getByRole("link", { name: /acme/i })).toBeVisible();
+
+		const search = page.getByRole("searchbox", {
+			name: /search organizations/i,
+		});
+		await search.fill("no-such-org-xyz");
+		await expect(page).toHaveURL(/q=no-such-org-xyz/);
+		await expect(page.getByText("No organizations found.")).toBeVisible({
+			timeout: 10_000,
+		});
+
+		await search.fill("acm");
+		await expect(page).toHaveURL(/q=acm/);
+		await expect(page.getByRole("link", { name: /acme/i })).toBeVisible({
+			timeout: 10_000,
+		});
+	});
+
+	test("organization detail renders members, tabs and user links", async ({
+		page,
+	}) => {
+		await page.goto("/admin/organizations?q=acme");
+		await page.getByRole("link", { name: /acme/i }).first().click();
+		await expect(page).toHaveURL(/\/admin\/organizations\/[^/]+$/);
+
+		await expect(
+			page.getByRole("heading", { level: 2, name: /^acme$/i }),
+		).toBeVisible({ timeout: 10_000 });
+		for (const tab of [
+			/^members/i,
+			/^invitations/i,
+			/^billing/i,
+			/^api keys/i,
+			/^activity/i,
+		]) {
+			await expect(page.getByRole("tab", { name: tab })).toBeVisible();
+		}
+		const memberLink = page.getByRole("link", { name: /member@fuutu\.local/ });
+		await expect(memberLink).toBeVisible();
+		await expect(memberLink).toHaveAttribute("href", /\/admin\/users\/.+/);
+		await expect(page.getByRole("link", { name: /^users$/i })).toHaveCount(1);
+	});
+
+	test("admin resends and cancels a pending invitation", async ({ page }) => {
+		const inviteEmail = `admin-e2e-${Date.now()}@fuutu.local`;
+
+		// A pending invitation through the regular organization flow.
+		await page.goto("/organizations/acme/settings/members");
+		const emailInput = page.getByPlaceholder(/teammate@company\.com/i);
+		await expect(emailInput).toBeVisible({ timeout: 10_000 });
+		await emailInput.fill(inviteEmail);
+		await page.getByRole("button", { name: /^invite$/i }).click();
+		await expect(page.getByText(inviteEmail)).toBeVisible({ timeout: 10_000 });
+
+		await page.goto("/admin/organizations?q=acme");
+		await page.getByRole("link", { name: /acme/i }).first().click();
+		await page.getByRole("tab", { name: /^invitations/i }).click();
+		const row = page.getByRole("row").filter({ hasText: inviteEmail });
+		await expect(row).toBeVisible({ timeout: 10_000 });
+
+		await row.getByRole("button", { name: /^resend$/i }).click();
+		await expect(page.getByText("Invitation sent again.")).toBeVisible({
+			timeout: 10_000,
+		});
+
+		await row.getByRole("button", { name: /^cancel$/i }).click();
+		await page
+			.getByRole("dialog")
+			.getByRole("button", { name: /^cancel invitation$/i })
+			.click();
+		await expect(row).toBeHidden({ timeout: 10_000 });
+	});
+});
+
+test.describe("admin audit logs", () => {
+	test("filters by action prefix through the URL and links targets", async ({
+		page,
+	}) => {
+		await page.goto("/admin/audit-logs");
+		await expect(page.getByLabel("Action starts with")).toBeVisible({
+			timeout: 10_000,
+		});
+		await expect(page.getByRole("row").nth(1)).toBeVisible({
+			timeout: 10_000,
+		});
+
+		await page.getByLabel("Action starts with").fill("org.create");
+		await expect(page).toHaveURL(/action=org\.create/);
+		await expect(
+			page.getByRole("cell", { name: "org.create", exact: true }).first(),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page.getByRole("cell", { name: "auth.session_created" }),
+		).toHaveCount(0);
+		await expect(
+			page.getByRole("link", { name: /^[0-9a-z-]{8}$/ }).first(),
+		).toHaveAttribute("href", /\/admin\/(organizations|users)\//);
+
+		await page.getByLabel("Action starts with").fill("no.such.action");
+		await expect(page.getByText("No audit logs.")).toBeVisible({
+			timeout: 10_000,
+		});
+
+		await page.getByRole("button", { name: /clear filters/i }).click();
+		await expect(page).not.toHaveURL(/action=/);
+	});
+});
+
+test.describe("admin system status", () => {
+	test("renders database, providers, jobs, flags and versions", async ({
+		page,
+	}) => {
+		await page.goto("/admin/system");
+		await expect(page.getByText("Reachable")).toBeVisible({ timeout: 10_000 });
+		for (const heading of [
+			"Database",
+			"Versions",
+			"Providers",
+			"Scheduled jobs",
+			"Feature flags",
+		]) {
+			await expect(
+				page.getByRole("heading", { level: 3, name: heading }),
+			).toBeVisible();
+		}
+		await expect(page.getByText("webhook-retry")).toBeVisible();
+		await expect(page.getByText("organizationsMode")).toBeVisible();
 	});
 });

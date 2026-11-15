@@ -168,7 +168,9 @@ test.describe("sidebar navigation", () => {
 
 		await expect(adminGroup.getByRole("link")).toHaveText([
 			/^users$/i,
+			/^organizations$/i,
 			/^audit logs$/i,
+			/^system$/i,
 		]);
 		await expect(
 			adminGroup.getByRole("link", { name: /overview/i }),
