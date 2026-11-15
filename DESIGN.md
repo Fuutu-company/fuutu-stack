@@ -312,7 +312,7 @@ Pasting an export from tweakcn or ui.shadcn.com/create:
 - Copy the new values into the frontmatter `colors` (and `rounded.lg` if `--radius` changed), update the Colors prose, then run `pnpm -F @fuutu/ui test`. The sync test fails until the two agree; the contrast audit fails if a pair drops below AA.
 - Open `/design` and check key routes in both modes.
 
-Guided path: the `setup-brand` skill (Fuutu MCP Plus) interviews you, proposes a direction, computes accessible tokens, applies them and updates this file.
+Guided path: the `setup-brand` skill (Fuutu Pro) interviews you, proposes a direction, computes accessible tokens, applies them and updates this file.
 
 ## Known Gaps
 

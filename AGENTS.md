@@ -31,7 +31,7 @@ Your app, built on **Fuutu Stack** — a TypeScript SaaS starter kit (pnpm + Tur
 
 If the `fuutu` MCP server is connected (see `.mcp.json`), use it before guessing:
 - free, no key: `docs_search` / `docs_get` — kit docs matched to this repo's `KIT_VERSION`; `changelog_get`, `version_check`
-- MCP Plus (key in `FUUTU_MCP_API_KEY`): `rules_get` — detailed rules per domain (auth, payments, i18n, …); `skills_get` — full instructions for skills marked `fuutu-source: mcp`
+- Fuutu Pro (key in `FUUTU_MCP_API_KEY`): `rules_get` — detailed rules per domain (auth, payments, i18n, …); `skills_get` — full instructions for skills marked `fuutu-source: mcp`
 
 Without it, everything still works: read the owning package's source and follow this file.
 
