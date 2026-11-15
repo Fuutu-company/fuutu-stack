@@ -14,7 +14,7 @@ import {
 	Input,
 } from "@fuutu/ui";
 import { slugify } from "@fuutu/utils";
-import { ArrowRight, Building2, Check, User } from "lucide-react";
+import { ArrowRight, Building2, Check, CircleCheck, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -301,8 +301,8 @@ export function OnboardingWizard({
 					)}
 					{step === "done" && (
 						<div className="space-y-6 text-center">
-							<div className="mx-auto flex size-14 items-center justify-center rounded-full bg-success/10 text-success">
-								<Check className="size-7" />
+							<div className="flex items-center justify-center text-success">
+								<CircleCheck className="size-10" />
 							</div>
 							<div className="space-y-2">
 								<h2 className="font-bold font-heading text-xl tracking-heading">

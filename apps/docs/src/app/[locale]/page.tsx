@@ -4,6 +4,7 @@ import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-select";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { appDocs } from "@/app-docs";
 import { LanguageSelect } from "@/components/language-select";
 import { locales } from "@/i18n/config";
 import { baseOptions, PRIVACY_LINK_CLASS } from "@/lib/layout.shared";
@@ -52,31 +53,37 @@ export default async function HomePage({ params }: HomePageProps) {
 				languageSelect: { root: LanguageSelect, text: LanguageSelectText },
 			}}
 		>
-			<div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-				<h1 className="mb-4 font-extrabold font-heading text-5xl leading-[0.98] tracking-display sm:text-6xl">
-					{t("title", { appName: config.app.name })}
-				</h1>
-				<p className="mb-2 text-fd-muted-foreground text-lg">{t("subtitle")}</p>
-				<p className="mb-8 max-w-2xl text-fd-muted-foreground">
-					{t("description")}
-				</p>
-				<div className="flex flex-wrap items-center justify-center gap-4">
-					<Link
-						href="/docs"
-						className="inline-flex h-11 items-center justify-center rounded-full bg-fd-primary px-6 font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
-					>
-						{t("exploreDocs")}
-					</Link>
-					<a
-						href="https://github.com/Fuutu-company/fuutu-stack"
-						target="_blank"
-						rel="noreferrer noopener"
-						className="inline-flex h-11 items-center justify-center rounded-full border border-fd-border px-6 font-medium transition-colors hover:bg-fd-accent"
-					>
-						{t("viewOnGithub")}
-					</a>
+			{appDocs.Home ? (
+				<appDocs.Home locale={locale} />
+			) : (
+				<div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
+					<h1 className="mb-4 font-extrabold font-heading text-5xl leading-[0.98] tracking-display sm:text-6xl">
+						{t("title", { appName: config.app.name })}
+					</h1>
+					<p className="mb-2 text-fd-muted-foreground text-lg">
+						{t("subtitle")}
+					</p>
+					<p className="mb-8 max-w-2xl text-fd-muted-foreground">
+						{t("description")}
+					</p>
+					<div className="flex flex-wrap items-center justify-center gap-4">
+						<Link
+							href="/docs"
+							className="inline-flex h-11 items-center justify-center rounded-full bg-fd-primary px-6 font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
+						>
+							{t("exploreDocs")}
+						</Link>
+						<a
+							href="https://github.com/Fuutu-company/fuutu-stack"
+							target="_blank"
+							rel="noreferrer noopener"
+							className="inline-flex h-11 items-center justify-center rounded-full border border-fd-border px-6 font-medium transition-colors hover:bg-fd-accent"
+						>
+							{t("viewOnGithub")}
+						</a>
+					</div>
 				</div>
-			</div>
+			)}
 			<footer className="flex justify-center pb-8">
 				<PrivacySettingsButton className={PRIVACY_LINK_CLASS} />
 			</footer>

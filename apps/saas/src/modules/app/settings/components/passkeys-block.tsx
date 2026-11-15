@@ -95,8 +95,8 @@ export function PasskeysBlock() {
 							className="flex items-center justify-between gap-4 p-4"
 						>
 							<div className="flex items-center gap-3">
-								<div className="flex size-9 items-center justify-center rounded-md bg-muted">
-									<KeyRound className="size-4 text-muted-foreground" />
+								<div className="flex shrink-0 items-center justify-center">
+									<KeyRound className="size-5 text-muted-foreground" />
 								</div>
 								<div>
 									<p className="font-medium text-sm">

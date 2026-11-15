@@ -122,4 +122,9 @@ export interface AppDocs {
 	sitemap?: (route: DocsSitemapRoute) => DocsSitemapOverride | undefined;
 	/** `/robots.txt` rules, sitemap and host — see `AppRobots`. */
 	robots?: AppRobots;
+	/**
+	 * The docs home (`/`) content inside the kit's home layout (nav,
+	 * search, theme and language stay the kit's). Unset: the kit hero.
+	 */
+	Home?: ComponentType<{ locale: string }>;
 }

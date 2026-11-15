@@ -202,7 +202,7 @@ export function AuthSignIn({
 					>
 						<span
 							aria-hidden="true"
-							className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card"
+							className="flex shrink-0 items-center justify-center [&>svg]:size-6"
 						>
 							<Fingerprint className="size-5" />
 						</span>

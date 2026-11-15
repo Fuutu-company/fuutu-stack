@@ -249,6 +249,7 @@ Don't:
 - Use `text-warning` or `text-info` on a surface.
 - Put opacity on area text (`text-area-ai-foreground/60`); it drops below 4.5:1.
 - Rely on color alone to convey state; pair it with an icon or label.
+- Put an icon on a round or filled chip (`size-9 rounded-lg bg-muted`); draw the plain icon in a text role or area ink.
 - Remove the focus ring or shrink hit targets below the `sm` control height.
 - Add new tokens to `brand.css` outside the shadcn set and the kit status and area blocks.
 
@@ -259,6 +260,8 @@ Short and functional: 150 to 250ms for state changes and overlay enter/exit, usi
 ## Iconography
 
 Lucide, outline style, 16px (`size-4`) inside controls and 20 to 24px for standalone icons. Icons inherit `currentColor`, so they follow the text role around them. Icon-only controls need an `aria-label` from the translations.
+
+Icons stand on their own. A standalone icon (list rows, empty states, settings cards, notifications, feature lists, menus) is the plain stroke in a text role (`text-muted-foreground`, `text-primary`, `text-destructive`) or an area ink, never on a round or filled chip: no `bg-*` and no radius behind it. `AreaIcon` is that plain icon in the area ink. Shapes that look alike but are not icons keep their fill: avatars (initials, logos), counters and badges, controls, and icon buttons over images. `icon-chip-guard` in `@fuutu/test-utils` flags a filled, rounded, centered square box and lists the exceptions with their reason.
 
 ## Accessibility
 
@@ -286,6 +289,7 @@ Target is WCAG 2.2 AA. Text pairs need 4.5:1; borders of form controls, focus ri
 | Fonts load with `next/font/google` from `fonts.ts` in each app | The `geist` package is gone; three variable fonts, no `weight` argument, identical files kept in sync by a guard | 2026-11-13 |
 | Default control height is 40px (`sm` 32, `lg` 44) | Larger pill targets feel tactile and meet the 24px target size with room to spare | 2026-11-13 |
 | Email and OG colors are light-palette hex literals | Mail clients and social crawlers cannot read CSS variables; `MAIL_COLORS` and `og-image.html` carry the values | 2026-11-13 |
+| Plain icons, no icon chips | A chip behind every icon adds a second shape per row and competes with avatars, badges and buttons; the stroke in a text role or area ink is enough. `AreaIcon` lost its fill, the hero cut-out icons became plain area icons, and a guard keeps chips out | 2026-11-14 |
 
 ## Iteration Guide
 

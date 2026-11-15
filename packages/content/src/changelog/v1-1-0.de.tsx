@@ -128,6 +128,17 @@ export default function ChangelogV110De() {
 					Datenschutzerklärung: 30 Tage, höchstens einmal täglich verlängert, 5
 					Minuten Session-Cookie-Cache.
 				</li>
+				<li>
+					<code>appDocs.Home</code> ersetzt den Inhalt der Docs-Startseite im
+					Kit-Home-Layout (Navigation, Suche, Theme und Sprache bleiben vom
+					Kit).
+				</li>
+				<li>
+					Schlichte Icons: Icons erscheinen als reine Linien in einer Textfarbe
+					oder Bereichsfarbe, nie auf runden oder gefüllten Flächen (DESIGN.md,
+					Iconography). Der <code>icon-chip-guard</code> hält solche Flächen
+					fern und führt echte Avatare, Zähler und Controls mit Begründung.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -146,6 +157,11 @@ export default function ChangelogV110De() {
 				<li>
 					<code>pnpm test:visual:update</code> aktualisiert jede Visual-Spec,
 					ausgewählt über den Titel.
+				</li>
+				<li>
+					Das Marketing-Layout schneidet Schatten und Fokusring der letzten
+					Karte einer Seite nicht mehr ab (<code>main</code> nutzt{" "}
+					<code>overflow-x-clip</code>).
 				</li>
 			</ul>
 			<h3>Breaking Changes und Migration</h3>
@@ -177,6 +193,12 @@ export default function ChangelogV110De() {
 					zeigen, solange <code>open</code> wahr ist (deckt das erneute Öffnen
 					und die neue Hinweis-Antwort <code>"acknowledged"</code> ab), statt{" "}
 					<code>status === "unknown"</code> zu prüfen.
+				</li>
+				<li>
+					<code>AreaIcon</code> zeichnet das Icon in der Bereichsfarbe ohne
+					Fläche und Rundung (16 px <code>sm</code>, 20 px <code>md</code>).
+					<code>AreaCutoutIcon</code> im Marketing entfällt; die Hero-Karten
+					nutzen <code>AreaIcon</code>. Visual-Baselines neu erzeugen.
 				</li>
 			</ul>
 		</>

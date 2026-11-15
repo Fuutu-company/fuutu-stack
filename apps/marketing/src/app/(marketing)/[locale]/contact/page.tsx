@@ -41,7 +41,7 @@ function ContactCard({
 		<Card className="relative flex-row items-center gap-4 px-6 py-5 transition-shadow duration-150 focus-within:shadow-md hover:shadow-md motion-reduce:transition-none">
 			<span
 				aria-hidden="true"
-				className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground [&>svg]:size-5"
+				className="flex shrink-0 items-center justify-center pt-0.5 text-primary [&>svg]:size-6"
 			>
 				{icon}
 			</span>

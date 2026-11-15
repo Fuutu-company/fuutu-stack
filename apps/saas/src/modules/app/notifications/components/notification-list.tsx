@@ -53,8 +53,8 @@ export function NotificationList() {
 			) : items.length === 0 ? (
 				<Card className="py-0">
 					<CardContent className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-						<span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-							<Bell className="size-[1.125rem]" />
+						<span className="flex items-center justify-center text-muted-foreground">
+							<Bell className="size-6" />
 						</span>
 						<p className="font-bold font-heading">{t("empty")}</p>
 						<p className="text-muted-foreground text-sm">

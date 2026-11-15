@@ -121,6 +121,16 @@ export default function ChangelogV110() {
 					your privacy policy: 30 days, extended at most once a day, a 5-minute
 					session cookie cache.
 				</li>
+				<li>
+					<code>appDocs.Home</code> replaces the docs home content inside the
+					kit home layout (nav, search, theme and language stay the kit's).
+				</li>
+				<li>
+					Plain icons: icons are drawn as plain strokes in a text role or an
+					area ink, never on a round or filled chip (DESIGN.md Iconography). The{" "}
+					<code>icon-chip-guard</code> keeps chips out and lists real avatars,
+					counters and controls with their reason.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -139,6 +149,11 @@ export default function ChangelogV110() {
 				<li>
 					<code>pnpm test:visual:update</code> updates every visual spec,
 					selected by title.
+				</li>
+				<li>
+					The marketing layout no longer clips the shadow and focus ring of the
+					last card on a page (<code>main</code> uses{" "}
+					<code>overflow-x-clip</code>).
 				</li>
 			</ul>
 			<h3>Breaking changes and migration</h3>
@@ -169,6 +184,12 @@ export default function ChangelogV110() {
 					while <code>open</code> is true (it covers the reopen and the new
 					notice answer <code>"acknowledged"</code>) instead of checking{" "}
 					<code>status === "unknown"</code>.
+				</li>
+				<li>
+					<code>AreaIcon</code> draws the icon in the area ink without a fill or
+					radius (sizes: 16 px <code>sm</code>, 20 px <code>md</code>). The
+					marketing <code>AreaCutoutIcon</code> is removed; the hero cards use{" "}
+					<code>AreaIcon</code>. Update your visual baselines.
 				</li>
 			</ul>
 		</>
