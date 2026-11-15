@@ -385,6 +385,118 @@ describe("release and prune", () => {
 	});
 });
 
+describe("kept data of pruned slots", () => {
+	const kept = (database: string | null) => ({
+		path: "/gone",
+		database,
+		keptAt: "2026-01-01T00:00:00.000Z",
+	});
+
+	it("lists kept slots with their recorded database", () => {
+		const registry = {
+			version: 1,
+			projects: {},
+			keptData: { 3: kept("acme-s3"), 5: kept(null) },
+		};
+		expect(lib.keptSlots(registry)).toEqual([
+			{ slot: 3, path: "/gone", database: "acme-s3" },
+			{ slot: 5, path: "/gone", database: null },
+		]);
+	});
+
+	it("plans the drop from the recorded database and the slot's buckets", () => {
+		const registry = { version: 1, projects: {}, keptData: {} };
+		const plan = lib.planKeptDrop(
+			{ slot: 3, database: "acme-s3" },
+			{
+				databases: ["postgres", "acme-s3", "acme-s3-e2e", "other-s30"],
+				buckets: ["s3-uploads", "s30-uploads", "s4-uploads"],
+			},
+			registry,
+		);
+		expect(plan).toEqual({
+			databases: ["acme-s3", "acme-s3-e2e"],
+			bucketPrefix: "s3-",
+			buckets: ["s3-uploads"],
+			empty: false,
+		});
+	});
+
+	it("matches by suffix when no database was recorded, sparing registered projects", () => {
+		const registry = {
+			version: 1,
+			projects: {
+				"/p": {
+					slot: 1,
+					name: "p",
+					database: "mine-s7",
+					lastStarted: null,
+				},
+			},
+			keptData: {},
+		};
+		const plan = lib.planKeptDrop(
+			{ slot: 7, database: null },
+			{ databases: ["old-s7", "mine-s7", "old-s7-e2e"], buckets: [] },
+			registry,
+		);
+		expect(plan.databases).toEqual(["old-s7", "old-s7-e2e"]);
+	});
+
+	it("is empty only when databases and buckets are both known and gone", () => {
+		const registry = { version: 1, projects: {}, keptData: {} };
+		const slot = { slot: 3, database: "acme-s3" };
+		expect(
+			lib.planKeptDrop(slot, { databases: ["postgres"], buckets: [] }, registry)
+				.empty,
+		).toBe(true);
+		expect(
+			lib.planKeptDrop(slot, { databases: undefined, buckets: [] }, registry)
+				.empty,
+		).toBe(false);
+		expect(
+			lib.planKeptDrop(
+				slot,
+				{ databases: ["postgres"], buckets: undefined },
+				registry,
+			).empty,
+		).toBe(false);
+	});
+
+	it("clearKeptData frees the slot of its warning", async () => {
+		const [a, b] = ["a", "b"].map((n) => asWorktree(project(n)));
+		await lib.ensureSlot(a as string, { busy: idle });
+		await lib.ensureSlot(b as string, { busy: idle });
+		await lib.releaseSlot(b as string, { busy: idle });
+		expect(lib.keptSlots(lib.readRegistry()).map((k) => k.slot)).toEqual([1]);
+		await lib.clearKeptData(1);
+		expect(lib.keptSlots(lib.readRegistry())).toEqual([]);
+	});
+});
+
+describe("ports command line", () => {
+	it("splits command, path argument and known flags", () => {
+		expect(lib.parseArgs(["release", "/x", "--drop-data"])).toEqual({
+			command: "release",
+			arg: "/x",
+			flags: new Set(["--drop-data"]),
+		});
+		expect(lib.parseArgs([])).toEqual({
+			command: "list",
+			arg: undefined,
+			flags: new Set(),
+		});
+	});
+
+	it("never takes a flag for a path and rejects unknown flags", () => {
+		expect(lib.parseArgs(["release", "--drop-data"]).arg).toBeUndefined();
+		expect(() => lib.parseArgs(["release", "--drop-dta"])).toThrow(
+			/unknown flag --drop-dta/,
+		);
+		expect(() => lib.parseArgs(["release", "-x"])).toThrow(/unknown flag -x/);
+	});
+});
+
 describe("local services for data drop", () => {
 	it("falls back to the main checkout's .env in a worktree without one", () => {
 		const main = project("main");
