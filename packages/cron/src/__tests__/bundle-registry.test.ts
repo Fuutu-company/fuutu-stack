@@ -131,6 +131,7 @@ describe("cron registry across bundles", () => {
 			"subscription-reminder",
 			"telemetry-ping",
 			"oauth-client-cleanup",
+			"auth-retention-cleanup",
 			"app-usage-rollup",
 		]);
 	});

@@ -1,5 +1,6 @@
 export * from "./api-key";
 export * from "./audit-log";
+export * from "./auth-retention";
 export * from "./chat";
 export * from "./contact";
 export * from "./credit-balance";
