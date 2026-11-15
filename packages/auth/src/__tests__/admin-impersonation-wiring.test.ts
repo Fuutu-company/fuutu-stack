@@ -47,6 +47,11 @@ vi.mock("../hooks/impersonation-guard", () => ({
 	assertNotImpersonating: vi.fn(),
 }));
 
+vi.mock("../hooks/impersonation-session", () => ({
+	assertImpersonationActive: vi.fn(),
+	isEndedImpersonationResult: vi.fn(async () => false),
+}));
+
 const IMPORT_TIMEOUT = 30_000;
 
 type AuthModule = typeof import("../index");
@@ -89,6 +94,46 @@ describe("hooks.before", () => {
 		expect(assertNotImpersonating).toHaveBeenCalledWith(
 			expect.objectContaining({ path: "/change-password" }),
 		);
+	});
+});
+
+describe("impersonation time limit and impersonator access on every request", () => {
+	it("runs the session check in hooks.before with the endpoint path", async () => {
+		const { assertImpersonationActive } = await import(
+			"../hooks/impersonation-session"
+		);
+		vi.mocked(assertImpersonationActive).mockRejectedValueOnce(
+			new APIError("UNAUTHORIZED", { code: "IMPERSONATION_ENDED" }),
+		);
+		await expect(
+			auth.api.listSessions({ headers: new Headers() }),
+		).rejects.toMatchObject({ body: { code: "IMPERSONATION_ENDED" } });
+		expect(assertImpersonationActive).toHaveBeenCalledWith(
+			expect.objectContaining({ path: "/list-sessions" }),
+		);
+	});
+
+	it("answers /get-session with no session once the impersonation has ended", async () => {
+		const { isEndedImpersonationResult } = await import(
+			"../hooks/impersonation-session"
+		);
+		const returned = { session: { id: "sess-1" }, user: { id: "user-2" } };
+		const after = auth.options.hooks?.after;
+		const run = () =>
+			after?.({
+				path: "/get-session",
+				headers: new Headers(),
+				context: { returned, session: null },
+			} as never);
+
+		vi.mocked(isEndedImpersonationResult).mockResolvedValueOnce(false);
+		await expect(run()).resolves.toBeUndefined();
+		vi.mocked(isEndedImpersonationResult).mockResolvedValueOnce(true);
+		await expect(run()).resolves.toBeNull();
+		expect(isEndedImpersonationResult).toHaveBeenCalledWith({
+			path: "/get-session",
+			returned,
+		});
 	});
 });
 

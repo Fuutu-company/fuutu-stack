@@ -1,6 +1,7 @@
 import { auth } from "@fuutu/auth";
 import { authConfig } from "@fuutu/auth/config";
 import { isImpersonationExpired } from "@fuutu/auth/impersonation";
+import { hasImpersonatorLostAccess } from "@fuutu/auth/impersonation-access";
 import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
 import { getSignedInRedirect } from "@fuutu/auth/redirect";
 import {
@@ -26,12 +27,16 @@ const readSession = cache(async () => {
 /**
  * Get the current session (cached per request). An impersonation past
  * `authConfig.admin.impersonationMinutes` counts as signed out; its
- * session row is deleted and the expiry audited (once).
+ * session row is deleted and the expiry audited (once). So does one whose
+ * impersonating admin lost the permission.
  */
 export const getSession = cache(async () => {
 	const session = await readSession();
 	if (session && isImpersonationExpired(session.session)) {
 		await endExpiredImpersonation(session.session);
+		return null;
+	}
+	if (session && (await hasImpersonatorLostAccess(session.session))) {
 		return null;
 	}
 	return session;

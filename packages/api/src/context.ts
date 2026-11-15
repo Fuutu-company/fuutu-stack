@@ -1,18 +1,8 @@
 import { auth } from "@fuutu/auth";
-import {
-	type ImpersonationSessionLike,
-	isImpersonationExpired,
-} from "@fuutu/auth/impersonation";
+import { isImpersonationExpired } from "@fuutu/auth/impersonation";
+import { hasImpersonatorLostAccess } from "@fuutu/auth/impersonation-access";
 import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
-import { isBanActive } from "@fuutu/auth/types";
-import { API_KEY_PREFIX, getUserAccessState } from "@fuutu/db";
-import {
-	hasSystemPermission,
-	PERMISSIONS,
-	SYSTEM_POLICY,
-	SystemAccessControl,
-	toSystemRole,
-} from "@fuutu/rbac";
+import { API_KEY_PREFIX } from "@fuutu/db";
 import type { Context as HonoContext } from "hono";
 import { API_SCOPE } from "./api-key-scopes";
 import {
@@ -78,30 +68,6 @@ const extractApiKey = (headers: Headers): string | null => {
  */
 const isAllowedOnApi = (scopes: readonly string[]): boolean =>
 	scopes.length === 0 || scopes.includes(API_SCOPE);
-
-const systemAC = new SystemAccessControl(SYSTEM_POLICY);
-
-/**
- * An impersonation lasts only while the impersonating admin may still
- * impersonate — a demotion, ban or deletion ends it at once, not when the
- * cookie-cached session runs out. One DB read, impersonation sessions only.
- * Cost: one primary-key user read per request of an impersonation session.
- */
-async function hasImpersonatorLostAccess({
-	impersonatedBy,
-}: ImpersonationSessionLike): Promise<boolean> {
-	if (!impersonatedBy) return false;
-	const impersonator = await getUserAccessState(impersonatedBy);
-	return (
-		!impersonator ||
-		isBanActive(impersonator) ||
-		!hasSystemPermission(
-			systemAC,
-			toSystemRole(impersonator.role),
-			PERMISSIONS.IMPERSONATE_USER,
-		)
-	);
-}
 
 export async function createContext({ context }: CreateContextOptions) {
 	const headers = context.req.raw.headers as Headers;

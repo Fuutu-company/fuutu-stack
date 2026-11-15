@@ -33,6 +33,10 @@ import {
 } from "./hooks/active-organization";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
 import { assertNotImpersonating } from "./hooks/impersonation-guard";
+import {
+	assertImpersonationActive,
+	isEndedImpersonationResult,
+} from "./hooks/impersonation-session";
 import { assertInvitationForSignup } from "./hooks/invitation-only";
 import {
 	assertRegistrationWithinLimits,
@@ -224,6 +228,10 @@ const authOptions = {
 				path: ctx.path,
 				getSession: () => getSessionFromCtx(ctx),
 			});
+			await assertImpersonationActive({
+				path: ctx.path,
+				getSession: () => getSessionFromCtx(ctx),
+			});
 			if (!mcpOAuth.active) return;
 
 			// MCP OAuth guards — see hooks/mcp-oauth-guards.ts.
@@ -256,6 +264,14 @@ const authOptions = {
 			}
 		}),
 		after: createAuthMiddleware(async (ctx) => {
+			if (
+				await isEndedImpersonationResult({
+					path: ctx.path,
+					returned: ctx.context.returned,
+				})
+			) {
+				return ctx.json(null);
+			}
 			await revokeApiKeysAfterLeave({
 				path: ctx.path,
 				returned: ctx.context.returned,

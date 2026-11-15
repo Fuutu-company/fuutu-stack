@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
 	getSession: vi.fn(),
 	signOut: vi.fn(),
 	endExpiredImpersonation: vi.fn(),
+	hasImpersonatorLostAccess: vi.fn(),
 }));
 
 type AuthServer = {
@@ -41,6 +42,9 @@ beforeAll(async () => {
 	}));
 	vi.doMock(resolveFromApp("@fuutu/auth/impersonation-expiry"), () => ({
 		endExpiredImpersonation: mocks.endExpiredImpersonation,
+	}));
+	vi.doMock(resolveFromApp("@fuutu/auth/impersonation-access"), () => ({
+		hasImpersonatorLostAccess: mocks.hasImpersonatorLostAccess,
 	}));
 	vi.doMock(resolveFromApp("@fuutu/db"), () => ({
 		countOrganizationsForUser: vi.fn(),
@@ -93,6 +97,7 @@ beforeEach(() => {
 	mocks.getSession.mockReset();
 	mocks.signOut.mockReset();
 	mocks.endExpiredImpersonation.mockReset();
+	mocks.hasImpersonatorLostAccess.mockReset().mockResolvedValue(false);
 });
 
 const EXPIRED_IMPERSONATION = {
@@ -201,6 +206,19 @@ describe("getSession", () => {
 		);
 		expect(await authServer.getSession()).not.toBeNull();
 		expect(mocks.endExpiredImpersonation).not.toHaveBeenCalled();
+	});
+	it("reports an impersonation whose admin lost access as signed out", async () => {
+		const current = session(
+			{},
+			{ impersonatedBy: "admin-1", createdAt: new Date() },
+		);
+		mocks.getSession.mockResolvedValue(current);
+		mocks.hasImpersonatorLostAccess.mockResolvedValue(true);
+		expect(await authServer.getSession()).toBeNull();
+		expect(mocks.hasImpersonatorLostAccess).toHaveBeenCalledWith(
+			current.session,
+		);
+		expect(await redirectOf(authServer.requireAuth)).toBe("/auth/sign-in");
 	});
 });
 
