@@ -107,6 +107,24 @@ export function legacySlotDatabases(
 	names: string[],
 	inUse?: Set<string>,
 ): string[];
+export function keptSlots(
+	registry?: ReturnType<typeof readRegistry>,
+): { slot: number; path: string; database: string | null }[];
+export function planKeptDrop(
+	kept: { slot: number; database: string | null },
+	existing: { databases?: string[]; buckets?: string[] },
+	registry?: ReturnType<typeof readRegistry>,
+): {
+	databases: string[];
+	bucketPrefix: string;
+	buckets: string[];
+	empty: boolean;
+};
+export function parseArgs(argv: string[]): {
+	command: string;
+	arg: string | undefined;
+	flags: Set<string>;
+};
 export function mainCheckoutRoot(root: string): string | null;
 export function serviceEnv(
 	root: string,

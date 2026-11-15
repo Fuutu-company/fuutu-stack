@@ -656,6 +656,80 @@ export function legacySlotDatabases(slot, names, inUse = databasesInUse()) {
 	return names.filter((name) => pattern.test(name) && !inUse.has(name));
 }
 
+/** Free slots whose data was kept when their registry entry went away. */
+export function keptSlots(registry = readRegistry()) {
+	return Object.entries(registry.keptData ?? {})
+		.map(([slot, k]) => ({
+			slot: Number(slot),
+			path: k.path,
+			database: k.database ?? null,
+		}))
+		.sort((a, b) => a.slot - b.slot);
+}
+
+/**
+ * What of a kept slot's data still exists, by the same rules as `release`
+ * (slotData, legacySlotDatabases). `existing` carries the local database and
+ * bucket names, undefined when that service was unreachable. `empty` = both
+ * are known and nothing of the slot is left — the record has nothing to protect.
+ */
+export function planKeptDrop(
+	{ slot, database },
+	existing,
+	registry = readRegistry(),
+) {
+	const data = slotData({ slot, database }, registry);
+	const bucketPrefix = `s${slot}-`;
+	if (!data) return { databases: [], bucketPrefix, buckets: [], empty: false };
+	const { databases: allDatabases, buckets: allBuckets } = existing;
+	let databases = data.databases;
+	if (!databases.length) {
+		databases = legacySlotDatabases(
+			slot,
+			allDatabases ?? [],
+			databasesInUse(registry),
+		);
+	} else if (allDatabases) {
+		databases = databases.filter((name) => allDatabases.includes(name));
+	}
+	const buckets = (allBuckets ?? []).filter((n) => n.startsWith(bucketPrefix));
+	return {
+		databases,
+		bucketPrefix,
+		buckets,
+		empty:
+			allDatabases !== undefined &&
+			allBuckets !== undefined &&
+			!databases.length &&
+			!buckets.length,
+	};
+}
+
+const KNOWN_FLAGS = new Set(["--yes", "--keep-data", "--drop-data"]);
+
+/**
+ * `ports` command line → command, path argument, flags. A flag is never a
+ * path, and an unknown one (a typo like `--drop-dta`) is an error rather than
+ * silently ignored.
+ */
+export function parseArgs(argv) {
+	const flags = new Set();
+	const positional = [];
+	for (const a of argv) {
+		if (!a.startsWith("-")) {
+			positional.push(a);
+		} else if (KNOWN_FLAGS.has(a)) {
+			flags.add(a);
+		} else {
+			throw new Error(
+				`unknown flag ${a} — known: ${[...KNOWN_FLAGS].join(", ")}`,
+			);
+		}
+	}
+	const [command = "list", arg] = positional;
+	return { command, arg, flags };
+}
+
 /**
  * The main checkout of a git worktree (parent of `git rev-parse
  * --git-common-dir`), or null for the main checkout itself / no git.

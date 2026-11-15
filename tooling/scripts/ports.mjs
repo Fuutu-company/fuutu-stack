@@ -6,13 +6,18 @@
  * pnpm ports reassign        move this project to the next free slot
  * pnpm ports release [path]  free a project's slot (default: this project)
  * pnpm ports prune           list registered projects whose folder is gone or
- *                            no longer a project/worktree (dry run); --yes drops them
+ *                            no longer a project/worktree, and slots still
+ *                            holding kept data (dry run); --yes drops them
  *
  *   release / prune --yes then offer to drop the slot's local database and
  *   buckets: asked interactively, kept without a terminal. --keep-data never
  *   asks, --drop-data drops without asking. Never released: running slots,
  *   and while their folder exists main checkouts, slot 0 and pinned slots —
  *   only git worktrees are temporary. A slot whose data was kept is handed out last.
+ *   prune --yes also handles slots whose data was kept earlier (auto-pruned
+ *   folder): same rules, and the record is cleared once the drop succeeded —
+ *   or at once when no database or bucket of the slot exists any more.
+ *   Unknown flags are rejected, never read as a path.
  *   Postgres and MinIO settings come from .env — in a worktree without one,
  *   from the main checkout's .env.
  * pnpm ports pin [slot]      make a slot the team's preferred slot (default: the
@@ -33,10 +38,13 @@ import {
 	findRoot,
 	isLocal,
 	isPortBusy,
+	keptSlots,
 	legacySlotDatabases,
 	mainCheckoutRoot,
 	minioCredentials,
+	parseArgs,
 	pinSlot,
+	planKeptDrop,
 	pruneRegistry,
 	readPreferredSlot,
 	readProject,
@@ -49,10 +57,15 @@ import {
 } from "../ports/index.mjs";
 
 const root = findRoot();
-const argv = process.argv.slice(2);
-const flags = new Set(argv.filter((a) => a.startsWith("--")));
-const [command = "list", arg] = argv.filter((a) => !a.startsWith("--"));
 const out = (s = "") => process.stdout.write(`${s}\n`);
+let parsed;
+try {
+	parsed = parseArgs(process.argv.slice(2));
+} catch (err) {
+	out(`[ports] ${err.message}`);
+	process.exit(1);
+}
+const { command, arg, flags } = parsed;
 const mainRoot = mainCheckoutRoot(root);
 
 /** Postgres client for a local DATABASE_URL, via @fuutu/db's `pg`. */
@@ -107,26 +120,53 @@ const CREDENTIAL_ERRORS = new Set([
 	"AccessDenied",
 ]);
 
-/** Empties and deletes the local MinIO buckets with the slot's prefix. */
-async function dropBuckets(prefix) {
+/** Local MinIO client: `{ s3sdk, s3 }`, or a reason string when none applies. */
+function minioClient() {
 	const { env, source } = serviceEnv(root, "S3_ENDPOINT", { mainRoot });
 	if (!env.S3_ENDPOINT || !isLocal(env.S3_ENDPOINT)) {
-		out(`  buckets: no local S3_ENDPOINT (${source}) — kept`);
-		return false;
+		return { skipped: `no local S3_ENDPOINT (${source})` };
 	}
 	const credentials = minioCredentials(env);
+	const require = createRequire(join(root, "packages/storage/package.json"));
+	const s3sdk = require("@aws-sdk/client-s3");
+	const s3 = new s3sdk.S3Client({
+		endpoint: env.S3_ENDPOINT,
+		region: env.S3_REGION ?? "us-east-1",
+		forcePathStyle: true,
+		credentials: {
+			accessKeyId: credentials.accessKeyId,
+			secretAccessKey: credentials.secretAccessKey,
+		},
+	});
+	return { s3sdk, s3, credentials, source };
+}
+
+/** Names of all local buckets, undefined when MinIO is not reachable. */
+async function listBuckets() {
 	try {
-		const require = createRequire(join(root, "packages/storage/package.json"));
-		const s3sdk = require("@aws-sdk/client-s3");
-		const s3 = new s3sdk.S3Client({
-			endpoint: env.S3_ENDPOINT,
-			region: env.S3_REGION ?? "us-east-1",
-			forcePathStyle: true,
-			credentials: {
-				accessKeyId: credentials.accessKeyId,
-				secretAccessKey: credentials.secretAccessKey,
-			},
-		});
+		const client = minioClient();
+		if (client.skipped) return undefined;
+		const { Buckets = [] } = await client.s3.send(
+			new client.s3sdk.ListBucketsCommand({}),
+		);
+		return Buckets.map((b) => b.Name).filter(Boolean);
+	} catch {
+		return undefined;
+	}
+}
+
+/** Empties and deletes the local MinIO buckets with the slot's prefix. */
+async function dropBuckets(prefix) {
+	let credentials;
+	let source;
+	try {
+		const client = minioClient();
+		if (client.skipped) {
+			out(`  buckets: ${client.skipped} — kept`);
+			return false;
+		}
+		const { s3sdk, s3 } = client;
+		({ credentials, source } = client);
 		const { Buckets = [] } = await s3.send(new s3sdk.ListBucketsCommand({}));
 		const names = Buckets.map((b) => b.Name).filter((n) =>
 			n?.startsWith(prefix),
@@ -155,7 +195,7 @@ async function dropBuckets(prefix) {
 		return true;
 	} catch (err) {
 		out(
-			CREDENTIAL_ERRORS.has(err.name)
+			CREDENTIAL_ERRORS.has(err.name) && credentials
 				? `  buckets: MinIO rejected access key "${credentials.accessKeyId}" (${credentials.from}, ${source}) — the compose MinIO accepts MINIO_ROOT_USER / MINIO_ROOT_PASSWORD from packages/db/.env, default minioadmin; set S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY to match`
 				: `  bucket drop failed (${err.message}) — is MinIO running?`,
 		);
@@ -208,6 +248,43 @@ async function handleData(released) {
 	const dbOk = databases.length ? await dropDatabases(databases) : true;
 	const bucketsOk = await dropBuckets(data.bucketPrefix);
 	if (dbOk && bucketsOk) await clearKeptData(released.slot);
+}
+
+/**
+ * Data of a slot whose registry entry is already gone (`keptData`): dropped
+ * on --drop-data or after confirmation, left alone with --keep-data. A slot
+ * with nothing left is cleared without asking.
+ */
+async function handleKept({ slot, path, database }) {
+	const plan = planKeptDrop(
+		{ slot, database },
+		{ databases: await listDatabases(), buckets: await listBuckets() },
+	);
+	if (plan.empty) {
+		await clearKeptData(slot);
+		return out(`  slot ${slot}: nothing left from ${path} — record cleared`);
+	}
+	const what = [
+		plan.databases.length ? `databases ${plan.databases.join(", ")}` : null,
+		plan.buckets.length ? `buckets ${plan.buckets.join(", ")}` : null,
+	]
+		.filter(Boolean)
+		.join(" and ");
+	if (flags.has("--keep-data")) return out(`  slot ${slot}: kept ${what}`);
+	const drop =
+		flags.has("--drop-data") ||
+		(process.stdin.isTTY &&
+			(await confirm(`  Drop local ${what || "data"} of slot ${slot}?`)));
+	if (!drop) {
+		return out(
+			`  slot ${slot}: kept ${what || "data"} — no terminal to confirm; --drop-data drops without asking`,
+		);
+	}
+	const dbOk = plan.databases.length
+		? await dropDatabases(plan.databases)
+		: true;
+	const bucketsOk = await dropBuckets(plan.bucketPrefix);
+	if (dbOk && bucketsOk) await clearKeptData(slot);
 }
 
 async function list() {
@@ -295,7 +372,8 @@ const commands = {
 	prune: async () => {
 		const apply = flags.has("--yes");
 		const found = await pruneRegistry({ apply, keep: root });
-		if (!found.length) return out("[ports] nothing to prune");
+		const kept = keptSlots();
+		if (!found.length && !kept.length) return out("[ports] nothing to prune");
 		for (const p of found) {
 			const action = p.kept
 				? `kept: ${p.kept}`
@@ -307,11 +385,18 @@ const commands = {
 			);
 		}
 		if (!apply) {
-			return out("[ports] dry run — `pnpm ports prune --yes` drops them");
+			for (const k of kept) {
+				out(
+					`  slot ${String(k.slot).padEnd(4)} holds data kept from ${k.path} (${k.database ? `database ${k.database}` : "database unknown"})`,
+				);
+			}
+			return out(
+				"[ports] dry run — `pnpm ports prune --yes` drops the entries and their data",
+			);
 		}
-		for (const p of found.filter((f) => !f.kept)) {
-			out(`[ports] slot ${p.slot} data:`);
-			await handleData(p);
+		for (const k of kept) {
+			out(`[ports] slot ${k.slot} data:`);
+			await handleKept(k);
 		}
 	},
 };
