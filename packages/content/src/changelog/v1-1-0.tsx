@@ -284,7 +284,9 @@ export default function ChangelogV110() {
 					<code>users.updateProfile</code>; Better Auth's account, 2FA, passkey,
 					organization, <code>/update-user</code> and session-revoke endpoints
 					answer 403 (<code>IMPERSONATION_FORBIDDEN</code>). A test fails when a
-					new mutation in these modules forgets the guard.
+					new mutation in these modules forgets the guard. The onboarding name
+					step is closed while impersonating and points support to the admin
+					user page.
 				</li>
 				<li>
 					An impersonation ends after{" "}
@@ -292,6 +294,13 @@ export default function ChangelogV110() {
 					start: the session is deleted, the expiry is audited (
 					<code>admin.user.impersonate_expired</code>) and the admin is signed
 					out.
+				</li>
+				<li>
+					An impersonation also ends as soon as the impersonating admin is
+					demoted, banned or deleted: the session is deleted, the end is audited
+					once (<code>admin.user.impersonate_ended_lost_access</code>) and the
+					browser is signed out, so restoring the role does not revive it — not
+					even from the cookie-cached session.
 				</li>
 				<li>
 					A temporary ban ends at <code>banExpires</code>: the server guards,

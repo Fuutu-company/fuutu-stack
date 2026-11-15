@@ -302,13 +302,23 @@ export default function ChangelogV110De() {
 					für Konto, 2FA, Passkeys, Organisationen, <code>/update-user</code>{" "}
 					und das Beenden von Sitzungen antworten mit 403 (
 					<code>IMPERSONATION_FORBIDDEN</code>). Ein Test schlägt fehl, wenn
-					einer neuen Mutation in diesen Modulen der Schutz fehlt.
+					einer neuen Mutation in diesen Modulen der Schutz fehlt. Der
+					Namensschritt im Onboarding ist während einer Impersonation gesperrt
+					und verweist den Support auf die Admin-Seite des Benutzers.
 				</li>
 				<li>
 					Eine Impersonation endet nach{" "}
 					<code>authConfig.admin.impersonationMinutes</code>, gezählt ab ihrem
 					Start: Die Sitzung wird gelöscht, das Ende auditiert (
 					<code>admin.user.impersonate_expired</code>) und der Admin abgemeldet.
+				</li>
+				<li>
+					Eine Impersonation endet außerdem, sobald der übernehmende Admin
+					herabgestuft, gesperrt oder gelöscht wird: Die Sitzung wird gelöscht,
+					das Ende einmal auditiert (
+					<code>admin.user.impersonate_ended_lost_access</code>) und der Browser
+					abgemeldet — eine wiederhergestellte Rolle belebt sie nicht wieder,
+					auch nicht über die im Cookie zwischengespeicherte Sitzung.
 				</li>
 				<li>
 					Eine befristete Sperre endet bei <code>banExpires</code>:
