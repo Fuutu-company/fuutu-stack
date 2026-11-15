@@ -203,6 +203,45 @@ test.describe("admin user management", () => {
 		).toBeHidden();
 	});
 
+	test("onboarding tells support the name step is closed while impersonating", async ({
+		page,
+	}) => {
+		await page.goto("/admin/users?q=member@");
+		await page.getByRole("link", { name: /member@fuutu\.local/ }).click();
+		await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/);
+		await page.getByRole("button", { name: /^actions$/i }).click();
+		await page.getByRole("menuitem", { name: /^impersonate/i }).click();
+		const dialog = page.getByRole("dialog");
+		await dialog.getByLabel("Reason").fill("E2E onboarding check");
+		await dialog.getByRole("button", { name: /^impersonate$/i }).click();
+		await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+
+		// The name update would answer 403 (IMPERSONATION_FORBIDDEN).
+		const updateUser: string[] = [];
+		page.on("request", (request) => {
+			if (request.url().includes("/api/auth/update-user")) {
+				updateUser.push(request.url());
+			}
+		});
+		await page.goto("/onboarding");
+		await expect(
+			page.getByText(/can't change this user's name while impersonating/i),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(page.getByLabel(/full name/i)).toBeDisabled();
+		await expect(
+			page.getByRole("button", { name: /continue/i }),
+		).toBeDisabled();
+		expect(updateUser).toEqual([]);
+
+		const banner = page.getByRole("status").filter({
+			hasText: /you are impersonating/i,
+		});
+		await banner.getByRole("button", { name: /stop impersonating/i }).click();
+		await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/, {
+			timeout: 15_000,
+		});
+	});
+
 	test.describe("without the admin session cookie", () => {
 		// Its sign-out ends every session of the browser (multi-session) —
 		// an own admin sign-in keeps the shared storage-state session alive.

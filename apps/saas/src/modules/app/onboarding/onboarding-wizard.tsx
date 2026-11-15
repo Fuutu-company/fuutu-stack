@@ -9,6 +9,7 @@ import {
 	Card,
 	CardContent,
 	Field,
+	FieldDescription,
 	FieldGroup,
 	FieldLabel,
 	Input,
@@ -41,6 +42,8 @@ interface OnboardingWizardProps {
 	userEmail: string;
 	pendingInvitations: PendingInvitation[];
 	canCreateOrg: boolean;
+	/** Support impersonation: Better Auth refuses `/update-user` (403). */
+	impersonating: boolean;
 }
 
 export function OnboardingWizard({
@@ -48,6 +51,7 @@ export function OnboardingWizard({
 	userEmail,
 	pendingInvitations: invitations,
 	canCreateOrg,
+	impersonating,
 }: OnboardingWizardProps) {
 	const t = useTranslations("onboarding");
 	const router = useRouter();
@@ -78,7 +82,11 @@ export function OnboardingWizard({
 		try {
 			const res = await authClient.updateUser({ name });
 			if (res.error) {
-				setError(t("failed"));
+				setError(
+					res.error.code === "IMPERSONATION_FORBIDDEN"
+						? t("profile.impersonating")
+						: t("failed"),
+				);
 				return;
 			}
 			goNext("profile");
@@ -201,11 +209,20 @@ export function OnboardingWizard({
 									onChange={(e) => setName(e.target.value)}
 									placeholder={t("profile.placeholder")}
 									required
+									disabled={impersonating}
+									aria-describedby={
+										impersonating ? "name-impersonating" : undefined
+									}
 								/>
+								{impersonating && (
+									<FieldDescription id="name-impersonating">
+										{t("profile.impersonating")}
+									</FieldDescription>
+								)}
 							</Field>
 							<Button
 								onClick={saveProfile}
-								disabled={isLoading || !name.trim()}
+								disabled={impersonating || isLoading || !name.trim()}
 								className="w-full"
 							>
 								{t("profile.continue")}

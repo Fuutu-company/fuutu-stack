@@ -86,4 +86,32 @@ test.describe("onboarding flow", () => {
 			page.getByRole("button", { name: /go to dashboard/i }),
 		).toBeVisible({ timeout: 10_000 });
 	});
+
+	test("an impersonation started after the page loaded gets the support message", async ({
+		page,
+	}) => {
+		// Another tab started impersonating: the guard refuses the update.
+		await page.route("**/api/auth/update-user", (route) =>
+			route.fulfill({
+				status: 403,
+				contentType: "application/json",
+				body: JSON.stringify({
+					code: "IMPERSONATION_FORBIDDEN",
+					message: "Not allowed while impersonating a user",
+				}),
+			}),
+		);
+		await page.goto("/onboarding");
+		const nameInput = page.getByLabel(/full name/i);
+		await expect(nameInput).toBeVisible({ timeout: 10_000 });
+		await nameInput.fill("Test Onboarding User");
+		await page.getByRole("button", { name: /continue/i }).click();
+
+		await expect(
+			page.getByText(/can't change this user's name while impersonating/i),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page.getByText(/could not save onboarding step/i),
+		).toBeHidden();
+	});
 });

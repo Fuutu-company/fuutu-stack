@@ -24,6 +24,10 @@ export default async function OnboardingPage() {
 				userEmail={session.user.email}
 				canCreateOrg={canCreateOrg}
 				pendingInvitations={pendingInvitations}
+				impersonating={Boolean(
+					(session.session as { impersonatedBy?: string | null })
+						.impersonatedBy,
+				)}
 			/>
 		</div>
 	);
