@@ -1,6 +1,7 @@
 import { db } from "../client";
 import type { Prisma } from "../generated/client";
-import { roleListMatches } from "./role-list";
+import { roleListIncludes, roleListMatches } from "./role-list";
+import { withSerializationRetry } from "./transaction";
 
 /**
  * System-admin (support back office) reads and writes. Every select is
@@ -229,6 +230,49 @@ export const getUserAccessState = (id: string) =>
 /** Users holding the system `admin` role — for the last-admin guard. */
 export const countAdminUsers = () =>
 	db.user.count({ where: roleListMatches("admin") });
+
+export type AdminSetSystemRoleResult =
+	| { status: "not_found" }
+	| { status: "unchanged" }
+	| { status: "last_admin" }
+	| { status: "updated"; previousRole: string | null };
+
+/**
+ * Sets a user's system role. Demoting an admin checks that another admin
+ * remains in the same Serializable transaction — two admins demoting each
+ * other at once cannot both pass (`last_admin`).
+ */
+export const adminSetSystemRole = (input: {
+	userId: string;
+	role: "admin" | "user";
+}): Promise<AdminSetSystemRoleResult> =>
+	withSerializationRetry(() =>
+		db.$transaction(
+			async (tx): Promise<AdminSetSystemRoleResult> => {
+				const user = await tx.user.findUnique({
+					where: { id: input.userId },
+					select: { id: true, role: true },
+				});
+				if (!user) return { status: "not_found" };
+				const isAdmin = roleListIncludes(user.role, "admin");
+				if (isAdmin === (input.role === "admin")) {
+					return { status: "unchanged" };
+				}
+				if (isAdmin) {
+					const otherAdmins = await tx.user.count({
+						where: { id: { not: user.id }, ...roleListMatches("admin") },
+					});
+					if (otherAdmins === 0) return { status: "last_admin" };
+				}
+				await tx.user.update({
+					where: { id: user.id },
+					data: { role: input.role },
+				});
+				return { status: "updated", previousRole: user.role };
+			},
+			{ isolationLevel: "Serializable" },
+		),
+	);
 
 /**
  * Organizations the user owns alone (no other owner) — deleting the user

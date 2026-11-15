@@ -37,6 +37,7 @@ vi.mock("@fuutu/db", () => ({
 	adminCountUsers: vi.fn(),
 	adminGetUserDetail: vi.fn(),
 	countAdminUsers: vi.fn(),
+	adminSetSystemRole: vi.fn(),
 	listSoleOwnedOrganizations: vi.fn(),
 	isEmailTaken: vi.fn(),
 	adminRevokeUserSession: vi.fn(),
@@ -145,6 +146,16 @@ beforeEach(() => {
 	vi.mocked(db.adminCountUsers).mockResolvedValue(0);
 	vi.mocked(db.adminGetUserDetail).mockResolvedValue({ id: "user-2" } as never);
 	vi.mocked(db.countAdminUsers).mockResolvedValue(2);
+	vi.mocked(db.adminSetSystemRole).mockImplementation((async (input: {
+		userId: string;
+		role: string;
+	}) => {
+		const current = STATES[input.userId]?.role;
+		if (current === undefined) return { status: "not_found" };
+		return current === input.role
+			? { status: "unchanged" }
+			: { status: "updated", previousRole: current };
+	}) as never);
 	vi.mocked(db.listSoleOwnedOrganizations).mockResolvedValue([]);
 	vi.mocked(db.isEmailTaken).mockResolvedValue(false);
 	vi.mocked(db.adminRevokeUserSession).mockResolvedValue(1);
@@ -693,9 +704,9 @@ describe("admin.users.setRole", () => {
 			{ userId: "user-2", role: "admin", reason: REASON },
 			{ context: adminContext() },
 		);
-		expect(auth.api.setRole).toHaveBeenCalledWith({
-			body: { userId: "user-2", role: "admin" },
-			headers: expect.any(Headers),
+		expect(db.adminSetSystemRole).toHaveBeenCalledWith({
+			userId: "user-2",
+			role: "admin",
 		});
 		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
 		expect(db.deleteSessionsImpersonatedBy).not.toHaveBeenCalled();
@@ -712,9 +723,10 @@ describe("admin.users.setRole", () => {
 			{ userId: "admin-2", role: "user", reason: REASON },
 			{ context: adminContext() },
 		);
-		expect(auth.api.setRole).toHaveBeenCalledWith(
-			expect.objectContaining({ body: { userId: "admin-2", role: "user" } }),
-		);
+		expect(db.adminSetSystemRole).toHaveBeenCalledWith({
+			userId: "admin-2",
+			role: "user",
+		});
 		expect(auth.api.revokeUserSessions).toHaveBeenCalledWith({
 			body: { userId: "admin-2" },
 			headers: expect.any(Headers),
@@ -730,8 +742,10 @@ describe("admin.users.setRole", () => {
 		expect(db.deleteSessionsImpersonatedBy).toHaveBeenCalledWith("admin-2");
 	});
 
-	it("never demotes the last admin", async () => {
-		vi.mocked(db.countAdminUsers).mockResolvedValue(1);
+	it("never demotes the last admin (checked inside the role transaction)", async () => {
+		vi.mocked(db.adminSetSystemRole).mockResolvedValueOnce({
+			status: "last_admin",
+		});
 		await expect(
 			call(
 				users.setRole,
@@ -740,6 +754,8 @@ describe("admin.users.setRole", () => {
 			),
 		).rejects.toMatchObject({ code: "CONFLICT" });
 		expect(auth.api.setRole).not.toHaveBeenCalled();
+		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
+		expect(audit.record).not.toHaveBeenCalled();
 	});
 
 	it("refuses to change your own role", async () => {
@@ -750,7 +766,7 @@ describe("admin.users.setRole", () => {
 				{ context: adminContext() },
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
-		expect(auth.api.setRole).not.toHaveBeenCalled();
+		expect(db.adminSetSystemRole).not.toHaveBeenCalled();
 	});
 
 	it("requires a reason", async () => {

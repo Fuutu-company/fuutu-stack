@@ -25,6 +25,7 @@ import {
 	adminListUsers,
 	adminResetTwoFactor,
 	adminRevokeUserSession,
+	adminSetSystemRole,
 	countAdminUsers,
 	deleteSessionsImpersonatedBy,
 	getUserAccessState,
@@ -379,6 +380,86 @@ describe("adminRevokeUserSession", () => {
 		expect(db.session.deleteMany).toHaveBeenCalledWith({
 			where: { id: "s1", userId: "u1" },
 		});
+	});
+});
+
+describe("adminSetSystemRole", () => {
+	beforeEach(() => {
+		vi.mocked(db.$transaction).mockImplementation(((
+			fn: (tx: typeof db) => unknown,
+		) => Promise.resolve(fn(db))) as never);
+	});
+
+	const target = (role: string | null) =>
+		vi.mocked(db.user.findUnique).mockResolvedValueOnce({
+			id: "admin-2",
+			role,
+		} as never);
+
+	it("checks the last admin and demotes in one Serializable transaction", async () => {
+		target("admin");
+		vi.mocked(db.user.count).mockResolvedValueOnce(1);
+		await expect(
+			adminSetSystemRole({ userId: "admin-2", role: "user" }),
+		).resolves.toEqual({ status: "updated", previousRole: "admin" });
+		expect(db.user.count).toHaveBeenCalledWith({
+			where: { id: { not: "admin-2" }, ...ADMIN_ROLE },
+		});
+		expect(db.user.update).toHaveBeenCalledWith({
+			where: { id: "admin-2" },
+			data: { role: "user" },
+		});
+		expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+			isolationLevel: "Serializable",
+		});
+	});
+
+	it("never demotes the last admin", async () => {
+		target("admin");
+		vi.mocked(db.user.count).mockResolvedValueOnce(0);
+		await expect(
+			adminSetSystemRole({ userId: "admin-2", role: "user" }),
+		).resolves.toEqual({ status: "last_admin" });
+		expect(db.user.update).not.toHaveBeenCalled();
+	});
+
+	it("treats a role list containing admin as admin", async () => {
+		target("user,admin");
+		vi.mocked(db.user.count).mockResolvedValueOnce(0);
+		await expect(
+			adminSetSystemRole({ userId: "admin-2", role: "user" }),
+		).resolves.toEqual({ status: "last_admin" });
+	});
+
+	it("promotes without counting admins", async () => {
+		target(null);
+		await expect(
+			adminSetSystemRole({ userId: "admin-2", role: "admin" }),
+		).resolves.toEqual({ status: "updated", previousRole: null });
+		expect(db.user.count).not.toHaveBeenCalled();
+		expect(db.user.update).toHaveBeenCalledWith({
+			where: { id: "admin-2" },
+			data: { role: "admin" },
+		});
+	});
+
+	it.each([
+		["admin", "admin"],
+		["user", "user"],
+		[null, "user"],
+	] as const)("leaves role %s alone when set to %s", async (current, role) => {
+		target(current);
+		await expect(
+			adminSetSystemRole({ userId: "admin-2", role }),
+		).resolves.toEqual({ status: "unchanged" });
+		expect(db.user.update).not.toHaveBeenCalled();
+	});
+
+	it("reports an unknown user", async () => {
+		vi.mocked(db.user.findUnique).mockResolvedValueOnce(null);
+		await expect(
+			adminSetSystemRole({ userId: "nope", role: "admin" }),
+		).resolves.toEqual({ status: "not_found" });
 	});
 });
 

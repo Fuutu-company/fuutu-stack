@@ -1,5 +1,5 @@
 import { auth } from "@fuutu/auth";
-import { countAdminUsers, deleteSessionsImpersonatedBy } from "@fuutu/db";
+import { adminSetSystemRole, deleteSessionsImpersonatedBy } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
@@ -40,23 +40,24 @@ export const setUserRoleProcedure = systemAdminProcedure(
 			"You cannot change your own role",
 		);
 		const target = await loadTargetUser(input.userId);
-		const demote = target.isAdmin && input.role === "user";
-		if (target.isAdmin === (input.role === "admin")) {
-			return { success: true, changed: false };
+		// Last-admin check and role write share one Serializable transaction.
+		const result = await adminSetSystemRole({
+			userId: target.id,
+			role: input.role,
+		});
+		if (result.status === "not_found") {
+			throw new ORPCError("NOT_FOUND", { message: "User not found" });
 		}
-		if (demote && (await countAdminUsers()) <= 1) {
+		if (result.status === "last_admin") {
 			throw new ORPCError("CONFLICT", {
 				message: "The last admin cannot be demoted",
 			});
 		}
+		if (result.status === "unchanged") {
+			return { success: true, changed: false };
+		}
 
-		await withAuthErrors(() =>
-			auth.api.setRole({
-				body: { userId: target.id, role: input.role },
-				headers: context.headers,
-			}),
-		);
-		if (demote) {
+		if (input.role === "user") {
 			await withAuthErrors(() =>
 				auth.api.revokeUserSessions({
 					body: { userId: target.id },
