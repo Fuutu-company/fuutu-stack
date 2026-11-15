@@ -480,8 +480,42 @@ describe("db command environment", () => {
 			{ DATABASE_URL: "postgresql://u:p@localhost:5432/acme" },
 			{ e2e: true },
 		);
-		expect(e2e[lib.SLOT_ENV_MARKER]).toBe("1");
+		expect(e2e[lib.SLOT_ENV_MARKER]).toBe(`1:${root}`);
 		expect(lib.commandSlotEnv(root, p, { ...e2e })).toEqual({});
+	});
+
+	it("re-resolves a slot env inherited from another checkout", async () => {
+		const main = project("main");
+		const mainProject = await lib.ensureSlot(main, { busy: idle });
+		const root = project("worktree");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		// A shell spawned by the main checkout's dev session or E2E run.
+		const inherited = {
+			...lib.slotEnv(mainProject, {
+				DATABASE_URL: "postgresql://u:p@localhost:5432/acme",
+			}),
+		};
+		expect(lib.commandSlotEnv(root, p, inherited).DATABASE_URL).toBe(
+			"postgresql://u:p@localhost:5432/acme-s1",
+		);
+	});
+
+	it("follows .env once it appears after the slot was taken", async () => {
+		await lib.ensureSlot(project("a"), { busy: idle });
+		const root = join(sandbox, "fresh");
+		mkdirSync(root);
+		writeFileSync(join(root, "pnpm-workspace.yaml"), "packages: []\n");
+		const first = await lib.ensureSlot(root, { busy: idle });
+		expect(first.database).toBe("fuutu-s1");
+		writeFileSync(
+			join(root, ".env"),
+			'DATABASE_URL="postgresql://u:p@localhost:5432/acme"\n',
+		);
+		const p = lib.readProject(root);
+		expect(p?.database).toBe("acme-s1");
+		expect(lib.commandSlotEnv(root, p as never, {}).DATABASE_URL).toBe(
+			"postgresql://u:p@localhost:5432/acme-s1",
+		);
 	});
 
 	it("lets the process env win over .env", async () => {
