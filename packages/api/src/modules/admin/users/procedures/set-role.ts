@@ -53,10 +53,8 @@ export const setUserRoleProcedure = systemAdminProcedure(
 				message: "The last admin cannot be demoted",
 			});
 		}
-		if (result.status === "unchanged") {
-			return { success: true, changed: false };
-		}
-
+		// Also on an unchanged demotion: idempotent, and a retry after a
+		// failed revoke must still end the sessions.
 		if (input.role === "user") {
 			await withAuthErrors(() =>
 				auth.api.revokeUserSessions({
@@ -65,6 +63,9 @@ export const setUserRoleProcedure = systemAdminProcedure(
 				}),
 			);
 			await deleteSessionsImpersonatedBy(target.id);
+		}
+		if (result.status === "unchanged") {
+			return { success: true, changed: false };
 		}
 
 		await recordAdminAction(context, {

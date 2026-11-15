@@ -821,6 +821,32 @@ describe("admin.users.setRole", () => {
 		expect(auth.api.setRole).not.toHaveBeenCalled();
 		expect(audit.record).not.toHaveBeenCalled();
 	});
+
+	it("a demotion that finds the role already user still ends sessions and impersonations", async () => {
+		// A retry after the first attempt's revoke failed must complete it.
+		const result = await call(
+			users.setRole,
+			{ userId: "user-2", role: "user", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(result).toEqual({ success: true, changed: false });
+		expect(auth.api.revokeUserSessions).toHaveBeenCalledWith({
+			body: { userId: "user-2" },
+			headers: expect.any(Headers),
+		});
+		expect(db.deleteSessionsImpersonatedBy).toHaveBeenCalledWith("user-2");
+		expect(audit.record).not.toHaveBeenCalled();
+	});
+
+	it("an unchanged promotion revokes nothing", async () => {
+		await call(
+			users.setRole,
+			{ userId: "admin-2", role: "admin", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
+		expect(db.deleteSessionsImpersonatedBy).not.toHaveBeenCalled();
+	});
 });
 
 // ─── sessions ───────────────────────────────────────────────────────────────
@@ -1092,6 +1118,29 @@ describe("admin.users.impersonate", () => {
 			),
 		).rejects.toThrow("audit sink down");
 		expect(auth.api.impersonateUser).not.toHaveBeenCalled();
+		expect(context.resHeaders?.getSetCookie()).toEqual([]);
+	});
+
+	it("records impersonate_failed when Better Auth refuses the session", async () => {
+		vi.mocked(auth.api.impersonateUser).mockRejectedValueOnce(
+			new Error("session store down"),
+		);
+		const context = adminContext();
+		await expect(
+			call(
+				users.impersonate,
+				{ userId: "user-2", reason: REASON },
+				{ context },
+			),
+		).rejects.toThrow();
+		expect(audit.record.mock.calls.map(([event]) => event.action)).toEqual([
+			"admin.user.impersonate_start",
+			"admin.user.impersonate_failed",
+		]);
+		expectAudit("admin.user.impersonate_failed", {
+			targetUserId: "user-2",
+			reason: REASON,
+		});
 		expect(context.resHeaders?.getSetCookie()).toEqual([]);
 	});
 

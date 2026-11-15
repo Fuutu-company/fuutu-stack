@@ -45,10 +45,10 @@ export const impersonateUserProcedure = systemAdminProcedure(
 		}
 
 		// Audited first: no impersonation session may exist without its row.
+		const audited = { targetUserId: target.id, reason: input.reason };
 		await recordAdminAction(context, {
 			action: "admin.user.impersonate_start",
-			targetUserId: target.id,
-			reason: input.reason,
+			...audited,
 		});
 
 		const { headers, response } = await withAuthErrors(() =>
@@ -57,7 +57,14 @@ export const impersonateUserProcedure = systemAdminProcedure(
 				headers: context.headers,
 				returnHeaders: true,
 			}),
-		);
+		).catch(async (err: unknown) => {
+			// The start row above stays; this one says no session came of it.
+			await recordAdminAction(context, {
+				action: "admin.user.impersonate_failed",
+				...audited,
+			});
+			throw err;
+		});
 		forwardSetCookies(headers, resHeaders);
 		return { success: true, expiresAt: response.session.expiresAt };
 	});

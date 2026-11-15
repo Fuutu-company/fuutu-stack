@@ -84,6 +84,7 @@ const systemAC = new SystemAccessControl(SYSTEM_POLICY);
  * An impersonation lasts only while the impersonating admin may still
  * impersonate — a demotion, ban or deletion ends it at once, not when the
  * cookie-cached session runs out. One DB read, impersonation sessions only.
+ * Cost: one primary-key user read per request of an impersonation session.
  */
 async function hasImpersonatorLostAccess({
 	impersonatedBy,
