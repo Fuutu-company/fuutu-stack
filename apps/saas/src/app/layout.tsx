@@ -8,6 +8,7 @@ import { Toaster } from "@fuutu/ui";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import type { PropsWithChildren } from "react";
+import { getLegalLinks } from "@/lib/legal-links";
 import { Providers } from "@/modules/shared/providers";
 import { fontVariables } from "./fonts";
 
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 	const locale = (await getLocale()) as Locale;
 	const direction = getDirection(locale);
 	const messages = await getMessages();
+	const legal = getLegalLinks(locale);
 
 	return (
 		<html
@@ -48,7 +50,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
 				<NextIntlClientProvider locale={locale} messages={messages}>
 					<Providers>
 						{children}
-						<ConsentBanner />
+						<ConsentBanner privacyHref={legal?.privacy} />
 						<AnalyticsScript />
 						<Toaster />
 					</Providers>

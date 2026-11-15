@@ -37,6 +37,9 @@
 		},
 		"./public-path": {
 			"default": "./src/public-path.ts"
+		},
+		"./legal-links": {
+			"default": "./src/legal-links.ts"
 		}
 	},
 	"dependencies": {

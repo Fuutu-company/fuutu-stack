@@ -27,14 +27,17 @@ import {
 	BadgeCheck,
 	ChevronsUpDown,
 	CreditCard,
+	FileText,
 	LogOut,
+	Scale,
 	ShieldCheck,
 	Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { getLegalLinks } from "@/lib/legal-links";
 import { ACCOUNT_SETTINGS_PATH, orgBillingHref } from "./nav-config";
 
 function getInitials(name: string, email: string): string {
@@ -46,6 +49,8 @@ function getInitials(name: string, email: string): string {
 export function NavUser() {
 	const t = useTranslations("navigation");
 	const tConsent = useTranslations("consent");
+	const tLegal = useTranslations("legal");
+	const legal = getLegalLinks(useLocale());
 	const router = useRouter();
 	const pathname = usePathname();
 	const { isMobile } = useSidebar();
@@ -181,6 +186,22 @@ export function NavUser() {
 									<ShieldCheck />
 									{tConsent("privacySettings")}
 								</DropdownMenuItem>
+							)}
+							{legal && (
+								<>
+									<DropdownMenuItem asChild>
+										<a href={legal.privacy}>
+											<FileText />
+											{tLegal("privacy")}
+										</a>
+									</DropdownMenuItem>
+									<DropdownMenuItem asChild>
+										<a href={legal.imprint}>
+											<Scale />
+											{tLegal("imprint")}
+										</a>
+									</DropdownMenuItem>
+								</>
 							)}
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />

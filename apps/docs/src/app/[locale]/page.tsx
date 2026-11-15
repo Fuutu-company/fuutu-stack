@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { appDocs } from "@/app-docs";
 import { LanguageSelect } from "@/components/language-select";
+import { LegalLinks } from "@/components/legal-links";
 import { locales } from "@/i18n/config";
 import { baseOptions, PRIVACY_LINK_CLASS } from "@/lib/layout.shared";
 import { hreflangLanguages } from "@/lib/page-metadata";
@@ -84,7 +85,8 @@ export default async function HomePage({ params }: HomePageProps) {
 					</div>
 				</div>
 			)}
-			<footer className="flex justify-center pb-8">
+			<footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pb-8">
+				<LegalLinks locale={locale} className={PRIVACY_LINK_CLASS} />
 				<PrivacySettingsButton className={PRIVACY_LINK_CLASS} />
 			</footer>
 		</HomeLayout>

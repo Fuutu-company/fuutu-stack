@@ -124,6 +124,13 @@ export const config = {
 		 * Deleting the module is safe, its guards skip.
 		 */
 		designSystem: true,
+		/**
+		 * Links to the marketing site's imprint and privacy pages from the
+		 * saas app (auth pages, user menu), the docs app (sidebar, home
+		 * footer) and the consent banner (§ 5 DDG: reachable from every
+		 * page). Off: no links. Also hidden without NEXT_PUBLIC_MARKETING_URL.
+		 */
+		legalPages: true,
 	},
 	theme: {
 		modes: ["light", "dark"] as const,

@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { expect, type Page, test } from "@playwright/test";
 
 // Base Playwright `test` on purpose: the shared fixture pre-accepts consent,
@@ -49,5 +50,44 @@ test.describe("privacy settings", () => {
 			.getByRole("button", { name: /^privacy settings$/i })
 			.click();
 		await expect(banner(page)).toBeVisible();
+	});
+});
+
+test.describe("legal links", () => {
+	test.skip(!config.features.legalPages, "config.features.legalPages is off");
+
+	test("the docs home footer links imprint and privacy on marketing", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const footer = page.locator("footer");
+		await expect(
+			footer.getByRole("link", { name: /^imprint$/i }),
+		).toHaveAttribute("href", /\/legal\/imprint$/);
+		await expect(
+			footer.getByRole("link", { name: /^privacy policy$/i }),
+		).toHaveAttribute("href", /\/legal\/privacy$/);
+	});
+
+	test("the docs sidebar footer links imprint and privacy on marketing", async ({
+		page,
+		isMobile,
+	}) => {
+		await page.goto("/docs");
+		if (isMobile) {
+			await page
+				.locator('button[aria-controls="nd-sidebar-mobile"]')
+				.first()
+				.click();
+		}
+		const sidebar = page.locator(
+			isMobile ? "#nd-sidebar-mobile" : "#nd-sidebar",
+		);
+		await expect(
+			sidebar.getByRole("link", { name: /^imprint$/i }),
+		).toHaveAttribute("href", /\/legal\/imprint$/);
+		await expect(
+			sidebar.getByRole("link", { name: /^privacy policy$/i }),
+		).toHaveAttribute("href", /\/legal\/privacy$/);
 	});
 });
