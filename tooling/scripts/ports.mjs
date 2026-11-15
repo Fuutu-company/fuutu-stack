@@ -10,8 +10,9 @@
  *
  *   release / prune --yes then offer to drop the slot's local database and
  *   buckets: asked interactively, kept without a terminal. --keep-data never
- *   asks, --drop-data drops without asking. Slot 0, pinned and running slots
- *   are never released. A slot whose data was kept is handed out last.
+ *   asks, --drop-data drops without asking. Never released: running slots,
+ *   and while their folder exists main checkouts, slot 0 and pinned slots —
+ *   only git worktrees are temporary. A slot whose data was kept is handed out last.
  *   Postgres and MinIO settings come from .env — in a worktree without one,
  *   from the main checkout's .env.
  * pnpm ports pin [slot]      make a slot the team's preferred slot (default: the
@@ -21,10 +22,12 @@
  * Writes .fuutu/project.json (per project) and ~/.fuutu/projects.json (per
  * machine). Both are generated — change them only through these commands.
  */
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
+	checkoutKind,
 	clearKeptData,
 	ensureSlot,
 	findRoot,
@@ -234,7 +237,8 @@ async function list() {
 			: stale.has(path)
 				? "  (not started for 90+ days)"
 				: "";
-		out(` ${mark} slot ${String(p.slot).padEnd(4)} ${path}${note}`);
+		const kind = existsSync(path) ? checkoutKind(path).padEnd(8) : "gone    ";
+		out(` ${mark} slot ${String(p.slot).padEnd(4)} ${kind} ${path}${note}`);
 	}
 	const kept = Object.entries(registry.keptData ?? {});
 	if (kept.length) {

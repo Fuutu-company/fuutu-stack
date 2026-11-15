@@ -8,13 +8,21 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const lib = await import("../../../../tooling/ports/index.mjs");
 
 const idle = async () => false;
 let sandbox: string;
+
+/** Marks a project as a live git worktree (`.git` file → existing gitdir). */
+function asWorktree(root: string) {
+	const gitdir = join(sandbox, "repo/.git/worktrees", basename(root));
+	mkdirSync(gitdir, { recursive: true });
+	writeFileSync(join(root, ".git"), `gitdir: ${gitdir}\n`);
+	return root;
+}
 
 function project(name: string, dbUrl = "postgresql://u:p@localhost:5432/acme") {
 	const root = join(sandbox, name);
@@ -129,7 +137,7 @@ describe("slot assignment", () => {
 
 	it("moves to a requested slot only if no other project owns it", async () => {
 		const a = project("a");
-		const b = project("b");
+		const b = asWorktree(project("b"));
 		await lib.ensureSlot(a, { busy: idle });
 		await lib.ensureSlot(b, { busy: idle });
 		await expect(lib.setSlot(b, 0, { busy: idle })).rejects.toThrow(
@@ -150,7 +158,7 @@ describe("slot assignment", () => {
 
 describe("release and prune", () => {
 	const registered = async (...names: string[]) => {
-		const roots = names.map((n) => project(n));
+		const roots = names.map((n) => asWorktree(project(n)));
 		for (const r of roots) await lib.ensureSlot(r, { busy: idle });
 		return roots;
 	};
@@ -256,6 +264,38 @@ describe("release and prune", () => {
 		).toEqual([]);
 	});
 
+	it("never releases or prunes a main checkout while its folder exists", async () => {
+		await registered("a");
+		const main = project("main"); // .git missing → a main checkout
+		await lib.setSlot(main, 5, { busy: idle });
+		const repo = project("mainrepo");
+		mkdirSync(join(repo, ".git"));
+		await lib.setSlot(repo, 6, { busy: idle });
+		expect(lib.checkoutKind(main)).toBe("main");
+		expect(lib.checkoutKind(repo)).toBe("main");
+		for (const root of [main, repo]) {
+			await expect(lib.releaseSlot(root, { busy: idle })).rejects.toThrow(
+				/main checkout/,
+			);
+		}
+		rmSync(join(repo, "pnpm-workspace.yaml"));
+		const found = await lib.pruneRegistry({ apply: true, busy: idle });
+		expect(found.map((f) => [f.path, f.kept])).toEqual([
+			[repo, "main checkout"],
+		]);
+		expect(lib.readRegistry().projects[main]?.slot).toBe(5);
+		expect(lib.readRegistry().projects[repo]?.slot).toBe(6);
+	});
+
+	it("a deleted main checkout frees its slot like any project", async () => {
+		await registered("a");
+		const main = project("main");
+		await lib.setSlot(main, 5, { busy: idle });
+		rmSync(main, { recursive: true });
+		await lib.pruneRegistry({ apply: true, busy: idle });
+		expect(lib.readRegistry().projects[main]).toBeUndefined();
+	});
+
 	it("refuses to release a running slot", async () => {
 		const [, b] = await registered("a", "b");
 		const busy = async (port: number) => port === lib.slotPorts(1).browser;
@@ -299,7 +339,7 @@ describe("release and prune", () => {
 		rmSync(join(plain as string, "pnpm-workspace.yaml"));
 		writeFileSync(
 			join(worktree as string, ".git"),
-			`gitdir: ${join(sandbox, "repo/.git/worktrees/worktree")}\n`,
+			`gitdir: ${join(sandbox, "repo/.git/worktrees/removed")}\n`,
 		);
 		mkdirSync(join(sandbox, "repo/.git/worktrees/live"), { recursive: true });
 		writeFileSync(

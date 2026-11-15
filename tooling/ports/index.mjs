@@ -320,11 +320,25 @@ export function projectGone(path) {
 }
 
 /**
+ * "worktree" when the project is a git worktree (`.git` is a file), else
+ * "main" — a repository's main checkout or a project without git.
+ */
+export function checkoutKind(path) {
+	try {
+		return statSync(join(path, ".git")).isFile() ? "worktree" : "main";
+	} catch {
+		return "main";
+	}
+}
+
+/**
  * Why an entry must keep its slot: a running session, or — while its folder
- * exists — slot 0 or a pinned slot.
+ * exists — a main checkout, slot 0 or a pinned slot. Only worktrees are
+ * temporary.
  */
 async function protectedReason(path, entry, busy) {
 	if (existsSync(path)) {
+		if (checkoutKind(path) === "main") return "main checkout";
 		if (entry.slot === 0) return "slot 0";
 		if (readPreferredSlot(path) === entry.slot) {
 			return "pinned (fuutu.preferredSlot)";
