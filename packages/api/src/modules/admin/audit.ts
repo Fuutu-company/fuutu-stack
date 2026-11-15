@@ -12,6 +12,8 @@ export type AdminAuditEntry = {
 	actorUserId?: string;
 	targetUserId?: string;
 	targetOrganizationId?: string;
+	/** An organization invitation — the invitee's email stays out. */
+	targetInvitationId?: string;
 	reason?: string;
 	/** Names of the fields an update changed — never their values. */
 	changedFields?: string[];
