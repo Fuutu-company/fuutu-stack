@@ -220,11 +220,14 @@ export function readProject(root) {
 	}
 	const recorded = project.ports ?? {};
 	const keys = Object.keys(current);
+	const refreshed = describeProject(root, project.slot);
+	// The database name follows .env — a slot first taken before .env existed
+	// must not keep the `fuutu-s<N>` fallback once the real name is known.
 	const same =
 		keys.length === Object.keys(recorded).length &&
-		keys.every((key) => recorded[key] === current[key]);
+		keys.every((key) => recorded[key] === current[key]) &&
+		project.database === refreshed.database;
 	if (same) return project;
-	const refreshed = describeProject(root, project.slot);
 	writeProject(root, refreshed);
 	return refreshed;
 }
@@ -602,8 +605,13 @@ export function isE2eResetTarget(value, project) {
 	}
 }
 
-/** Set in every slot env so child commands don't re-apply it. */
+/**
+ * Set in every slot env to `<slot>:<root>` so this project's child commands
+ * don't re-apply it. A marker of another checkout (a shell spawned by its
+ * dev session or E2E run) does not match and is resolved again.
+ */
 export const SLOT_ENV_MARKER = "FUUTU_SLOT_ENV";
+const slotEnvMark = (project) => `${project.slot}:${project.root}`;
 
 /**
  * Env for an app process of this project. Local URLs (unset or pointing at
@@ -646,7 +654,7 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
 		}
 	}
 	out.FUUTU_AUTH_COOKIE_PREFIX = project.authCookiePrefix;
-	out[SLOT_ENV_MARKER] = "1";
+	out[SLOT_ENV_MARKER] = slotEnvMark(project);
 	return out;
 }
 
@@ -656,8 +664,8 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
  * this project's slot database — never another checkout's.
  */
 export function commandSlotEnv(root, project, env = process.env) {
-	// Already resolved by a parent (dev launcher, E2E reset → `<db>-e2e`):
-	// re-applying would point the command back at the dev database.
-	if (env[SLOT_ENV_MARKER]) return {};
+	// Already resolved by a parent of THIS project (dev launcher, E2E reset →
+	// `<db>-e2e`): re-applying would point the command back at the dev database.
+	if (env[SLOT_ENV_MARKER] === slotEnvMark(project)) return {};
 	return slotEnv(project, { ...readDotEnv(root), ...env });
 }

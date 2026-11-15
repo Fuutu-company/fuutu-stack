@@ -15,6 +15,7 @@ import {
 	commandSlotEnv,
 	ensureSlot,
 	findRoot,
+	readDotEnv,
 	readProject,
 } from "../ports/index.mjs";
 
@@ -42,9 +43,13 @@ if (!process.env.CI) {
 }
 if (print) process.exit(0);
 
+const env = { ...process.env, ...overrides };
+if (!env.DATABASE_URL && !readDotEnv(findRoot()).DATABASE_URL) {
+	process.stderr.write(
+		"[db] no DATABASE_URL: copy .env.example to .env (or set DATABASE_URL)\n",
+	);
+	process.exit(1);
+}
 const [cmd, ...rest] = args;
-const result = spawnSync(cmd, rest, {
-	stdio: "inherit",
-	env: { ...process.env, ...overrides },
-});
+const result = spawnSync(cmd, rest, { stdio: "inherit", env });
 process.exit(result.status ?? 1);
