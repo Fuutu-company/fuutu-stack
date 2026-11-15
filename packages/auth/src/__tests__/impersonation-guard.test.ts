@@ -1,4 +1,5 @@
 import { APIError } from "better-auth/api";
+import { organization } from "better-auth/plugins";
 import { describe, expect, it, vi } from "vitest";
 import { assertNotImpersonating } from "../hooks/impersonation-guard";
 
@@ -40,6 +41,21 @@ const GUARDED_PATHS = [
 	// impersonation without the audited stop.
 	"/multi-session/set-active",
 	"/multi-session/revoke",
+	// Organization management: membership, roles, invitations and the
+	// organization's identity (name, slug, logo).
+	"/organization/update",
+	"/organization/remove-member",
+	"/organization/update-member-role",
+	"/organization/cancel-invitation",
+	"/organization/reject-invitation",
+	"/organization/create-role",
+	"/organization/update-role",
+	"/organization/delete-role",
+	"/organization/create-team",
+	"/organization/update-team",
+	"/organization/remove-team",
+	"/organization/add-team-member",
+	"/organization/remove-team-member",
 ];
 
 describe("assertNotImpersonating (hooks.before)", () => {
@@ -81,8 +97,11 @@ describe("assertNotImpersonating (hooks.before)", () => {
 		"/update-user",
 		"/sign-out",
 		"/admin/stop-impersonating",
-		"/organization/delete-role",
+		"/organization/create",
 		"/organization/set-active",
+		"/organization/set-active-team",
+		"/organization/get-full-organization",
+		"/organization/list-members",
 		undefined,
 	])("never reads the session on unguarded path %s", async (path) => {
 		const getSession = vi.fn(impersonated);
@@ -90,5 +109,51 @@ describe("assertNotImpersonating (hooks.before)", () => {
 			assertNotImpersonating({ path, getSession }),
 		).resolves.toBeUndefined();
 		expect(getSession).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * Every Better Auth organization mutation (teams and dynamic roles enabled,
+ * so nothing is hidden) is guarded unless listed here. A new endpoint in a
+ * Better Auth update fails this test until it is classified.
+ */
+const ORGANIZATION_MUTATIONS_ALLOWED_WHILE_IMPERSONATING = new Set([
+	// A new organization of the user's own — changes nothing that exists
+	// (oRPC `organizations.create` allows it too).
+	"/organization/create",
+	// Navigation: which organization / team the session looks at.
+	"/organization/set-active",
+	"/organization/set-active-team",
+	// Read-only checks sent as POST.
+	"/organization/check-slug",
+	"/organization/has-permission",
+]);
+
+describe("organization plugin coverage", () => {
+	const plugin = organization({
+		teams: { enabled: true },
+		dynamicAccessControl: { enabled: true },
+	});
+	const mutations = Object.values(plugin.endpoints)
+		.filter((endpoint) => {
+			const method = endpoint.options.method;
+			const methods = Array.isArray(method) ? method : [method];
+			return methods.some((m) => m !== "GET");
+		})
+		.map((endpoint) => endpoint.path)
+		// Server-only endpoints (`addMember`) have no path and no HTTP route.
+		.filter((path): path is string => typeof path === "string")
+		.filter(
+			(path) => !ORGANIZATION_MUTATIONS_ALLOWED_WHILE_IMPERSONATING.has(path),
+		);
+
+	it("finds the organization mutations", () => {
+		expect(mutations).toContain("/organization/remove-member");
+	});
+
+	it.each(mutations)("guards %s", async (path) => {
+		await expect(
+			assertNotImpersonating({ path, getSession: impersonated }),
+		).rejects.toMatchObject({ body: { code: "IMPERSONATION_FORBIDDEN" } });
 	});
 });

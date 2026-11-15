@@ -32,6 +32,22 @@ const GUARDED_PATHS: ReadonlySet<string> = new Set([
 	// audited stop (`admin.impersonation.stop`).
 	"/multi-session/set-active",
 	"/multi-session/revoke",
+	// Organization management — membership, roles, invitations and the
+	// organization's identity. Roles and teams are guarded although the kit
+	// does not enable them, so enabling them later stays covered.
+	"/organization/update",
+	"/organization/remove-member",
+	"/organization/update-member-role",
+	"/organization/cancel-invitation",
+	"/organization/reject-invitation",
+	"/organization/create-role",
+	"/organization/update-role",
+	"/organization/delete-role",
+	"/organization/create-team",
+	"/organization/update-team",
+	"/organization/remove-team",
+	"/organization/add-team-member",
+	"/organization/remove-team-member",
 ]);
 
 const GUARDED_PREFIXES = ["/delete-user", "/two-factor/", "/passkey/"];
