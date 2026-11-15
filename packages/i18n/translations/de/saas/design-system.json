@@ -636,6 +636,17 @@
 						"trigger": "Fehler",
 						"title": "Einladung konnte nicht gesendet werden"
 					}
+				},
+				"secretReveal": {
+					"title": "Dialog für einmalige Geheimnisse",
+					"description": "Zeigt einen Schlüssel oder ein Geheimnis genau einmal und vollständig. Ein Klick daneben schließt ihn nicht.",
+					"trigger": "Geheimnis anzeigen",
+					"heading": "Dein neuer API-Schlüssel",
+					"body": "Kopiere diesen Schlüssel jetzt. Du kannst ihn später nicht mehr sehen.",
+					"copy": "Kopieren",
+					"copied": "Kopiert!",
+					"copyFailed": "Kopieren fehlgeschlagen. Markiere den Schlüssel und kopiere ihn selbst.",
+					"done": "Habe ich kopiert"
 				}
 			},
 			"display": {

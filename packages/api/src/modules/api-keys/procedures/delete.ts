@@ -3,9 +3,9 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
 import { assertSessionCaller } from "../assert-session-caller";
+import { requireOrgApiKeyManageAccess } from "../org-key-access";
 
 const apiKeyIdSchema = z.object({
 	id: z.string().min(1).max(64),
@@ -21,7 +21,7 @@ export const deleteApiKeyProcedure = permissionProcedure(
 		tags: ["API Keys"],
 		summary: "Delete API key",
 		description:
-			"Permanently deletes an API key. Personal keys can only be deleted by the owner. Org-level keys require admin role in the organization.",
+			"Permanently deletes an API key. Personal keys can only be deleted by the owner. Org keys: an org admin or owner may delete any key of the organization, a member only the keys they created.",
 	})
 	.input(apiKeyIdSchema)
 	.handler(async ({ input, context }) => {
@@ -31,10 +31,9 @@ export const deleteApiKeyProcedure = permissionProcedure(
 			throw new ORPCError("NOT_FOUND", { message: "API key not found" });
 		}
 		if (key.organizationId) {
-			await requireOrgPermissionAccess(
-				key.organizationId,
+			await requireOrgApiKeyManageAccess(
+				{ organizationId: key.organizationId, userId: key.userId },
 				context.user.id,
-				PERMISSIONS.API_KEY.DELETE,
 				context,
 			);
 			const result = await deleteApiKey(input.id, {

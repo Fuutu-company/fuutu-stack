@@ -131,6 +131,29 @@ export default function ChangelogV110() {
 					<code>icon-chip-guard</code> keeps chips out and lists real avatars,
 					counters and controls with their reason.
 				</li>
+				<li>
+					<code>SecretRevealDialog</code> (<code>@fuutu/ui</code>) shows a key
+					or secret exactly once: in full and wrapped, selectable, and an
+					outside click does not close it. A failed copy selects the secret and
+					shows a hint instead of throwing. New API keys and webhook signing
+					secrets use it.
+				</li>
+				<li>
+					Create an API key from anywhere with <code>CreateApiKeyButton</code>{" "}
+					(create dialog, then the reveal): <code>presetScopes</code>,{" "}
+					<code>triggerLabel</code>, <code>triggerVariant</code> and a{" "}
+					<code>createdHint</code> under the key. The create dialog starts fresh
+					on every open. <code>ApiKeyList</code> takes{" "}
+					<code>variant="section"</code>, <code>scope</code> (lists only keys
+					with that scope and presets new ones), <code>manageHref</code> and{" "}
+					<code>createdHint</code>; <code>ApiKeyStatusBadge</code> is exported.{" "}
+					<code>apiKeys.list</code> accepts a <code>scope</code> filter.
+				</li>
+				<li>
+					<code>AppOrgSettingsNavItem.replaces</code> puts an app item in place
+					of a kit org-settings item (e.g. one "Keys" page instead of "API
+					keys") without rewording kit text; the kit route keeps working.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -154,6 +177,20 @@ export default function ChangelogV110() {
 					The marketing layout no longer clips the shadow and focus ring of the
 					last card on a page (<code>main</code> uses{" "}
 					<code>overflow-x-clip</code>).
+				</li>
+				<li>
+					Dialogs fit the screen: a 16 px inset on phones, a maximum height with
+					scrolling, gaps between stacked footer buttons, and the content column
+					no longer grows past the dialog (a long API key pushed "I've copied
+					it" outside).
+				</li>
+				<li>
+					The API key lists show every key: they load 100 per page with a "Load
+					more" button instead of silently stopping at 50.
+				</li>
+				<li>
+					The <code>versioning</code> scope description says what it is for:
+					letting a release workflow compute the next app version.
 				</li>
 			</ul>
 			<h3>Breaking changes and migration</h3>
@@ -190,6 +227,20 @@ export default function ChangelogV110() {
 					radius (sizes: 16 px <code>sm</code>, 20 px <code>md</code>). The
 					marketing <code>AreaCutoutIcon</code> is removed; the hero cards use{" "}
 					<code>AreaIcon</code>. Update your visual baselines.
+				</li>
+				<li>
+					Security: org members can no longer revoke or delete other people's
+					org API keys, an admin's included.{" "}
+					<code>PERMISSIONS.API_KEY.DELETE</code> moved from the member to the
+					admin tier of <code>ORG_POLICY</code>; a member still revokes the keys
+					they created. <code>apiKeys.list</code> items carry{" "}
+					<code>canRevoke</code>, and the list shows Revoke only there.
+				</li>
+				<li>
+					<code>DialogContent</code> defaults to{" "}
+					<code>max-w-[calc(100%-2rem)] sm:max-w-lg</code>. Override the width
+					with <code>sm:max-w-*</code>; a bare <code>max-w-*</code> drops the
+					phone inset. Update your visual baselines.
 				</li>
 			</ul>
 		</>

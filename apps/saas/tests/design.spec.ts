@@ -1,6 +1,7 @@
 import { config } from "@fuutu/config";
 import { CONTRAST_PAIRS } from "@fuutu/ui/color";
 import type { Page } from "@playwright/test";
+import { DIALOG_VIEWPORTS, expectContentInsideDialog } from "./dialog-geometry";
 import { expect, test } from "./fixtures";
 import { expectedFontFamily } from "./font-families";
 
@@ -545,4 +546,18 @@ test.describe("/design", () => {
 		await page.keyboard.press("Escape");
 		await expect(dialog).toBeHidden();
 	});
+
+	for (const viewport of DIALOG_VIEWPORTS) {
+		test(`dialog content stays inside the dialog at ${viewport.width}px`, async ({
+			page,
+		}) => {
+			await page.setViewportSize(viewport);
+			await page.goto("/design");
+			await page
+				.locator("section#components")
+				.getByRole("button", { name: /^open dialog$/i })
+				.click();
+			await expectContentInsideDialog(page, page.getByRole("dialog"));
+		});
+	}
 });

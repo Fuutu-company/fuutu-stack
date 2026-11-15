@@ -87,6 +87,15 @@ export interface AppOrgSettingsNavItem
 	segment: string;
 	/** Shown only when the viewer's org role has this permission. */
 	permission?: KnownPermission;
+	/**
+	 * Take this kit item's place (wins over `after`) — e.g. an app "Keys"
+	 * page instead of the kit "API keys" item, without rewording kit text.
+	 * The kit route keeps working. Hidden kit item → appended; hidden by
+	 * `permission` → the kit item is removed anyway; `enabled: false` →
+	 * the kit item stays. Two items replacing one key throw. An app item
+	 * anchored `after` the replaced key lands behind the replacement.
+	 */
+	replaces?: OrgSettingsNavKey;
 }
 
 /** Where an app main-nav item links — exactly one of the three. */
@@ -146,13 +155,15 @@ function mergeAppItems<T extends AppNavItemBase<string>>(
 	extras: readonly T[],
 	toHref: (item: T) => string,
 	visible: (item: T) => boolean = () => true,
+	anchorOf: (after: string | undefined) => string | undefined = (after) =>
+		after,
 ): NavSubItem[] {
 	return insertAfter(
 		base,
 		extras
 			.filter((item) => item.enabled !== false && visible(item))
 			.map((item) => ({
-				after: item.after,
+				after: anchorOf(item.after),
 				item: toNavSubItem(item, toHref(item)),
 			})),
 		(item) => item.titleKey,
@@ -255,12 +266,68 @@ export function getOrgSettingsItems(
 		items.push({ titleKey: "auditLog", href: `${base}/audit-log` });
 	}
 	items.push({ titleKey: "danger", href: `${base}/danger` });
+	const toHref = (item: AppOrgSettingsNavItem) => `${base}/${item.segment}`;
+	const visible = (item: AppOrgSettingsNavItem) =>
+		!item.permission || (can?.(item.permission) ?? false);
+	const {
+		base: replaced,
+		extras,
+		replacedBy,
+	} = applyReplacements(items, appOrgSettingsNavItems, toHref, visible);
 	return mergeAppItems(
-		items,
-		appOrgSettingsNavItems,
-		(item) => `${base}/${item.segment}`,
-		(item) => !item.permission || (can?.(item.permission) ?? false),
+		replaced,
+		extras,
+		toHref,
+		visible,
+		(after) => (after && replacedBy.get(after)) ?? after,
 	);
+}
+
+/**
+ * Swap kit items for app items that declare `replaces`. Returns the kit
+ * list with replacements in place, the remaining extras (a replacement
+ * whose kit item is hidden comes back as a plain, appended extra) and the
+ * replaced keys, so an `after` on one lands behind its replacement.
+ */
+function applyReplacements(
+	base: NavSubItem[],
+	extras: readonly AppOrgSettingsNavItem[],
+	toHref: (item: AppOrgSettingsNavItem) => string,
+	visible: (item: AppOrgSettingsNavItem) => boolean,
+): {
+	base: NavSubItem[];
+	extras: AppOrgSettingsNavItem[];
+	/** Replaced kit key → the app item's key. */
+	replacedBy: Map<string, string>;
+} {
+	const result = [...base];
+	const replacedBy = new Map<string, string>();
+	const rest: AppOrgSettingsNavItem[] = [];
+	for (const item of extras) {
+		if (!item.replaces || item.enabled === false) {
+			rest.push(item);
+			continue;
+		}
+		if (replacedBy.has(item.replaces)) {
+			throw new Error(
+				`nav-config: "${item.titleKey}" and "${replacedBy.get(item.replaces)}" both replace "${item.replaces}"`,
+			);
+		}
+		replacedBy.set(item.replaces, item.titleKey);
+		const index = result.findIndex((i) => i.titleKey === item.replaces);
+		if (index === -1) {
+			// Kit item hidden (feature flag, role): append like a missing anchor.
+			const { replaces: _replaces, after: _after, ...plain } = item;
+			rest.push(plain);
+			continue;
+		}
+		if (visible(item)) {
+			result.splice(index, 1, toNavSubItem(item, toHref(item)));
+		} else {
+			result.splice(index, 1);
+		}
+	}
+	return { base: result, extras: rest, replacedBy };
 }
 
 export function getAccountItems(): NavSubItem[] {

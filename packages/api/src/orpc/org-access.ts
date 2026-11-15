@@ -29,12 +29,19 @@ export type OrgAccessContext = {
 	apiKey?: { organizationId: string | null } | null;
 };
 
+/** Whether the member's org role grants `permission` (no throw). */
+export function memberHasOrgPermission(
+	member: { role: string | null | undefined },
+	permission: KnownPermission,
+): boolean {
+	return hasOrgPermission(orgAC, toOrgRole(member.role), permission);
+}
+
 export function requireOrgPermission(
 	member: { role: string | null | undefined },
 	permission: KnownPermission,
 ): void {
-	const role = toOrgRole(member.role);
-	if (!hasOrgPermission(orgAC, role, permission)) {
+	if (!memberHasOrgPermission(member, permission)) {
 		throw new ORPCError("FORBIDDEN", { message: "Insufficient permissions" });
 	}
 }

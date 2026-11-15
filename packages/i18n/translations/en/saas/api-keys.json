@@ -49,14 +49,15 @@
 		"scopeDescriptions": {
 			"api": "Call the REST and oRPC API.",
 			"mcp": "Connect AI agents through the MCP server.",
-			"versioning": "Read version and release information."
+			"versioning": "Let a release workflow compute the next app version."
 		},
 		"createdDialog": {
 			"title": "Your new API key",
 			"description": "Copy this key now — you won't be able to see it again.",
 			"copy": "Copy",
 			"copied": "Copied!",
-			"done": "I've copied it"
+			"done": "I've copied it",
+			"copyFailed": "Copy failed. Select the key and copy it yourself."
 		},
 		"revokeDialog": {
 			"title": "Revoke API key?",
@@ -69,6 +70,8 @@
 		"failed": "Could not perform this action.",
 		"created": "API key created.",
 		"revoked": "API key revoked.",
-		"revokeError": "Failed to revoke API key. Please try again."
+		"revokeError": "Failed to revoke API key. Please try again.",
+		"allKeys": "All keys",
+		"loadMore": "Load more"
 	}
 }

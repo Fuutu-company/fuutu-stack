@@ -139,6 +139,32 @@ export default function ChangelogV110De() {
 					Iconography). Der <code>icon-chip-guard</code> hält solche Flächen
 					fern und führt echte Avatare, Zähler und Controls mit Begründung.
 				</li>
+				<li>
+					<code>SecretRevealDialog</code> (<code>@fuutu/ui</code>) zeigt einen
+					Schlüssel oder ein Geheimnis genau einmal: vollständig und umbrochen,
+					markierbar, und ein Klick daneben schließt ihn nicht. Schlägt das
+					Kopieren fehl, wird das Geheimnis markiert und ein Hinweis erscheint,
+					statt eines Fehlers. Neue API-Schlüssel und Webhook-Geheimnisse nutzen
+					ihn.
+				</li>
+				<li>
+					API-Schlüssel lassen sich überall mit <code>CreateApiKeyButton</code>{" "}
+					anlegen (Anlegen-Dialog, dann die Anzeige): <code>presetScopes</code>,{" "}
+					<code>triggerLabel</code>, <code>triggerVariant</code> und ein{" "}
+					<code>createdHint</code> unter dem Schlüssel. Der Anlegen-Dialog
+					startet bei jedem Öffnen leer. <code>ApiKeyList</code> nimmt{" "}
+					<code>variant="section"</code>, <code>scope</code> (listet nur
+					Schlüssel mit diesem Scope und belegt neue damit vor),{" "}
+					<code>manageHref</code> und <code>createdHint</code>;{" "}
+					<code>ApiKeyStatusBadge</code> wird exportiert.{" "}
+					<code>apiKeys.list</code> akzeptiert einen <code>scope</code>-Filter.
+				</li>
+				<li>
+					<code>AppOrgSettingsNavItem.replaces</code> setzt einen App-Eintrag an
+					die Stelle eines Kit-Eintrags der Organisationseinstellungen (z. B.
+					eine Seite „Keys“ statt „API-Schlüssel“), ohne Kit-Texte
+					umzuschreiben; die Kit-Route funktioniert weiter.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -162,6 +188,21 @@ export default function ChangelogV110De() {
 					Das Marketing-Layout schneidet Schatten und Fokusring der letzten
 					Karte einer Seite nicht mehr ab (<code>main</code> nutzt{" "}
 					<code>overflow-x-clip</code>).
+				</li>
+				<li>
+					Dialoge passen auf den Bildschirm: 16 px Abstand auf dem Handy, eine
+					maximale Höhe mit Scrollen, Abstand zwischen gestapelten
+					Footer-Buttons, und die Inhaltsspalte wächst nicht mehr über den
+					Dialog hinaus (ein langer API-Schlüssel schob „Habe ich kopiert“ nach
+					draußen).
+				</li>
+				<li>
+					Die API-Schlüssel-Listen zeigen alle Schlüssel: 100 pro Seite mit
+					„Mehr laden“, statt still bei 50 aufzuhören.
+				</li>
+				<li>
+					Die Beschreibung des <code>versioning</code>-Scopes sagt, wofür er da
+					ist: einen Release-Workflow die nächste App-Version berechnen lassen.
 				</li>
 			</ul>
 			<h3>Breaking Changes und Migration</h3>
@@ -199,6 +240,21 @@ export default function ChangelogV110De() {
 					Fläche und Rundung (16 px <code>sm</code>, 20 px <code>md</code>).
 					<code>AreaCutoutIcon</code> im Marketing entfällt; die Hero-Karten
 					nutzen <code>AreaIcon</code>. Visual-Baselines neu erzeugen.
+				</li>
+				<li>
+					Sicherheit: Mitglieder einer Organisation können fremde
+					Organisations-API-Schlüssel nicht mehr widerrufen oder löschen, auch
+					nicht die eines Admins. <code>PERMISSIONS.API_KEY.DELETE</code> liegt
+					in <code>ORG_POLICY</code> jetzt bei Admins statt bei Mitgliedern; ein
+					Mitglied widerruft weiterhin die Schlüssel, die es selbst angelegt
+					hat. Einträge von <code>apiKeys.list</code> tragen{" "}
+					<code>canRevoke</code>, und die Liste zeigt „Widerrufen“ nur dort.
+				</li>
+				<li>
+					<code>DialogContent</code> hat standardmäßig{" "}
+					<code>max-w-[calc(100%-2rem)] sm:max-w-lg</code>. Breite mit{" "}
+					<code>sm:max-w-*</code> überschreiben; ein bloßes <code>max-w-*</code>{" "}
+					entfernt den Abstand auf dem Handy. Visuelle Baselines aktualisieren.
 				</li>
 			</ul>
 		</>

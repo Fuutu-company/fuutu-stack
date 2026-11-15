@@ -243,6 +243,91 @@ describe("org settings extras", () => {
 	});
 });
 
+describe("org settings — replaces", () => {
+	const kitWith = (replacement: string) =>
+		keys(nav.getOrgSettingsItems("acme", true)).map((key) =>
+			key === "apiKeys" ? replacement : key,
+		);
+
+	it("swaps the kit item in place", () => {
+		const expected = kitWith("keys");
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "keys", segment: "keys", replaces: "apiKeys" },
+		];
+		const items = nav.getOrgSettingsItems("acme", true);
+		expect(keys(items)).toEqual(expected);
+		expect(items.find((i) => i.titleKey === "keys")?.href).toBe(
+			"/organizations/acme/settings/keys",
+		);
+	});
+
+	it("wins over after", () => {
+		const expected = kitWith("keys");
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "keys",
+				segment: "keys",
+				replaces: "apiKeys",
+				after: "general",
+			},
+		];
+		expect(keys(nav.getOrgSettingsItems("acme", true))).toEqual(expected);
+	});
+
+	it("an item anchored on the replaced key lands after the replacement", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "keys", segment: "keys", replaces: "apiKeys" },
+			{ titleKey: "usage", segment: "usage", after: "apiKeys" },
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", true));
+		expect(k[k.indexOf("keys") + 1]).toBe("usage");
+	});
+
+	it("two items replacing one kit key throw", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "keys", segment: "keys", replaces: "apiKeys" },
+			{ titleKey: "tokens", segment: "tokens", replaces: "apiKeys" },
+		];
+		expect(() => nav.getOrgSettingsItems("acme", true)).toThrow(/apiKeys/);
+	});
+
+	it("replacing a hidden kit item appends", () => {
+		flags.webhooks = false;
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "hooks", segment: "hooks", replaces: "webhooks" },
+		];
+		expect(keys(nav.getOrgSettingsItems("acme", true)).at(-1)).toBe("hooks");
+	});
+
+	it("a disabled replacement keeps the kit item", () => {
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "keys",
+				segment: "keys",
+				replaces: "apiKeys",
+				enabled: false,
+			},
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", true));
+		expect(k).toContain("apiKeys");
+		expect(k).not.toContain("keys");
+	});
+
+	it("a replacement the role may not see still removes the kit item", () => {
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "keys",
+				segment: "keys",
+				replaces: "apiKeys",
+				permission: "update:organization",
+			},
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", true, () => false));
+		expect(k).not.toContain("apiKeys");
+		expect(k).not.toContain("keys");
+	});
+});
+
 describe("org settings — webhooks flag", () => {
 	it("org settings show Webhooks while the flag is on", () => {
 		const items = nav.getOrgSettingsItems("acme", true);

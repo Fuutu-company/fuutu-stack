@@ -13,8 +13,8 @@ import { crud, PERMISSIONS } from "./permissions";
  * for resources that exist in both scopes. The admin/owner tiers add management, not
  * more resource access.
  *
- * - member: full CRUD on org resources (api-key, webhook, chat, storage, crm) + view credit/activity/payment
- * - admin:  everything member has + manage members, update org, manage billing (checkout, portal, cancel)
+ * - member: full CRUD on org resources (webhook, chat, storage, crm) + view/create/update api-key + view credit/activity/payment
+ * - admin:  everything member has + revoke/delete any org api-key, manage members, update org, manage billing (checkout, portal, cancel)
  * - owner:  everything admin has + delete org
  *
  * Note: Notifications are NOT here — they are always user-scoped (checked via SYSTEM_POLICY).
@@ -22,7 +22,11 @@ import { crud, PERMISSIONS } from "./permissions";
 export const ORG_POLICY: OrgAccessPolicy = Object.freeze({
 	member: Object.freeze([
 		// Org-scoped resources — full CRUD (member can use these like a user would)
-		...crud("api-key"),
+		// API keys: no DELETE — revoking any org key is admin-only; a member
+		// revokes the keys they created (creator check in apiKeys.revoke/delete).
+		PERMISSIONS.API_KEY.VIEW,
+		PERMISSIONS.API_KEY.CREATE,
+		PERMISSIONS.API_KEY.UPDATE,
 		...crud("webhook"),
 		...crud("chat"),
 		...crud("storage"),
@@ -35,6 +39,8 @@ export const ORG_POLICY: OrgAccessPolicy = Object.freeze({
 		PERMISSIONS.ORGANIZATION.VIEW,
 	]),
 	admin: Object.freeze([
+		// Revoke/delete any org API key, an admin's included
+		PERMISSIONS.API_KEY.DELETE,
 		// Org management
 		PERMISSIONS.ORGANIZATION.UPDATE,
 		PERMISSIONS.INVITE_MEMBER,
