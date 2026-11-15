@@ -81,6 +81,19 @@ vi.mock("@fuutu/payments", async () => {
 		isPaymentsEnabled: vi.fn().mockReturnValue(true),
 		PaymentsDisabledError: class PaymentsDisabledError extends Error {},
 		WebhookConfigError: class WebhookConfigError extends Error {},
+		// Same shape and name check as @fuutu/payments (cross-bundle safe).
+		ProviderRequestError: class ProviderRequestError extends Error {
+			readonly kind: string;
+			constructor(message: string, kind: string) {
+				super(message);
+				this.name = "ProviderRequestError";
+				this.kind = kind;
+			}
+		},
+		isProviderRequestError: (err: unknown) =>
+			err instanceof Error &&
+			err.name === "ProviderRequestError" &&
+			typeof (err as { kind?: unknown }).kind === "string",
 		CREDIT_TOPUPS: [
 			{
 				id: "ai_tokens_100k",
@@ -122,6 +135,7 @@ const {
 	resolvePaymentProvider,
 	PaymentsDisabledError,
 	WebhookConfigError,
+	ProviderRequestError,
 	isPaymentsEnabled,
 } = await import("@fuutu/payments");
 const { buildPricingTiers } = await import("@fuutu/payments/plans");
@@ -866,7 +880,7 @@ describe("payments.subscription.cancel", () => {
 		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-1", {
 			mode: "immediate",
 		});
-		expect(result).toEqual({ success: true });
+		expect(result).toEqual({ success: true, mode: "immediate" });
 	});
 
 	it("cancels a subscription owned by an org the user belongs to", async () => {
@@ -888,7 +902,7 @@ describe("payments.subscription.cancel", () => {
 		expect(mockProvider.cancelSubscription).toHaveBeenCalledWith("sub-2", {
 			mode: "immediate",
 		});
-		expect(result).toEqual({ success: true });
+		expect(result).toEqual({ success: true, mode: "immediate" });
 	});
 
 	it("throws FORBIDDEN when subscription belongs to another user", async () => {
@@ -1247,5 +1261,223 @@ describe("payments.invoices.list", () => {
 				{ context: authenticatedContext },
 			),
 		).rejects.toBeDefined();
+	});
+});
+
+describe("payments — typed provider failures", () => {
+	// Own user: these cases do not eat the shared paymentsMutation budget.
+	const failureContext = makeSession<Context>(
+		makeUser({ id: "user-provider-failure" }),
+	);
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(isPaymentsEnabled).mockReturnValue(true);
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-f",
+			userId: "user-provider-failure",
+			organizationId: null,
+			status: "ACTIVE",
+			currentPeriodEnd: null,
+		} as never);
+	});
+
+	it.each([
+		["not_found", "PRECONDITION_FAILED"],
+		["invalid_state", "CONFLICT"],
+		["rejected", "BAD_REQUEST"],
+		["unavailable", "SERVICE_UNAVAILABLE"],
+	] as const)(
+		"a %s provider failure on cancel is %s with that reason, without the provider's detail",
+		async (kind, code) => {
+			mockProvider.cancelSubscription.mockRejectedValueOnce(
+				Object.assign(new ProviderRequestError("Failed to cancel", kind), {
+					detail: "Subscription cannot be canceled in state: canceled",
+				}),
+			);
+			const error = await call(
+				paymentsRouter.subscription.cancel,
+				{ subscriptionId: "sub-f" },
+				{ context: failureContext },
+			).catch((err: unknown) => err);
+			expect(error).toMatchObject({ code, data: { reason: kind } });
+			expect(JSON.stringify(error)).not.toContain("in state");
+		},
+	);
+
+	it("maps a provider failure of checkout and of the portal the same way", async () => {
+		mockProvider.createCheckoutLink.mockRejectedValueOnce(
+			new ProviderRequestError("Failed to create checkout link", "unavailable"),
+		);
+		await expect(
+			call(
+				paymentsRouter.checkout.create,
+				{ planId: fixturePlanId<PlanId>("pro") },
+				{ context: failureContext },
+			),
+		).rejects.toMatchObject({
+			code: "SERVICE_UNAVAILABLE",
+			data: { reason: "unavailable" },
+		});
+
+		vi.mocked(getActiveSubscriptionForUser).mockResolvedValueOnce({
+			customerId: "cust-f",
+		} as never);
+		mockProvider.createCustomerPortalLink.mockRejectedValueOnce(
+			new ProviderRequestError("Failed to create portal link", "not_found"),
+		);
+		await expect(
+			call(paymentsRouter.portal.open, {}, { context: failureContext }),
+		).rejects.toMatchObject({
+			code: "PRECONDITION_FAILED",
+			data: { reason: "not_found" },
+		});
+	});
+
+	it("maps a provider failure on resume", async () => {
+		const resumeProvider = {
+			...mockProvider,
+			resumeSubscription: vi
+				.fn()
+				.mockRejectedValue(
+					new ProviderRequestError("Failed to resume", "invalid_state"),
+				),
+		};
+		vi.mocked(resolvePaymentProvider).mockReturnValue(resumeProvider as never);
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-f",
+			userId: "user-provider-failure",
+			organizationId: null,
+			status: "SCHEDULED_CANCEL",
+		} as never);
+		await expect(
+			call(
+				paymentsRouter.subscription.resume,
+				{ subscriptionId: "sub-f" },
+				{ context: failureContext },
+			),
+		).rejects.toMatchObject({
+			code: "CONFLICT",
+			data: { reason: "invalid_state" },
+		});
+	});
+
+	it("a misconfigured provider stays SERVICE_UNAVAILABLE with the not-configured reason", async () => {
+		mockProvider.cancelSubscription.mockRejectedValueOnce(
+			new WebhookConfigError("Creem rejected the API key (HTTP 401)"),
+		);
+		const error = await call(
+			paymentsRouter.subscription.cancel,
+			{ subscriptionId: "sub-f" },
+			{ context: failureContext },
+		).catch((err: unknown) => err);
+		expect(error).toMatchObject({
+			code: "SERVICE_UNAVAILABLE",
+			message: "Payments are not configured",
+			data: { reason: "not_configured" },
+		});
+		expect(JSON.stringify(error)).not.toContain("API key");
+	});
+});
+
+describe("payments.subscription.cancel — trials", () => {
+	// Own user: these cases do not eat the shared paymentsMutation budget.
+	const trialContext = makeSession<Context>(makeUser({ id: "user-trial" }));
+	const DAY = 24 * 60 * 60 * 1000;
+	const trialProvider = {
+		...mockProvider,
+		id: "creem",
+		cancelEndsTrial: true,
+		getSubscriptionStatus: vi.fn(),
+	};
+	const stored = (status: string, currentPeriodEnd: Date | null) =>
+		vi.mocked(getPurchaseByProviderSubscriptionId).mockResolvedValue({
+			id: "purchase-t",
+			userId: "user-trial",
+			organizationId: null,
+			status,
+			currentPeriodEnd,
+		} as never);
+	const cancel = (atPeriodEnd?: boolean) =>
+		call(
+			paymentsRouter.subscription.cancel,
+			{ subscriptionId: "sub-t", atPeriodEnd },
+			{ context: trialContext },
+		);
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(isPaymentsEnabled).mockReturnValue(true);
+		vi.mocked(resolvePaymentProvider).mockReturnValue(trialProvider as never);
+		trialProvider.cancelSubscription.mockResolvedValue(undefined);
+	});
+
+	it("cancels a trial now when the provider reports it trialing, and says so", async () => {
+		stored("ACTIVE", new Date(Date.now() + 7 * DAY));
+		trialProvider.getSubscriptionStatus.mockResolvedValueOnce("TRIALING");
+		const result = await cancel(true);
+		expect(trialProvider.getSubscriptionStatus).toHaveBeenCalledWith("sub-t");
+		expect(trialProvider.cancelSubscription).toHaveBeenCalledWith("sub-t", {
+			mode: "immediate",
+		});
+		expect(result).toEqual({ success: true, mode: "immediate" });
+	});
+
+	it("cancels at period end when the provider says the trial is over, though the stored row still says TRIALING", async () => {
+		stored("TRIALING", new Date(Date.now() + 7 * DAY));
+		trialProvider.getSubscriptionStatus.mockResolvedValueOnce("ACTIVE");
+		const result = await cancel(true);
+		expect(trialProvider.cancelSubscription).toHaveBeenCalledWith("sub-t", {
+			mode: "period_end",
+		});
+		expect(result).toEqual({ success: true, mode: "period_end" });
+	});
+
+	it("a failed status lookup falls back to a stored trial that has not ended", async () => {
+		stored("TRIALING", new Date(Date.now() + DAY));
+		trialProvider.getSubscriptionStatus.mockRejectedValueOnce(
+			new Error("down"),
+		);
+		await cancel(true);
+		expect(trialProvider.cancelSubscription).toHaveBeenCalledWith("sub-t", {
+			mode: "immediate",
+		});
+	});
+
+	it.each([
+		["a stored trial whose period ended", "TRIALING", -1],
+		["a stored trial without a period end", "TRIALING", null],
+		["an active subscription", "ACTIVE", 7],
+	] as const)(
+		"a failed status lookup cancels at period end for %s",
+		async (_, status, days) => {
+			stored(status, days === null ? null : new Date(Date.now() + days * DAY));
+			trialProvider.getSubscriptionStatus.mockRejectedValueOnce(
+				new Error("down"),
+			);
+			await cancel(true);
+			expect(trialProvider.cancelSubscription).toHaveBeenCalledWith("sub-t", {
+				mode: "period_end",
+			});
+		},
+	);
+
+	it("a provider that keeps trials until their end is not asked and cancels at period end", async () => {
+		const keepsTrial = { ...trialProvider, cancelEndsTrial: false };
+		vi.mocked(resolvePaymentProvider).mockReturnValue(keepsTrial as never);
+		stored("TRIALING", new Date(Date.now() + DAY));
+		await cancel(true);
+		expect(keepsTrial.getSubscriptionStatus).not.toHaveBeenCalled();
+		expect(keepsTrial.cancelSubscription).toHaveBeenCalledWith("sub-t", {
+			mode: "period_end",
+		});
+	});
+
+	it("an immediate cancel needs no trial lookup", async () => {
+		stored("TRIALING", new Date(Date.now() + DAY));
+		const result = await cancel();
+		expect(trialProvider.getSubscriptionStatus).not.toHaveBeenCalled();
+		expect(result).toEqual({ success: true, mode: "immediate" });
 	});
 });

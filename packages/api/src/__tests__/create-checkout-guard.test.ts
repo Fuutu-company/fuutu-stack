@@ -44,6 +44,8 @@ vi.mock("@fuutu/payments", () => ({
 	resolvePaymentProvider: () => mockProvider,
 	PaymentsDisabledError: class PaymentsDisabledError extends Error {},
 	WebhookConfigError: class WebhookConfigError extends Error {},
+	isProviderRequestError: (err: unknown) =>
+		err instanceof Error && err.name === "ProviderRequestError",
 }));
 
 vi.mock("@fuutu/db", () => ({}));
