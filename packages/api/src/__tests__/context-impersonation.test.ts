@@ -5,6 +5,10 @@ vi.mock("@fuutu/auth", () => ({
 	auth: { api: { getSession: vi.fn() } },
 }));
 
+vi.mock("@fuutu/auth/impersonation-expiry", () => ({
+	endExpiredImpersonation: vi.fn(),
+}));
+
 vi.mock("@fuutu/db", () => ({
 	API_KEY_PREFIX: "futu_sk_",
 	verifyApiKeyWithOwner: vi.fn(),
@@ -14,6 +18,9 @@ vi.mock("@fuutu/db", () => ({
 
 const { auth } = await import("@fuutu/auth");
 const { getUserAccessState } = await import("@fuutu/db");
+const { endExpiredImpersonation } = await import(
+	"@fuutu/auth/impersonation-expiry"
+);
 const { authConfig } = await import("@fuutu/auth/config");
 const { createContext } = await import("../context");
 
@@ -27,6 +34,7 @@ function sessionStartedAgo(ms: number, impersonatedBy: string | null) {
 		user: { id: "user-2", banned: false },
 		session: {
 			id: "sess-1",
+			userId: "user-2",
 			impersonatedBy,
 			createdAt: new Date(Date.now() - ms),
 			// Better Auth may have refreshed the expiry — must not matter.
@@ -56,6 +64,7 @@ describe("createContext — impersonation time limit", () => {
 			context: fakeHonoContext(new Headers()),
 		});
 		expect(ctx.session).toBe(session);
+		expect(endExpiredImpersonation).not.toHaveBeenCalled();
 	});
 
 	it("treats an expired impersonation session as signed out", async () => {
@@ -67,6 +76,14 @@ describe("createContext — impersonation time limit", () => {
 		});
 		expect(ctx.session).toBeNull();
 		expect(ctx.apiKey).toBeNull();
+	});
+
+	it("ends the expired impersonation (row deleted and audited once)", async () => {
+		const expired = sessionStartedAgo(WINDOW_MS + 1, "admin-1");
+		vi.mocked(auth.api.getSession).mockResolvedValue(expired as never);
+		await createContext({ context: fakeHonoContext(new Headers()) });
+		expect(endExpiredImpersonation).toHaveBeenCalledOnce();
+		expect(endExpiredImpersonation).toHaveBeenCalledWith(expired.session);
 	});
 
 	it("never expires a user's own session by age", async () => {

@@ -1,6 +1,7 @@
 import { auth } from "@fuutu/auth";
 import { authConfig } from "@fuutu/auth/config";
 import { isImpersonationExpired } from "@fuutu/auth/impersonation";
+import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
 import { getSignedInRedirect } from "@fuutu/auth/redirect";
 import {
 	isBanActive,
@@ -24,11 +25,16 @@ const readSession = cache(async () => {
 
 /**
  * Get the current session (cached per request). An impersonation past
- * `authConfig.admin.impersonationMinutes` counts as signed out.
+ * `authConfig.admin.impersonationMinutes` counts as signed out; its
+ * session row is deleted and the expiry audited (once).
  */
 export const getSession = cache(async () => {
 	const session = await readSession();
-	return session && isImpersonationExpired(session.session) ? null : session;
+	if (session && isImpersonationExpired(session.session)) {
+		await endExpiredImpersonation(session.session);
+		return null;
+	}
+	return session;
 });
 
 /**
@@ -39,6 +45,7 @@ export const getSession = cache(async () => {
 export async function requireAuth() {
 	const current = await readSession();
 	if (current && isImpersonationExpired(current.session)) {
+		await endExpiredImpersonation(current.session);
 		try {
 			await auth.api.signOut({ headers: await headers() });
 		} catch {

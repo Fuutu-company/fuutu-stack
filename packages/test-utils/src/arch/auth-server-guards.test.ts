@@ -25,6 +25,7 @@ class RedirectSignal extends Error {
 const mocks = vi.hoisted(() => ({
 	getSession: vi.fn(),
 	signOut: vi.fn(),
+	endExpiredImpersonation: vi.fn(),
 }));
 
 type AuthServer = {
@@ -37,6 +38,9 @@ let authServer: AuthServer;
 beforeAll(async () => {
 	vi.doMock(resolveFromApp("@fuutu/auth"), () => ({
 		auth: { api: { getSession: mocks.getSession, signOut: mocks.signOut } },
+	}));
+	vi.doMock(resolveFromApp("@fuutu/auth/impersonation-expiry"), () => ({
+		endExpiredImpersonation: mocks.endExpiredImpersonation,
 	}));
 	vi.doMock(resolveFromApp("@fuutu/db"), () => ({
 		countOrganizationsForUser: vi.fn(),
@@ -88,7 +92,15 @@ async function redirectOf(run: () => Promise<unknown>): Promise<string | null> {
 beforeEach(() => {
 	mocks.getSession.mockReset();
 	mocks.signOut.mockReset();
+	mocks.endExpiredImpersonation.mockReset();
 });
+
+const EXPIRED_IMPERSONATION = {
+	id: "sess-1",
+	userId: "user-2",
+	impersonatedBy: "admin-1",
+	createdAt: new Date(Date.now() - 2 * 60 * 60_000),
+};
 
 describe("requireAuth", () => {
 	it("sends a running ban to the suspended page", async () => {
@@ -121,6 +133,17 @@ describe("requireAuth", () => {
 		expect(mocks.signOut).toHaveBeenCalledWith({
 			headers: expect.any(Headers),
 		});
+	});
+
+	it("ends the expired impersonation (row deleted and audited) before signing out", async () => {
+		mocks.getSession.mockResolvedValue(session({}, EXPIRED_IMPERSONATION));
+		await redirectOf(authServer.requireAuth);
+		expect(mocks.endExpiredImpersonation).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "sess-1", impersonatedBy: "admin-1" }),
+		);
+		expect(
+			mocks.endExpiredImpersonation.mock.invocationCallOrder[0],
+		).toBeLessThan(mocks.signOut.mock.invocationCallOrder[0] ?? 0);
 	});
 
 	it("still redirects when the expired session is already gone", async () => {
@@ -162,6 +185,22 @@ describe("getSession", () => {
 		expect(await authServer.getSession()).toBeNull();
 		// The sign-in page reads getSession — no sign-out side effect there.
 		expect(mocks.signOut).not.toHaveBeenCalled();
+	});
+
+	it("ends the expired impersonation's session row (audited once)", async () => {
+		mocks.getSession.mockResolvedValue(session({}, EXPIRED_IMPERSONATION));
+		await authServer.getSession();
+		expect(mocks.endExpiredImpersonation).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "sess-1", impersonatedBy: "admin-1" }),
+		);
+	});
+
+	it("leaves sessions inside the window alone", async () => {
+		mocks.getSession.mockResolvedValue(
+			session({}, { impersonatedBy: "admin-1", createdAt: new Date() }),
+		);
+		expect(await authServer.getSession()).not.toBeNull();
+		expect(mocks.endExpiredImpersonation).not.toHaveBeenCalled();
 	});
 });
 

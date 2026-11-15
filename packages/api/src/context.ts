@@ -3,6 +3,7 @@ import {
 	type ImpersonationSessionLike,
 	isImpersonationExpired,
 } from "@fuutu/auth/impersonation";
+import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
 import { isBanActive } from "@fuutu/auth/types";
 import { API_KEY_PREFIX, getUserAccessState } from "@fuutu/db";
 import {
@@ -107,11 +108,11 @@ export async function createContext({ context }: CreateContextOptions) {
 	let session = await auth.api.getSession({ headers });
 	// A support impersonation ends after authConfig.admin.impersonationMinutes
 	// even though Better Auth still holds the session row and cookies.
-	if (
-		session &&
-		(isImpersonationExpired(session.session) ||
-			(await hasImpersonatorLostAccess(session.session)))
-	) {
+	if (session && isImpersonationExpired(session.session)) {
+		await endExpiredImpersonation(session.session);
+		session = null;
+	}
+	if (session && (await hasImpersonatorLostAccess(session.session))) {
 		session = null;
 	}
 	let apiKey: ApiKeyAuth | null = null;
