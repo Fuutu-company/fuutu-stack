@@ -482,7 +482,10 @@
 			"loadError": "Die Audit-Logs konnten nicht geladen werden.",
 			"user": "Benutzer",
 			"organization": "Organisation",
-			"reason": "Grund: {reason}"
+			"reason": "Grund: {reason}",
+			"prev": "Zurück",
+			"next": "Weiter",
+			"page": "Seite {page} · {total}"
 		},
 		"sections": {}
 	}

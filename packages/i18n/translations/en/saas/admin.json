@@ -482,7 +482,10 @@
 			"loadError": "The audit logs could not be loaded.",
 			"user": "User",
 			"organization": "Organization",
-			"reason": "Reason: {reason}"
+			"reason": "Reason: {reason}",
+			"prev": "Previous",
+			"next": "Next",
+			"page": "Page {page} · {total}"
 		},
 		"sections": {}
 	}
