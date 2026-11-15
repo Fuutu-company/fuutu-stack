@@ -42,12 +42,21 @@ The PR title *is* the squash commit message and must be a valid [Conventional Co
 4. CI must pass (`verify`, `build`, `e2e`). CI ships disabled: to enable it in your fork, see [Run tests in CI](https://docs.fuutustack.com/docs/testing/ci).
 5. Address review feedback; the PR is squash-merged.
 
+Sign off every commit with `git commit -s` (adds a `Signed-off-by:` line matching the commit author). The `DCO` check fails pull requests with unsigned commits; to fix, run `git rebase --signoff <base>` and force-push your branch. See [Contribution terms](#contribution-terms).
+
 Every bug fix needs a regression test, and tests are never deleted or weakened to get green.
 
 ## Reporting issues
 
 Use the Bug Report or Feature Request issue template. **Security vulnerabilities: do not open a public issue**, see [SECURITY.md](./SECURITY.md).
 
-## License
+## Contribution terms
 
-By contributing, you agree that your contributions are licensed under the [Fuutu Business License](./LICENSE.md).
+By submitting a contribution (for example a pull request), you agree to these terms, which are also section 11 of the [Fuutu Business License](./LICENSE.md):
+
+1. You license your contribution to everyone, free of charge, under the [MIT No Attribution License (MIT-0)](https://spdx.org/licenses/MIT-0.html), and grant Fuutu and every recipient of the kit a royalty-free patent license as set out in section 11 of the License.
+2. You sign off every commit (`git commit -s`), certifying the [Developer Certificate of Origin 1.1](https://developercertificate.org). You confirm that you have the right to submit the contribution, including your employer's consent where needed.
+3. Fuutu may distribute your contribution as part of the kit under the Fuutu Business License or other terms. Your authorship stays visible in the git history.
+4. Fuutu need not accept or use a contribution. Contributions are voluntary and unpaid and create no employment or other relationship.
+
+If your pull request is merged, we can thank you on our contributors page, but only if you tick the box in the pull request template. See our [Privacy Policy](https://fuutustack.com/legal/privacy).
