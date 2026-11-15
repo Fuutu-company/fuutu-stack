@@ -61,6 +61,10 @@ const { updateWebhookProcedure } = await import(
 const { updateUserProfile } = await import(
 	"../modules/users/procedures/update-user-profile"
 );
+const { chat } = await import("../modules/ai/procedures/chat");
+const { streamMessageProcedure } = await import(
+	"../modules/chat/messages/procedures/stream"
+);
 
 /**
  * Support may look around as the user, but never spend their money, mint
@@ -124,6 +128,13 @@ const DENIED = [
 		{ id: "wh-1", organizationId: "org-1", url: "https://example.com/hook" },
 	],
 	["users.updateProfile", updateUserProfile, { name: "Renamed" }],
+	// Spends the user's/org's AI credits at a paid provider.
+	["ai.chat", chat, { messages: [{ role: "user", content: "Hi" }] }],
+	[
+		"chat.messages.stream",
+		streamMessageProcedure,
+		{ conversationId: "conv-1", content: "Hi" },
+	],
 ] as const;
 
 function impersonatedContext(): Context {

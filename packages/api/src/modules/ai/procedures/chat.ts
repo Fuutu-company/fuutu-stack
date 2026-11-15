@@ -5,7 +5,10 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { eventIterator } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { permissionProcedure } from "../../../orpc/procedures";
+import {
+	denyImpersonation,
+	permissionProcedure,
+} from "../../../orpc/procedures";
 import { assertAiCredits, estimateTokens, recordAiUsage } from "../metering";
 import { textChunks } from "../text-chunks";
 
@@ -24,6 +27,7 @@ const chatInputSchema = z.object({
 });
 
 export const chat = permissionProcedure(PERMISSIONS.USE_AI)
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "aiChat" }))
 	.route({
 		method: "POST",

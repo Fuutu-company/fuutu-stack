@@ -2,7 +2,7 @@
  * Deny-impersonation scanner — static source scan, no runtime.
  *
  * Every mutation (route method other than GET; oRPC's default is POST)
- * under `modules/{payments,api-keys,webhooks,organizations,users}/**\/procedures/`
+ * under `modules/{payments,api-keys,webhooks,organizations,users,ai,chat}/**\/procedures/`
  * must reject impersonation sessions: `authProcedure({ denyImpersonation:
  * true })` or `.use(denyImpersonation)`. A new mutation in these modules
  * fails here until it is guarded or added to the allow-list below with a
@@ -19,6 +19,8 @@ const SCANNED_MODULES = [
 	"webhooks",
 	"organizations",
 	"users",
+	"ai",
+	"chat",
 ];
 
 /** Mutations support may run as the user — each with its reason. */
@@ -26,6 +28,14 @@ const ALLOWED_WHILE_IMPERSONATING: ReadonlyMap<string, string> = new Map([
 	[
 		"organizations/procedures/create.ts",
 		"creates a new organization of the user's own and changes nothing that exists (Better Auth /organization/create is allowed too)",
+	],
+	[
+		"chat/conversations/procedures/create.ts",
+		"creates an empty conversation — no AI provider call, no credits spent",
+	],
+	[
+		"chat/conversations/procedures/delete.ts",
+		"deletes one of the user's conversations (support may clean up while reproducing an issue) — no provider call, no credits",
 	],
 ]);
 
