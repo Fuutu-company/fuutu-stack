@@ -1,6 +1,6 @@
 # Fuutu Business License
 
-**Version 1.2**
+**Version 1.3**
 
 Copyright © 2026 Fuutu UG (haftungsbeschränkt) and the Fuutu Stack contributors. All rights reserved.
 
@@ -227,13 +227,11 @@ Derivative Work created under this section 3.
    legal entity. Each legal entity that operates a Production Application
    or otherwise uses the Kit needs its own Enterprise License if its
    Annual Revenue or Headcount, together with its Affiliates, exceeds an
-   Eligibility Threshold. At the time of this version, the price is
-   **USD 2,000 per legal entity per year**, net, billed yearly in advance,
-   including five Seats; additional Seats cost the Pro price. The current
-   price, subscription period and any volume terms are published at
-   **https://fuutustack.com/pricing** and form part of this License by
-   reference at the moment of purchase or renewal, subject to the Terms
-   of Service.
+   Eligibility Threshold. It is billed yearly in advance and includes
+   five Seats; additional Seats cost the Pro price. The price,
+   subscription period and any volume terms are those published at
+   **https://fuutustack.com/pricing** at the moment of purchase or
+   renewal, subject to the Terms of Service. This License sets no price.
 
 4. **License keys.** A valid Fuutu Enterprise License is identified by a
    license key issued by Fuutu and configured via the `FUUTU_LICENSE_KEY`
@@ -271,13 +269,10 @@ authenticated access to:
 - such additional Fuutu-hosted developer services as Fuutu publishes from
   time to time at `https://fuutustack.com/pricing`.
 
-Pro is sold per Seat: one Seat gives one natural person Pro access. At
-the time of this version, the price is **USD 15 per Seat per month,
-billed yearly in advance** (USD 180 per Seat per year), net. The current
-price, subscription period and any volume terms are published at
-`https://fuutustack.com/pricing` and form part of this License by
-reference at the moment of purchase or renewal, subject to the Terms of
-Service.
+Pro is sold per Seat: one Seat gives one natural person Pro access. The
+price, subscription period and any volume terms are those published at
+`https://fuutustack.com/pricing` at the moment of purchase or renewal,
+subject to the Terms of Service. This License sets no price.
 
 Prices published at `https://fuutustack.com/pricing` are in USD, are net
 prices and exclude value-added tax and similar taxes, which are added
@@ -317,8 +312,8 @@ Subject to sections 3, 4, 6 and 7, the Licensee may:
 - create internal Derivative Works for the Licensee's own products and
   services;
 - modify the source for the Licensee's own purposes;
-- contribute back to the official upstream repository under the inbound =
-  outbound contribution rule (section 11).
+- contribute back to the official upstream repository under the
+  contribution terms of section 11.
 
 ---
 
@@ -495,12 +490,34 @@ beyond those expressly stated in this License.
 
 ## 11. Contributions
 
-Contributions submitted to the official Fuutu Stack repository are
-licensed to Fuutu under the **inbound = outbound** rule: by submitting a
-contribution you grant Fuutu and downstream Licensees the same rights
-under this License that you received in the contributed material, plus a
-perpetual, worldwide, royalty-free patent license to the extent necessary
-to make, use, sell and distribute the contribution as part of the Kit.
+1. **Contribution terms.** Contributions to the official Fuutu Stack
+   repository (code, documentation, assets and any other material
+   submitted, for example in a pull request) are accepted only under the
+   contribution terms in `CONTRIBUTING.md` of that repository as in force
+   when the contribution is submitted. Unless those terms say otherwise,
+   items 2 to 5 apply.
+2. **License of the contribution.** You license your contribution to
+   everyone, free of charge, under the MIT No Attribution License
+   (MIT-0, https://spdx.org/licenses/MIT-0.html). You also grant Fuutu
+   and every recipient of the Kit a perpetual, worldwide, non-exclusive,
+   royalty-free and irrevocable license under the patent claims you can
+   license that are necessarily infringed by the contribution alone or by
+   its combination with the Kit, to make, have made, use, sell, offer
+   for sale, import and otherwise distribute the contribution, alone or as
+   part of the Kit.
+3. **Origin.** You certify each contribution under the Developer
+   Certificate of Origin 1.1 (https://developercertificate.org) by a
+   `Signed-off-by` line in each commit. You confirm that you have the
+   right to submit the contribution under these terms, including the
+   consent of your employer where needed.
+4. **Distribution by Fuutu.** Fuutu may distribute contributions as part
+   of the Kit under this License, any later version of it, or separate
+   commercial terms. Your authorship stays visible in the history of the
+   repository; no other attribution is owed.
+5. **No obligations, no payment.** Fuutu need not accept, use, keep or
+   credit a contribution. Contributions are voluntary and unpaid. They
+   create no employment, service, agency or partnership relationship and
+   no claim to payment, credit or other consideration.
 
 ---
 
