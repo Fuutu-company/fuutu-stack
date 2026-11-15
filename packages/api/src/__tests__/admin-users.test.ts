@@ -393,6 +393,16 @@ describe("admin.users.list", () => {
 			call(users.list, { pageSize: 101 }, { context: adminContext() }),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
+
+	it("caps the page number at 100 000 (no unbounded OFFSET)", async () => {
+		await expect(
+			call(users.list, { page: 100_000 }, { context: adminContext() }),
+		).resolves.toBeDefined();
+		await expect(
+			call(users.list, { page: 100_001 }, { context: adminContext() }),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(db.adminListUsers).toHaveBeenCalledTimes(1);
+	});
 });
 
 describe("admin.users.get", () => {
@@ -401,6 +411,21 @@ describe("admin.users.get", () => {
 		await expect(
 			call(users.get, { userId: "nobody" }, { context: adminContext() }),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
+	});
+});
+
+describe("admin.auditLogs.list paging", () => {
+	it("caps the page number at 100 000", async () => {
+		vi.mocked(db.listAuditLogs).mockResolvedValue([] as never);
+		vi.mocked(db.countAuditLogs).mockResolvedValue(0);
+		await expect(
+			call(
+				adminRouter.auditLogs.list,
+				{ page: 100_001 },
+				{ context: adminContext() },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(db.listAuditLogs).not.toHaveBeenCalled();
 	});
 });
 

@@ -15,7 +15,13 @@ export const queryBooleanSchema = z.union([
 	z.enum(["true", "false"]).transform((value) => value === "true"),
 ]);
 
-export const pageSchema = z.coerce.number().int().min(1).default(1);
+/** Capped so a request cannot ask the database for an unbounded OFFSET. */
+export const pageSchema = z.coerce
+	.number()
+	.int()
+	.min(1)
+	.max(100_000)
+	.default(1);
 
 export type AdminTargetUser = {
 	id: string;

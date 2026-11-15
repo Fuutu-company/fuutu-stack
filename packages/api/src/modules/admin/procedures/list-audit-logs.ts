@@ -2,7 +2,7 @@ import { countAuditLogs, listAuditLogs } from "@fuutu/db";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { adminProcedure } from "../../../orpc/procedures";
-import { adminIdSchema } from "../shared";
+import { adminIdSchema, pageSchema } from "../shared";
 
 /**
  * Admin-global audit feed. Support actions (`admin.*`) carry the acting
@@ -21,7 +21,7 @@ const listAuditLogsInput = z.object({
 	actionPrefix: z.string().min(1).max(100).optional(),
 	from: z.coerce.date().optional(),
 	to: z.coerce.date().optional(),
-	page: z.coerce.number().int().min(1).default(1),
+	page: pageSchema,
 	pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 

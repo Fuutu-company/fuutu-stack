@@ -455,6 +455,12 @@ describe("admin.organizations.list", () => {
 			call(orgs.list, { pageSize: 101 }, { context: adminContext() }),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
+
+	it("caps the page number at 100 000", async () => {
+		await expect(
+			call(orgs.list, { page: 100_001 }, { context: adminContext() }),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+	});
 });
 
 describe("admin.organizations.get", () => {
