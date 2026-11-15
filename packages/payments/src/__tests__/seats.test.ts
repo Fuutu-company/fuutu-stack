@@ -84,6 +84,7 @@ vi.mock("../billing-policy", async (importOriginal) => {
 const {
 	updateSeatsInOrganizationSubscription,
 	cancelAllSubscriptionsForOrganization,
+	cancelAllSubscriptionsForOrganizationOrThrow,
 } = await import("../seats");
 
 describe("updateSeatsInOrganizationSubscription", () => {
@@ -336,7 +337,7 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 		expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
 	});
 
-	describe("with failOnError", () => {
+	describe("cancelAllSubscriptionsForOrganizationOrThrow", () => {
 		const active = (id: string, provider = "test-provider") => ({
 			id,
 			type: "SUBSCRIPTION",
@@ -355,7 +356,7 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 				.mockResolvedValueOnce(undefined);
 
 			await expect(
-				cancelAllSubscriptionsForOrganization("org_1", { failOnError: true }),
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
 			).rejects.toThrow("1 of 2 subscriptions could not be cancelled");
 			expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
 		});
@@ -366,7 +367,7 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 			]);
 
 			await expect(
-				cancelAllSubscriptionsForOrganization("org_1", { failOnError: true }),
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
 			).rejects.toThrow("1 of 1 subscriptions could not be cancelled");
 		});
 
@@ -375,7 +376,7 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 			mockCancelSubscription.mockResolvedValueOnce(undefined);
 
 			await expect(
-				cancelAllSubscriptionsForOrganization("org_1", { failOnError: true }),
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
 			).resolves.toBeUndefined();
 		});
 	});

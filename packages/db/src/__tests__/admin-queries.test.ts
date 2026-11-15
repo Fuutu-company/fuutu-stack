@@ -32,7 +32,10 @@ import {
 	isEmailTaken,
 	listSoleOwnedOrganizations,
 } from "../../prisma/queries/admin";
-import { countAuditLogs, listAuditLogs } from "../../prisma/queries/audit-log";
+import {
+	countFilteredAuditLogs,
+	listFilteredAuditLogs,
+} from "../../prisma/queries/audit-log";
 
 const NOW = new Date("2026-06-01T12:00:00Z");
 
@@ -497,10 +500,10 @@ describe("adminResetTwoFactor", () => {
 	});
 });
 
-describe("listAuditLogs / countAuditLogs filters", () => {
+describe("listFilteredAuditLogs / countFilteredAuditLogs", () => {
 	it("keeps the plain userId + action filter unchanged", async () => {
 		vi.mocked(db.auditLog.findMany).mockResolvedValueOnce([] as never);
-		await listAuditLogs({ userId: "u1", action: "auth.sign_up" });
+		await listFilteredAuditLogs({ userId: "u1", action: "auth.sign_up" });
 		expect(db.auditLog.findMany).toHaveBeenCalledWith(
 			expect.objectContaining({
 				where: { userId: "u1", action: "auth.sign_up" },
@@ -512,7 +515,7 @@ describe("listAuditLogs / countAuditLogs filters", () => {
 		vi.mocked(db.auditLog.count).mockResolvedValueOnce(0 as never);
 		const from = new Date("2026-01-01T00:00:00Z");
 		const to = new Date("2026-02-01T00:00:00Z");
-		await countAuditLogs({
+		await countFilteredAuditLogs({
 			actorUserId: "admin-1",
 			organizationId: "org-1",
 			actionPrefix: "admin.",
@@ -537,7 +540,7 @@ describe("listAuditLogs / countAuditLogs filters", () => {
 
 	it("builds a user timeline from own rows and rows targeting the user", async () => {
 		vi.mocked(db.auditLog.findMany).mockResolvedValueOnce([] as never);
-		await listAuditLogs({ timelineUserId: "u2" });
+		await listFilteredAuditLogs({ timelineUserId: "u2" });
 		expect(db.auditLog.findMany).toHaveBeenCalledWith(
 			expect.objectContaining({
 				where: {
@@ -556,7 +559,7 @@ describe("listAuditLogs / countAuditLogs filters", () => {
 
 	it("builds an organization timeline from org rows and support actions on it", async () => {
 		vi.mocked(db.auditLog.count).mockResolvedValueOnce(0 as never);
-		await countAuditLogs({ timelineOrganizationId: "org-1" });
+		await countFilteredAuditLogs({ timelineOrganizationId: "org-1" });
 		expect(db.auditLog.count).toHaveBeenCalledWith({
 			where: {
 				AND: [

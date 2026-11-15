@@ -13,91 +13,21 @@ export type AuditLogInput = {
 export const createAuditLog = (input: AuditLogInput) =>
 	db.auditLog.create({ data: input });
 
-/**
- * Audit-log filters. `userId`, `organizationId` and `action` match the
- * columns exactly. Support actions (`admin.*`) store the acting admin in
- * `userId` and their targets in `metadata.targetUserId` /
- * `metadata.targetOrganizationId`.
- */
-export type AuditLogFilters = {
+export const listAuditLogs = (opts: {
 	userId?: string;
-	/** The user who performed the action (the `userId` column). */
-	actorUserId?: string;
+	/** With `userId`: only that user's rows inside this organization. */
 	organizationId?: string;
 	action?: string;
-	/** Raw prefix match on `action`, e.g. `"admin."`. */
-	actionPrefix?: string;
-	targetUserId?: string;
-	targetOrganizationId?: string;
-	/** Rows by the user plus rows targeting the user. */
-	timelineUserId?: string;
-	/** Rows of the organization plus support actions targeting it. */
-	timelineOrganizationId?: string;
-	from?: Date;
-	to?: Date;
-};
-
-const metadataEquals = (
-	key: "targetUserId" | "targetOrganizationId",
-	value: string,
-): Prisma.AuditLogWhereInput => ({
-	metadata: { path: [key], equals: value },
-});
-
-const auditLogWhere = (filters: AuditLogFilters): Prisma.AuditLogWhereInput => {
-	const where: Prisma.AuditLogWhereInput = {
-		...(filters.userId ? { userId: filters.userId } : {}),
-		...(filters.organizationId
-			? { organizationId: filters.organizationId }
-			: {}),
-		...(filters.action ? { action: filters.action } : {}),
-	};
-	const and: Prisma.AuditLogWhereInput[] = [];
-	if (filters.actorUserId) and.push({ userId: filters.actorUserId });
-	if (filters.actionPrefix) {
-		and.push({ action: { startsWith: filters.actionPrefix } });
-	}
-	if (filters.targetUserId) {
-		and.push(metadataEquals("targetUserId", filters.targetUserId));
-	}
-	if (filters.targetOrganizationId) {
-		and.push(
-			metadataEquals("targetOrganizationId", filters.targetOrganizationId),
-		);
-	}
-	if (filters.timelineUserId) {
-		and.push({
-			OR: [
-				{ userId: filters.timelineUserId },
-				metadataEquals("targetUserId", filters.timelineUserId),
-			],
-		});
-	}
-	if (filters.timelineOrganizationId) {
-		and.push({
-			OR: [
-				{ organizationId: filters.timelineOrganizationId },
-				metadataEquals("targetOrganizationId", filters.timelineOrganizationId),
-			],
-		});
-	}
-	if (filters.from || filters.to) {
-		and.push({
-			createdAt: {
-				...(filters.from ? { gte: filters.from } : {}),
-				...(filters.to ? { lte: filters.to } : {}),
-			},
-		});
-	}
-	return and.length > 0 ? { ...where, AND: and } : where;
-};
-
-export const listAuditLogs = (
-	opts: AuditLogFilters & { take?: number; skip?: number },
-) => {
-	const { take = 50, skip = 0, ...filters } = opts;
+	take?: number;
+	skip?: number;
+}) => {
+	const { userId, organizationId, action, take = 50, skip = 0 } = opts;
 	return db.auditLog.findMany({
-		where: auditLogWhere(filters),
+		where: {
+			...(userId ? { userId } : {}),
+			...(organizationId ? { organizationId } : {}),
+			...(action ? { action } : {}),
+		},
 		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
@@ -107,8 +37,13 @@ export const listAuditLogs = (
 	});
 };
 
-export const countAuditLogs = (opts: AuditLogFilters) =>
-	db.auditLog.count({ where: auditLogWhere(opts) });
+export const countAuditLogs = (opts: { userId?: string; action?: string }) =>
+	db.auditLog.count({
+		where: {
+			...(opts.userId ? { userId: opts.userId } : {}),
+			...(opts.action ? { action: opts.action } : {}),
+		},
+	});
 
 /**
  * Find audit logs scoped to an organization.
@@ -235,3 +170,101 @@ export const countAuditLogsByOrg = (
 		},
 	});
 };
+
+/**
+ * Audit-log filters. `userId`, `organizationId` and `action` match the
+ * columns exactly. Support actions (`admin.*`) store the acting admin in
+ * `userId` and their targets in `metadata.targetUserId` /
+ * `metadata.targetOrganizationId`.
+ */
+export type AuditLogFilters = {
+	userId?: string;
+	/** The user who performed the action (the `userId` column). */
+	actorUserId?: string;
+	organizationId?: string;
+	action?: string;
+	/** Raw prefix match on `action`, e.g. `"admin."`. */
+	actionPrefix?: string;
+	targetUserId?: string;
+	targetOrganizationId?: string;
+	/** Rows by the user plus rows targeting the user. */
+	timelineUserId?: string;
+	/** Rows of the organization plus support actions targeting it. */
+	timelineOrganizationId?: string;
+	from?: Date;
+	to?: Date;
+};
+
+const metadataEquals = (
+	key: "targetUserId" | "targetOrganizationId",
+	value: string,
+): Prisma.AuditLogWhereInput => ({
+	metadata: { path: [key], equals: value },
+});
+
+const auditLogWhere = (filters: AuditLogFilters): Prisma.AuditLogWhereInput => {
+	const where: Prisma.AuditLogWhereInput = {
+		...(filters.userId ? { userId: filters.userId } : {}),
+		...(filters.organizationId
+			? { organizationId: filters.organizationId }
+			: {}),
+		...(filters.action ? { action: filters.action } : {}),
+	};
+	const and: Prisma.AuditLogWhereInput[] = [];
+	if (filters.actorUserId) and.push({ userId: filters.actorUserId });
+	if (filters.actionPrefix) {
+		and.push({ action: { startsWith: filters.actionPrefix } });
+	}
+	if (filters.targetUserId) {
+		and.push(metadataEquals("targetUserId", filters.targetUserId));
+	}
+	if (filters.targetOrganizationId) {
+		and.push(
+			metadataEquals("targetOrganizationId", filters.targetOrganizationId),
+		);
+	}
+	if (filters.timelineUserId) {
+		and.push({
+			OR: [
+				{ userId: filters.timelineUserId },
+				metadataEquals("targetUserId", filters.timelineUserId),
+			],
+		});
+	}
+	if (filters.timelineOrganizationId) {
+		and.push({
+			OR: [
+				{ organizationId: filters.timelineOrganizationId },
+				metadataEquals("targetOrganizationId", filters.timelineOrganizationId),
+			],
+		});
+	}
+	if (filters.from || filters.to) {
+		and.push({
+			createdAt: {
+				...(filters.from ? { gte: filters.from } : {}),
+				...(filters.to ? { lte: filters.to } : {}),
+			},
+		});
+	}
+	return and.length > 0 ? { ...where, AND: and } : where;
+};
+
+/** `listAuditLogs` with the support filters (`AuditLogFilters`). */
+export const listFilteredAuditLogs = (
+	opts: AuditLogFilters & { take?: number; skip?: number },
+) => {
+	const { take = 50, skip = 0, ...filters } = opts;
+	return db.auditLog.findMany({
+		where: auditLogWhere(filters),
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+		take,
+		skip,
+		include: {
+			user: { select: { id: true, email: true, name: true } },
+		},
+	});
+};
+
+export const countFilteredAuditLogs = (opts: AuditLogFilters) =>
+	db.auditLog.count({ where: auditLogWhere(opts) });

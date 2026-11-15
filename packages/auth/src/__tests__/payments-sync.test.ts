@@ -22,6 +22,7 @@ const resolveById = vi.fn((id: string) =>
 );
 const updateSeatsInOrganizationSubscription = vi.fn();
 const cancelAllSubscriptionsForOrganization = vi.fn();
+const cancelAllSubscriptionsForOrganizationOrThrow = vi.fn();
 const logError = vi.fn();
 
 vi.mock("@fuutu/db", () => ({
@@ -37,6 +38,8 @@ vi.mock("@fuutu/payments", () => ({
 		updateSeatsInOrganizationSubscription(...args),
 	cancelAllSubscriptionsForOrganization: (...args: unknown[]) =>
 		cancelAllSubscriptionsForOrganization(...args),
+	cancelAllSubscriptionsForOrganizationOrThrow: (...args: unknown[]) =>
+		cancelAllSubscriptionsForOrganizationOrThrow(...args),
 }));
 
 vi.mock("@fuutu/logs", () => ({
@@ -237,14 +240,15 @@ describe("cancelActiveSubscriptionsForOrganization*()", () => {
 	});
 
 	it("the strict variant fails on any cancel failure", async () => {
-		cancelAllSubscriptionsForOrganization.mockResolvedValue(undefined);
+		cancelAllSubscriptionsForOrganizationOrThrow.mockResolvedValue(undefined);
 		await cancelActiveSubscriptionsForOrganizationOrThrow("org-1");
-		expect(cancelAllSubscriptionsForOrganization).toHaveBeenCalledWith(
+		expect(cancelAllSubscriptionsForOrganizationOrThrow).toHaveBeenCalledWith(
 			"org-1",
-			{ failOnError: true },
 		);
 
-		cancelAllSubscriptionsForOrganization.mockRejectedValue(new Error("down"));
+		cancelAllSubscriptionsForOrganizationOrThrow.mockRejectedValue(
+			new Error("down"),
+		);
 		const error = await cancelActiveSubscriptionsForOrganizationOrThrow(
 			"org-1",
 		).catch((e: unknown) => e);

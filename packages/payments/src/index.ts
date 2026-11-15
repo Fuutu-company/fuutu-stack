@@ -105,6 +105,7 @@ export { stripePaymentProvider } from "./providers/stripe";
 export { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
 export {
 	cancelAllSubscriptionsForOrganization,
+	cancelAllSubscriptionsForOrganizationOrThrow,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
 export { getActivePlanId, processWebhookEvents } from "./sync";

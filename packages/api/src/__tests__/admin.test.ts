@@ -9,8 +9,8 @@ vi.mock("@fuutu/ai", () => ({
 }));
 
 vi.mock("@fuutu/db", () => ({
-	listAuditLogs: vi.fn(),
-	countAuditLogs: vi.fn(),
+	listFilteredAuditLogs: vi.fn(),
+	countFilteredAuditLogs: vi.fn(),
 	// adminProcedure re-reads the caller's role and ban from the database.
 	getUserAccessState: vi.fn(async (id: string) => ({
 		id,
@@ -21,7 +21,9 @@ vi.mock("@fuutu/db", () => ({
 	})),
 }));
 
-const { listAuditLogs, countAuditLogs } = await import("@fuutu/db");
+const { listFilteredAuditLogs, countFilteredAuditLogs } = await import(
+	"@fuutu/db"
+);
 
 const adminContext = makeSession<Context>(makeUser({ role: "admin" }));
 const memberContext = makeSession<Context>(
@@ -45,8 +47,10 @@ describe("admin.auditLogs.list", () => {
 	});
 
 	it("returns paginated audit logs for an admin user", async () => {
-		vi.mocked(listAuditLogs).mockResolvedValue(auditLogFixture as never);
-		vi.mocked(countAuditLogs).mockResolvedValue(1);
+		vi.mocked(listFilteredAuditLogs).mockResolvedValue(
+			auditLogFixture as never,
+		);
+		vi.mocked(countFilteredAuditLogs).mockResolvedValue(1);
 
 		const result = await call(
 			listAuditLogsProcedure,
@@ -54,13 +58,13 @@ describe("admin.auditLogs.list", () => {
 			{ context: adminContext },
 		);
 
-		expect(listAuditLogs).toHaveBeenCalledWith({
+		expect(listFilteredAuditLogs).toHaveBeenCalledWith({
 			userId: undefined,
 			action: undefined,
 			take: 50,
 			skip: 0,
 		});
-		expect(countAuditLogs).toHaveBeenCalledWith({
+		expect(countFilteredAuditLogs).toHaveBeenCalledWith({
 			userId: undefined,
 			action: undefined,
 		});
@@ -74,8 +78,8 @@ describe("admin.auditLogs.list", () => {
 	});
 
 	it("applies userId and action filters", async () => {
-		vi.mocked(listAuditLogs).mockResolvedValue([] as never);
-		vi.mocked(countAuditLogs).mockResolvedValue(0);
+		vi.mocked(listFilteredAuditLogs).mockResolvedValue([] as never);
+		vi.mocked(countFilteredAuditLogs).mockResolvedValue(0);
 
 		await call(
 			listAuditLogsProcedure,
@@ -88,30 +92,32 @@ describe("admin.auditLogs.list", () => {
 			{ context: adminContext },
 		);
 
-		expect(listAuditLogs).toHaveBeenCalledWith({
+		expect(listFilteredAuditLogs).toHaveBeenCalledWith({
 			userId: "550e8400-e29b-41d4-a716-446655440000",
 			action: "user.login",
 			take: 10,
 			skip: 10,
 		});
-		expect(countAuditLogs).toHaveBeenCalledWith({
+		expect(countFilteredAuditLogs).toHaveBeenCalledWith({
 			userId: "550e8400-e29b-41d4-a716-446655440000",
 			action: "user.login",
 		});
 	});
 
 	it("accepts Better Auth user ids (not UUIDs) as the userId filter", async () => {
-		vi.mocked(listAuditLogs).mockResolvedValue([] as never);
-		vi.mocked(countAuditLogs).mockResolvedValue(0);
+		vi.mocked(listFilteredAuditLogs).mockResolvedValue([] as never);
+		vi.mocked(countFilteredAuditLogs).mockResolvedValue(0);
 		// Better Auth generates 32-char alphanumeric ids for signed-up users.
 		const userId = "Xq3k9TzP0aLmB7nVwR2sYcD5eF8gH1jK";
 		await call(listAuditLogsProcedure, { userId }, { context: adminContext });
-		expect(countAuditLogs).toHaveBeenCalledWith({ userId });
+		expect(countFilteredAuditLogs).toHaveBeenCalledWith({ userId });
 	});
 
 	it("computes totalPages across multiple pages", async () => {
-		vi.mocked(listAuditLogs).mockResolvedValue(auditLogFixture as never);
-		vi.mocked(countAuditLogs).mockResolvedValue(120);
+		vi.mocked(listFilteredAuditLogs).mockResolvedValue(
+			auditLogFixture as never,
+		);
+		vi.mocked(countFilteredAuditLogs).mockResolvedValue(120);
 
 		const result = await call(
 			listAuditLogsProcedure,

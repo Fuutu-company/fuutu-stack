@@ -44,8 +44,8 @@ vi.mock("@fuutu/db", () => ({
 	deleteSessionsImpersonatedBy: vi.fn(),
 	adminResetTwoFactor: vi.fn(),
 	revokeOAuthTokensForUser: vi.fn(),
-	listAuditLogs: vi.fn(),
-	countAuditLogs: vi.fn(),
+	listFilteredAuditLogs: vi.fn(),
+	countFilteredAuditLogs: vi.fn(),
 }));
 
 const audit = vi.hoisted(() => ({ record: vi.fn() }));
@@ -416,8 +416,8 @@ describe("admin.users.get", () => {
 
 describe("admin.auditLogs.list paging", () => {
 	it("caps the page number at 100 000", async () => {
-		vi.mocked(db.listAuditLogs).mockResolvedValue([] as never);
-		vi.mocked(db.countAuditLogs).mockResolvedValue(0);
+		vi.mocked(db.listFilteredAuditLogs).mockResolvedValue([] as never);
+		vi.mocked(db.countFilteredAuditLogs).mockResolvedValue(0);
 		await expect(
 			call(
 				adminRouter.auditLogs.list,
@@ -425,14 +425,14 @@ describe("admin.auditLogs.list paging", () => {
 				{ context: adminContext() },
 			),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
-		expect(db.listAuditLogs).not.toHaveBeenCalled();
+		expect(db.listFilteredAuditLogs).not.toHaveBeenCalled();
 	});
 });
 
 describe("admin.auditLogs.list filters", () => {
 	it("passes the timeline and target filters to the queries", async () => {
-		vi.mocked(db.listAuditLogs).mockResolvedValue([] as never);
-		vi.mocked(db.countAuditLogs).mockResolvedValue(0);
+		vi.mocked(db.listFilteredAuditLogs).mockResolvedValue([] as never);
+		vi.mocked(db.countFilteredAuditLogs).mockResolvedValue(0);
 		await call(
 			adminRouter.auditLogs.list,
 			{
@@ -453,10 +453,10 @@ describe("admin.auditLogs.list filters", () => {
 			from: new Date("2026-01-01T00:00:00Z"),
 			to: new Date("2026-02-01T00:00:00Z"),
 		};
-		expect(db.listAuditLogs).toHaveBeenCalledWith(
+		expect(db.listFilteredAuditLogs).toHaveBeenCalledWith(
 			expect.objectContaining({ ...filters, take: 50, skip: 0 }),
 		);
-		expect(db.countAuditLogs).toHaveBeenCalledWith(
+		expect(db.countFilteredAuditLogs).toHaveBeenCalledWith(
 			expect.objectContaining(filters),
 		);
 	});

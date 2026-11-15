@@ -1,4 +1,4 @@
-import { countAuditLogs, listAuditLogs } from "@fuutu/db";
+import { countFilteredAuditLogs, listFilteredAuditLogs } from "@fuutu/db";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { adminProcedure } from "../../../orpc/procedures";
@@ -41,8 +41,8 @@ export const listAuditLogsProcedure = adminProcedure
 		const skip = (page - 1) * pageSize;
 
 		const [items, total] = await Promise.all([
-			listAuditLogs({ ...filters, take: pageSize, skip }),
-			countAuditLogs(filters),
+			listFilteredAuditLogs({ ...filters, take: pageSize, skip }),
+			countFilteredAuditLogs(filters),
 		]);
 
 		return {

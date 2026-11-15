@@ -4,13 +4,13 @@
  *
  * Wired from auth hooks; actual provider calls delegate to
  * `@fuutu/payments`. Failures are logged but never propagate —
- * auth flows must not block on payment-provider availability. Only the
- * `…OrThrow` cancel variants (support deletes) throw.
+ * auth flows must not block on payment-provider availability.
  */
 import { countOrganizationMembers, getPurchasesByUserId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import {
 	cancelAllSubscriptionsForOrganization,
+	cancelAllSubscriptionsForOrganizationOrThrow,
 	resolvePaymentProviderById,
 	updateSeatsInOrganizationSubscription,
 } from "@fuutu/payments";
@@ -40,6 +40,72 @@ export async function syncSeatsForOrganization(
 	}
 }
 
+export async function cancelActiveSubscriptionsForUser(
+	userId: string,
+): Promise<void> {
+	let purchases: Awaited<ReturnType<typeof getPurchasesByUserId>>;
+	try {
+		purchases = await getPurchasesByUserId(userId);
+	} catch (err) {
+		log.error("cancelActiveSubscriptionsForUser: load failed", {
+			userId,
+			err: String(err),
+		});
+		return;
+	}
+
+	// Each subscription is cancelled through the provider it was created
+	// with — never through whichever provider is active now. `allSettled` so
+	// a single provider failure does not leave the rest dangling.
+	const results = await Promise.allSettled(
+		purchases
+			.filter(
+				(p): p is UserPurchase & { subscriptionId: string } =>
+					p.type === "SUBSCRIPTION" &&
+					p.subscriptionId != null &&
+					(p.status === "ACTIVE" || p.status === "TRIALING"),
+			)
+			.map((p) => {
+				const provider = resolvePaymentProviderById(p.provider);
+				if (!provider) {
+					log.warn(
+						"cancelActiveSubscriptionsForUser: unknown provider, cancel it manually",
+						{
+							userId,
+							provider: p.provider,
+							subscriptionId: p.subscriptionId,
+						},
+					);
+					return Promise.resolve();
+				}
+				return provider.cancelSubscription(p.subscriptionId, {
+					mode: "immediate",
+				});
+			}),
+	);
+	for (const r of results) {
+		if (r.status === "rejected") {
+			log.error("cancelActiveSubscriptionsForUser: one cancel failed", {
+				userId,
+				err: String(r.reason),
+			});
+		}
+	}
+}
+
+export async function cancelActiveSubscriptionsForOrganization(
+	organizationId: string,
+): Promise<void> {
+	try {
+		await cancelAllSubscriptionsForOrganization(organizationId);
+	} catch (err) {
+		log.error("cancelActiveSubscriptionsForOrganization failed", {
+			organizationId,
+			err: String(err),
+		});
+	}
+}
+
 /**
  * Thrown by the `…OrThrow` variants: at least one subscription is still
  * billing (provider rejected, provider unavailable or purchases
@@ -53,16 +119,24 @@ export class SubscriptionCancellationError extends Error {
 }
 
 /**
- * Cancels the user's active subscriptions, each through the provider it
- * was created with. Returns how many could not be cancelled; throws only
- * when the purchases cannot be read.
+ * Strict `cancelActiveSubscriptionsForUser` for support deletes: tries
+ * every cancel, then throws `SubscriptionCancellationError` if any
+ * subscription is still billing.
  */
-async function cancelUserSubscriptions(userId: string): Promise<number> {
-	const purchases = await getPurchasesByUserId(userId);
+export async function cancelActiveSubscriptionsForUserOrThrow(
+	userId: string,
+): Promise<void> {
+	let purchases: Awaited<ReturnType<typeof getPurchasesByUserId>>;
+	try {
+		purchases = await getPurchasesByUserId(userId);
+	} catch (err) {
+		log.error("cancelActiveSubscriptionsForUser: load failed", {
+			userId,
+			err: String(err),
+		});
+		throw new SubscriptionCancellationError();
+	}
 
-	// Each subscription is cancelled through the provider it was created
-	// with — never through whichever provider is active now. `allSettled` so
-	// a single provider failure does not leave the rest dangling.
 	let failed = 0;
 	const results = await Promise.allSettled(
 		purchases
@@ -100,68 +174,19 @@ async function cancelUserSubscriptions(userId: string): Promise<number> {
 			});
 		}
 	}
-	return failed;
-}
-
-/** Hook variant (user delete): failures are logged, never thrown. */
-export async function cancelActiveSubscriptionsForUser(
-	userId: string,
-): Promise<void> {
-	try {
-		await cancelUserSubscriptions(userId);
-	} catch (err) {
-		log.error("cancelActiveSubscriptionsForUser: load failed", {
-			userId,
-			err: String(err),
-		});
-	}
-}
-
-/**
- * Strict variant for support deletes: tries every cancel, then throws
- * `SubscriptionCancellationError` if any subscription is still billing.
- */
-export async function cancelActiveSubscriptionsForUserOrThrow(
-	userId: string,
-): Promise<void> {
-	let failed: number;
-	try {
-		failed = await cancelUserSubscriptions(userId);
-	} catch (err) {
-		log.error("cancelActiveSubscriptionsForUser: load failed", {
-			userId,
-			err: String(err),
-		});
-		throw new SubscriptionCancellationError();
-	}
 	if (failed > 0) throw new SubscriptionCancellationError();
 }
 
-/** Hook variant (`beforeDeleteOrganization`): failures are logged, never thrown. */
-export async function cancelActiveSubscriptionsForOrganization(
-	organizationId: string,
-): Promise<void> {
-	try {
-		await cancelAllSubscriptionsForOrganization(organizationId);
-	} catch (err) {
-		log.error("cancelActiveSubscriptionsForOrganization failed", {
-			organizationId,
-			err: String(err),
-		});
-	}
-}
-
 /**
- * Strict variant for support deletes: throws
- * `SubscriptionCancellationError` if any subscription is still billing.
+ * Strict `cancelActiveSubscriptionsForOrganization` for support deletes:
+ * throws `SubscriptionCancellationError` if any subscription is still
+ * billing.
  */
 export async function cancelActiveSubscriptionsForOrganizationOrThrow(
 	organizationId: string,
 ): Promise<void> {
 	try {
-		await cancelAllSubscriptionsForOrganization(organizationId, {
-			failOnError: true,
-		});
+		await cancelAllSubscriptionsForOrganizationOrThrow(organizationId);
 	} catch (err) {
 		log.error("cancelActiveSubscriptionsForOrganization failed", {
 			organizationId,
