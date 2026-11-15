@@ -58,6 +58,9 @@ const { createWebhookProcedure } = await import(
 const { updateWebhookProcedure } = await import(
 	"../modules/webhooks/procedures/update"
 );
+const { updateUserProfile } = await import(
+	"../modules/users/procedures/update-user-profile"
+);
 
 /**
  * Support may look around as the user, but never spend their money, mint
@@ -120,6 +123,7 @@ const DENIED = [
 		updateWebhookProcedure,
 		{ id: "wh-1", organizationId: "org-1", url: "https://example.com/hook" },
 	],
+	["users.updateProfile", updateUserProfile, { name: "Renamed" }],
 ] as const;
 
 function impersonatedContext(): Context {

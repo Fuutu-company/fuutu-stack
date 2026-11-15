@@ -56,6 +56,11 @@ const GUARDED_PATHS = [
 	"/organization/remove-team",
 	"/organization/add-team-member",
 	"/organization/remove-team-member",
+	// The user's profile and their other device sessions.
+	"/update-user",
+	"/revoke-session",
+	"/revoke-sessions",
+	"/revoke-other-sessions",
 ];
 
 describe("assertNotImpersonating (hooks.before)", () => {
@@ -94,7 +99,7 @@ describe("assertNotImpersonating (hooks.before)", () => {
 
 	it.each([
 		"/get-session",
-		"/update-user",
+		"/list-sessions",
 		"/sign-out",
 		"/admin/stop-impersonating",
 		"/organization/create",

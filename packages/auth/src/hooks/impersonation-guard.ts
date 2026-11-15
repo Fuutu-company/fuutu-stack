@@ -48,6 +48,12 @@ const GUARDED_PATHS: ReadonlySet<string> = new Set([
 	"/organization/remove-team",
 	"/organization/add-team-member",
 	"/organization/remove-team-member",
+	// The user's profile and their other device sessions (signing them out
+	// elsewhere). The audited stop never calls these.
+	"/update-user",
+	"/revoke-session",
+	"/revoke-sessions",
+	"/revoke-other-sessions",
 ]);
 
 const GUARDED_PREFIXES = ["/delete-user", "/two-factor/", "/passkey/"];

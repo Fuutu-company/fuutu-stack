@@ -2,7 +2,7 @@
  * Deny-impersonation scanner — static source scan, no runtime.
  *
  * Every mutation (route method other than GET; oRPC's default is POST)
- * under `modules/{payments,api-keys,webhooks,organizations}/**\/procedures/`
+ * under `modules/{payments,api-keys,webhooks,organizations,users}/**\/procedures/`
  * must reject impersonation sessions: `authProcedure({ denyImpersonation:
  * true })` or `.use(denyImpersonation)`. A new mutation in these modules
  * fails here until it is guarded or added to the allow-list below with a
@@ -13,7 +13,13 @@ import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const MODULES_DIR = join(__dirname, "..", "modules");
-const SCANNED_MODULES = ["payments", "api-keys", "webhooks", "organizations"];
+const SCANNED_MODULES = [
+	"payments",
+	"api-keys",
+	"webhooks",
+	"organizations",
+	"users",
+];
 
 /** Mutations support may run as the user — each with its reason. */
 const ALLOWED_WHILE_IMPERSONATING: ReadonlyMap<string, string> = new Map([
@@ -91,9 +97,9 @@ describe("scanner detection", () => {
 
 describe("deny-impersonation scanner", () => {
 	it("finds the procedure files", () => {
-		expect(procedureFiles.map((file) => file.path)).toContain(
-			"payments/procedures/create-checkout.ts",
-		);
+		const paths = procedureFiles.map((file) => file.path);
+		expect(paths).toContain("payments/procedures/create-checkout.ts");
+		expect(paths).toContain("users/procedures/update-user-profile.ts");
 	});
 
 	it("allow-list entries exist and are mutations", () => {
