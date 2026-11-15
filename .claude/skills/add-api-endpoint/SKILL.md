@@ -16,7 +16,7 @@ The full, version-matched blueprint is served by the **Fuutu MCP** server (Fuutu
 ## Minimal path (without MCP)
 
 1. Zod input schema — never trust raw input.
-2. `authProcedure({ systemPermission | org: { permission } })` for protected data; public only when intentional.
+2. `authProcedure({ systemPermission | org: { permission } })` for protected data; public only when intentional. System-admin procedures: `systemAdminProcedure(permission)`. Payments, API-key, webhook and org mutations: `denyImpersonation`.
 3. `createRateLimitMiddleware(...)` on every mutation.
 4. `.route({ method, path, tags, summary })` so it appears in `/api/docs`.
 5. Register in the module router and `packages/api/src/orpc/router.ts`.
