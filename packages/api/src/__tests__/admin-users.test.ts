@@ -1040,6 +1040,20 @@ describe("admin.users.impersonate", () => {
 		expect(auth.api.impersonateUser).not.toHaveBeenCalled();
 	});
 
+	it("creates no session when the audit row cannot be written", async () => {
+		audit.record.mockRejectedValueOnce(new Error("audit sink down"));
+		const context = adminContext();
+		await expect(
+			call(
+				users.impersonate,
+				{ userId: "user-2", reason: REASON },
+				{ context },
+			),
+		).rejects.toThrow("audit sink down");
+		expect(auth.api.impersonateUser).not.toHaveBeenCalled();
+		expect(context.resHeaders?.getSetCookie()).toEqual([]);
+	});
+
 	it("requires a reason", async () => {
 		await expect(
 			call(users.impersonate, { userId: "user-2" } as never, {

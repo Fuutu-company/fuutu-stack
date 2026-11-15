@@ -44,6 +44,13 @@ export const impersonateUserProcedure = systemAdminProcedure(
 			});
 		}
 
+		// Audited first: no impersonation session may exist without its row.
+		await recordAdminAction(context, {
+			action: "admin.user.impersonate_start",
+			targetUserId: target.id,
+			reason: input.reason,
+		});
+
 		const { headers, response } = await withAuthErrors(() =>
 			auth.api.impersonateUser({
 				body: { userId: target.id },
@@ -52,11 +59,5 @@ export const impersonateUserProcedure = systemAdminProcedure(
 			}),
 		);
 		forwardSetCookies(headers, resHeaders);
-
-		await recordAdminAction(context, {
-			action: "admin.user.impersonate_start",
-			targetUserId: target.id,
-			reason: input.reason,
-		});
 		return { success: true, expiresAt: response.session.expiresAt };
 	});
