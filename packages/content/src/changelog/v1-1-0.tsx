@@ -154,6 +154,19 @@ export default function ChangelogV110() {
 					of a kit org-settings item (e.g. one "Keys" page instead of "API
 					keys") without rewording kit text; the kit route keeps working.
 				</li>
+				<li>
+					System admin area under <code>/admin</code>: users and organizations
+					(search, detail pages, support actions with a reason), impersonation
+					with a time limit and banner, a filterable audit log and a read-only
+					system status page. Every action runs through the audited{" "}
+					<code>admin.*</code> oRPC procedures; irreversible ones (ban, set
+					role, delete, impersonate) write their audit row before they run and
+					an <code>_failed</code> row when they then fail. New config:{" "}
+					<code>authConfig.admin.impersonationMinutes</code> (default 60),{" "}
+					<code>authConfig.organizations.invitationExpiresIn</code> (default 48
+					h) and <code>authConfig.admin.exposeAuthEndpoints</code> (default{" "}
+					<code>false</code>).
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -248,6 +261,47 @@ export default function ChangelogV110() {
 					<code>max-w-[calc(100%-2rem)] sm:max-w-lg</code>. Override the width
 					with <code>sm:max-w-*</code>; a bare <code>max-w-*</code> drops the
 					phone inset. Update your visual baselines.
+				</li>
+				<li>
+					<code>adminProcedure</code> is{" "}
+					<code>systemAdminProcedure(PERMISSIONS.VIEW_ADMIN)</code>: it re-reads
+					the caller's role and ban from the database on every call and rejects
+					API keys and impersonation sessions with 403, whatever their scopes.
+				</li>
+				<li>
+					Better Auth's admin endpoints (<code>/api/auth/admin/*</code>,{" "}
+					<code>authClient.admin.*</code>) answer 404 and are no longer listed
+					in <code>/api/docs</code>. Call the <code>admin.*</code> procedures
+					instead (e.g. <code>admin.users.ban</code>,{" "}
+					<code>admin.users.setRole</code>, <code>admin.users.impersonate</code>
+					). To keep the old endpoints, set{" "}
+					<code>authConfig.admin.exposeAuthEndpoints: true</code> — they then
+					bypass the reason, audit row and guards of the procedures.
+				</li>
+				<li>
+					Impersonation sessions are rejected by the payments, API-key, webhook
+					and organization mutations (<code>denyImpersonation</code>) and by{" "}
+					<code>users.updateProfile</code>; Better Auth's account, 2FA, passkey,
+					organization, <code>/update-user</code> and session-revoke endpoints
+					answer 403 (<code>IMPERSONATION_FORBIDDEN</code>). A test fails when a
+					new mutation in these modules forgets the guard.
+				</li>
+				<li>
+					An impersonation ends after{" "}
+					<code>authConfig.admin.impersonationMinutes</code>, counted from its
+					start: the session is deleted, the expiry is audited (
+					<code>admin.user.impersonate_expired</code>) and the admin is signed
+					out.
+				</li>
+				<li>
+					A temporary ban ends at <code>banExpires</code>: the server guards,
+					the API and the admin badges treat an expired ban as lifted (
+					<code>isBanActive</code> from <code>@fuutu/auth/types</code>).
+				</li>
+				<li>
+					The admin sidebar group lists Users, Organizations, Audit logs and
+					System, in that order. An app item with{" "}
+					<code>after: "adminUsers"</code> now sits before Organizations.
 				</li>
 			</ul>
 		</>

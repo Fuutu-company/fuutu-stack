@@ -165,6 +165,20 @@ export default function ChangelogV110De() {
 					eine Seite „Keys“ statt „API-Schlüssel“), ohne Kit-Texte
 					umzuschreiben; die Kit-Route funktioniert weiter.
 				</li>
+				<li>
+					System-Admin-Bereich unter <code>/admin</code>: Nutzer und
+					Organisationen (Suche, Detailseiten, Support-Aktionen mit Begründung),
+					Impersonation mit Zeitlimit und Banner, ein filterbares Audit-Log und
+					eine schreibgeschützte Systemstatus-Seite. Jede Aktion läuft über die
+					auditierten <code>admin.*</code>-oRPC-Prozeduren; unumkehrbare
+					(Sperren, Rolle setzen, Löschen, Impersonation) schreiben ihren
+					Audit-Eintrag, bevor sie laufen, und einen <code>_failed</code>
+					-Eintrag, wenn sie danach scheitern. Neue Konfiguration:{" "}
+					<code>authConfig.admin.impersonationMinutes</code> (Standard 60),{" "}
+					<code>authConfig.organizations.invitationExpiresIn</code> (Standard 48
+					h) und <code>authConfig.admin.exposeAuthEndpoints</code> (Standard{" "}
+					<code>false</code>).
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
@@ -262,6 +276,50 @@ export default function ChangelogV110De() {
 					<code>max-w-[calc(100%-2rem)] sm:max-w-lg</code>. Breite mit{" "}
 					<code>sm:max-w-*</code> überschreiben; ein bloßes <code>max-w-*</code>{" "}
 					entfernt den Abstand auf dem Handy. Visuelle Baselines aktualisieren.
+				</li>
+				<li>
+					<code>adminProcedure</code> ist{" "}
+					<code>systemAdminProcedure(PERMISSIONS.VIEW_ADMIN)</code>: Rolle und
+					Sperre des Aufrufers werden bei jedem Aufruf aus der Datenbank
+					gelesen, API-Schlüssel und Impersonation-Sitzungen bekommen 403, egal
+					mit welchen Scopes.
+				</li>
+				<li>
+					Die Admin-Endpunkte von Better Auth (<code>/api/auth/admin/*</code>,{" "}
+					<code>authClient.admin.*</code>) antworten mit 404 und stehen nicht
+					mehr in <code>/api/docs</code>. Stattdessen die <code>admin.*</code>
+					-Prozeduren aufrufen (z. B. <code>admin.users.ban</code>,{" "}
+					<code>admin.users.setRole</code>, <code>admin.users.impersonate</code>
+					). Wer die alten Endpunkte behalten will, setzt{" "}
+					<code>authConfig.admin.exposeAuthEndpoints: true</code> — sie umgehen
+					dann Begründung, Audit-Eintrag und Schutzregeln der Prozeduren.
+				</li>
+				<li>
+					Impersonation-Sitzungen werden von den Mutationen für Payments,
+					API-Schlüssel, Webhooks und Organisationen (
+					<code>denyImpersonation</code>) und von{" "}
+					<code>users.updateProfile</code> abgewiesen; die Better-Auth-Endpunkte
+					für Konto, 2FA, Passkeys, Organisationen, <code>/update-user</code>{" "}
+					und das Beenden von Sitzungen antworten mit 403 (
+					<code>IMPERSONATION_FORBIDDEN</code>). Ein Test schlägt fehl, wenn
+					einer neuen Mutation in diesen Modulen der Schutz fehlt.
+				</li>
+				<li>
+					Eine Impersonation endet nach{" "}
+					<code>authConfig.admin.impersonationMinutes</code>, gezählt ab ihrem
+					Start: Die Sitzung wird gelöscht, das Ende auditiert (
+					<code>admin.user.impersonate_expired</code>) und der Admin abgemeldet.
+				</li>
+				<li>
+					Eine befristete Sperre endet bei <code>banExpires</code>:
+					Server-Guards, API und Admin-Badges behandeln eine abgelaufene Sperre
+					als aufgehoben (<code>isBanActive</code> aus{" "}
+					<code>@fuutu/auth/types</code>).
+				</li>
+				<li>
+					Die Admin-Gruppe der Seitenleiste zeigt Nutzer, Organisationen,
+					Audit-Logs und System in dieser Reihenfolge. Ein App-Eintrag mit{" "}
+					<code>after: "adminUsers"</code> steht jetzt vor Organisationen.
 				</li>
 			</ul>
 		</>
