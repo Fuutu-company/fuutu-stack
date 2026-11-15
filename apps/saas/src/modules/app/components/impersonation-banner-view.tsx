@@ -39,7 +39,13 @@ export function ImpersonationBannerView({
 	const stop = useMutation({
 		mutationFn: () => client.admin.impersonation.stop(),
 		// The admin session cookie is restored: leave via a full navigation.
-		onSuccess: () => window.location.assign(`/admin/users/${userId}`),
+		// Signed out instead (admin session gone): to the sign-out target.
+		onSuccess: (result) =>
+			window.location.assign(
+				result.outcome === "signed_out"
+					? result.redirectTo
+					: `/admin/users/${userId}`,
+			),
 		onError: (error) => {
 			log.error("stop impersonating failed", { err: error });
 			toast.error(t("stopError"));

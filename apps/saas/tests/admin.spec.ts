@@ -203,6 +203,49 @@ test.describe("admin user management", () => {
 		).toBeHidden();
 	});
 
+	test.describe("without the admin session cookie", () => {
+		// Its sign-out ends every session of the browser (multi-session) —
+		// an own admin sign-in keeps the shared storage-state session alive.
+		test.use({ storageState: { cookies: [], origins: [] } });
+
+		test("stop signs the impersonation out", async ({ page }) => {
+			await page.goto("/auth/sign-in");
+			await page.getByLabel("Email").fill("admin@fuutu.local");
+			await page.getByLabel("Password").fill("DevPassword!2345");
+			await page.getByRole("button", { name: "Sign in", exact: true }).click();
+			await page.waitForURL(/\/dashboard|\/onboarding/, { timeout: 30_000 });
+
+			await page.goto("/admin/users?q=member@");
+			await page.getByRole("link", { name: /member@fuutu\.local/ }).click();
+			await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/);
+			await page.getByRole("button", { name: /^actions$/i }).click();
+			await page.getByRole("menuitem", { name: /^impersonate/i }).click();
+			const dialog = page.getByRole("dialog");
+			await dialog
+				.getByLabel("Reason")
+				.fill("E2E impersonation sign-out check");
+			await dialog.getByRole("button", { name: /^impersonate$/i }).click();
+
+			await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+			const banner = page.getByRole("status").filter({
+				hasText: /you are impersonating/i,
+			});
+			await expect(banner).toBeVisible({ timeout: 10_000 });
+
+			// Better Auth can no longer restore the admin: its cookie is gone.
+			const adminCookie = (await page.context().cookies()).find((cookie) =>
+				cookie.name.endsWith(".admin_session"),
+			);
+			expect(adminCookie).toBeDefined();
+			await page.context().clearCookies({ name: adminCookie?.name });
+
+			await banner.getByRole("button", { name: /stop impersonating/i }).click();
+			await expect(page).toHaveURL(/\/auth\/sign-in/, { timeout: 15_000 });
+			await page.goto("/dashboard");
+			await expect(page).toHaveURL(/\/auth\/sign-in/);
+		});
+	});
+
 	test("Better Auth admin endpoints are closed to direct HTTP", async ({
 		request,
 	}) => {

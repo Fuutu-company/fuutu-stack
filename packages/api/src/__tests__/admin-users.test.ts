@@ -23,6 +23,7 @@ vi.mock("@fuutu/auth", () => ({
 			requestPasswordReset: vi.fn(),
 			impersonateUser: vi.fn(),
 			stopImpersonating: vi.fn(),
+			signOut: vi.fn(),
 		},
 	},
 }));
@@ -48,7 +49,11 @@ vi.mock("@fuutu/db", () => ({
 	countFilteredAuditLogs: vi.fn(),
 }));
 
-const audit = vi.hoisted(() => ({ record: vi.fn() }));
+const audit = vi.hoisted(() => {
+	const record = vi.fn();
+	// Strict rows land in `record` too, so order assertions see every row.
+	return { record, recordStrict: vi.fn((event: unknown) => record(event)) };
+});
 vi.mock("@fuutu/logs", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@fuutu/logs")>()),
 	createAuditLogger: () => audit,
@@ -644,6 +649,18 @@ describe("admin.users.ban", () => {
 		expectAuditedBefore(vi.mocked(auth.api.banUser));
 	});
 
+	it("never bans without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(
+				users.ban,
+				{ userId: "user-2", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow("audit sink down");
+		expect(auth.api.banUser).not.toHaveBeenCalled();
+	});
+
 	it("turns an expiry date into Better Auth's banExpiresIn seconds", async () => {
 		vi.useFakeTimers({ now: new Date("2026-06-01T12:00:00Z") });
 		try {
@@ -775,6 +792,18 @@ describe("admin.users.setRole", () => {
 			reason: REASON,
 			changedFields: ["role"],
 		});
+	});
+
+	it("never changes a role without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(
+				users.setRole,
+				{ userId: "user-2", role: "admin", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow("audit sink down");
+		expect(db.adminSetSystemRole).not.toHaveBeenCalled();
 	});
 
 	it("writes the audit row before the role changes", async () => {
@@ -1069,6 +1098,15 @@ describe("admin.users.delete", () => {
 		});
 	});
 
+	it("never deletes without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(users.delete, input, { context: adminContext() }),
+		).rejects.toThrow("audit sink down");
+		expect(support.supportCancelUserSubscriptions).not.toHaveBeenCalled();
+		expect(auth.api.removeUser).not.toHaveBeenCalled();
+	});
+
 	it("writes the audit row before cancelling or deleting anything", async () => {
 		await call(users.delete, input, { context: adminContext() });
 		expect(auditedActions()).toEqual(["admin.user.delete"]);
@@ -1229,6 +1267,20 @@ describe("admin.users.impersonate", () => {
 		expect(auth.api.impersonateUser).not.toHaveBeenCalled();
 	});
 
+	it("writes impersonate_start strictly — no session without a persisted row", async () => {
+		await call(
+			users.impersonate,
+			{ userId: "user-2", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(audit.recordStrict).toHaveBeenCalledWith(
+			expect.objectContaining({ action: "admin.user.impersonate_start" }),
+		);
+		expect(audit.recordStrict.mock.invocationCallOrder[0]).toBeLessThan(
+			vi.mocked(auth.api.impersonateUser).mock.invocationCallOrder[0] ?? 0,
+		);
+	});
+
 	it("creates no session when the audit row cannot be written", async () => {
 		audit.record.mockRejectedValueOnce(new Error("audit sink down"));
 		const context = adminContext();
@@ -1306,6 +1358,53 @@ describe("admin.impersonation.stop", () => {
 			"admin-9",
 		);
 		expect(rateLimit.keys).toContain("adminMutation:user-2");
+	});
+
+	it("answers restored when the admin session came back", async () => {
+		const context = impersonatedContext(makeUser({ id: "user-2" }));
+		await expect(call(stop, undefined, { context })).resolves.toEqual({
+			success: true,
+			outcome: "restored",
+		});
+		expect(auth.api.signOut).not.toHaveBeenCalled();
+	});
+
+	it("signs the impersonation out when the admin session cannot be restored", async () => {
+		// Better Auth: admin_session cookie missing or that session is gone.
+		vi.mocked(auth.api.stopImpersonating).mockRejectedValueOnce(
+			Object.assign(new Error("Failed to find admin session"), {
+				name: "APIError",
+				statusCode: 500,
+			}),
+		);
+		vi.mocked(auth.api.signOut).mockResolvedValueOnce({
+			headers: setCookieHeaders(
+				"better-auth.session_token=; Max-Age=0; Path=/",
+				"better-auth.session_data=; Max-Age=0; Path=/",
+			),
+			response: { success: true },
+		} as never);
+		const context = impersonatedContext(makeUser({ id: "user-2" }));
+
+		await expect(call(stop, undefined, { context })).resolves.toEqual({
+			success: true,
+			outcome: "signed_out",
+			// authConfig.redirects.afterSignOut
+			redirectTo: "/auth/sign-in",
+		});
+		expect(auth.api.signOut).toHaveBeenCalledWith({
+			headers: expect.any(Headers),
+			returnHeaders: true,
+		});
+		expect(context.resHeaders?.getSetCookie()).toEqual([
+			"better-auth.session_token=; Max-Age=0; Path=/",
+			"better-auth.session_data=; Max-Age=0; Path=/",
+		]);
+		expectAudit(
+			"admin.user.impersonate_stop",
+			{ targetUserId: "user-2", outcome: "signed_out" },
+			"admin-9",
+		);
 	});
 
 	it("rejects a session that is not impersonating", async () => {

@@ -40,5 +40,11 @@ export interface AuditSink {
 }
 
 export interface AuditLogger {
+	/** Never throws — a sink failure is logged. */
 	record(event: AuditEvent): Promise<void>;
+	/**
+	 * Rejects when the sink fails (logged too) — for actions that must not
+	 * run without a persisted row (impersonation, irreversible deletes).
+	 */
+	recordStrict(event: AuditEvent): Promise<void>;
 }

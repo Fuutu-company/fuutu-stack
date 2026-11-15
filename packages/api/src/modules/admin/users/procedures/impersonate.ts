@@ -4,7 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { recordAdminAction, recordAdminActionStrict } from "../../audit";
 import {
 	adminIdSchema,
 	assertNotAdmin,
@@ -44,9 +44,10 @@ export const impersonateUserProcedure = systemAdminProcedure(
 			});
 		}
 
-		// Audited first: no impersonation session may exist without its row.
+		// Audited first and strictly: no impersonation session may exist
+		// without its persisted row.
 		const audited = { targetUserId: target.id, reason: input.reason };
-		await recordAdminAction(context, {
+		await recordAdminActionStrict(context, {
 			action: "admin.user.impersonate_start",
 			...audited,
 		});

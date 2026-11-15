@@ -41,7 +41,11 @@ vi.mock("@fuutu/payments/config.server", () => ({
 		({ prod_pro: "pro", prod_ent: "enterprise" })[productId],
 }));
 
-const audit = vi.hoisted(() => ({ record: vi.fn() }));
+const audit = vi.hoisted(() => {
+	const record = vi.fn();
+	// Strict rows land in `record` too, so order assertions see every row.
+	return { record, recordStrict: vi.fn((event: unknown) => record(event)) };
+});
 vi.mock("@fuutu/logs", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@fuutu/logs")>()),
 	createAuditLogger: () => audit,
@@ -920,6 +924,14 @@ describe("admin.organizations.delete", () => {
 			targetOrganizationId: ORG_ID,
 			reason: REASON,
 		});
+	});
+
+	it("never deletes without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(orgs.delete, input, { context: adminContext() }),
+		).rejects.toThrow("audit sink down");
+		expect(support.supportDeleteOrganization).not.toHaveBeenCalled();
 	});
 
 	it("writes the audit row before anything is deleted", async () => {
