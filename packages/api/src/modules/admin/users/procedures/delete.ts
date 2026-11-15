@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { supportCancelUserSubscriptions } from "@fuutu/auth/admin-support";
 import { listSoleOwnedOrganizations } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
@@ -13,6 +14,7 @@ import {
 	loadTargetUser,
 	reasonSchema,
 	withAuthErrors,
+	withSubscriptionCancellation,
 } from "../../shared";
 
 const deleteUserInput = z.object({
@@ -30,7 +32,7 @@ export const deleteUserProcedure = systemAdminProcedure(PERMISSIONS.USER.DELETE)
 		tags: ["Admin"],
 		summary: "Delete user",
 		description:
-			"Permanently deletes a user (subscriptions are cancelled first). Requires the user's email as `confirmEmail`. Refused for yourself, other admins and sole owners of an organization. System admin only.",
+			"Permanently deletes a user (subscriptions are cancelled first; the delete aborts with 502 when one cannot be). Requires the user's email as `confirmEmail`. Refused for yourself, other admins and sole owners of an organization. System admin only.",
 	})
 	.input(deleteUserInput)
 	.handler(async ({ input, context }) => {
@@ -53,6 +55,10 @@ export const deleteUserProcedure = systemAdminProcedure(PERMISSIONS.USER.DELETE)
 			});
 		}
 
+		// Better Auth's delete hook cancels too, but only logs a failure.
+		await withSubscriptionCancellation(() =>
+			supportCancelUserSubscriptions(target.id),
+		);
 		await withAuthErrors(() =>
 			auth.api.removeUser({
 				body: { userId: target.id },

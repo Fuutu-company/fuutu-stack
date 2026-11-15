@@ -40,7 +40,8 @@
 			"notFound": "Not found. It may have been deleted.",
 			"rateLimited": "Too many actions. Wait a moment and try again.",
 			"invalid": "The request was not valid. Check your input.",
-			"generic": "Something went wrong. Please try again."
+			"generic": "Something went wrong. Please try again.",
+			"paymentProvider": "Subscriptions could not be cancelled at the payment provider, so nothing was deleted. Try again later."
 		},
 		"pagination": {
 			"summary": "Page {page} of {totalPages} · {total, plural, one {# result} other {# results}}",

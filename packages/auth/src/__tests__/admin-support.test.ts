@@ -23,7 +23,8 @@ vi.mock("../hooks/member-api-keys", () => ({
 
 vi.mock("../hooks/payments-sync", () => ({
 	syncSeatsForOrganization: vi.fn(),
-	cancelActiveSubscriptionsForOrganization: vi.fn(),
+	cancelActiveSubscriptionsForOrganizationOrThrow: vi.fn(),
+	cancelActiveSubscriptionsForUserOrThrow: vi.fn(),
 }));
 
 vi.mock("../hooks/seat-limit", () => ({
@@ -38,8 +39,11 @@ const db = await import("@fuutu/db");
 const { revokeApiKeysOfRemovedMember } = await import(
 	"../hooks/member-api-keys"
 );
-const { syncSeatsForOrganization, cancelActiveSubscriptionsForOrganization } =
-	await import("../hooks/payments-sync");
+const {
+	syncSeatsForOrganization,
+	cancelActiveSubscriptionsForOrganizationOrThrow,
+	cancelActiveSubscriptionsForUserOrThrow,
+} = await import("../hooks/payments-sync");
 const { assertInviteSeatAvailable } = await import("../hooks/seat-limit");
 const { sendOrganizationInvitationEmail } = await import(
 	"../lib/invitation-email"
@@ -73,7 +77,7 @@ beforeEach(() => {
 	vi.mocked(syncSeatsForOrganization).mockImplementation(async () => {
 		order.push("syncSeats");
 	});
-	vi.mocked(cancelActiveSubscriptionsForOrganization).mockImplementation(
+	vi.mocked(cancelActiveSubscriptionsForOrganizationOrThrow).mockImplementation(
 		async () => {
 			order.push("cancelSubscriptions");
 		},
@@ -231,17 +235,45 @@ describe("supportDeleteOrganization", () => {
 		await expect(support.supportDeleteOrganization("org-1")).resolves.toBe(
 			true,
 		);
-		expect(cancelActiveSubscriptionsForOrganization).toHaveBeenCalledWith(
-			"org-1",
-		);
+		expect(
+			cancelActiveSubscriptionsForOrganizationOrThrow,
+		).toHaveBeenCalledWith("org-1");
 		expect(db.adminDeleteOrganization).toHaveBeenCalledWith("org-1");
 		expect(order).toEqual(["cancelSubscriptions", "deleteOrg"]);
+	});
+
+	it("deletes nothing when a subscription could not be cancelled", async () => {
+		const failure = Object.assign(new Error("1 of 1 failed"), {
+			name: "SubscriptionCancellationError",
+		});
+		vi.mocked(
+			cancelActiveSubscriptionsForOrganizationOrThrow,
+		).mockRejectedValueOnce(failure);
+		await expect(support.supportDeleteOrganization("org-1")).rejects.toBe(
+			failure,
+		);
+		expect(db.adminDeleteOrganization).not.toHaveBeenCalled();
 	});
 
 	it("reports false when the organization was already gone", async () => {
 		vi.mocked(db.adminDeleteOrganization).mockResolvedValueOnce(0);
 		await expect(support.supportDeleteOrganization("org-1")).resolves.toBe(
 			false,
+		);
+	});
+});
+
+describe("supportCancelUserSubscriptions", () => {
+	it("cancels strictly — a failure reaches the caller", async () => {
+		const failure = new Error("provider down");
+		vi.mocked(cancelActiveSubscriptionsForUserOrThrow).mockRejectedValueOnce(
+			failure,
+		);
+		await expect(support.supportCancelUserSubscriptions("user-2")).rejects.toBe(
+			failure,
+		);
+		expect(cancelActiveSubscriptionsForUserOrThrow).toHaveBeenCalledWith(
+			"user-2",
 		);
 	});
 });

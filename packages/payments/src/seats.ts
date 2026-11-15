@@ -107,14 +107,22 @@ export async function updateSeatsInOrganizationSubscription(
  * are removed with the organization. The provider-side cancel is the
  * authoritative stop-billing action; any `subscription.canceled` webhook
  * that arrives before deletion resolves on a gone row harmlessly.
+ *
+ * Failures are logged and the rest still cancelled. `failOnError` then
+ * rejects (also for a subscription whose provider is not available) — for
+ * callers that must not delete while billing continues.
  */
 export async function cancelAllSubscriptionsForOrganization(
 	organizationId: string,
+	options: { failOnError?: boolean } = {},
 ): Promise<void> {
 	const purchases = await getPurchasesByOrganizationId(organizationId);
+	let attempted = 0;
+	let failed = 0;
 	for (const p of purchases) {
 		if (p.type !== "SUBSCRIPTION" || !p.subscriptionId) continue;
 		if (p.status !== "ACTIVE" && p.status !== "TRIALING") continue;
+		attempted++;
 		// The purchase's own provider — never the active one by default,
 		// which would receive a foreign subscription id after a switch.
 		const provider = resolvePaymentProviderById(p.provider);
@@ -127,6 +135,7 @@ export async function cancelAllSubscriptionsForOrganization(
 					subscriptionProvider: p.provider,
 				},
 			);
+			failed++;
 			continue;
 		}
 		try {
@@ -134,11 +143,17 @@ export async function cancelAllSubscriptionsForOrganization(
 				mode: "immediate",
 			});
 		} catch (err) {
+			failed++;
 			log.error("cancelSubscription failed", {
 				organizationId,
 				subscriptionId: p.subscriptionId,
 				err: String(err),
 			});
 		}
+	}
+	if (options.failOnError && failed > 0) {
+		throw new Error(
+			`${failed} of ${attempted} subscriptions could not be cancelled`,
+		);
 	}
 }

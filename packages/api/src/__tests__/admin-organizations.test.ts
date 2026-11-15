@@ -896,6 +896,18 @@ describe("admin.organizations.delete", () => {
 		});
 	});
 
+	it("aborts with 502 when a subscription could not be cancelled", async () => {
+		vi.mocked(support.supportDeleteOrganization).mockRejectedValueOnce(
+			Object.assign(new Error("Subscriptions could not be cancelled"), {
+				name: "SubscriptionCancellationError",
+			}),
+		);
+		await expect(
+			call(orgs.delete, input, { context: adminContext() }),
+		).rejects.toMatchObject({ code: "BAD_GATEWAY", status: 502 });
+		expect(audit.record).not.toHaveBeenCalled();
+	});
+
 	it("refuses when the confirmation is not the organization's slug", async () => {
 		await expect(
 			call(

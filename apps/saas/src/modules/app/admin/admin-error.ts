@@ -6,6 +6,7 @@ export type AdminErrorKey =
 	| "notFound"
 	| "rateLimited"
 	| "invalid"
+	| "paymentProvider"
 	| "generic";
 
 /**
@@ -26,6 +27,8 @@ export function adminErrorKey(err: unknown): AdminErrorKey {
 			return "rateLimited";
 		case "BAD_REQUEST":
 			return "invalid";
+		case "BAD_GATEWAY":
+			return "paymentProvider";
 		default:
 			return "generic";
 	}

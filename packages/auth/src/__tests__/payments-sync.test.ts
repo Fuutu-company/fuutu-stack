@@ -1,7 +1,11 @@
 import { paymentsConfig } from "@fuutu/payments/config";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	cancelActiveSubscriptionsForOrganization,
+	cancelActiveSubscriptionsForOrganizationOrThrow,
 	cancelActiveSubscriptionsForUser,
+	cancelActiveSubscriptionsForUserOrThrow,
+	SubscriptionCancellationError,
 	syncSeatsForOrganization,
 } from "../hooks/payments-sync";
 
@@ -17,6 +21,7 @@ const resolveById = vi.fn((id: string) =>
 			: null,
 );
 const updateSeatsInOrganizationSubscription = vi.fn();
+const cancelAllSubscriptionsForOrganization = vi.fn();
 const logError = vi.fn();
 
 vi.mock("@fuutu/db", () => ({
@@ -30,7 +35,8 @@ vi.mock("@fuutu/payments", () => ({
 	resolvePaymentProviderById: (id: string) => resolveById(id),
 	updateSeatsInOrganizationSubscription: (...args: unknown[]) =>
 		updateSeatsInOrganizationSubscription(...args),
-	cancelAllSubscriptionsForOrganization: vi.fn(),
+	cancelAllSubscriptionsForOrganization: (...args: unknown[]) =>
+		cancelAllSubscriptionsForOrganization(...args),
 }));
 
 vi.mock("@fuutu/logs", () => ({
@@ -163,5 +169,86 @@ describe("cancelActiveSubscriptionsForUser() — provider per purchase", () => {
 		await cancelActiveSubscriptionsForUser("user-1");
 		expect(cancelSubscription).not.toHaveBeenCalled();
 		expect(polarCancel).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * Support deletes (admin.users.delete, admin.organizations.delete) must not
+ * remove an account while a subscription keeps billing — the strict
+ * variants try every cancel, then throw.
+ */
+describe("cancelActiveSubscriptionsForUserOrThrow()", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		cancelSubscription.mockResolvedValue(undefined);
+	});
+
+	it("resolves when every subscription is cancelled", async () => {
+		getPurchasesByUserId.mockResolvedValue([sub({ subscriptionId: "sub_a" })]);
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).resolves.toBeUndefined();
+		expect(cancelSubscription).toHaveBeenCalledWith("sub_a", {
+			mode: "immediate",
+		});
+	});
+
+	it("tries every subscription, then throws on a provider rejection", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ subscriptionId: "sub_bad" }),
+			sub({ subscriptionId: "sub_ok" }),
+		]);
+		cancelSubscription
+			.mockRejectedValueOnce(new Error("stripe 500"))
+			.mockResolvedValueOnce(undefined);
+
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).rejects.toBeInstanceOf(SubscriptionCancellationError);
+		expect(cancelSubscription).toHaveBeenCalledTimes(2);
+	});
+
+	it("throws when the purchase lookup fails", async () => {
+		getPurchasesByUserId.mockRejectedValue(new Error("db down"));
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).rejects.toBeInstanceOf(SubscriptionCancellationError);
+	});
+
+	it("throws when a subscription's provider is not available", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ provider: "gone", subscriptionId: "sub_x" }),
+		]);
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).rejects.toBeInstanceOf(SubscriptionCancellationError);
+	});
+});
+
+describe("cancelActiveSubscriptionsForOrganization*()", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("the hook variant swallows a failure", async () => {
+		cancelAllSubscriptionsForOrganization.mockRejectedValue(new Error("down"));
+		await expect(
+			cancelActiveSubscriptionsForOrganization("org-1"),
+		).resolves.toBeUndefined();
+		expect(logError).toHaveBeenCalled();
+	});
+
+	it("the strict variant fails on any cancel failure", async () => {
+		cancelAllSubscriptionsForOrganization.mockResolvedValue(undefined);
+		await cancelActiveSubscriptionsForOrganizationOrThrow("org-1");
+		expect(cancelAllSubscriptionsForOrganization).toHaveBeenCalledWith(
+			"org-1",
+			{ failOnError: true },
+		);
+
+		cancelAllSubscriptionsForOrganization.mockRejectedValue(new Error("down"));
+		const error = await cancelActiveSubscriptionsForOrganizationOrThrow(
+			"org-1",
+		).catch((e: unknown) => e);
+		expect(error).toBeInstanceOf(SubscriptionCancellationError);
+		expect(error).toMatchObject({ name: "SubscriptionCancellationError" });
 	});
 });

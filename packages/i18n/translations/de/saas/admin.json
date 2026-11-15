@@ -40,7 +40,8 @@
 			"notFound": "Nicht gefunden. Möglicherweise wurde es gelöscht.",
 			"rateLimited": "Zu viele Aktionen. Bitte kurz warten und erneut versuchen.",
 			"invalid": "Die Anfrage war ungültig. Bitte Eingaben prüfen.",
-			"generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+			"generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+			"paymentProvider": "Die Abonnements konnten beim Zahlungsanbieter nicht gekündigt werden, daher wurde nichts gelöscht. Bitte später erneut versuchen."
 		},
 		"pagination": {
 			"summary": "Seite {page} von {totalPages} · {total, plural, one {# Ergebnis} other {# Ergebnisse}}",

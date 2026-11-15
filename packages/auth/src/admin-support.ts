@@ -27,7 +27,8 @@ import { toOrgRole } from "@fuutu/rbac";
 import { authConfig } from "./config";
 import { revokeApiKeysOfRemovedMember } from "./hooks/member-api-keys";
 import {
-	cancelActiveSubscriptionsForOrganization,
+	cancelActiveSubscriptionsForOrganizationOrThrow,
+	cancelActiveSubscriptionsForUserOrThrow,
 	syncSeatsForOrganization,
 } from "./hooks/payments-sync";
 import { assertInviteSeatAvailable } from "./hooks/seat-limit";
@@ -82,13 +83,24 @@ export function supportTransferOwnership(
 
 /**
  * Deletes the organization after cancelling its subscriptions
- * (`beforeDeleteOrganization`). False when it no longer existed.
+ * (`beforeDeleteOrganization`). Unlike the hook, a failed cancel aborts:
+ * throws `SubscriptionCancellationError` and nothing is deleted. False
+ * when the organization no longer existed.
  */
 export async function supportDeleteOrganization(
 	organizationId: string,
 ): Promise<boolean> {
-	await cancelActiveSubscriptionsForOrganization(organizationId);
+	await cancelActiveSubscriptionsForOrganizationOrThrow(organizationId);
 	return (await adminDeleteOrganization(organizationId)) > 0;
+}
+
+/**
+ * Cancels the user's subscriptions before support deletes the account.
+ * Throws `SubscriptionCancellationError` when any is still billing — the
+ * delete must not go ahead (Better Auth's delete hook only logs).
+ */
+export function supportCancelUserSubscriptions(userId: string): Promise<void> {
+	return cancelActiveSubscriptionsForUserOrThrow(userId);
 }
 
 export type SupportResendInvitationResult =

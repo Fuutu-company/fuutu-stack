@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
 import { recordAdminAction } from "../../audit";
-import { reasonSchema } from "../../shared";
+import { reasonSchema, withSubscriptionCancellation } from "../../shared";
 import { loadTargetOrganization, organizationIdSchema } from "../shared";
 
 const deleteOrganizationInput = z.object({
@@ -25,7 +25,7 @@ export const deleteOrganizationProcedure = systemAdminProcedure(
 		tags: ["Admin"],
 		summary: "Delete organization",
 		description:
-			"Permanently deletes an organization with its members, invitations, API keys and billing records; subscriptions are cancelled first. Requires the organization's slug as `confirmSlug`. System admin only.",
+			"Permanently deletes an organization with its members, invitations, API keys and billing records; subscriptions are cancelled first and the delete aborts (502) when one cannot be. Requires the organization's slug as `confirmSlug`. System admin only.",
 	})
 	.input(deleteOrganizationInput)
 	.handler(async ({ input, context }) => {
@@ -35,7 +35,10 @@ export const deleteOrganizationProcedure = systemAdminProcedure(
 				message: "Confirmation does not match the organization's slug",
 			});
 		}
-		if (!(await supportDeleteOrganization(org.id))) {
+		const deleted = await withSubscriptionCancellation(() =>
+			supportDeleteOrganization(org.id),
+		);
+		if (!deleted) {
 			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
 		}
 		await recordAdminAction(context, {

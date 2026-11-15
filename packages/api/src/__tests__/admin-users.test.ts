@@ -27,6 +27,10 @@ vi.mock("@fuutu/auth", () => ({
 	},
 }));
 
+vi.mock("@fuutu/auth/admin-support", () => ({
+	supportCancelUserSubscriptions: vi.fn(),
+}));
+
 vi.mock("@fuutu/db", () => ({
 	getUserAccessState: vi.fn(),
 	adminListUsers: vi.fn(),
@@ -71,6 +75,7 @@ vi.mock("@fuutu/utils/rate-limit", async (importOriginal) => {
 });
 
 const { auth } = await import("@fuutu/auth");
+const support = await import("@fuutu/auth/admin-support");
 const db = await import("@fuutu/db");
 const { apiConfig } = await import("../config");
 const { adminRouter } = await import("../modules/admin/router");
@@ -902,6 +907,37 @@ describe("admin.users.delete", () => {
 			targetUserId: "user-2",
 			reason: REASON,
 		});
+	});
+
+	it("cancels the user's subscriptions strictly before deleting", async () => {
+		const order: string[] = [];
+		vi.mocked(support.supportCancelUserSubscriptions).mockImplementationOnce(
+			async () => {
+				order.push("cancel");
+			},
+		);
+		vi.mocked(auth.api.removeUser).mockImplementationOnce((async () => {
+			order.push("remove");
+			return { success: true };
+		}) as never);
+		await call(users.delete, input, { context: adminContext() });
+		expect(support.supportCancelUserSubscriptions).toHaveBeenCalledWith(
+			"user-2",
+		);
+		expect(order).toEqual(["cancel", "remove"]);
+	});
+
+	it("aborts with 502 when a subscription could not be cancelled", async () => {
+		vi.mocked(support.supportCancelUserSubscriptions).mockRejectedValueOnce(
+			Object.assign(new Error("Subscriptions could not be cancelled"), {
+				name: "SubscriptionCancellationError",
+			}),
+		);
+		await expect(
+			call(users.delete, input, { context: adminContext() }),
+		).rejects.toMatchObject({ code: "BAD_GATEWAY", status: 502 });
+		expect(auth.api.removeUser).not.toHaveBeenCalled();
+		expect(audit.record).not.toHaveBeenCalled();
 	});
 
 	it("refuses when the confirmation is not the user's email", async () => {

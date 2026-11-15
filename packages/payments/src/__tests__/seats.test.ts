@@ -335,4 +335,48 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 
 		expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
 	});
+
+	describe("with failOnError", () => {
+		const active = (id: string, provider = "test-provider") => ({
+			id,
+			type: "SUBSCRIPTION",
+			provider,
+			subscriptionId: `sub_${id}`,
+			status: "ACTIVE",
+		});
+
+		it("still tries every subscription, then rejects on a failure", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				active("a"),
+				active("b"),
+			]);
+			mockCancelSubscription
+				.mockRejectedValueOnce(new Error("provider down"))
+				.mockResolvedValueOnce(undefined);
+
+			await expect(
+				cancelAllSubscriptionsForOrganization("org_1", { failOnError: true }),
+			).rejects.toThrow("1 of 2 subscriptions could not be cancelled");
+			expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
+		});
+
+		it("rejects when a subscription's provider is not available", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				active("gone", "gone-provider"),
+			]);
+
+			await expect(
+				cancelAllSubscriptionsForOrganization("org_1", { failOnError: true }),
+			).rejects.toThrow("1 of 1 subscriptions could not be cancelled");
+		});
+
+		it("resolves when every cancel succeeds", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([active("a")]);
+			mockCancelSubscription.mockResolvedValueOnce(undefined);
+
+			await expect(
+				cancelAllSubscriptionsForOrganization("org_1", { failOnError: true }),
+			).resolves.toBeUndefined();
+		});
+	});
 });

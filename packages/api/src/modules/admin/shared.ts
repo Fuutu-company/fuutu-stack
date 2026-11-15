@@ -95,6 +95,27 @@ export async function withAuthErrors<T>(run: () => Promise<T>): Promise<T> {
 }
 
 /**
+ * Runs a support delete that cancels subscriptions first. When a cancel
+ * fails (`SubscriptionCancellationError`, @fuutu/auth payments-sync)
+ * nothing was deleted — answered as 502, details stay in the logs.
+ */
+export async function withSubscriptionCancellation<T>(
+	run: () => Promise<T>,
+): Promise<T> {
+	try {
+		return await run();
+	} catch (err) {
+		if (err instanceof Error && err.name === "SubscriptionCancellationError") {
+			throw new ORPCError("BAD_GATEWAY", {
+				message:
+					"Subscriptions could not be cancelled at the payment provider. Nothing was deleted.",
+			});
+		}
+		throw err;
+	}
+}
+
+/**
  * Response headers of the call (ResponseHeadersPlugin). Checked before a
  * Better Auth call that sets cookies — without them the new session would
  * exist server-side but never reach the browser.
