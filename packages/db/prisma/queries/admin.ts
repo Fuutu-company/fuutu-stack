@@ -1,21 +1,12 @@
 import { db } from "../client";
 import type { Prisma } from "../generated/client";
+import { roleListMatches } from "./role-list";
 
 /**
  * System-admin (support back office) reads and writes. Every select is
  * explicit: credentials — password hashes, session tokens, OAuth tokens,
  * TOTP secrets, API-key hashes — never leave this module.
  */
-
-/** Better Auth stores role lists comma-separated ("admin,user"). */
-const roleListMatches = (role: string) => ({
-	OR: [
-		{ role: { equals: role } },
-		{ role: { startsWith: `${role},` } },
-		{ role: { endsWith: `,${role}` } },
-		{ role: { contains: `,${role},` } },
-	],
-});
 
 const activeBan = (now: Date): Prisma.UserWhereInput => ({
 	banned: true,

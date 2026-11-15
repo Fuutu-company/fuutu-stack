@@ -27,11 +27,13 @@ export const getPurchasesByOrganizationId = (organizationId: string) =>
  * currentPeriodEnd. Also self-heals: if the provider's cancel event
  * never arrives, access still stops at currentPeriodEnd.
  */
-const accessGatingWhere = (): Prisma.PurchaseWhereInput => ({
+export const accessGatingWhere = (
+	now: Date = new Date(),
+): Prisma.PurchaseWhereInput => ({
 	type: "SUBSCRIPTION",
 	OR: [
 		{ status: { in: ACTIVE_STATUSES } },
-		{ status: "SCHEDULED_CANCEL", currentPeriodEnd: { gt: new Date() } },
+		{ status: "SCHEDULED_CANCEL", currentPeriodEnd: { gt: now } },
 	],
 });
 
