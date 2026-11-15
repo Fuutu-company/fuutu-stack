@@ -551,6 +551,9 @@ describe("stripe provider — getSubscriptionStatus", () => {
 		["canceled", "CANCELED"],
 		["active", "ACTIVE"],
 		["past_due", "PAST_DUE"],
+		// Terminal: the first invoice was never paid — nothing left to cancel.
+		["incomplete_expired", "EXPIRED"],
+		["incomplete", "INCOMPLETE"],
 	])("maps a %s subscription to %s", async (status, expected) => {
 		subscriptionsRetrieve.mockResolvedValueOnce({ id: "sub_1", status });
 		await expect(

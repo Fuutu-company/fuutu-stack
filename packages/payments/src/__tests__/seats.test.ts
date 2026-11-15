@@ -8,6 +8,7 @@ interface MockProviderShape {
 		seats: number;
 	}) => Promise<void>;
 	cancelSubscription?: (subscriptionId: string) => Promise<void>;
+	getSubscriptionStatus?: (subscriptionId: string) => Promise<string>;
 }
 
 const mocks = vi.hoisted((): { provider: MockProviderShape } => ({
@@ -379,5 +380,73 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
 			).resolves.toBeUndefined();
 		});
+
+		it("cancels every status that can still charge — not only active/trialing", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				{ ...active("past_due"), status: "PAST_DUE" },
+				{ ...active("paused"), status: "PAUSED" },
+				{ ...active("incomplete"), status: "INCOMPLETE" },
+				{ ...active("scheduled"), status: "SCHEDULED_CANCEL" },
+				{ ...active("canceled"), status: "CANCELED" },
+				{ ...active("expired"), status: "EXPIRED" },
+			]);
+			mockCancelSubscription.mockResolvedValue(undefined);
+
+			await cancelAllSubscriptionsForOrganizationOrThrow("org_1");
+
+			expect(
+				mockCancelSubscription.mock.calls.map(([id]) => id).sort(),
+			).toEqual(["sub_incomplete", "sub_past_due", "sub_paused"]);
+			expect(mockCancelSubscription).toHaveBeenCalledWith("sub_past_due", {
+				mode: "immediate",
+			});
+		});
+
+		it("counts a refused cancel as done when the provider reports the subscription ended", async () => {
+			const getSubscriptionStatus = vi.fn().mockResolvedValue("EXPIRED");
+			mocks.provider = { ...mocks.provider, getSubscriptionStatus };
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				{ ...active("stale"), status: "INCOMPLETE" },
+			]);
+			mockCancelSubscription.mockRejectedValueOnce(
+				new Error("subscription already expired"),
+			);
+
+			await expect(
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
+			).resolves.toBeUndefined();
+			expect(getSubscriptionStatus).toHaveBeenCalledWith("sub_stale");
+		});
+
+		it("rejects a refused cancel when the provider still reports it billing", async () => {
+			mocks.provider = {
+				...mocks.provider,
+				getSubscriptionStatus: vi.fn().mockResolvedValue("INCOMPLETE"),
+			};
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				{ ...active("open"), status: "INCOMPLETE" },
+			]);
+			mockCancelSubscription.mockRejectedValueOnce(new Error("provider down"));
+
+			await expect(
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
+			).rejects.toThrow("1 of 1 subscriptions could not be cancelled");
+		});
+	});
+
+	it("the lenient variant still cancels only active/trialing subscriptions", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			{
+				id: "p1",
+				type: "SUBSCRIPTION",
+				provider: "test-provider",
+				subscriptionId: "sub_past_due",
+				status: "PAST_DUE",
+			},
+		]);
+
+		await cancelAllSubscriptionsForOrganization("org_1");
+
+		expect(mockCancelSubscription).not.toHaveBeenCalled();
 	});
 });

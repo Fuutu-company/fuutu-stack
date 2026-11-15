@@ -104,8 +104,10 @@ export { noopPaymentProvider } from "./providers/skeletons";
 export { stripePaymentProvider } from "./providers/stripe";
 export { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
 export {
+	CHARGEABLE_SUBSCRIPTION_STATUSES,
 	cancelAllSubscriptionsForOrganization,
 	cancelAllSubscriptionsForOrganizationOrThrow,
+	cancelSubscriptionNowOrThrow,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
 export { getActivePlanId, processWebhookEvents } from "./sync";

@@ -72,6 +72,8 @@ function mapStripeStatusToPurchaseStatus(
 			return "CANCELED";
 		case "incomplete":
 			return "INCOMPLETE";
+		case "incomplete_expired":
+			return "EXPIRED";
 		default:
 			return "INCOMPLETE";
 	}

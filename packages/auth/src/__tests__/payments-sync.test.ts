@@ -40,6 +40,18 @@ vi.mock("@fuutu/payments", () => ({
 		cancelAllSubscriptionsForOrganization(...args),
 	cancelAllSubscriptionsForOrganizationOrThrow: (...args: unknown[]) =>
 		cancelAllSubscriptionsForOrganizationOrThrow(...args),
+	CHARGEABLE_SUBSCRIPTION_STATUSES: [
+		"ACTIVE",
+		"TRIALING",
+		"PAST_DUE",
+		"PAUSED",
+		"INCOMPLETE",
+	],
+	// The ended-at-provider fallback is covered in @fuutu/payments seats.test.ts.
+	cancelSubscriptionNowOrThrow: (
+		provider: { cancelSubscription: typeof cancelSubscription },
+		subscriptionId: string,
+	) => provider.cancelSubscription(subscriptionId, { mode: "immediate" }),
 }));
 
 vi.mock("@fuutu/logs", () => ({
@@ -225,6 +237,29 @@ describe("cancelActiveSubscriptionsForUserOrThrow()", () => {
 		await expect(
 			cancelActiveSubscriptionsForUserOrThrow("user-1"),
 		).rejects.toBeInstanceOf(SubscriptionCancellationError);
+	});
+	it("cancels every status that can still charge — not only active/trialing", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ subscriptionId: "sub_past_due", status: "PAST_DUE" }),
+			sub({ subscriptionId: "sub_paused", status: "PAUSED" }),
+			sub({ subscriptionId: "sub_incomplete", status: "INCOMPLETE" }),
+			sub({ subscriptionId: "sub_scheduled", status: "SCHEDULED_CANCEL" }),
+			sub({ subscriptionId: "sub_canceled", status: "CANCELED" }),
+		]);
+		await cancelActiveSubscriptionsForUserOrThrow("user-1");
+		expect(cancelSubscription.mock.calls.map(([id]) => id).sort()).toEqual([
+			"sub_incomplete",
+			"sub_past_due",
+			"sub_paused",
+		]);
+	});
+
+	it("the lenient variant still skips past-due subscriptions", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ subscriptionId: "sub_past_due", status: "PAST_DUE" }),
+		]);
+		await cancelActiveSubscriptionsForUser("user-1");
+		expect(cancelSubscription).not.toHaveBeenCalled();
 	});
 });
 

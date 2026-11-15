@@ -9,8 +9,10 @@
 import { countOrganizationMembers, getPurchasesByUserId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import {
+	CHARGEABLE_SUBSCRIPTION_STATUSES,
 	cancelAllSubscriptionsForOrganization,
 	cancelAllSubscriptionsForOrganizationOrThrow,
+	cancelSubscriptionNowOrThrow,
 	resolvePaymentProviderById,
 	updateSeatsInOrganizationSubscription,
 } from "@fuutu/payments";
@@ -120,8 +122,9 @@ export class SubscriptionCancellationError extends Error {
 
 /**
  * Strict `cancelActiveSubscriptionsForUser` for support deletes: tries
- * every cancel, then throws `SubscriptionCancellationError` if any
- * subscription is still billing.
+ * every cancel — every status that can still charge
+ * (`CHARGEABLE_SUBSCRIPTION_STATUSES`) — then throws
+ * `SubscriptionCancellationError` if any subscription is still billing.
  */
 export async function cancelActiveSubscriptionsForUserOrThrow(
 	userId: string,
@@ -144,7 +147,7 @@ export async function cancelActiveSubscriptionsForUserOrThrow(
 				(p): p is UserPurchase & { subscriptionId: string } =>
 					p.type === "SUBSCRIPTION" &&
 					p.subscriptionId != null &&
-					(p.status === "ACTIVE" || p.status === "TRIALING"),
+					CHARGEABLE_SUBSCRIPTION_STATUSES.includes(p.status),
 			)
 			.map((p) => {
 				const provider = resolvePaymentProviderById(p.provider);
@@ -160,9 +163,7 @@ export async function cancelActiveSubscriptionsForUserOrThrow(
 					);
 					return Promise.resolve();
 				}
-				return provider.cancelSubscription(p.subscriptionId, {
-					mode: "immediate",
-				});
+				return cancelSubscriptionNowOrThrow(provider, p.subscriptionId);
 			}),
 	);
 	for (const r of results) {
