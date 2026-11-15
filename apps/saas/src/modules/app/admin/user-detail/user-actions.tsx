@@ -1,6 +1,5 @@
 "use client";
 
-import { createLogger } from "@fuutu/logs";
 import {
 	Alert,
 	AlertDescription,
@@ -19,7 +18,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@fuutu/ui";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	Ban,
 	ChevronDown,
@@ -35,13 +33,10 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useId, useState } from "react";
-import { toast } from "sonner";
-import { client, orpc } from "@/utils/orpc";
-import { adminErrorKey } from "../admin-error";
+import { client } from "@/utils/orpc";
+import { useAdminAction } from "../admin-action";
 import { ActionDialog, isReasonValid, ReasonField } from "./action-dialog";
 import type { AdminUserDetailData } from "./types";
-
-const log = createLogger({ scope: "admin-user-actions" });
 
 type DialogKind =
 	| "edit"
@@ -59,28 +54,6 @@ type ActionContext = {
 	isAdmin: boolean;
 	isBanned: boolean;
 };
-
-/** Runs an admin call, toasts the outcome and refreshes admin queries. */
-function useAdminAction<TVars>(options: {
-	mutationFn: (vars: TVars) => Promise<unknown>;
-	successKey: string;
-	onSuccess?: () => void;
-}) {
-	const t = useTranslations("admin");
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: options.mutationFn,
-		onSuccess: async () => {
-			toast.success(t(options.successKey));
-			await queryClient.invalidateQueries({ queryKey: orpc.admin.key() });
-			options.onSuccess?.();
-		},
-		onError: (error) => {
-			log.error("admin user action failed", { err: error });
-			toast.error(t(`errors.${adminErrorKey(error)}`));
-		},
-	});
-}
 
 export function UserActions({
 	user,
@@ -489,6 +462,7 @@ function ImpersonateDialog({ ctx, onClose }: DialogProps) {
 			}),
 		successKey: "userDetail.toast.impersonating",
 		// New session cookies: a full navigation, not a client transition.
+		navigatesAway: true,
 		onSuccess: () => window.location.assign("/dashboard"),
 	});
 	return (
