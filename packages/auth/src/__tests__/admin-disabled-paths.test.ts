@@ -50,10 +50,22 @@ const IMPORT_TIMEOUT = 30_000;
 
 type AuthModule = typeof import("../index");
 let auth: AuthModule["auth"];
+let mcpOAuthActive: boolean;
 
 beforeAll(async () => {
 	({ auth } = await import("../index"));
+	({
+		mcpOAuth: { active: mcpOAuthActive },
+	} = await import("../mcp-oauth"));
 }, IMPORT_TIMEOUT);
+
+type PluginEndpoint = {
+	path?: string;
+	options?: {
+		method?: string | string[];
+		metadata?: { SERVER_ONLY?: boolean };
+	};
+};
 
 function adminEndpointPaths(): string[] {
 	const plugin = auth.options.plugins?.find((p) => p.id === "admin") as
@@ -97,5 +109,61 @@ describe("admin plugin HTTP surface", () => {
 		expect(auth.api.banUser).toBeTypeOf("function");
 		expect(auth.api.impersonateUser).toBeTypeOf("function");
 		expect(auth.api.stopImpersonating).toBeTypeOf("function");
+	});
+});
+
+describe("other plugins' /admin/* endpoints", () => {
+	function otherAdminEndpoints(): PluginEndpoint[] {
+		return (auth.options.plugins ?? [])
+			.filter((p) => p.id !== "admin")
+			.flatMap((p) =>
+				Object.values(
+					(p as { endpoints?: Record<string, PluginEndpoint> }).endpoints ?? {},
+				),
+			)
+			.filter(
+				(endpoint) =>
+					typeof endpoint.path === "string" &&
+					endpoint.path.startsWith("/admin/"),
+			);
+	}
+
+	it("keeps the JWT /token route disabled next to the admin paths", () => {
+		expect(mcpOAuthActive).toBe(true);
+		expect(auth.options.disabledPaths).toContain("/token");
+	});
+
+	it("exposes the OAuth provider's admin endpoints to check", () => {
+		const paths = otherAdminEndpoints().map((endpoint) => endpoint.path);
+		expect(paths.length).toBeGreaterThanOrEqual(8);
+		expect(paths).toContain("/admin/oauth2/create-client");
+		expect(paths).toContain("/admin/oauth2/update-client");
+	});
+
+	it("never serves them over HTTP (SERVER_ONLY, 404)", async () => {
+		// Same request shape reaches a served route — the 404s below are real.
+		const served = await auth.handler(
+			new Request("http://localhost:3000/api/auth/oauth2/update-client", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: "{}",
+			}),
+		);
+		expect(served.status).not.toBe(404);
+		for (const endpoint of otherAdminEndpoints()) {
+			expect(endpoint.options?.metadata?.SERVER_ONLY, endpoint.path).toBe(true);
+			const path = String(endpoint.path).replace(/:\w+/g, "x");
+			const methods = [endpoint.options?.method ?? "POST"].flat();
+			for (const method of methods) {
+				const res = await auth.handler(
+					new Request(`http://localhost:3000/api/auth${path}`, {
+						method,
+						headers: { "content-type": "application/json" },
+						...(method === "GET" ? {} : { body: "{}" }),
+					}),
+				);
+				expect(res.status, `${method} ${endpoint.path}`).toBe(404);
+			}
+		}
 	});
 });
