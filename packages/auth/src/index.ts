@@ -61,6 +61,8 @@ import {
 import { assertSignupPolicy } from "./hooks/signup-policy";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
 import { sendEmail } from "./lib/email";
+import { sendOrganizationInvitationEmail } from "./lib/invitation-email";
+import { saasBaseUrl } from "./lib/saas-url";
 import { MCP_ORG_CLAIM, mcpOAuth } from "./mcp-oauth";
 import { getSocialCredentials, isSocialProviderActive } from "./methods";
 import { mcpConnectedApps } from "./plugins/mcp-connected-apps";
@@ -83,10 +85,6 @@ if (env.FUUTU_DISABLE_RATE_LIMIT) {
 		"FUUTU_DISABLE_RATE_LIMIT is set — auth rate limiting is DISABLED. Intended for CI/E2E only; never set this in production.",
 	);
 }
-
-// Base URL of the public SaaS app — used for links in auth emails and
-// the passkey relying-party ID.
-const saasBaseUrl = env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000";
 
 if (!env.NEXT_PUBLIC_SAAS_URL && env.NODE_ENV === "production") {
 	log.warn(
@@ -510,22 +508,15 @@ const authOptions = {
 								: authConfig.organizations.allowUserToCreateOrganization ===
 									"all",
 						organizationLimit: authConfig.organizations.organizationLimit,
+						invitationExpiresIn: authConfig.organizations.invitationExpiresIn,
 						async sendInvitationEmail({ email, id, organization, inviter }) {
-							const inviteUrl = `${saasBaseUrl}/auth/accept-invitation?id=${id}`;
-							try {
-								await sendEmail({
-									to: email,
-									template: "organization-invitation",
-									data: {
-										organizationName: organization.name,
-										inviteUrl,
-										inviterName: inviter.user.name,
-										locale: (inviter.user as { locale?: string }).locale,
-									},
-								});
-							} catch (err) {
-								log.error("invitation email failed", { err: String(err) });
-							}
+							await sendOrganizationInvitationEmail({
+								email,
+								invitationId: id,
+								organizationName: organization.name,
+								inviterName: inviter.user.name,
+								locale: (inviter.user as { locale?: string }).locale,
+							});
 						},
 						// Sync seats with the payment provider on membership changes;
 						// before* hooks enforce the plan's membersPerOrg seat cap.

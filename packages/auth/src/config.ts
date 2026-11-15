@@ -103,6 +103,9 @@ export const authConfig = {
 		// plan, on top of the per-plan `LIMITS.organizations`
 		// (@fuutu/payments/config); system admins are capped too.
 		organizationLimit: undefined as number | undefined,
+		// Seconds an invitation stays valid (Better Auth `invitationExpiresIn`,
+		// default 48 h); a resend — also from the admin area — restarts it.
+		invitationExpiresIn: 48 * 60 * 60,
 	},
 	// OAuth 2.1 sign-in for MCP clients (Claude.ai, ChatGPT, Claude Code,
 	// Cursor, VS Code) — Better Auth acts as the authorization server for
