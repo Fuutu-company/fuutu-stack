@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { getRoutableLocales } from "@fuutu/i18n";
 import { i18nConfig } from "@fuutu/i18n/config";
 import type { Metadata } from "next";
@@ -15,6 +16,22 @@ export interface DocsMetadataOptions {
 	 * Unset: no canonical link.
 	 */
 	canonicalBase?: string;
+}
+
+/**
+ * Open Graph fields every docs page keeps. A page-level `openGraph` replaces
+ * the layout's wholesale, so these are repeated here — merge, don't replace.
+ */
+function baseOpenGraph() {
+	return {
+		type: "website",
+		siteName: `${config.app.name} Docs`,
+	} as const;
+}
+
+/** Image dimensions of the docs OG cards (`/og-image.png`, `/og/docs/…`). */
+function ogImage(url: string) {
+	return [{ url, width: 1200, height: 630 }];
 }
 
 /** Path of a locale-free docs path in a locale (`as-needed` prefix). */
@@ -68,15 +85,42 @@ export function docsPageMetadata(
 		description: page.description,
 		...(alternates ? { alternates } : {}),
 		openGraph: {
+			...baseOpenGraph(),
 			title: page.title,
 			description: page.description,
 			locale: page.locale,
-			images: page.image,
+			images: ogImage(page.image),
 		},
 		twitter: {
 			card: "summary_large_image",
 			title: page.title,
 			description: page.description,
+		},
+	};
+}
+
+/** Metadata of the docs home: canonical, hreflang and the default OG image. */
+export function docsHomeMetadata(
+	home: { title: string; description?: string; locale: string },
+	options: DocsMetadataOptions | undefined,
+): Metadata {
+	const languages = hreflangLanguages("");
+	const path = localePath(home.locale, "");
+	// Relative canonicals resolve against `metadataBase` (`docsBaseUrl()`).
+	const canonical = options?.canonicalBase
+		? `${options.canonicalBase.replace(/\/+$/, "")}${path}`
+		: path;
+
+	return {
+		title: home.title,
+		description: home.description,
+		alternates: { canonical, ...(languages ? { languages } : {}) },
+		openGraph: {
+			...baseOpenGraph(),
+			title: home.title,
+			description: home.description,
+			locale: home.locale,
+			images: ogImage("/og-image.png"),
 		},
 	};
 }

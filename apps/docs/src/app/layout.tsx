@@ -2,16 +2,16 @@ import "./global.css";
 import { config, KIT_GENERATOR_META } from "@fuutu/config";
 import type { Locale } from "@fuutu/i18n";
 import { getDirection } from "@fuutu/i18n";
-import { getBaseUrl } from "@fuutu/utils";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import { getLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
+import { docsBaseUrl } from "@/lib/docs-base-url";
 import { i18nUI } from "@/lib/i18n";
 import { ThemeProvider } from "@/modules/shared/providers/theme-provider";
 import { fontVariables } from "./fonts";
 
 export const metadata = {
-	metadataBase: new URL(getBaseUrl({ defaultPort: 4000 })),
+	metadataBase: new URL(docsBaseUrl()),
 	generator: KIT_GENERATOR_META,
 	icons: {
 		icon: [

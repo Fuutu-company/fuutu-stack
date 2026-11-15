@@ -9,7 +9,7 @@ import { LanguageSelect } from "@/components/language-select";
 import { LegalLinks } from "@/components/legal-links";
 import { locales } from "@/i18n/config";
 import { baseOptions, PRIVACY_LINK_CLASS } from "@/lib/layout.shared";
-import { hreflangLanguages } from "@/lib/page-metadata";
+import { docsHomeMetadata } from "@/lib/page-metadata";
 import { Link } from "@/navigation";
 
 interface HomePageProps {
@@ -26,19 +26,14 @@ export async function generateMetadata({
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "home" });
 
-	// hreflang alternates — none while i18n is disabled.
-	const languages = hreflangLanguages("");
-
-	return {
-		title: t("metaTitle", { appName: config.app.name }),
-		description: t("metaDescription"),
-		...(languages ? { alternates: { languages } } : {}),
-		openGraph: {
+	return docsHomeMetadata(
+		{
 			title: t("metaTitle", { appName: config.app.name }),
 			description: t("metaDescription"),
 			locale,
 		},
-	};
+		appDocs.metadata,
+	);
 }
 
 export default async function HomePage({ params }: HomePageProps) {
