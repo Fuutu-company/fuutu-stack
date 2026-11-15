@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { DIALOG_VIEWPORTS, expectContentInsideDialog } from "./dialog-geometry";
 import { expect, test } from "./fixtures";
 import { apiKeyScopeLabel, defaultApiKeyScopes } from "./kit-catalog";
@@ -55,7 +55,9 @@ test.describe("API keys — org key from user settings", () => {
 		const key = (
 			await page.getByRole("dialog").locator("code").textContent()
 		)?.trim();
-		expect(key).toMatch(/^futu_sk_/);
+		expect(key?.startsWith("futu_sk_"), "key has the futu_sk_ prefix").toBe(
+			true,
+		);
 
 		const list = await request.get("/api/api-keys");
 		const created = ((await list.json()) as { items: ApiKeyItem[] }).items.find(
@@ -108,6 +110,21 @@ test.describe("API keys — org key from user settings", () => {
 
 const ORG_KEYS_PATH = "/organizations/acme/settings/api-keys";
 
+/**
+ * The revealed key starts with `futu_sk_`. Polls a boolean so a failure
+ * never prints the live key.
+ */
+async function expectKeyShown(dialog: Locator) {
+	await expect
+		.poll(
+			async () =>
+				(await dialog.locator("code").textContent())?.startsWith("futu_sk_") ??
+				false,
+			{ message: "the dialog shows a futu_sk_ key" },
+		)
+		.toBe(true);
+}
+
 /** Creates an org key from the org settings page; leaves the reveal open. */
 async function createOrgKey(page: Page, name: string) {
 	await page.goto(ORG_KEYS_PATH);
@@ -120,7 +137,7 @@ async function createOrgKey(page: Page, name: string) {
 	const dialog = page.getByRole("dialog");
 	await dialog.getByRole("textbox").first().fill(name);
 	await dialog.locator("button[type='submit']").click();
-	await expect(dialog.locator("code")).toHaveText(/^futu_sk_/);
+	await expectKeyShown(dialog);
 	return dialog;
 }
 
@@ -193,9 +210,12 @@ test.describe("API keys — shown-once dialog behaviour", () => {
 			await expect(dialog.getByRole("alert")).toHaveText(
 				"Copy failed. Select the key and copy it yourself.",
 			);
-			expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(
-				key,
+			const selected = await page.evaluate(
+				() => window.getSelection()?.toString() ?? "",
 			);
+			// Lengths and a boolean only: never print the key.
+			expect(selected.length, "selection length").toBe(key.length);
+			expect(selected === key, "the whole key is selected").toBe(true);
 			expect(errors).toEqual([]);
 		} finally {
 			await deleteKeysNamed(request, name);
@@ -210,7 +230,7 @@ test.describe("API keys — shown-once dialog behaviour", () => {
 		try {
 			const dialog = await createOrgKey(page, name);
 			await page.mouse.click(4, 4);
-			await expect(dialog.locator("code")).toHaveText(/^futu_sk_/);
+			await expectKeyShown(dialog);
 			await page.keyboard.press("Escape");
 			await expect(dialog).toBeHidden();
 			await expect(

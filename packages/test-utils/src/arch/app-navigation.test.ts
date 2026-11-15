@@ -299,6 +299,32 @@ describe("org settings — replaces", () => {
 		expect(keys(nav.getOrgSettingsItems("acme", true)).at(-1)).toBe("hooks");
 	});
 
+	it("replacing a kit item hidden by role drops a replacement without its own permission", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "activity", segment: "activity", replaces: "auditLog" },
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", false, () => true));
+		expect(k).not.toContain("auditLog");
+		expect(k).not.toContain("activity");
+	});
+
+	it("replacing a kit item hidden by role appends a replacement with its own permission", () => {
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "activity",
+				segment: "activity",
+				replaces: "auditLog",
+				permission: "view:activity",
+			},
+		];
+		expect(
+			keys(nav.getOrgSettingsItems("acme", false, () => true)).at(-1),
+		).toBe("activity");
+		expect(
+			keys(nav.getOrgSettingsItems("acme", false, () => false)),
+		).not.toContain("activity");
+	});
+
 	it("a disabled replacement keeps the kit item", () => {
 		extras.appOrgSettingsNavItems = [
 			{

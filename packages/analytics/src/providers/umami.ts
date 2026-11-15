@@ -30,6 +30,9 @@ function getUmami(): UmamiGlobal | undefined {
  * opt-out; the opt-out is honored via `hasTrackingConsent()` and, for the
  * loaded script, the `data-before-send` gate. `data-do-not-track` skips
  * browsers that send Do Not Track.
+ * `data-before-send` needs Umami v2.18.0 or later (Umami Cloud has it).
+ * An older self-hosted tracker ignores it: the opt-out then stops only
+ * `trackEvent`/`trackPageview`, not the script's auto-tracked page views.
  * Kit owners can hide the banner or force the gate via `analyticsConfig`.
  */
 export const umamiAnalyticsProvider: AnalyticsProvider = {

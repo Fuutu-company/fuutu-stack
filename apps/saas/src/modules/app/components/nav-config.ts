@@ -90,10 +90,20 @@ export interface AppOrgSettingsNavItem
 	/**
 	 * Take this kit item's place (wins over `after`) — e.g. an app "Keys"
 	 * page instead of the kit "API keys" item, without rewording kit text.
-	 * The kit route keeps working. Hidden kit item → appended; hidden by
-	 * `permission` → the kit item is removed anyway; `enabled: false` →
-	 * the kit item stays. Two items replacing one key throw. An app item
-	 * anchored `after` the replaced key lands behind the replacement.
+	 * The kit route keeps working.
+	 *
+	 * The replacement does NOT inherit the kit item's visibility: it is
+	 * shown by its own `enabled` and `permission` only. Gate it yourself
+	 * when the kit item was role-gated (e.g. `auditLog` is admin+).
+	 * - Kit item hidden by a feature flag → the replacement is appended.
+	 * - Kit item hidden by the viewer's role → appended only when the
+	 *   replacement declares its own `permission` (and the role has it);
+	 *   without one it is dropped, so it never shows to a role that could
+	 *   not see the kit item.
+	 * - Replacement hidden by `permission` → the kit item is removed anyway.
+	 * - `enabled: false` → no replacement, the kit item stays.
+	 * Two items replacing one key throw. An app item anchored `after` the
+	 * replaced key lands behind the replacement.
 	 */
 	replaces?: OrgSettingsNavKey;
 }
@@ -269,11 +279,19 @@ export function getOrgSettingsItems(
 	const toHref = (item: AppOrgSettingsNavItem) => `${base}/${item.segment}`;
 	const visible = (item: AppOrgSettingsNavItem) =>
 		!item.permission || (can?.(item.permission) ?? false);
+	// Kit items the viewer's role hides (not a feature flag).
+	const hiddenByRole = new Set<string>(canViewAuditLog ? [] : ["auditLog"]);
 	const {
 		base: replaced,
 		extras,
 		replacedBy,
-	} = applyReplacements(items, appOrgSettingsNavItems, toHref, visible);
+	} = applyReplacements(
+		items,
+		appOrgSettingsNavItems,
+		toHref,
+		visible,
+		hiddenByRole,
+	);
 	return mergeAppItems(
 		replaced,
 		extras,
@@ -286,7 +304,8 @@ export function getOrgSettingsItems(
 /**
  * Swap kit items for app items that declare `replaces`. Returns the kit
  * list with replacements in place, the remaining extras (a replacement
- * whose kit item is hidden comes back as a plain, appended extra) and the
+ * whose kit item is hidden comes back as a plain, appended extra — for a
+ * role-hidden kit item only when it declares its own `permission`) and the
  * replaced keys, so an `after` on one lands behind its replacement.
  */
 function applyReplacements(
@@ -294,6 +313,7 @@ function applyReplacements(
 	extras: readonly AppOrgSettingsNavItem[],
 	toHref: (item: AppOrgSettingsNavItem) => string,
 	visible: (item: AppOrgSettingsNavItem) => boolean,
+	hiddenByRole: ReadonlySet<string>,
 ): {
 	base: NavSubItem[];
 	extras: AppOrgSettingsNavItem[];
@@ -316,7 +336,9 @@ function applyReplacements(
 		replacedBy.set(item.replaces, item.titleKey);
 		const index = result.findIndex((i) => i.titleKey === item.replaces);
 		if (index === -1) {
-			// Kit item hidden (feature flag, role): append like a missing anchor.
+			// A role-hidden kit item: no own permission → never show it.
+			if (hiddenByRole.has(item.replaces) && !item.permission) continue;
+			// Otherwise append like a missing anchor (visibility still applies).
 			const { replaces: _replaces, after: _after, ...plain } = item;
 			rest.push(plain);
 			continue;

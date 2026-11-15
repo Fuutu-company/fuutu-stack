@@ -71,7 +71,8 @@ export interface AnalyticsProvider {
 	 * opt-out also stops a script that is already loaded (auto-tracked
 	 * page views after client-side navigation). Called by
 	 * <AnalyticsScript /> before it injects the script; `hasConsent` is
-	 * read on every send.
+	 * read on every send. Without it, <AnalyticsScript /> reloads the page
+	 * when consent is withdrawn (`consentWithdrawalStrategy`).
 	 */
 	installConsentGate?(hasConsent: () => boolean): void;
 	/**

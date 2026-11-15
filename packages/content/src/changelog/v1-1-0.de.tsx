@@ -204,6 +204,13 @@ export default function ChangelogV110De() {
 					Die Beschreibung des <code>versioning</code>-Scopes sagt, wofür er da
 					ist: einen Release-Workflow die nächste App-Version berechnen lassen.
 				</li>
+				<li>
+					Ein Widerruf der Einwilligung stoppt auch ein bereits geladenes
+					Analytics-Script: über <code>installConsentGate</code> des Providers
+					oder, wenn er keinen hat, durch ein Neuladen der Seite. Selbst
+					gehostetes Umami braucht v2.18.0 oder neuer, damit der Widerspruch
+					auch das Auto-Tracking stoppt (<code>data-before-send</code>).
+				</li>
 			</ul>
 			<h3>Breaking Changes und Migration</h3>
 			<ul>

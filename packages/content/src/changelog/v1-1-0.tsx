@@ -192,6 +192,13 @@ export default function ChangelogV110() {
 					The <code>versioning</code> scope description says what it is for:
 					letting a release workflow compute the next app version.
 				</li>
+				<li>
+					Withdrawing consent stops an analytics script that is already loaded:
+					through the provider's <code>installConsentGate</code>, or, for a
+					provider without one, by reloading the page. Self-hosted Umami needs
+					v2.18.0 or later for the opt-out to stop auto-tracking (
+					<code>data-before-send</code>).
+				</li>
 			</ul>
 			<h3>Breaking changes and migration</h3>
 			<ul>
