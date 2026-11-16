@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,7 @@ const app = vi.hoisted(() => ({
 	appNavRemove: [] as string[],
 	appFooter: {} as Record<string, unknown>,
 	appMarketing: {} as Record<string, unknown>,
+	consentBannerVisible: true,
 }));
 
 vi.mock("../../../../apps/marketing/src/app-site-links", () => ({
@@ -53,6 +55,13 @@ vi.mock("@/app-marketing", () => ({
 		return app.appMarketing;
 	},
 }));
+vi.mock("../../../../packages/analytics/src/index.ts", () => ({
+	consentBannerVisible: () => app.consentBannerVisible,
+}));
+vi.mock(
+	"../../../../apps/marketing/src/modules/marketing/components/privacy-settings-action",
+	() => ({ PrivacySettingsAction: () => null }),
+);
 vi.mock("../../../../apps/marketing/src/lib/urls", () => ({
 	urls: { docs: "https://docs.example.test" },
 }));
@@ -86,6 +95,7 @@ beforeEach(() => {
 	app.appNavRemove = [];
 	app.appFooter = {};
 	app.appMarketing = {};
+	app.consentBannerVisible = true;
 	vi.resetModules();
 });
 
@@ -132,8 +142,25 @@ describe("composeHomeSections", () => {
 	});
 });
 
+/** The `site-links` exports these tests read — typed here so tsc never follows the module. */
+type SiteLinksModule = {
+	NAV_ITEMS: { key: string }[];
+	NAV_DROPDOWNS: { key: string; items: { key: string }[] }[];
+	NAV_ORDER: { kind: string; key: string }[];
+	FOOTER_COLUMNS: { titleKey: string }[];
+	FOOTER_ACTIONS: { key: string; column: string }[];
+	FOOTER_TAGLINE_KEY: string;
+	FOOTER_AREA_LINE: { textKey: string; Mark: unknown } | null;
+	HEADER_BRAND: { Brand?: unknown };
+};
+
 describe("site links", () => {
-	const load = () => import("../../../../apps/marketing/src/lib/site-links");
+	// Non-literal path: app-site-links may import `.tsx` (footer actions),
+	// which this package's tsc must not follow.
+	const load = () =>
+		import(
+			/* @vite-ignore */ join(ROOT, "apps/marketing/src/lib/site-links.ts")
+		) as Promise<SiteLinksModule>;
 
 	it("keeps the kit nav items and footer columns without app extras", async () => {
 		const links = await load();
@@ -342,6 +369,71 @@ describe("site links", () => {
 		expect((await load()).FOOTER_AREA_LINE).toBeNull();
 	});
 
+	const actionKeys = (links: SiteLinksModule) =>
+		links.FOOTER_ACTIONS.map((a) => [a.key, a.column]);
+
+	it("has only the kit Privacy settings action without app extras", async () => {
+		expect(actionKeys(await load())).toEqual([
+			["privacySettings", "companyAndLegal"],
+		]);
+	});
+
+	it("drops the Privacy settings action while the consent banner is off", async () => {
+		app.consentBannerVisible = false;
+		expect((await load()).FOOTER_ACTIONS).toEqual([]);
+	});
+
+	it("keeps app footer actions in declaration order, in kit or app columns", async () => {
+		const Gate = () => null;
+		app.appFooterColumns = [{ titleKey: "community", links: [] }];
+		app.appFooter = {
+			actions: [
+				{
+					key: "joinDiscord",
+					column: "community",
+					labelKey: "footer.join",
+					Component: Gate,
+				},
+				{
+					key: "feedback",
+					column: "companyAndLegal",
+					labelKey: "footer.fb",
+					Component: Gate,
+				},
+			],
+		};
+		expect(actionKeys(await load())).toEqual([
+			["privacySettings", "companyAndLegal"],
+			["joinDiscord", "community"],
+			["feedback", "companyAndLegal"],
+		]);
+	});
+
+	it("throws on a footer action in an unknown column", async () => {
+		app.appFooter = {
+			actions: [
+				{
+					key: "join",
+					column: "nope",
+					labelKey: "footer.join",
+					Component: () => null,
+				},
+			],
+		};
+		await expect(load()).rejects.toThrow(/unknown footer column "nope"/);
+	});
+
+	it("throws on a duplicate footer action key", async () => {
+		const action = {
+			key: "join",
+			column: "resources",
+			labelKey: "footer.join",
+			Component: () => null,
+		};
+		app.appFooter = { actions: [action, action] };
+		await expect(load()).rejects.toThrow(/duplicate footer action key "join"/);
+	});
+
 	it("exposes the app header brand to the navbar (kit brand when unset)", async () => {
 		expect((await load()).HEADER_BRAND).toEqual({});
 		vi.resetModules();
@@ -374,6 +466,69 @@ describe("navbar order and footer tagline wiring", () => {
 			/FOOTER_AREA_LINE\.Mark === undefined\s*\?\s*AreaMark\s*:\s*FOOTER_AREA_LINE\.Mark/,
 		);
 		expect(footer).not.toMatch(/t\("footer\.areas"\)/);
+	});
+});
+
+describe("footer action rendering", () => {
+	const MARKETING = join(ROOT, "apps/marketing");
+	const requireFromMarketing = createRequire(join(MARKETING, "package.json"));
+	type El = { type: unknown; props: Record<string, unknown> };
+	const { createElement } = requireFromMarketing("react") as {
+		createElement: (
+			type: unknown,
+			props: unknown,
+			...children: unknown[]
+		) => El;
+	};
+	const { renderToStaticMarkup } = requireFromMarketing("react-dom/server") as {
+		renderToStaticMarkup: (element: El) => string;
+	};
+
+	it("renders the app component around a kit-styled <button> with the label", async () => {
+		// Non-literal path: a `.tsx` module this package's tsc must not follow.
+		const { FooterActionItem, FOOTER_LINK_CLASS } = (await import(
+			/* @vite-ignore */ join(
+				MARKETING,
+				"src/modules/marketing/components/footer-action.tsx",
+			)
+		)) as { FooterActionItem: unknown; FOOTER_LINK_CLASS: string };
+		const Gate = ({ trigger }: { trigger: unknown }) =>
+			createElement("span", { "data-gate": "" }, trigger);
+		const html = renderToStaticMarkup(
+			createElement(
+				"ul",
+				null,
+				createElement(FooterActionItem, {
+					action: {
+						key: "join",
+						column: "resources",
+						labelKey: "footer.join",
+						Component: Gate,
+					},
+					label: "Join the community",
+				}),
+			),
+		);
+		expect(html).toBe(
+			`<ul><li><span data-gate=""><button type="button" class="${FOOTER_LINK_CLASS} cursor-pointer">Join the community</button></span></li></ul>`,
+		);
+	});
+
+	it("the footer renders each column's actions after its links, labels via t()", () => {
+		const footer = readFileSync(
+			join(ROOT, "apps/marketing/src/modules/marketing/components/footer.tsx"),
+			"utf8",
+		);
+		expect(footer).toMatch(
+			/FOOTER_ACTIONS\.filter\(\s*\(action\) => action\.column === column\.titleKey,?\s*\)/,
+		);
+		expect(footer).toMatch(
+			/<FooterActionItem[\s\S]*?label=\{t\(action\.labelKey\)\}/,
+		);
+		// Links stay before actions inside the column list.
+		expect(footer.indexOf("column.links.map")).toBeLessThan(
+			footer.indexOf("FOOTER_ACTIONS.filter"),
+		);
 	});
 });
 

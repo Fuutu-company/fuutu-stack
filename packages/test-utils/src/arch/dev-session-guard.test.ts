@@ -60,4 +60,10 @@ describe("dev session guard", () => {
 			"node tooling/scripts/dev-session.mjs",
 		);
 	});
+	it("`pnpm dev:session reset` clears only the apps' Turbopack dev cache and restarts them", () => {
+		const script = read("tooling/scripts/dev-session.mjs");
+		expect(script).toMatch(/const commands = \{[^}]*\breset\b/);
+		expect(script).toMatch(/join\(ROOT, "apps", [a-z]+, "\.next", "dev"\)/);
+		expect(script).not.toMatch(/rmSync\([^)]*PROFILE_DIR/);
+	});
 });

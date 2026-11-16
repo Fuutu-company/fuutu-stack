@@ -39,7 +39,7 @@ This skill uses the design that exists. Deriving a new one (more than one coordi
 
 - Use the `@fuutu/ui` component instead of re-assembling its classes; shape, height and padding live in the component.
 - Variants by intent: `default` for the one primary action per view, `secondary` / `outline` for the rest, `ghost` in toolbars, `destructive` only for irreversible actions behind an alert dialog.
-- Lucide icons, `size-4` inside controls; icon-only buttons get an `aria-label` from the translations.
+- Lucide icons, `size-4` inside controls; icon-only buttons get an `aria-label` from the translations. Icons are plain strokes in a text role or area ink, never on a round or filled chip (`AreaIcon` for area-coloured icons). Icons are plain strokes in a text role or area ink, never on a round or filled chip (`AreaIcon` for area-coloured icons).
 - Motion only through the utilities the components already carry, and it must respect `prefers-reduced-motion`.
 - Every label, title and placeholder is a translation key in every locale; no literal strings in JSX.
 

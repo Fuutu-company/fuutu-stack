@@ -61,10 +61,45 @@ describe("umami provider — window.umami integration", () => {
 			expect(props?.attributes).toHaveProperty("data-auto-track", "true");
 		});
 
+		it("tells the script to honor Do Not Track", () => {
+			analyticsConfig.websiteId = "test-website-id";
+			const props = umamiAnalyticsProvider.getScriptProps?.();
+			expect(props?.attributes?.["data-do-not-track"]).toBe("true");
+		});
+
+		it("names the consent gate as the script's before-send hook", () => {
+			analyticsConfig.websiteId = "test-website-id";
+			const props = umamiAnalyticsProvider.getScriptProps?.();
+			expect(props?.attributes?.["data-before-send"]).toBe(
+				"__fuutuUmamiBeforeSend",
+			);
+		});
+
 		it("returns null when websiteId is not configured", () => {
 			analyticsConfig.websiteId = undefined;
 			const props = umamiAnalyticsProvider.getScriptProps?.();
 			expect(props).toBeNull();
+		});
+	});
+
+	describe("installConsentGate", () => {
+		type BeforeSend = (type: string, payload: object) => object | null;
+		const beforeSend = () =>
+			(globalThis as { __fuutuUmamiBeforeSend?: BeforeSend })
+				.__fuutuUmamiBeforeSend;
+
+		afterEach(() => {
+			delete (globalThis as { __fuutuUmamiBeforeSend?: unknown })
+				.__fuutuUmamiBeforeSend;
+		});
+
+		it("drops every send of an already-loaded script after an opt-out", () => {
+			let allowed = true;
+			umamiAnalyticsProvider.installConsentGate?.(() => allowed);
+			const payload = { url: "/pricing" };
+			expect(beforeSend()?.("event", payload)).toBe(payload);
+			allowed = false;
+			expect(beforeSend()?.("event", payload)).toBeNull();
 		});
 	});
 

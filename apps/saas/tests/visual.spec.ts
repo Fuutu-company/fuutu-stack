@@ -1,4 +1,6 @@
+import { paymentsConfig } from "@fuutu/payments/config";
 import type { Page } from "@playwright/test";
+import { featureOff } from "./features";
 import {
 	expect,
 	expectVisual,
@@ -159,6 +161,12 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("settings billing matches baseline", async ({ page }) => {
+		// 404 while billing is org-attached (kit default) — the org invoice
+		// list is covered by "org invoices matches baseline".
+		test.skip(
+			paymentsConfig.billingAttachedTo !== "user",
+			"Personal billing is off while billing is org-attached",
+		);
 		await page.goto("/settings/billing");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "settings--billing.png", {
@@ -167,6 +175,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("settings credits matches baseline", async ({ page }) => {
+		test.skip(...featureOff("credits"));
 		await page.goto("/settings/credits");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "settings--credits.png", {
@@ -191,15 +200,54 @@ test.describe("visual regression — app pages", () => {
 		});
 	});
 
+	test("admin organizations matches baseline", async ({ page }) => {
+		await page.goto("/admin/organizations");
+		await page.waitForLoadState("domcontentloaded");
+		await expect(
+			page.getByRole("main").getByRole("link", { name: /acme/i }).first(),
+		).toBeVisible({ timeout: 10_000 });
+		await expectVisual(page, "admin--organizations.png", {
+			fullPage: true,
+		});
+	});
+
+	test("admin organization detail matches baseline", async ({ page }) => {
+		await page.goto("/admin/organizations?q=acme");
+		await page
+			.getByRole("main")
+			.getByRole("link", { name: /acme/i })
+			.first()
+			.click();
+		await expect(
+			page.getByRole("main").getByText("member@fuutu.local"),
+		).toBeVisible({ timeout: 10_000 });
+		await expectVisual(page, "admin--organization-detail.png", {
+			fullPage: true,
+		});
+	});
+
+	test("admin system matches baseline", async ({ page }) => {
+		await page.goto("/admin/system");
+		await page.waitForLoadState("domcontentloaded");
+		await expect(page.getByText("Feature flags")).toBeVisible({
+			timeout: 10_000,
+		});
+		await expectVisual(page, "admin--system.png", { fullPage: true });
+	});
+
 	test("admin audit-logs matches baseline", async ({ page }) => {
 		await page.goto("/admin/audit-logs");
 		await page.waitForLoadState("domcontentloaded");
+		await expect(page.getByRole("row").nth(1)).toBeVisible({
+			timeout: 10_000,
+		});
 		await expectVisual(page, "admin--audit-logs.png", {
 			fullPage: true,
 		});
 	});
 
 	test("chat matches baseline", async ({ page }) => {
+		test.skip(...featureOff("aiChat"));
 		await page.goto("/chat");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "core--chat.png", {
@@ -208,6 +256,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("crm matches baseline", async ({ page }) => {
+		test.skip(...featureOff("crm"));
 		await page.goto("/crm");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "core--crm.png", {
@@ -259,6 +308,7 @@ test.describe("visual regression — app pages", () => {
 
 test.describe("visual regression — overlays", () => {
 	test("webhook create dialog matches baseline", async ({ page }) => {
+		test.skip(...featureOff("webhooks"));
 		await page.goto("/organizations/acme/settings/webhooks");
 		await page.waitForLoadState("domcontentloaded");
 		await page.getByRole("button", { name: /add webhook/i }).click();

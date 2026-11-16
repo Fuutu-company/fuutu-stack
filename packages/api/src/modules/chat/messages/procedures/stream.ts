@@ -5,7 +5,10 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { eventIterator, ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
-import { permissionProcedure } from "../../../../orpc/procedures";
+import {
+	denyImpersonation,
+	permissionProcedure,
+} from "../../../../orpc/procedures";
 import {
 	type AiCreditOwner,
 	assertAiCredits,
@@ -26,6 +29,7 @@ const streamMessageSchema = z.object({
 });
 
 export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "aiChat" }))
 	.route({
 		method: "POST",

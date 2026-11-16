@@ -50,6 +50,9 @@ const { deleteConversationProcedure } = await import(
 	"../modules/chat/conversations/procedures/delete"
 );
 
+// Kit suite: the credits module on — an app may ship config.features.credits off.
+(await import("@fuutu/payments/config")).paymentsConfig.creditsEnabled = true;
+
 const context = makeSession<Context>(makeUser({ id: "user-1" }));
 
 const ORG_ID = "12345678-1234-1234-8123-123456789abc";

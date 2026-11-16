@@ -47,6 +47,30 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "apps/saas/src/app-main-nav.ts",
+		exports: ["appMainNavItems"],
+		wiredInto: [
+			{
+				file: "apps/saas/src/modules/app/components/nav-config.ts",
+				import: /\{ appMainNavItems \} from "\.\.\/\.\.\/\.\.\/app-main-nav"/,
+			},
+		],
+	},
+	{
+		file: "apps/saas/src/app-admin.tsx",
+		exports: ["appAdminUserSections", "appAdminOrganizationSections"],
+		wiredInto: [
+			{
+				file: "apps/saas/src/modules/app/admin/user-detail/admin-user-detail.tsx",
+				import: /\{ appAdminUserSections \} from "@\/app-admin"/,
+			},
+			{
+				file: "apps/saas/src/modules/app/admin/org-detail/admin-organization-detail.tsx",
+				import: /\{ appAdminOrganizationSections \} from "@\/app-admin"/,
+			},
+		],
+	},
+	{
 		file: "apps/saas/src/app-onboarding.tsx",
 		exports: ["appOnboardingSteps"],
 		wiredInto: [
@@ -96,12 +120,32 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "packages/content/src/app-content.ts",
+		exports: ["appContent"],
+		wiredInto: [
+			{
+				file: "packages/content/src/index.tsx",
+				import: /\{ appContent \} from "\.\/app-content"/,
+			},
+		],
+	},
+	{
 		file: "packages/cron/src/app-jobs.ts",
 		exports: ["appJobs"],
 		wiredInto: [
 			{
 				file: "packages/cron/src/jobs/index.ts",
 				import: /\{ appJobs \} from "\.\.\/app-jobs"/,
+			},
+		],
+	},
+	{
+		file: "packages/mail/src/app-mail.ts",
+		exports: ["appMail"],
+		wiredInto: [
+			{
+				file: "packages/mail/src/templates/layout.ts",
+				import: /\{ appMail \} from "\.\.\/app-mail"/,
 			},
 		],
 	},

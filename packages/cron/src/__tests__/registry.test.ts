@@ -13,6 +13,7 @@ vi.mock("@fuutu/logs", () => ({
 
 vi.mock("@fuutu/webhooks", () => ({
 	processPendingDeliveries: vi.fn(),
+	isWebhooksEnabled: () => true,
 }));
 
 vi.mock("@fuutu/db", () => ({

@@ -37,7 +37,7 @@
     <text x="56" y="332">· Admin panel (ban, override)</text>
     <text x="56" y="356">· Invitation-only signup</text>
     <text x="56" y="380">· Rate limiting (per-endpoint)</text>
-    <text x="56" y="404">· Audit logs (immutable, org-scoped)</text>
+    <text x="56" y="404">· Audit logs (append-only, org-scoped)</text>
   </g>
 
   <!-- ===== 2. API & BACKEND (6 items) ===== -->
@@ -207,20 +207,20 @@
   <!-- Column 2: Fuutu MCP -->
   <rect x="450" y="1255" width="390" height="210" rx="8" fill="#0E0E11" stroke="#1F1F23" stroke-width="1"/>
   <text x="466" y="1282" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#F7F8F8">
-    Fuutu MCP — free + Plus
+    Fuutu MCP — free + Pro
   </text>
   <text x="466" y="1302" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#6B6F76">
     Version-matched to your kit release
   </text>
   <g font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="400" fill="#F7F8F8">
     <text x="466" y="1330">· Free: docs search, changelog, updates</text>
-    <text x="466" y="1354">· Plus: rules per domain — auth, payments…</text>
-    <text x="466" y="1378">· Plus: full skills — entity, API…</text>
-    <text x="466" y="1402">· Plus: per-user limits, no shared quota</text>
-    <text x="466" y="1426">· Plus: versioning API — app releases</text>
+    <text x="466" y="1354">· Pro: rules per domain — auth, payments…</text>
+    <text x="466" y="1378">· Pro: full skills — entity, API…</text>
+    <text x="466" y="1402">· Pro: per-user limits, no shared quota</text>
+    <text x="466" y="1426">· Pro: versioning API — app releases</text>
   </g>
   <text x="466" y="1455" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#3B82F6">
-    → any MCP client · Plus via API key
+    → any MCP client · Pro via API key
   </text>
 
   <!-- ===== TECH STACK BADGES ===== -->

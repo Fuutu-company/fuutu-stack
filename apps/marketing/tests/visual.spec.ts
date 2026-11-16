@@ -1,4 +1,5 @@
 import { DEFAULT_LOCALE, LOCALES, OTHER_LOCALES } from "./locales";
+import { FIRST_POST_SLUG, NO_PUBLISHED_POST } from "./posts";
 import {
 	expect,
 	expectVisual,
@@ -27,17 +28,21 @@ import {
  * component).
  */
 
-const PAGES = [
+/** `path: null` — the app serves no such page; the shot is skipped. */
+const PAGES: readonly { path: string | null; name: string }[] = [
 	{ path: "", name: "marketing--landing" },
 	{ path: "/pricing", name: "marketing--pricing" },
 	{ path: "/blog", name: "marketing--blog" },
-	{ path: "/blog/welcome", name: "marketing--blog-post" },
+	{
+		path: FIRST_POST_SLUG ? `/blog/${FIRST_POST_SLUG}` : null,
+		name: "marketing--blog-post",
+	},
 	{ path: "/changelog", name: "marketing--changelog" },
 	{ path: "/contact", name: "marketing--contact" },
 	{ path: "/legal/privacy", name: "legal--privacy" },
 	{ path: "/legal/terms", name: "legal--terms" },
 	{ path: "/legal/imprint", name: "legal--imprint" },
-] as const;
+];
 
 const VIEWPORTS = [
 	{ width: 1280, height: 720, label: "desktop" },
@@ -55,6 +60,7 @@ test.describe("visual regression — marketing pages", () => {
 				isMobile,
 			}) => {
 				test.skip(isMobile, "desktop baselines are shot by desktop projects");
+				test.skip(path === null, NO_PUBLISHED_POST);
 				await page.goto(`/${locale}${path}`);
 				await page.waitForLoadState("domcontentloaded");
 				await scrollThroughPage(page);

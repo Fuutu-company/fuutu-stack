@@ -53,8 +53,11 @@ vi.mock("@/lib/source", () => ({
 	},
 }));
 
-const { docsPageMetadata, hreflangLanguages } = await import(
+const { docsHomeMetadata, docsPageMetadata, hreflangLanguages } = await import(
 	"../../../../apps/docs/src/lib/page-metadata"
+);
+const { docsBaseUrl } = await import(
+	"../../../../apps/docs/src/lib/docs-base-url"
 );
 const hooks = await import("../../../../apps/docs/src/lib/app-docs-hooks");
 const config = await import("../../../../apps/docs/src/lib/docs-source-config");
@@ -104,10 +107,18 @@ describe("docs page metadata", () => {
 				},
 			},
 			openGraph: {
+				type: "website",
+				siteName: "Fuutu Stack Docs",
 				title: "Theming",
 				description: "Brand tokens",
 				locale: "de",
-				images: "/og/docs/de/guides/theming/image.png",
+				images: [
+					{
+						url: "/og/docs/de/guides/theming/image.png",
+						width: 1200,
+						height: 630,
+					},
+				],
 			},
 			twitter: {
 				card: "summary_large_image",
@@ -160,8 +171,47 @@ describe("docs page metadata", () => {
 			/docsPageMetadata\(\s*\{[\s\S]*?image: resolveOgImageUrl\(\s*page,\s*getPageImage\(page\)\.url,\s*appDocs\.ogImage\?\.url,?\s*\),?\s*\},\s*appDocs\.metadata,?\s*\)/,
 		);
 		const home = read("apps/docs/src/app/[locale]/page.tsx");
-		expect(home).toMatch(/hreflangLanguages\(""\)/);
+		expect(home).toMatch(/docsHomeMetadata\(/);
 		expect(home).not.toMatch(/for \(const loc of locales\)/);
+	});
+});
+
+describe("docs home metadata", () => {
+	const home = { title: "Docs", description: "Start here", locale: "de" };
+
+	it("keeps og:type, site name and the og:image, and sets a canonical", () => {
+		const meta = docsHomeMetadata(home, undefined);
+		expect(meta.alternates).toEqual({
+			canonical: "/de",
+			languages: { en: "/", de: "/de" },
+		});
+		expect(meta.openGraph).toEqual({
+			type: "website",
+			siteName: "Fuutu Stack Docs",
+			title: "Docs",
+			description: "Start here",
+			locale: "de",
+			images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+		});
+	});
+
+	it("uses the canonical base as an absolute canonical; default locale is /", () => {
+		expect(
+			docsHomeMetadata(
+				{ ...home, locale: "en" },
+				{ canonicalBase: "https://docs.acme.test/" },
+			).alternates,
+		).toMatchObject({ canonical: "https://docs.acme.test/" });
+	});
+});
+
+describe("docs base URL", () => {
+	it("is NEXT_PUBLIC_DOCS_URL without a trailing slash, and the layout uses it", () => {
+		expect(docsBaseUrl()).toBe("https://docs.test");
+		expect(read("apps/docs/src/app/layout.tsx")).toMatch(
+			/metadataBase: new URL\(docsBaseUrl\(\)\)/,
+		);
+		expect(read("apps/docs/src/app/layout.tsx")).not.toMatch(/getBaseUrl/);
 	});
 });
 

@@ -1,3 +1,4 @@
+import type { ProviderFailureKind } from "@fuutu/payments";
 import { ORPCError } from "@orpc/client";
 import type { useTranslations } from "next-intl";
 
@@ -19,6 +20,27 @@ export function seatLimitFromError(err: unknown): SeatLimit | null {
 		: null;
 }
 
+/** Code of a refusal because support is impersonating the user. */
+const IMPERSONATION_FORBIDDEN = "IMPERSONATION_FORBIDDEN";
+
+/**
+ * True when the API refused because the session is an impersonation —
+ * oRPC `denyImpersonation` (`data.code`) or Better Auth's guard
+ * (`res.error.code`, or a thrown error carrying it).
+ */
+export function isImpersonationForbidden(err: unknown): boolean {
+	if (typeof err !== "object" || err === null) return false;
+	if (err instanceof ORPCError) {
+		const data: unknown = err.data;
+		return (
+			typeof data === "object" &&
+			data !== null &&
+			(data as Record<string, unknown>).code === IMPERSONATION_FORBIDDEN
+		);
+	}
+	return (err as Record<string, unknown>).code === IMPERSONATION_FORBIDDEN;
+}
+
 /**
  * Map an API error to a localized message. The API's authorize middleware
  * reports plan gates with stable English messages ("Limit exceeded (n/m)",
@@ -31,6 +53,9 @@ export function planGateMessage(
 	t: ReturnType<typeof useTranslations>,
 	fallbackKey: Parameters<ReturnType<typeof useTranslations>>[0],
 ): string {
+	if (isImpersonationForbidden(err)) {
+		return t("common.errors.impersonationForbidden");
+	}
 	const message = err instanceof Error ? err.message : "";
 	if (message.includes("Limit exceeded")) {
 		return t("common.errors.planLimitReached");
@@ -44,17 +69,63 @@ export function planGateMessage(
 	return t(fallbackKey);
 }
 
+/** `payments.*` message of each provider failure the API reports. */
+const PROVIDER_FAILURE_KEY = {
+	not_found: "errors.providerNotFound",
+	invalid_state: "errors.providerStateConflict",
+	rejected: "errors.providerRejected",
+	unavailable: "errors.providerUnavailable",
+} as const satisfies Record<ProviderFailureKind, string>;
+
+/**
+ * The provider failure behind a payments error (`data.reason`, set by the
+ * API for a typed provider failure), else null.
+ */
+function providerFailure(err: unknown): ProviderFailureKind | null {
+	if (!(err instanceof ORPCError)) return null;
+	const data: unknown = err.data;
+	if (typeof data !== "object" || data === null) return null;
+	const { reason } = data as Record<string, unknown>;
+	return typeof reason === "string" &&
+		Object.hasOwn(PROVIDER_FAILURE_KEY, reason)
+		? (reason as ProviderFailureKind)
+		: null;
+}
+
 /**
  * True when a payments call failed because the deployment cannot take
  * payments — provider off (`NOT_IMPLEMENTED`) or misconfigured, e.g. a
- * missing API key (`SERVICE_UNAVAILABLE`). The UI says so instead of a
- * generic "checkout failed".
+ * missing or rejected API key (`SERVICE_UNAVAILABLE`). A provider that
+ * can't be reached is a `SERVICE_UNAVAILABLE` too, but with a provider
+ * failure reason — not this. The UI says so instead of a generic
+ * "checkout failed".
  */
 export function isPaymentsUnavailable(err: unknown): boolean {
 	return (
 		err instanceof ORPCError &&
-		(err.code === "SERVICE_UNAVAILABLE" || err.code === "NOT_IMPLEMENTED")
+		(err.code === "NOT_IMPLEMENTED" ||
+			(err.code === "SERVICE_UNAVAILABLE" && providerFailure(err) === null))
 	);
+}
+
+/**
+ * The `payments.*` message key for a failed payments call: what the
+ * provider said (unknown subscription, state changed, declined,
+ * unreachable), that payments are not configured or that support is
+ * impersonating the user; null for anything else — the caller shows its
+ * own fallback.
+ */
+export function paymentsErrorKey(
+	err: unknown,
+):
+	| (typeof PROVIDER_FAILURE_KEY)[ProviderFailureKind]
+	| "choosePlan.unavailable"
+	| "errors.impersonationForbidden"
+	| null {
+	if (isImpersonationForbidden(err)) return "errors.impersonationForbidden";
+	const failure = providerFailure(err);
+	if (failure) return PROVIDER_FAILURE_KEY[failure];
+	return isPaymentsUnavailable(err) ? "choosePlan.unavailable" : null;
 }
 
 /**

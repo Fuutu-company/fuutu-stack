@@ -15,16 +15,11 @@ import {
 	Button,
 	Card,
 	CardContent,
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
 	PageHeader,
+	SecretRevealDialog,
 } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy, Trash2, Webhook } from "lucide-react";
+import { Trash2, Webhook } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -184,27 +179,20 @@ export function WebhookList({ slug }: { slug: string }) {
 			)}
 
 			{/* Secret dialog — shown once after creation */}
-			<Dialog
+			<SecretRevealDialog
 				open={secretWebhook !== null}
-				onOpenChange={(v) => {
-					if (!v) setSecretWebhook(null);
+				secret={secretWebhook?.secret ?? null}
+				onClose={() => setSecretWebhook(null)}
+				title={t("secretDialog.title")}
+				description={t("secretDialog.description")}
+				labels={{
+					copy: t("secretDialog.copy"),
+					copied: t("secretDialog.copied"),
+					copyFailed: t("secretDialog.copyFailed"),
+					done: t("secretDialog.done"),
+					close: tCommon("close"),
 				}}
-			>
-				<DialogContent className="sm:max-w-md" closeLabel={tCommon("close")}>
-					<DialogHeader>
-						<DialogTitle>{t("secretDialog.title")}</DialogTitle>
-						<DialogDescription>
-							{t("secretDialog.description")}
-						</DialogDescription>
-					</DialogHeader>
-					<SecretField secret={secretWebhook?.secret ?? null} t={t} />
-					<DialogFooter>
-						<Button onClick={() => setSecretWebhook(null)}>
-							{t("secretDialog.done")}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			/>
 
 			{/* Delete confirmation */}
 			<AlertDialog
@@ -232,33 +220,6 @@ export function WebhookList({ slug }: { slug: string }) {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-		</div>
-	);
-}
-
-function SecretField({
-	secret,
-	t,
-}: {
-	secret: string | null;
-	t: ReturnType<typeof useTranslations>;
-}) {
-	const [copied, setCopied] = useState(false);
-
-	async function copySecret() {
-		if (!secret) return;
-		await navigator.clipboard.writeText(secret);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
-	}
-
-	return (
-		<div className="flex items-center gap-2 rounded-md border bg-muted p-3">
-			<code className="flex-1 truncate font-mono text-sm">{secret}</code>
-			<Button type="button" variant="outline" size="sm" onClick={copySecret}>
-				{copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-				{copied ? t("secretDialog.copied") : t("secretDialog.copy")}
-			</Button>
 		</div>
 	);
 }

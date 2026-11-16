@@ -49,14 +49,15 @@
 		"scopeDescriptions": {
 			"api": "REST- und oRPC-API aufrufen.",
 			"mcp": "KI-Agenten über den MCP-Server anbinden.",
-			"versioning": "Versions- und Release-Informationen lesen."
+			"versioning": "Einen Release-Workflow die nächste App-Version berechnen lassen."
 		},
 		"createdDialog": {
 			"title": "Dein neuer API-Schlüssel",
 			"description": "Kopiere diesen Schlüssel jetzt — du kannst ihn später nicht mehr sehen.",
 			"copy": "Kopieren",
 			"copied": "Kopiert!",
-			"done": "Habe ich kopiert"
+			"done": "Habe ich kopiert",
+			"copyFailed": "Kopieren fehlgeschlagen. Markiere den Schlüssel und kopiere ihn selbst."
 		},
 		"revokeDialog": {
 			"title": "API-Schlüssel widerrufen?",
@@ -69,6 +70,8 @@
 		"failed": "Aktion konnte nicht durchgeführt werden.",
 		"created": "API-Schlüssel erstellt.",
 		"revoked": "API-Schlüssel widerrufen.",
-		"revokeError": "API-Schlüssel konnte nicht widerrufen werden. Bitte erneut versuchen."
+		"revokeError": "API-Schlüssel konnte nicht widerrufen werden. Bitte erneut versuchen.",
+		"allKeys": "Alle Schlüssel",
+		"loadMore": "Mehr laden"
 	}
 }

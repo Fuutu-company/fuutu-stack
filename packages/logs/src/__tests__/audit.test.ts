@@ -315,3 +315,58 @@ describe("setAuditSink / getAuditSink", () => {
 		setAuditSink(original);
 	});
 });
+
+/**
+ * Impersonation starts and irreversible support actions must not happen
+ * without a persisted row — `recordStrict` rejects when the sink fails.
+ */
+describe("createAuditLogger().recordStrict", () => {
+	it("persists via the active sink and mirrors to console", async () => {
+		const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+		const mockSink: AuditSink = {
+			record: vi.fn().mockResolvedValue(undefined),
+		};
+		setAuditSink(mockSink);
+
+		await createAuditLogger({ scope: "admin" }).recordStrict({
+			action: "admin.user.impersonate_start",
+			userId: "admin-1",
+		});
+
+		expect(mockSink.record).toHaveBeenCalledWith({
+			action: "admin.user.impersonate_start",
+			userId: "admin-1",
+		});
+		expect(infoSpy).toHaveBeenCalledWith(
+			"[admin] audit: admin.user.impersonate_start",
+			expect.objectContaining({ userId: "admin-1" }),
+		);
+		infoSpy.mockRestore();
+	});
+
+	it("rejects when the sink fails, without a console mirror", async () => {
+		const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		setAuditSink({ record: vi.fn().mockRejectedValue(new Error("DB down")) });
+
+		await expect(
+			createAuditLogger({ scope: "admin" }).recordStrict({
+				action: "admin.user.delete",
+				userId: "admin-1",
+			}),
+		).rejects.toThrow("DB down");
+		expect(infoSpy).not.toHaveBeenCalled();
+		infoSpy.mockRestore();
+		errorSpy.mockRestore();
+	});
+
+	it("succeeds with the default console sink", async () => {
+		const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+		await expect(
+			createAuditLogger({ scope: "admin" }).recordStrict({
+				action: "admin.user.ban",
+			}),
+		).resolves.toBeUndefined();
+		infoSpy.mockRestore();
+	});
+});

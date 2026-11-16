@@ -1,3 +1,4 @@
+import { consentBannerVisible } from "@fuutu/analytics";
 import { expect, type Page, test } from "@playwright/test";
 
 // Base Playwright `test` on purpose: the shared fixture pre-accepts consent,
@@ -5,11 +6,19 @@ import { expect, type Page, test } from "@playwright/test";
 
 const banner = (page: Page) => page.getByRole("dialog", { name: /analytics/i });
 
-async function bannerShown(page: Page): Promise<boolean> {
-	return banner(page)
-		.waitFor({ state: "visible", timeout: 5_000 })
-		.then(() => true)
-		.catch(() => false);
+/**
+ * Skips only when the analytics config this run is built with (same env)
+ * switches the banner off — a banner that should show but doesn't fails.
+ */
+const BANNER_OFF: [boolean, string] = [
+	!consentBannerVisible(),
+	"Consent banner switched off by the analytics config",
+];
+
+/** Opens `path` and waits for the banner the config says is there. */
+async function gotoWithBanner(page: Page, path: string) {
+	await page.goto(path);
+	await expect(banner(page)).toBeVisible({ timeout: 10_000 });
 }
 
 /** How far the page scrolls past the viewport. */
@@ -37,6 +46,7 @@ async function endClearsBanner(page: Page, selector: string): Promise<boolean> {
 }
 
 test.describe("consent banner scroll room", () => {
+	test.skip(...BANNER_OFF);
 	// Signed out: the auth pages would otherwise redirect to the dashboard.
 	test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -45,11 +55,7 @@ test.describe("consent banner scroll room", () => {
 	}) => {
 		// At this size the sign-in page fits without scrolling.
 		await page.setViewportSize({ width: 1280, height: 873 });
-		await page.goto("/auth/sign-in");
-		test.skip(
-			!(await bannerShown(page)),
-			"Consent banner disabled in this environment",
-		);
+		await gotoWithBanner(page, "/auth/sign-in");
 		// Regression: the banner's spacer used to make a full-height page
 		// taller than the viewport, so it scrolled into blank space and
 		// "lost" that scroll once consent was given.
@@ -63,11 +69,7 @@ test.describe("consent banner scroll room", () => {
 		// fits. The banner lives in the layout and survives navigation, so
 		// its room must be recomputed per page.
 		await page.setViewportSize({ width: 1280, height: 720 });
-		await page.goto("/auth/sign-in");
-		test.skip(
-			!(await bannerShown(page)),
-			"Consent banner disabled in this environment",
-		);
+		await gotoWithBanner(page, "/auth/sign-in");
 		const formEnd = "form button[type='submit']";
 		await expect.poll(() => endClearsBanner(page, formEnd)).toBe(true);
 
@@ -87,11 +89,7 @@ test.describe("consent banner scroll room", () => {
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 873 });
-		await page.goto("/auth/sign-in");
-		test.skip(
-			!(await bannerShown(page)),
-			"Consent banner disabled in this environment",
-		);
+		await gotoWithBanner(page, "/auth/sign-in");
 		await expect.poll(() => overflow(page)).toBeLessThanOrEqual(1);
 
 		// Late-loading content makes the page scroll: its end must clear
@@ -119,5 +117,40 @@ test.describe("consent banner scroll room", () => {
 			document.getElementById("late-content")?.remove(),
 		);
 		await expect.poll(() => overflow(page)).toBeLessThanOrEqual(1);
+	});
+});
+
+/** Answers the banner (OK in notice mode, Accept in consent mode). */
+async function decide(page: Page) {
+	await banner(page)
+		.getByRole("button", { name: /^(ok|accept)$/i })
+		.click();
+	await expect(banner(page)).toBeHidden();
+}
+
+test.describe("privacy settings", () => {
+	test.skip(...BANNER_OFF);
+	test.describe("signed out", () => {
+		test.use({ storageState: { cookies: [], origins: [] } });
+
+		test("the auth pages' footer link reopens the banner", async ({ page }) => {
+			await gotoWithBanner(page, "/auth/sign-in");
+			await decide(page);
+
+			await page.getByRole("button", { name: /^privacy settings$/i }).click();
+			await expect(banner(page)).toBeVisible();
+		});
+	});
+
+	test("the user menu reopens the banner", async ({ page, isMobile }) => {
+		test.skip(isMobile, "Opens the desktop sidebar user menu");
+		await gotoWithBanner(page, "/dashboard");
+		await decide(page);
+
+		const footer = page.locator("[data-sidebar='footer']");
+		await expect(footer.getByText(/@/)).toBeVisible({ timeout: 10_000 });
+		await footer.getByRole("button").click();
+		await page.getByRole("menuitem", { name: /^privacy settings$/i }).click();
+		await expect(banner(page)).toBeVisible();
 	});
 });

@@ -6,6 +6,7 @@ vi.mock("@fuutu/webhooks", () => ({
 		succeeded: 2,
 		failed: 1,
 	}),
+	isWebhooksEnabled: () => true,
 }));
 
 vi.mock("@fuutu/db", () => ({
@@ -445,7 +446,7 @@ describe("in-flight guard", () => {
 describe("listJobs", () => {
 	it("returns all registered jobs", () => {
 		const jobs = listJobs();
-		expect(jobs.length).toBe(5);
+		expect(jobs.length).toBe(6);
 		expect(jobs.map((j) => j.name)).toEqual(
 			expect.arrayContaining([
 				"webhook-retry",
@@ -453,6 +454,7 @@ describe("listJobs", () => {
 				"subscription-reminder",
 				"telemetry-ping",
 				"oauth-client-cleanup",
+				"auth-retention-cleanup",
 			]),
 		);
 	});

@@ -1,7 +1,11 @@
 import { paymentsConfig } from "@fuutu/payments/config";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	cancelActiveSubscriptionsForOrganization,
+	cancelActiveSubscriptionsForOrganizationOrThrow,
 	cancelActiveSubscriptionsForUser,
+	cancelActiveSubscriptionsForUserOrThrow,
+	SubscriptionCancellationError,
 	syncSeatsForOrganization,
 } from "../hooks/payments-sync";
 
@@ -17,6 +21,8 @@ const resolveById = vi.fn((id: string) =>
 			: null,
 );
 const updateSeatsInOrganizationSubscription = vi.fn();
+const cancelAllSubscriptionsForOrganization = vi.fn();
+const cancelAllSubscriptionsForOrganizationOrThrow = vi.fn();
 const logError = vi.fn();
 
 vi.mock("@fuutu/db", () => ({
@@ -30,7 +36,22 @@ vi.mock("@fuutu/payments", () => ({
 	resolvePaymentProviderById: (id: string) => resolveById(id),
 	updateSeatsInOrganizationSubscription: (...args: unknown[]) =>
 		updateSeatsInOrganizationSubscription(...args),
-	cancelAllSubscriptionsForOrganization: vi.fn(),
+	cancelAllSubscriptionsForOrganization: (...args: unknown[]) =>
+		cancelAllSubscriptionsForOrganization(...args),
+	cancelAllSubscriptionsForOrganizationOrThrow: (...args: unknown[]) =>
+		cancelAllSubscriptionsForOrganizationOrThrow(...args),
+	CHARGEABLE_SUBSCRIPTION_STATUSES: [
+		"ACTIVE",
+		"TRIALING",
+		"PAST_DUE",
+		"PAUSED",
+		"INCOMPLETE",
+	],
+	// The ended-at-provider fallback is covered in @fuutu/payments seats.test.ts.
+	cancelSubscriptionNowOrThrow: (
+		provider: { cancelSubscription: typeof cancelSubscription },
+		subscriptionId: string,
+	) => provider.cancelSubscription(subscriptionId, { mode: "immediate" }),
 }));
 
 vi.mock("@fuutu/logs", () => ({
@@ -107,8 +128,12 @@ describe("cancelActiveSubscriptionsForUser()", () => {
 		await cancelActiveSubscriptionsForUser("user-1");
 
 		expect(cancelSubscription).toHaveBeenCalledTimes(2);
-		expect(cancelSubscription).toHaveBeenCalledWith("sub_active");
-		expect(cancelSubscription).toHaveBeenCalledWith("sub_trial");
+		expect(cancelSubscription).toHaveBeenCalledWith("sub_active", {
+			mode: "immediate",
+		});
+		expect(cancelSubscription).toHaveBeenCalledWith("sub_trial", {
+			mode: "immediate",
+		});
 	});
 
 	it("does not throw on a partial provider rejection and logs it", async () => {
@@ -146,7 +171,9 @@ describe("cancelActiveSubscriptionsForUser() — provider per purchase", () => {
 			sub({ provider: "polar", subscriptionId: "sub_polar" }),
 		]);
 		await cancelActiveSubscriptionsForUser("user-1");
-		expect(polarCancel).toHaveBeenCalledWith("sub_polar");
+		expect(polarCancel).toHaveBeenCalledWith("sub_polar", {
+			mode: "immediate",
+		});
 		expect(cancelSubscription).not.toHaveBeenCalled();
 	});
 
@@ -157,5 +184,110 @@ describe("cancelActiveSubscriptionsForUser() — provider per purchase", () => {
 		await cancelActiveSubscriptionsForUser("user-1");
 		expect(cancelSubscription).not.toHaveBeenCalled();
 		expect(polarCancel).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * Support deletes (admin.users.delete, admin.organizations.delete) must not
+ * remove an account while a subscription keeps billing — the strict
+ * variants try every cancel, then throw.
+ */
+describe("cancelActiveSubscriptionsForUserOrThrow()", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		cancelSubscription.mockResolvedValue(undefined);
+	});
+
+	it("resolves when every subscription is cancelled", async () => {
+		getPurchasesByUserId.mockResolvedValue([sub({ subscriptionId: "sub_a" })]);
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).resolves.toBeUndefined();
+		expect(cancelSubscription).toHaveBeenCalledWith("sub_a", {
+			mode: "immediate",
+		});
+	});
+
+	it("tries every subscription, then throws on a provider rejection", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ subscriptionId: "sub_bad" }),
+			sub({ subscriptionId: "sub_ok" }),
+		]);
+		cancelSubscription
+			.mockRejectedValueOnce(new Error("stripe 500"))
+			.mockResolvedValueOnce(undefined);
+
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).rejects.toBeInstanceOf(SubscriptionCancellationError);
+		expect(cancelSubscription).toHaveBeenCalledTimes(2);
+	});
+
+	it("throws when the purchase lookup fails", async () => {
+		getPurchasesByUserId.mockRejectedValue(new Error("db down"));
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).rejects.toBeInstanceOf(SubscriptionCancellationError);
+	});
+
+	it("throws when a subscription's provider is not available", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ provider: "gone", subscriptionId: "sub_x" }),
+		]);
+		await expect(
+			cancelActiveSubscriptionsForUserOrThrow("user-1"),
+		).rejects.toBeInstanceOf(SubscriptionCancellationError);
+	});
+	it("cancels every status that can still charge — not only active/trialing", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ subscriptionId: "sub_past_due", status: "PAST_DUE" }),
+			sub({ subscriptionId: "sub_paused", status: "PAUSED" }),
+			sub({ subscriptionId: "sub_incomplete", status: "INCOMPLETE" }),
+			sub({ subscriptionId: "sub_scheduled", status: "SCHEDULED_CANCEL" }),
+			sub({ subscriptionId: "sub_canceled", status: "CANCELED" }),
+		]);
+		await cancelActiveSubscriptionsForUserOrThrow("user-1");
+		expect(cancelSubscription.mock.calls.map(([id]) => id).sort()).toEqual([
+			"sub_incomplete",
+			"sub_past_due",
+			"sub_paused",
+		]);
+	});
+
+	it("the lenient variant still skips past-due subscriptions", async () => {
+		getPurchasesByUserId.mockResolvedValue([
+			sub({ subscriptionId: "sub_past_due", status: "PAST_DUE" }),
+		]);
+		await cancelActiveSubscriptionsForUser("user-1");
+		expect(cancelSubscription).not.toHaveBeenCalled();
+	});
+});
+
+describe("cancelActiveSubscriptionsForOrganization*()", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("the hook variant swallows a failure", async () => {
+		cancelAllSubscriptionsForOrganization.mockRejectedValue(new Error("down"));
+		await expect(
+			cancelActiveSubscriptionsForOrganization("org-1"),
+		).resolves.toBeUndefined();
+		expect(logError).toHaveBeenCalled();
+	});
+
+	it("the strict variant fails on any cancel failure", async () => {
+		cancelAllSubscriptionsForOrganizationOrThrow.mockResolvedValue(undefined);
+		await cancelActiveSubscriptionsForOrganizationOrThrow("org-1");
+		expect(cancelAllSubscriptionsForOrganizationOrThrow).toHaveBeenCalledWith(
+			"org-1",
+		);
+
+		cancelAllSubscriptionsForOrganizationOrThrow.mockRejectedValue(
+			new Error("down"),
+		);
+		const error = await cancelActiveSubscriptionsForOrganizationOrThrow(
+			"org-1",
+		).catch((e: unknown) => e);
+		expect(error).toBeInstanceOf(SubscriptionCancellationError);
+		expect(error).toMatchObject({ name: "SubscriptionCancellationError" });
 	});
 });

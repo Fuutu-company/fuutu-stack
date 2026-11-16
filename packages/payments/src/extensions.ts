@@ -10,7 +10,8 @@
  * this module once per bundle (instrumentation, route handlers, RSC), and
  * a registration made in one bundle must be visible in all of them.
  */
-import type { PurchaseOwner } from "@fuutu/db";
+import type { getPurchasesByUserId, PurchaseOwner } from "@fuutu/db";
+import type { PlanId } from "./config";
 import type { Entitlement } from "./entitlements";
 
 // ─── Entitlement resolver ─────────────────────────────────────────────────────
@@ -39,6 +40,9 @@ export type EntitlementResolver = {
 interface ExtensionRegistry {
 	entitlementResolver: EntitlementResolver | null;
 	purchaseChangedHandlers: Set<PurchaseChangedHandler>;
+	supersedePolicy?: SupersedePolicy | null;
+	checkoutGuards?: Set<CheckoutGuard>;
+	trialEligibilityPolicy?: TrialEligibilityPolicy | null;
 }
 
 const REGISTRY_KEY = Symbol.for("fuutu.payments.extensions");
@@ -105,4 +109,146 @@ export async function notifyPurchaseChanged(
 	for (const handler of registry().purchaseChangedHandlers) {
 		await handler(owner);
 	}
+}
+
+// ─── Supersede policy ─────────────────────────────────────────────────────────
+
+/** The subscription whose activation is being processed. */
+export type ActivatedSubscription = {
+	/** `null` when the product maps to no plan in `PLANS`. */
+	planId: PlanId | null;
+	productId: string;
+	subscriptionId: string;
+	owner: PurchaseOwner;
+};
+
+/** Another ACTIVE/TRIALING subscription of the same owner. */
+export type ExistingSubscription = {
+	planId: PlanId | null;
+	productId: string | null;
+	subscriptionId: string;
+	purchaseId: string;
+	status: string;
+};
+
+/**
+ * `true` = the activation supersedes `existing`: the kit cancels it at its
+ * provider and marks it CANCELED. `defaults` returns the kit decision —
+ * plans replace each other, add-ons (`Plan.addonOf`) stack: they never
+ * cancel and are never canceled. Throwing fails the webhook delivery
+ * (5xx → provider retry) before the new subscription is recorded.
+ */
+export type SupersedePolicy = (
+	activated: ActivatedSubscription,
+	existing: ExistingSubscription,
+	defaults: () => boolean,
+) => boolean | Promise<boolean>;
+
+/**
+ * Decide which of an owner's other active subscriptions a new activation
+ * cancels. One policy at a time; `null` restores the kit default.
+ *
+ * Runs on activations only — nothing cascades when a base subscription
+ * ends, so its add-ons keep running. Return `true` for `existing` add-ons
+ * of a replaced base here, or cancel orphaned add-ons in an
+ * `onPurchaseChanged` handler.
+ */
+export function registerSupersedePolicy(policy: SupersedePolicy | null): void {
+	registry().supersedePolicy = policy;
+}
+
+export function getSupersedePolicy(): SupersedePolicy | null {
+	return registry().supersedePolicy ?? null;
+}
+
+// ─── Checkout guard ───────────────────────────────────────────────────────────
+
+type StoredPurchase = Awaited<ReturnType<typeof getPurchasesByUserId>>[number];
+
+/** A purchase of the checkout owner, with its plan resolved. */
+export type OwnerPurchase = StoredPurchase & {
+	/** `null` when the product maps to no plan (e.g. a credit top-up). */
+	planId: PlanId | null;
+	/** Grants access now: ACTIVE/TRIALING, or SCHEDULED_CANCEL in its period. */
+	grantsAccess: boolean;
+};
+
+export type CheckoutGuardContext = {
+	/** Who the purchase will belong to (organization when one is passed). */
+	owner: PurchaseOwner;
+	/** The signed-in user starting the checkout. */
+	userId: string;
+	planId: PlanId;
+	interval: "month" | "year";
+	seats?: number;
+	/** The caller asked to buy now, without the plan's trial. */
+	skipTrial: boolean;
+	/**
+	 * Whether this checkout gets the plan's trial (`Plan.trialDays`,
+	 * `Plan.trialOnce`, `skipTrial`, `registerTrialEligibilityPolicy`).
+	 */
+	trial: boolean;
+	/** Every purchase of `owner`, newest first. */
+	existingPurchases: readonly OwnerPurchase[];
+};
+
+/**
+ * Throw `CheckoutRejectedError` (from `@fuutu/payments`) to refuse a plan
+ * checkout — `payments.checkout.create` answers PRECONDITION_FAILED with
+ * `data.reason` and never calls the provider. Any other error fails the
+ * request generically (500).
+ */
+export type CheckoutGuard = (ctx: CheckoutGuardContext) => void | Promise<void>;
+
+/**
+ * Add a guard run before every plan checkout, after the kit's own checks
+ * (an add-on needs an active base). Guards run in registration order.
+ * Returns an unsubscribe function.
+ */
+export function registerCheckoutGuard(guard: CheckoutGuard): () => void {
+	const scope = registry();
+	scope.checkoutGuards ??= new Set();
+	const guards = scope.checkoutGuards;
+	guards.add(guard);
+	return () => {
+		guards.delete(guard);
+	};
+}
+
+export function getCheckoutGuards(): CheckoutGuard[] {
+	return [...(registry().checkoutGuards ?? [])];
+}
+
+// ─── Trial eligibility ────────────────────────────────────────────────────────
+
+/** The checkout being decided — the guard context without its outcome. */
+export type TrialEligibilityContext = Omit<CheckoutGuardContext, "trial">;
+
+/**
+ * `true` = this checkout gets the plan's trial. `defaults` returns the kit
+ * decision: no earlier purchase of the plan by the owner when the plan
+ * sets `trialOnce`, else always. Consulted only when the plan has
+ * `trialDays` and the caller did not pass `skipTrial` — it can deny a
+ * trial, never add one the plan does not offer.
+ */
+export type TrialEligibilityPolicy = (
+	ctx: TrialEligibilityContext,
+	defaults: () => boolean,
+) => boolean | Promise<boolean>;
+
+/**
+ * Decide which plan checkouts get the trial (e.g. once per user across
+ * their organizations). Runs before the checkout guards, which see the
+ * result as `ctx.trial`. One policy at a time; `null` restores the kit
+ * default. Throwing `CheckoutRejectedError` refuses the checkout like a
+ * guard; any other error fails it generically (500).
+ */
+export function registerTrialEligibilityPolicy(
+	policy: TrialEligibilityPolicy | null,
+): void {
+	registry().trialEligibilityPolicy = policy;
+}
+
+export function getTrialEligibilityPolicy(): TrialEligibilityPolicy | null {
+	return registry().trialEligibilityPolicy ?? null;
 }

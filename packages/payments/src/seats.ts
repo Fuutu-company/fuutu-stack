@@ -1,12 +1,14 @@
-import {
-	getActiveSubscriptionForOrganization,
-	getPurchasesByOrganizationId,
-} from "@fuutu/db";
+import { getPurchasesByOrganizationId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
+import { getPlanSubscription } from "./billing-policy";
 import { PLANS } from "./config";
 import { getPlanIdForProductId } from "./config.server";
 import { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
-import { isSeatAware } from "./types";
+import {
+	isSeatAware,
+	type PaymentProvider,
+	type PurchaseStatusLiteral,
+} from "./types";
 
 const log = createLogger({ scope: "payments:seats" });
 
@@ -48,8 +50,8 @@ export async function updateSeatsInOrganizationSubscription(
 		return;
 	}
 
-	const subscription =
-		await getActiveSubscriptionForOrganization(organizationId);
+	// The plan subscription — an add-on (`Plan.addonOf`) keeps its own quantity.
+	const subscription = await getPlanSubscription({ organizationId });
 	if (!subscription?.subscriptionId) {
 		log.info("no active subscription — skipping seat sync", {
 			organizationId,
@@ -132,7 +134,9 @@ export async function cancelAllSubscriptionsForOrganization(
 			continue;
 		}
 		try {
-			await provider.cancelSubscription(p.subscriptionId);
+			await provider.cancelSubscription(p.subscriptionId, {
+				mode: "immediate",
+			});
 		} catch (err) {
 			log.error("cancelSubscription failed", {
 				organizationId,
@@ -140,5 +144,89 @@ export async function cancelAllSubscriptionsForOrganization(
 				err: String(err),
 			});
 		}
+	}
+}
+
+/**
+ * Statuses a strict cancel must end — the subscription can still charge:
+ * PAST_DUE retries its open invoice, PAUSED bills again on resume and
+ * INCOMPLETE can still collect its first invoice (Stripe/Polar until it
+ * expires). SCHEDULED_CANCEL never renews; CANCELED/EXPIRED are terminal.
+ */
+export const CHARGEABLE_SUBSCRIPTION_STATUSES: readonly PurchaseStatusLiteral[] =
+	["ACTIVE", "TRIALING", "PAST_DUE", "PAUSED", "INCOMPLETE"];
+
+/**
+ * Cancels a subscription now through `provider` for strict callers. A
+ * refused cancel counts as done only when the provider reports the
+ * subscription CANCELED/EXPIRED (e.g. an INCOMPLETE row that already
+ * expired there and cannot be cancelled again); otherwise it rethrows.
+ */
+export async function cancelSubscriptionNowOrThrow(
+	provider: PaymentProvider,
+	subscriptionId: string,
+): Promise<void> {
+	try {
+		await provider.cancelSubscription(subscriptionId, { mode: "immediate" });
+	} catch (err) {
+		const status = await provider
+			.getSubscriptionStatus?.(subscriptionId)
+			.catch(() => undefined);
+		if (status === "CANCELED" || status === "EXPIRED") {
+			log.info("subscription already ended at the provider", {
+				subscriptionId,
+				status,
+			});
+			return;
+		}
+		throw err;
+	}
+}
+
+/**
+ * Strict `cancelAllSubscriptionsForOrganization` for callers that must not
+ * delete while billing continues (support deletes): still tries every
+ * subscription that can still charge (`CHARGEABLE_SUBSCRIPTION_STATUSES`),
+ * then rejects if any could not be cancelled — also one whose provider is
+ * not available.
+ */
+export async function cancelAllSubscriptionsForOrganizationOrThrow(
+	organizationId: string,
+): Promise<void> {
+	const purchases = await getPurchasesByOrganizationId(organizationId);
+	let attempted = 0;
+	let failed = 0;
+	for (const p of purchases) {
+		if (p.type !== "SUBSCRIPTION" || !p.subscriptionId) continue;
+		if (!CHARGEABLE_SUBSCRIPTION_STATUSES.includes(p.status)) continue;
+		attempted++;
+		const provider = resolvePaymentProviderById(p.provider);
+		if (!provider) {
+			failed++;
+			log.warn(
+				"subscription's provider is not available — cancel it manually at that provider",
+				{
+					organizationId,
+					subscriptionId: p.subscriptionId,
+					subscriptionProvider: p.provider,
+				},
+			);
+			continue;
+		}
+		try {
+			await cancelSubscriptionNowOrThrow(provider, p.subscriptionId);
+		} catch (err) {
+			failed++;
+			log.error("cancelSubscription failed", {
+				organizationId,
+				subscriptionId: p.subscriptionId,
+				err: String(err),
+			});
+		}
+	}
+	if (failed > 0) {
+		throw new Error(
+			`${failed} of ${attempted} subscriptions could not be cancelled`,
+		);
 	}
 }

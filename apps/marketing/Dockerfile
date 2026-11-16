@@ -47,7 +47,7 @@ ARG NEXT_PUBLIC_UMAMI_SCRIPT_URL
 ENV SKIP_ENV_VALIDATION=1
 # Build-time telemetry emission point (only present when
 # @fuutu/telemetry is in this app's pruned workspace).
-RUN if [ -f packages/telemetry/bin/ping.mjs ]; then node packages/telemetry/bin/ping.mjs || true; fi
+RUN if [ -f packages/telemetry/bin/ping.mjs ]; then NODE_ENV=production node packages/telemetry/bin/ping.mjs || true; fi
 RUN pnpm --filter @fuutu/marketing build
 
 # ---------------------------------------------------------------- runner ----

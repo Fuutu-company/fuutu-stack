@@ -9,23 +9,25 @@ import {
 	Card,
 	CardContent,
 	Field,
+	FieldDescription,
 	FieldGroup,
 	FieldLabel,
 	Input,
 } from "@fuutu/ui";
 import { slugify } from "@fuutu/utils";
-import { ArrowRight, Building2, Check, User } from "lucide-react";
+import { ArrowRight, Building2, Check, CircleCheck, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { appOnboardingSteps } from "@/app-onboarding";
 import { orpc } from "@/utils/orpc";
 import { completeOnboardingAction } from "./actions";
 import {
-	buildOnboardingSteps,
 	nextOnboardingStep,
+	onboardingStepsFor,
 	previousOnboardingStep,
+	resumeOnboardingStep,
 } from "./onboarding-steps";
 
 const forcedOrgs = config.features.organizationsMode === "forced";
@@ -41,6 +43,43 @@ interface OnboardingWizardProps {
 	userEmail: string;
 	pendingInvitations: PendingInvitation[];
 	canCreateOrg: boolean;
+	/** Support impersonation: Better Auth refuses `/update-user` (403). */
+	impersonating: boolean;
+	/**
+	 * Forced organizations mode and the user already belongs to an org —
+	 * the org step is left out of the flow.
+	 */
+	hasOrganization: boolean;
+}
+
+type SavedProgress = { step: string; orgCreated: boolean };
+
+/** Progress of this tab's run, so a reload resumes instead of restarting. */
+function readProgress(key: string): SavedProgress | null {
+	try {
+		const raw = window.sessionStorage.getItem(key);
+		if (!raw) return null;
+		const parsed: unknown = JSON.parse(raw);
+		if (typeof parsed !== "object" || parsed === null) return null;
+		const { step, orgCreated } = parsed as Record<string, unknown>;
+		return typeof step === "string"
+			? { step, orgCreated: orgCreated === true }
+			: null;
+	} catch {
+		return null;
+	}
+}
+
+function writeProgress(key: string, progress: SavedProgress | null): void {
+	try {
+		if (progress) {
+			window.sessionStorage.setItem(key, JSON.stringify(progress));
+		} else {
+			window.sessionStorage.removeItem(key);
+		}
+	} catch {
+		// Storage blocked — the wizard still works, it just starts over.
+	}
 }
 
 export function OnboardingWizard({
@@ -48,22 +87,50 @@ export function OnboardingWizard({
 	userEmail,
 	pendingInvitations: invitations,
 	canCreateOrg,
+	impersonating,
+	hasOrganization,
 }: OnboardingWizardProps) {
 	const t = useTranslations("onboarding");
 	const router = useRouter();
-	const [step, setStep] = useState<string>("profile");
+	const orgsEnabled = config.features.organizationsMode !== "off";
+	const steps = onboardingStepsFor(
+		config.features.organizationsMode,
+		hasOrganization,
+		appOnboardingSteps,
+	);
+	const progressKey = `fuutu.onboarding.${userEmail}`;
 	const [name, setName] = useState(initialName);
 	const [orgName, setOrgName] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	// Created in this flow — navigating back or forward skips the org step
-	// so "Create" can't run a second time.
+	// Created in this flow — navigating back or forward (or reloading)
+	// skips the org step so "Create" can't run a second time.
 	const [orgCreated, setOrgCreated] = useState(false);
-
-	const orgsEnabled = config.features.organizationsMode !== "off";
-	const steps = buildOnboardingSteps(orgsEnabled, appOnboardingSteps);
-	const currentIndex = steps.indexOf(step);
 	const completed = orgCreated ? ["organization"] : [];
+	const [step, setStep] = useState<string>(() =>
+		resumeOnboardingStep(steps, completed, null),
+	);
+	// Saving starts on the render after the restore — the first commit
+	// still holds the initial step and must not overwrite the saved one.
+	const [restored, setRestored] = useState(false);
+
+	// After hydration: pick up where this tab left off.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once on mount
+	useEffect(() => {
+		const saved = readProgress(progressKey);
+		if (saved) {
+			const savedCompleted = saved.orgCreated ? ["organization"] : [];
+			setOrgCreated(saved.orgCreated);
+			setStep(resumeOnboardingStep(steps, savedCompleted, saved.step));
+		}
+		setRestored(true);
+	}, []);
+
+	useEffect(() => {
+		if (restored) writeProgress(progressKey, { step, orgCreated });
+	}, [restored, progressKey, step, orgCreated]);
+
+	const currentIndex = steps.indexOf(step);
 	const goNext = (from: string) =>
 		setStep(nextOnboardingStep(steps, from, completed));
 	const goBack = (from: string) =>
@@ -78,7 +145,11 @@ export function OnboardingWizard({
 		try {
 			const res = await authClient.updateUser({ name });
 			if (res.error) {
-				setError(t("failed"));
+				setError(
+					res.error.code === "IMPERSONATION_FORBIDDEN"
+						? t("profile.impersonating")
+						: t("failed"),
+				);
 				return;
 			}
 			goNext("profile");
@@ -129,6 +200,7 @@ export function OnboardingWizard({
 				setError(t("incomplete"));
 				return;
 			}
+			writeProgress(progressKey, null);
 			// Refresh the cached session cookie so the server-side onboarding
 			// guard sees onboardingComplete=true immediately (cookie cache TTL
 			// would otherwise keep redirecting to /onboarding for minutes).
@@ -201,11 +273,20 @@ export function OnboardingWizard({
 									onChange={(e) => setName(e.target.value)}
 									placeholder={t("profile.placeholder")}
 									required
+									disabled={impersonating}
+									aria-describedby={
+										impersonating ? "name-impersonating" : undefined
+									}
 								/>
+								{impersonating && (
+									<FieldDescription id="name-impersonating">
+										{t("profile.impersonating")}
+									</FieldDescription>
+								)}
 							</Field>
 							<Button
 								onClick={saveProfile}
-								disabled={isLoading || !name.trim()}
+								disabled={impersonating || isLoading || !name.trim()}
 								className="w-full"
 							>
 								{t("profile.continue")}
@@ -301,8 +382,8 @@ export function OnboardingWizard({
 					)}
 					{step === "done" && (
 						<div className="space-y-6 text-center">
-							<div className="mx-auto flex size-14 items-center justify-center rounded-full bg-success/10 text-success">
-								<Check className="size-7" />
+							<div className="flex items-center justify-center text-success">
+								<CircleCheck className="size-10" />
 							</div>
 							<div className="space-y-2">
 								<h2 className="font-bold font-heading text-xl tracking-heading">

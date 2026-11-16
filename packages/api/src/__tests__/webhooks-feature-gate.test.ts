@@ -3,6 +3,18 @@ import { call } from "@orpc/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
 
+// Kit suite: outgoing webhooks on — an app may ship config.features.webhooks off.
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			features: { ...actual.config.features, webhooks: true },
+		},
+	};
+});
+
 // Webhook creation is gated by the `api.webhooks` feature in
 // FEATURE_CATALOG, not by a hard-coded tier id. Move the feature to the
 // enterprise tier and a pro org must be turned away.

@@ -55,3 +55,19 @@ export function userHasPermission(
 ): boolean {
 	return rbacHasSystemPermission(ac, toSystemRole(user?.role), permission);
 }
+
+/**
+ * True while a ban is in force: `banned` is set and `banExpires` is
+ * unset or still in the future. An expired temporary ban no longer
+ * blocks (Better Auth lifts it on the next sign-in). An unreadable
+ * `banExpires` keeps the ban — fail closed.
+ */
+export function isBanActive(
+	user: Pick<UserWithRole, "banned" | "banExpires"> | null | undefined,
+	now: number = Date.now(),
+): boolean {
+	if (!user?.banned) return false;
+	if (!user.banExpires) return true;
+	const expiresAt = new Date(user.banExpires).getTime();
+	return Number.isNaN(expiresAt) || expiresAt > now;
+}

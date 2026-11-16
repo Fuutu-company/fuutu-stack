@@ -14,7 +14,7 @@ import type { AppUrls } from "./lib/urls";
  *
  * ```ts
  * export const appUrls = {
- *   discord: "https://discord.gg/acme",
+ *   community: "https://community.acme.dev",
  *   contact: { supportEmail: "mailto:support@acme.dev", consulting: "https://cal.com/acme" },
  * } satisfies AppUrls;
  * ```

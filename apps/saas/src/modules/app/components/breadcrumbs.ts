@@ -4,7 +4,7 @@ import { ADMIN_HOME, ADMIN_PATH } from "./nav-config";
 export interface BreadcrumbSegment {
 	/** i18n key under navigation.breadcrumb.*, or null for dynamic labels */
 	labelKey: string | null;
-	/** Raw label for dynamic segments (e.g. org slug) */
+	/** Raw label for dynamic segments (e.g. the org name) */
 	label?: string;
 	href?: string;
 }
@@ -37,6 +37,7 @@ const routeMap: Record<string, string> = {
 const adminSubRoutes: Record<string, string> = {
 	users: "breadcrumb.users",
 	"audit-logs": "breadcrumb.auditLogs",
+	system: "breadcrumb.system",
 };
 
 const settingsTabMap: Record<string, string> = {
@@ -70,10 +71,13 @@ const orgSettingsSubRoutes: Record<string, string> = {
  * above. App labels (`appBreadcrumbLabels`, `app-navigation.ts`) apply to
  * segments the kit leaves unlabelled only — never to a kit segment.
  * Segments nobody labels (ids), or labelled with an empty key, are skipped.
+ * The org crumb shows `orgName`; the capitalized slug stands in until the
+ * organization has loaded.
  */
 export function buildBreadcrumbs(
 	pathname: string,
 	tab: string | null,
+	orgName?: string | null,
 ): BreadcrumbSegment[] {
 	const segments = pathname.split("/").filter(Boolean);
 	const crumbs: BreadcrumbSegment[] = [];
@@ -99,11 +103,19 @@ export function buildBreadcrumbs(
 			});
 		} else if (segments[0] === "admin" && adminLabel) {
 			crumbs.push({ labelKey: adminLabel, href });
+		} else if (segments[0] === "admin" && segments[1] === "users" && i === 2) {
+			crumbs.push({ labelKey: "breadcrumb.userDetail", href });
+		} else if (
+			segments[0] === "admin" &&
+			segments[1] === "organizations" &&
+			i === 2
+		) {
+			crumbs.push({ labelKey: "breadcrumb.orgDetail", href });
 		} else if (inOrgRoute && i === orgSlugIndex + 1) {
-			// Dynamic org slug
+			// Dynamic org segment
 			crumbs.push({
 				labelKey: null,
-				label: capitalize(segment),
+				label: orgName || capitalize(segment),
 				href: `/organizations/${segment}/dashboard`,
 			});
 		} else if (inOrgRoute && orgSettingsLabel) {

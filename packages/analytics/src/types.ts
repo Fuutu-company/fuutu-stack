@@ -67,6 +67,15 @@ export interface AnalyticsProvider {
 	 */
 	getScriptProps?(): AnalyticsScriptProps | null;
 	/**
+	 * Wire the provider's own script to the live consent decision, so an
+	 * opt-out also stops a script that is already loaded (auto-tracked
+	 * page views after client-side navigation). Called by
+	 * <AnalyticsScript /> before it injects the script; `hasConsent` is
+	 * read on every send. Without it, <AnalyticsScript /> reloads the page
+	 * when consent is withdrawn (`consentWithdrawalStrategy`).
+	 */
+	installConsentGate?(hasConsent: () => boolean): void;
+	/**
 	 * Origins the app's CSP must allow for this provider. Kept in the
 	 * provider so swapping providers via env requires zero app-config
 	 * edits — `next.config.ts` spreads `analyticsCspOrigins()` into

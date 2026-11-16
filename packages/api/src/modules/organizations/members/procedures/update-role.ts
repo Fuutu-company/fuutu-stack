@@ -14,6 +14,7 @@ const updateMemberRoleSchema = z.object({
 
 export const updateMemberRole = authProcedure({
 	org: { permission: PERMISSIONS.ORGANIZATION.UPDATE },
+	denyImpersonation: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({

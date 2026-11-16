@@ -16,6 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "api-key-revoke" });
@@ -29,6 +30,7 @@ export function ApiKeyRevokeDialog({
 }) {
 	const t = useTranslations("apiKeys");
 	const tCommon = useTranslations("common");
+	const tRoot = useTranslations();
 	const [open, setOpen] = useState(false);
 	const [revoking, setRevoking] = useState(false);
 
@@ -40,7 +42,7 @@ export function ApiKeyRevokeDialog({
 			onRevoked();
 		} catch (e) {
 			log.error("api key revoke failed", { err: e });
-			toast.error(t("revokeError"));
+			toast.error(planGateMessage(e, tRoot, "apiKeys.revokeError"));
 		} finally {
 			setRevoking(false);
 		}

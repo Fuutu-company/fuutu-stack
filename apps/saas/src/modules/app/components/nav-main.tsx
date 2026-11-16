@@ -16,15 +16,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@fuutu/ui";
-import {
-	Bell,
-	LayoutDashboard,
-	type LucideIcon,
-	MessageSquare,
-	Settings,
-	UserCog,
-	Users,
-} from "lucide-react";
+import { Settings, UserCog } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -32,18 +24,14 @@ import { useOrgRole } from "../organizations/use-org-role";
 import {
 	ACCOUNT_SETTINGS_PATH,
 	getAccountItems,
+	getMainItems,
 	getOrgSettingsItems,
+	type MainNavItem,
 	orgSettingsBase,
 } from "./nav-config";
 import { NavGroup } from "./nav-group";
 
 const orgAC = new OrgAccessControl(ORG_POLICY);
-
-interface NavItem {
-	titleKey: string;
-	url: string;
-	icon: LucideIcon;
-}
 
 /** Extract org slug from pathname if inside an org route */
 function useOrgSlug(): string | null {
@@ -59,53 +47,23 @@ export function NavMain() {
 	const orgRole = useOrgRole(orgSlug);
 	const inOrg = orgSlug !== null;
 
-	// Build base URLs — org-scoped when inside an org, personal otherwise
-	const base = inOrg ? `/organizations/${orgSlug}` : "";
-
-	const platformItems: NavItem[] = [
-		{
-			titleKey: "dashboard",
-			url: `${base}/dashboard`,
-			icon: LayoutDashboard,
-		},
-	];
-
-	if (config.features.aiChat) {
-		platformItems.push({
-			titleKey: "aiChat",
-			url: `${base}/chat`,
-			icon: MessageSquare,
-		});
-	}
-
-	if (config.features.crm) {
-		platformItems.push({
-			titleKey: "crm",
-			url: `${base}/crm`,
-			icon: Users,
-		});
-	}
-
-	platformItems.push({
-		titleKey: "notifications",
-		url: "/notifications",
-		icon: Bell,
-	});
-
 	const can = (permission: KnownPermission): boolean =>
 		orgRole ? hasOrgPermission(orgAC, toOrgRole(orgRole), permission) : false;
 	const canViewAuditLog = can(PERMISSIONS.AUDIT_LOG.VIEW);
+	// Kit items (org-scoped inside an org) + app items (app-main-nav.ts).
+	const platformItems = getMainItems(orgSlug, can);
 	const showOrgGroup = inOrg && config.features.organizationsMode !== "off";
 
-	const isActive = (url: string): boolean => {
-		return pathname === url || pathname.startsWith(`${url}/`);
-	};
+	const isActive = (item: MainNavItem): boolean =>
+		item.exact
+			? pathname === item.url
+			: pathname === item.url || pathname.startsWith(`${item.url}/`);
 
-	const renderItem = (item: NavItem) => (
+	const renderItem = (item: MainNavItem) => (
 		<SidebarMenuItem key={item.titleKey}>
 			<SidebarMenuButton
 				tooltip={t(`navigation.${item.titleKey}`)}
-				isActive={isActive(item.url)}
+				isActive={isActive(item)}
 				asChild
 			>
 				<Link href={item.url}>

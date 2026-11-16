@@ -14,7 +14,9 @@
 		"general": "Allgemein",
 		"admin": "Admin",
 		"adminUsers": "Benutzer",
+		"adminOrganizations": "Organisationen",
 		"adminAuditLogs": "Audit-Logs",
+		"adminSystem": "System",
 		"aiChat": "AI Chat",
 		"crm": "CRM",
 		"security": "Sicherheit",
@@ -69,7 +71,10 @@
 			"invoices": "Rechnungen",
 			"notifications": "Benachrichtigungen",
 			"credits": "Guthaben",
-			"design": "Designsystem"
+			"design": "Designsystem",
+			"userDetail": "Benutzerdetails",
+			"system": "System",
+			"orgDetail": "Organisationsdetails"
 		},
 		"groupAccount": "Konto",
 		"accountSettings": "Kontoeinstellungen",

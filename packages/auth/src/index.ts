@@ -32,6 +32,11 @@ import {
 	restoreActiveOrganization,
 } from "./hooks/active-organization";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
+import { assertNotImpersonating } from "./hooks/impersonation-guard";
+import {
+	assertImpersonationActive,
+	isEndedImpersonationResult,
+} from "./hooks/impersonation-session";
 import { assertInvitationForSignup } from "./hooks/invitation-only";
 import {
 	assertRegistrationWithinLimits,
@@ -60,9 +65,12 @@ import {
 import { assertSignupPolicy } from "./hooks/signup-policy";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
 import { sendEmail } from "./lib/email";
+import { sendOrganizationInvitationEmail } from "./lib/invitation-email";
+import { saasBaseUrl } from "./lib/saas-url";
 import { MCP_ORG_CLAIM, mcpOAuth } from "./mcp-oauth";
 import { getSocialCredentials, isSocialProviderActive } from "./methods";
 import { mcpConnectedApps } from "./plugins/mcp-connected-apps";
+import { readOnlyRateLimitRules } from "./rate-limit-rules";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
 // Postgres `AuditLog` table — but only when LOG_AUDIT_SINK=db (the default is
@@ -83,10 +91,6 @@ if (env.FUUTU_DISABLE_RATE_LIMIT) {
 	);
 }
 
-// Base URL of the public SaaS app — used for links in auth emails and
-// the passkey relying-party ID.
-const saasBaseUrl = env.NEXT_PUBLIC_SAAS_URL ?? "http://localhost:3000";
-
 if (!env.NEXT_PUBLIC_SAAS_URL && env.NODE_ENV === "production") {
 	log.warn(
 		"NEXT_PUBLIC_SAAS_URL is unset — auth emails and passkeys will point at http://localhost:3000.",
@@ -103,6 +107,17 @@ const getErrorPageUrl = (context: {
 	baseURL: string;
 	options: { onAPIError?: { errorURL?: string } };
 }) => context.options.onAPIError?.errorURL || `${context.baseURL}/error`;
+
+const adminPlugin = admin({
+	defaultBanReason: authConfig.admin.defaultBanReason,
+	bannedUserMessage: authConfig.admin.bannedUserMessage,
+	impersonationSessionDuration: authConfig.admin.impersonationMinutes * 60,
+});
+
+/** HTTP paths of every admin-plugin endpoint (closed via `disabledPaths`). */
+const adminEndpointPaths = Object.values(adminPlugin.endpoints).map(
+	(endpoint) => endpoint.path,
+);
 
 const authOptions = {
 	database: prismaAdapter(db, {
@@ -121,7 +136,15 @@ const authOptions = {
 
 	// The JWT plugin's session-to-JWT route would mint tokens signed with
 	// the same key as MCP access tokens — disabled per the oauth-provider docs.
-	...(mcpOAuth.active ? { disabledPaths: ["/token"] } : {}),
+	//
+	// Every admin-plugin endpoint is closed to direct HTTP too: support
+	// actions run through the audited oRPC procedures, which call
+	// `auth.api.*` server-side (not affected by `disabledPaths`).
+	// `authConfig.admin.exposeAuthEndpoints` opts back in.
+	disabledPaths: [
+		...(mcpOAuth.active ? ["/token"] : []),
+		...(authConfig.admin.exposeAuthEndpoints ? [] : adminEndpointPaths),
+	],
 
 	// Rate limiting: Prevent brute-force attacks and email spam.
 	// Disabled when FUUTU_DISABLE_RATE_LIMIT is set (CI E2E).
@@ -131,6 +154,7 @@ const authOptions = {
 		enabled: authConfig.rateLimiting.enabled && !env.FUUTU_DISABLE_RATE_LIMIT,
 		window: authConfig.rateLimiting.window,
 		max: authConfig.rateLimiting.max,
+		customRules: readOnlyRateLimitRules(),
 		storage: "database",
 	},
 
@@ -202,6 +226,14 @@ const authOptions = {
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
 			assertPasswordPolicy(ctx.path, ctx.body);
+			await assertNotImpersonating({
+				path: ctx.path,
+				getSession: () => getSessionFromCtx(ctx),
+			});
+			await assertImpersonationActive({
+				path: ctx.path,
+				getSession: () => getSessionFromCtx(ctx),
+			});
 			if (!mcpOAuth.active) return;
 
 			// MCP OAuth guards — see hooks/mcp-oauth-guards.ts.
@@ -234,6 +266,14 @@ const authOptions = {
 			}
 		}),
 		after: createAuthMiddleware(async (ctx) => {
+			if (
+				await isEndedImpersonationResult({
+					path: ctx.path,
+					returned: ctx.context.returned,
+				})
+			) {
+				return ctx.json(null);
+			}
 			await revokeApiKeysAfterLeave({
 				path: ctx.path,
 				returned: ctx.context.returned,
@@ -445,6 +485,10 @@ const authOptions = {
 									: null,
 							ipAddress: session.ipAddress,
 							userAgent: session.userAgent,
+							impersonatedBy:
+								typeof session.impersonatedBy === "string"
+									? session.impersonatedBy
+									: null,
 						});
 					} catch (err) {
 						log.warn("session audit log failed", { err: String(err) });
@@ -500,22 +544,16 @@ const authOptions = {
 								? (user) => (user as { role?: string }).role === "admin"
 								: authConfig.organizations.allowUserToCreateOrganization ===
 									"all",
+						organizationLimit: authConfig.organizations.organizationLimit,
+						invitationExpiresIn: authConfig.organizations.invitationExpiresIn,
 						async sendInvitationEmail({ email, id, organization, inviter }) {
-							const inviteUrl = `${saasBaseUrl}/auth/accept-invitation?id=${id}`;
-							try {
-								await sendEmail({
-									to: email,
-									template: "organization-invitation",
-									data: {
-										organizationName: organization.name,
-										inviteUrl,
-										inviterName: inviter.user.name,
-										locale: (inviter.user as { locale?: string }).locale,
-									},
-								});
-							} catch (err) {
-								log.error("invitation email failed", { err: String(err) });
-							}
+							await sendOrganizationInvitationEmail({
+								email,
+								invitationId: id,
+								organizationName: organization.name,
+								inviterName: inviter.user.name,
+								locale: (inviter.user as { locale?: string }).locale,
+							});
 						},
 						// Sync seats with the payment provider on membership changes;
 						// before* hooks enforce the plan's membersPerOrg seat cap.
@@ -557,10 +595,7 @@ const authOptions = {
 				]
 			: []),
 
-		admin({
-			defaultBanReason: authConfig.admin.defaultBanReason,
-			bannedUserMessage: authConfig.admin.bannedUserMessage,
-		}),
+		adminPlugin,
 
 		multiSession(),
 

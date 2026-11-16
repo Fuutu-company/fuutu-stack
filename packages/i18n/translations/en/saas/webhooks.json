@@ -58,7 +58,8 @@
 			"description": "Copy this signing secret now — you won't be able to see it again.",
 			"copy": "Copy",
 			"copied": "Copied!",
-			"done": "I've copied it"
+			"done": "I've copied it",
+			"copyFailed": "Copy failed. Select the secret and copy it yourself."
 		},
 		"deleteDialog": {
 			"title": "Delete webhook?",

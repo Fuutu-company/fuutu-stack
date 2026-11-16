@@ -1,13 +1,22 @@
 import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import { Polar } from "@polar-sh/sdk";
+import { AlreadyCanceledSubscription } from "@polar-sh/sdk/models/errors/alreadycanceledsubscription.js";
+import {
+	ConnectionError,
+	RequestTimeoutError,
+	UnexpectedClientError,
+} from "@polar-sh/sdk/models/errors/httpclienterrors.js";
+import { PolarError } from "@polar-sh/sdk/models/errors/polarerror.js";
 import { SDKValidationError } from "@polar-sh/sdk/models/errors/sdkvalidationerror.js";
+import { SubscriptionLocked } from "@polar-sh/sdk/models/errors/subscriptionlocked.js";
 import {
 	validateEvent,
 	WebhookVerificationError,
 } from "@polar-sh/sdk/webhooks";
 import { z } from "zod";
 import type {
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PortalInput,
@@ -17,7 +26,13 @@ import type {
 	SeatAwarePaymentProvider,
 	SetSeatsInput,
 } from "../types";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	failureKindForStatus,
+	ProviderRequestError,
+	resolveCancelMode,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const log = createLogger({ scope: "payments:polar" });
 
@@ -88,6 +103,54 @@ function getClient(): Polar {
 }
 
 /**
+ * A Polar SDK error as a typed payments error: an already canceled or
+ * locked subscription is `invalid_state` (Polar answers the first with
+ * 403), any other 401/403 a rejected access token — our configuration —,
+ * a connection failure or timeout `unavailable`, anything else by its
+ * status. Polar's body goes to the log only. Errors not from Polar pass
+ * through unchanged.
+ */
+function polarFailure(err: unknown, failure: string): unknown {
+	if (
+		err instanceof ConnectionError ||
+		err instanceof RequestTimeoutError ||
+		err instanceof UnexpectedClientError
+	) {
+		log.error(failure, { err: err.message });
+		return new ProviderRequestError(failure, "unavailable", { cause: err });
+	}
+	if (!(err instanceof PolarError)) return err;
+	const status = err.statusCode;
+	log.error(failure, { status, type: err.name, body: err.body });
+	const stateConflict =
+		err instanceof AlreadyCanceledSubscription ||
+		err instanceof SubscriptionLocked;
+	if (!stateConflict && (status === 401 || status === 403)) {
+		return new WebhookConfigError(
+			`[payments:polar] ${failure}: Polar rejected the access token (HTTP ${status}). Check POLAR_ACCESS_TOKEN and the sandbox/production server.`,
+		);
+	}
+	return new ProviderRequestError(
+		failure,
+		stateConflict ? "invalid_state" : failureKindForStatus(status),
+		{ status, detail: err.body, cause: err },
+	);
+}
+
+/** Run one Polar API call; its failure becomes a typed payments error. */
+async function polarCall<T>(
+	failure: string,
+	run: (client: Polar) => Promise<T>,
+): Promise<T> {
+	const client = getClient();
+	try {
+		return await run(client);
+	} catch (err) {
+		throw polarFailure(err, failure);
+	}
+}
+
+/**
  * Provider APIs require absolute URLs. Env fallbacks are optional, so a
  * resolved value can be undefined — and a caller-supplied value can be
  * relative. Fail fast with a config error instead of handing the provider
@@ -151,6 +214,21 @@ function mapPolarStatus(status: string): PurchaseStatusLiteral {
 		default:
 			return "INCOMPLETE";
 	}
+}
+
+/**
+ * Status of a subscription, with `cancelAtPeriodEnd` on a live one
+ * reported as SCHEDULED_CANCEL instead of ACTIVE/TRIALING.
+ */
+function polarSubscriptionStatus(subscription: {
+	status: string;
+	cancelAtPeriodEnd?: boolean | null;
+}): PurchaseStatusLiteral {
+	const status = mapPolarStatus(subscription.status);
+	return subscription.cancelAtPeriodEnd === true &&
+		(status === "ACTIVE" || status === "TRIALING")
+		? "SCHEDULED_CANCEL"
+		: status;
 }
 
 /**
@@ -246,7 +324,6 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 	ownsSeatSync: false,
 
 	async createCheckoutLink(input: CheckoutInput) {
-		const client = getClient();
 		// Without metadata, Polar webhook payloads carry no owner — the
 		// owner-XOR rule in sync.ts would skip them as ownerless.
 		const metadata: Record<string, string> = {};
@@ -258,39 +335,51 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		// the signed webhook can't be pointed at a different billing owner.
 		if (input.userId) metadata.user_id = input.userId;
 		if (input.organizationId) metadata.organization_id = input.organizationId;
-		const checkout = await client.checkouts.create({
-			products: [input.priceId],
-			successUrl: requireAbsoluteUrl(
-				input.successUrl ?? env.POLAR_SUCCESS_URL,
-				"checkout success URL (input.successUrl or POLAR_SUCCESS_URL)",
-			),
-			externalCustomerId: input.userId ?? input.organizationId,
-			seats: input.seats,
-			// Without trialDays the product's own trial config applies.
-			...(input.trialDays
-				? { trialInterval: "day" as const, trialIntervalCount: input.trialDays }
-				: {}),
-			metadata,
-		});
+		const successUrl = requireAbsoluteUrl(
+			input.successUrl ?? env.POLAR_SUCCESS_URL,
+			"checkout success URL (input.successUrl or POLAR_SUCCESS_URL)",
+		);
+		const checkout = await polarCall("Failed to create checkout link", (c) =>
+			c.checkouts.create({
+				products: [input.priceId],
+				successUrl,
+				externalCustomerId: input.userId ?? input.organizationId,
+				seats: input.seats,
+				// Without trialDays the product's own trial config applies —
+				// unless the caller wants no trial at all.
+				...(input.trialDays
+					? {
+							trialInterval: "day" as const,
+							trialIntervalCount: input.trialDays,
+						}
+					: {}),
+				...(input.trial === false ? { allowTrial: false } : {}),
+				metadata,
+			}),
+		);
 		return { url: checkout.url };
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {
-		const client = getClient();
-		const session = await client.customerSessions.create({
-			customerId: input.customerId,
-			returnUrl: input.returnUrl,
-		});
+		const session = await polarCall(
+			"Failed to create customer portal link",
+			(c) =>
+				c.customerSessions.create({
+					customerId: input.customerId,
+					returnUrl: input.returnUrl,
+				}),
+		);
 		return { url: session.customerPortalUrl };
 	},
 
 	async createCustomer(input: CustomerInput) {
-		const client = getClient();
-		const customer = await client.customers.create({
-			externalId: input.userId,
-			email: input.email,
-			name: input.name,
-		});
+		const customer = await polarCall("Failed to create customer", (c) =>
+			c.customers.create({
+				externalId: input.userId,
+				email: input.email,
+				name: input.name,
+			}),
+		);
 		return { customerId: customer.id };
 	},
 
@@ -386,7 +475,10 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 			} else if (eventType === "subscription.expired") {
 				providerEvent.status = "EXPIRED";
 			} else if (data?.status) {
-				providerEvent.status = mapPolarStatus(data.status);
+				providerEvent.status = polarSubscriptionStatus({
+					status: data.status,
+					cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+				});
 			}
 			// endsAt is the effective end for revoked/canceled subs;
 			// currentPeriodEnd is authoritative when present. The SDK
@@ -405,20 +497,73 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		return [providerEvent];
 	},
 
-	async cancelSubscription(subscriptionId: string) {
-		const client = getClient();
-		await client.subscriptions.revoke({ id: subscriptionId });
+	async getSubscriptionStatus(subscriptionId: string) {
+		const subscription = await polarCall(
+			"Failed to get subscription status",
+			(c) => c.subscriptions.get({ id: subscriptionId }),
+		);
+		return polarSubscriptionStatus(subscription);
+	},
+
+	async getSubscriptionSeats(subscriptionId: string) {
+		const subscription = await polarCall("Failed to get subscription", (c) =>
+			c.subscriptions.get({ id: subscriptionId }),
+		);
+		return Math.max(1, subscription.seats ?? 1);
+	},
+
+	async cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	) {
+		if (resolveCancelMode(options) === "period_end") {
+			await polarCall("Failed to cancel subscription", (c) =>
+				c.subscriptions.update({
+					id: subscriptionId,
+					subscriptionUpdate: { cancelAtPeriodEnd: true },
+				}),
+			);
+			log.info("scheduled subscription cancel", { subscriptionId });
+			return;
+		}
+		await polarCall("Failed to cancel subscription", (c) =>
+			c.subscriptions.revoke({ id: subscriptionId }),
+		);
 		log.info("cancelled subscription", { subscriptionId });
 	},
 
-	async setSubscriptionSeats({ subscriptionId, seats }: SetSeatsInput) {
-		const client = getClient();
+	async resumeSubscription(subscriptionId: string) {
+		await polarCall("Failed to resume subscription", (c) =>
+			c.subscriptions.update({
+				id: subscriptionId,
+				subscriptionUpdate: { cancelAtPeriodEnd: false },
+			}),
+		);
+		log.info("resumed subscription", { subscriptionId });
+	},
+
+	async setSubscriptionSeats({
+		subscriptionId,
+		seats,
+		proration,
+	}: SetSeatsInput) {
 		// prorationBehavior omitted — Polar applies the organization's
 		// configured default, matching the Stripe seat-update behavior.
-		await client.subscriptions.update({
-			id: subscriptionId,
-			subscriptionUpdate: { seats },
-		});
+		if (proration) {
+			log.warn(
+				"per-call proration ignored — Polar uses its organization setting",
+				{
+					subscriptionId,
+					proration,
+				},
+			);
+		}
+		await polarCall("Failed to update subscription seats", (c) =>
+			c.subscriptions.update({
+				id: subscriptionId,
+				subscriptionUpdate: { seats },
+			}),
+		);
 		log.info("updated subscription seats", { subscriptionId, seats });
 	},
 };

@@ -11,8 +11,10 @@ vi.mock("@fuutu/logs", () => ({
 	createLogger: () => mockLog,
 }));
 
+const webhooksFlag = vi.hoisted(() => ({ on: true }));
 vi.mock("@fuutu/webhooks", () => ({
 	processPendingDeliveries: vi.fn(),
+	isWebhooksEnabled: () => webhooksFlag.on,
 }));
 
 vi.mock("@fuutu/db", () => ({
@@ -92,6 +94,16 @@ describe("webhookRetryJob", () => {
 		const result = await webhookRetryJob.run();
 		expect(result.success).toBe(false);
 		expect(result.errors).toContain("db down");
+	});
+
+	it("is disabled while config.features.webhooks is off", () => {
+		expect(webhookRetryJob.enabled).toBe(true);
+		webhooksFlag.on = false;
+		try {
+			expect(webhookRetryJob.enabled).toBe(false);
+		} finally {
+			webhooksFlag.on = true;
+		}
 	});
 });
 
@@ -463,6 +475,17 @@ describe("telemetryPingJob", () => {
 		const result = await telemetryPingJob.run();
 		expect(result.success).toBe(true);
 		expect(result.processed).toBe(0);
+		expect(result.skipped).toBe(true);
+		expect(result.errors).toEqual([]);
+	});
+
+	it("records a skip (not an error) outside production", async () => {
+		vi.mocked(pingTelemetry).mockResolvedValue({
+			sent: false,
+			reason: "not-production",
+		});
+		const result = await telemetryPingJob.run();
+		expect(result.success).toBe(true);
 		expect(result.skipped).toBe(true);
 		expect(result.errors).toEqual([]);
 	});

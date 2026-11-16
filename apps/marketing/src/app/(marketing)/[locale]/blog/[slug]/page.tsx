@@ -4,11 +4,17 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { appMarketing } from "@/app-marketing";
+import { withAppMetadata } from "@/lib/page-metadata";
 import { Link } from "@/navigation";
 
 interface BlogPostPageProps {
 	params: Promise<{ locale: string; slug: string }>;
 }
+
+// Unlisted slugs are a plain 404 — even when the list is empty, where an
+// on-demand not-found render would turn the static route dynamic (500).
+export const dynamicParams = false;
 
 export function generateStaticParams() {
 	return posts
@@ -25,10 +31,15 @@ export async function generateMetadata({
 		const t = await getTranslations({ locale, namespace: "notFound" });
 		return { title: t("title") };
 	}
-	return {
-		title: post.frontmatter.title,
-		description: post.frontmatter.description,
-	};
+	return withAppMetadata(
+		{
+			title: post.frontmatter.title,
+			description: post.frontmatter.description,
+		},
+		appMarketing.metadata?.blogPost,
+		locale,
+		{ slug },
+	);
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {

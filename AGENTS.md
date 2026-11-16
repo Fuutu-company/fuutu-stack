@@ -31,7 +31,7 @@ Your app, built on **Fuutu Stack** — a TypeScript SaaS starter kit (pnpm + Tur
 
 If the `fuutu` MCP server is connected (see `.mcp.json`), use it before guessing:
 - free, no key: `docs_search` / `docs_get` — kit docs matched to this repo's `KIT_VERSION`; `changelog_get`, `version_check`
-- MCP Plus (key in `FUUTU_MCP_API_KEY`): `rules_get` — detailed rules per domain (auth, payments, i18n, …); `skills_get` — full instructions for skills marked `fuutu-source: mcp`
+- Fuutu Pro (key in `FUUTU_MCP_API_KEY`): `rules_get` — detailed rules per domain (auth, payments, i18n, …); `skills_get` — full instructions for skills marked `fuutu-source: mcp`
 
 Without it, everything still works: read the owning package's source and follow this file.
 
@@ -76,7 +76,7 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 - **Env**: only via `@fuutu/env/saas` | `/marketing` | `/docs` — never `process.env.*`. New vars: Zod schema + `.env.example`.
 - **DB**: only exported query functions from `@fuutu/db` (`packages/db/prisma/queries/`) — never the raw client outside `packages/db`.
 - **Generated files — only via their command, never by hand** (no creating, editing or deleting; reading is fine): migrations → edit `packages/db/prisma/schema/`, then `pnpm --filter @fuutu/db db:migrate --name <change>` (`--create-only` to review) · Prisma client + Zod (`prisma/generated`, `prisma/zod`) → `pnpm db:generate` · `pnpm-lock.yaml` → `pnpm add/remove/install` · shadcn components → `pnpm dlx shadcn@4.21.4 add` · `next-env.d.ts`, `.source/` → `pnpm check-types`. A migration needing custom SQL → stop and ask. Claude Code blocks hand edits (`.claude/hooks/protect-generated.mjs`); CI fails on schema/migration drift.
-- **API**: oRPC procedure with Zod input; `authProcedure({ systemPermission | org: { permission } })` from `packages/api/src/orpc/procedures.ts` for protected data; rate-limit every mutation; register in `packages/api/src/orpc/router.ts`.
+- **API**: oRPC procedure with Zod input; `authProcedure({ systemPermission | org: { permission } })` from `packages/api/src/orpc/procedures.ts` for protected data (`systemAdminProcedure(permission)` for system-admin procedures); rate-limit every mutation; payments, API-key, webhook and org mutations use `denyImpersonation`; register in `packages/api/src/orpc/router.ts`.
 - **MCP tools**: `defineMcpTool` (`@fuutu/mcp`) with `access: "public" | "authenticated" | (principal) => boolean`; register in `packages/api/src/mcp/index.ts`.
 - **Auth guards**: server-side in layouts (`requireAuth()` / `requireOnboarded()` from `apps/saas/src/lib/auth-server.ts`); `proxy.ts` is an optimistic pre-check only.
 - **Redirects**: `getSafeRedirect()` from `@fuutu/utils/redirect`.
@@ -96,7 +96,7 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 
 ## 8 · Kit-owned — do not modify
 
-License-relevant (`LICENSE.md` §6(5), §7): `KIT_NAME` / `KIT_VERSION` / `KIT_FINGERPRINT_*` / `KIT_GENERATOR_META` in `packages/config/index.ts`, the `X-Framework` header emitters (`packages/api/src/app.ts`, `apps/*/next.config.ts`, `apps/*/src/proxy.ts`), `metadata.generator` in `apps/*/src/app/layout.tsx`, and `packages/telemetry` (opt-out via `FUUTU_TELEMETRY_DISABLED=1` is allowed).
+License-relevant (`LICENSE.md` §6(5), §7): `KIT_NAME` / `KIT_VERSION` / `KIT_FINGERPRINT_*` / `KIT_GENERATOR_META` in `packages/config/index.ts`, the `X-Framework` header emitters (`packages/api/src/app.ts`, `apps/*/next.config.ts`, `apps/*/src/proxy.ts`), `metadata.generator` in `apps/*/src/app/layout.tsx`, and `packages/telemetry` (`FUUTU_TELEMETRY_DISABLED=1` only for local development and non-production instances — a Production Application keeps telemetry on, `LICENSE.md` §7).
 
 ## 9 · Testing
 

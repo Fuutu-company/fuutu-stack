@@ -636,6 +636,17 @@
 						"trigger": "Error",
 						"title": "Could not send the invite"
 					}
+				},
+				"secretReveal": {
+					"title": "Secret reveal dialog",
+					"description": "Shows a key or secret exactly once, in full. An outside click keeps it open.",
+					"trigger": "Show secret",
+					"heading": "Your new API key",
+					"body": "Copy this key now. You won't be able to see it again.",
+					"copy": "Copy",
+					"copied": "Copied!",
+					"copyFailed": "Copy failed. Select the key and copy it yourself.",
+					"done": "I've copied it"
 				}
 			},
 			"display": {

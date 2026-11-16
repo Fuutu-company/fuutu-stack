@@ -11,6 +11,7 @@ import {
 } from "@fuutu/ui";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 
 export function ProfileForm() {
 	const { data: session, isPending } = authClient.useSession();
@@ -45,7 +46,9 @@ function ProfileFields({
 		try {
 			const res = await authClient.updateUser({ name });
 			setStatus(
-				res.error ? t("settings.profile.failed") : t("settings.profile.saved"),
+				res.error
+					? planGateMessage(res.error, t, "settings.profile.failed")
+					: t("settings.profile.saved"),
 			);
 		} finally {
 			setIsSaving(false);

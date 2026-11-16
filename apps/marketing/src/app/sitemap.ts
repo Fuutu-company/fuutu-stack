@@ -27,13 +27,17 @@ function localeUrl(base: string, locale: string, path: string): string {
 /**
  * One entry per (path, routable locale): every enabled locale with hreflang
  * alternates, or only the unprefixed default locale while i18n is disabled.
- * `appMarketing.sitemap` may override the kit's per-entry values.
+ * `appMarketing.sitemapExclude` may drop entries, `appMarketing.sitemap`
+ * override the kit's per-entry values.
  */
 function entriesFor(
 	base: string,
 	route: Omit<SitemapRoute, "locale">,
 ): MetadataRoute.Sitemap {
-	const locales = getRoutableLocales();
+	const { sitemapExclude } = appMarketing;
+	const locales = getRoutableLocales().filter(
+		(locale) => !sitemapExclude?.({ ...route, locale }),
+	);
 	const languages: Record<string, string> = {};
 	for (const locale of locales) {
 		languages[locale] = localeUrl(base, locale, route.path);

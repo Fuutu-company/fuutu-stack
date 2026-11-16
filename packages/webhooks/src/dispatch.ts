@@ -8,6 +8,7 @@ import {
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
 import { webhooksConfig } from "./config";
+import { isWebhooksEnabled } from "./enabled";
 import { WEBHOOK_EVENTS, type WebhookEventType } from "./events";
 
 const log = createLogger({ scope: "webhooks:dispatch" });
@@ -79,6 +80,8 @@ export async function dispatchEvent(
 	rawInput: DispatchEventInput,
 ): Promise<{ enqueued: number }> {
 	const input = dispatchEventInput.parse(rawInput);
+	// Module off (`config.features.webhooks`): no endpoint lookup, no deliveries.
+	if (!isWebhooksEnabled()) return { enqueued: 0 };
 
 	const organizationIds = input.organizationId
 		? [input.organizationId]

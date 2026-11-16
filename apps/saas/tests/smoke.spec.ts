@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { featureOff } from "./features";
 import { expect, test } from "./fixtures";
 
 /**
@@ -126,6 +127,7 @@ test.describe("security headers + kit fingerprint", () => {
 
 test.describe("placeholder routes", () => {
 	test("/chat page loads with title", async ({ page }) => {
+		test.skip(...featureOff("aiChat"));
 		await page.goto("/chat");
 		expect(page.url()).not.toMatch(/\/auth\/sign-in/);
 		await expect(page.getByRole("heading", { name: /ai chat/i })).toBeVisible({
@@ -134,6 +136,7 @@ test.describe("placeholder routes", () => {
 	});
 
 	test("/crm page loads with title", async ({ page }) => {
+		test.skip(...featureOff("crm"));
 		await page.goto("/crm");
 		expect(page.url()).not.toMatch(/\/auth\/sign-in/);
 		await expect(page.getByRole("heading", { name: /^crm$/i })).toBeVisible({

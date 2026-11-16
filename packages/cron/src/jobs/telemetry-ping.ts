@@ -13,10 +13,13 @@ export const telemetryPingJob: CronJob = {
 		try {
 			const result = await pingTelemetry();
 			if (!result.sent) {
-				// FUUTU_TELEMETRY_DISABLED is a legitimate opt-out, not a
-				// failure — record a skip so persisted run state does not
-				// show a recurring hourly "error".
-				if (result.reason === "disabled") {
+				// The opt-out (FUUTU_TELEMETRY_DISABLED) and a non-production
+				// runtime are not failures — record a skip so persisted run
+				// state does not show a recurring hourly "error".
+				if (
+					result.reason === "disabled" ||
+					result.reason === "not-production"
+				) {
 					return { success: true, processed: 0, errors, skipped: true };
 				}
 				errors.push(`telemetry not sent: ${result.reason}`);

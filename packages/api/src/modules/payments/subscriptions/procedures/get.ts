@@ -1,7 +1,4 @@
-import {
-	getActiveSubscriptionForOrganization,
-	getActiveSubscriptionForUser,
-} from "@fuutu/db";
+import { getPlanSubscription } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
@@ -30,9 +27,12 @@ export const getSubscription = protectedProcedure
 				context,
 			);
 		}
-		const subscription = input.organizationId
-			? await getActiveSubscriptionForOrganization(input.organizationId)
-			: await getActiveSubscriptionForUser(context.user.id);
+		// The plan subscription — never an add-on (`Plan.addonOf`).
+		const subscription = await getPlanSubscription(
+			input.organizationId
+				? { organizationId: input.organizationId }
+				: { userId: context.user.id },
+		);
 		return {
 			active: subscription !== null,
 			subscription,

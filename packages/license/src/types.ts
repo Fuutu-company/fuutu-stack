@@ -3,7 +3,7 @@
  *
  *   - `"oss"`         — no license key configured. Free use under the
  *                       Eligibility Thresholds in LICENSE.md §3.
- *   - `"mcp"`         — a paid **MCP Plus** key. Grants access to
+ *   - `"mcp"`         — a paid **Fuutu Pro** key. Grants access to
  *                       both Fuutu agent surfaces:
  *                         * MCP for editors at
  *                           `app.fuutustack.com/api/mcp`,

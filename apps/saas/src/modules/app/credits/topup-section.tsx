@@ -6,6 +6,9 @@ import { Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { isImpersonationForbidden } from "@/lib/api-error";
+import { useImpersonating } from "@/lib/use-impersonating";
+import { ImpersonationNotice } from "@/modules/app/components/impersonation-notice";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "topup-section" });
@@ -20,6 +23,9 @@ type TopupResult = Awaited<
 
 export function TopUpSection({ organizationId }: TopUpSectionProps) {
 	const t = useTranslations("credits.topup");
+	const tp = useTranslations("payments");
+	// Top-up checkout refuses impersonation sessions (denyImpersonation).
+	const impersonating = useImpersonating();
 	const locale = useLocale();
 	const [redirecting, setRedirecting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -51,7 +57,11 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 			window.location.href = result.url;
 		} catch (err) {
 			log.warn("topup checkout failed", { err });
-			setError(t("unavailable"));
+			setError(
+				isImpersonationForbidden(err)
+					? tp("errors.impersonationForbidden")
+					: t("unavailable"),
+			);
 			setRedirecting(false);
 		}
 	};
@@ -72,6 +82,8 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 				</h2>
 				<p className="text-muted-foreground text-sm">{t("description")}</p>
 			</div>
+
+			{impersonating && <ImpersonationNotice />}
 
 			{error && (
 				<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
@@ -119,7 +131,7 @@ export function TopUpSection({ organizationId }: TopUpSectionProps) {
 							</div>
 							<Button
 								className="w-full"
-								disabled={redirecting}
+								disabled={redirecting || impersonating}
 								onClick={() => handleBuy(topup.id)}
 							>
 								{t("buy")}

@@ -2,46 +2,499 @@
 	"admin": {
 		"users": {
 			"title": "Benutzer",
-			"searchPlaceholder": "Nach E-Mail suchen…",
+			"searchPlaceholder": "Nach E-Mail, Name oder ID suchen…",
+			"searchLabel": "Benutzer suchen",
+			"loading": "Benutzer werden geladen…",
+			"loadError": "Die Benutzer konnten nicht geladen werden.",
 			"empty": "Keine Benutzer gefunden.",
+			"user": "Benutzer",
 			"role": "Rolle",
+			"status": "Status",
+			"emailStatus": "E-Mail",
+			"createdAt": "Erstellt",
+			"noName": "Kein Name",
 			"roleValue": {
 				"admin": "Admin",
 				"user": "Benutzer",
 				"member": "Mitglied",
 				"owner": "Inhaber"
 			},
-			"email": "E-Mail",
-			"createdAt": "Erstellt",
-			"actions": "Aktionen",
-			"status": "Status",
 			"banned": "Gesperrt",
 			"active": "Aktiv",
-			"ban": "Sperren",
-			"unban": "Entsperren",
-			"makeAdmin": "Zum Admin machen",
-			"makeUser": "Zum Benutzer machen",
-			"makeAdminAria": "Zum Admin machen",
-			"makeUserAria": "Zum Benutzer machen",
-			"banAria": "Benutzer sperren",
-			"unbanAria": "Benutzer entsperren",
-			"defaultBanReason": "Verstoß gegen die Nutzungsbedingungen",
-			"failed": "Aktion fehlgeschlagen.",
-			"banError": "Sperrstatus konnte nicht aktualisiert werden. Bitte erneut versuchen.",
-			"roleError": "Rolle konnte nicht aktualisiert werden. Bitte erneut versuchen."
+			"verified": "Bestätigt",
+			"unverified": "Unbestätigt",
+			"twoFactorOn": "2FA an",
+			"twoFactorOff": "2FA aus",
+			"filter": {
+				"role": "Nach Rolle filtern",
+				"anyRole": "Alle Rollen",
+				"status": "Nach Status filtern",
+				"anyStatus": "Alle Status",
+				"email": "Nach E-Mail-Status filtern",
+				"anyEmail": "Alle E-Mail-Status"
+			}
+		},
+		"errors": {
+			"forbidden": "Das ist bei diesem Benutzer nicht erlaubt.",
+			"conflict": "Das passt nicht zum aktuellen Stand, zum Beispiel eine bereits verwendete E-Mail oder der einzige Inhaber einer Organisation.",
+			"notFound": "Nicht gefunden. Möglicherweise wurde es gelöscht.",
+			"rateLimited": "Zu viele Aktionen. Bitte kurz warten und erneut versuchen.",
+			"invalid": "Die Anfrage war ungültig. Bitte Eingaben prüfen.",
+			"generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+			"paymentProvider": "Die Abonnements konnten beim Zahlungsanbieter nicht gekündigt werden, daher wurde nichts gelöscht. Bitte später erneut versuchen."
+		},
+		"pagination": {
+			"summary": "Seite {page} von {totalPages} · {total, plural, one {# Ergebnis} other {# Ergebnisse}}",
+			"prev": "Zurück",
+			"next": "Weiter"
+		},
+		"impersonation": {
+			"message": "Du handelst als {name} ({email}) — endet in {minutes, plural, =0 {weniger als einer Minute} one {# Minute} other {# Minuten}}",
+			"stop": "Beenden",
+			"stopError": "Das Beenden ist fehlgeschlagen. Bitte erneut versuchen."
+		},
+		"userDetail": {
+			"title": "Benutzerdetails",
+			"notFound": "Diesen Benutzer gibt es nicht.",
+			"loadError": "Der Benutzer konnte nicht geladen werden.",
+			"retry": "Erneut versuchen",
+			"back": "Zurück zu den Benutzern",
+			"noName": "Kein Name",
+			"banReason": "Grund: {reason}",
+			"banNoReason": "Kein Grund angegeben.",
+			"banUntil": "Gesperrt bis {date}",
+			"banPermanent": "Dauerhaft gesperrt.",
+			"tabs": {
+				"overview": "Übersicht",
+				"sessions": "Sitzungen ({count})",
+				"organizations": "Organisationen ({count})",
+				"billing": "Abrechnung",
+				"apiKeys": "API-Schlüssel ({count})",
+				"activity": "Aktivität"
+			},
+			"overview": {
+				"created": "Erstellt",
+				"lastActive": "Zuletzt aktiv",
+				"never": "Nie",
+				"userId": "Benutzer-ID",
+				"username": "Benutzername",
+				"locale": "Sprache",
+				"none": "—",
+				"onboarding": "Onboarding",
+				"onboardingDone": "Abgeschlossen",
+				"onboardingPending": "Nicht abgeschlossen",
+				"authMethods": "Anmeldemethoden",
+				"providers": "Anbieter",
+				"providerCredential": "E-Mail und Passwort",
+				"password": "Passwort",
+				"passwordSet": "Gesetzt",
+				"passwordNone": "Nicht gesetzt",
+				"passkeys": "Passkeys",
+				"twoFactor": "Zwei-Faktor-Authentifizierung",
+				"emailVerified": "E-Mail",
+				"role": "Systemrolle"
+			},
+			"sessions": {
+				"description": "Aktive Sitzungen dieses Benutzers. Tokens werden nie angezeigt.",
+				"revokeAll": "Alle Sitzungen beenden",
+				"empty": "Keine aktiven Sitzungen.",
+				"ip": "IP-Adresse",
+				"userAgent": "Gerät",
+				"created": "Erstellt",
+				"expires": "Läuft ab",
+				"actions": "Aktionen",
+				"unknown": "Unbekannt",
+				"impersonated": "Übernommen",
+				"revoke": "Beenden"
+			},
+			"organizations": {
+				"empty": "Kein Mitglied einer Organisation.",
+				"name": "Organisation",
+				"role": "Rolle",
+				"joined": "Beigetreten"
+			},
+			"billing": {
+				"purchases": "Persönliche Abonnements und Käufe",
+				"organizations": "Organisationen",
+				"organizationsHint": "Tarife werden meist über die Organisation abgerechnet: jede Organisation, in der dieser Nutzer Mitglied ist, mit aktuellem Tarif und Käufen.",
+				"noOrganizations": "In keiner Organisation Mitglied.",
+				"plan": "Tarif",
+				"noPurchases": "Keine Käufe.",
+				"type": "Typ",
+				"status": "Status",
+				"provider": "Anbieter",
+				"product": "Produkt",
+				"quantity": "Menge",
+				"periodEnd": "Laufzeit endet",
+				"none": "—",
+				"typeValue": {
+					"SUBSCRIPTION": "Abonnement",
+					"ONE_TIME": "Einmalkauf"
+				},
+				"statusValue": {
+					"ACTIVE": "Aktiv",
+					"TRIALING": "Testphase",
+					"PAST_DUE": "Überfällig",
+					"SCHEDULED_CANCEL": "Endet zum Laufzeitende",
+					"PAUSED": "Pausiert",
+					"CANCELED": "Gekündigt",
+					"EXPIRED": "Abgelaufen",
+					"INCOMPLETE": "Unvollständig"
+				},
+				"credits": "Guthaben",
+				"noCredits": "Keine Guthaben.",
+				"meter": "Zähler",
+				"remaining": "Verbleibend",
+				"remainingValue": "{remaining} von {granted}",
+				"resets": "Wird zurückgesetzt"
+			},
+			"apiKeys": {
+				"empty": "Keine API-Schlüssel.",
+				"name": "Name",
+				"key": "Schlüssel",
+				"scopes": "Berechtigungen",
+				"lastUsed": "Zuletzt verwendet",
+				"status": "Status",
+				"allScopes": "Alle Berechtigungen",
+				"never": "Nie",
+				"revoked": "Widerrufen",
+				"expired": "Abgelaufen",
+				"active": "Aktiv"
+			},
+			"activity": {
+				"loadError": "Die Aktivität konnte nicht geladen werden.",
+				"empty": "Noch keine Aktivität.",
+				"by": "Von {actor}",
+				"reason": "Grund: {reason}"
+			},
+			"actions": {
+				"menu": "Aktionen",
+				"edit": "Name oder E-Mail ändern",
+				"verifyEmail": "E-Mail als bestätigt markieren",
+				"passwordReset": "E-Mail zum Zurücksetzen des Passworts senden",
+				"role": "Systemrolle ändern",
+				"resetTwoFactor": "Zwei-Faktor-Authentifizierung zurücksetzen",
+				"unban": "Entsperren",
+				"ban": "Sperren",
+				"impersonate": "Als Benutzer handeln",
+				"delete": "Benutzer löschen",
+				"reason": {
+					"self": "Für dein eigenes Konto nicht verfügbar.",
+					"peerAdmin": "Für Admins nicht verfügbar. Zuerst die Rolle ändern.",
+					"alreadyVerified": "Die E-Mail ist bereits bestätigt.",
+					"noTwoFactor": "Zwei-Faktor-Authentifizierung ist nicht aktiviert.",
+					"banned": "Gesperrte Benutzer können nicht übernommen werden."
+				}
+			},
+			"toast": {
+				"verified": "E-Mail als bestätigt markiert.",
+				"passwordReset": "E-Mail zum Zurücksetzen des Passworts gesendet.",
+				"updated": "Benutzer aktualisiert.",
+				"banned": "Benutzer gesperrt.",
+				"unbanned": "Benutzer entsperrt.",
+				"roleChanged": "Rolle geändert.",
+				"twoFactorReset": "Zwei-Faktor-Authentifizierung zurückgesetzt. Der Benutzer wurde abgemeldet.",
+				"impersonating": "Übernahme gestartet. Weiterleitung…",
+				"deleted": "Benutzer gelöscht.",
+				"sessionsRevoked": "Alle Sitzungen beendet.",
+				"sessionRevoked": "Sitzung beendet."
+			},
+			"dialog": {
+				"reason": "Grund",
+				"reasonOptional": "Grund (optional)",
+				"reasonPlaceholder": "Warum führst du das aus?",
+				"reasonHint": "Wird im Audit-Log festgehalten. Mindestens 3 Zeichen.",
+				"edit": {
+					"title": "Benutzer bearbeiten",
+					"description": "Name oder E-Mail dieses Benutzers ändern.",
+					"name": "Name",
+					"email": "E-Mail",
+					"emailLockedSelf": "Ändere deine eigene E-Mail in den Kontoeinstellungen.",
+					"emailLockedAdmin": "Die E-Mail eines Admins kann nicht geändert werden. Zuerst die Rolle ändern.",
+					"emailWarning": "Eine geänderte E-Mail gilt als unbestätigt und meldet den Benutzer überall ab.",
+					"confirm": "Änderungen speichern"
+				},
+				"ban": {
+					"title": "Benutzer sperren",
+					"description": "Der Benutzer wird überall abgemeldet und kann sich bis zum Ende der Sperre nicht anmelden.",
+					"confirm": "Benutzer sperren",
+					"until": "Sperre endet am (optional)",
+					"untilHint": "Leer lassen für eine dauerhafte Sperre."
+				},
+				"unban": {
+					"title": "Benutzer entsperren",
+					"description": "Der Benutzer kann sich wieder anmelden.",
+					"confirm": "Benutzer entsperren"
+				},
+				"role": {
+					"title": "Systemrolle ändern",
+					"description": "System-Admins können alle Benutzer und Organisationen verwalten.",
+					"role": "Rolle",
+					"demoteHint": "Wird ein Admin herabgestuft, wird er überall abgemeldet.",
+					"confirm": "Rolle ändern"
+				},
+				"resetTwoFactor": {
+					"title": "Zwei-Faktor-Authentifizierung zurücksetzen",
+					"description": "Schaltet die Zwei-Faktor-Authentifizierung aus, löscht Authenticator-Geheimnis und Backup-Codes und meldet den Benutzer ab. Für ausgesperrte Benutzer.",
+					"confirm": "Zwei-Faktor zurücksetzen"
+				},
+				"impersonate": {
+					"title": "Als Benutzer handeln",
+					"description": "Du wirst für begrenzte Zeit als {email} angemeldet. Alles, was du tust, wird protokolliert.",
+					"limits": "Zahlungen, Zugangsdaten, Zwei-Faktor, API-Schlüssel sowie Verlassen oder Löschen von Organisationen bleiben währenddessen gesperrt.",
+					"confirm": "Übernehmen"
+				},
+				"delete": {
+					"title": "Benutzer löschen",
+					"description": "Löscht {email} und alle Daten dauerhaft. Das kann nicht rückgängig gemacht werden.",
+					"confirmLabel": "Zur Bestätigung {email} eingeben",
+					"confirm": "Benutzer löschen"
+				},
+				"revokeAll": {
+					"title": "Alle Sitzungen beenden",
+					"description": "Der Benutzer wird überall abgemeldet, auch in verbundenen MCP-Apps.",
+					"confirm": "Alle Sitzungen beenden"
+				}
+			}
+		},
+		"organizations": {
+			"title": "Organisationen",
+			"searchPlaceholder": "Nach Name, Slug oder ID suchen…",
+			"searchLabel": "Organisationen suchen",
+			"loading": "Organisationen werden geladen…",
+			"loadError": "Die Organisationen konnten nicht geladen werden.",
+			"empty": "Keine Organisationen gefunden.",
+			"organization": "Organisation",
+			"members": "Mitglieder",
+			"invitations": "Einladungen",
+			"plan": "Tarif",
+			"createdAt": "Erstellt",
+			"noPlan": "Kein Abonnement",
+			"otherPlan": "Anderer Tarif"
+		},
+		"organizationDetail": {
+			"title": "Organisationsdetails",
+			"notFound": "Diese Organisation existiert nicht.",
+			"loadError": "Die Organisation konnte nicht geladen werden.",
+			"retry": "Erneut versuchen",
+			"back": "Zurück zu den Organisationen",
+			"slug": "Slug: {slug}",
+			"memberCount": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+			"created": "Erstellt am {date}",
+			"tabs": {
+				"members": "Mitglieder ({count})",
+				"invitations": "Einladungen ({count})",
+				"billing": "Abrechnung",
+				"apiKeys": "API-Schlüssel ({count})",
+				"activity": "Aktivität"
+			},
+			"members": {
+				"description": "Mitglieder und ihre Rollen in der Organisation. Öffne einen Benutzer, um das Konto selbst zu verwalten.",
+				"empty": "Keine Mitglieder.",
+				"truncated": "Die ersten {shown} von {total} Mitgliedern werden angezeigt.",
+				"user": "Benutzer",
+				"role": "Rolle",
+				"joined": "Beigetreten",
+				"actions": "Aktionen",
+				"menu": "Aktionen für {name}",
+				"changeRole": "Rolle ändern",
+				"makeOwner": "Zum Inhaber machen",
+				"remove": "Aus der Organisation entfernen",
+				"alreadyOwner": "Ist bereits der einzige Inhaber."
+			},
+			"invitations": {
+				"description": "Offene Einladungen. Abgelaufene können erneut gesendet werden.",
+				"empty": "Keine offenen Einladungen.",
+				"email": "E-Mail",
+				"role": "Rolle",
+				"status": "Status",
+				"expires": "Läuft ab",
+				"inviter": "Eingeladen von",
+				"actions": "Aktionen",
+				"pending": "Offen",
+				"expired": "Abgelaufen",
+				"unknownInviter": "—",
+				"resend": "Erneut senden",
+				"cancel": "Zurückziehen"
+			},
+			"billing": {
+				"summary": "{members, plural, one {# Mitglied} other {# Mitglieder}} · {seats, plural, one {# Platz} other {# Plätze}}",
+				"summaryNoSeats": "{members, plural, one {# Mitglied} other {# Mitglieder}} · kein aktives Abonnement",
+				"purchases": "Abonnements und Käufe",
+				"noPurchases": "Keine Käufe.",
+				"type": "Typ",
+				"status": "Status",
+				"provider": "Anbieter",
+				"plan": "Tarif",
+				"seats": "Plätze",
+				"periodEnd": "Aktueller Zeitraum endet",
+				"none": "—",
+				"otherPlan": "Anderer",
+				"credits": "Guthaben",
+				"noCredits": "Keine Guthaben.",
+				"meter": "Zähler",
+				"remaining": "Verbleibend",
+				"remainingValue": "{remaining} von {granted}",
+				"resets": "Wird zurückgesetzt"
+			},
+			"apiKeys": {
+				"empty": "Keine API-Schlüssel.",
+				"name": "Name",
+				"key": "Schlüssel",
+				"scopes": "Berechtigungen",
+				"lastUsed": "Zuletzt verwendet",
+				"status": "Status",
+				"allScopes": "Alle Berechtigungen",
+				"never": "Nie",
+				"revoked": "Widerrufen",
+				"expired": "Abgelaufen",
+				"active": "Aktiv"
+			},
+			"activity": {
+				"loadError": "Die Aktivität konnte nicht geladen werden.",
+				"empty": "Noch keine Aktivität.",
+				"by": "Von {actor}",
+				"reason": "Grund: {reason}"
+			},
+			"actions": {
+				"menu": "Aktionen",
+				"rename": "Organisation umbenennen",
+				"delete": "Organisation löschen"
+			},
+			"toast": {
+				"renamed": "Organisation umbenannt.",
+				"deleted": "Organisation gelöscht.",
+				"roleChanged": "Rolle geändert.",
+				"memberRemoved": "Mitglied entfernt.",
+				"ownershipTransferred": "Inhaberschaft übertragen.",
+				"invitationResent": "Einladung erneut gesendet.",
+				"invitationResentNoEmail": "Die Einladung wurde verlängert, die E-Mail konnte aber nicht gesendet werden.",
+				"invitationCanceled": "Einladung zurückgezogen."
+			},
+			"dialog": {
+				"rename": {
+					"title": "Organisation umbenennen",
+					"description": "Ändert den Anzeigenamen. Slug und URLs bleiben gleich.",
+					"name": "Name",
+					"confirm": "Namen speichern"
+				},
+				"delete": {
+					"title": "Organisation löschen",
+					"description": "Löscht {name} endgültig mit Mitgliedern, Einladungen, API-Schlüsseln und Abrechnungsdaten. Aktive Abonnements werden zuvor gekündigt. Das lässt sich nicht rückgängig machen.",
+					"confirmLabel": "Zur Bestätigung {slug} eingeben",
+					"confirm": "Organisation löschen"
+				},
+				"role": {
+					"title": "Rolle ändern",
+					"description": "Legt die Rolle von {name} in der Organisation fest. Eine Organisation behält immer mindestens einen Inhaber.",
+					"role": "Rolle",
+					"confirm": "Rolle ändern"
+				},
+				"removeMember": {
+					"title": "Mitglied entfernen",
+					"description": "{name} verliert den Zugriff auf die Organisation. Die API-Schlüssel der Organisation werden widerrufen und die Plätze angepasst.",
+					"confirm": "Mitglied entfernen"
+				},
+				"transferOwnership": {
+					"title": "Zum Inhaber machen",
+					"description": "{name} wird Inhaber. Alle bisherigen Inhaber werden Admins.",
+					"confirm": "Zum Inhaber machen"
+				},
+				"cancelInvitation": {
+					"title": "Einladung zurückziehen",
+					"description": "Der Einladungslink für {email} funktioniert nicht mehr.",
+					"confirm": "Einladung zurückziehen"
+				}
+			}
+		},
+		"system": {
+			"title": "System",
+			"loadError": "Der Systemstatus konnte nicht geladen werden.",
+			"retry": "Erneut versuchen",
+			"refresh": "Aktualisieren",
+			"database": {
+				"title": "Datenbank",
+				"ok": "Erreichbar",
+				"down": "Nicht erreichbar",
+				"latency": "Latenz",
+				"latencyValue": "{ms} ms",
+				"status": "Status"
+			},
+			"providers": {
+				"title": "Anbieter",
+				"description": "Der aktive Anbieter pro Bereich. Zugangsdaten werden nie angezeigt.",
+				"configured": "Konfiguriert",
+				"notConfigured": "Nicht konfiguriert",
+				"domain": {
+					"mail": "E-Mail",
+					"payments": "Zahlungen",
+					"storage": "Speicher",
+					"analytics": "Analytics",
+					"logs": "Logs",
+					"ai": "KI"
+				}
+			},
+			"cron": {
+				"title": "Geplante Jobs",
+				"description": "Letzter Lauf pro Job laut Scheduler.",
+				"empty": "Keine Jobs registriert.",
+				"job": "Job",
+				"schedule": "Zeitplan",
+				"lastRun": "Letzter Lauf",
+				"status": "Status",
+				"neverRun": "Noch nie gelaufen",
+				"disabled": "Deaktiviert",
+				"statusValue": {
+					"success": "Erfolgreich",
+					"error": "Fehlgeschlagen",
+					"skipped": "Übersprungen",
+					"running": "Läuft"
+				}
+			},
+			"features": {
+				"title": "Feature-Flags",
+				"description": "Aus der App-Konfiguration gelesen. Änderungen erfolgen im Code, nicht hier.",
+				"on": "An",
+				"off": "Aus"
+			},
+			"versions": {
+				"title": "Versionen",
+				"app": "App-Version",
+				"kit": "Kit-Version"
+			}
 		},
 		"auditLogs": {
+			"sinkNotice": {
+				"title": "Audit-Ereignisse werden nicht gespeichert",
+				"description": "Der Audit-Sink ist „console“ (Standard): Audit-Ereignisse, auch Support-Aktionen von Admins, landen nur im Server-Log. Setze LOG_AUDIT_SINK=db, um sie in der Datenbank zu speichern und hier aufzulisten."
+			},
 			"title": "Audit-Logs",
 			"col": {
 				"time": "Zeit",
 				"action": "Aktion",
 				"user": "Benutzer",
-				"ip": "IP"
+				"ip": "IP",
+				"target": "Ziel"
 			},
+			"empty": "Keine Audit-Logs.",
+			"filters": {
+				"actionPrefix": "Aktion beginnt mit",
+				"actionPrefixPlaceholder": "z. B. admin.user.",
+				"actor": "Benutzer-ID des Akteurs",
+				"targetUser": "Benutzer-ID des Ziels",
+				"targetOrganization": "Organisations-ID des Ziels",
+				"from": "Von",
+				"to": "Bis",
+				"clear": "Filter zurücksetzen"
+			},
+			"loadError": "Die Audit-Logs konnten nicht geladen werden.",
+			"user": "Benutzer",
+			"organization": "Organisation",
+			"reason": "Grund: {reason}",
 			"prev": "Zurück",
 			"next": "Weiter",
-			"page": "Seite {page} · {total}",
-			"empty": "Keine Audit-Logs."
-		}
+			"page": "Seite {page} · {total}"
+		},
+		"sections": {}
 	}
 }

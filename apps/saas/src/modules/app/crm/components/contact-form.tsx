@@ -120,7 +120,7 @@ export function ContactForm({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-lg" closeLabel={tCommon("close")}>
+			<DialogContent closeLabel={tCommon("close")}>
 				<DialogHeader>
 					<DialogTitle>
 						{initialValues ? t("editContact") : t("newContact")}

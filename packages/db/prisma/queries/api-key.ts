@@ -96,6 +96,10 @@ export const createApiKeyWithinLimit = (params: {
 	);
 };
 
+/** Only keys whose `scopes` list this scope (unset → no filter). */
+const scopeFilter = (scope?: string) =>
+	scope ? { scopes: { has: scope } } : {};
+
 export const listApiKeys = (
 	userId: string,
 	opts: {
@@ -103,14 +107,17 @@ export const listApiKeys = (
 		skip?: number;
 		/** Exclude org keys the user created. */
 		personalOnly?: boolean;
+		/** Only keys carrying this scope. */
+		scope?: string;
 	} = {},
 ) => {
-	const { take = 50, skip = 0, personalOnly = false } = opts;
+	const { take = 50, skip = 0, personalOnly = false, scope } = opts;
 	return db.apiKey.findMany({
 		where: {
 			userId,
 			revokedAt: null,
 			...(personalOnly ? { organizationId: null } : {}),
+			...scopeFilter(scope),
 		},
 		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
@@ -121,23 +128,24 @@ export const listApiKeys = (
 
 export const countApiKeys = (
 	userId: string,
-	opts: { personalOnly?: boolean } = {},
+	opts: { personalOnly?: boolean; scope?: string } = {},
 ) =>
 	db.apiKey.count({
 		where: {
 			userId,
 			revokedAt: null,
 			...(opts.personalOnly ? { organizationId: null } : {}),
+			...scopeFilter(opts.scope),
 		},
 	});
 
 export const listOrgApiKeys = (
 	organizationId: string,
-	opts: { take?: number; skip?: number } = {},
+	opts: { take?: number; skip?: number; scope?: string } = {},
 ) => {
-	const { take = 50, skip = 0 } = opts;
+	const { take = 50, skip = 0, scope } = opts;
 	return db.apiKey.findMany({
-		where: { organizationId, revokedAt: null },
+		where: { organizationId, revokedAt: null, ...scopeFilter(scope) },
 		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 		take,
 		skip,
@@ -145,8 +153,13 @@ export const listOrgApiKeys = (
 	});
 };
 
-export const countOrgApiKeys = (organizationId: string) =>
-	db.apiKey.count({ where: { organizationId, revokedAt: null } });
+export const countOrgApiKeys = (
+	organizationId: string,
+	opts: { scope?: string } = {},
+) =>
+	db.apiKey.count({
+		where: { organizationId, revokedAt: null, ...scopeFilter(opts.scope) },
+	});
 
 /**
  * Verify a plaintext API key. Hashes the key internally with sha256 (matching

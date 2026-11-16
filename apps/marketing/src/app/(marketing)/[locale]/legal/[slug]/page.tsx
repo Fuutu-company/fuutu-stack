@@ -11,6 +11,10 @@ interface LegalPageProps {
 	params: Promise<{ locale: string; slug: string }>;
 }
 
+// Unlisted slugs are a plain 404 — even when the list is empty, where an
+// on-demand not-found render would turn the static route dynamic (500).
+export const dynamicParams = false;
+
 export function generateStaticParams() {
 	return [...new Set(legal.map((d) => d.slug))].map((slug) => ({ slug }));
 }

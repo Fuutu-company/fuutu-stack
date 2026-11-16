@@ -1,0 +1,169 @@
+/**
+ * Billing policy — which subscriptions stack, which replace each other,
+ * and which plan checkouts are allowed. Kit defaults come from
+ * `Plan.addonOf`; apps refine them through `registerSupersedePolicy` /
+ * `registerCheckoutGuard` (`./extensions`).
+ */
+import {
+	getActiveSubscriptionForOrganization,
+	getActiveSubscriptionForUser,
+	getActiveSubscriptionsForOwner,
+	getPurchasesByOrganizationId,
+	getPurchasesByUserId,
+	type PurchaseOwner,
+} from "@fuutu/db";
+import { PLANS, type Plan, type PlanId } from "./config";
+import { getPlanIdForProductId } from "./config.server";
+import {
+	type ActivatedSubscription,
+	type CheckoutGuardContext,
+	type ExistingSubscription,
+	getCheckoutGuards,
+	getSupersedePolicy,
+	getTrialEligibilityPolicy,
+	type OwnerPurchase,
+	type TrialEligibilityContext,
+} from "./extensions";
+import { CheckoutRejectedError } from "./types";
+
+// Widened view: the `as const` catalog only carries the keys each plan declares.
+const plans: Partial<Record<PlanId, Plan>> = PLANS;
+
+/** Rejection reason when an add-on checkout has no active base plan. */
+export const ADDON_REQUIRES_BASE = "addon_requires_base";
+
+export function isAddonPlan(planId: PlanId | null | undefined): boolean {
+	return planId ? plans[planId]?.addonOf !== undefined : false;
+}
+
+/** Plan of a stored purchase, `null` when its product maps to none. */
+export function planIdOfPurchase(purchase: {
+	productId: string | null;
+	priceId: string;
+}): PlanId | null {
+	return getPlanIdForProductId(purchase.productId ?? purchase.priceId) ?? null;
+}
+
+/** Kit default: plans replace each other, add-ons stack with everything. */
+function defaultSupersedes(
+	activated: ActivatedSubscription,
+	existing: ExistingSubscription,
+): boolean {
+	return !isAddonPlan(activated.planId) && !isAddonPlan(existing.planId);
+}
+
+/** Does `activated` cancel `existing`? Registered policy first, else the default. */
+export async function shouldSupersede(
+	activated: ActivatedSubscription,
+	existing: ExistingSubscription,
+): Promise<boolean> {
+	const policy = getSupersedePolicy();
+	const defaults = () => defaultSupersedes(activated, existing);
+	return policy ? await policy(activated, existing, defaults) : defaults();
+}
+
+/**
+ * The owner's access-gating plan subscription: the newest ACTIVE/TRIALING
+ * (or SCHEDULED_CANCEL in period) subscription that is not an add-on.
+ * Without add-ons in the catalog this is a single query.
+ */
+export async function getPlanSubscription(owner: PurchaseOwner) {
+	const newest =
+		"organizationId" in owner
+			? await getActiveSubscriptionForOrganization(owner.organizationId)
+			: await getActiveSubscriptionForUser(owner.userId);
+	if (!newest || !isAddonPlan(planIdOfPurchase(newest))) return newest;
+	const all = await getActiveSubscriptionsForOwner(owner);
+	return all.find((sub) => !isAddonPlan(planIdOfPurchase(sub))) ?? null;
+}
+
+function grantsAccess(
+	purchase: { status: string; currentPeriodEnd: Date | null },
+	now: Date,
+): boolean {
+	if (purchase.status === "ACTIVE" || purchase.status === "TRIALING") {
+		return true;
+	}
+	return (
+		purchase.status === "SCHEDULED_CANCEL" &&
+		purchase.currentPeriodEnd !== null &&
+		purchase.currentPeriodEnd > now
+	);
+}
+
+export type CheckoutRequest = Omit<
+	CheckoutGuardContext,
+	"existingPurchases" | "trial" | "skipTrial"
+> & {
+	/** Buy now without the plan's trial. Default false. */
+	skipTrial?: boolean;
+};
+
+/** What an allowed checkout gets. */
+export type CheckoutDecision = {
+	/** Start the plan's trial (`Plan.trialDays`) with this checkout. */
+	trial: boolean;
+};
+
+/** Kit trial rule: `Plan.trialOnce` = no earlier purchase of the plan. */
+function defaultTrialEligible(ctx: TrialEligibilityContext): boolean {
+	const plan = plans[ctx.planId];
+	return (
+		!plan?.trialOnce ||
+		!ctx.existingPurchases.some((p) => p.planId === ctx.planId)
+	);
+}
+
+async function decideTrial(ctx: TrialEligibilityContext): Promise<boolean> {
+	const plan = plans[ctx.planId];
+	const trialDays = plan?.billingType === "subscription" ? plan.trialDays : 0;
+	if (!trialDays || trialDays <= 0 || ctx.skipTrial) {
+		return false;
+	}
+	const policy = getTrialEligibilityPolicy();
+	const defaults = () => defaultTrialEligible(ctx);
+	return policy ? await policy(ctx, defaults) : defaults();
+}
+
+/**
+ * Run the kit's checkout rules, decide the trial, then run every
+ * registered guard (they see the decision as `ctx.trial`). Throws
+ * `CheckoutRejectedError` when the checkout must not start:
+ * - `addon_requires_base`: the plan is an add-on (`Plan.addonOf`) and the
+ *   owner holds no access-granting purchase of its base plan.
+ */
+export async function assertCheckoutAllowed(
+	request: CheckoutRequest,
+): Promise<CheckoutDecision> {
+	const { owner } = request;
+	const stored =
+		"organizationId" in owner
+			? await getPurchasesByOrganizationId(owner.organizationId)
+			: await getPurchasesByUserId(owner.userId);
+	const now = new Date();
+	const existingPurchases: OwnerPurchase[] = stored.map((purchase) => ({
+		...purchase,
+		planId: planIdOfPurchase(purchase),
+		grantsAccess: grantsAccess(purchase, now),
+	}));
+
+	const baseOf = plans[request.planId]?.addonOf;
+	if (
+		baseOf &&
+		!existingPurchases.some((p) => p.grantsAccess && p.planId === baseOf)
+	) {
+		throw new CheckoutRejectedError(ADDON_REQUIRES_BASE);
+	}
+
+	const trialCtx: TrialEligibilityContext = {
+		...request,
+		skipTrial: request.skipTrial ?? false,
+		existingPurchases,
+	};
+	const trial = await decideTrial(trialCtx);
+	const ctx: CheckoutGuardContext = { ...trialCtx, trial };
+	for (const guard of getCheckoutGuards()) {
+		await guard(ctx);
+	}
+	return { trial };
+}

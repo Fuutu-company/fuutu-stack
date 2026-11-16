@@ -49,6 +49,34 @@ describe("renderSlot", () => {
 	});
 });
 
+describe("renderSlot with a fallback (replacing slots)", () => {
+	const kitWidgets = () => createElement("p", null, "kit-widgets");
+
+	it("renders the slot instead of the fallback when set", () => {
+		expect(
+			renderToStaticMarkup(
+				createElement(
+					"main",
+					null,
+					renderSlot(Usage, { orgSlug: "acme" }, kitWidgets()),
+				),
+			),
+		).toBe("<main><p>usage:acme</p></main>");
+	});
+
+	it("renders the fallback when the slot is unset", () => {
+		expect(
+			renderToStaticMarkup(
+				createElement(
+					"main",
+					null,
+					renderSlot(undefined, { orgSlug: "acme" }, kitWidgets()),
+				),
+			),
+		).toBe("<main><p>kit-widgets</p></main>");
+	});
+});
+
 describe("host pages", () => {
 	const PAGES: Record<string, string[]> = {
 		"src/app/(app)/settings/page.tsx": ["userSettings"],
@@ -59,6 +87,32 @@ describe("host pages", () => {
 		"src/app/(app)/dashboard/page.tsx": ["dashboard"],
 		"src/app/(app)/organizations/[slug]/dashboard/page.tsx": ["dashboard"],
 	};
+
+	// Replacing slots: the kit content is the fallback, rendered only when
+	// the app leaves the slot unset.
+	const REPLACING: Record<string, { slot: string; fallback: string }> = {
+		"src/app/(app)/dashboard/page.tsx": {
+			slot: "dashboardMain",
+			fallback: "<DashboardOverview",
+		},
+		"src/app/(app)/organizations/[slug]/dashboard/page.tsx": {
+			slot: "dashboardMain",
+			fallback: "<DashboardOverview",
+		},
+	};
+
+	for (const [page, { slot, fallback }] of Object.entries(REPLACING)) {
+		it(`${page} renders ${slot} in place of the kit widgets`, () => {
+			const source = readFileSync(join(SAAS, page), "utf8");
+			// The kit widgets are the fallback argument of the slot's renderSlot.
+			expect(source).toMatch(
+				new RegExp(
+					`renderSlot\\(\\s*appSlots\\.${slot},[^)]*\\},\\s*${fallback}`,
+				),
+			);
+			expect(source.match(/<DashboardOverview/g)).toHaveLength(1);
+		});
+	}
 
 	for (const [page, slots] of Object.entries(PAGES)) {
 		it(`${page} renders ${slots.join(", ")} through renderSlot`, () => {

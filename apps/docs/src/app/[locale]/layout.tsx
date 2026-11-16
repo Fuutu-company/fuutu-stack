@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
 import { locales } from "@/i18n/config";
+import { getLegalLinks } from "@/lib/legal-links";
 
 export function generateStaticParams() {
 	return locales.map((locale) => ({ locale }));
@@ -29,7 +30,7 @@ export default async function LocaleLayout({
 			    consent cookie. Same contract as saas + marketing. */}
 			<ConsentProvider>
 				{children}
-				<ConsentBanner />
+				<ConsentBanner privacyHref={getLegalLinks(locale)?.privacy} />
 				<AnalyticsScript />
 			</ConsentProvider>
 		</NextIntlClientProvider>

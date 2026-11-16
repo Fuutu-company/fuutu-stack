@@ -1,6 +1,10 @@
 import { env } from "@fuutu/env/saas";
 import { describe, expect, it, vi } from "vitest";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	isProviderRequestError,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const checkoutCreate = vi
 	.fn()
@@ -49,22 +53,29 @@ const MockStripeSignatureVerificationError = vi.hoisted(
 		},
 );
 
-vi.mock("stripe", () => ({
-	default: class MockStripe {
-		static errors = {
-			StripeSignatureVerificationError: MockStripeSignatureVerificationError,
-		};
-		checkout = { sessions: { create: checkoutCreate, listLineItems } };
-		billingPortal = { sessions: { create: portalCreate } };
-		customers = { create: customersCreate };
-		subscriptions = {
-			cancel: subscriptionsCancel,
-			retrieve: subscriptionsRetrieve,
-			update: subscriptionsUpdate,
-		};
-		webhooks = { constructEventAsync: webhooksConstructEventAsync };
-	},
-}));
+vi.mock("stripe", async () => {
+	// The SDK's own API error classes, so failures carry the real type,
+	// statusCode and code fields.
+	const actual = await vi.importActual<typeof import("stripe")>("stripe");
+	const errors = {
+		...actual.default.errors,
+		StripeSignatureVerificationError: MockStripeSignatureVerificationError,
+	};
+	return {
+		default: class MockStripe {
+			static errors = errors;
+			checkout = { sessions: { create: checkoutCreate, listLineItems } };
+			billingPortal = { sessions: { create: portalCreate } };
+			customers = { create: customersCreate };
+			subscriptions = {
+				cancel: subscriptionsCancel,
+				retrieve: subscriptionsRetrieve,
+				update: subscriptionsUpdate,
+			};
+			webhooks = { constructEventAsync: webhooksConstructEventAsync };
+		},
+	};
+});
 
 vi.mock("@fuutu/env/saas", () => ({
 	env: {
@@ -76,6 +87,7 @@ vi.mock("@fuutu/env/saas", () => ({
 }));
 
 const { stripePaymentProvider } = await import("../providers/stripe");
+const { default: Stripe } = await import("stripe");
 
 describe("stripe provider — SDK integration", () => {
 	it("createCheckoutLink calls Stripe checkout.sessions.create and returns the url", async () => {
@@ -437,6 +449,41 @@ describe("stripe provider — SDK integration", () => {
 		});
 	});
 
+	it("invoice.paid carries the new period end from the subscription line, not the billed period", async () => {
+		// invoice.period_end is the end of the period just billed; the
+		// subscription line's period is the one the payment starts.
+		webhooksConstructEventAsync.mockResolvedValueOnce({
+			type: "invoice.paid",
+			id: "evt_inv_cycle",
+			data: {
+				object: {
+					id: "in_cycle",
+					customer: "cust_123",
+					status: "paid",
+					amount_paid: 1900,
+					currency: "usd",
+					created: 1_702_678_400,
+					period_start: 1_700_000_000,
+					period_end: 1_702_678_400,
+					lines: {
+						data: [{ period: { start: 1_702_678_400, end: 1_705_356_800 } }],
+					},
+					parent: {
+						type: "subscription_details",
+						subscription_details: { subscription: "sub_123" },
+					},
+				},
+			},
+		} as never);
+		const request = new Request("https://app.test/api/webhooks/payments", {
+			method: "POST",
+			headers: { "stripe-signature": "test" },
+			body: "{}",
+		});
+		const events = await stripePaymentProvider.parseWebhook(request);
+		expect(events[0]?.currentPeriodEnd).toEqual(new Date(1_705_356_800 * 1000));
+	});
+
 	it("maps invoice.payment_failed to subscription.past_due carrying the open invoice", async () => {
 		webhooksConstructEventAsync.mockResolvedValueOnce({
 			type: "invoice.payment_failed",
@@ -508,6 +555,30 @@ describe("stripe provider — SDK integration", () => {
 		});
 		expect(subscriptionsRetrieve).toHaveBeenCalledOnce();
 		expect(subscriptionsUpdate).toHaveBeenCalledOnce();
+	});
+});
+
+describe("stripe provider — getSubscriptionStatus", () => {
+	it.each([
+		["canceled", "CANCELED"],
+		["active", "ACTIVE"],
+		["past_due", "PAST_DUE"],
+		// Terminal: the first invoice was never paid — nothing left to cancel.
+		["incomplete_expired", "EXPIRED"],
+		["incomplete", "INCOMPLETE"],
+	])("maps a %s subscription to %s", async (status, expected) => {
+		subscriptionsRetrieve.mockResolvedValueOnce({ id: "sub_1", status });
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).resolves.toBe(expected);
+		expect(subscriptionsRetrieve).toHaveBeenLastCalledWith("sub_1");
+	});
+
+	it("throws when the lookup fails", async () => {
+		subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).rejects.toThrow("stripe down");
 	});
 });
 
@@ -623,7 +694,328 @@ describe("stripe provider — purchased units", () => {
 	);
 });
 
+describe("stripe provider — per-call seat proration", () => {
+	it.each([
+		["charge-immediately", "always_invoice"],
+		["none", "none"],
+	] as const)(
+		"proration %s sends proration_behavior %s",
+		async (proration, expected) => {
+			subscriptionsUpdate.mockClear();
+			await stripePaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_123",
+				seats: 5,
+				proration,
+			});
+			expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+				items: [{ id: "item_123", quantity: 5 }],
+				proration_behavior: expected,
+			});
+		},
+	);
+
+	it("without proration it keeps the account default (no proration_behavior)", async () => {
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_123",
+			seats: 5,
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			items: [{ id: "item_123", quantity: 5 }],
+		});
+	});
+});
+
+describe("stripe provider — cancel at period end and resume", () => {
+	it("cancel with atPeriodEnd sets cancel_at_period_end instead of canceling", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123", {
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			cancel_at_period_end: true,
+		});
+		expect(subscriptionsCancel).not.toHaveBeenCalled();
+	});
+
+	it("cancel with mode period_end sets cancel_at_period_end", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123", {
+			mode: "period_end",
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			cancel_at_period_end: true,
+		});
+		expect(subscriptionsCancel).not.toHaveBeenCalled();
+	});
+
+	it("cancel with mode immediate cancels now, whatever atPeriodEnd says", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123", {
+			mode: "immediate",
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsCancel).toHaveBeenCalledWith("sub_123");
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("cancel without options cancels immediately, as before", async () => {
+		subscriptionsCancel.mockClear();
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.cancelSubscription("sub_123");
+		expect(subscriptionsCancel).toHaveBeenCalledWith("sub_123");
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("resumeSubscription clears cancel_at_period_end", async () => {
+		subscriptionsUpdate.mockClear();
+		await stripePaymentProvider.resumeSubscription?.("sub_123");
+		expect(subscriptionsUpdate).toHaveBeenCalledWith("sub_123", {
+			cancel_at_period_end: false,
+		});
+	});
+});
+
+describe("stripe provider — scheduled cancel status", () => {
+	function parseEvent(event: unknown) {
+		webhooksConstructEventAsync.mockResolvedValueOnce(event as never);
+		return stripePaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "stripe-signature": "test" },
+				body: "{}",
+			}),
+		);
+	}
+
+	const subscription = (overrides: Record<string, unknown>) => ({
+		id: "sub_1",
+		customer: "cust_1",
+		status: "active",
+		metadata: {},
+		items: {
+			data: [{ price: { id: "price_1" }, current_period_end: 1_700_000_000 }],
+		},
+		...overrides,
+	});
+
+	it.each([
+		[{ cancel_at_period_end: true }, "SCHEDULED_CANCEL"],
+		[{ cancel_at: 1_700_000_000 }, "SCHEDULED_CANCEL"],
+		[{ cancel_at_period_end: false, cancel_at: null }, "ACTIVE"],
+	])("getSubscriptionStatus with %o reports %s", async (flags, expected) => {
+		subscriptionsRetrieve.mockResolvedValueOnce(subscription(flags));
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).resolves.toBe(expected);
+	});
+
+	it("customer.subscription.updated with cancel_at_period_end maps to SCHEDULED_CANCEL", async () => {
+		const events = await parseEvent({
+			type: "customer.subscription.updated",
+			id: "evt_sc",
+			data: { object: subscription({ cancel_at_period_end: true }) },
+		});
+		expect(events[0]).toMatchObject({
+			type: "subscription.updated",
+			status: "SCHEDULED_CANCEL",
+		});
+	});
+
+	it("customer.subscription.updated without a scheduled cancel stays ACTIVE (resume)", async () => {
+		const events = await parseEvent({
+			type: "customer.subscription.updated",
+			id: "evt_res",
+			data: { object: subscription({ cancel_at_period_end: false }) },
+		});
+		expect(events[0]?.status).toBe("ACTIVE");
+	});
+
+	it("a past-due subscription keeps PAST_DUE even with a scheduled cancel", async () => {
+		subscriptionsRetrieve.mockResolvedValueOnce(
+			subscription({ status: "past_due", cancel_at_period_end: true }),
+		);
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).resolves.toBe("PAST_DUE");
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("stripe", () => stripePaymentProvider, {
 	behavior: "shape",
+});
+
+describe("stripe provider — getSubscriptionSeats", () => {
+	it("reads the quantity of the subscription's item", async () => {
+		subscriptionsRetrieve.mockResolvedValueOnce({
+			id: "sub_1",
+			items: { data: [{ id: "item_1", quantity: 7 }] },
+		});
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(7);
+		expect(subscriptionsRetrieve).toHaveBeenLastCalledWith("sub_1");
+	});
+
+	it("fails closed for an item without a quantity (metered prices have none)", async () => {
+		subscriptionsRetrieve.mockResolvedValueOnce({
+			id: "sub_1",
+			items: { data: [{ id: "item_1" }] },
+		});
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow();
+	});
+
+	it("fails closed when the lookup fails or the subscription has no item", async () => {
+		subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow("stripe down");
+
+		subscriptionsRetrieve.mockResolvedValueOnce({
+			id: "sub_1",
+			items: { data: [] },
+		});
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow();
+	});
+});
+
+describe("stripe provider — typed API failures", () => {
+	const { errors } = Stripe;
+	const raw = (over: Record<string, unknown>) => ({
+		message: "Stripe says no",
+		...over,
+	});
+
+	it.each([
+		[
+			"an unknown subscription",
+			"not_found",
+			new errors.StripeInvalidRequestError(
+				raw({ statusCode: 404, code: "resource_missing" }),
+			),
+		],
+		[
+			"a change a canceled subscription refuses",
+			"invalid_state",
+			new errors.StripeInvalidRequestError(
+				raw({
+					statusCode: 400,
+					message:
+						"A canceled subscription can only update its cancellation_details and metadata.",
+				}),
+			),
+		],
+		[
+			"a request Stripe refuses",
+			"rejected",
+			new errors.StripeInvalidRequestError(
+				raw({ statusCode: 400, code: "parameter_invalid_integer" }),
+			),
+		],
+		[
+			"a declined card",
+			"rejected",
+			new errors.StripeCardError(
+				raw({ statusCode: 402, code: "card_declined" }),
+			),
+		],
+		[
+			"a Stripe outage",
+			"unavailable",
+			new errors.StripeAPIError(raw({ statusCode: 500 })),
+		],
+		[
+			"a rate limit",
+			"unavailable",
+			new errors.StripeRateLimitError(raw({ statusCode: 429 })),
+		],
+		[
+			"a network failure",
+			"unavailable",
+			new errors.StripeConnectionError(raw({})),
+		],
+	] as const)(
+		"%s is a ProviderRequestError of kind %s",
+		async (_, kind, err) => {
+			subscriptionsCancel.mockRejectedValueOnce(err);
+			const failure = await stripePaymentProvider
+				.cancelSubscription("sub_123")
+				.catch((e: unknown) => e);
+			expect(isProviderRequestError(failure)).toBe(true);
+			expect(failure).toMatchObject({
+				kind,
+				message: "Failed to cancel subscription",
+			});
+		},
+	);
+
+	it.each([
+		new errors.StripeAuthenticationError(raw({ statusCode: 401 })),
+		new errors.StripePermissionError(raw({ statusCode: 403 })),
+	])(
+		"a rejected API key ($statusCode) is a configuration error",
+		async (err) => {
+			subscriptionsUpdate.mockRejectedValueOnce(err);
+			await expect(
+				stripePaymentProvider.resumeSubscription?.("sub_123"),
+			).rejects.toBeInstanceOf(WebhookConfigError);
+		},
+	);
+
+	it("every Stripe call classifies its failure", async () => {
+		const missing = () =>
+			new errors.StripeInvalidRequestError(
+				raw({ statusCode: 404, code: "resource_missing" }),
+			);
+		checkoutCreate.mockRejectedValueOnce(missing());
+		await expect(
+			stripePaymentProvider.createCheckoutLink({ priceId: "price_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		portalCreate.mockRejectedValueOnce(missing());
+		await expect(
+			stripePaymentProvider.createCustomerPortalLink({ customerId: "cus_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		customersCreate.mockRejectedValueOnce(missing());
+		await expect(
+			stripePaymentProvider.createCustomer({
+				userId: "u",
+				email: "u@example.com",
+			}),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsRetrieve.mockRejectedValueOnce(missing());
+		await expect(
+			stripePaymentProvider.getSubscriptionStatus?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsRetrieve.mockRejectedValueOnce(missing());
+		await expect(
+			stripePaymentProvider.getSubscriptionSeats?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsRetrieve.mockRejectedValueOnce(missing());
+		await expect(
+			stripePaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_x",
+				seats: 2,
+			}),
+		).rejects.toMatchObject({ kind: "not_found" });
+	});
+
+	it("an error that is not from Stripe is rethrown unchanged", async () => {
+		const own = new Error("boom");
+		subscriptionsCancel.mockRejectedValueOnce(own);
+		await expect(
+			stripePaymentProvider.cancelSubscription("sub_123"),
+		).rejects.toBe(own);
+	});
+
+	it("does not end a trial on cancel (cancel at period end waits for the trial end)", () => {
+		expect(stripePaymentProvider.cancelEndsTrial).toBeFalsy();
+	});
 });

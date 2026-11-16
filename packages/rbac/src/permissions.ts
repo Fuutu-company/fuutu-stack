@@ -8,6 +8,7 @@ const CUSTOM_PERMISSIONS = {
 	VIEW_ADMIN: "view:admin",
 	INVITE_MEMBER: "invite:member",
 	REMOVE_MEMBER: "remove:member",
+	IMPERSONATE_USER: "impersonate:user",
 } as const;
 
 // ─── CRUD resources ────────────────────────────────────────────
@@ -27,6 +28,7 @@ export const CRUD_RESOURCES = [
 	"audit-log",
 	"payment",
 	"admin",
+	"admin-organization",
 ] as const;
 
 export type CrudResource = (typeof CRUD_RESOURCES)[number];

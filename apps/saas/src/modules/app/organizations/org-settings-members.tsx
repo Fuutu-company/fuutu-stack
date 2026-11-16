@@ -172,7 +172,7 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 			await load();
 		} catch (e) {
 			log.error("removeMember failed", { err: e });
-			setActionError(t("organizations.settings.failed"));
+			setActionError(planGateMessage(e, t, "organizations.settings.failed"));
 		} finally {
 			setBusy(null);
 		}
@@ -192,7 +192,9 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 			await load();
 		} catch (e) {
 			log.error("updateMemberRole failed", { err: e });
-			toast.error(t("organizations.settings.roleUpdateFailed"));
+			toast.error(
+				planGateMessage(e, t, "organizations.settings.roleUpdateFailed"),
+			);
 		} finally {
 			setBusy(null);
 		}
@@ -209,7 +211,7 @@ export function OrgSettingsMembers({ slug }: { slug: string }) {
 			await load();
 		} catch (e) {
 			log.error("cancelInvite failed", { err: e });
-			setActionError(t("organizations.settings.failed"));
+			setActionError(planGateMessage(e, t, "organizations.settings.failed"));
 		} finally {
 			setBusy(null);
 		}

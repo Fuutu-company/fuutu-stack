@@ -48,9 +48,203 @@ export default function ChangelogV110() {
 					The SaaS app's <code>/robots.txt</code> disallows crawling instead of
 					redirecting to sign-in.
 				</li>
+				<li>
+					Trials once per owner: <code>Plan.trialOnce</code>,{" "}
+					<code>Plan.noTrialPriceIdEnvVars</code> (products without the trial,
+					for Creem), <code>registerTrialEligibilityPolicy</code> and{" "}
+					<code>skipTrial</code> on <code>payments.checkout.create</code>.
+					Checkout guards see the decision as <code>ctx.trial</code>; a checkout
+					that must skip a product-level trial without a no-trial product
+					answers <code>trial_unavailable</code>.
+				</li>
+				<li>
+					Cancel at the period end and resume:{" "}
+					<code>payments.subscription.cancel</code> takes{" "}
+					<code>atPeriodEnd</code>, <code>payments.subscription.resume</code>{" "}
+					undoes it (Creem, Stripe, Polar). Seat changes take a per-call{" "}
+					<code>proration</code> (<code>"charge-immediately"</code> or{" "}
+					<code>"none"</code>) on Creem and Stripe.
+				</li>
+				<li>
+					<code>config.features.webhooks</code> switches outgoing webhooks off:
+					the org settings page and its sidebar item, the{" "}
+					<code>webhooks.*</code> API, the retry job, event dispatch and the
+					dashboard count. Incoming payment webhooks are not affected.
+				</li>
+				<li>
+					<code>appContent.legal</code> replaces kit legal documents per slug
+					and locale or publishes new <code>/legal/&lt;slug&gt;</code> pages.
+				</li>
+				<li>
+					<code>appMarketing.sitemapExclude</code> drops entries from{" "}
+					<code>/sitemap.xml</code> per path and locale — kit pages, legal
+					pages, blog posts and app routes — together with their hreflang
+					alternates. Page metadata overrides take <code>robots</code>, and{" "}
+					<code>metadata.blogPost</code> covers every{" "}
+					<code>/blog/&lt;slug&gt;</code> post.
+				</li>
+				<li>
+					<code>appSlots.headerActions</code> renders app UI in the desktop top
+					bar, right before the notification bell — rendered by the server
+					layout, so it may be a server component.
+				</li>
+				<li>
+					<code>authConfig.organizations.organizationLimit</code> caps how many
+					organizations a user may belong to and still create another one
+					(unset: no cap). <code>organizations.create</code> answers{" "}
+					<code>FORBIDDEN</code> at the cap instead of a 500.
+				</li>
+				<li>
+					Community help moved into the app: README, contributing guide and
+					issue templates point to <code>app.fuutustack.com</code> (Support).
+				</li>
+				<li>
+					The consent banner has two modes. Providers that track without consent
+					(Umami) get a notice — anonymous, cookieless analytics already run —
+					with "OK" and "Opt out"; the opt-out is remembered and also stops an
+					already-loaded script. Providers that need consent, and{" "}
+					<code>NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT=true</code>, keep Accept /
+					Decline. A "Privacy settings" link reopens the banner: in the
+					marketing footer, the SaaS user menu and auth pages, and the docs
+					sidebar and home page. The Umami script loads with{" "}
+					<code>data-do-not-track="true"</code>.
+				</li>
+				<li>
+					<code>appMail.legalFooter</code> (
+					<code>packages/mail/src/app-mail.ts</code>) adds company details —
+					e.g. what § 35a GmbHG requires — under every transactional email, in
+					the HTML and the plain-text part. A string, a list of lines or a
+					function of the recipient locale; unset, the emails are unchanged.
+				</li>
+				<li>
+					<code>authConfig.session</code> documents the session lifetime for
+					your privacy policy: 30 days, extended at most once a day, a 5-minute
+					session cookie cache.
+				</li>
+				<li>
+					<code>appDocs.Home</code> replaces the docs home content inside the
+					kit home layout (nav, search, theme and language stay the kit's).
+				</li>
+				<li>
+					Plain icons: icons are drawn as plain strokes in a text role or an
+					area ink, never on a round or filled chip (DESIGN.md Iconography). The{" "}
+					<code>icon-chip-guard</code> keeps chips out and lists real avatars,
+					counters and controls with their reason.
+				</li>
+				<li>
+					<code>SecretRevealDialog</code> (<code>@fuutu/ui</code>) shows a key
+					or secret exactly once: in full and wrapped, selectable, and an
+					outside click does not close it. A failed copy selects the secret and
+					shows a hint instead of throwing. New API keys and webhook signing
+					secrets use it.
+				</li>
+				<li>
+					Create an API key from anywhere with <code>CreateApiKeyButton</code>{" "}
+					(create dialog, then the reveal): <code>presetScopes</code>,{" "}
+					<code>triggerLabel</code>, <code>triggerVariant</code> and a{" "}
+					<code>createdHint</code> under the key. The create dialog starts fresh
+					on every open. <code>ApiKeyList</code> takes{" "}
+					<code>variant="section"</code>, <code>scope</code> (lists only keys
+					with that scope and presets new ones), <code>manageHref</code> and{" "}
+					<code>createdHint</code>; <code>ApiKeyStatusBadge</code> is exported.{" "}
+					<code>apiKeys.list</code> accepts a <code>scope</code> filter.
+				</li>
+				<li>
+					<code>AppOrgSettingsNavItem.replaces</code> puts an app item in place
+					of a kit org-settings item (e.g. one "Keys" page instead of "API
+					keys") without rewording kit text; the kit route keeps working.
+				</li>
+				<li>
+					System admin area under <code>/admin</code>: users and organizations
+					(search, detail pages, support actions with a reason), impersonation
+					with a time limit and banner, a filterable audit log and a read-only
+					system status page. Every action runs through the audited{" "}
+					<code>admin.*</code> oRPC procedures; irreversible ones (ban, set
+					role, delete, impersonate) write their audit row before they run and
+					an <code>_failed</code> row when they then fail. New config:{" "}
+					<code>authConfig.admin.impersonationMinutes</code> (default 60),{" "}
+					<code>authConfig.organizations.invitationExpiresIn</code> (default 48
+					h) and <code>authConfig.admin.exposeAuthEndpoints</code> (default{" "}
+					<code>false</code>).
+				</li>
+			</ul>
+			<h3>Changes</h3>
+			<ul>
+				<li>
+					<code>LICENSE.md</code> is the Fuutu Business License 1.3: prices are
+					no longer part of the license (only the published pricing page), and
+					contributions follow the terms in <code>CONTRIBUTING.md</code> (MIT-0
+					and a Developer Certificate of Origin sign-off).
+				</li>
+				<li>
+					Telemetry sends only the five fields LICENSE.md §7 lists:{" "}
+					<code>kitName</code>, <code>kitVersion</code>,{" "}
+					<code>licenseKeyHash</code>, <code>appUrl</code> and the new{" "}
+					<code>kind</code> (<code>build</code> or <code>runtime</code>).{" "}
+					<code>nodeVersion</code>, <code>platform</code>, <code>features</code>{" "}
+					and <code>sentAt</code> are gone. Pings come only from CI or
+					production builds and from production runtimes — never from a dev
+					server or a plain local build.
+				</li>
+				<li>
+					<code>config.features.legalPages</code> (new, default on) links the
+					marketing imprint and privacy pages from the saas auth pages and user
+					menu, the docs sidebar and the consent banner.
+				</li>
+				<li>
+					<code>APP_PUBLIC_PREFIXES</code> in <code>proxy-public.ts</code> also
+					takes <code>{'{ exact: "/path" }'}</code> for a single public path; a
+					string entry still matches by prefix.
+				</li>
+				<li>
+					Port slots: <code>pnpm ports release [path]</code> frees a project's
+					slot and <code>pnpm ports prune</code> lists (and with{" "}
+					<code>--yes</code> drops) slots whose folder is gone, each offering to
+					drop the slot's local database and buckets.{" "}
+					<code>pnpm dev:session reset</code> restarts the apps with an empty
+					Turbopack dev cache.
+				</li>
+				<li>
+					Payment providers report typed failures (
+					<code>ProviderRequestError</code> with <code>kind</code>{" "}
+					<code>not_found</code>, <code>invalid_state</code>,{" "}
+					<code>rejected</code> or <code>unavailable</code>); the API passes the
+					kind on and the billing views show a matching message.
+				</li>
 			</ul>
 			<h3>Fixes</h3>
 			<ul>
+				<li>
+					While impersonating, billing actions and API-key creation are disabled
+					up front with the reason, and every refusal says "Not available while
+					you're signed in as this user (impersonation)" instead of a generic
+					error. <code>denyImpersonation</code> errors carry{" "}
+					<code>data.code: "IMPERSONATION_FORBIDDEN"</code>, like Better Auth's
+					guard.
+				</li>
+				<li>
+					Another organization's pages answer 404 to non-members before the app
+					shell renders — no "Something went wrong", no org name.
+				</li>
+				<li>
+					Onboarding resumes at the step reached after a reload, and in forced
+					organizations mode skips the organization step once the user belongs
+					to one — one sign-up no longer creates several organizations.
+				</li>
+				<li>
+					<code>/auth/verify-email-change</code> reports success only when the
+					session carries the new email; <code>/auth/reset-password</code>{" "}
+					checks the token first and offers a new link when it is missing,
+					unknown or expired.
+				</li>
+				<li>Org breadcrumbs show the organization's name, not its slug.</li>
+				<li>
+					The admin user page's Billing tab lists the user's organizations with
+					their plan and purchases, next to personal purchases.
+				</li>
+				<li>
+					<code>/robots.txt</code> is public as an exact path, not as a prefix.
+				</li>
 				<li>
 					With i18n disabled, the marketing sitemap no longer lists{" "}
 					<code>/de</code> URLs and docs pages emit no hreflang links.
@@ -67,9 +261,49 @@ export default function ChangelogV110() {
 					<code>pnpm test:visual:update</code> updates every visual spec,
 					selected by title.
 				</li>
+				<li>
+					The marketing layout no longer clips the shadow and focus ring of the
+					last card on a page (<code>main</code> uses{" "}
+					<code>overflow-x-clip</code>).
+				</li>
+				<li>
+					Dialogs fit the screen: a 16 px inset on phones, a maximum height with
+					scrolling, gaps between stacked footer buttons, and the content column
+					no longer grows past the dialog (a long API key pushed "I've copied
+					it" outside).
+				</li>
+				<li>
+					The API key lists show every key: they load 100 per page with a "Load
+					more" button instead of silently stopping at 50.
+				</li>
+				<li>
+					The <code>versioning</code> scope description says what it is for:
+					letting a release workflow compute the next app version.
+				</li>
+				<li>
+					Withdrawing consent stops an analytics script that is already loaded:
+					through the provider's <code>installConsentGate</code>, or, for a
+					provider without one, by reloading the page. Self-hosted Umami needs
+					v2.18.0 or later for the opt-out to stop auto-tracking (
+					<code>data-before-send</code>).
+				</li>
 			</ul>
 			<h3>Breaking changes and migration</h3>
 			<ul>
+				<li>
+					Telemetry payload and gating: a receiver or proxy that expected{" "}
+					<code>nodeVersion</code>, <code>platform</code>, <code>features</code>{" "}
+					or <code>sentAt</code> gets <code>kind</code> instead. Local builds
+					and dev servers no longer ping; set <code>CI</code> or{" "}
+					<code>NODE_ENV=production</code> for a build that should (Docker
+					builds count as production). <code>FUUTU_TELEMETRY_DISABLED=1</code>{" "}
+					still turns it off for non-production instances only (LICENSE.md §7).
+				</li>
+				<li>
+					<code>requireOrgMembership</code> answers 404 (<code>notFound()</code>
+					) for an unknown org or a non-member instead of redirecting to{" "}
+					<code>/organizations</code>.
+				</li>
 				<li>
 					<code>POST /api/chat/messages/stream</code> and{" "}
 					<code>POST /api/ai/chat</code> answer with an event stream (
@@ -77,6 +311,95 @@ export default function ChangelogV110() {
 					: one <code>message</code> event per text chunk (JSON string data),
 					then a final <code>done</code> event; a failure mid-stream arrives as
 					an <code>error</code> event. <code>/api/docs</code> describes it.
+				</li>
+				<li>
+					<code>/settings/billing</code> answers 404 while billing is attached
+					to organizations (the kit default) — billing lives on{" "}
+					<code>/organizations/&lt;slug&gt;/settings/billing</code>.{" "}
+					<code>assertCheckoutAllowed</code> returns <code>{"{ trial }"}</code>,
+					and <code>CheckoutGuardContext</code> carries <code>trial</code> and{" "}
+					<code>skipTrial</code>.
+				</li>
+				<li>
+					On Creem, <code>payments.subscription.cancel</code> without{" "}
+					<code>atPeriodEnd</code> now cancels immediately instead of using the
+					store's default cancellation mode.
+				</li>
+				<li>
+					Custom consent UIs built on <code>useConsent()</code>: show the banner
+					while <code>open</code> is true (it covers the reopen and the new
+					notice answer <code>"acknowledged"</code>) instead of checking{" "}
+					<code>status === "unknown"</code>.
+				</li>
+				<li>
+					<code>AreaIcon</code> draws the icon in the area ink without a fill or
+					radius (sizes: 16 px <code>sm</code>, 20 px <code>md</code>). The
+					marketing <code>AreaCutoutIcon</code> is removed; the hero cards use{" "}
+					<code>AreaIcon</code>. Update your visual baselines.
+				</li>
+				<li>
+					Security: org members can no longer revoke or delete other people's
+					org API keys, an admin's included.{" "}
+					<code>PERMISSIONS.API_KEY.DELETE</code> moved from the member to the
+					admin tier of <code>ORG_POLICY</code>; a member still revokes the keys
+					they created. <code>apiKeys.list</code> items carry{" "}
+					<code>canRevoke</code>, and the list shows Revoke only there.
+				</li>
+				<li>
+					<code>DialogContent</code> defaults to{" "}
+					<code>max-w-[calc(100%-2rem)] sm:max-w-lg</code>. Override the width
+					with <code>sm:max-w-*</code>; a bare <code>max-w-*</code> drops the
+					phone inset. Update your visual baselines.
+				</li>
+				<li>
+					<code>adminProcedure</code> is{" "}
+					<code>systemAdminProcedure(PERMISSIONS.VIEW_ADMIN)</code>: it re-reads
+					the caller's role and ban from the database on every call and rejects
+					API keys and impersonation sessions with 403, whatever their scopes.
+				</li>
+				<li>
+					Better Auth's admin endpoints (<code>/api/auth/admin/*</code>,{" "}
+					<code>authClient.admin.*</code>) answer 404 and are no longer listed
+					in <code>/api/docs</code>. Call the <code>admin.*</code> procedures
+					instead (e.g. <code>admin.users.ban</code>,{" "}
+					<code>admin.users.setRole</code>, <code>admin.users.impersonate</code>
+					). To keep the old endpoints, set{" "}
+					<code>authConfig.admin.exposeAuthEndpoints: true</code> — they then
+					bypass the reason, audit row and guards of the procedures.
+				</li>
+				<li>
+					Impersonation sessions are rejected by the payments, API-key, webhook
+					and organization mutations (<code>denyImpersonation</code>) and by{" "}
+					<code>users.updateProfile</code>; Better Auth's account, 2FA, passkey,
+					organization, <code>/update-user</code> and session-revoke endpoints
+					answer 403 (<code>IMPERSONATION_FORBIDDEN</code>). A test fails when a
+					new mutation in these modules forgets the guard. The onboarding name
+					step is closed while impersonating and points support to the admin
+					user page.
+				</li>
+				<li>
+					An impersonation ends after{" "}
+					<code>authConfig.admin.impersonationMinutes</code>, counted from its
+					start: the session is deleted, the expiry is audited (
+					<code>admin.user.impersonate_expired</code>) and the admin is signed
+					out.
+				</li>
+				<li>
+					An impersonation also ends as soon as the impersonating admin is
+					demoted, banned or deleted: the session is deleted, the end is audited
+					once (<code>admin.user.impersonate_ended_lost_access</code>) and the
+					browser is signed out, so restoring the role does not revive it — not
+					even from the cookie-cached session.
+				</li>
+				<li>
+					A temporary ban ends at <code>banExpires</code>: the server guards,
+					the API and the admin badges treat an expired ban as lifted (
+					<code>isBanActive</code> from <code>@fuutu/auth/types</code>).
+				</li>
+				<li>
+					The admin sidebar group lists Users, Organizations, Audit logs and
+					System, in that order. An app item with{" "}
+					<code>after: "adminUsers"</code> now sits before Organizations.
 				</li>
 			</ul>
 		</>
