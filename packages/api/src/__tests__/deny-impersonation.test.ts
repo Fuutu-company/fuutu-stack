@@ -153,6 +153,8 @@ describe.each(DENIED)("%s while impersonating", (_name, procedure, input) => {
 		).rejects.toMatchObject({
 			code: "FORBIDDEN",
 			message: "Not allowed while impersonating a user",
+			// The UI maps this code to its "not while impersonating" message.
+			data: { code: "IMPERSONATION_FORBIDDEN" },
 		});
 	});
 });

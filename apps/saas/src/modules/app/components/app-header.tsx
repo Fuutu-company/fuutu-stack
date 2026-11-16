@@ -16,13 +16,18 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { NotificationBell } from "@/modules/app/notifications/components/notification-bell";
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { type BreadcrumbSegment, buildBreadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
+
+const ORG_SLUG = /^\/organizations\/([^/]+)/;
 
 function useBreadcrumbs(): BreadcrumbSegment[] {
 	const pathname = usePathname();
 	const tab = useSearchParams().get("tab");
-	return buildBreadcrumbs(pathname, tab);
+	// Same cache entry the sidebar reads — no extra request.
+	const org = useFullOrganization(pathname.match(ORG_SLUG)?.[1]).data;
+	return buildBreadcrumbs(pathname, tab, org?.name);
 }
 
 function BreadcrumbLabel({

@@ -3,7 +3,11 @@ import { Providers } from "@shared/providers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import type { PropsWithChildren } from "react";
-import { requireOnboarded, requireOrg } from "@/lib/auth-server";
+import {
+	notFoundUnlessOrgMember,
+	requireOnboarded,
+	requireOrg,
+} from "@/lib/auth-server";
 import { notFoundIfFeatureOff } from "@/lib/feature-routes";
 
 export default async function AppLayout({ children }: PropsWithChildren) {
@@ -16,6 +20,8 @@ export default async function AppLayout({ children }: PropsWithChildren) {
 	await requireOnboarded();
 	// Forced-organizations gate — no-op unless organizationsMode is "forced".
 	await requireOrg();
+	// Another org's routes 404 here, before the shell renders.
+	await notFoundUnlessOrgMember();
 
 	const locale = await getLocale();
 	const messages = await getMessages();

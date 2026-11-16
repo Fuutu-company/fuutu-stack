@@ -82,3 +82,22 @@ export function previousOnboardingStep(
 	}
 	return from;
 }
+
+/**
+ * Where the wizard opens: the step the user had reached (`saved`, from an
+ * earlier visit) unless it is completed or gone from the flow; otherwise
+ * the step after the last completed one (the steps before it were passed
+ * on the way there), else the first step.
+ */
+export function resumeOnboardingStep(
+	steps: readonly string[],
+	completed: readonly string[],
+	saved: string | null,
+): string {
+	if (saved && steps.includes(saved) && !completed.includes(saved)) {
+		return saved;
+	}
+	const lastCompleted = steps.findLast((id) => completed.includes(id));
+	if (lastCompleted) return nextOnboardingStep(steps, lastCompleted, completed);
+	return steps[0] ?? DONE_STEP;
+}

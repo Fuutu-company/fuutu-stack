@@ -7,7 +7,8 @@ import { authConfig } from "../../../auth/src/config";
  * Server guards of the SaaS app (`apps/saas/src/lib/auth-server.ts`):
  * a temporary ban ends at `banExpires`, an impersonation session ends
  * after `authConfig.admin.impersonationMinutes` (signed out server-side),
- * and the admin area is closed to impersonation sessions.
+ * the admin area is closed to impersonation sessions, and an org route
+ * answers 404 to anyone who is not a member of that org.
  */
 
 const SAAS = join(import.meta.dirname, "../../../../apps/saas");
@@ -22,23 +23,45 @@ class RedirectSignal extends Error {
 	}
 }
 
+class NotFoundSignal extends Error {
+	constructor() {
+		super("not-found");
+	}
+}
+
 const mocks = vi.hoisted(() => ({
 	getSession: vi.fn(),
 	signOut: vi.fn(),
 	endExpiredImpersonation: vi.fn(),
 	endImpersonationIfAccessLost: vi.fn(),
+	getOrganizationBySlug: vi.fn(),
+	isOrganizationMember: vi.fn(),
+	getFullOrganization: vi.fn(),
+	requestPasswordResetCallback: vi.fn(),
+	pathname: "/dashboard",
 }));
 
 type AuthServer = {
 	getSession: () => Promise<unknown>;
 	requireAuth: () => Promise<unknown>;
 	requireAdmin: () => Promise<unknown>;
+	requireOrgMembership: (slug: string) => Promise<{ org: { id: string } }>;
+	notFoundUnlessOrgMember: () => Promise<void>;
+	isPasswordResetTokenValid: (token: string) => Promise<boolean>;
 };
 let authServer: AuthServer;
 
 beforeAll(async () => {
 	vi.doMock(resolveFromApp("@fuutu/auth"), () => ({
-		auth: { api: { getSession: mocks.getSession, signOut: mocks.signOut } },
+		auth: {
+			api: {
+				getSession: mocks.getSession,
+				signOut: mocks.signOut,
+				getFullOrganization: mocks.getFullOrganization,
+				setActiveOrganization: vi.fn(),
+				requestPasswordResetCallback: mocks.requestPasswordResetCallback,
+			},
+		},
 	}));
 	vi.doMock(resolveFromApp("@fuutu/auth/impersonation-expiry"), () => ({
 		endExpiredImpersonation: mocks.endExpiredImpersonation,
@@ -48,14 +71,19 @@ beforeAll(async () => {
 	}));
 	vi.doMock(resolveFromApp("@fuutu/db"), () => ({
 		countOrganizationsForUser: vi.fn(),
-		getOrganizationBySlug: vi.fn(),
+		getOrganizationBySlug: mocks.getOrganizationBySlug,
+		isOrganizationMember: mocks.isOrganizationMember,
 	}));
 	vi.doMock(resolveFromApp("next/headers"), () => ({
-		headers: async () => new Headers({ cookie: "session=1" }),
+		headers: async () =>
+			new Headers({ cookie: "session=1", "x-pathname": mocks.pathname }),
 	}));
 	vi.doMock(resolveFromApp("next/navigation"), () => ({
 		redirect: (to: string) => {
 			throw new RedirectSignal(to);
+		},
+		notFound: () => {
+			throw new NotFoundSignal();
 		},
 	}));
 	// No request scope in tests — `cache` must not memoize across cases.
@@ -98,6 +126,10 @@ beforeEach(() => {
 	mocks.signOut.mockReset();
 	mocks.endExpiredImpersonation.mockReset();
 	mocks.endImpersonationIfAccessLost.mockReset().mockResolvedValue(false);
+	mocks.getOrganizationBySlug.mockReset();
+	mocks.isOrganizationMember.mockReset();
+	mocks.getFullOrganization.mockReset();
+	mocks.pathname = "/dashboard";
 });
 
 const EXPIRED_IMPERSONATION = {
@@ -272,5 +304,114 @@ describe("requireAdmin", () => {
 		expect(await redirectOf(authServer.requireAdmin)).toBe(
 			"/dashboard?error=forbidden",
 		);
+	});
+});
+
+async function outcome(run: () => Promise<unknown>): Promise<string> {
+	try {
+		await run();
+		return "rendered";
+	} catch (err) {
+		if (err instanceof NotFoundSignal) return "404";
+		if (err instanceof RedirectSignal) return `redirect:${err.to}`;
+		throw err;
+	}
+}
+
+const ACME = { id: "org-acme", name: "Acme", slug: "acme" };
+
+describe("requireOrgMembership", () => {
+	beforeEach(() => {
+		mocks.getSession.mockResolvedValue(session({ onboardingComplete: true }));
+	});
+
+	it("answers 404 to a signed-in user who is not a member", async () => {
+		mocks.getOrganizationBySlug.mockResolvedValue(ACME);
+		mocks.isOrganizationMember.mockResolvedValue(false);
+		// Better Auth's getFullOrganization throws 403 for non-members — the
+		// org error boundary then showed "Something went wrong" in the shell.
+		mocks.getFullOrganization.mockRejectedValue(new Error("FORBIDDEN"));
+		expect(await outcome(() => authServer.requireOrgMembership("acme"))).toBe(
+			"404",
+		);
+		expect(mocks.isOrganizationMember).toHaveBeenCalledWith("user-2", ACME.id);
+	});
+
+	it("answers the same 404 for an unknown slug", async () => {
+		mocks.getOrganizationBySlug.mockResolvedValue(null);
+		expect(await outcome(() => authServer.requireOrgMembership("nobody"))).toBe(
+			"404",
+		);
+	});
+
+	it("lets a member in", async () => {
+		mocks.getOrganizationBySlug.mockResolvedValue(ACME);
+		mocks.isOrganizationMember.mockResolvedValue(true);
+		const result = await authServer.requireOrgMembership("acme");
+		expect(result.org).toEqual(ACME);
+	});
+});
+
+describe("notFoundUnlessOrgMember (app layout, before the shell renders)", () => {
+	beforeEach(() => {
+		mocks.getSession.mockResolvedValue(session({ onboardingComplete: true }));
+	});
+
+	it("answers 404 for another org's page", async () => {
+		mocks.pathname = "/organizations/acme/settings/billing";
+		mocks.getOrganizationBySlug.mockResolvedValue(ACME);
+		mocks.isOrganizationMember.mockResolvedValue(false);
+		expect(await outcome(authServer.notFoundUnlessOrgMember)).toBe("404");
+	});
+
+	it("renders a member's org page", async () => {
+		mocks.pathname = "/organizations/acme/dashboard";
+		mocks.getOrganizationBySlug.mockResolvedValue(ACME);
+		mocks.isOrganizationMember.mockResolvedValue(true);
+		expect(await outcome(authServer.notFoundUnlessOrgMember)).toBe("rendered");
+	});
+
+	it("leaves routes outside an org alone", async () => {
+		for (const pathname of ["/dashboard", "/organizations", "/settings"]) {
+			mocks.pathname = pathname;
+			expect(await outcome(authServer.notFoundUnlessOrgMember)).toBe(
+				"rendered",
+			);
+		}
+		expect(mocks.getOrganizationBySlug).not.toHaveBeenCalled();
+	});
+});
+
+describe("isPasswordResetTokenValid", () => {
+	/** Better Auth's GET /reset-password/:token answer (a redirect). */
+	const redirectTo = (location: string) =>
+		new Response(null, { status: 302, headers: { location } });
+
+	beforeEach(() => {
+		mocks.requestPasswordResetCallback.mockReset();
+	});
+
+	it("accepts a token Better Auth passes on", async () => {
+		mocks.requestPasswordResetCallback.mockResolvedValue(
+			redirectTo("http://localhost:3000/auth/reset-password?token=t-1"),
+		);
+		expect(await authServer.isPasswordResetTokenValid("t-1")).toBe(true);
+		expect(mocks.requestPasswordResetCallback).toHaveBeenCalledWith(
+			expect.objectContaining({ params: { token: "t-1" }, asResponse: true }),
+		);
+	});
+
+	it("rejects a token Better Auth answers with INVALID_TOKEN", async () => {
+		mocks.requestPasswordResetCallback.mockResolvedValue(
+			redirectTo(
+				"http://localhost:3000/auth/reset-password?error=INVALID_TOKEN",
+			),
+		);
+		expect(await authServer.isPasswordResetTokenValid("bogus")).toBe(false);
+	});
+
+	it("rejects when the check itself fails", async () => {
+		mocks.requestPasswordResetCallback.mockRejectedValue(new Error("db down"));
+		expect(await authServer.isPasswordResetTokenValid("t-1")).toBe(false);
 	});
 });

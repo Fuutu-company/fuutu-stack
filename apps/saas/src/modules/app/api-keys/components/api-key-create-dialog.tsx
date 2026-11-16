@@ -31,6 +31,7 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ComponentProps, useEffect, useState } from "react";
 import { planGateMessage } from "@/lib/api-error";
+import { useImpersonating } from "@/lib/use-impersonating";
 import { orpc } from "@/utils/orpc";
 import { initialApiKeyScopes, offeredApiKeyScopes } from "../scope-selection";
 
@@ -97,6 +98,8 @@ export function ApiKeyCreateDialog({
 	const [pickedOrgId, setPickedOrgId] = useState("");
 	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	// apiKeys.create refuses impersonation sessions (denyImpersonation).
+	const impersonating = useImpersonating();
 
 	// The org id can resolve after mount (loaded async by the parent) —
 	// re-apply the context default when it changes.
@@ -171,7 +174,15 @@ export function ApiKeyCreateDialog({
 	return (
 		<Dialog open={open} onOpenChange={changeOpen}>
 			<DialogTrigger asChild>
-				<Button variant={triggerVariant}>
+				<Button
+					variant={triggerVariant}
+					disabled={impersonating}
+					title={
+						impersonating
+							? tRoot("common.errors.impersonationForbidden")
+							: undefined
+					}
+				>
 					<Plus className="size-4" />
 					{triggerLabel ?? t("create")}
 				</Button>

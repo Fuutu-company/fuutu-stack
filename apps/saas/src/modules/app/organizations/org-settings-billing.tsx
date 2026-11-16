@@ -29,6 +29,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { paymentsErrorKey } from "@/lib/api-error";
+import { useImpersonating } from "@/lib/use-impersonating";
+import { ImpersonationNotice } from "@/modules/app/components/impersonation-notice";
 import { orpc } from "@/utils/orpc";
 import {
 	useFullOrganization,
@@ -80,6 +82,8 @@ export function OrgSettingsBilling({
 	const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [seatCount, setSeatCount] = useState(1);
+	// Checkout and portal refuse impersonation sessions (denyImpersonation).
+	const impersonating = useImpersonating();
 
 	// The seat-priced plan (first `seatBased` plan) prices the selector.
 	const seatPlan = getSeatPlan()?.plan;
@@ -221,7 +225,7 @@ export function OrgSettingsBilling({
 		t: resolve,
 		onCtaClick: checkout,
 		loadingId: checkoutLoading,
-		allDisabled: checkoutLoading !== null,
+		allDisabled: checkoutLoading !== null || impersonating,
 		seatCountFor: (id) =>
 			(PLANS[id] as Plan).seatBased ? seatCount : undefined,
 	});
@@ -299,7 +303,12 @@ export function OrgSettingsBilling({
 									{t("organizations.settings.billingPortalHint")}
 								</p>
 							</div>
-							<Button variant="outline" size="sm" onClick={openPortal}>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={openPortal}
+								disabled={impersonating}
+							>
 								<ExternalLink className="size-4" />
 								{t("organizations.settings.billingManagePortal")}
 							</Button>
@@ -317,6 +326,8 @@ export function OrgSettingsBilling({
 					{t("organizations.settings.billingChoosePlanHint")}
 				</p>
 			</div>
+
+			{impersonating && <ImpersonationNotice />}
 
 			{error && (
 				<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">

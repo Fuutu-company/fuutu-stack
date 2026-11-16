@@ -114,7 +114,11 @@
 				"joined": "Joined"
 			},
 			"billing": {
-				"purchases": "Subscriptions and purchases",
+				"purchases": "Personal subscriptions and purchases",
+				"organizations": "Organizations",
+				"organizationsHint": "Plans are usually billed to the organization: each organization this user belongs to, with its current plan and purchases.",
+				"noOrganizations": "Not a member of any organization.",
+				"plan": "Plan",
 				"noPurchases": "No purchases.",
 				"type": "Type",
 				"status": "Status",

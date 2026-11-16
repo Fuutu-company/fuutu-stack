@@ -20,6 +20,27 @@ export function seatLimitFromError(err: unknown): SeatLimit | null {
 		: null;
 }
 
+/** Code of a refusal because support is impersonating the user. */
+const IMPERSONATION_FORBIDDEN = "IMPERSONATION_FORBIDDEN";
+
+/**
+ * True when the API refused because the session is an impersonation —
+ * oRPC `denyImpersonation` (`data.code`) or Better Auth's guard
+ * (`res.error.code`, or a thrown error carrying it).
+ */
+export function isImpersonationForbidden(err: unknown): boolean {
+	if (typeof err !== "object" || err === null) return false;
+	if (err instanceof ORPCError) {
+		const data: unknown = err.data;
+		return (
+			typeof data === "object" &&
+			data !== null &&
+			(data as Record<string, unknown>).code === IMPERSONATION_FORBIDDEN
+		);
+	}
+	return (err as Record<string, unknown>).code === IMPERSONATION_FORBIDDEN;
+}
+
 /**
  * Map an API error to a localized message. The API's authorize middleware
  * reports plan gates with stable English messages ("Limit exceeded (n/m)",
@@ -32,6 +53,9 @@ export function planGateMessage(
 	t: ReturnType<typeof useTranslations>,
 	fallbackKey: Parameters<ReturnType<typeof useTranslations>>[0],
 ): string {
+	if (isImpersonationForbidden(err)) {
+		return t("common.errors.impersonationForbidden");
+	}
 	const message = err instanceof Error ? err.message : "";
 	if (message.includes("Limit exceeded")) {
 		return t("common.errors.planLimitReached");
@@ -87,15 +111,18 @@ export function isPaymentsUnavailable(err: unknown): boolean {
 /**
  * The `payments.*` message key for a failed payments call: what the
  * provider said (unknown subscription, state changed, declined,
- * unreachable) or that payments are not configured; null for anything
- * else — the caller shows its own fallback.
+ * unreachable), that payments are not configured or that support is
+ * impersonating the user; null for anything else — the caller shows its
+ * own fallback.
  */
 export function paymentsErrorKey(
 	err: unknown,
 ):
 	| (typeof PROVIDER_FAILURE_KEY)[ProviderFailureKind]
 	| "choosePlan.unavailable"
+	| "errors.impersonationForbidden"
 	| null {
+	if (isImpersonationForbidden(err)) return "errors.impersonationForbidden";
 	const failure = providerFailure(err);
 	if (failure) return PROVIDER_FAILURE_KEY[failure];
 	return isPaymentsUnavailable(err) ? "choosePlan.unavailable" : null;

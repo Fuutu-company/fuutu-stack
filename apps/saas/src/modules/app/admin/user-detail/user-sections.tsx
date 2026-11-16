@@ -4,6 +4,7 @@ import { Badge, Button, Card, CardContent } from "@fuutu/ui";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { RoleBadge, TwoFactorBadge, VerifiedBadge } from "../admin-badges";
+import { OrgPlan } from "../org-plan";
 import type { AdminUserDetailData } from "./types";
 
 const KEY_MASK = "••••";
@@ -274,72 +275,147 @@ export function OrganizationsSection({ user }: { user: AdminUserDetailData }) {
 	);
 }
 
+type Purchase = AdminUserDetailData["purchases"][number];
+
+/** Purchases with their plan; `className` frames the scrolling table. */
+function PurchaseTable({
+	purchases,
+	className,
+}: {
+	purchases: readonly Purchase[];
+	className: string;
+}) {
+	const t = useTranslations("admin.userDetail.billing");
+	const tPlans = useTranslations("payments.plans");
+	const format = useFormatter();
+	return (
+		<div className={className}>
+			<table className="w-full text-sm">
+				<thead className="bg-muted/50">
+					<tr>
+						<th scope="col" className={th}>
+							{t("type")}
+						</th>
+						<th scope="col" className={th}>
+							{t("status")}
+						</th>
+						<th scope="col" className={th}>
+							{t("provider")}
+						</th>
+						<th scope="col" className={th}>
+							{t("plan")}
+						</th>
+						<th scope="col" className={th}>
+							{t("product")}
+						</th>
+						<th scope="col" className={th}>
+							{t("quantity")}
+						</th>
+						<th scope="col" className={th}>
+							{t("periodEnd")}
+						</th>
+					</tr>
+				</thead>
+				<tbody className="divide-y">
+					{purchases.map((p) => (
+						<tr key={p.id}>
+							<td className="px-4 py-3 text-xs">{t(`typeValue.${p.type}`)}</td>
+							<td className="px-4 py-3">
+								<Badge variant="outline">{t(`statusValue.${p.status}`)}</Badge>
+							</td>
+							<td className="px-4 py-3 text-xs">{p.provider}</td>
+							<td className="px-4 py-3 text-xs">
+								{p.planId && tPlans.has(`${p.planId}.name`)
+									? tPlans(`${p.planId}.name`)
+									: t("none")}
+							</td>
+							<td className="px-4 py-3 font-mono text-xs">
+								{p.productId ?? p.priceId}
+							</td>
+							<td className="px-4 py-3 text-xs">{p.quantity}</td>
+							<td
+								className="whitespace-nowrap px-4 py-3 text-muted-foreground text-xs"
+								data-volatile
+							>
+								{p.currentPeriodEnd
+									? format.dateTime(p.currentPeriodEnd, {
+											dateStyle: "medium",
+										})
+									: t("none")}
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
 export function BillingSection({ user }: { user: AdminUserDetailData }) {
 	const t = useTranslations("admin.userDetail.billing");
+	const tRole = useTranslations("admin.users.roleValue");
 	const format = useFormatter();
 	return (
 		<div className="space-y-6">
+			<Card className="overflow-hidden py-0">
+				<CardContent className="space-y-4 p-6">
+					<div className="space-y-1">
+						<h3 className="font-semibold text-sm">{t("organizations")}</h3>
+						<p className="text-muted-foreground text-xs">
+							{t("organizationsHint")}
+						</p>
+					</div>
+					{user.memberships.length === 0 ? (
+						<Empty>{t("noOrganizations")}</Empty>
+					) : (
+						<ul className="divide-y">
+							{user.memberships.map((m) => (
+								<li
+									key={m.id}
+									aria-label={m.organization.name}
+									className="space-y-3 py-4 first:pt-0 last:pb-0"
+								>
+									<div className="flex flex-wrap items-center justify-between gap-2">
+										<span className="flex flex-wrap items-center gap-2">
+											<Link
+												href={`/admin/organizations/${m.organization.id}`}
+												className="font-medium text-sm underline-offset-4 hover:underline"
+											>
+												{m.organization.name}
+											</Link>
+											<Badge variant="outline">
+												{tRole.has(m.role) ? tRole(m.role) : m.role}
+											</Badge>
+										</span>
+										<OrgPlan
+											subscription={m.organization.activeSubscription}
+											statusLabel={(status) => t(`statusValue.${status}`)}
+										/>
+									</div>
+									{m.organization.purchases.length === 0 ? (
+										<Empty>{t("noPurchases")}</Empty>
+									) : (
+										<PurchaseTable
+											purchases={m.organization.purchases}
+											className="overflow-x-auto rounded-xl border"
+										/>
+									)}
+								</li>
+							))}
+						</ul>
+					)}
+				</CardContent>
+			</Card>
 			<Card className="overflow-hidden py-0">
 				<CardContent className="space-y-4 p-6">
 					<h3 className="font-semibold text-sm">{t("purchases")}</h3>
 					{user.purchases.length === 0 ? (
 						<Empty>{t("noPurchases")}</Empty>
 					) : (
-						<div className="-mx-6 -mb-6 overflow-x-auto border-t">
-							<table className="w-full text-sm">
-								<thead className="bg-muted/50">
-									<tr>
-										<th scope="col" className={th}>
-											{t("type")}
-										</th>
-										<th scope="col" className={th}>
-											{t("status")}
-										</th>
-										<th scope="col" className={th}>
-											{t("provider")}
-										</th>
-										<th scope="col" className={th}>
-											{t("product")}
-										</th>
-										<th scope="col" className={th}>
-											{t("quantity")}
-										</th>
-										<th scope="col" className={th}>
-											{t("periodEnd")}
-										</th>
-									</tr>
-								</thead>
-								<tbody className="divide-y">
-									{user.purchases.map((p) => (
-										<tr key={p.id}>
-											<td className="px-4 py-3 text-xs">
-												{t(`typeValue.${p.type}`)}
-											</td>
-											<td className="px-4 py-3">
-												<Badge variant="outline">
-													{t(`statusValue.${p.status}`)}
-												</Badge>
-											</td>
-											<td className="px-4 py-3 text-xs">{p.provider}</td>
-											<td className="px-4 py-3 font-mono text-xs">
-												{p.productId ?? p.priceId}
-											</td>
-											<td className="px-4 py-3 text-xs">{p.quantity}</td>
-											<td
-												className="whitespace-nowrap px-4 py-3 text-muted-foreground text-xs"
-												data-volatile
-											>
-												{p.currentPeriodEnd
-													? format.dateTime(p.currentPeriodEnd, {
-															dateStyle: "medium",
-														})
-													: t("none")}
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+						<PurchaseTable
+							purchases={user.purchases}
+							className="-mx-6 -mb-6 overflow-x-auto border-t"
+						/>
 					)}
 				</CardContent>
 			</Card>

@@ -114,7 +114,11 @@
 				"joined": "Beigetreten"
 			},
 			"billing": {
-				"purchases": "Abonnements und Käufe",
+				"purchases": "Persönliche Abonnements und Käufe",
+				"organizations": "Organisationen",
+				"organizationsHint": "Tarife werden meist über die Organisation abgerechnet: jede Organisation, in der dieser Nutzer Mitglied ist, mit aktuellem Tarif und Käufen.",
+				"noOrganizations": "In keiner Organisation Mitglied.",
+				"plan": "Tarif",
 				"noPurchases": "Keine Käufe.",
 				"type": "Typ",
 				"status": "Status",

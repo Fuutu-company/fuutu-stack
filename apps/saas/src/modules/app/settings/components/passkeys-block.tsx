@@ -5,6 +5,7 @@ import { Button } from "@fuutu/ui";
 import { KeyRound, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 
 type Passkey = {
 	id: string;
@@ -39,7 +40,9 @@ export function PasskeysBlock() {
 		setError(null);
 		try {
 			const res = await authClient.passkey.addPasskey();
-			if (res?.error) setError(t("settings.passkeys.failed"));
+			if (res?.error) {
+				setError(planGateMessage(res.error, t, "settings.passkeys.failed"));
+			}
 			await load();
 		} catch {
 			setError(t("settings.passkeys.failed"));

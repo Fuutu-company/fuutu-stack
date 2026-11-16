@@ -518,6 +518,20 @@ describe("breadcrumb extras", () => {
 		]);
 	});
 
+	it("names the org crumb after the organization, not its slug", () => {
+		expect(
+			buildBreadcrumbs(
+				"/organizations/persona-free/settings/billing",
+				null,
+				"Persona GmbH",
+			)[1],
+		).toEqual({
+			labelKey: null,
+			label: "Persona GmbH",
+			href: "/organizations/persona-free/dashboard",
+		});
+	});
+
 	it("the Admin crumb links to the admin home, not the bare group root", () => {
 		expect(buildBreadcrumbs("/admin/audit-logs", null)).toEqual([
 			{ labelKey: "breadcrumb.admin", href: "/admin/users" },

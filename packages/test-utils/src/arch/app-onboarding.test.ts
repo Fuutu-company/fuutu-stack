@@ -6,10 +6,14 @@ import { describe, expect, it } from "vitest";
  * slot in by `after`, and the final "done" step always stays last.
  */
 
-const { buildOnboardingSteps, nextOnboardingStep, previousOnboardingStep } =
-	await import(
-		"../../../../apps/saas/src/modules/app/onboarding/onboarding-steps"
-	);
+const {
+	buildOnboardingSteps,
+	nextOnboardingStep,
+	previousOnboardingStep,
+	resumeOnboardingStep,
+} = await import(
+	"../../../../apps/saas/src/modules/app/onboarding/onboarding-steps"
+);
 
 describe("buildOnboardingSteps", () => {
 	it("keeps the kit order without extras", () => {
@@ -99,5 +103,32 @@ describe("step navigation", () => {
 				"done",
 			);
 		});
+	});
+});
+
+describe("resumeOnboardingStep (reload / return to /onboarding)", () => {
+	const kit = ["profile", "organization", "done"];
+	const flow = ["profile", "role", "organization", "tour", "done"];
+
+	it("starts at the first step on a fresh visit", () => {
+		expect(resumeOnboardingStep(kit, [], null)).toBe("profile");
+	});
+
+	it("returns to the step the user had reached", () => {
+		expect(resumeOnboardingStep(flow, [], "role")).toBe("role");
+		expect(resumeOnboardingStep(kit, [], "organization")).toBe("organization");
+	});
+
+	it("never reopens the org step once the user belongs to an org", () => {
+		expect(resumeOnboardingStep(kit, ["organization"], null)).toBe("done");
+		expect(resumeOnboardingStep(flow, ["organization"], "organization")).toBe(
+			"tour",
+		);
+		// Steps before the org step were passed on the way there.
+		expect(resumeOnboardingStep(flow, ["organization"], null)).toBe("tour");
+	});
+
+	it("ignores a stored step the flow no longer has", () => {
+		expect(resumeOnboardingStep(kit, [], "removed-app-step")).toBe("profile");
 	});
 });

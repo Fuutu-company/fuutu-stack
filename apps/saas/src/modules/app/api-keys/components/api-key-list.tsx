@@ -14,6 +14,8 @@ import { KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useId } from "react";
+import { useImpersonating } from "@/lib/use-impersonating";
+import { ImpersonationNotice } from "@/modules/app/components/impersonation-notice";
 import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { orpc } from "@/utils/orpc";
 import type { ApiKeyOrgOption } from "./api-key-create-dialog";
@@ -103,6 +105,8 @@ export function ApiKeyList({
 	const org = (useFullOrganization(slug).data ?? null) as FullOrg | null;
 
 	const effectiveOrgId = organizationId ?? org?.id;
+	// Creating a key is closed while impersonating (denyImpersonation).
+	const impersonating = useImpersonating();
 
 	const query = useInfiniteQuery(
 		orpc.apiKeys.list.infiniteOptions({
@@ -150,6 +154,7 @@ export function ApiKeyList({
 
 	const body = (
 		<>
+			{impersonating && <ImpersonationNotice />}
 			{query.isLoading ? (
 				<p className="text-muted-foreground text-sm">{t("loading")}</p>
 			) : query.isError ? (

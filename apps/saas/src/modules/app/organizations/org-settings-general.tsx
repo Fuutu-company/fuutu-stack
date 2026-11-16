@@ -22,6 +22,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 import { OrgLogoUpload } from "./components/org-logo-upload";
 import {
@@ -86,8 +87,13 @@ export function OrgSettingsGeneral({ slug }: { slug: string }) {
 			await invalidateOrganization(slug);
 		} catch (error) {
 			log.error("organization rename failed", { err: error });
-			setStatus(t("organizations.settings.failed"));
-			toast.error(t("organizations.settings.failed"));
+			const message = planGateMessage(
+				error,
+				t,
+				"organizations.settings.failed",
+			);
+			setStatus(message);
+			toast.error(message);
 		} finally {
 			setSaving(false);
 		}

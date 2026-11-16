@@ -61,6 +61,9 @@ vi.mock(h.dep("@fuutu/ui"), () => ({
 vi.mock("@shared/components/locale-switcher", () => ({
 	LocaleSwitcher: () => h.createElement("i", { id: "locale" }),
 }));
+vi.mock("@/modules/app/organizations/use-full-organization", () => ({
+	useFullOrganization: () => ({ data: null }),
+}));
 vi.mock("@/modules/app/notifications/components/notification-bell", () => ({
 	NotificationBell: () => h.createElement("i", { id: "bell" }),
 }));

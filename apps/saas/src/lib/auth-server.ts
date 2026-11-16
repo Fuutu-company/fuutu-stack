@@ -10,10 +10,14 @@ import {
 	userHasPermission,
 } from "@fuutu/auth/types";
 import { config } from "@fuutu/config";
-import { countOrganizationsForUser, getOrganizationBySlug } from "@fuutu/db";
+import {
+	countOrganizationsForUser,
+	getOrganizationBySlug,
+	isOrganizationMember,
+} from "@fuutu/db";
 import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 
 const ac = new SystemAccessControl(SYSTEM_POLICY);
@@ -171,32 +175,47 @@ export async function requireOrg() {
 }
 
 /**
+ * The organization behind `slug` when the user is a member of it; 404
+ * otherwise. An unknown slug and someone else's org answer the same, so
+ * the response never tells whether an org exists or what it is called.
+ */
+async function orgForMember(slug: string, userId: string) {
+	const org = await getOrganizationBySlug(slug);
+	if (!org || !(await isOrganizationMember(userId, org.id))) {
+		notFound();
+	}
+	return org;
+}
+
+/** `/organizations/<slug>/…` → `<slug>`; null outside an org route. */
+const ORG_ROUTE = /^\/organizations\/([^/]+)\/?/;
+
+/**
+ * Org routes answer 404 to non-members before the app shell renders. Call
+ * it in the `(app)` layout — above every `loading.tsx`, so the status is a
+ * real 404 and no org chrome is streamed. Reads the pathname the proxy
+ * forwards (`x-pathname`); the org layouts' `requireOrgMembership` still
+ * applies without it.
+ */
+export async function notFoundUnlessOrgMember(): Promise<void> {
+	const pathname = (await headers()).get("x-pathname") ?? "";
+	const slug = pathname.match(ORG_ROUTE)?.[1];
+	if (!slug) return;
+	const session = await requireAuth();
+	await orgForMember(slug, session.user.id);
+}
+
+/**
  * Require authentication AND membership in the organization identified by
  * `slug`. Use this in org-scoped layouts — oRPC procedures still enforce
  * org permissions server-side, but the layout guard keeps the page shell
  * (nav, settings chrome) from rendering for non-members.
  *
- * Redirects to /organizations when the org doesn't exist or the user is
- * not a member — mirrors the per-page checks (e.g. audit-log page).
+ * 404 when the org doesn't exist or the user is not a member.
  */
 export async function requireOrgMembership(slug: string) {
 	const session = await requireOnboarded();
-
-	const org = await getOrganizationBySlug(slug);
-	if (!org) {
-		redirect("/organizations");
-	}
-
-	const fullOrg = await auth.api.getFullOrganization({
-		query: { organizationId: org.id },
-		headers: await headers(),
-	});
-	const isMember = fullOrg?.members?.some(
-		(m: { userId: string }) => m.userId === session.user.id,
-	);
-	if (!isMember) {
-		redirect("/organizations");
-	}
+	const org = await orgForMember(slug, session.user.id);
 
 	// Forced mode: entering an org route implies org context — activate the
 	// org on the session so the proxy hint and active-org resolution work
@@ -219,6 +238,42 @@ export async function requireOrgMembership(slug: string) {
 	}
 
 	return { session, org };
+}
+
+/**
+ * Whether Better Auth still knows a password-reset token (unused, not
+ * expired). Asks its own link endpoint (`GET /reset-password/:token`),
+ * which only checks the token and redirects — with the token when it is
+ * valid, with `error=INVALID_TOKEN` otherwise. Nothing is consumed.
+ */
+export async function isPasswordResetTokenValid(
+	token: string,
+): Promise<boolean> {
+	try {
+		const response = await auth.api.requestPasswordResetCallback({
+			params: { token },
+			query: { callbackURL: "/auth/reset-password" },
+			asResponse: true,
+		});
+		const location = response.headers.get("location");
+		if (!location) return false;
+		return (
+			new URL(location, "http://localhost").searchParams.get("token") === token
+		);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * The session read past Better Auth's cookie cache — for a page that must
+ * see a change made moments before (the email change landing page).
+ */
+export async function getFreshSession() {
+	return auth.api.getSession({
+		headers: await headers(),
+		query: { disableCookieCache: true },
+	});
 }
 
 /**

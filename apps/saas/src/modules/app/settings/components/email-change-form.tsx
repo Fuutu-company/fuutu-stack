@@ -5,11 +5,13 @@ import { createLogger } from "@fuutu/logs";
 import { Button, Field, FieldGroup, FieldLabel, Input } from "@fuutu/ui";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 
 const log = createLogger({ scope: "email-change" });
 
 export function EmailChangeForm() {
 	const t = useTranslations("settings");
+	const tRoot = useTranslations();
 	const { data: session } = authClient.useSession();
 	const [newEmail, setNewEmail] = useState("");
 	const [saving, setSaving] = useState(false);
@@ -22,10 +24,14 @@ export function EmailChangeForm() {
 		try {
 			const res = await authClient.changeEmail({
 				newEmail,
-				callbackURL: "/auth/verify-email-change",
+				// The landing page reports success only once the session
+				// carries this address.
+				callbackURL: `/auth/verify-email-change?email=${encodeURIComponent(newEmail)}`,
 			});
 			if (res.error) {
-				setStatus(t("emailChange.failed"));
+				setStatus(
+					planGateMessage(res.error, tRoot, "settings.emailChange.failed"),
+				);
 			} else {
 				setStatus(t("emailChange.sent"));
 				setNewEmail("");

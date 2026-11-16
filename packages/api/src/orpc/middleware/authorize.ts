@@ -239,7 +239,9 @@ export type AuthorizeOptions = {
 
 /**
  * Throws FORBIDDEN for an impersonation session (Better Auth admin plugin
- * sets `session.impersonatedBy` to the impersonating admin's id).
+ * sets `session.impersonatedBy` to the impersonating admin's id). `data.code`
+ * matches Better Auth's guard (`IMPERSONATION_FORBIDDEN`) so the UI can
+ * say why.
  */
 export function assertNotImpersonating(
 	context: Pick<Context, "session">,
@@ -250,6 +252,7 @@ export function assertNotImpersonating(
 	if (inner?.impersonatedBy) {
 		throw new ORPCError("FORBIDDEN", {
 			message: "Not allowed while impersonating a user",
+			data: { code: "IMPERSONATION_FORBIDDEN" },
 		});
 	}
 }

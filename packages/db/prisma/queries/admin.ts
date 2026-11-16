@@ -1,5 +1,6 @@
 import { db } from "../client";
 import type { Prisma } from "../generated/client";
+import { accessGatingWhere } from "./purchase";
 import { roleListIncludes, roleListMatches } from "./role-list";
 import { withSerializationRetry } from "./transaction";
 
@@ -96,6 +97,32 @@ const DETAIL_SESSION_LIMIT = 50;
  * counts, sessions without tokens, API keys by prefix. `null` when the
  * user does not exist.
  */
+/** Purchase columns support sees — no provider metadata or customer ids. */
+const purchaseSummary = {
+	id: true,
+	type: true,
+	status: true,
+	provider: true,
+	priceId: true,
+	productId: true,
+	subscriptionId: true,
+	quantity: true,
+	currentPeriodEnd: true,
+	createdAt: true,
+} satisfies Prisma.PurchaseSelect;
+
+const NEWEST_FIRST: Prisma.PurchaseOrderByWithRelationInput[] = [
+	{ createdAt: "desc" },
+	{ id: "asc" },
+];
+
+/**
+ * Profile, sign-in methods, live sessions, API keys, personal purchases
+ * and credits of one user, plus each organization they belong to with
+ * its purchases and the subscription that gates its access (newest
+ * first, like `getActiveSubscriptionForOrganization`) — billing usually
+ * sits on the org, not the user. `null` when unknown.
+ */
 export async function adminGetUserDetail(id: string, now: Date = new Date()) {
 	const [user, passwordAccounts] = await Promise.all([
 		db.user.findUnique({
@@ -142,7 +169,14 @@ export async function adminGetUserDetail(id: string, now: Date = new Date()) {
 						id: true,
 						role: true,
 						createdAt: true,
-						organization: { select: { id: true, name: true, slug: true } },
+						organization: {
+							select: {
+								id: true,
+								name: true,
+								slug: true,
+								purchases: { select: purchaseSummary, orderBy: NEWEST_FIRST },
+							},
+						},
 					},
 					orderBy: [{ createdAt: "asc" }, { id: "asc" }],
 				},
@@ -160,21 +194,7 @@ export async function adminGetUserDetail(id: string, now: Date = new Date()) {
 					},
 					orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 				},
-				purchases: {
-					select: {
-						id: true,
-						type: true,
-						status: true,
-						provider: true,
-						priceId: true,
-						productId: true,
-						subscriptionId: true,
-						quantity: true,
-						currentPeriodEnd: true,
-						createdAt: true,
-					},
-					orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-				},
+				purchases: { select: purchaseSummary, orderBy: NEWEST_FIRST },
 				creditBalances: {
 					select: {
 						meterKey: true,
@@ -195,6 +215,16 @@ export async function adminGetUserDetail(id: string, now: Date = new Date()) {
 	if (!user) return null;
 	const withPassword = new Set(passwordAccounts.map((account) => account.id));
 	const { _count, accounts, members, twoFactorEnabled, ...rest } = user;
+	const gating = members.length
+		? await db.purchase.findMany({
+				where: {
+					organizationId: { in: members.map((m) => m.organization.id) },
+					...accessGatingWhere(now),
+				},
+				select: { ...purchaseSummary, organizationId: true },
+				orderBy: NEWEST_FIRST,
+			})
+		: [];
 	return {
 		...rest,
 		twoFactorEnabled: twoFactorEnabled === true,
@@ -203,7 +233,15 @@ export async function adminGetUserDetail(id: string, now: Date = new Date()) {
 			...account,
 			hasPassword: withPassword.has(account.id),
 		})),
-		memberships: members,
+		memberships: members.map((member) => ({
+			...member,
+			organization: {
+				...member.organization,
+				activeSubscription:
+					gating.find((p) => p.organizationId === member.organization.id) ??
+					null,
+			},
+		})),
 	};
 }
 

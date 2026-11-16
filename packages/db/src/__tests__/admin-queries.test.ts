@@ -12,6 +12,7 @@ vi.mock("../../prisma/client", () => ({
 		},
 		account: { findMany: vi.fn() },
 		member: { findMany: vi.fn() },
+		purchase: { findMany: vi.fn() },
 		session: { deleteMany: vi.fn(), findFirst: vi.fn() },
 		twoFactor: { deleteMany: vi.fn() },
 		auditLog: { findMany: vi.fn(), count: vi.fn() },
@@ -271,6 +272,80 @@ describe("adminGetUserDetail", () => {
 		expect(JSON.stringify(select)).not.toMatch(
 			/"(token|password|key|secret|backupCodes|accessToken|refreshToken|idToken)"/,
 		);
+	});
+
+	it("lists each organization with its purchases and the subscription that gates access", async () => {
+		const purchase = {
+			id: "pur-1",
+			type: "SUBSCRIPTION",
+			status: "ACTIVE",
+			provider: "creem",
+			priceId: "price_pro",
+			productId: "prod_pro",
+			subscriptionId: "sub_1",
+			quantity: 3,
+			currentPeriodEnd: NOW,
+			createdAt: NOW,
+		};
+		vi.mocked(db.user.findUnique).mockResolvedValueOnce({
+			...userRow,
+			members: [
+				{
+					id: "mem-1",
+					role: "owner",
+					createdAt: NOW,
+					organization: {
+						id: "org-1",
+						name: "Acme",
+						slug: "acme",
+						purchases: [purchase],
+					},
+				},
+				{
+					id: "mem-2",
+					role: "member",
+					createdAt: NOW,
+					organization: {
+						id: "org-2",
+						name: "Beta",
+						slug: "beta",
+						purchases: [],
+					},
+				},
+			],
+		} as never);
+		vi.mocked(db.account.findMany).mockResolvedValueOnce([] as never);
+		vi.mocked(db.purchase.findMany).mockResolvedValueOnce([
+			{ ...purchase, organizationId: "org-1" },
+		] as never);
+
+		const detail = await adminGetUserDetail("u1", NOW);
+
+		expect(
+			detail?.memberships.map((m) => ({
+				org: m.organization.slug,
+				purchases: m.organization.purchases.map((p) => p.id),
+				active: m.organization.activeSubscription?.id ?? null,
+			})),
+		).toEqual([
+			{ org: "acme", purchases: ["pur-1"], active: "pur-1" },
+			{ org: "beta", purchases: [], active: null },
+		]);
+		// Same rule as the org's own access check (accessGatingWhere).
+		expect(db.purchase.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: {
+					organizationId: { in: ["org-1", "org-2"] },
+					type: "SUBSCRIPTION",
+					OR: [
+						{ status: { in: ["ACTIVE", "TRIALING"] } },
+						{ status: "SCHEDULED_CANCEL", currentPeriodEnd: { gt: NOW } },
+					],
+				},
+			}),
+		);
+		const select = vi.mocked(db.user.findUnique).mock.calls[0]?.[0]?.select;
+		expect(JSON.stringify(select?.members)).not.toMatch(/customerId|metadata/);
 	});
 
 	it("drops the internal _count from the result", async () => {

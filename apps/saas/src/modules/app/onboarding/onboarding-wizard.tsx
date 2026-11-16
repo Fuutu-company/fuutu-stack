@@ -19,7 +19,7 @@ import { ArrowRight, Building2, Check, CircleCheck, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { appOnboardingSteps } from "@/app-onboarding";
 import { orpc } from "@/utils/orpc";
 import { completeOnboardingAction } from "./actions";
@@ -27,6 +27,7 @@ import {
 	buildOnboardingSteps,
 	nextOnboardingStep,
 	previousOnboardingStep,
+	resumeOnboardingStep,
 } from "./onboarding-steps";
 
 const forcedOrgs = config.features.organizationsMode === "forced";
@@ -44,6 +45,41 @@ interface OnboardingWizardProps {
 	canCreateOrg: boolean;
 	/** Support impersonation: Better Auth refuses `/update-user` (403). */
 	impersonating: boolean;
+	/**
+	 * Forced organizations mode and the user already belongs to an org —
+	 * the org step is done and never offered again.
+	 */
+	hasOrganization: boolean;
+}
+
+type SavedProgress = { step: string; orgCreated: boolean };
+
+/** Progress of this tab's run, so a reload resumes instead of restarting. */
+function readProgress(key: string): SavedProgress | null {
+	try {
+		const raw = window.sessionStorage.getItem(key);
+		if (!raw) return null;
+		const parsed: unknown = JSON.parse(raw);
+		if (typeof parsed !== "object" || parsed === null) return null;
+		const { step, orgCreated } = parsed as Record<string, unknown>;
+		return typeof step === "string"
+			? { step, orgCreated: orgCreated === true }
+			: null;
+	} catch {
+		return null;
+	}
+}
+
+function writeProgress(key: string, progress: SavedProgress | null): void {
+	try {
+		if (progress) {
+			window.sessionStorage.setItem(key, JSON.stringify(progress));
+		} else {
+			window.sessionStorage.removeItem(key);
+		}
+	} catch {
+		// Storage blocked — the wizard still works, it just starts over.
+	}
 }
 
 export function OnboardingWizard({
@@ -52,22 +88,46 @@ export function OnboardingWizard({
 	pendingInvitations: invitations,
 	canCreateOrg,
 	impersonating,
+	hasOrganization,
 }: OnboardingWizardProps) {
 	const t = useTranslations("onboarding");
 	const router = useRouter();
-	const [step, setStep] = useState<string>("profile");
+	const orgsEnabled = config.features.organizationsMode !== "off";
+	const steps = buildOnboardingSteps(orgsEnabled, appOnboardingSteps);
+	const progressKey = `fuutu.onboarding.${userEmail}`;
 	const [name, setName] = useState(initialName);
 	const [orgName, setOrgName] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	// Created in this flow — navigating back or forward skips the org step
-	// so "Create" can't run a second time.
+	// Created in this flow — navigating back or forward (or reloading)
+	// skips the org step so "Create" can't run a second time.
 	const [orgCreated, setOrgCreated] = useState(false);
+	const completed = orgCreated || hasOrganization ? ["organization"] : [];
+	const [step, setStep] = useState<string>(() =>
+		resumeOnboardingStep(steps, completed, null),
+	);
+	// Saving starts on the render after the restore — the first commit
+	// still holds the initial step and must not overwrite the saved one.
+	const [restored, setRestored] = useState(false);
 
-	const orgsEnabled = config.features.organizationsMode !== "off";
-	const steps = buildOnboardingSteps(orgsEnabled, appOnboardingSteps);
+	// After hydration: pick up where this tab left off.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once on mount
+	useEffect(() => {
+		const saved = readProgress(progressKey);
+		if (saved) {
+			const savedCompleted =
+				saved.orgCreated || hasOrganization ? ["organization"] : [];
+			setOrgCreated(saved.orgCreated);
+			setStep(resumeOnboardingStep(steps, savedCompleted, saved.step));
+		}
+		setRestored(true);
+	}, []);
+
+	useEffect(() => {
+		if (restored) writeProgress(progressKey, { step, orgCreated });
+	}, [restored, progressKey, step, orgCreated]);
+
 	const currentIndex = steps.indexOf(step);
-	const completed = orgCreated ? ["organization"] : [];
 	const goNext = (from: string) =>
 		setStep(nextOnboardingStep(steps, from, completed));
 	const goBack = (from: string) =>
@@ -137,6 +197,7 @@ export function OnboardingWizard({
 				setError(t("incomplete"));
 				return;
 			}
+			writeProgress(progressKey, null);
 			// Refresh the cached session cookie so the server-side onboarding
 			// guard sees onboardingComplete=true immediately (cookie cache TTL
 			// would otherwise keep redirecting to /onboarding for minutes).

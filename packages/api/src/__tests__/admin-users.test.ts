@@ -54,6 +54,10 @@ const audit = vi.hoisted(() => {
 	// Strict rows land in `record` too, so order assertions see every row.
 	return { record, recordStrict: vi.fn((event: unknown) => record(event)) };
 });
+vi.mock("@fuutu/payments/config.server", () => ({
+	getPlanIdForProductId: (productId: string) =>
+		({ prod_pro: "pro", prod_ent: "enterprise" })[productId],
+}));
 vi.mock("@fuutu/logs", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@fuutu/logs")>()),
 	createAuditLogger: () => audit,
@@ -149,7 +153,11 @@ beforeEach(() => {
 	}) as never);
 	vi.mocked(db.adminListUsers).mockResolvedValue([] as never);
 	vi.mocked(db.adminCountUsers).mockResolvedValue(0);
-	vi.mocked(db.adminGetUserDetail).mockResolvedValue({ id: "user-2" } as never);
+	vi.mocked(db.adminGetUserDetail).mockResolvedValue({
+		id: "user-2",
+		purchases: [],
+		memberships: [],
+	} as never);
 	vi.mocked(db.countAdminUsers).mockResolvedValue(2);
 	vi.mocked(db.adminSetSystemRole).mockImplementation((async (input: {
 		userId: string;
@@ -411,6 +419,42 @@ describe("admin.users.list", () => {
 });
 
 describe("admin.users.get", () => {
+	it("maps personal and organization purchases to their plan", async () => {
+		vi.mocked(db.adminGetUserDetail).mockResolvedValue({
+			id: "user-2",
+			purchases: [{ id: "pur-u", priceId: "price_x", productId: "prod_pro" }],
+			memberships: [
+				{
+					id: "mem-1",
+					role: "owner",
+					organization: {
+						id: "org-1",
+						name: "Acme",
+						slug: "acme",
+						purchases: [
+							{ id: "pur-1", priceId: "price_ent", productId: "prod_ent" },
+							{ id: "pur-2", priceId: "topup", productId: "topup" },
+						],
+						activeSubscription: {
+							id: "pur-1",
+							priceId: "price_ent",
+							productId: "prod_ent",
+						},
+					},
+				},
+			],
+		} as never);
+		const detail = await call(
+			users.get,
+			{ userId: "user-2" },
+			{ context: adminContext() },
+		);
+		expect(detail.purchases.map((p) => p.planId)).toEqual(["pro"]);
+		const org = detail.memberships[0]?.organization;
+		expect(org?.purchases.map((p) => p.planId)).toEqual(["enterprise", null]);
+		expect(org?.activeSubscription?.planId).toBe("enterprise");
+	});
+
 	it("returns 404 for an unknown user", async () => {
 		vi.mocked(db.adminGetUserDetail).mockResolvedValue(null);
 		await expect(

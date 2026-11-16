@@ -87,6 +87,54 @@ test.describe("onboarding flow", () => {
 		).toBeVisible({ timeout: 10_000 });
 	});
 
+	test("a reload resumes at the step reached instead of restarting", async ({
+		page,
+	}) => {
+		await page.goto("/onboarding");
+		const nameInput = page.getByLabel(/full name/i);
+		await expect(nameInput).toBeVisible({ timeout: 10_000 });
+		await nameInput.fill("Test Onboarding User");
+		await page.getByRole("button", { name: /continue/i }).click();
+		const skip = page.getByRole("button", { name: /skip for now/i });
+		await expect(skip).toBeVisible({ timeout: 10_000 });
+
+		await page.reload();
+		await expect(skip).toBeVisible({ timeout: 10_000 });
+		await expect(page.getByLabel(/full name/i)).toBeHidden();
+	});
+
+	test("an organization created in the flow is not offered again after a reload", async ({
+		page,
+	}) => {
+		// The create call answers like the API (seeded plans may cap orgs).
+		await page.route("**/api/rpc/organizations/create", (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					json: { id: "org-e2e", name: "Onboarding Org", slug: "onb-org" },
+				}),
+			}),
+		);
+		await page.goto("/onboarding");
+		const nameInput = page.getByLabel(/full name/i);
+		await expect(nameInput).toBeVisible({ timeout: 10_000 });
+		await nameInput.fill("Test Onboarding User");
+		await page.getByRole("button", { name: /continue/i }).click();
+		await page.getByLabel(/organization name/i).fill("Onboarding Org");
+		await page.getByRole("button", { name: /create organization/i }).click();
+		const goToDashboard = page.getByRole("button", {
+			name: /go to dashboard/i,
+		});
+		await expect(goToDashboard).toBeVisible({ timeout: 10_000 });
+
+		await page.reload();
+		await expect(goToDashboard).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page.getByRole("button", { name: /create organization/i }),
+		).toBeHidden();
+	});
+
 	test("an impersonation started after the page loaded gets the support message", async ({
 		page,
 	}) => {

@@ -158,6 +158,31 @@ test.describe("admin user management", () => {
 		).toBeVisible();
 	});
 
+	test("user billing lists the organizations the user pays through", async ({
+		page,
+	}) => {
+		// Regression: the tab said "No purchases" for the owner of a paid org.
+		await page.goto("/admin/users?q=admin@");
+		await page.getByRole("link", { name: /admin@fuutu\.local/ }).click();
+		await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/);
+		await page.getByRole("tab", { name: /^billing/i }).click();
+
+		const acme = page.getByRole("listitem", { name: "Acme" });
+		await expect(acme).toBeVisible({ timeout: 10_000 });
+		await expect(acme.getByRole("link", { name: "Acme" })).toHaveAttribute(
+			"href",
+			/\/admin\/organizations\/[^/]+$/,
+		);
+		// The seeded Acme subscription, with its plan.
+		await expect(acme.getByRole("table")).toBeVisible();
+		await expect(acme.getByText(/^subscription$/i).first()).toBeVisible();
+		await expect(
+			page.getByRole("heading", {
+				name: /personal subscriptions and purchases/i,
+			}),
+		).toBeVisible();
+	});
+
 	test("impersonation shows the banner and stop returns to the user detail", async ({
 		page,
 	}) => {
@@ -232,6 +257,47 @@ test.describe("admin user management", () => {
 			page.getByRole("button", { name: /continue/i }),
 		).toBeDisabled();
 		expect(updateUser).toEqual([]);
+
+		const banner = page.getByRole("status").filter({
+			hasText: /you are impersonating/i,
+		});
+		await banner.getByRole("button", { name: /stop impersonating/i }).click();
+		await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/, {
+			timeout: 15_000,
+		});
+	});
+
+	test("billing and API-key creation are closed up front while impersonating", async ({
+		page,
+	}) => {
+		await page.goto("/admin/users?q=member@");
+		await page.getByRole("link", { name: /member@fuutu\.local/ }).click();
+		await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/);
+		await page.getByRole("button", { name: /^actions$/i }).click();
+		await page.getByRole("menuitem", { name: /^impersonate/i }).click();
+		const dialog = page.getByRole("dialog");
+		await dialog.getByLabel("Reason").fill("E2E billing check");
+		await dialog.getByRole("button", { name: /^impersonate$/i }).click();
+		await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+
+		// The API refuses these (denyImpersonation) — the UI says so before
+		// anyone clicks, instead of a generic "Checkout failed".
+		const reason = /not available while you're signed in as this user/i;
+		await page.goto("/organizations/acme/settings/billing");
+		await expect(page.getByText(reason).first()).toBeVisible({
+			timeout: 10_000,
+		});
+		await expect(
+			page.getByRole("button", { name: /upgrade to pro/i }),
+		).toBeDisabled();
+
+		await page.goto("/settings/api-keys");
+		await expect(page.getByText(reason).first()).toBeVisible({
+			timeout: 10_000,
+		});
+		await expect(
+			page.getByRole("button", { name: /create api key/i }).first(),
+		).toBeDisabled();
 
 		const banner = page.getByRole("status").filter({
 			hasText: /you are impersonating/i,
