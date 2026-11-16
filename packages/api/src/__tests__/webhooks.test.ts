@@ -339,9 +339,17 @@ describe("webhooks.deliveries.list", () => {
 	});
 
 	it("lists deliveries for a webhook with pagination", async () => {
-		vi.mocked(listDeliveries).mockResolvedValue([
-			{ id: "del-1", status: "success", eventType: "invoice.created" },
-		] as never);
+		const delivery = {
+			id: "del-1",
+			eventId: "evt-1",
+			eventType: "invoice.created",
+			status: "success",
+			responseCode: 200,
+			attempt: 1,
+			attemptedAt: new Date("2025-01-01T00:00:00Z"),
+			nextRetryAt: null,
+		};
+		vi.mocked(listDeliveries).mockResolvedValue([delivery] as never);
 		vi.mocked(countDeliveries).mockResolvedValue(1);
 
 		const result = await call(
@@ -353,12 +361,51 @@ describe("webhooks.deliveries.list", () => {
 		expect(listDeliveries).toHaveBeenCalledWith("wh-1", { take: 10, skip: 0 });
 		expect(countDeliveries).toHaveBeenCalledWith("wh-1");
 		expect(result).toEqual({
-			items: [{ id: "del-1", status: "success", eventType: "invoice.created" }],
+			items: [delivery],
 			page: 1,
 			limit: 10,
 			total: 1,
 			totalPages: 1,
 		});
+	});
+
+	it("never returns the receiver's response body or the payload", async () => {
+		const attemptedAt = new Date("2025-01-01T00:00:00Z");
+		vi.mocked(listDeliveries).mockResolvedValue([
+			{
+				id: "del-1",
+				webhookId: "wh-1",
+				eventId: "evt-1",
+				eventType: "invoice.created",
+				status: "failed",
+				responseCode: 500,
+				responseBody: "internal service banner",
+				payload: { secret: "x" },
+				attempt: 2,
+				attemptedAt,
+				nextRetryAt: null,
+			},
+		] as never);
+		vi.mocked(countDeliveries).mockResolvedValue(1);
+
+		const result = await call(
+			webhooksRouter.deliveries.list,
+			{ webhookId: "wh-1", organizationId: "org-1", page: 1, limit: 10 },
+			{ context: authenticatedContext },
+		);
+
+		expect(result.items).toEqual([
+			{
+				id: "del-1",
+				eventId: "evt-1",
+				eventType: "invoice.created",
+				status: "failed",
+				responseCode: 500,
+				attempt: 2,
+				attemptedAt,
+				nextRetryAt: null,
+			},
+		]);
 	});
 
 	it("computes correct skip for page 2", async () => {

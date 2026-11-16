@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import { protectedProcedure } from "../../../../orpc/procedures";
+import { listDeliveriesOutputSchema } from "../schemas";
 
 const listDeliveriesSchema = z.object({
 	webhookId: z.string().min(1),
@@ -21,6 +22,7 @@ export const listDeliveriesProcedure = protectedProcedure
 		description: "Returns paginated delivery attempts for a webhook.",
 	})
 	.input(listDeliveriesSchema)
+	.output(listDeliveriesOutputSchema)
 	.handler(async ({ input, context }) => {
 		await requireOrgPermissionAccess(
 			input.organizationId,
