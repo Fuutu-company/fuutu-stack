@@ -123,3 +123,14 @@ describe("workflow credential guard", () => {
 		expect(version).not.toMatch(/\bpnpm (install|i)\b/);
 	});
 });
+
+describe("maintenance workflow guard", () => {
+	const audit = job(read(".github/workflows/maintenance.yml"), "audit");
+
+	it("reports production advisories (high and above) without failing", () => {
+		expect(audit).toMatch(
+			/^ +pnpm audit --prod --audit-level=high \|\| true$/m,
+		);
+		expect(audit).toContain('>> "$GITHUB_STEP_SUMMARY"');
+	});
+});
