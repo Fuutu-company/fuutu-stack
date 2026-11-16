@@ -416,4 +416,12 @@ describe("@fuutu/env/docs", () => {
 		const { env } = await import("../docs");
 		expect(env.NEXT_PUBLIC_DOCS_URL).toBe("https://docs.example.com");
 	});
+
+	it("TRUST_PROXY_HEADERS (search rate limit) defaults to false", async () => {
+		delete process.env.TRUST_PROXY_HEADERS;
+		expect((await import("../docs")).env.TRUST_PROXY_HEADERS).toBe(false);
+		vi.resetModules();
+		process.env.TRUST_PROXY_HEADERS = "1";
+		expect((await import("../docs")).env.TRUST_PROXY_HEADERS).toBe(true);
+	});
 });
