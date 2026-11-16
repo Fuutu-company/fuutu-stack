@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { consentBannerMode, consentBannerVisible } from "@fuutu/analytics";
 import { expect, type Page, test } from "@playwright/test";
 import { PLAN_IDS, PLANS } from "../../../packages/payments/src/config";
 
@@ -19,9 +20,19 @@ function marketingPlanCtas(): string[] {
 	);
 }
 
+/**
+ * Skips only when the analytics config this run is built with (same env)
+ * switches the banner off — a banner that should show but doesn't fails.
+ */
+const BANNER_OFF: [boolean, string] = [
+	!consentBannerVisible(),
+	"Consent banner switched off by the analytics config",
+];
+
 // Base Playwright `test` on purpose: the shared fixture pre-accepts consent,
 // this spec needs the banner on screen.
 test.describe("consent banner", () => {
+	test.skip(...BANNER_OFF);
 	test.use({ viewport: { width: 1280, height: 720 } });
 
 	test("links the privacy policy in the user's locale", async ({ page }) => {
@@ -31,11 +42,7 @@ test.describe("consent banner", () => {
 		] as const) {
 			await page.goto(path);
 			const banner = page.getByRole("dialog", { name: /analytics/i });
-			const shown = await banner
-				.waitFor({ state: "visible", timeout: 5_000 })
-				.then(() => true)
-				.catch(() => false);
-			test.skip(!shown, "Consent banner disabled in this environment");
+			await expect(banner).toBeVisible({ timeout: 10_000 });
 			await expect(banner.getByRole("link")).toHaveAttribute("href", href);
 		}
 	});
@@ -45,11 +52,7 @@ test.describe("consent banner", () => {
 	}) => {
 		await page.goto("/en/pricing");
 		const banner = page.getByRole("dialog", { name: /analytics/i });
-		const shown = await banner
-			.waitFor({ state: "visible", timeout: 5_000 })
-			.then(() => true)
-			.catch(() => false);
-		test.skip(!shown, "Consent banner disabled in this environment");
+		await expect(banner).toBeVisible({ timeout: 10_000 });
 
 		const overlapsBanner = (selector: string, text?: string) =>
 			page.evaluate(
@@ -100,21 +103,14 @@ const CONSENT_COOKIE = "fuutu.consent.v1";
 
 const banner = (page: Page) => page.getByRole("dialog", { name: /analytics/i });
 
-async function bannerShown(page: Page): Promise<boolean> {
-	return banner(page)
-		.waitFor({ state: "visible", timeout: 5_000 })
-		.then(() => true)
-		.catch(() => false);
+/** Opens `path` and waits for the banner the config says is there. */
+async function gotoWithBanner(page: Page, path: string) {
+	await page.goto(path);
+	await expect(banner(page)).toBeVisible({ timeout: 10_000 });
 }
 
 /** `"notice"` (OK / Opt out) or `"consent"` (Accept / Decline) — set by the build env. */
-async function bannerMode(page: Page): Promise<"notice" | "consent"> {
-	return (await banner(page)
-		.getByRole("button", { name: /^opt out$/i })
-		.count()) > 0
-		? "notice"
-		: "consent";
-}
+const MODE = consentBannerMode();
 
 async function consentCookie(page: Page): Promise<string | undefined> {
 	const cookies = await page.context().cookies();
@@ -132,9 +128,9 @@ test.describe("consent banner modes", () => {
 	test("notice mode: says analytics already run, OK keeps them on and hides the banner", async ({
 		page,
 	}) => {
-		await page.goto("/en");
-		test.skip(!(await bannerShown(page)), "Consent banner disabled");
-		test.skip((await bannerMode(page)) !== "notice", "Consent mode build");
+		test.skip(...BANNER_OFF);
+		test.skip(MODE !== "notice", "Consent mode build");
+		await gotoWithBanner(page, "/en");
 
 		await expect(banner(page)).toContainText(/cookieless analytics/i);
 		await expect(banner(page)).toContainText(/opt out at any time/i);
@@ -150,9 +146,9 @@ test.describe("consent banner modes", () => {
 	test("notice mode: an opt-out is remembered across reloads", async ({
 		page,
 	}) => {
-		await page.goto("/en");
-		test.skip(!(await bannerShown(page)), "Consent banner disabled");
-		test.skip((await bannerMode(page)) !== "notice", "Consent mode build");
+		test.skip(...BANNER_OFF);
+		test.skip(MODE !== "notice", "Consent mode build");
+		await gotoWithBanner(page, "/en");
 
 		await banner(page)
 			.getByRole("button", { name: /^opt out$/i })
@@ -182,9 +178,9 @@ test.describe("consent banner modes", () => {
 	test("consent mode: asks first, Accept / Decline store the decision", async ({
 		page,
 	}) => {
-		await page.goto("/en");
-		test.skip(!(await bannerShown(page)), "Consent banner disabled");
-		test.skip((await bannerMode(page)) !== "consent", "Notice mode build");
+		test.skip(...BANNER_OFF);
+		test.skip(MODE !== "consent", "Notice mode build");
+		await gotoWithBanner(page, "/en");
 
 		await expect(page.locator("script[data-website-id]")).toHaveCount(0);
 		await banner(page)
@@ -197,9 +193,9 @@ test.describe("consent banner modes", () => {
 	test("footer Privacy settings reopens the banner after a decision", async ({
 		page,
 	}) => {
-		await page.goto("/en");
-		test.skip(!(await bannerShown(page)), "Consent banner disabled");
-		const mode = await bannerMode(page);
+		test.skip(...BANNER_OFF);
+		await gotoWithBanner(page, "/en");
+		const mode = MODE;
 		await banner(page)
 			.getByRole("button", { name: mode === "notice" ? /^ok$/i : /^accept$/i })
 			.click();
