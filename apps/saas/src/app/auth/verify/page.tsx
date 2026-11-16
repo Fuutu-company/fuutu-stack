@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Suspense, useEffect, useState } from "react";
+import { useStripQueryParam } from "@/lib/strip-query-param";
 
 export default function VerifyPage() {
 	return (
@@ -19,7 +20,8 @@ export default function VerifyPage() {
 function VerifyContent() {
 	const t = useTranslations("auth");
 	const params = useSearchParams();
-	const token = params.get("token");
+	const [token] = useState(() => params.get("token"));
+	useStripQueryParam("token", token);
 	const [status, setStatus] = useState<"idle" | "verifying" | "ok" | "error">(
 		token ? "verifying" : "idle",
 	);
