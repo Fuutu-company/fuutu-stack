@@ -7,53 +7,21 @@ import { i18nConfig } from "../../../i18n/config";
  * Orphaned visual baselines: a committed PNG that no visual spec writes any
  * more (page or test removed, locale disabled, a viewport the project no
  * longer shoots). Playwright never deletes snapshots, so these linger and
- * look like current renders. `pnpm test:visual:local --update` and the CI
- * baseline update prune the ones only a run can tell; this guard catches the
- * ones the file name already gives away.
+ * look like current renders. This guard catches the ones the file name
+ * gives away; the CI baseline update and `pnpm test:visual:local --update`
+ * delete exactly those (visual-prune.mjs, same rules). A shot whose test
+ * skips itself (feature off, other project class) is not visible by name —
+ * delete its baseline with the change that skips it.
  */
 
 const REPO_ROOT = join(import.meta.dirname, "../../../../");
 const APPS = ["saas", "marketing"] as const;
 const LOCALES = Object.keys(i18nConfig.locales);
-const VIEWPORTS = ["desktop", "tablet", "mobile"];
-// Longest first: `mobile-safari` before `safari`-like prefixes.
-const PROJECTS = [
-	"mobile-safari",
-	"mobile-chrome",
-	"chromium",
-	"firefox",
-	"webkit",
-];
 
-interface Parsed {
-	/** `category--slug`, without locale, viewport, project and platform. */
-	base: string;
-	project: string;
-	locale: string | null;
-	viewport: string | null;
-}
-
-function parse(file: string): Parsed | null {
-	const stem = file.replace(/-linux\.png$/, "");
-	const project = PROJECTS.find((p) => stem.endsWith(`-${p}`));
-	if (!project) return null;
-	const tokens = stem.slice(0, -(project.length + 1)).split("-");
-	const viewport = VIEWPORTS.includes(tokens.at(-1) ?? "")
-		? tokens.pop()
-		: null;
-	// A locale token only counts in front of a viewport (`…-en-desktop`);
-	// no locale-less name carries one.
-	const locale =
-		viewport !== null && tokens.at(-1)?.length === 2
-			? (tokens.pop() ?? null)
-			: null;
-	return {
-		base: tokens.join("-"),
-		project,
-		locale,
-		viewport: viewport ?? null,
-	};
-}
+// Same parser and rules as tooling/scripts/visual-prune.mjs — what this
+// guard rejects is exactly what the CI and local update runs delete.
+const lib = await import("../../../../tooling/scripts/visual-local-lib.mjs");
+const parse = lib.parseBaseline;
 
 const specSource = (app: string) => {
 	const dir = join(REPO_ROOT, "apps", app, "tests");
@@ -68,35 +36,23 @@ describe.each(APPS)("visual baselines of %s", (app) => {
 	const files = existsSync(dir)
 		? readdirSync(dir).filter((f) => f.endsWith("-linux.png"))
 		: [];
-	const source = specSource(app);
+	const ctx = { locales: LOCALES, specSource: specSource(app) };
+	const orphans = (...reasons: string[]) =>
+		files.filter((f) => reasons.includes(lib.orphanReason(f, ctx) ?? ""));
 
 	it("has no baseline for a disabled locale", () => {
-		const orphans = files.filter((f) => {
-			const locale = parse(f)?.locale;
-			return locale && !LOCALES.includes(locale);
-		});
-		expect(orphans).toEqual([]);
+		expect(orphans("disabled locale")).toEqual([]);
 	});
 
 	it("has no baseline whose page no visual spec names", () => {
-		const orphans = files.filter((f) => {
-			const parsed = parse(f);
-			return !parsed || !source.includes(`"${parsed.base}`);
-		});
-		expect(orphans).toEqual([]);
+		expect(
+			orphans("unknown project", "no visual spec names this page"),
+		).toEqual([]);
 	});
 
-	if (app === "marketing") {
-		it("shoots each viewport on one project class only (mobile on mobile projects)", () => {
-			const orphans = files.filter((f) => {
-				const parsed = parse(f);
-				if (!parsed?.viewport) return false;
-				const mobileProject = parsed.project.startsWith("mobile-");
-				return (parsed.viewport === "mobile") !== mobileProject;
-			});
-			expect(orphans).toEqual([]);
-		});
-	}
+	it("shoots each viewport on one project class only (mobile on mobile projects)", () => {
+		expect(orphans("viewport shot on the wrong project class")).toEqual([]);
+	});
 });
 
 describe("orphan guard", () => {

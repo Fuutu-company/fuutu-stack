@@ -1,5 +1,15 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	utimesSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../../");
@@ -106,46 +116,199 @@ describe("visual-local: paths", () => {
 	});
 });
 
-describe("visual-local: orphaned baselines", () => {
-	const committed = [
-		"a--x-en-desktop-chromium-linux.png",
-		"a--x-de-desktop-chromium-linux.png",
-		"a--x-en-mobile-mobile-safari-linux.png",
-		"a--x-en-desktop-firefox-linux.png",
-		"a--x-en-desktop-chromium-darwin.png",
+describe("visual-prune: static orphan rules", () => {
+	const ctx = {
+		locales: ["en", "de"],
+		specSource: [
+			'expectVisual(page, "core--dashboard.png");',
+			'{ path: "", name: "marketing--landing" },',
+			'{ name: "marketing--pricing" },',
+		].join("\n"),
+	};
+
+	it("flags a disabled locale, a page no spec names and a viewport on the wrong project class", () => {
+		expect(
+			lib.orphanReason("marketing--landing-fr-desktop-chromium-linux.png", ctx),
+		).toBe("disabled locale");
+		expect(lib.orphanReason("core--crm-chromium-linux.png", ctx)).toBe(
+			"no visual spec names this page",
+		);
+		expect(
+			lib.orphanReason("marketing--pricing-en-mobile-chromium-linux.png", ctx),
+		).toBe("viewport shot on the wrong project class");
+		expect(
+			lib.orphanReason(
+				"marketing--pricing-en-desktop-mobile-safari-linux.png",
+				ctx,
+			),
+		).toBe("viewport shot on the wrong project class");
+	});
+
+	it("keeps every baseline a spec still names, on every browser", () => {
+		for (const file of [
+			"core--dashboard-chromium-linux.png",
+			"core--dashboard-mobile-safari-linux.png",
+			"core--dashboard-firefox-linux.png",
+			"marketing--landing-de-desktop-webkit-linux.png",
+			"marketing--pricing-en-mobile-mobile-chrome-linux.png",
+		]) {
+			expect(lib.orphanReason(file, ctx), file).toBeNull();
+		}
+	});
+
+	it("never prunes a name it cannot classify — the guard test reports those", () => {
+		expect(lib.orphanReason("core--dashboard-msedge-linux.png", ctx)).toBe(
+			"unknown project",
+		);
+		expect(
+			lib.prunableOrphans(
+				[
+					"core--dashboard-msedge-linux.png",
+					"core--crm-chromium-darwin.png",
+					"core--crm-chromium-linux.png",
+				],
+				ctx,
+			),
+		).toEqual(["core--crm-chromium-linux.png"]);
+	});
+});
+
+describe("visual-prune: CLI after a partial update run", () => {
+	const SAAS_SPEC = [
+		'expectVisual(page, "core--dashboard.png");',
+		'expectVisual(page, "core--settings.png");',
+	].join("\n");
+	const MARKETING_SPEC = [
+		'{ path: "", name: "marketing--landing" },',
+		'expectVisual(menu, "component--locale-switcher.png");',
+	].join("\n");
+	const I18N_CONFIG = `export const i18nConfig = {
+	locales: { en: { label: "English" }, de: { label: "Deutsch" } },
+	defaultLocale: "en",
+} as const;
+`;
+	const SAAS = [
+		"core--dashboard-chromium-linux.png",
+		"core--dashboard-mobile-safari-linux.png",
+		"core--settings-chromium-linux.png",
+		"core--settings-mobile-safari-linux.png",
+		"core--settings-firefox-linux.png",
+	];
+	const MARKETING = [
+		"marketing--landing-en-desktop-chromium-linux.png",
+		"marketing--landing-de-desktop-chromium-linux.png",
+		"marketing--landing-en-mobile-mobile-safari-linux.png",
+		"component--locale-switcher-chromium-linux.png",
 	];
 
-	it("flags committed baselines of the run's projects that the run did not write", () => {
-		expect(
-			lib.orphanedBaselines(committed, [
-				"a--x-en-desktop-chromium-linux.png",
-				"a--x-en-mobile-mobile-safari-linux.png",
-			]),
-		).toEqual(["a--x-de-desktop-chromium-linux.png"]);
+	/**
+	 * A throwaway repo with copies of the real scripts — they resolve the
+	 * repo root from their own location, so nothing here touches the real
+	 * baselines. Every baseline predates the run (`mtime` an hour ago): an
+	 * update run leaves byte-identical renders untouched.
+	 */
+	function fixtureRepo() {
+		const root = mkdtempSync(join(tmpdir(), "fuutu-visual-prune-"));
+		const put = (rel: string, body: string | Buffer) => {
+			mkdirSync(dirname(join(root, rel)), { recursive: true });
+			writeFileSync(join(root, rel), body);
+		};
+		for (const rel of [
+			"tooling/scripts/visual-prune.mjs",
+			"tooling/scripts/visual-local-lib.mjs",
+			"packages/i18n/scripts/locales.mjs",
+		]) {
+			put(rel, read(rel));
+		}
+		put("packages/i18n/config.ts", I18N_CONFIG);
+		put("apps/saas/tests/visual.spec.ts", SAAS_SPEC);
+		put("apps/marketing/tests/visual.spec.ts", MARKETING_SPEC);
+		const hourAgo = new Date(Date.now() - 3_600_000);
+		const baseline = (app: string, file: string) => {
+			const rel = `.fuutu/visual-baselines/${app}/${file}`;
+			put(rel, "png");
+			utimesSync(join(root, rel), hourAgo, hourAgo);
+		};
+		for (const file of SAAS) baseline("saas", file);
+		for (const file of MARKETING) baseline("marketing", file);
+		const list = (app: string) =>
+			readdirSync(join(root, ".fuutu", "visual-baselines", app)).sort();
+		const prune = (app: string) =>
+			spawnSync(
+				process.execPath,
+				[join(root, "tooling/scripts/visual-prune.mjs"), "--app", app],
+				{ encoding: "utf8" },
+			);
+		return { root, put, list, prune, baseline };
+	}
+
+	it("a chromium-only saas run deletes no mobile-safari or marketing baseline", () => {
+		const repo = fixtureRepo();
+		try {
+			// The run rewrote only the chromium shots that changed.
+			repo.put(
+				".fuutu/visual-baselines/saas/core--dashboard-chromium-linux.png",
+				"new",
+			);
+			const result = repo.prune("saas");
+			expect(result.status, result.stderr).toBe(0);
+			expect(repo.list("saas")).toEqual([...SAAS].sort());
+			expect(repo.list("marketing")).toEqual([...MARKETING].sort());
+		} finally {
+			rmSync(repo.root, { recursive: true, force: true });
+		}
 	});
 
-	it("leaves other browsers' and host-platform files alone", () => {
-		expect(lib.orphanedBaselines(committed, [])).not.toContain(
-			"a--x-en-desktop-firefox-linux.png",
-		);
-		expect(lib.orphanedBaselines(committed, [])).not.toContain(
-			"a--x-en-desktop-chromium-darwin.png",
-		);
+	it("a run that rewrote nothing deletes nothing, in neither app", () => {
+		const repo = fixtureRepo();
+		try {
+			for (const app of ["saas", "marketing"]) {
+				const result = repo.prune(app);
+				expect(result.status, result.stderr).toBe(0);
+			}
+			expect(repo.list("saas")).toEqual([...SAAS].sort());
+			expect(repo.list("marketing")).toEqual([...MARKETING].sort());
+		} finally {
+			rmSync(repo.root, { recursive: true, force: true });
+		}
 	});
 
-	it("flags baselines not rewritten since the CI run started", () => {
-		const entries = [
-			{ file: "a--x-en-desktop-chromium-linux.png", mtimeMs: 2000 },
-			{ file: "a--y-en-desktop-chromium-linux.png", mtimeMs: 500 },
-			{ file: "a--y-en-desktop-firefox-linux.png", mtimeMs: 500 },
+	it("still deletes the real orphans of the app that ran — and only of that app", () => {
+		const repo = fixtureRepo();
+		const saasOrphans = [
+			"core--crm-chromium-linux.png", // page no spec names
 		];
-		expect(lib.staleBaselines(entries, 1000)).toEqual([
-			"a--y-en-desktop-chromium-linux.png",
-			"a--y-en-desktop-firefox-linux.png",
-		]);
-		expect(lib.staleBaselines(entries, 1000, ["chromium"])).toEqual([
-			"a--y-en-desktop-chromium-linux.png",
-		]);
+		const marketingOrphans = [
+			"marketing--landing-fr-desktop-chromium-linux.png", // disabled locale
+			"marketing--landing-en-mobile-chromium-linux.png", // wrong project class
+		];
+		try {
+			for (const f of saasOrphans) repo.baseline("saas", f);
+			for (const f of marketingOrphans) repo.baseline("marketing", f);
+			const result = repo.prune("marketing");
+			expect(result.status, result.stderr).toBe(0);
+			expect(repo.list("marketing")).toEqual([...MARKETING].sort());
+			expect(repo.list("saas")).toEqual([...SAAS, ...saasOrphans].sort());
+		} finally {
+			rmSync(repo.root, { recursive: true, force: true });
+		}
+	});
+
+	it("deletes nothing when it cannot read the app's specs or locales", () => {
+		const repo = fixtureRepo();
+		try {
+			rmSync(join(repo.root, "apps/saas/tests"), { recursive: true });
+			const noSpecs = repo.prune("saas");
+			expect(noSpecs.status).not.toBe(0);
+			expect(repo.list("saas")).toEqual([...SAAS].sort());
+
+			repo.put("packages/i18n/config.ts", "export const i18nConfig = {};\n");
+			const noLocales = repo.prune("marketing");
+			expect(noLocales.status).not.toBe(0);
+			expect(repo.list("marketing")).toEqual([...MARKETING].sort());
+		} finally {
+			rmSync(repo.root, { recursive: true, force: true });
+		}
 	});
 });
 
@@ -211,6 +374,22 @@ describe("visual-local: wiring", () => {
 		expect(ci.match(/node tooling\/scripts\/visual-prune\.mjs/g)?.length).toBe(
 			3,
 		);
+	});
+
+	it("CI and the local runner prune by the static rules only, never by what a run rewrote", () => {
+		const ci = read(".github", "workflows", "ci.yml");
+		const calls = ci.match(/node tooling\/scripts\/visual-prune\.mjs[^\n]*/g);
+		expect(
+			calls?.map((call) => call.replace(/\$\{\{ matrix\.app \}\}/, "<app>")),
+		).toEqual(
+			Array(3).fill('node tooling/scripts/visual-prune.mjs --app "<app>"'),
+		);
+		expect(ci).not.toMatch(/started="\$\(node/);
+
+		// One implementation: the local --update path runs the same script.
+		const runner = read("tooling", "scripts", "visual-local.mjs");
+		expect(runner).toMatch(/"visual-prune\.mjs"\),\s*"--app",\s*app/);
+		expect(runner).not.toMatch(/\b(orphanedBaselines|staleBaselines)\b/);
 	});
 
 	it("both playwright configs honour the snapshot dir override", () => {
@@ -283,10 +462,38 @@ describe("visual-local: container never receives host secrets", () => {
 			"BETTER_AUTH_URL",
 			"EMAIL_PROVIDER",
 			"NEXT_PUBLIC_ANALYTICS_PROVIDER",
+			"NEXT_PUBLIC_MARKETING_URL",
+			"PAYMENTS_PRO_PRICE_ID",
 			"FUUTU_TELEMETRY_DISABLED",
 		]);
 		// The only interpolated host value is the throwaway container DB.
 		expect(body?.match(/\$\{?\w+/g)).toEqual(["${DATABASE_URL"]);
+	});
+
+	it("renders with the CI e2e job's env (same plan, same marketing URL)", () => {
+		const ci = read(".github", "workflows", "ci.yml");
+		const job = ci.slice(
+			ci.indexOf("\n  e2e:"),
+			ci.indexOf("\n    steps:", ci.indexOf("\n  e2e:")),
+		);
+		const ciEnv = [...job.matchAll(/^ {6}([A-Z_]+): (?!\$\{\{)(.+)$/gm)]
+			.map(([, key = "", value = ""]) => [key, value.trim()] as const)
+			// The runner hands the throwaway container DB in.
+			.filter(([key]) => key !== "DATABASE_URL");
+		expect(ciEnv.map(([key]) => key)).toEqual(
+			expect.arrayContaining([
+				"PAYMENTS_PRO_PRICE_ID",
+				"NEXT_PUBLIC_MARKETING_URL",
+			]),
+		);
+		for (const [key, value] of ciEnv) {
+			expect(script, key).toMatch(
+				new RegExp(
+					`(^|\\s)${key}=${value.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}(\\s|$)`,
+					"m",
+				),
+			);
+		}
 	});
 
 	it("passes no host environment into the container", () => {

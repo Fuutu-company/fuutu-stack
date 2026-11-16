@@ -86,47 +86,74 @@ export function appPaths(root, app, mode) {
 /** Committed baselines are CI renders — Linux only. */
 export const isCiBaseline = (file) => file.endsWith("-linux.png");
 
-/**
- * Projects whose baselines are committed and refreshed on PRs, develop and
- * locally. A main-branch CI run also writes the other browsers.
- */
-export const BASELINE_PROJECTS = ["chromium", "mobile-safari"];
-
-const inProjects = (file, projects) =>
-	projects === null ||
-	projects.some((project) => file.endsWith(`-${project}-linux.png`));
-
-/**
- * Committed CI baselines (of `projects`) that a complete update run did not
- * write: no spec emits them any more (removed page, disabled locale, a
- * viewport a project no longer shoots).
- */
-export function orphanedBaselines(
-	committed,
-	produced,
-	projects = BASELINE_PROJECTS,
-) {
-	const written = new Set(produced);
-	return committed.filter(
-		(file) =>
-			isCiBaseline(file) && inProjects(file, projects) && !written.has(file),
-	);
-}
+// Longest first: `mobile-safari` before shorter suffixes.
+const PROJECTS = [
+	"mobile-safari",
+	"mobile-chrome",
+	"chromium",
+	"firefox",
+	"webkit",
+];
+const VIEWPORTS = ["desktop", "tablet", "mobile"];
 
 /**
- * Same for CI, where the update run writes straight into the committed dir:
- * a baseline of `projects` last modified before the run started was not
- * rewritten. `projects: null` covers every browser (main branch run).
+ * `category--slug[-<locale>-<viewport>]-<project>-linux.png` → its parts;
+ * null for a host-platform file or a project this list does not know.
  *
- * @param {{ file: string; mtimeMs: number }[]} entries
+ * @returns {{ base: string; project: string; locale: string | null; viewport: string | null } | null}
  */
-export function staleBaselines(entries, startedAtMs, projects = null) {
-	return entries
-		.filter(
-			({ file, mtimeMs }) =>
-				isCiBaseline(file) &&
-				inProjects(file, projects) &&
-				mtimeMs < startedAtMs,
-		)
-		.map(({ file }) => file);
+export function parseBaseline(file) {
+	if (!isCiBaseline(file)) return null;
+	const stem = file.replace(/-linux\.png$/, "");
+	const project = PROJECTS.find((p) => stem.endsWith(`-${p}`));
+	if (!project) return null;
+	const tokens = stem.slice(0, -(project.length + 1)).split("-");
+	const viewport = VIEWPORTS.includes(tokens.at(-1) ?? "")
+		? (tokens.pop() ?? null)
+		: null;
+	// A locale token only counts in front of a viewport (`…-en-desktop`);
+	// no locale-less name carries one.
+	const locale =
+		viewport !== null && tokens.at(-1)?.length === 2
+			? (tokens.pop() ?? null)
+			: null;
+	return { base: tokens.join("-"), project, locale, viewport };
 }
+
+/**
+ * Why a committed CI baseline is orphaned, decided from its name and the
+ * app's visual specs alone — never from what an update run rewrote:
+ * Playwright leaves a byte-identical render untouched, and CI runs cover a
+ * subset of apps and projects. Null when the baseline is still current.
+ *
+ * @param {string} file
+ * @param {{ locales: string[]; specSource: string }} ctx
+ */
+export function orphanReason(file, { locales, specSource }) {
+	const parsed = parseBaseline(file);
+	if (!parsed) return "unknown project";
+	if (parsed.locale && !locales.includes(parsed.locale))
+		return "disabled locale";
+	if (!specSource.includes(`"${parsed.base}`))
+		return "no visual spec names this page";
+	if (
+		parsed.viewport &&
+		(parsed.viewport === "mobile") !== parsed.project.startsWith("mobile-")
+	)
+		return "viewport shot on the wrong project class";
+	return null;
+}
+
+/**
+ * The CI baselines safe to delete. A name that cannot be classified stays —
+ * it may belong to a browser this list does not know; the guard test
+ * (packages/test-utils/src/arch/visual-baselines.test.ts) reports it.
+ *
+ * @param {string[]} files
+ * @param {{ locales: string[]; specSource: string }} ctx
+ */
+export const prunableOrphans = (files, ctx) =>
+	files.filter((file) => {
+		const reason = isCiBaseline(file) ? orphanReason(file, ctx) : null;
+		return reason !== null && reason !== "unknown project";
+	});

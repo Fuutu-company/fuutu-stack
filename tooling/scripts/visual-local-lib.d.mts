@@ -22,14 +22,22 @@ export function appPaths(
 	nativeBaselineDir: string;
 };
 export function isCiBaseline(file: string): boolean;
-export const BASELINE_PROJECTS: string[];
-export function orphanedBaselines(
-	committed: string[],
-	produced: string[],
-	projects?: string[] | null,
-): string[];
-export function staleBaselines(
-	entries: { file: string; mtimeMs: number }[],
-	startedAtMs: number,
-	projects?: string[] | null,
+export function parseBaseline(file: string): {
+	base: string;
+	project: string;
+	locale: string | null;
+	viewport: string | null;
+} | null;
+export type OrphanReason =
+	| "unknown project"
+	| "disabled locale"
+	| "no visual spec names this page"
+	| "viewport shot on the wrong project class";
+export function orphanReason(
+	file: string,
+	ctx: { locales: string[]; specSource: string },
+): OrphanReason | null;
+export function prunableOrphans(
+	files: string[],
+	ctx: { locales: string[]; specSource: string },
 ): string[];
