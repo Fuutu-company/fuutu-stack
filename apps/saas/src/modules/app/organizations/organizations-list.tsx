@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { planGateMessage } from "@/lib/api-error";
+import { VerifyEmailForInvitations } from "@/modules/auth/components/verify-email-for-invitations";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "organizations-list" });
@@ -40,9 +41,14 @@ type PendingInvitation = {
 export function OrganizationsList({
 	pendingInvitations: invitations,
 	canCreateOrg,
+	emailVerified,
+	userEmail,
 }: {
 	pendingInvitations: PendingInvitation[];
 	canCreateOrg: boolean;
+	/** Unverified: invitations stay hidden until the email is verified. */
+	emailVerified: boolean;
+	userEmail: string;
 }) {
 	const t = useTranslations();
 	const router = useRouter();
@@ -107,6 +113,13 @@ export function OrganizationsList({
 					)
 				}
 			/>
+
+			{!emailVerified && (
+				<VerifyEmailForInvitations
+					email={userEmail}
+					callbackPath="/organizations"
+				/>
+			)}
 
 			{invitations.length > 0 && (
 				<Card className="py-0">

@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { appOnboardingSteps } from "@/app-onboarding";
+import { VerifyEmailForInvitations } from "@/modules/auth/components/verify-email-for-invitations";
 import { orpc } from "@/utils/orpc";
 import { completeOnboardingAction } from "./actions";
 import {
@@ -42,6 +43,8 @@ interface OnboardingWizardProps {
 	initialName: string;
 	userEmail: string;
 	pendingInvitations: PendingInvitation[];
+	/** Unverified: invitations stay hidden until the email is verified. */
+	emailVerified: boolean;
 	canCreateOrg: boolean;
 	/** Support impersonation: Better Auth refuses `/update-user` (403). */
 	impersonating: boolean;
@@ -86,6 +89,7 @@ export function OnboardingWizard({
 	initialName,
 	userEmail,
 	pendingInvitations: invitations,
+	emailVerified,
 	canCreateOrg,
 	impersonating,
 	hasOrganization,
@@ -342,6 +346,12 @@ export function OnboardingWizard({
 										</Button>
 									)}
 								</div>
+							)}
+							{!emailVerified && (
+								<VerifyEmailForInvitations
+									email={userEmail}
+									callbackPath="/onboarding"
+								/>
 							)}
 							{invitations.length > 0 && (
 								<div>

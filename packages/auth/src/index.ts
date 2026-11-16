@@ -546,6 +546,9 @@ const authOptions = {
 									"all",
 						organizationLimit: authConfig.organizations.organizationLimit,
 						invitationExpiresIn: authConfig.organizations.invitationExpiresIn,
+						// Accept / reject / get by invitation id only with a verified
+						// session email — anyone can sign up with an invited address.
+						requireEmailVerificationOnInvitation: true,
 						async sendInvitationEmail({ email, id, organization, inviter }) {
 							await sendOrganizationInvitationEmail({
 								email,

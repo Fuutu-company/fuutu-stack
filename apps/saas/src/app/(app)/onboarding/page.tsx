@@ -14,13 +14,21 @@ export default async function OnboardingPage() {
 		orgCreation === "all" ||
 		(orgCreation === "admin" &&
 			(session.user as { role?: string }).role === "admin");
-	const pendingInvitations = (
-		await listPendingInvitationsForUser(session.user.email)
-	).map((inv) => ({
-		id: inv.id,
-		organizationName: inv.organization.name,
-		role: inv.role ?? "member",
-	}));
+	// Unverified: no invitations (anyone can sign up with an invited
+	// address) — the page asks the user to verify the email instead.
+	const emailVerified = session.user.emailVerified === true;
+	const pendingInvitations = emailVerified
+		? (
+				await listPendingInvitationsForUser({
+					email: session.user.email,
+					emailVerified,
+				})
+			).map((inv) => ({
+				id: inv.id,
+				organizationName: inv.organization.name,
+				role: inv.role ?? "member",
+			}))
+		: [];
 	// Forced mode: an org is required, so one membership completes the org
 	// step — a reload or second visit never offers "Create" again.
 	const hasOrganization =
@@ -33,6 +41,7 @@ export default async function OnboardingPage() {
 				userEmail={session.user.email}
 				canCreateOrg={canCreateOrg}
 				pendingInvitations={pendingInvitations}
+				emailVerified={emailVerified}
 				hasOrganization={hasOrganization}
 				impersonating={Boolean(
 					(session.session as { impersonatedBy?: string | null })

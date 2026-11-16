@@ -8,6 +8,7 @@ import { Building2, RotateCw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { VerifyEmailForInvitations } from "./verify-email-for-invitations";
 
 type InvitationData = {
 	id: string;
@@ -27,6 +28,8 @@ export function AcceptInvitation() {
 	const invitationId = searchParams.get("id");
 
 	const [session, setSession] = useState<boolean | null>(null);
+	/** The signed-in email while it is unverified — invitations need it verified. */
+	const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 	const [invitation, setInvitation] = useState<InvitationData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [accepting, setAccepting] = useState(false);
@@ -41,7 +44,7 @@ export function AcceptInvitation() {
 	 * sign-in — the server would bounce them straight back here, in a loop.
 	 */
 	const checkSession = useCallback(async (): Promise<
-		"signed-in" | "signed-out" | "unavailable"
+		"signed-in" | "unverified" | "signed-out" | "unavailable"
 	> => {
 		try {
 			const res = await authClient.getSession();
@@ -50,7 +53,13 @@ export function AcceptInvitation() {
 				return "unavailable";
 			}
 			setSession(Boolean(res.data));
-			return res.data ? "signed-in" : "signed-out";
+			if (!res.data) return "signed-out";
+			if (!res.data.user.emailVerified) {
+				setUnverifiedEmail(res.data.user.email);
+				return "unverified";
+			}
+			setUnverifiedEmail(null);
+			return "signed-in";
 		} catch (e) {
 			log.warn("session check failed", { err: e });
 			return "unavailable";
@@ -106,6 +115,12 @@ export function AcceptInvitation() {
 				} else {
 					router.replace("/auth/sign-in");
 				}
+				return;
+			}
+			// Better Auth refuses invitation lookups for an unverified email;
+			// the page asks for verification instead.
+			if (state === "unverified") {
+				setLoading(false);
 				return;
 			}
 			await loadInvitation();
@@ -173,6 +188,17 @@ export function AcceptInvitation() {
 		return (
 			<AuthCard title={t("errorTitle")}>
 				<p className="text-muted-foreground text-sm">{t("missingId")}</p>
+			</AuthCard>
+		);
+	}
+
+	if (unverifiedEmail) {
+		return (
+			<AuthCard title={t("title")}>
+				<VerifyEmailForInvitations
+					email={unverifiedEmail}
+					callbackPath={`/auth/accept-invitation?id=${encodeURIComponent(invitationId)}`}
+				/>
 			</AuthCard>
 		);
 	}
