@@ -24,8 +24,8 @@ import { appOnboardingSteps } from "@/app-onboarding";
 import { orpc } from "@/utils/orpc";
 import { completeOnboardingAction } from "./actions";
 import {
-	buildOnboardingSteps,
 	nextOnboardingStep,
+	onboardingStepsFor,
 	previousOnboardingStep,
 	resumeOnboardingStep,
 } from "./onboarding-steps";
@@ -47,7 +47,7 @@ interface OnboardingWizardProps {
 	impersonating: boolean;
 	/**
 	 * Forced organizations mode and the user already belongs to an org —
-	 * the org step is done and never offered again.
+	 * the org step is left out of the flow.
 	 */
 	hasOrganization: boolean;
 }
@@ -93,7 +93,11 @@ export function OnboardingWizard({
 	const t = useTranslations("onboarding");
 	const router = useRouter();
 	const orgsEnabled = config.features.organizationsMode !== "off";
-	const steps = buildOnboardingSteps(orgsEnabled, appOnboardingSteps);
+	const steps = onboardingStepsFor(
+		config.features.organizationsMode,
+		hasOrganization,
+		appOnboardingSteps,
+	);
 	const progressKey = `fuutu.onboarding.${userEmail}`;
 	const [name, setName] = useState(initialName);
 	const [orgName, setOrgName] = useState("");
@@ -102,7 +106,7 @@ export function OnboardingWizard({
 	// Created in this flow — navigating back or forward (or reloading)
 	// skips the org step so "Create" can't run a second time.
 	const [orgCreated, setOrgCreated] = useState(false);
-	const completed = orgCreated || hasOrganization ? ["organization"] : [];
+	const completed = orgCreated ? ["organization"] : [];
 	const [step, setStep] = useState<string>(() =>
 		resumeOnboardingStep(steps, completed, null),
 	);
@@ -115,8 +119,7 @@ export function OnboardingWizard({
 	useEffect(() => {
 		const saved = readProgress(progressKey);
 		if (saved) {
-			const savedCompleted =
-				saved.orgCreated || hasOrganization ? ["organization"] : [];
+			const savedCompleted = saved.orgCreated ? ["organization"] : [];
 			setOrgCreated(saved.orgCreated);
 			setStep(resumeOnboardingStep(steps, savedCompleted, saved.step));
 		}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -9,6 +11,7 @@ import { describe, expect, it } from "vitest";
 const {
 	buildOnboardingSteps,
 	nextOnboardingStep,
+	onboardingStepsFor,
 	previousOnboardingStep,
 	resumeOnboardingStep,
 } = await import(
@@ -106,29 +109,105 @@ describe("step navigation", () => {
 	});
 });
 
+describe("onboardingStepsFor (organizations mode × existing membership)", () => {
+	const appSteps = [
+		{ id: "role", after: "profile" as const },
+		{ id: "invite", after: "organization" as const },
+		{ id: "tour" },
+	];
+
+	it("forced mode without an org runs the org step", () => {
+		expect(onboardingStepsFor("forced", false, [])).toEqual([
+			"profile",
+			"organization",
+			"done",
+		]);
+	});
+
+	it("forced mode with an org leaves out only the org step", () => {
+		expect(onboardingStepsFor("forced", true, [])).toEqual(["profile", "done"]);
+		// App steps anchored on the org step keep their place.
+		expect(onboardingStepsFor("forced", true, appSteps)).toEqual([
+			"profile",
+			"role",
+			"invite",
+			"tour",
+			"done",
+		]);
+	});
+
+	it("on mode keeps the org step, membership or not", () => {
+		const expected = ["profile", "organization", "done"];
+		expect(onboardingStepsFor("on", false, [])).toEqual(expected);
+		expect(onboardingStepsFor("on", true, [])).toEqual(expected);
+	});
+
+	it("off mode has no org step", () => {
+		expect(onboardingStepsFor("off", false, [])).toEqual(["profile", "done"]);
+		expect(onboardingStepsFor("off", true, [])).toEqual(["profile", "done"]);
+	});
+});
+
+describe("onboarding wizard wiring", () => {
+	// The kit E2E runs with orgs "on" — this keeps forced mode's membership
+	// rule from silently dropping out of the wizard.
+	it("builds the steps from the organizations mode and the user's membership", () => {
+		const wizard = readFileSync(
+			join(
+				import.meta.dirname,
+				"../../../../apps/saas/src/modules/app/onboarding/onboarding-wizard.tsx",
+			),
+			"utf8",
+		);
+		expect(wizard).toMatch(
+			/onboardingStepsFor\(\s*config\.features\.organizationsMode,\s*hasOrganization,\s*appOnboardingSteps,?\s*\)/,
+		);
+		expect(wizard).not.toMatch(/buildOnboardingSteps\(/);
+	});
+});
+
 describe("resumeOnboardingStep (reload / return to /onboarding)", () => {
 	const kit = ["profile", "organization", "done"];
 	const flow = ["profile", "role", "organization", "tour", "done"];
 
 	it("starts at the first step on a fresh visit", () => {
 		expect(resumeOnboardingStep(kit, [], null)).toBe("profile");
+		// Forced mode, user already in an org: the org step is gone, the
+		// profile step still comes first.
+		expect(
+			resumeOnboardingStep(onboardingStepsFor("forced", true, []), [], null),
+		).toBe("profile");
+	});
+
+	it("a fresh visit starts at the first step even with the org created", () => {
+		expect(resumeOnboardingStep(kit, ["organization"], null)).toBe("profile");
+		expect(resumeOnboardingStep(flow, ["organization"], null)).toBe("profile");
 	});
 
 	it("returns to the step the user had reached", () => {
 		expect(resumeOnboardingStep(flow, [], "role")).toBe("role");
 		expect(resumeOnboardingStep(kit, [], "organization")).toBe("organization");
+		expect(resumeOnboardingStep(flow, ["organization"], "tour")).toBe("tour");
 	});
 
-	it("never reopens the org step once the user belongs to an org", () => {
-		expect(resumeOnboardingStep(kit, ["organization"], null)).toBe("done");
+	it("never reopens the org step once it was completed in this tab", () => {
+		expect(resumeOnboardingStep(kit, ["organization"], "organization")).toBe(
+			"done",
+		);
 		expect(resumeOnboardingStep(flow, ["organization"], "organization")).toBe(
 			"tour",
 		);
-		// Steps before the org step were passed on the way there.
-		expect(resumeOnboardingStep(flow, ["organization"], null)).toBe("tour");
 	});
 
 	it("ignores a stored step the flow no longer has", () => {
 		expect(resumeOnboardingStep(kit, [], "removed-app-step")).toBe("profile");
+		// Org step dropped because the user now belongs to one.
+		expect(
+			resumeOnboardingStep(
+				onboardingStepsFor("forced", true, []),
+				[],
+				"organization",
+			),
+		).toBe("profile");
 	});
 });

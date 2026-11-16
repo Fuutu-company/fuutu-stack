@@ -51,6 +51,22 @@ export function buildOnboardingSteps(
 }
 
 /**
+ * This user's steps: org step per organizations mode (`off` has none), and
+ * in `forced` mode it is left out once the user belongs to an org — the
+ * org requirement is met. App steps anchored on it keep their place.
+ */
+export function onboardingStepsFor(
+	organizationsMode: "off" | "on" | "forced",
+	hasOrganization: boolean,
+	appSteps: readonly Pick<AppOnboardingStep, "id" | "after" | "enabled">[],
+): string[] {
+	const steps = buildOnboardingSteps(organizationsMode !== "off", appSteps);
+	return organizationsMode === "forced" && hasOrganization
+		? steps.filter((id) => id !== "organization")
+		: steps;
+}
+
+/**
  * Step after `from`, skipping `completed` steps that must not run twice in
  * one flow (e.g. `organization` once the org was created). `done` is never
  * skipped and stays the last stop.
@@ -84,20 +100,19 @@ export function previousOnboardingStep(
 }
 
 /**
- * Where the wizard opens: the step the user had reached (`saved`, from an
- * earlier visit) unless it is completed or gone from the flow; otherwise
- * the step after the last completed one (the steps before it were passed
- * on the way there), else the first step.
+ * Where the wizard opens: the step this tab had reached (`saved`), or the
+ * step after it when it was completed meanwhile; a fresh visit, or a saved
+ * step gone from the flow, starts at the first step.
  */
 export function resumeOnboardingStep(
 	steps: readonly string[],
 	completed: readonly string[],
 	saved: string | null,
 ): string {
-	if (saved && steps.includes(saved) && !completed.includes(saved)) {
-		return saved;
+	if (saved && steps.includes(saved)) {
+		return completed.includes(saved)
+			? nextOnboardingStep(steps, saved, completed)
+			: saved;
 	}
-	const lastCompleted = steps.findLast((id) => completed.includes(id));
-	if (lastCompleted) return nextOnboardingStep(steps, lastCompleted, completed);
 	return steps[0] ?? DONE_STEP;
 }
