@@ -78,9 +78,8 @@ jobs:
           # (and develop): a protected main rejects the release commit pushed
           # with GITHUB_TOKEN. Empty → the default token is used.
           ssh-key: ${{ secrets.FUUTU_RELEASE_DEPLOY_KEY }}
-      - uses: ./.github/actions/setup
-        with:
-          db-generate: "false"
+      # No toolchain setup: node, jq, git and gh ship on the runner, and no
+      # dependency code may run while the deploy key is loaded.
 
       - name: Select version target
         id: target

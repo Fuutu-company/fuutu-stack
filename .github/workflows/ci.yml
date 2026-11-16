@@ -170,10 +170,6 @@ jobs:
       matrix:
         app: [saas, marketing]
     env:
-      # PAT/GitHub App token for the baseline auto-commit push — empty means
-      # the feature degrades to report-only (GITHUB_TOKEN pushes only
-      # produce "action_required" ghost suites).
-      BOT_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN }}
       # SWC materializes its native binding into a cache dir and validates
       # parent permissions — /github/home fails that check inside containers.
       SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
@@ -202,12 +198,12 @@ jobs:
         with:
           # PRs check out the branch tip — baseline commits must be pushable
           # back onto the PR branch; full history for the rebase-retry.
-          # FUUTU_CI_BOT_TOKEN (PAT/GitHub App token) makes the baseline push
-          # fire a real pull_request synchronize run — GITHUB_TOKEN pushes
-          # only produce permanently "action_required" ghost suites.
-          token: ${{ secrets.FUUTU_CI_BOT_TOKEN || github.token }}
           ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
+          # This job runs dependency code (install, build, Playwright): no
+          # token stays in .git/config. The baseline push steps hand theirs
+          # to ci-visual-baselines.sh only.
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Create .env for dotenv-cli
         run: |
@@ -291,13 +287,14 @@ jobs:
       # checks conclude on the baseline commit — the loop-terminating
       # mechanism, since that run sees a chore(visual) head and only
       # compares. With plain GITHUB_TOKEN the push would leave permanently
-      # "action_required" ghost suites, so the feature degrades to
-      # report-only (baselines still refresh on merge to develop/main).
+      # "action_required" ghost suites, so without the bot token the script
+      # stays report-only (baselines still refresh on merge to develop/main).
       - name: Commit updated baselines to PR branch
         id: baseline-pr
-        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1' && env.BOT_TOKEN != ''
+        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1'
         env:
           HEAD_REF: ${{ github.head_ref }}
+          GIT_PUSH_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN }}
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "$HEAD_REF" pr
 
 
@@ -323,6 +320,8 @@ jobs:
 
       - name: Commit updated baselines (push)
         if: github.event_name == 'push'
+        env:
+          GIT_PUSH_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN || github.token }}
         run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.ref_name }}" push
 
       # Hosted report (opt-in via FUUTU_PAGES_ENABLED): handed to the pages
