@@ -42,7 +42,7 @@ The PR title *is* the squash commit message and must be a valid [Conventional Co
 4. CI must pass (`verify`, `build`, `e2e`). CI ships disabled: to enable it in your fork, see [Run tests in CI](https://docs.fuutustack.com/docs/testing/ci).
 5. Address review feedback; the PR is squash-merged.
 
-Sign off every commit with `git commit -s` (adds a `Signed-off-by:` line matching the commit author). The `DCO` check fails pull requests with unsigned commits; to fix, run `git rebase --signoff <base>` and force-push your branch. See [Contribution terms](#contribution-terms).
+Sign off every commit with `git commit -s` (adds a `Signed-off-by:` line matching the commit author). The `DCO` check fails pull requests with unsigned commits; to fix, run `git rebase --signoff <base>` and force-push your branch. See [Contribution terms](#contribution-terms). The check runs on pull requests from forks, which is how external contributions arrive. Branches in this repository belong to the maintainers, whose work is owned by Fuutu, so their pull requests skip it.
 
 Every bug fix needs a regression test, and tests are never deleted or weakened to get green.
 

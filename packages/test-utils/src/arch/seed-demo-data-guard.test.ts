@@ -95,6 +95,24 @@ describe("seed demo data guard", () => {
 			expect(purchaseBlock).toMatch(/update:\s*\{[^}]*productId/);
 		});
 
+		it("CI's E2E job sets the demo plan's price id, so the seeded Acme is on that plan", () => {
+			const envVar = demoPlanEnvVar();
+			expect(
+				envVar,
+				`PLANS.${DEMO_PLAN_ID}.priceIdEnvVars.month not found`,
+			).toBeDefined();
+
+			// Without it CI seeds Acme on Free and every plan-gated spec
+			// (webhooks: FEATURE_CATALOG tier pro) answers 403.
+			const ci = read(".github/workflows/ci.yml");
+			const e2e = ci.slice(ci.indexOf("\n  e2e:\n"));
+			const jobEnv = e2e.slice(
+				e2e.indexOf("\n    env:\n"),
+				e2e.indexOf("\n    steps:\n"),
+			);
+			expect(jobEnv).toMatch(new RegExp(`\\n {6}${envVar}: \\S+`));
+		});
+
 		it("grants the demo ai_tokens only when Acme resolves to the demo plan's price", () => {
 			const envVar = demoPlanEnvVar();
 			expect(

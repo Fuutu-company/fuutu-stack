@@ -185,6 +185,14 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+      # `next build` inlines NEXT_PUBLIC_* into client bundles; local builds
+      # get it from the slot env (tooling/scripts/next.mjs), CI's plain
+      # `next build` from here (slot 0 marketing port).
+      NEXT_PUBLIC_MARKETING_URL: http://localhost:3001
+      # Any non-empty id: the seed puts Acme on Pro with it and the app maps
+      # it back to Pro, like a local .env with a test price. Unset, Acme is
+      # Free and plan-gated specs (webhooks) answer 403.
+      PAYMENTS_PRO_PRICE_ID: ci_pro_month
     steps:
       - name: Generate CI auth secret
         run: |
@@ -384,7 +392,10 @@ jobs:
     steps:
       - run: mkdir -p "$HOME"
       - uses: actions/checkout@v5
+      # Docs never import @fuutu/db, and Prisma generate needs DATABASE_URL.
       - uses: ./.github/actions/setup
+        with:
+          db-generate: "false"
       - name: Create .env for dotenv-cli
         run: |
           cat > .env << 'EOF'
