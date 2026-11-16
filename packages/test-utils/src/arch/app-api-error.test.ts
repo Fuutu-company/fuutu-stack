@@ -76,6 +76,17 @@ describe("paymentsErrorKey", () => {
 		);
 	});
 
+	it("says only the payer may open the org's billing portal", () => {
+		expect(
+			apiError.paymentsErrorKey(
+				new ORPCError("PRECONDITION_FAILED", {
+					message: "Only the member who pays can open the billing portal",
+					data: { reason: "portal_payer_only", payer: "j***@acme.com" },
+				}),
+			),
+		).toBe("errors.portalPayerOnly");
+	});
+
 	it("still falls back to the caller's key for other failures", () => {
 		expect(
 			apiError.paymentsErrorKey(new ORPCError("INTERNAL_SERVER_ERROR")),

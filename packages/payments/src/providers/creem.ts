@@ -40,6 +40,9 @@ function getApiKey(): string {
 	return env.CREEM_API_KEY;
 }
 
+/** Upper bound for one Creem API call — a hanging API must not stall the request. */
+const CREEM_TIMEOUT_MS = 10_000;
+
 async function creemFetch(path: string, init: RequestInit = {}) {
 	const baseUrl = env.CREEM_TEST_MODE
 		? "https://test-api.creem.io/v1"
@@ -51,6 +54,7 @@ async function creemFetch(path: string, init: RequestInit = {}) {
 	try {
 		return await fetch(url, {
 			...init,
+			signal: init.signal ?? AbortSignal.timeout(CREEM_TIMEOUT_MS),
 			headers: {
 				"x-api-key": apiKey,
 				"Content-Type": "application/json",
@@ -166,15 +170,65 @@ const creemWebhookSchema = z.object({
 		status: z.string().optional(),
 		current_period_end_date: z.string().optional(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
-		subscription: z.object({ id: z.string() }).optional(),
+		subscription: z.union([z.string(), z.object({ id: z.string() })]).nullish(),
 		// Purchased units: checkout objects carry `units` at the top level,
 		// subscription objects via `items[]`, renewals via the embedded
 		// originating `checkout`.
 		units: z.number().optional(),
 		items: z.array(z.object({ units: z.number().optional() })).optional(),
-		checkout: z.object({ units: z.number().optional() }).optional(),
+		checkout: z
+			.union([
+				z.string(),
+				z.object({
+					id: z.string().optional(),
+					units: z.number().optional(),
+				}),
+			])
+			.nullish(),
+		// refund.created / dispute.created: the refunded amount and the
+		// transaction it was taken from.
+		refund_amount: z.number().nullish(),
+		transaction: z
+			.union([
+				z.string(),
+				z.object({
+					amount_paid: z.number().nullish(),
+					status: z.string().nullish(),
+				}),
+			])
+			.nullish(),
 	}),
 });
+
+type CreemObject = z.infer<typeof creemWebhookSchema>["object"];
+
+function refId(
+	value: string | { id?: string } | null | undefined,
+): string | undefined {
+	if (!value) return undefined;
+	return typeof value === "string" ? value : value.id;
+}
+
+/** Transaction statuses of a payment Creem took back in full. */
+const REVERSED_TRANSACTION = new Set(["refunded", "chargedBack"]);
+
+/**
+ * A full refund: the transaction says so, or the refund covers the paid
+ * amount. Without either it cannot be told from a partial refund — not a
+ * reversal.
+ */
+function isFullRefund(object: CreemObject): boolean {
+	const transaction =
+		typeof object.transaction === "object" ? object.transaction : null;
+	if (transaction?.status && REVERSED_TRANSACTION.has(transaction.status)) {
+		return true;
+	}
+	return (
+		object.refund_amount != null &&
+		transaction?.amount_paid != null &&
+		object.refund_amount >= transaction.amount_paid
+	);
+}
 
 /** A unit count is only meaningful as a positive integer. */
 function toUnits(value: number | undefined): number | undefined {
@@ -472,6 +526,28 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		}
 		const payload = parsed.data;
 		const eventType = payload.eventType;
+
+		// A dispute or a full refund takes the payment back — of the
+		// subscription it paid, else of the one-time checkout.
+		if (eventType === "dispute.created" || eventType === "refund.created") {
+			const object = payload.object;
+			if (eventType === "refund.created" && !isFullRefund(object)) {
+				log.info("partial or unclassified refund — not a reversal", {
+					eventId: payload.id,
+				});
+				return [];
+			}
+			const eventId = payload.id ?? object.id;
+			const subscriptionId = refId(object.subscription);
+			if (subscriptionId) {
+				return [{ type: "payment.reversed", eventId, subscriptionId }];
+			}
+			const paymentRef = refId(object.checkout);
+			return paymentRef
+				? [{ type: "payment.reversed", eventId, paymentRef }]
+				: [];
+		}
+
 		const mappedType = mapCreemEvent(eventType);
 
 		if (!mappedType) {
@@ -481,7 +557,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		const object = payload.object;
 
 		// Skip checkout.completed if it created a subscription (subscription events handle it)
-		if (eventType === "checkout.completed" && object.subscription?.id) {
+		if (eventType === "checkout.completed" && refId(object.subscription)) {
 			return [];
 		}
 
@@ -493,7 +569,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		// and skip top-up credit granting. Only set subscriptionId for actual
 		// subscription events.
 		const isOneTimeCheckout =
-			eventType === "checkout.completed" && !object.subscription?.id;
+			eventType === "checkout.completed" && !refId(object.subscription);
 		const subscriptionId = isOneTimeCheckout ? undefined : object.id;
 		const productId = object.product?.id;
 		const status = object.status ? mapCreemStatus(object.status) : undefined;
@@ -512,9 +588,15 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			status,
 			currentPeriodEnd,
 			units: toUnits(
-				object.units ?? object.items?.[0]?.units ?? object.checkout?.units,
+				object.units ??
+					object.items?.[0]?.units ??
+					(typeof object.checkout === "object"
+						? object.checkout?.units
+						: undefined),
 			),
 			metadata: object.metadata,
+			// The checkout id names a one-time purchase in a later refund.
+			...(isOneTimeCheckout && object.id ? { paymentRef: object.id } : {}),
 		};
 
 		return [event];

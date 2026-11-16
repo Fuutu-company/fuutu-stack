@@ -117,6 +117,9 @@ vi.mock("@fuutu/payments/config.server", async (importOriginal) => {
 
 vi.mock("@fuutu/db", () => ({
 	getOrganizationById: vi.fn(),
+	getPurchasesByOrganizationId: vi.fn().mockResolvedValue([]),
+	getUserById: vi.fn().mockResolvedValue(null),
+	countOrganizationMembers: vi.fn().mockResolvedValue(1),
 	getActiveSubscriptionForUser: vi.fn(),
 	getActiveSubscriptionForOrganization: vi.fn(),
 	getPurchaseByProviderSubscriptionId: vi.fn(),
@@ -141,6 +144,9 @@ const {
 const { buildPricingTiers } = await import("@fuutu/payments/plans");
 const {
 	getOrganizationById,
+	getPurchasesByOrganizationId,
+	getUserById,
+	countOrganizationMembers,
 	getActiveSubscriptionForUser,
 	getActiveSubscriptionForOrganization,
 	getPurchaseByProviderSubscriptionId,
@@ -456,6 +462,8 @@ describe("payments.checkout.create", () => {
 			successUrl: "http://localhost:3000/success",
 			cancelUrl: "http://localhost:3000/cancel",
 			customerEmail: "test@fuutu.local",
+			// Seat-based org checkout: at least the member count (1 here).
+			seats: 1,
 			trial: true,
 			trialDays: 14,
 		});
@@ -552,6 +560,48 @@ describe("payments.checkout.create — seats", () => {
 		);
 
 		expect(mockProvider.createCheckoutLink.mock.calls[0]?.[0].seats).toBe(1000);
+	});
+
+	it("bills at least the org's member count when seats follow members", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [{ userId: "user-seats", role: "owner", id: "member-s" }],
+		} as never);
+		vi.mocked(countOrganizationMembers).mockResolvedValue(7);
+
+		await call(
+			paymentsRouter.checkout.create,
+			{
+				planId: fixturePlanId<PlanId>("pro"),
+				organizationId: orgFixture.id,
+				seats: 2,
+			},
+			{ context: seatsContext },
+		);
+
+		expect(countOrganizationMembers).toHaveBeenCalledWith(orgFixture.id);
+		expect(vi.mocked(assertCheckoutAllowed).mock.calls[0]?.[0].seats).toBe(7);
+		expect(mockProvider.createCheckoutLink.mock.calls[0]?.[0].seats).toBe(7);
+	});
+
+	it("keeps a seat count above the member count", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [{ userId: "user-seats", role: "owner", id: "member-s" }],
+		} as never);
+		vi.mocked(countOrganizationMembers).mockResolvedValue(3);
+
+		await call(
+			paymentsRouter.checkout.create,
+			{
+				planId: fixturePlanId<PlanId>("pro"),
+				organizationId: orgFixture.id,
+				seats: 10,
+			},
+			{ context: seatsContext },
+		);
+
+		expect(mockProvider.createCheckoutLink.mock.calls[0]?.[0].seats).toBe(10);
 	});
 
 	it("rejects more than 1000 seats before any guard or provider call", async () => {
@@ -670,6 +720,14 @@ describe("payments.portal.open", () => {
 			id: "12345678-1234-1234-8123-123456789abc",
 			paymentsCustomerId: "cust-123",
 		} as never);
+		// The signed-in user checked out the org's subscription.
+		vi.mocked(getPurchasesByOrganizationId).mockResolvedValue([
+			{
+				customerId: "cust-123",
+				userId: null,
+				metadata: { user_id: "user-1", organization_id: orgFixture.id },
+			},
+		] as never);
 		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
 		mockProvider.createCustomerPortalLink.mockResolvedValue({
 			url: "https://portal.example.com",
@@ -689,6 +747,107 @@ describe("payments.portal.open", () => {
 			returnUrl: undefined,
 		});
 		expect(result).toEqual({ url: "https://portal.example.com" });
+	});
+
+	// Own user: these cases do not eat the shared paymentsMutation budget.
+	const portalContext = makeSession<Context>(makeUser({ id: "user-portal" }));
+	function mockPortalMembership() {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [{ userId: "user-portal", role: "owner", id: "member-p" }],
+		} as never);
+	}
+
+	it("refuses an org admin who is not the payer: the portal is the payer's whole customer", async () => {
+		mockPortalMembership();
+		vi.mocked(getOrganizationById).mockResolvedValue({
+			id: orgFixture.id,
+			paymentsCustomerId: "cust-payer",
+		} as never);
+		vi.mocked(getPurchasesByOrganizationId).mockResolvedValue([
+			{
+				customerId: "cust-payer",
+				userId: null,
+				metadata: { user_id: "user-payer", organization_id: orgFixture.id },
+			},
+		] as never);
+		vi.mocked(getUserById).mockResolvedValue({
+			id: "user-payer",
+			email: "jane@acme.com",
+		} as never);
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+
+		const error = await call(
+			paymentsRouter.portal.open,
+			{ organizationId: orgFixture.id },
+			{ context: portalContext },
+		).catch((err: unknown) => err);
+
+		expect(error).toMatchObject({
+			code: "PRECONDITION_FAILED",
+			data: { reason: "portal_payer_only", payer: "j***@acme.com" },
+		});
+		expect(JSON.stringify(error)).not.toContain("jane@");
+		expect(mockProvider.createCustomerPortalLink).not.toHaveBeenCalled();
+	});
+
+	it("lets the payer in by email when their account id changed", async () => {
+		mockPortalMembership();
+		vi.mocked(getOrganizationById).mockResolvedValue({
+			id: orgFixture.id,
+			paymentsCustomerId: "cust-payer",
+		} as never);
+		vi.mocked(getPurchasesByOrganizationId).mockResolvedValue([
+			{
+				customerId: "cust-payer",
+				userId: null,
+				metadata: { user_id: "user-old", organization_id: orgFixture.id },
+			},
+		] as never);
+		vi.mocked(getUserById).mockResolvedValue({
+			id: "user-old",
+			email: "TEST@fuutu.local",
+		} as never);
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+		mockProvider.createCustomerPortalLink.mockResolvedValue({
+			url: "https://portal.example.com",
+		});
+
+		await expect(
+			call(
+				paymentsRouter.portal.open,
+				{ organizationId: orgFixture.id },
+				{ context: portalContext },
+			),
+		).resolves.toEqual({ url: "https://portal.example.com" });
+	});
+
+	it("refuses when no purchase names the payer of the org's customer", async () => {
+		mockPortalMembership();
+		vi.mocked(getOrganizationById).mockResolvedValue({
+			id: orgFixture.id,
+			paymentsCustomerId: "cust-orphan",
+		} as never);
+		vi.mocked(getPurchasesByOrganizationId).mockResolvedValue([
+			{
+				customerId: "cust-other",
+				userId: null,
+				metadata: { user_id: "user-1" },
+			},
+		] as never);
+		vi.mocked(resolvePaymentProvider).mockReturnValue(mockProvider as never);
+
+		await expect(
+			call(
+				paymentsRouter.portal.open,
+				{ organizationId: orgFixture.id },
+				{ context: portalContext },
+			),
+		).rejects.toMatchObject({
+			code: "PRECONDITION_FAILED",
+			data: { reason: "portal_payer_only" },
+		});
+		expect(mockProvider.createCustomerPortalLink).not.toHaveBeenCalled();
 	});
 
 	it("throws NOT_FOUND when organization does not exist", async () => {

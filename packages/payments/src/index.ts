@@ -11,6 +11,7 @@
 
 export {
 	ADDON_REQUIRES_BASE,
+	ALREADY_SUBSCRIBED,
 	assertCheckoutAllowed,
 	type CheckoutDecision,
 	type CheckoutRequest,
@@ -108,6 +109,8 @@ export {
 	cancelAllSubscriptionsForOrganization,
 	cancelAllSubscriptionsForOrganizationOrThrow,
 	cancelSubscriptionNowOrThrow,
+	reconcileOrganizationSeats,
+	type SeatReconcileResult,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
 export { getActivePlanId, processWebhookEvents } from "./sync";

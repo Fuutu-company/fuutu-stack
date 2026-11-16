@@ -642,3 +642,110 @@ export const resetRecurringBalancesTx = (params: {
 		return reset;
 	});
 };
+
+/** Attempts per balance before a revocation gives up (concurrent consumes). */
+const REVOKE_ATTEMPTS = 3;
+
+/**
+ * Revoke the unused rest of every recurring balance of one owner — after
+ * a refund, a dispute or an unpaid trial end. `recurringGranted` drops to
+ * what is already consumed (consumed credits stay consumed); the next
+ * paid renewal grants again. The ledger records the revoked rest as a
+ * debit (positive `amount`, source "reset"). A balance with nothing left is skipped, so a
+ * redelivery is a no-op. Compare-and-swap per balance, re-read on a
+ * concurrent consume; throws when it cannot settle, so the caller's
+ * webhook delivery fails and is retried. Returns the revoked count.
+ */
+export const revokeRecurringBalancesTx = async (params: {
+	userId?: string | null;
+	organizationId?: string | null;
+	reason: string;
+}): Promise<number> => {
+	assertSingleOwner(params);
+	const { userId, organizationId, reason } = params;
+	return db.$transaction(async (tx) => {
+		const balances = await tx.creditBalance.findMany({
+			where: ownerWhere(userId, organizationId),
+		});
+		let revoked = 0;
+		for (const initial of balances) {
+			let current: CreditBalance | null = initial;
+			let settled = false;
+			for (let attempt = 0; attempt < REVOKE_ATTEMPTS && current; attempt++) {
+				const remaining = current.recurringGranted - current.recurringConsumed;
+				if (remaining <= 0) {
+					settled = true;
+					break;
+				}
+				const result = await tx.creditBalance.updateMany({
+					where: {
+						id: current.id,
+						recurringGranted: current.recurringGranted,
+						recurringConsumed: current.recurringConsumed,
+					},
+					data: { recurringGranted: current.recurringConsumed },
+				});
+				if (result.count > 0) {
+					await tx.creditEvent.create({
+						data: {
+							userId: userId ?? null,
+							organizationId: organizationId ?? null,
+							meterKey: current.meterKey,
+							amount: remaining,
+							source: "reset",
+							reason,
+						},
+					});
+					revoked++;
+					settled = true;
+					break;
+				}
+				current = await tx.creditBalance.findUnique({
+					where: { id: current.id },
+				});
+			}
+			if (!settled && current) {
+				throw new Error(
+					`revokeRecurringBalancesTx: balance ${current.id} kept changing`,
+				);
+			}
+		}
+		return revoked;
+	});
+};
+
+/**
+ * Revoke the unused rest of the top-up package a purchase granted (refund
+ * or dispute of that purchase): the package expires now, so nothing more
+ * is consumed from it. No package, or one already expired → `false`.
+ */
+export const revokeCreditPackageForPurchaseTx = (
+	purchaseId: string,
+	reason: string,
+): Promise<boolean> =>
+	db.$transaction(async (tx) => {
+		const pkg = await tx.creditPackage.findFirst({ where: { purchaseId } });
+		const now = new Date();
+		if (!pkg || (pkg.expiresAt !== null && pkg.expiresAt <= now)) {
+			return false;
+		}
+		await tx.creditPackage.update({
+			where: { id: pkg.id },
+			data: { expiresAt: now },
+		});
+		const remaining = pkg.amount - pkg.consumed;
+		if (remaining > 0) {
+			await tx.creditEvent.create({
+				data: {
+					userId: pkg.userId,
+					organizationId: pkg.organizationId,
+					meterKey: pkg.meterKey,
+					amount: remaining,
+					source: "reset",
+					reason,
+					packageId: pkg.id,
+				},
+			});
+		}
+		return true;
+	});

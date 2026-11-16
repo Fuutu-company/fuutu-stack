@@ -246,6 +246,7 @@ function polarSubscriptionStatus(subscription: {
 const PARSED_POLAR_EVENT_TYPES = new Set([
 	"checkout.updated",
 	"order.paid",
+	"order.refunded",
 	"subscription.created",
 	"subscription.active",
 	"subscription.updated",
@@ -285,6 +286,9 @@ function mapPolarEventToProviderEvent(
 				return "one_time.purchased";
 			}
 			return null;
+		// Only a full refund takes back what the order bought.
+		case "order.refunded":
+			return data?.status === "refunded" ? "payment.reversed" : null;
 		// subscription.created fires BEFORE the first payment clears —
 		// mapping it to activated would cancel the owner's existing
 		// subscription and grant credits pre-payment. The real activation
@@ -447,13 +451,28 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		const subscriptionId = isSubscriptionPayload
 			? (data?.subscriptionId ?? data?.id ?? undefined)
 			: (data?.subscriptionId ?? undefined);
+		const eventId = headers["webhook-id"] || data?.id || undefined;
+
+		// A refunded order names its subscription, else the one-time
+		// purchase by the checkout (or, without one, the order) it paid.
+		if (eventType === "payment.reversed") {
+			return [
+				subscriptionId
+					? { type: eventType, eventId, subscriptionId }
+					: {
+							type: eventType,
+							eventId,
+							paymentRef: data?.checkoutId ?? data?.id,
+						},
+			];
+		}
 
 		const providerEvent: ProviderEvent = {
 			type: eventType,
 			// Standard-webhooks delivery id — dedup marker for
 			// checkout.completed redeliveries. Falls back to the
 			// payload id (checkout/order id) when the header is absent.
-			eventId: headers["webhook-id"] || data?.id || undefined,
+			eventId,
 			metadata: data?.metadata,
 			subscriptionId,
 			customerId: data?.customerId ?? undefined,
@@ -465,6 +484,14 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 					? data.seats
 					: undefined,
 		};
+		// One-time payments: the checkout (or the order without one) a later
+		// order.refunded names.
+		if (
+			eventType === "checkout.completed" ||
+			eventType === "one_time.purchased"
+		) {
+			providerEvent.paymentRef = data?.id;
+		}
 
 		if (isSubscriptionPayload) {
 			// scheduled_cancel / expired are derived transitions —

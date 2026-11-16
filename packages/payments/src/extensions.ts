@@ -190,6 +190,12 @@ export type CheckoutGuardContext = {
 	trial: boolean;
 	/** Every purchase of `owner`, newest first. */
 	existingPurchases: readonly OwnerPurchase[];
+	/**
+	 * Every purchase `userId` checked out — their own and organizations'
+	 * (`metadata.user_id`), newest first. Rows of deleted organizations
+	 * are gone with them.
+	 */
+	checkoutUserPurchases: readonly OwnerPurchase[];
 };
 
 /**
@@ -226,8 +232,9 @@ export type TrialEligibilityContext = Omit<CheckoutGuardContext, "trial">;
 
 /**
  * `true` = this checkout gets the plan's trial. `defaults` returns the kit
- * decision: no earlier purchase of the plan by the owner when the plan
- * sets `trialOnce`, else always. Consulted only when the plan has
+ * decision: no earlier purchase of the plan by the owner nor by the
+ * checkout user (`checkoutUserPurchases`), unless the plan sets
+ * `trialOnce: false` (then always). Consulted only when the plan has
  * `trialDays` and the caller did not pass `skipTrial` — it can deny a
  * trial, never add one the plan does not offer.
  */

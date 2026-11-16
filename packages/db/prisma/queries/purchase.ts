@@ -22,6 +22,19 @@ export const getPurchasesByOrganizationId = (organizationId: string) =>
 	});
 
 /**
+ * Every purchase a user checked out: their own, plus organization
+ * purchases whose checkout metadata names them (`metadata.user_id`).
+ * Newest first. Rows of deleted organizations are gone (cascade).
+ */
+export const getPurchasesCheckedOutByUser = (userId: string) =>
+	db.purchase.findMany({
+		where: {
+			OR: [{ userId }, { metadata: { path: ["user_id"], equals: userId } }],
+		},
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+	});
+
+/**
  * Access-gating filter: ACTIVE/TRIALING, plus SCHEDULED_CANCEL while the
  * paid period still runs — "cancel at period end" keeps access until
  * currentPeriodEnd. Also self-heals: if the provider's cancel event
@@ -60,6 +73,47 @@ export const getActiveSubscriptionForOrganization = (organizationId: string) =>
 	});
 
 export type PurchaseOwner = { userId: string } | { organizationId: string };
+
+/**
+ * Every access-gating organization subscription with the org's current
+ * member count — the seat reconcile compares it to the billed quantity.
+ */
+export const getOrganizationSeatSubscriptions = async () => {
+	const rows = await db.purchase.findMany({
+		where: {
+			organizationId: { not: null },
+			subscriptionId: { not: null },
+			...accessGatingWhere(),
+		},
+		select: {
+			id: true,
+			organizationId: true,
+			subscriptionId: true,
+			provider: true,
+			productId: true,
+			priceId: true,
+			quantity: true,
+			organization: { select: { _count: { select: { members: true } } } },
+		},
+		orderBy: NEWEST_FIRST,
+	});
+	return rows.flatMap((row) =>
+		row.organizationId && row.subscriptionId
+			? [
+					{
+						purchaseId: row.id,
+						organizationId: row.organizationId,
+						subscriptionId: row.subscriptionId,
+						provider: row.provider,
+						productId: row.productId,
+						priceId: row.priceId,
+						quantity: row.quantity,
+						memberCount: row.organization?._count.members ?? 0,
+					},
+				]
+			: [],
+	);
+};
 
 /** Every access-gating subscription of one owner, newest first. */
 export const getActiveSubscriptionsForOwner = (owner: PurchaseOwner) =>
@@ -101,6 +155,27 @@ export const getPurchaseByProviderSubscriptionId = (
 ) =>
 	db.purchase.findUnique({
 		where: { provider_subscriptionId: { provider, subscriptionId } },
+	});
+
+/**
+ * Key in `Purchase.metadata` that holds the provider's payment reference
+ * of a one-time purchase (Stripe payment intent, Creem checkout, Polar
+ * checkout/order) — a refund or dispute names the purchase by it.
+ */
+export const PURCHASE_PAYMENT_REF_KEY = "fuutu_payment_ref";
+
+/** The one-time purchase a refund or dispute names by its payment reference. */
+export const getOneTimePurchaseByPaymentRef = (
+	provider: string,
+	paymentRef: string,
+): Promise<Purchase | null> =>
+	db.purchase.findFirst({
+		where: {
+			provider,
+			type: "ONE_TIME",
+			metadata: { path: [PURCHASE_PAYMENT_REF_KEY], equals: paymentRef },
+		},
+		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
 
 /**
