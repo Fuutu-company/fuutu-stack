@@ -365,6 +365,7 @@ describe("getUserAccessState", () => {
 			select: {
 				id: true,
 				email: true,
+				emailVerified: true,
 				role: true,
 				banned: true,
 				banExpires: true,

@@ -7,6 +7,7 @@ import { resetTwoFactorProcedure } from "./procedures/reset-two-factor";
 import { revokeAllUserSessionsProcedure } from "./procedures/revoke-all-sessions";
 import { revokeUserSessionProcedure } from "./procedures/revoke-session";
 import { sendPasswordResetProcedure } from "./procedures/send-password-reset";
+import { sendVerificationEmailProcedure } from "./procedures/send-verification-email";
 import { setUserRoleProcedure } from "./procedures/set-role";
 import { unbanUserProcedure } from "./procedures/unban";
 import { updateUserProcedure } from "./procedures/update";
@@ -21,6 +22,7 @@ export const adminUsersRouter = {
 	revokeSession: revokeUserSessionProcedure,
 	revokeAllSessions: revokeAllUserSessionsProcedure,
 	sendPasswordReset: sendPasswordResetProcedure,
+	sendVerificationEmail: sendVerificationEmailProcedure,
 	resetTwoFactor: resetTwoFactorProcedure,
 	delete: deleteUserProcedure,
 	impersonate: impersonateUserProcedure,

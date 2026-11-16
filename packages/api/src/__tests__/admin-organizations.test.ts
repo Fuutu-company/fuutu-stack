@@ -316,6 +316,7 @@ describe.each(ORG_PROCEDURES)("admin.organizations access: $name", (entry) => {
 		vi.mocked(db.getUserAccessState).mockResolvedValueOnce({
 			id: ADMIN_ID,
 			email: "admin@fuutu.local",
+			emailVerified: true,
 			role: "user",
 			banned: false,
 			banExpires: null,

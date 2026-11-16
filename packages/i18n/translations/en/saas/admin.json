@@ -170,7 +170,7 @@
 			"actions": {
 				"menu": "Actions",
 				"edit": "Edit name or email",
-				"verifyEmail": "Mark email as verified",
+				"sendVerificationEmail": "Send verification email",
 				"passwordReset": "Send password reset email",
 				"role": "Change system role",
 				"resetTwoFactor": "Reset two-factor authentication",
@@ -187,7 +187,7 @@
 				}
 			},
 			"toast": {
-				"verified": "Email marked as verified.",
+				"verificationEmailSent": "Verification email sent.",
 				"passwordReset": "Password reset email sent.",
 				"updated": "User updated.",
 				"banned": "User banned.",

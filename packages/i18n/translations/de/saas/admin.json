@@ -170,7 +170,7 @@
 			"actions": {
 				"menu": "Aktionen",
 				"edit": "Name oder E-Mail ändern",
-				"verifyEmail": "E-Mail als bestätigt markieren",
+				"sendVerificationEmail": "Bestätigungs-E-Mail senden",
 				"passwordReset": "E-Mail zum Zurücksetzen des Passworts senden",
 				"role": "Systemrolle ändern",
 				"resetTwoFactor": "Zwei-Faktor-Authentifizierung zurücksetzen",
@@ -187,7 +187,7 @@
 				}
 			},
 			"toast": {
-				"verified": "E-Mail als bestätigt markiert.",
+				"verificationEmailSent": "Bestätigungs-E-Mail gesendet.",
 				"passwordReset": "E-Mail zum Zurücksetzen des Passworts gesendet.",
 				"updated": "Benutzer aktualisiert.",
 				"banned": "Benutzer gesperrt.",

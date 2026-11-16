@@ -21,6 +21,7 @@ vi.mock("@fuutu/auth", () => ({
 			revokeUserSessions: vi.fn(),
 			removeUser: vi.fn(),
 			requestPasswordReset: vi.fn(),
+			sendVerificationEmail: vi.fn(),
 			impersonateUser: vi.fn(),
 			stopImpersonating: vi.fn(),
 			signOut: vi.fn(),
@@ -105,6 +106,11 @@ const STATES: Record<string, Record<string, unknown>> = {
 	[ADMIN_ID]: { email: "admin@fuutu.local", role: "admin" },
 	"admin-2": { email: "peer@fuutu.local", role: "admin" },
 	"user-2": { email: "ada@fuutu.local", role: "user" },
+	"verified-4": {
+		email: "verified@fuutu.local",
+		role: "user",
+		emailVerified: true,
+	},
 	"banned-3": {
 		email: "banned@fuutu.local",
 		role: "user",
@@ -251,6 +257,12 @@ const ADMIN_PROCEDURES = [
 	{
 		name: "sendPasswordReset",
 		procedure: users.sendPasswordReset,
+		input: { userId: "user-2" },
+		endpoint: "adminMutation",
+	},
+	{
+		name: "sendVerificationEmail",
+		procedure: users.sendVerificationEmail,
 		input: { userId: "user-2" },
 		endpoint: "adminMutation",
 	},
@@ -552,14 +564,17 @@ function expectAudit(
 // ─── update ─────────────────────────────────────────────────────────────────
 
 describe("admin.users.update", () => {
-	it("updates name and verification and audits the field names", async () => {
+	it("updates name and unverifies the email and audits the field names", async () => {
 		await call(
 			users.update,
-			{ userId: "user-2", name: "Ada L.", emailVerified: true },
+			{ userId: "user-2", name: "Ada L.", emailVerified: false },
 			{ context: adminContext() },
 		);
 		expect(auth.api.adminUpdateUser).toHaveBeenCalledWith({
-			body: { userId: "user-2", data: { name: "Ada L.", emailVerified: true } },
+			body: {
+				userId: "user-2",
+				data: { name: "Ada L.", emailVerified: false },
+			},
 			headers: expect.any(Headers),
 		});
 		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
@@ -567,6 +582,17 @@ describe("admin.users.update", () => {
 			targetUserId: "user-2",
 			changedFields: ["name", "emailVerified"],
 		});
+	});
+
+	// Marking an address verified without proof of the mailbox lets a
+	// pre-registered attacker account absorb the owner's social sign-in.
+	it("never marks an email verified (sendVerificationEmail instead)", async () => {
+		await expect(
+			call(users.update, { userId: "user-2", emailVerified: true } as never, {
+				context: adminContext(),
+			}),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(auth.api.adminUpdateUser).not.toHaveBeenCalled();
 	});
 
 	it("changes the email: unverifies it and signs the user out everywhere", async () => {
@@ -618,7 +644,7 @@ describe("admin.users.update", () => {
 					email: "new@fuutu.local",
 					emailVerified: true,
 					reason: REASON,
-				},
+				} as never,
 				{ context: adminContext() },
 			),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -1081,6 +1107,46 @@ describe("admin.users.sendPasswordReset", () => {
 			},
 		});
 		expectAudit("admin.user.password_reset_send", { targetUserId: "user-2" });
+	});
+});
+
+describe("admin.users.sendVerificationEmail", () => {
+	it("sends Better Auth's verification email without the admin's session and audits", async () => {
+		await call(
+			users.sendVerificationEmail,
+			{ userId: "user-2", reason: REASON },
+			{ context: adminContext() },
+		);
+		// No headers: with the admin's session Better Auth would compare the
+		// address against the admin's own email.
+		expect(auth.api.sendVerificationEmail).toHaveBeenCalledWith({
+			body: { email: "ada@fuutu.local", callbackURL: "/dashboard" },
+		});
+		expectAudit("admin.user.verification_email_send", {
+			targetUserId: "user-2",
+			reason: REASON,
+		});
+	});
+
+	it("refuses an address that is already verified", async () => {
+		await expect(
+			call(
+				users.sendVerificationEmail,
+				{ userId: "verified-4", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toMatchObject({ code: "CONFLICT" });
+		expect(auth.api.sendVerificationEmail).not.toHaveBeenCalled();
+	});
+
+	it("returns 404 for an unknown user", async () => {
+		await expect(
+			call(
+				users.sendVerificationEmail,
+				{ userId: "nobody" },
+				{ context: adminContext() },
+			),
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
 	});
 });
 

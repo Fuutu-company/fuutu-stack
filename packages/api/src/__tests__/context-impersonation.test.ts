@@ -48,6 +48,7 @@ function sessionStartedAgo(ms: number, impersonatedBy: string | null) {
 const IMPERSONATOR = {
 	id: "admin-1",
 	email: "admin@fuutu.local",
+	emailVerified: true,
 	role: "admin",
 	banned: false,
 	banExpires: null,
