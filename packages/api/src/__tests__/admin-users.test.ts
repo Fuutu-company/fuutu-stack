@@ -34,6 +34,7 @@ vi.mock("@fuutu/auth/admin-support", () => ({
 
 vi.mock("@fuutu/db", () => ({
 	getUserAccessState: vi.fn(),
+	isUserSessionLive: vi.fn(async () => true),
 	adminListUsers: vi.fn(),
 	adminCountUsers: vi.fn(),
 	adminGetUserDetail: vi.fn(),
