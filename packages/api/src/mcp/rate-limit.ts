@@ -9,15 +9,21 @@ export type McpRateLimits = {
 };
 
 /**
- * Rate-limit bucket for an MCP request: one per credential for signed-in
- * callers, one per client IP for anonymous callers (one shared bucket when
- * the IP can't be trusted — see getClientIp).
+ * Rate-limit bucket for an MCP request: one per API key, one per user and
+ * OAuth client (a minted or refreshed token gets no fresh budget), one per
+ * client IP for anonymous callers (one shared bucket when the IP can't be
+ * trusted — see getClientIp).
  */
 export function mcpRateLimitBucket(
 	principal: McpPrincipal,
 	headers: Headers,
 ): string {
-	if (principal.kind === "user") return `mcp:key:${principal.credentialId}`;
+	if (principal.kind === "user") {
+		if (principal.via === "oauth") {
+			return `mcp:oauth:${principal.userId}:${principal.clientId ?? principal.credentialId}`;
+		}
+		return `mcp:key:${principal.credentialId}`;
+	}
 	const ip = getClientIp(headers);
 	return ip ? `mcp:ip:${ip}` : "mcp:anonymous";
 }
