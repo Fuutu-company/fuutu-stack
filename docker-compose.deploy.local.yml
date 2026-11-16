@@ -1,7 +1,7 @@
 # Local rehearsal override — runs the deploy stack next to `pnpm dev`
 # (ports 3000/3001/4000/5432 stay free):
 #
-#   docker compose -f docker-compose.deploy.yml -f docker-compose.deploy.local.yml up -d --build
+#   TRUST_PROXY_HEADERS=0 docker compose -f docker-compose.deploy.yml -f docker-compose.deploy.local.yml up -d --build
 #
 # NEXT_PUBLIC_* is baked at build time, so the remapped URLs are build args.
 x-public-urls: &public-urls

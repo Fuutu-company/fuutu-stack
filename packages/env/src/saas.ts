@@ -177,7 +177,23 @@ const kitServerEnv = {
 	FUUTU_DISABLE_RATE_LIMIT: strictFlag().optional(),
 	// Trust X-Forwarded-For / X-Real-IP for per-IP rate limiting — only
 	// behind a reverse proxy that overwrites them (Traefik, nginx, LB).
-	TRUST_PROXY_HEADERS: strictFlag().default(false),
+	// Required in production (0 or 1): left unset, every client would
+	// share one auth rate-limit bucket without anyone deciding so.
+	TRUST_PROXY_HEADERS: strictFlag()
+		.optional()
+		.refine((v) => !isProduction() || v !== undefined, {
+			message:
+				"TRUST_PROXY_HEADERS must be set in production: 1 behind a reverse proxy that writes X-Forwarded-For, else 0",
+		})
+		.transform((v) => v ?? false),
+	// With TRUST_PROXY_HEADERS=1: the header that carries the client IP set
+	// by the edge in front of the proxy (e.g. CF-Connecting-IP behind
+	// Cloudflare). Unset: the right-most X-Forwarded-For entry.
+	TRUSTED_CLIENT_IP_HEADER: z
+		.string()
+		.regex(/^[A-Za-z0-9-]{1,64}$/)
+		.transform((v) => v.toLowerCase())
+		.optional(),
 	// Auth cookie prefix — set per project by the port slot (local dev),
 	// so several projects on localhost don't share one login cookie.
 	FUUTU_AUTH_COOKIE_PREFIX: z
@@ -296,6 +312,7 @@ export const env = createEnv({
 		FUUTU_TELEMETRY_DISABLED: process.env.FUUTU_TELEMETRY_DISABLED,
 		FUUTU_DISABLE_RATE_LIMIT: process.env.FUUTU_DISABLE_RATE_LIMIT,
 		TRUST_PROXY_HEADERS: process.env.TRUST_PROXY_HEADERS,
+		TRUSTED_CLIENT_IP_HEADER: process.env.TRUSTED_CLIENT_IP_HEADER,
 		FUUTU_AUTH_COOKIE_PREFIX: process.env.FUUTU_AUTH_COOKIE_PREFIX,
 		WEBHOOK_ALLOW_PRIVATE_URLS: process.env.WEBHOOK_ALLOW_PRIVATE_URLS,
 	},

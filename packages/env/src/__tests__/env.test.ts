@@ -4,6 +4,8 @@ function setRequiredSaasEnv() {
 	process.env.DATABASE_URL = "postgresql://localhost:5432/test";
 	process.env.BETTER_AUTH_SECRET = "a".repeat(32);
 	process.env.BETTER_AUTH_URL = "http://localhost:3000";
+	// Required (explicitly 0 or 1) in production.
+	process.env.TRUST_PROXY_HEADERS = "0";
 }
 
 describe("@fuutu/env/saas", () => {
@@ -305,6 +307,47 @@ describe("@fuutu/env/saas", () => {
 			await expect(import("../saas")).rejects.toThrow();
 		}
 		delete process.env.TRUST_PROXY_HEADERS;
+	});
+
+	it("TRUST_PROXY_HEADERS must be set explicitly in production", async () => {
+		setRequiredSaasEnv();
+		process.env.NODE_ENV = "production";
+		delete process.env.TRUST_PROXY_HEADERS;
+		await expect(import("../saas")).rejects.toThrow();
+
+		for (const [value, expected] of [
+			["0", false],
+			["1", true],
+		] as const) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.NODE_ENV = "production";
+			process.env.TRUST_PROXY_HEADERS = value;
+			const { env } = await import("../saas");
+			expect(env.TRUST_PROXY_HEADERS).toBe(expected);
+		}
+		delete process.env.TRUST_PROXY_HEADERS;
+	});
+
+	it("TRUSTED_CLIENT_IP_HEADER accepts a header name, lowercased", async () => {
+		setRequiredSaasEnv();
+		delete process.env.TRUSTED_CLIENT_IP_HEADER;
+		let mod = await import("../saas");
+		expect(mod.env.TRUSTED_CLIENT_IP_HEADER).toBeUndefined();
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+		process.env.TRUSTED_CLIENT_IP_HEADER = "CF-Connecting-IP";
+		mod = await import("../saas");
+		expect(mod.env.TRUSTED_CLIENT_IP_HEADER).toBe("cf-connecting-ip");
+
+		for (const value of ["x forwarded", "x-ip:1", "a".repeat(65)]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.TRUSTED_CLIENT_IP_HEADER = value;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+		delete process.env.TRUSTED_CLIENT_IP_HEADER;
 	});
 
 	it("accepts noop and custom PAYMENTS_PROVIDER values", async () => {

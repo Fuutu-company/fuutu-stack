@@ -32,6 +32,10 @@ export const apiConfig = {
 		// `=== true`: an unvalidated raw string (SKIP_ENV_VALIDATION) never
 		// turns trust on.
 		trustProxyHeaders: env.TRUST_PROXY_HEADERS === true,
+		// Header with the client IP set by a CDN in front of the proxy
+		// (`TRUSTED_CLIENT_IP_HEADER`, e.g. cf-connecting-ip); read only with
+		// trustProxyHeaders. Unset: the right-most X-Forwarded-For entry.
+		clientIpHeader: env.TRUSTED_CLIENT_IP_HEADER as string | undefined,
 		defaults: {
 			maxRequests: 100,
 			windowMs: 60 * 1000, // 1 minute

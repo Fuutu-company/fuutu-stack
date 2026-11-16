@@ -71,3 +71,39 @@ describe("compose port bindings", () => {
 		});
 	}
 });
+
+/**
+ * `TRUST_PROXY_HEADERS` is required in production (`@fuutu/env/saas`):
+ * unset, every client would share one auth rate-limit bucket. The deploy
+ * compose file demands a value; CI's production builds and `next start`
+ * set one so they still boot.
+ */
+describe("TRUST_PROXY_HEADERS in production", () => {
+	it("docker-compose.deploy.yml requires it explicitly (no default)", () => {
+		const source = readFileSync(
+			join(REPO_ROOT, "docker-compose.deploy.yml"),
+			"utf8",
+		);
+		expect(source).toMatch(/TRUST_PROXY_HEADERS: \$\{TRUST_PROXY_HEADERS:\?/);
+	});
+
+	it("the CI build and e2e jobs set it", () => {
+		const ci = readFileSync(
+			join(REPO_ROOT, ".github/workflows/ci.yml"),
+			"utf8",
+		);
+		const job = (name: string) =>
+			ci.split(new RegExp(`^  ${name}:$`, "m"))[1]?.split(/^ {2}\S/m)[0] ?? "";
+		for (const name of ["build", "e2e"]) {
+			expect(job(name)).toMatch(/TRUST_PROXY_HEADERS: "[01]"/);
+		}
+	});
+
+	it("local production-mode E2E servers set it", () => {
+		const next = readFileSync(
+			join(REPO_ROOT, "tooling/scripts/next.mjs"),
+			"utf8",
+		);
+		expect(next).toMatch(/TRUST_PROXY_HEADERS:/);
+	});
+});

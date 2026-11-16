@@ -62,6 +62,8 @@ const env = {
 	...(e2e && {
 		// E2E servers run with CI settings and never touch the dev session.
 		FUUTU_DISABLE_RATE_LIMIT: "1",
+		// Required in production mode (`next build` / `next start`).
+		TRUST_PROXY_HEADERS: process.env.TRUST_PROXY_HEADERS ?? "0",
 		EMAIL_PROVIDER: "console",
 		FUUTU_TELEMETRY_DISABLED: "1",
 		// Own build output: `next build` must not overwrite the dev server's `.next`.

@@ -129,6 +129,8 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+      # Required in production builds; no proxy in CI.
+      TRUST_PROXY_HEADERS: "0"
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup
@@ -189,6 +191,9 @@ jobs:
       # it back to Pro, like a local .env with a test price. Unset, Acme is
       # Free and plan-gated specs (webhooks) answer 403.
       PAYMENTS_PRO_PRICE_ID: ci_pro_month
+      # Required by `next build` / `next start` (NODE_ENV=production); no
+      # proxy in CI.
+      TRUST_PROXY_HEADERS: "0"
     steps:
       - name: Generate CI auth secret
         run: |

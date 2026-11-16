@@ -80,6 +80,12 @@ services:
       EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
       LOG_AUDIT_SINK: ${LOG_AUDIT_SINK:-db}
       FUUTU_LICENSE_KEY: ${FUUTU_LICENSE_KEY:-}
+      # Required in production — a conscious choice, no default: 1 when the
+      # host proxy writes X-Forwarded-For (nginx, Caddy, Traefik), else 0
+      # (every client then shares one auth rate-limit bucket).
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:?set TRUST_PROXY_HEADERS to 1 behind a proxy that writes X-Forwarded-For, else 0}
+      # Behind a CDN: the header it sets with the client IP (e.g. CF-Connecting-IP).
+      TRUSTED_CLIENT_IP_HEADER: ${TRUSTED_CLIENT_IP_HEADER:-}
     depends_on:
       postgres:
         condition: service_healthy
