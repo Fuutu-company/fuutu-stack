@@ -83,3 +83,22 @@ describe("changelog drafts (unreleased entries)", () => {
 		).toBe(true);
 	});
 });
+
+describe("changelog translations", () => {
+	/** Entries per `<h3>` section of a changelog body, read from its source. */
+	function sections(file: string): number[] {
+		const source = readFileSync(join(SRC, "changelog", file), "utf8");
+		return source
+			.split("<h3>")
+			.slice(1)
+			.map((section) => section.split("<li>").length - 1);
+	}
+
+	it("every German body has the same sections and entries as the English one", () => {
+		const all = [...changelogMeta, ...metaModule.changelogDraftMeta];
+		expect(all.map((entry) => entry.slug)).toContain("v1-1-0");
+		for (const { slug } of all) {
+			expect(sections(`${slug}.de.tsx`), slug).toEqual(sections(`${slug}.tsx`));
+		}
+	});
+});

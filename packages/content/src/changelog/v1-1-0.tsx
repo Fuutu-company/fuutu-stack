@@ -168,8 +168,83 @@ export default function ChangelogV110() {
 					<code>false</code>).
 				</li>
 			</ul>
+			<h3>Changes</h3>
+			<ul>
+				<li>
+					<code>LICENSE.md</code> is the Fuutu Business License 1.3: prices are
+					no longer part of the license (only the published pricing page), and
+					contributions follow the terms in <code>CONTRIBUTING.md</code> (MIT-0
+					and a Developer Certificate of Origin sign-off).
+				</li>
+				<li>
+					Telemetry sends only the five fields LICENSE.md §7 lists:{" "}
+					<code>kitName</code>, <code>kitVersion</code>,{" "}
+					<code>licenseKeyHash</code>, <code>appUrl</code> and the new{" "}
+					<code>kind</code> (<code>build</code> or <code>runtime</code>).{" "}
+					<code>nodeVersion</code>, <code>platform</code>, <code>features</code>{" "}
+					and <code>sentAt</code> are gone. Pings come only from CI or
+					production builds and from production runtimes — never from a dev
+					server or a plain local build.
+				</li>
+				<li>
+					<code>config.features.legalPages</code> (new, default on) links the
+					marketing imprint and privacy pages from the saas auth pages and user
+					menu, the docs sidebar and the consent banner.
+				</li>
+				<li>
+					<code>APP_PUBLIC_PREFIXES</code> in <code>proxy-public.ts</code> also
+					takes <code>{'{ exact: "/path" }'}</code> for a single public path; a
+					string entry still matches by prefix.
+				</li>
+				<li>
+					Port slots: <code>pnpm ports release [path]</code> frees a project's
+					slot and <code>pnpm ports prune</code> lists (and with{" "}
+					<code>--yes</code> drops) slots whose folder is gone, each offering to
+					drop the slot's local database and buckets.{" "}
+					<code>pnpm dev:session reset</code> restarts the apps with an empty
+					Turbopack dev cache.
+				</li>
+				<li>
+					Payment providers report typed failures (
+					<code>ProviderRequestError</code> with <code>kind</code>{" "}
+					<code>not_found</code>, <code>invalid_state</code>,{" "}
+					<code>rejected</code> or <code>unavailable</code>); the API passes the
+					kind on and the billing views show a matching message.
+				</li>
+			</ul>
 			<h3>Fixes</h3>
 			<ul>
+				<li>
+					While impersonating, billing actions and API-key creation are disabled
+					up front with the reason, and every refusal says "Not available while
+					you're signed in as this user (impersonation)" instead of a generic
+					error. <code>denyImpersonation</code> errors carry{" "}
+					<code>data.code: "IMPERSONATION_FORBIDDEN"</code>, like Better Auth's
+					guard.
+				</li>
+				<li>
+					Another organization's pages answer 404 to non-members before the app
+					shell renders — no "Something went wrong", no org name.
+				</li>
+				<li>
+					Onboarding resumes at the step reached after a reload, and in forced
+					organizations mode skips the organization step once the user belongs
+					to one — one sign-up no longer creates several organizations.
+				</li>
+				<li>
+					<code>/auth/verify-email-change</code> reports success only when the
+					session carries the new email; <code>/auth/reset-password</code>{" "}
+					checks the token first and offers a new link when it is missing,
+					unknown or expired.
+				</li>
+				<li>Org breadcrumbs show the organization's name, not its slug.</li>
+				<li>
+					The admin user page's Billing tab lists the user's organizations with
+					their plan and purchases, next to personal purchases.
+				</li>
+				<li>
+					<code>/robots.txt</code> is public as an exact path, not as a prefix.
+				</li>
 				<li>
 					With i18n disabled, the marketing sitemap no longer lists{" "}
 					<code>/de</code> URLs and docs pages emit no hreflang links.
@@ -215,6 +290,20 @@ export default function ChangelogV110() {
 			</ul>
 			<h3>Breaking changes and migration</h3>
 			<ul>
+				<li>
+					Telemetry payload and gating: a receiver or proxy that expected{" "}
+					<code>nodeVersion</code>, <code>platform</code>, <code>features</code>{" "}
+					or <code>sentAt</code> gets <code>kind</code> instead. Local builds
+					and dev servers no longer ping; set <code>CI</code> or{" "}
+					<code>NODE_ENV=production</code> for a build that should (Docker
+					builds count as production). <code>FUUTU_TELEMETRY_DISABLED=1</code>{" "}
+					still turns it off for non-production instances only (LICENSE.md §7).
+				</li>
+				<li>
+					<code>requireOrgMembership</code> answers 404 (<code>notFound()</code>
+					) for an unknown org or a non-member instead of redirecting to{" "}
+					<code>/organizations</code>.
+				</li>
 				<li>
 					<code>POST /api/chat/messages/stream</code> and{" "}
 					<code>POST /api/ai/chat</code> answer with an event stream (

@@ -180,8 +180,93 @@ export default function ChangelogV110De() {
 					<code>false</code>).
 				</li>
 			</ul>
+			<h3>Änderungen</h3>
+			<ul>
+				<li>
+					<code>LICENSE.md</code> ist die Fuutu Business License 1.3: Preise
+					sind nicht mehr Teil der Lizenz (es gilt die veröffentlichte
+					Preisseite), und Beiträge folgen den Bedingungen in{" "}
+					<code>CONTRIBUTING.md</code> (MIT-0 und Developer Certificate of
+					Origin per Sign-off).
+				</li>
+				<li>
+					Telemetrie sendet nur noch die fünf Felder aus LICENSE.md §7:{" "}
+					<code>kitName</code>, <code>kitVersion</code>,{" "}
+					<code>licenseKeyHash</code>, <code>appUrl</code> und das neue{" "}
+					<code>kind</code> (<code>build</code> oder <code>runtime</code>).{" "}
+					<code>nodeVersion</code>, <code>platform</code>, <code>features</code>{" "}
+					und <code>sentAt</code> entfallen. Pings kommen nur aus CI- oder
+					Production-Builds und aus Production-Laufzeiten — nie von einem
+					Dev-Server oder einem einfachen lokalen Build.
+				</li>
+				<li>
+					<code>config.features.legalPages</code> (neu, standardmäßig an)
+					verlinkt Impressum und Datenschutzerklärung der Marketing-Seite von
+					den Auth-Seiten und dem Nutzermenü der SaaS-App, der Docs-Sidebar und
+					dem Consent-Banner.
+				</li>
+				<li>
+					<code>APP_PUBLIC_PREFIXES</code> in <code>proxy-public.ts</code> nimmt
+					auch <code>{'{ exact: "/pfad" }'}</code> für einen einzelnen
+					öffentlichen Pfad; ein String-Eintrag passt weiter als Präfix.
+				</li>
+				<li>
+					Port-Slots: <code>pnpm ports release [pfad]</code> gibt den Slot eines
+					Projekts frei, <code>pnpm ports prune</code> listet Slots, deren
+					Ordner fehlt (und entfernt sie mit <code>--yes</code>) — beide bieten
+					an, die lokale Datenbank und die Buckets des Slots zu löschen.{" "}
+					<code>pnpm dev:session reset</code> startet die Apps mit leerem
+					Turbopack-Dev-Cache neu.
+				</li>
+				<li>
+					Zahlungsanbieter melden typisierte Fehler (
+					<code>ProviderRequestError</code> mit <code>kind</code>{" "}
+					<code>not_found</code>, <code>invalid_state</code>,{" "}
+					<code>rejected</code> oder <code>unavailable</code>); die API reicht
+					die Art weiter, und die Billing-Ansichten zeigen eine passende
+					Meldung.
+				</li>
+			</ul>
 			<h3>Fixes</h3>
 			<ul>
+				<li>
+					Während einer Impersonation sind Billing-Aktionen und das Anlegen von
+					API-Keys von vornherein deaktiviert, mit Begründung, und jede
+					Ablehnung sagt „Nicht verfügbar, solange du als dieser Nutzer
+					angemeldet bist (Impersonation)“ statt eines allgemeinen Fehlers.
+					Fehler von <code>denyImpersonation</code> tragen{" "}
+					<code>data.code: "IMPERSONATION_FORBIDDEN"</code>, wie der Guard von
+					Better Auth.
+				</li>
+				<li>
+					Seiten einer fremden Organisation antworten Nicht-Mitgliedern mit 404,
+					bevor die App-Shell rendert — kein „Etwas ist schiefgelaufen“, kein
+					Organisationsname.
+				</li>
+				<li>
+					Das Onboarding macht nach einem Neuladen beim erreichten Schritt
+					weiter und überspringt im erzwungenen Organisationsmodus den
+					Organisationsschritt, sobald der Nutzer Mitglied einer Organisation
+					ist — eine Registrierung legt nicht mehr mehrere Organisationen an.
+				</li>
+				<li>
+					<code>/auth/verify-email-change</code> meldet Erfolg nur, wenn die
+					Session die neue E-Mail trägt; <code>/auth/reset-password</code> prüft
+					den Token vorab und bietet einen neuen Link an, wenn er fehlt,
+					unbekannt oder abgelaufen ist.
+				</li>
+				<li>
+					Breadcrumbs von Organisationen zeigen den Namen der Organisation,
+					nicht ihren Slug.
+				</li>
+				<li>
+					Der Billing-Tab der Admin-Nutzerseite listet die Organisationen des
+					Nutzers mit Tarif und Käufen, neben den persönlichen Käufen.
+				</li>
+				<li>
+					<code>/robots.txt</code> ist als exakter Pfad öffentlich, nicht als
+					Präfix.
+				</li>
 				<li>
 					Ohne i18n listet die Marketing-Sitemap keine <code>/de</code>-URLs
 					mehr, und Docs-Seiten geben keine hreflang-Links aus.
@@ -228,6 +313,22 @@ export default function ChangelogV110De() {
 			</ul>
 			<h3>Breaking Changes und Migration</h3>
 			<ul>
+				<li>
+					Telemetrie-Payload und -Bedingungen: Ein Empfänger oder Proxy, der{" "}
+					<code>nodeVersion</code>, <code>platform</code>, <code>features</code>{" "}
+					oder <code>sentAt</code> erwartet hat, bekommt stattdessen{" "}
+					<code>kind</code>. Lokale Builds und Dev-Server pingen nicht mehr;
+					setze <code>CI</code> oder <code>NODE_ENV=production</code> für einen
+					Build, der pingen soll (Docker-Builds zählen als Production).{" "}
+					<code>FUUTU_TELEMETRY_DISABLED=1</code> schaltet sie weiterhin nur für
+					Nicht-Production-Instanzen ab (LICENSE.md §7).
+				</li>
+				<li>
+					<code>requireOrgMembership</code> antwortet bei unbekannter
+					Organisation oder Nicht-Mitgliedschaft mit 404 (
+					<code>notFound()</code>) statt auf <code>/organizations</code>{" "}
+					weiterzuleiten.
+				</li>
 				<li>
 					<code>POST /api/chat/messages/stream</code> und{" "}
 					<code>POST /api/ai/chat</code> antworten mit einem Event-Stream (
