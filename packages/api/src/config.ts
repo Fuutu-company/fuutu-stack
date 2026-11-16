@@ -102,6 +102,11 @@ export const apiConfig = {
 				maxRequests: 30,
 				windowMs: 60 * 1000,
 			},
+			// Public OpenAPI docs + spec (/api/docs, /api/spec.json) — per client IP
+			apiDocs: {
+				maxRequests: 60,
+				windowMs: 60 * 1000,
+			},
 		},
 	},
 	/**

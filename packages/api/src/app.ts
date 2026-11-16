@@ -14,35 +14,44 @@ import { checkLicense, getLicenseMode } from "@fuutu/license";
 import { createLogger } from "@fuutu/logs";
 import { handlePaymentsWebhook } from "@fuutu/payments";
 import { pingTelemetry } from "@fuutu/telemetry";
+import { defaultRateLimitStore } from "@fuutu/utils/rate-limit";
 import { Hono, type Context as HonoContext } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+import { getClientIp } from "./client-ip";
 import { apiConfig } from "./config";
 import { createContext } from "./context";
 import { CORS_ALLOW_HEADERS } from "./cors";
 import { mountCustomRoutes } from "./custom-routes";
 import { handleMcpRequest } from "./mcp";
 import { isOriginAllowed } from "./origin-guard";
+import { type ApiDocsPath, serveApiDocs } from "./orpc/api-docs";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
+import { rateLimitedResponse } from "./pre-auth-throttle";
 
 const log = createLogger({ scope: "api" });
 
-const docsHandler = async (c: HonoContext) => {
-	// withEvlog-wrapped handler emits the wide event — skip the request-log
-	// middleware's duplicate line (same flag as the dispatch below).
-	c.set("evlogWideEvent", true);
-	const { matched, response } = await openApiHandler.handle(c.req.raw, {
-		prefix: "/api",
-		context: {
-			session: null,
-			headers: c.req.raw.headers as Headers,
-			apiKey: null,
-		},
-	});
-	if (matched) {
-		return c.newResponse(response.body, response);
+/** A provider event with expanded customer, product and transaction: a few KB. */
+const PAYMENTS_WEBHOOK_MAX_BODY_BYTES = 256 * 1024;
+/** A JSON-RPC message (or batch) with tool arguments. */
+const MCP_MAX_BODY_BYTES = 1024 * 1024;
+
+const payloadTooLarge = (c: HonoContext) =>
+	c.json({ error: "payload_too_large" }, 413);
+
+const docsHandler = async (c: HonoContext, path: ApiDocsPath) => {
+	// Public and unauthenticated — limited per client IP (one shared bucket
+	// without trusted proxy headers, see getClientIp).
+	if (apiConfig.rateLimit.enabled) {
+		const caller = getClientIp(c.req.raw.headers) ?? "anonymous";
+		const { allowed, resetAt } = await defaultRateLimitStore.check(
+			`apiDocs:${caller}`,
+			apiConfig.rateLimit.endpoints.apiDocs,
+		);
+		if (!allowed) return rateLimitedResponse(resetAt);
 	}
-	return c.notFound();
+	return serveApiDocs(path);
 };
 
 // Boot-time license cache warm-up. Fire-and-forget so import time is
@@ -140,11 +149,20 @@ const base = new Hono<{
 	// session to gate on. Do not move this below the `.use("*", createContext)`
 	// line or signature verification will break.
 	// BYPASS: provider HMAC signature over raw body — mounted before contextMiddleware, do not move
-	.all("/webhooks/payments", (c) => handlePaymentsWebhook(c.req.raw))
+	.all(
+		"/webhooks/payments",
+		bodyLimit({
+			maxSize: PAYMENTS_WEBHOOK_MAX_BODY_BYTES,
+			onError: payloadTooLarge,
+		}),
+		(c) => handlePaymentsWebhook(c.req.raw),
+	)
 	// MCP server — authenticates per request via org API key (src/mcp/),
 	// so it is mounted before createContext like the other machine routes.
-	.all("/mcp", (c) =>
-		apiConfig.mcp.enabled ? handleMcpRequest(c.req.raw) : c.notFound(),
+	.all(
+		"/mcp",
+		bodyLimit({ maxSize: MCP_MAX_BODY_BYTES, onError: payloadTooLarge }),
+		(c) => (apiConfig.mcp.enabled ? handleMcpRequest(c.req.raw) : c.notFound()),
 	)
 	// Cron trigger — mounted before createContext: external schedulers
 	// (Vercel Cron, cron-job.org, GitHub Actions) authenticate via
@@ -178,8 +196,8 @@ const base = new Hono<{
 	// OpenAPI docs + spec: served before createContext so they render without a DB
 	// connection. The Scalar UI and spec are public — procedure-level auth still
 	// applies to actual API endpoints.
-	.get("/docs", docsHandler)
-	.get("/spec.json", docsHandler);
+	.get("/docs", (c) => docsHandler(c, "/docs"))
+	.get("/spec.json", (c) => docsHandler(c, "/spec.json"));
 
 // App-owned routes (src/custom-routes.ts) — like the machine routes above,
 // mounted before createContext; they authenticate themselves.

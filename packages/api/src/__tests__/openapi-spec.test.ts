@@ -41,18 +41,12 @@ vi.mock("@fuutu/ai", () => ({
 	resolveAIProvider: vi.fn(),
 }));
 
-const { openApiHandler } = await import("../orpc/handler");
+const { serveApiDocs } = await import("../orpc/api-docs");
 
 async function fetchSpec(): Promise<Record<string, unknown>> {
-	const { matched, response } = await openApiHandler.handle(
-		new Request("http://localhost/api/spec.json"),
-		{
-			prefix: "/api",
-			context: { session: null, headers: new Headers(), apiKey: null },
-		},
-	);
-	expect(matched).toBe(true);
-	return (await response?.json()) as Record<string, unknown>;
+	const response = await serveApiDocs("/spec.json");
+	expect(response.status).toBe(200);
+	return (await response.json()) as Record<string, unknown>;
 }
 
 describe("OpenAPI spec (/api/spec.json)", () => {
