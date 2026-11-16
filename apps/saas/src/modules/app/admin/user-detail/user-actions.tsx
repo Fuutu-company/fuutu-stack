@@ -70,10 +70,10 @@ export function UserActions({
 	const isSelf = currentUserId === user.id;
 	const ctx: ActionContext = { user, isSelf, isAdmin, isBanned };
 
-	const verifyEmail = useAdminAction({
+	const verificationEmail = useAdminAction({
 		mutationFn: () =>
-			client.admin.users.update({ userId: user.id, emailVerified: true }),
-		successKey: "userDetail.toast.verified",
+			client.admin.users.sendVerificationEmail({ userId: user.id }),
+		successKey: "userDetail.toast.verificationEmailSent",
 	});
 	const passwordReset = useAdminAction({
 		mutationFn: () => client.admin.users.sendPasswordReset({ userId: user.id }),
@@ -102,11 +102,11 @@ export function UserActions({
 			onSelect: () => setDialog("edit"),
 		},
 		{
-			key: "verifyEmail",
+			key: "sendVerificationEmail",
 			icon: <MailCheck />,
-			label: t("verifyEmail"),
+			label: t("sendVerificationEmail"),
 			disabledReason: user.emailVerified ? t("reason.alreadyVerified") : null,
-			onSelect: () => verifyEmail.mutate(undefined),
+			onSelect: () => verificationEmail.mutate(undefined),
 		},
 		{
 			key: "passwordReset",

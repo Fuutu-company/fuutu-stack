@@ -205,14 +205,26 @@ describe("ORG_POLICY", () => {
 			true,
 		);
 	});
-	it("member has full CRUD on webhooks", () => {
+	// A webhook keeps receiving org events after its creator leaves —
+	// members see them, admins and owners manage them.
+	it("member can view webhooks but not create, update or delete them", () => {
 		expect(hasOrgPermission(ac, "member", PERMISSIONS.WEBHOOK.VIEW)).toBe(true);
 		expect(hasOrgPermission(ac, "member", PERMISSIONS.WEBHOOK.CREATE)).toBe(
-			true,
+			false,
+		);
+		expect(hasOrgPermission(ac, "member", PERMISSIONS.WEBHOOK.UPDATE)).toBe(
+			false,
 		);
 		expect(hasOrgPermission(ac, "member", PERMISSIONS.WEBHOOK.DELETE)).toBe(
-			true,
+			false,
 		);
+	});
+	it("admin and owner manage webhooks", () => {
+		for (const role of ["admin", "owner"] as const) {
+			expect(hasOrgPermission(ac, role, PERMISSIONS.WEBHOOK.CREATE)).toBe(true);
+			expect(hasOrgPermission(ac, role, PERMISSIONS.WEBHOOK.UPDATE)).toBe(true);
+			expect(hasOrgPermission(ac, role, PERMISSIONS.WEBHOOK.DELETE)).toBe(true);
+		}
 	});
 	it("member has full CRUD on chat", () => {
 		expect(hasOrgPermission(ac, "member", PERMISSIONS.CHAT.VIEW)).toBe(true);

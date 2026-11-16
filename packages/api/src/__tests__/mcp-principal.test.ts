@@ -217,6 +217,7 @@ describe("resolveMcpPrincipal — OAuth access tokens", () => {
 			kind: "user",
 			via: "oauth",
 			credentialId: "jti-1",
+			clientId: "client-1",
 			userId: "user-1",
 			organizationId: "org-1",
 			orgRole: "owner",

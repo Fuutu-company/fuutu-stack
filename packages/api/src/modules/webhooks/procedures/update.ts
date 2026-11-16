@@ -18,6 +18,7 @@ const updateWebhookSchema = z.object({
 export const updateWebhookProcedure = authProcedure({
 	org: { permission: PERMISSIONS.WEBHOOK.UPDATE },
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({

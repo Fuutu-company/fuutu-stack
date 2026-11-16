@@ -18,14 +18,15 @@ export const listInvitations = permissionProcedure(
 		tags: ["Organizations"],
 		summary: "List pending invitations",
 		description:
-			"Returns pending invitations for an organization. Admin role required.",
+			"Returns pending invitations for an organization. Requires the invite-member permission (org admin or owner).",
 	})
 	.input(listInvitationsSchema)
 	.handler(async ({ input, context }) => {
 		await requireOrgPermissionAccess(
 			input.organizationId,
 			context.user.id,
-			PERMISSIONS.ORGANIZATION.VIEW,
+			// Invitee emails — only for members who may invite.
+			PERMISSIONS.INVITE_MEMBER,
 			context,
 		);
 		const invitations = sortByCreatedAt(

@@ -1,6 +1,7 @@
 import { makeSession, makeUser } from "@fuutu/test-utils";
 import { call } from "@orpc/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { apiConfig } from "../config";
 import type { Context } from "../context";
 import { apiKeysRouter } from "../modules/api-keys/router";
 
@@ -125,6 +126,63 @@ describe("apiKeys.create", () => {
 			organizationId: "org-1",
 			expiresAt: expiry,
 			max: 2,
+		});
+	});
+
+	describe("with apiConfig.apiKeyMaxLifetimeDays", () => {
+		const NOW = new Date("2026-06-01T12:00:00Z");
+		const DAY = 24 * 60 * 60 * 1000;
+		const setMax = (days: number | undefined) => {
+			(
+				apiConfig as { apiKeyMaxLifetimeDays: number | undefined }
+			).apiKeyMaxLifetimeDays = days;
+		};
+
+		beforeEach(() => {
+			vi.useFakeTimers({ toFake: ["Date"] });
+			vi.setSystemTime(NOW);
+			setMax(90);
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+			setMax(undefined);
+		});
+
+		it("gives a key without expiry the maximum lifetime", async () => {
+			await call(
+				apiKeysRouter.create,
+				{ name: "CI" },
+				{ context: authenticatedContext },
+			);
+			expect(createApiKeyWithinLimit).toHaveBeenCalledWith(
+				expect.objectContaining({
+					expiresAt: new Date(NOW.getTime() + 90 * DAY),
+				}),
+			);
+		});
+
+		it("accepts an expiry within the maximum", async () => {
+			const expiresAt = new Date(NOW.getTime() + 30 * DAY);
+			await call(
+				apiKeysRouter.create,
+				{ name: "CI", expiresAt },
+				{ context: authenticatedContext },
+			);
+			expect(createApiKeyWithinLimit).toHaveBeenCalledWith(
+				expect.objectContaining({ expiresAt }),
+			);
+		});
+
+		it("rejects an expiry beyond the maximum", async () => {
+			await expect(
+				call(
+					apiKeysRouter.create,
+					{ name: "CI", expiresAt: new Date(NOW.getTime() + 91 * DAY) },
+					{ context: authenticatedContext },
+				),
+			).rejects.toMatchObject({ code: "BAD_REQUEST" });
+			expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
 		});
 	});
 

@@ -156,6 +156,7 @@ async function resolveOAuthPrincipal(
 		kind: "user",
 		via: "oauth",
 		credentialId: claims.jti ?? claims.azp,
+		clientId: claims.azp,
 		userId: user.id,
 		organizationId,
 		orgRole,

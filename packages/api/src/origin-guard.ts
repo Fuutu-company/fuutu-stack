@@ -3,7 +3,7 @@ export type OriginGuardConfig = {
 	requestUrl: string;
 	/** Public origin of this app (BETTER_AUTH_URL). */
 	appUrl: string;
-	/** Extra trusted origin for credentialed cross-site calls (CORS_ORIGIN). */
+	/** Extra trusted origin for credentialed cross-site calls (CORS_ORIGIN with CORS_CREDENTIALS). */
 	corsOrigin: string | undefined;
 };
 

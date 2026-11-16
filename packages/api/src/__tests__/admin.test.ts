@@ -11,7 +11,8 @@ vi.mock("@fuutu/ai", () => ({
 vi.mock("@fuutu/db", () => ({
 	listFilteredAuditLogs: vi.fn(),
 	countFilteredAuditLogs: vi.fn(),
-	// adminProcedure re-reads the caller's role and ban from the database.
+	// adminProcedure re-reads the caller's role, ban and session row.
+	isUserSessionLive: vi.fn(async () => true),
 	getUserAccessState: vi.fn(async (id: string) => ({
 		id,
 		email: "admin@fuutu.local",

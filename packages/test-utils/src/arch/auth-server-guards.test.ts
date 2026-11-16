@@ -38,6 +38,8 @@ const mocks = vi.hoisted(() => ({
 	isOrganizationMember: vi.fn(),
 	getFullOrganization: vi.fn(),
 	requestPasswordResetCallback: vi.fn(),
+	getUserAccessState: vi.fn(),
+	isUserSessionLive: vi.fn(),
 	pathname: "/dashboard",
 }));
 
@@ -73,6 +75,8 @@ beforeAll(async () => {
 		countOrganizationsForUser: vi.fn(),
 		getOrganizationBySlug: mocks.getOrganizationBySlug,
 		isOrganizationMember: mocks.isOrganizationMember,
+		getUserAccessState: mocks.getUserAccessState,
+		isUserSessionLive: mocks.isUserSessionLive,
 	}));
 	vi.doMock(resolveFromApp("next/headers"), () => ({
 		headers: async () =>
@@ -282,6 +286,17 @@ describe("getSession", () => {
 });
 
 describe("requireAdmin", () => {
+	beforeEach(() => {
+		mocks.getUserAccessState.mockImplementation(async (id: string) => ({
+			id,
+			email: "ada@fuutu.local",
+			role: "admin",
+			banned: false,
+			banExpires: null,
+		}));
+		mocks.isUserSessionLive.mockResolvedValue(true);
+	});
+
 	it("lets a system admin in", async () => {
 		mocks.getSession.mockResolvedValue(session({ role: "admin" }));
 		expect(await redirectOf(authServer.requireAdmin)).toBeNull();
@@ -289,6 +304,46 @@ describe("requireAdmin", () => {
 
 	it("keeps a non-admin out", async () => {
 		mocks.getSession.mockResolvedValue(session({ role: "user" }));
+		expect(await redirectOf(authServer.requireAdmin)).toBe(
+			"/dashboard?error=forbidden",
+		);
+	});
+
+	it("keeps a revoked admin session out (row gone, cookie cache still valid)", async () => {
+		mocks.getSession.mockResolvedValue(session({ role: "admin" }));
+		mocks.isUserSessionLive.mockResolvedValue(false);
+		expect(await redirectOf(authServer.requireAdmin)).toBe(
+			"/dashboard?error=forbidden",
+		);
+		expect(mocks.isUserSessionLive).toHaveBeenCalledWith({
+			userId: "user-2",
+			sessionId: "sess-1",
+		});
+	});
+
+	it("keeps an admin demoted since the session was cached out", async () => {
+		mocks.getSession.mockResolvedValue(session({ role: "admin" }));
+		mocks.getUserAccessState.mockResolvedValue({
+			id: "user-2",
+			email: "ada@fuutu.local",
+			role: "user",
+			banned: false,
+			banExpires: null,
+		});
+		expect(await redirectOf(authServer.requireAdmin)).toBe(
+			"/dashboard?error=forbidden",
+		);
+	});
+
+	it("keeps an admin banned since the session was cached out", async () => {
+		mocks.getSession.mockResolvedValue(session({ role: "admin" }));
+		mocks.getUserAccessState.mockResolvedValue({
+			id: "user-2",
+			email: "ada@fuutu.local",
+			role: "admin",
+			banned: true,
+			banExpires: null,
+		});
 		expect(await redirectOf(authServer.requireAdmin)).toBe(
 			"/dashboard?error=forbidden",
 		);

@@ -431,3 +431,102 @@ describe("webhooks.deliveries.list", () => {
 		).rejects.toBeDefined();
 	});
 });
+
+// A webhook keeps delivering org events (invitee emails included) after
+// whoever created it is gone — creating or re-pointing one is an admin
+// decision made from a signed-in session, never with a leaked API key.
+describe("webhook mutations: admin tier, session only", () => {
+	const owner = makeUser({ id: "user-1" });
+	const member = makeUser({ id: "user-2" });
+	const memberContext = makeSession<Context>(member);
+	const ownerApiKeyContext = {
+		session: { user: owner },
+		headers: new Headers(),
+		apiKey: { id: "key-1", organizationId: "org-1" },
+	} as unknown as Context;
+
+	const mutations = [
+		{
+			name: "create",
+			run: (context: Context) =>
+				call(
+					webhooksRouter.create,
+					{
+						organizationId: "org-1",
+						url: "https://attacker.example/hook",
+						events: ["member.invited"],
+					},
+					{ context },
+				),
+		},
+		{
+			name: "update",
+			run: (context: Context) =>
+				call(
+					webhooksRouter.update,
+					{
+						id: "wh-1",
+						organizationId: "org-1",
+						url: "https://attacker.example/hook",
+					},
+					{ context },
+				),
+		},
+		{
+			name: "delete",
+			run: (context: Context) =>
+				call(
+					webhooksRouter.delete,
+					{ id: "wh-1", organizationId: "org-1" },
+					{ context },
+				),
+		},
+	];
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		vi.mocked(getActiveSubscriptionForOrganization).mockResolvedValue({
+			productId: "price_pro",
+			status: "ACTIVE",
+		} as never);
+	});
+
+	it.each(mutations)(
+		"$name rejects an org member (admin tier)",
+		async ({ run }) => {
+			await expect(run(memberContext)).rejects.toMatchObject({
+				code: "FORBIDDEN",
+			});
+			expect(createWebhookWithinLimit).not.toHaveBeenCalled();
+			expect(updateWebhook).not.toHaveBeenCalled();
+			expect(deleteWebhook).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each(mutations)(
+		"$name rejects an owner's org API key",
+		async ({ run }) => {
+			await expect(run(ownerApiKeyContext)).rejects.toMatchObject({
+				code: "FORBIDDEN",
+			});
+			expect(createWebhookWithinLimit).not.toHaveBeenCalled();
+			expect(updateWebhook).not.toHaveBeenCalled();
+			expect(deleteWebhook).not.toHaveBeenCalled();
+		},
+	);
+
+	it("lets a member list the org's webhooks", async () => {
+		vi.mocked(listWebhooks).mockResolvedValue([] as never);
+		vi.mocked(countWebhooks).mockResolvedValue(0);
+		await expect(
+			call(
+				webhooksRouter.list,
+				{ organizationId: "org-1" },
+				{ context: memberContext },
+			),
+		).resolves.toMatchObject({ items: [] });
+	});
+});

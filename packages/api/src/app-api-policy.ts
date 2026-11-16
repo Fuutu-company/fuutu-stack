@@ -42,3 +42,6 @@ export const appProcedurePolicyExceptions: ProcedurePolicyExceptions = {};
 
 /** One entry per route mounted in `custom-routes.ts`. */
 export const appRoutePolicies: readonly RoutePolicy[] = [];
+
+/** Procedure path prefixes of your back office — every procedure under them (reads too) is a `systemAdminProcedure`. */
+export const appSystemAdminProcedurePrefixes: readonly string[] = [];

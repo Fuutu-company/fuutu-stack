@@ -1,5 +1,5 @@
 import { isBanActive, type UserWithRole } from "@fuutu/auth/types";
-import { getUserAccessState } from "@fuutu/db";
+import { getUserAccessState, isUserSessionLive } from "@fuutu/db";
 import {
 	hasSystemPermission,
 	type KnownPermission,
@@ -152,8 +152,9 @@ export function permissionProcedure(permission: KnownPermission) {
  * `permissionProcedure(permission)`:
  *  - interactive sessions only — API keys (even an admin's) are rejected
  *  - never an impersonation session
- *  - role and ban are re-read from the database on every call, so a
- *    demotion or ban applies before the cookie-cached session expires
+ *  - role, ban and the session row are re-read from the database on every
+ *    call, so a demotion, ban or revoked session applies before the
+ *    cookie-cached session expires
  *
  * Built on `permissionProcedure`, not `authProcedure`: an `organizationId`
  * in the input must never switch the check to org scope.
@@ -163,6 +164,7 @@ export function systemAdminProcedure(permission: KnownPermission) {
 		markPolicy(systemAdminMiddleware(permission), {
 			denyImpersonation: true,
 			sessionOnly: true,
+			systemAdmin: true,
 		}),
 	);
 }
@@ -177,8 +179,14 @@ function systemAdminMiddleware(permission: KnownPermission) {
 				});
 			}
 			assertNotImpersonating(context);
-			const state = await getUserAccessState(context.user.id);
-			if (!state) {
+			const [state, live] = await Promise.all([
+				getUserAccessState(context.user.id),
+				isUserSessionLive({
+					userId: context.user.id,
+					sessionId: context.session.session.id,
+				}),
+			]);
+			if (!state || !live) {
 				throw new ORPCError("UNAUTHORIZED");
 			}
 			if (isBanActive(state)) {

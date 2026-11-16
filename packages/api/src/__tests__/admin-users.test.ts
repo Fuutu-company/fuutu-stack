@@ -21,6 +21,7 @@ vi.mock("@fuutu/auth", () => ({
 			revokeUserSessions: vi.fn(),
 			removeUser: vi.fn(),
 			requestPasswordReset: vi.fn(),
+			sendVerificationEmail: vi.fn(),
 			impersonateUser: vi.fn(),
 			stopImpersonating: vi.fn(),
 			signOut: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock("@fuutu/auth/admin-support", () => ({
 
 vi.mock("@fuutu/db", () => ({
 	getUserAccessState: vi.fn(),
+	isUserSessionLive: vi.fn(async () => true),
 	adminListUsers: vi.fn(),
 	adminCountUsers: vi.fn(),
 	adminGetUserDetail: vi.fn(),
@@ -104,6 +106,11 @@ const STATES: Record<string, Record<string, unknown>> = {
 	[ADMIN_ID]: { email: "admin@fuutu.local", role: "admin" },
 	"admin-2": { email: "peer@fuutu.local", role: "admin" },
 	"user-2": { email: "ada@fuutu.local", role: "user" },
+	"verified-4": {
+		email: "verified@fuutu.local",
+		role: "user",
+		emailVerified: true,
+	},
 	"banned-3": {
 		email: "banned@fuutu.local",
 		role: "user",
@@ -250,6 +257,12 @@ const ADMIN_PROCEDURES = [
 	{
 		name: "sendPasswordReset",
 		procedure: users.sendPasswordReset,
+		input: { userId: "user-2" },
+		endpoint: "adminMutation",
+	},
+	{
+		name: "sendVerificationEmail",
+		procedure: users.sendVerificationEmail,
 		input: { userId: "user-2" },
 		endpoint: "adminMutation",
 	},
@@ -551,14 +564,17 @@ function expectAudit(
 // ─── update ─────────────────────────────────────────────────────────────────
 
 describe("admin.users.update", () => {
-	it("updates name and verification and audits the field names", async () => {
+	it("updates name and unverifies the email and audits the field names", async () => {
 		await call(
 			users.update,
-			{ userId: "user-2", name: "Ada L.", emailVerified: true },
+			{ userId: "user-2", name: "Ada L.", emailVerified: false },
 			{ context: adminContext() },
 		);
 		expect(auth.api.adminUpdateUser).toHaveBeenCalledWith({
-			body: { userId: "user-2", data: { name: "Ada L.", emailVerified: true } },
+			body: {
+				userId: "user-2",
+				data: { name: "Ada L.", emailVerified: false },
+			},
 			headers: expect.any(Headers),
 		});
 		expect(auth.api.revokeUserSessions).not.toHaveBeenCalled();
@@ -566,6 +582,17 @@ describe("admin.users.update", () => {
 			targetUserId: "user-2",
 			changedFields: ["name", "emailVerified"],
 		});
+	});
+
+	// Marking an address verified without proof of the mailbox lets a
+	// pre-registered attacker account absorb the owner's social sign-in.
+	it("never marks an email verified (sendVerificationEmail instead)", async () => {
+		await expect(
+			call(users.update, { userId: "user-2", emailVerified: true } as never, {
+				context: adminContext(),
+			}),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(auth.api.adminUpdateUser).not.toHaveBeenCalled();
 	});
 
 	it("changes the email: unverifies it and signs the user out everywhere", async () => {
@@ -597,6 +624,46 @@ describe("admin.users.update", () => {
 		});
 	});
 
+	it("writes the audit row before the email changes", async () => {
+		await call(
+			users.update,
+			{ userId: "user-2", email: "ada.new@fuutu.local", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(audit.recordStrict).toHaveBeenCalledOnce();
+		expectAuditedBefore(vi.mocked(auth.api.adminUpdateUser));
+		expect(auditedActions()).toEqual(["admin.user.update"]);
+	});
+
+	it("never changes an email without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(
+				users.update,
+				{ userId: "user-2", email: "ada.new@fuutu.local", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow("audit sink down");
+		expect(auth.api.adminUpdateUser).not.toHaveBeenCalled();
+	});
+
+	it("records update_failed when the email change fails", async () => {
+		vi.mocked(auth.api.adminUpdateUser).mockRejectedValueOnce(
+			new Error("db down"),
+		);
+		await expect(
+			call(
+				users.update,
+				{ userId: "user-2", email: "ada.new@fuutu.local", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow();
+		expect(auditedActions()).toEqual([
+			"admin.user.update",
+			"admin.user.update_failed",
+		]);
+	});
+
 	it("requires a reason for an email change", async () => {
 		await expect(
 			call(
@@ -617,7 +684,7 @@ describe("admin.users.update", () => {
 					email: "new@fuutu.local",
 					emailVerified: true,
 					reason: REASON,
-				},
+				} as never,
 				{ context: adminContext() },
 			),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -1083,6 +1150,46 @@ describe("admin.users.sendPasswordReset", () => {
 	});
 });
 
+describe("admin.users.sendVerificationEmail", () => {
+	it("sends Better Auth's verification email without the admin's session and audits", async () => {
+		await call(
+			users.sendVerificationEmail,
+			{ userId: "user-2", reason: REASON },
+			{ context: adminContext() },
+		);
+		// No headers: with the admin's session Better Auth would compare the
+		// address against the admin's own email.
+		expect(auth.api.sendVerificationEmail).toHaveBeenCalledWith({
+			body: { email: "ada@fuutu.local", callbackURL: "/dashboard" },
+		});
+		expectAudit("admin.user.verification_email_send", {
+			targetUserId: "user-2",
+			reason: REASON,
+		});
+	});
+
+	it("refuses an address that is already verified", async () => {
+		await expect(
+			call(
+				users.sendVerificationEmail,
+				{ userId: "verified-4", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toMatchObject({ code: "CONFLICT" });
+		expect(auth.api.sendVerificationEmail).not.toHaveBeenCalled();
+	});
+
+	it("returns 404 for an unknown user", async () => {
+		await expect(
+			call(
+				users.sendVerificationEmail,
+				{ userId: "nobody" },
+				{ context: adminContext() },
+			),
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
+	});
+});
+
 describe("admin.users.resetTwoFactor", () => {
 	it("removes 2FA, signs the user out and audits", async () => {
 		await call(
@@ -1099,6 +1206,29 @@ describe("admin.users.resetTwoFactor", () => {
 			targetUserId: "user-2",
 			reason: REASON,
 		});
+	});
+
+	it("writes the audit row before the 2FA secret is deleted", async () => {
+		await call(
+			users.resetTwoFactor,
+			{ userId: "user-2", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(audit.recordStrict).toHaveBeenCalledOnce();
+		expectAuditedBefore(vi.mocked(db.adminResetTwoFactor));
+		expect(auditedActions()).toEqual(["admin.user.two_factor_reset"]);
+	});
+
+	it("never resets 2FA without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(
+				users.resetTwoFactor,
+				{ userId: "user-2", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow("audit sink down");
+		expect(db.adminResetTwoFactor).not.toHaveBeenCalled();
 	});
 
 	it.each([ADMIN_ID, "admin-2"])("refuses for admin %s", async (userId) => {
