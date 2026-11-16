@@ -3,6 +3,12 @@ name: DCO
 # Every commit in a pull request must carry a `Signed-off-by:` line that
 # matches the commit author (Developer Certificate of Origin 1.1, see
 # CONTRIBUTING.md). Uses the GitHub API only: no checkout, no third-party actions.
+#
+# Runs for external contributions only: pull requests from a fork. A branch
+# in this repository needs write access, so its work is the maintainers'
+# (owned by Fuutu, see CONTRIBUTING.md). The head repo is a fact of the PR;
+# `author_association` is not (private org membership reports CONTRIBUTOR).
+# A deleted fork (head repo null) still runs the check.
 
 on:
   pull_request:
@@ -15,6 +21,7 @@ permissions:
 jobs:
   dco:
     name: DCO
+    if: github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check Signed-off-by on every commit
