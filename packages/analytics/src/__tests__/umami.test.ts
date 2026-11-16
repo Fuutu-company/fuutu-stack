@@ -101,6 +101,50 @@ describe("umami provider — window.umami integration", () => {
 			allowed = false;
 			expect(beforeSend()?.("event", payload)).toBeNull();
 		});
+
+		it("strips secrets from the page and referrer URLs it sends", () => {
+			umamiAnalyticsProvider.installConsentGate?.(() => true);
+			const sent = beforeSend()?.("event", {
+				website: "w",
+				url: "/auth/reset-password?token=abc123&utm_source=mail",
+				referrer:
+					"https://app.example.com/auth/verify-email-change?email=a%40b.co&State=x#top",
+			});
+			expect(sent).toEqual({
+				website: "w",
+				url: "/auth/reset-password?utm_source=mail",
+				referrer: "https://app.example.com/auth/verify-email-change#top",
+			});
+		});
+
+		it("strips every secret-bearing param from an absolute URL", () => {
+			umamiAnalyticsProvider.installConsentGate?.(() => true);
+			const sent = beforeSend()?.("event", {
+				url: "https://app.example.com/auth/accept-invitation?id=inv_1&code=9&sig=s&page=2",
+			});
+			expect(sent).toEqual({
+				url: "https://app.example.com/auth/accept-invitation?page=2",
+			});
+		});
+
+		it("leaves URLs without secrets untouched", () => {
+			umamiAnalyticsProvider.installConsentGate?.(() => true);
+			const sent = beforeSend()?.("event", {
+				url: "/pricing?utm_campaign=launch",
+				referrer: "",
+			});
+			expect(sent).toEqual({
+				url: "/pricing?utm_campaign=launch",
+				referrer: "",
+			});
+		});
+	});
+
+	describe("trackPageview redaction", () => {
+		it("strips secrets from a manual page view URL", () => {
+			umamiAnalyticsProvider.trackPageview("/auth/verify?token=t0k3n");
+			expect(trackMock).toHaveBeenCalledWith({ url: "/auth/verify" });
+		});
 	});
 
 	describe("getCspOrigins", () => {

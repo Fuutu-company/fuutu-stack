@@ -74,3 +74,63 @@ describe("dco workflow guard", () => {
 		expect(check).toContain('exit "$failed"');
 	});
 });
+
+/**
+ * Credentials stay out of reach of dependency code: the E2E job runs
+ * `pnpm install`, `next build` and Playwright, so no token may sit in
+ * `.git/config` or the job env. The bot token reaches only the baseline
+ * push script, through step env.
+ */
+describe("workflow credential guard", () => {
+	const e2e = job(ci, "e2e");
+	const jobEnv = e2e.slice(
+		e2e.indexOf("\n    env:\n"),
+		e2e.indexOf("\n    steps:\n"),
+	);
+
+	it("the E2E checkout keeps no credentials in .git/config", () => {
+		const checkout = e2e.slice(e2e.indexOf("- uses: actions/checkout@"));
+		const withBlock = checkout.slice(0, checkout.indexOf("\n      - "));
+		expect(withBlock).toMatch(/^ {10}persist-credentials: false$/m);
+		expect(withBlock).not.toMatch(/^ {10}token:/m);
+	});
+
+	it("no secret is exposed in the E2E job env", () => {
+		expect(jobEnv).not.toBe("");
+		expect(jobEnv).not.toContain("secrets.");
+	});
+
+	it("only the baseline push steps get the push token", () => {
+		const steps = e2e.split("\n      - ").filter((s) => s.includes("secrets."));
+		expect(steps.length).toBeGreaterThan(0);
+		for (const step of steps) {
+			expect(step).toContain("tooling/scripts/ci-visual-baselines.sh");
+			expect(step).toMatch(/^ {10}GIT_PUSH_TOKEN: \$\{\{ secrets\./m);
+		}
+	});
+
+	it("the baseline script authenticates git from env, not argv", () => {
+		const script = read("tooling/scripts/ci-visual-baselines.sh");
+		expect(script).toContain("GIT_PUSH_TOKEN");
+		expect(script).toContain("GIT_CONFIG_KEY_0=");
+		expect(script).not.toMatch(/git -c http/);
+	});
+
+	it("the version job runs no package install next to its deploy key", () => {
+		const version = job(read(".github/workflows/version.yml"), "version");
+		expect(version).not.toBe("");
+		expect(version).not.toContain("./.github/actions/setup");
+		expect(version).not.toMatch(/\bpnpm (install|i)\b/);
+	});
+});
+
+describe("maintenance workflow guard", () => {
+	const audit = job(read(".github/workflows/maintenance.yml"), "audit");
+
+	it("reports production advisories (high and above) without failing", () => {
+		expect(audit).toMatch(
+			/^ +pnpm audit --prod --audit-level=high \|\| true$/m,
+		);
+		expect(audit).toContain('>> "$GITHUB_STEP_SUMMARY"');
+	});
+});

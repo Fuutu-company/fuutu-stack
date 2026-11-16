@@ -10,8 +10,8 @@ build
 
 # Environment variables
 .env
-.env*.local
-.env.bak*
+.env.*
+!.env.example
 
 # IDEs and editors
 .vscode/*

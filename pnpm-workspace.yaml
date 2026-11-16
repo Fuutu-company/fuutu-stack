@@ -7,7 +7,7 @@ catalog:
   # Core
   typescript: ^7.0.2
   dotenv: ^17.4.2
-  zod: ^4.6.5
+  zod: ^4.6.6
   deepmerge: ^4.3.1
   "@types/node": ^26.6.3
   "@t3-oss/env-nextjs": ^0.13.11
@@ -72,7 +72,7 @@ catalog:
   "@orpc/zod": ^1.15.4
   "@orpc/client": ^1.15.4
   "@orpc/tanstack-query": ^1.15.4
-  hono: ^4.13.12
+  hono: ^4.13.16
   # Auth
   # Better Auth packages move in lockstep — pinned exactly (MCP OAuth plugin
   # peer-requires the same version).

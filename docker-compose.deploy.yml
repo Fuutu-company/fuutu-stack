@@ -5,6 +5,11 @@
 #
 # Coolify itself does not consume this file — services there are created
 # individually from the same Dockerfiles.
+#
+# Ports are published on 127.0.0.1 only: Docker-published ports bypass
+# host firewall rules, and a reachable app port would let callers skip the
+# reverse proxy (TLS, forwarding headers for per-IP rate limits). Put a
+# proxy on the host in front of them.
 
 services:
   postgres:
@@ -36,7 +41,7 @@ services:
         NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
 
   web-docs:
     build:
@@ -52,7 +57,7 @@ services:
         NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
 
   app:
     build:
@@ -79,7 +84,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
   # One-shot migration runner — `migrator` stage of the app Dockerfile.
   #   docker compose -f docker-compose.deploy.yml run --rm migrate

@@ -43,26 +43,10 @@ const securityHeaders = [
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 	{
 		key: "Permissions-Policy",
-		value: "camera=(), microphone=(), geolocation=()",
+		value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
 	},
-	{ key: "X-DNS-Prefetch-Control", value: "on" },
-	{
-		key: "Content-Security-Policy",
-		value: [
-			"default-src 'self'",
-			// React Compiler + next-themes inline script on first paint.
-			// Scalar CDN for OpenAPI docs at /api/docs.
-			`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' https://cdn.jsdelivr.net ${analyticsCsp.scriptSrc.join(" ")}`,
-			"style-src 'self' 'unsafe-inline'",
-			"img-src 'self' data: blob: https:",
-			"font-src 'self' data: https://fonts.scalar.com",
-			`connect-src 'self' https: ${storageConnectSrc} ${analyticsCsp.connectSrc.join(" ")}`,
-			"frame-ancestors 'none'",
-			"base-uri 'self'",
-			"form-action 'self'",
-			"object-src 'none'",
-		].join("; "),
-	},
+	{ key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+	{ key: "Cross-Origin-Resource-Policy", value: "same-site" },
 	...(isProd
 		? [
 				{
@@ -72,6 +56,26 @@ const securityHeaders = [
 			]
 		: []),
 ];
+
+// Every path except /api/docs: that page sends its own sandboxed CSP
+// (`@fuutu/api` api-docs.ts) — a route header cannot replace this one.
+const contentSecurityPolicy = {
+	key: "Content-Security-Policy",
+	value: [
+		"default-src 'self'",
+		// React Compiler + next-themes inline script on first paint.
+		`script-src 'self' ${isProd ? "" : "'unsafe-eval'"} 'unsafe-inline' ${analyticsCsp.scriptSrc.join(" ")}`,
+		"style-src 'self' 'unsafe-inline'",
+		"img-src 'self' data: blob: https:",
+		"font-src 'self' data:",
+		`connect-src 'self' https: ${storageConnectSrc} ${analyticsCsp.connectSrc.join(" ")}`,
+		"frame-ancestors 'none'",
+		"base-uri 'self'",
+		"form-action 'self'",
+		"object-src 'none'",
+		...(isProd ? ["upgrade-insecure-requests"] : []),
+	].join("; "),
+};
 
 const nextConfig: NextConfig = {
 	// typedRoutes disabled until cross-app links (to marketing) are wired
@@ -100,6 +104,10 @@ const nextConfig: NextConfig = {
 					},
 					...securityHeaders,
 				],
+			},
+			{
+				source: "/:path((?!api/docs$).*)",
+				headers: [contentSecurityPolicy],
 			},
 		];
 	},
