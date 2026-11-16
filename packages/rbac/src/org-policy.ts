@@ -29,6 +29,9 @@ export const ORG_POLICY: OrgAccessPolicy = Object.freeze({
 		PERMISSIONS.API_KEY.UPDATE,
 		...crud("webhook"),
 		...crud("chat"),
+		// Storage: a bucket in BUCKET_WRITE_ORG_PERMISSION (api storage
+		// module) also needs that permission — organization-logos writes
+		// and deletes need ORGANIZATION.UPDATE.
 		...crud("storage"),
 		...crud("crm"),
 		// View-only resources
