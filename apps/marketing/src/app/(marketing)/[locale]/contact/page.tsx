@@ -5,6 +5,8 @@ import { ArrowUpRight, GitBranch, Mail } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
+import { appMarketing } from "@/app-marketing";
+import { withAppMetadata } from "@/lib/page-metadata";
 
 interface ContactPageProps {
 	params: Promise<{ locale: string }>;
@@ -15,7 +17,11 @@ export async function generateMetadata({
 }: ContactPageProps): Promise<Metadata> {
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "contact" });
-	return { title: t("title"), description: t("description") };
+	return withAppMetadata(
+		{ title: t("title"), description: t("description") },
+		appMarketing.metadata?.contact,
+		locale,
+	);
 }
 
 function ContactCard({
@@ -35,7 +41,7 @@ function ContactCard({
 		<Card className="relative flex-row items-center gap-4 px-6 py-5 transition-shadow duration-150 focus-within:shadow-md hover:shadow-md motion-reduce:transition-none">
 			<span
 				aria-hidden="true"
-				className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground [&>svg]:size-5"
+				className="flex shrink-0 items-center justify-center pt-0.5 text-primary [&>svg]:size-6"
 			>
 				{icon}
 			</span>

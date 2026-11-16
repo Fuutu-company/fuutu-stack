@@ -5,7 +5,10 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { requireOrgPermissionAccess } from "../../../orpc/org-access";
-import { protectedProcedure } from "../../../orpc/procedures";
+import {
+	denyImpersonation,
+	protectedProcedure,
+} from "../../../orpc/procedures";
 import { sanitizePaymentUrl, throwIfPaymentsDisabled } from "../shared";
 
 const topupSchema = z.object({
@@ -16,6 +19,7 @@ const topupSchema = z.object({
 });
 
 export const createTopupCheckout = protectedProcedure
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",

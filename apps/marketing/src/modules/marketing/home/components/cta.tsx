@@ -1,4 +1,5 @@
-import { LIMITS } from "@fuutu/payments/config";
+import { LIMITS, type PlanLimits } from "@fuutu/payments/config";
+import { getFreePlanId } from "@fuutu/payments/plans";
 import { Button } from "@fuutu/ui";
 import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -8,7 +9,10 @@ import { Blob } from "./section-heading";
 
 export function CTA() {
 	const t = useTranslations("home.cta");
-	const freeMembers = LIMITS.free.membersPerOrg;
+	const freePlanId = getFreePlanId();
+	const freeMembers = freePlanId
+		? (LIMITS[freePlanId] as PlanLimits).membersPerOrg
+		: undefined;
 
 	return (
 		<section className="px-4 pt-24 sm:px-6 md:pt-32">

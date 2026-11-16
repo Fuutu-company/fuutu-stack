@@ -16,6 +16,7 @@ import { Building2, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 import {
 	useFullOrganization,
@@ -44,6 +45,7 @@ type FullOrg = {
 
 export function OrgLogoUpload({ slug }: { slug: string }) {
 	const t = useTranslations("organizations");
+	const tRoot = useTranslations();
 	const { data: session } = authClient.useSession();
 	const orgQuery = useFullOrganization(slug);
 	const invalidateOrganization = useInvalidateOrganization();
@@ -105,7 +107,9 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 			await invalidateOrganization(slug);
 		} catch (e) {
 			log.error("logo upload failed", { err: e });
-			setStatus(t("settings.logo.failed"));
+			setStatus(
+				planGateMessage(e, tRoot, "organizations.settings.logo.failed"),
+			);
 		} finally {
 			setUploading(false);
 			if (fileInputRef.current) fileInputRef.current.value = "";
@@ -125,7 +129,9 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 			await invalidateOrganization(slug);
 		} catch (e) {
 			log.error("logo removal failed", { err: e });
-			setStatus(t("settings.logo.failed"));
+			setStatus(
+				planGateMessage(e, tRoot, "organizations.settings.logo.failed"),
+			);
 		} finally {
 			setRemoving(false);
 		}

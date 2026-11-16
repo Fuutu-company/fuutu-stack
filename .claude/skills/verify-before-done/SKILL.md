@@ -24,7 +24,7 @@ A claim without fresh evidence from this turn is a guess. Run the command, read 
 | Types clean | `pnpm check-types` → all tasks successful |
 | Tests pass | `pnpm test` (or `pnpm -F @fuutu/<pkg> test`) → 0 failed |
 | Translations complete | `pnpm check-translations` → all keys present |
-| User flow works | `pnpm test:e2e:saas` / `test:e2e:marketing` for the touched specs |
+| User flow works | `pnpm test:e2e:saas` / `test:e2e:marketing` / `test:e2e:docs` for the touched specs |
 | UI works | `check-in-browser` — zero console errors |
 | Bug fixed | regression test: fails with the fix reverted, passes with it |
 | Requirements met | plan/spec re-read as a checklist, every line checked off |

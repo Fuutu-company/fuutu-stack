@@ -8,6 +8,7 @@ interface MockProviderShape {
 		seats: number;
 	}) => Promise<void>;
 	cancelSubscription?: (subscriptionId: string) => Promise<void>;
+	getSubscriptionStatus?: (subscriptionId: string) => Promise<string>;
 }
 
 const mocks = vi.hoisted((): { provider: MockProviderShape } => ({
@@ -26,6 +27,7 @@ vi.mock("@fuutu/db", () => ({
 	getActiveSubscriptionForOrganization:
 		mockGetActiveSubscriptionForOrganization,
 	getPurchasesByOrganizationId: mockGetPurchasesByOrganizationId,
+	getActiveSubscriptionsForOwner: vi.fn().mockResolvedValue([]),
 }));
 
 const mockWarn = vi.fn();
@@ -71,9 +73,19 @@ vi.mock("../resolve", () => ({
 				: null,
 }));
 
+// Pass-through spy: lets a test stand in for the plan-subscription lookup
+// (add-on filtering is covered in sync-supersede.test.ts).
+const mockGetPlanSubscription = vi.hoisted(() => vi.fn());
+vi.mock("../billing-policy", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../billing-policy")>();
+	mockGetPlanSubscription.mockImplementation(actual.getPlanSubscription);
+	return { ...actual, getPlanSubscription: mockGetPlanSubscription };
+});
+
 const {
 	updateSeatsInOrganizationSubscription,
 	cancelAllSubscriptionsForOrganization,
+	cancelAllSubscriptionsForOrganizationOrThrow,
 } = await import("../seats");
 
 describe("updateSeatsInOrganizationSubscription", () => {
@@ -98,6 +110,37 @@ describe("updateSeatsInOrganizationSubscription", () => {
 	it("calls setSubscriptionSeats with the active subscription's id", async () => {
 		await updateSeatsInOrganizationSubscription("org_1", 5);
 
+		expect(mockSetSubscriptionSeats).toHaveBeenCalledWith({
+			subscriptionId: "sub_123",
+			seats: 5,
+		});
+	});
+
+	it("syncs seats on the plan subscription, never on a newer add-on", async () => {
+		// The newest active row is an add-on (e.g. a seat pack) — seat sync
+		// must target the base plan's subscription.
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue({
+			id: "purchase_addon",
+			provider: "test-provider",
+			subscriptionId: "sub_addon",
+			productId: "price-addon",
+			priceId: "price-addon",
+			status: "ACTIVE",
+		});
+		mockGetPlanSubscription.mockResolvedValueOnce({
+			id: "purchase_1",
+			provider: "test-provider",
+			subscriptionId: "sub_123",
+			productId: "price-pro",
+			priceId: "price-pro",
+			status: "ACTIVE",
+		});
+
+		await updateSeatsInOrganizationSubscription("org_1", 5);
+
+		expect(mockGetPlanSubscription).toHaveBeenCalledWith({
+			organizationId: "org_1",
+		});
 		expect(mockSetSubscriptionSeats).toHaveBeenCalledWith({
 			subscriptionId: "sub_123",
 			seats: 5,
@@ -232,8 +275,12 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 		await cancelAllSubscriptionsForOrganization("org_1");
 
 		expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
-		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_a");
-		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_b");
+		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_a", {
+			mode: "immediate",
+		});
+		expect(mockCancelSubscription).toHaveBeenCalledWith("sub_b", {
+			mode: "immediate",
+		});
 	});
 
 	it("cancels each subscription through the provider that owns it", async () => {
@@ -256,7 +303,9 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 
 		await cancelAllSubscriptionsForOrganization("org_1");
 
-		expect(mockOtherCancel).toHaveBeenCalledWith("sub_other");
+		expect(mockOtherCancel).toHaveBeenCalledWith("sub_other", {
+			mode: "immediate",
+		});
 		expect(mockCancelSubscription).not.toHaveBeenCalled();
 		expect(mockWarn).toHaveBeenCalled();
 	});
@@ -287,5 +336,117 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 		).resolves.toBeUndefined();
 
 		expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
+	});
+
+	describe("cancelAllSubscriptionsForOrganizationOrThrow", () => {
+		const active = (id: string, provider = "test-provider") => ({
+			id,
+			type: "SUBSCRIPTION",
+			provider,
+			subscriptionId: `sub_${id}`,
+			status: "ACTIVE",
+		});
+
+		it("still tries every subscription, then rejects on a failure", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				active("a"),
+				active("b"),
+			]);
+			mockCancelSubscription
+				.mockRejectedValueOnce(new Error("provider down"))
+				.mockResolvedValueOnce(undefined);
+
+			await expect(
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
+			).rejects.toThrow("1 of 2 subscriptions could not be cancelled");
+			expect(mockCancelSubscription).toHaveBeenCalledTimes(2);
+		});
+
+		it("rejects when a subscription's provider is not available", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				active("gone", "gone-provider"),
+			]);
+
+			await expect(
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
+			).rejects.toThrow("1 of 1 subscriptions could not be cancelled");
+		});
+
+		it("resolves when every cancel succeeds", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([active("a")]);
+			mockCancelSubscription.mockResolvedValueOnce(undefined);
+
+			await expect(
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
+			).resolves.toBeUndefined();
+		});
+
+		it("cancels every status that can still charge — not only active/trialing", async () => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				{ ...active("past_due"), status: "PAST_DUE" },
+				{ ...active("paused"), status: "PAUSED" },
+				{ ...active("incomplete"), status: "INCOMPLETE" },
+				{ ...active("scheduled"), status: "SCHEDULED_CANCEL" },
+				{ ...active("canceled"), status: "CANCELED" },
+				{ ...active("expired"), status: "EXPIRED" },
+			]);
+			mockCancelSubscription.mockResolvedValue(undefined);
+
+			await cancelAllSubscriptionsForOrganizationOrThrow("org_1");
+
+			expect(
+				mockCancelSubscription.mock.calls.map(([id]) => id).sort(),
+			).toEqual(["sub_incomplete", "sub_past_due", "sub_paused"]);
+			expect(mockCancelSubscription).toHaveBeenCalledWith("sub_past_due", {
+				mode: "immediate",
+			});
+		});
+
+		it("counts a refused cancel as done when the provider reports the subscription ended", async () => {
+			const getSubscriptionStatus = vi.fn().mockResolvedValue("EXPIRED");
+			mocks.provider = { ...mocks.provider, getSubscriptionStatus };
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				{ ...active("stale"), status: "INCOMPLETE" },
+			]);
+			mockCancelSubscription.mockRejectedValueOnce(
+				new Error("subscription already expired"),
+			);
+
+			await expect(
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
+			).resolves.toBeUndefined();
+			expect(getSubscriptionStatus).toHaveBeenCalledWith("sub_stale");
+		});
+
+		it("rejects a refused cancel when the provider still reports it billing", async () => {
+			mocks.provider = {
+				...mocks.provider,
+				getSubscriptionStatus: vi.fn().mockResolvedValue("INCOMPLETE"),
+			};
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				{ ...active("open"), status: "INCOMPLETE" },
+			]);
+			mockCancelSubscription.mockRejectedValueOnce(new Error("provider down"));
+
+			await expect(
+				cancelAllSubscriptionsForOrganizationOrThrow("org_1"),
+			).rejects.toThrow("1 of 1 subscriptions could not be cancelled");
+		});
+	});
+
+	it("the lenient variant still cancels only active/trialing subscriptions", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			{
+				id: "p1",
+				type: "SUBSCRIPTION",
+				provider: "test-provider",
+				subscriptionId: "sub_past_due",
+				status: "PAST_DUE",
+			},
+		]);
+
+		await cancelAllSubscriptionsForOrganization("org_1");
+
+		expect(mockCancelSubscription).not.toHaveBeenCalled();
 	});
 });

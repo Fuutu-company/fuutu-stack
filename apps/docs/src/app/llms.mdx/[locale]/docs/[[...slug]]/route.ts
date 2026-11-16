@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { appDocs } from "@/app-docs";
 import { getLLMText, source } from "@/lib/source";
 
 export const revalidate = false;
@@ -12,7 +13,7 @@ export async function GET(
 	const page = source.getPage(slug, locale);
 	if (!page) notFound();
 
-	return new Response(await getLLMText(page), {
+	return new Response(await getLLMText(page, appDocs.processMarkdown), {
 		headers: {
 			"Content-Type": "text/markdown",
 		},

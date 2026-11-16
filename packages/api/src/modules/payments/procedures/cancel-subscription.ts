@@ -1,58 +1,105 @@
-import { getPurchaseByProviderSubscriptionId } from "@fuutu/db";
-import { isPaymentsEnabled, resolvePaymentProvider } from "@fuutu/payments";
-import { PERMISSIONS } from "@fuutu/rbac";
-import { ORPCError } from "@orpc/server";
+import {
+	type CancelMode,
+	type PaymentProvider,
+	resolvePaymentProvider,
+} from "@fuutu/payments";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { requireOrgPermissionAccess } from "../../../orpc/org-access";
-import { protectedProcedure } from "../../../orpc/procedures";
+import {
+	denyImpersonation,
+	protectedProcedure,
+} from "../../../orpc/procedures";
 import { throwIfPaymentsDisabled } from "../shared";
+import {
+	assertPaymentsEnabled,
+	requireSubscriptionAccess,
+} from "./subscription-access";
 
 const cancelSubscriptionSchema = z.object({
 	subscriptionId: z.string().min(1).max(200),
+	/** Cancel when the current period ends (resumable) instead of now. */
+	atPeriodEnd: z.boolean().optional(),
 });
 
+/**
+ * Is the subscription in a trial? The provider decides; when its lookup
+ * fails (or it has none), the stored row counts only while its trial
+ * period has not ended.
+ */
+async function isTrialing(
+	provider: PaymentProvider,
+	subscriptionId: string,
+	stored: { status: string; currentPeriodEnd: Date | null },
+): Promise<boolean> {
+	try {
+		if (provider.getSubscriptionStatus) {
+			return (
+				(await provider.getSubscriptionStatus(subscriptionId)) === "TRIALING"
+			);
+		}
+	} catch {
+		// fall through to the stored row
+	}
+	return (
+		stored.status === "TRIALING" &&
+		stored.currentPeriodEnd !== null &&
+		stored.currentPeriodEnd.getTime() > Date.now()
+	);
+}
+
+/**
+ * The mode the cancel runs in. A provider that ends a trial on cancel
+ * (`cancelEndsTrial`, Creem) has no cancel at trial end, so a trial is
+ * canceled now even when the period end was asked for — and the response
+ * says so.
+ */
+async function cancelModeFor(
+	provider: PaymentProvider,
+	subscriptionId: string,
+	atPeriodEnd: boolean | undefined,
+	stored: { status: string; currentPeriodEnd: Date | null },
+): Promise<CancelMode> {
+	if (!atPeriodEnd) return "immediate";
+	if (
+		provider.cancelEndsTrial &&
+		(await isTrialing(provider, subscriptionId, stored))
+	) {
+		return "immediate";
+	}
+	return "period_end";
+}
+
 export const cancelSubscription = protectedProcedure
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",
 		path: "/payments/subscription/cancel",
 		tags: ["Payments"],
 		summary: "Cancel subscription",
-		description: "Cancels an active subscription via the payment provider.",
+		description:
+			"Cancels an active subscription via the payment provider — now, or at the end of the current period with `atPeriodEnd`. A provider without a cancel at trial end (Creem) ends a trial now; `mode` in the response is the mode applied.",
 	})
 	.input(cancelSubscriptionSchema)
 	.handler(async ({ input, context }) => {
-		// Disabled installs must surface 501 — the noop provider id would
-		// otherwise miss the purchase lookup and masquerade as NOT_FOUND.
-		if (!isPaymentsEnabled()) {
-			throw new ORPCError("NOT_IMPLEMENTED", {
-				message: "Payments are not enabled on this deployment",
-			});
-		}
+		assertPaymentsEnabled();
 		try {
 			const provider = resolvePaymentProvider();
-			const purchase = await getPurchaseByProviderSubscriptionId(
-				provider.id,
+			const purchase = await requireSubscriptionAccess(
+				provider,
 				input.subscriptionId,
+				context.user.id,
+				context,
 			);
-			if (!purchase) {
-				throw new ORPCError("NOT_FOUND", {
-					message: "Subscription not found",
-				});
-			}
-			if (purchase.organizationId) {
-				await requireOrgPermissionAccess(
-					purchase.organizationId,
-					context.user.id,
-					PERMISSIONS.PAYMENT.UPDATE,
-					context,
-				);
-			} else if (purchase.userId !== context.user.id) {
-				throw new ORPCError("FORBIDDEN", { message: "Not the owner" });
-			}
-			await provider.cancelSubscription(input.subscriptionId);
-			return { success: true };
+			// Explicit mode — never the provider's store default.
+			const mode = await cancelModeFor(
+				provider,
+				input.subscriptionId,
+				input.atPeriodEnd,
+				purchase,
+			);
+			await provider.cancelSubscription(input.subscriptionId, { mode });
+			return { success: true, mode };
 		} catch (err) {
 			throwIfPaymentsDisabled(err);
 		}

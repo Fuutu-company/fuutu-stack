@@ -1,3 +1,4 @@
+import { featureRouter } from "../../orpc/middleware/require-feature";
 import { invoicesRouter } from "./invoices/router";
 import { orgPlansRouter } from "./org-plans/router";
 import { plansRouter } from "./plans/router";
@@ -6,6 +7,7 @@ import { createBillingPortal } from "./procedures/create-billing-portal";
 import { createCheckout } from "./procedures/create-checkout";
 import { createTopupCheckout } from "./procedures/create-topup-checkout";
 import { getTopupPackages } from "./procedures/get-topup-packages";
+import { resumeSubscription } from "./procedures/resume-subscription";
 import { subscriptionsRouter } from "./subscriptions/router";
 
 export const paymentsRouter = {
@@ -14,18 +16,20 @@ export const paymentsRouter = {
 	checkout: {
 		create: createCheckout,
 	},
-	topupCheckout: {
+	// Credit top-ups are part of the credits module (`config.features.credits`).
+	topupCheckout: featureRouter("credits", {
 		create: createTopupCheckout,
-	},
-	topupPackages: {
+	}),
+	topupPackages: featureRouter("credits", {
 		list: getTopupPackages,
-	},
+	}),
 	portal: {
 		open: createBillingPortal,
 	},
 	subscription: {
 		...subscriptionsRouter,
 		cancel: cancelSubscription,
+		resume: resumeSubscription,
 	},
 	invoices: invoicesRouter,
 };

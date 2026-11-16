@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { changelogMeta } from "../changelog-meta";
+import { frontmatter as v110 } from "../changelog/v1-1-0.meta";
+import * as metaModule from "../changelog-meta";
 import { changelog } from "../index";
+
+const { changelogMeta } = metaModule;
 
 const SRC = join(import.meta.dirname, "..");
 
@@ -49,5 +52,53 @@ describe("changelogMeta (@fuutu/content/changelog-meta)", () => {
 		expect(pkg.exports["./changelog-meta"]?.default).toBe(
 			"./src/changelog-meta.ts",
 		);
+	});
+});
+
+describe("changelog drafts (unreleased entries)", () => {
+	const slugs = (list: readonly { slug: string }[]) => list.map((e) => e.slug);
+
+	it("keeps a draft out of changelogMeta — what feeds and MCP version checks read", () => {
+		expect(v110.draft).toBe(true);
+		expect(slugs(changelogMeta)).not.toContain("v1-1-0");
+		expect(changelogMeta.every((e) => !e.frontmatter.draft)).toBe(true);
+	});
+
+	it("keeps a draft out of the collection the changelog page renders", () => {
+		expect(slugs(changelog)).not.toContain("v1-1-0");
+		expect(slugs(changelog)).toContain("v1-0-0");
+	});
+
+	it("still validates drafts and lists them separately", () => {
+		const drafts = (
+			metaModule as { changelogDraftMeta?: readonly { slug: string }[] }
+		).changelogDraftMeta;
+		expect(slugs(drafts ?? [])).toEqual(["v1-1-0"]);
+		expect(
+			metaModule.changelogFrontmatterSchema.parse({
+				title: "T",
+				publishedAt: "2026-01-01",
+				draft: true,
+			}).draft,
+		).toBe(true);
+	});
+});
+
+describe("changelog translations", () => {
+	/** Entries per `<h3>` section of a changelog body, read from its source. */
+	function sections(file: string): number[] {
+		const source = readFileSync(join(SRC, "changelog", file), "utf8");
+		return source
+			.split("<h3>")
+			.slice(1)
+			.map((section) => section.split("<li>").length - 1);
+	}
+
+	it("every German body has the same sections and entries as the English one", () => {
+		const all = [...changelogMeta, ...metaModule.changelogDraftMeta];
+		expect(all.map((entry) => entry.slug)).toContain("v1-1-0");
+		for (const { slug } of all) {
+			expect(sections(`${slug}.de.tsx`), slug).toEqual(sections(`${slug}.tsx`));
+		}
 	});
 });

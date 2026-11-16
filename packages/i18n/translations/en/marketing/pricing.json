@@ -8,11 +8,11 @@
 		"customPrice": "Custom",
 		"enterprise": {
 			"dedicated_support": "Dedicated support",
-			"dedicated_support_desc": "A named engineer on call for your team.",
+			"dedicated_support_desc": "A direct contact for your team, as agreed in your contract.",
 			"dedicated_app": "Dedicated instance",
 			"dedicated_app_desc": "Isolated deployment — your data never shared.",
-			"sla": "SLA guarantee",
-			"sla_desc": "99.9% uptime with response-time commitments.",
+			"sla": "Service levels",
+			"sla_desc": "Uptime and response-time targets, as agreed in your contract.",
 			"custom_integrations": "Custom integrations",
 			"custom_integrations_desc": "We build the connectors you need."
 		}

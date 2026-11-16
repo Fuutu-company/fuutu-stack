@@ -7,6 +7,7 @@ import { Check, Copy, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 
 type Setup = { totpURI: string; backupCodes: string[] };
 type Notice = "enabled" | "disabled" | null;
@@ -19,6 +20,7 @@ type Notice = "enabled" | "disabled" | null;
  */
 export function TwoFactorBlock() {
 	const t = useTranslations("settings.twoFactor");
+	const tRoot = useTranslations();
 	const { data: session } = authClient.useSession();
 	const enabled = Boolean(
 		(session?.user as { twoFactorEnabled?: boolean } | undefined)
@@ -42,7 +44,9 @@ export function TwoFactorBlock() {
 		try {
 			const res = await authClient.twoFactor.enable({ password });
 			if (res.error || res.data?.method !== "totp") {
-				setError(t("failed"));
+				setError(
+					planGateMessage(res.error, tRoot, "settings.twoFactor.failed"),
+				);
 				return;
 			}
 			setSetup({
@@ -89,7 +93,9 @@ export function TwoFactorBlock() {
 		try {
 			const res = await authClient.twoFactor.disable({ password });
 			if (res.error) {
-				setError(t("failed"));
+				setError(
+					planGateMessage(res.error, tRoot, "settings.twoFactor.failed"),
+				);
 				return;
 			}
 			setPassword("");

@@ -93,6 +93,7 @@ export type ContrastGroup =
 	| "areas"
 	| "destructiveFill"
 	| "primaryHover"
+	| "primaryBand"
 	| "focusRing"
 	| "nonText";
 
@@ -103,6 +104,7 @@ export const CONTRAST_GROUPS: readonly ContrastGroup[] = [
 	"areas",
 	"destructiveFill",
 	"primaryHover",
+	"primaryBand",
 	"focusRing",
 	"nonText",
 ];
@@ -118,6 +120,7 @@ function isPartnerPair({ fg, bg }: ContrastPair): boolean {
 export function contrastGroupOf(pair: ContrastPair): ContrastGroup {
 	if (pair.effective === "destructive-fill") return "destructiveFill";
 	if (pair.effective === "primary-hover-blend") return "primaryHover";
+	if (pair.effective === "primary-band-tile") return "primaryBand";
 	if (pair.effective === "focus-ring") return "focusRing";
 	if (pair.fg.startsWith("area-")) return "areas";
 	if (pair.min < 4.5) return "nonText";

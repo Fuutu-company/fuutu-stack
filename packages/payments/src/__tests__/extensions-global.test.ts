@@ -17,7 +17,9 @@ async function freshInstance(): Promise<Extensions> {
 const cleanups: (() => void)[] = [];
 afterEach(async () => {
 	for (const cleanup of cleanups.splice(0)) cleanup();
-	(await freshInstance()).registerEntitlementResolver(null);
+	const last = await freshInstance();
+	last.registerEntitlementResolver(null);
+	last.registerSupersedePolicy(null);
 });
 
 describe("extension registries across module instances", () => {
@@ -50,5 +52,25 @@ describe("extension registries across module instances", () => {
 		unsubscribe();
 		await other.notifyPurchaseChanged("user_1", null);
 		expect(handler).not.toHaveBeenCalled();
+	});
+
+	it("shares the supersede policy", async () => {
+		const instrumentation = await freshInstance();
+		const policy = vi.fn(() => false);
+		instrumentation.registerSupersedePolicy(policy);
+
+		const webhookRoute = await freshInstance();
+		expect(webhookRoute.getSupersedePolicy()).toBe(policy);
+	});
+
+	it("shares checkout guards and their unsubscribe", async () => {
+		const instrumentation = await freshInstance();
+		const guard = vi.fn();
+		const unsubscribe = instrumentation.registerCheckoutGuard(guard);
+
+		const apiRoute = await freshInstance();
+		expect(apiRoute.getCheckoutGuards()).toEqual([guard]);
+		unsubscribe();
+		expect(apiRoute.getCheckoutGuards()).toEqual([]);
 	});
 });

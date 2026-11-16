@@ -16,6 +16,8 @@
  *
  * Local development only: deployments use fixed container ports.
  */
+
+import { spawnSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -39,6 +41,7 @@ export const TOOL_OFFSETS = {
 	mailPreview: 3,
 	e2eSaas: 50,
 	e2eMarketing: 51,
+	e2eDocs: 52,
 	browser: 99,
 };
 
@@ -77,6 +80,7 @@ export function slotPorts(slot) {
 		mailPreview: tools + TOOL_OFFSETS.mailPreview,
 		e2eSaas: tools + TOOL_OFFSETS.e2eSaas,
 		e2eMarketing: tools + TOOL_OFFSETS.e2eMarketing,
+		e2eDocs: tools + TOOL_OFFSETS.e2eDocs,
 		browser: tools + TOOL_OFFSETS.browser,
 	};
 }
@@ -97,10 +101,38 @@ const registryPath = () => join(fuutuHome(), "projects.json");
 export function readRegistry() {
 	try {
 		const data = JSON.parse(readFileSync(registryPath(), "utf8"));
-		return { version: 1, projects: {}, ...data };
+		return { version: 1, projects: {}, keptData: {}, ...data };
 	} catch {
-		return { version: 1, projects: {} };
+		return { version: 1, projects: {}, keptData: {} };
 	}
+}
+
+/**
+ * Removes a project from the registry. Its slot's local data stays behind
+ * until dropped (clearKeptData), so allocation prefers other slots.
+ */
+function forget(registry, path) {
+	const entry = registry.projects[path];
+	delete registry.projects[path];
+	if (!entry || !Number.isInteger(entry.slot) || entry.slot === 0) return;
+	registry.keptData = {
+		...registry.keptData,
+		[entry.slot]: {
+			path,
+			database: entry.database ?? null,
+			keptAt: new Date().toISOString(),
+		},
+	};
+}
+
+/** The slot's local data was dropped — it counts as clean again. */
+export async function clearKeptData(slot) {
+	await withRegistryLock(async () => {
+		const registry = readRegistry();
+		if (!registry.keptData?.[slot]) return;
+		delete registry.keptData[slot];
+		writeRegistry(registry);
+	});
 }
 
 function writeRegistry(registry) {
@@ -198,12 +230,36 @@ export function describeProject(root, slot, dotEnv = readDotEnv(root)) {
 	};
 }
 
+/**
+ * The recorded project. A file written for another port layout (a kit
+ * update added a port) is rewritten for the same slot first.
+ */
 export function readProject(root) {
+	let project;
 	try {
-		return JSON.parse(readFileSync(join(root, PROJECT_FILE), "utf8"));
+		project = JSON.parse(readFileSync(join(root, PROJECT_FILE), "utf8"));
 	} catch {
 		return null;
 	}
+	if (!Number.isInteger(project?.slot)) return project;
+	let current;
+	try {
+		current = slotPorts(project.slot);
+	} catch {
+		return project;
+	}
+	const recorded = project.ports ?? {};
+	const keys = Object.keys(current);
+	const refreshed = describeProject(root, project.slot);
+	// The database name follows .env — a slot first taken before .env existed
+	// must not keep the `fuutu-s<N>` fallback once the real name is known.
+	const same =
+		keys.length === Object.keys(recorded).length &&
+		keys.every((key) => recorded[key] === current[key]) &&
+		project.database === refreshed.database;
+	if (same) return project;
+	writeProject(root, refreshed);
+	return refreshed;
 }
 
 function writeProject(root, project) {
@@ -234,11 +290,103 @@ const slotPortList = (slot) => {
 	return [p.saas, p.marketing, p.docs, p.mailPreview, p.browser];
 };
 
-/** Registered projects whose folder is gone free their slot. */
-function prune(registry, keep) {
-	for (const path of Object.keys(registry.projects)) {
-		if (path !== keep && !existsSync(path)) delete registry.projects[path];
+/** Every port a slot owns — apps, docs/tools, E2E servers, session browser. */
+const allSlotPorts = (slot) => Object.values(slotPorts(slot));
+
+/** True when any of the slot's ports answers — a session is running on it. */
+export async function isSlotRunning(slot, busy = isPortBusy) {
+	const used = await Promise.all(allSlotPorts(slot).map((p) => busy(p)));
+	return used.some(Boolean);
+}
+
+/**
+ * Why a registered path no longer holds a project: "missing" (folder gone),
+ * "not-a-project" (no pnpm-workspace.yaml) or "orphaned-worktree" (its .git
+ * file points at a worktree git no longer knows). null = still a project.
+ */
+export function projectGone(path) {
+	if (!existsSync(path)) return "missing";
+	if (!existsSync(join(path, "pnpm-workspace.yaml"))) return "not-a-project";
+	try {
+		const git = join(path, ".git");
+		if (statSync(git).isFile()) {
+			const gitdir = /^gitdir:\s*(.+)$/m.exec(readFileSync(git, "utf8"))?.[1];
+			if (gitdir && !existsSync(resolve(path, gitdir.trim()))) {
+				return "orphaned-worktree";
+			}
+		}
+	} catch {}
+	return null;
+}
+
+/**
+ * "worktree" when the project is a git worktree (`.git` is a file), else
+ * "main" — a repository's main checkout or a project without git.
+ */
+export function checkoutKind(path) {
+	try {
+		return statSync(join(path, ".git")).isFile() ? "worktree" : "main";
+	} catch {
+		return "main";
 	}
+}
+
+/**
+ * Why an entry must keep its slot: a running session, or — while its folder
+ * exists — a main checkout, slot 0 or a pinned slot. Only worktrees are
+ * temporary.
+ */
+async function protectedReason(path, entry, busy) {
+	if (existsSync(path)) {
+		if (checkoutKind(path) === "main") return "main checkout";
+		if (entry.slot === 0) return "slot 0";
+		if (readPreferredSlot(path) === entry.slot) {
+			return "pinned (fuutu.preferredSlot)";
+		}
+	}
+	if (await isSlotRunning(entry.slot, busy)) return "running";
+	return null;
+}
+
+/**
+ * Registry entries that no longer hold a project. `apply` drops the ones
+ * that are not protected; without it nothing changes (dry run). `missingOnly`
+ * limits it to deleted folders (the automatic prune on start).
+ */
+export async function pruneRegistry({
+	apply = false,
+	busy = isPortBusy,
+	keep,
+	missingOnly = false,
+} = {}) {
+	const run = async () => {
+		const registry = readRegistry();
+		const found = [];
+		for (const [path, entry] of Object.entries(registry.projects)) {
+			if (path === keep) continue;
+			const reason = projectGone(path);
+			if (!reason || (missingOnly && reason !== "missing")) continue;
+			const kept = await protectedReason(path, entry, busy);
+			found.push({ path, ...entry, reason, kept });
+			if (apply && !kept) forget(registry, path);
+		}
+		if (apply && found.some((f) => !f.kept)) writeRegistry(registry);
+		return found;
+	};
+	return apply ? withRegistryLock(run) : run();
+}
+
+/** The automatic prune on start: deleted folders only, never data. */
+async function pruneLocked(root, busy) {
+	const registry = readRegistry();
+	let changed = false;
+	for (const [path, entry] of Object.entries(registry.projects)) {
+		if (path === root || projectGone(path) !== "missing") continue;
+		if (await protectedReason(path, entry, busy)) continue;
+		forget(registry, path);
+		changed = true;
+	}
+	if (changed) writeRegistry(registry);
 }
 
 export function staleProjects(registry, now = Date.now()) {
@@ -260,8 +408,8 @@ export async function ensureSlot(
 	{ busy = isPortBusy, touch = true } = {},
 ) {
 	return withRegistryLock(async () => {
+		await pruneLocked(root, busy);
 		const registry = readRegistry();
-		prune(registry, root);
 		const taken = new Map(
 			Object.entries(registry.projects)
 				.filter(([path]) => path !== root)
@@ -301,9 +449,14 @@ export async function ensureSlot(
 		) {
 			slot = recorded;
 		}
-		if (slot === undefined) {
+		// Clean slots first; a slot whose released data was kept only when
+		// no clean one is left.
+		const kept = registry.keptData ?? {};
+		for (const allowKept of [false, true]) {
+			if (slot !== undefined) break;
 			for (let s = 0; s <= MAX_SLOT; s++) {
 				if (taken.has(s) || !isSlotAllowed(s)) continue;
+				if (!allowKept && kept[s]) continue;
 				const used = await Promise.all(slotPortList(s).map((p) => busy(p)));
 				if (used.some(Boolean)) continue;
 				slot = s;
@@ -318,9 +471,19 @@ export async function ensureSlot(
 				`all ${MAX_SLOT + 1} port slots are taken. Free one with \`pnpm ports release <path>\`.${stale ? `\nNot started for ${STALE_DAYS}+ days:\n${stale}` : ""}`,
 			);
 		}
+		const leftover = kept[slot];
+		if (leftover) {
+			if (leftover.path !== root) {
+				const warning = `slot ${slot} still holds data kept from ${leftover.path}${leftover.database ? ` (database ${leftover.database})` : ""} — no clean slot was left; drop it or reset this project's database`;
+				notice = notice ? `${notice}; ${warning}` : warning;
+			}
+			delete registry.keptData[slot];
+		}
+		const project = describeProject(root, slot);
 		registry.projects[root] = {
 			slot,
 			name: basename(root),
+			database: project.database,
 			registeredAt:
 				registry.projects[root]?.registeredAt ?? new Date().toISOString(),
 			lastStarted: touch
@@ -328,7 +491,6 @@ export async function ensureSlot(
 				: (registry.projects[root]?.lastStarted ?? null),
 		};
 		writeRegistry(registry);
-		const project = describeProject(root, slot);
 		writeProject(root, project);
 		return notice ? { ...project, notice } : project;
 	});
@@ -348,7 +510,8 @@ export async function setSlot(root, slot, opts = {}) {
 			);
 			if (owner) throw new Error(`slot ${slot} belongs to ${owner[0]}`);
 		}
-		delete registry.projects[root];
+		if (registry.projects[root]?.slot === slot) delete registry.projects[root];
+		else forget(registry, root);
 		if (slot !== undefined) {
 			registry.projects[root] = {
 				slot,
@@ -397,12 +560,236 @@ export async function pinSlot(root, slot) {
 	writeFileSync(file, `${JSON.stringify(pkg, null, indent)}\n`);
 }
 
-export async function releaseSlot(path) {
-	await withRegistryLock(async () => {
+/**
+ * Frees a project's slot in the registry. Never a running slot; slot 0 and
+ * a pinned slot only when the folder is gone. Data is left alone — the
+ * result names what belonged to the slot (see slotData).
+ */
+export async function releaseSlot(path, { busy = isPortBusy } = {}) {
+	const abs = resolve(path);
+	return withRegistryLock(async () => {
 		const registry = readRegistry();
-		delete registry.projects[resolve(path)];
+		const entry = registry.projects[abs];
+		if (!entry) throw new Error(`${abs} has no slot on this machine`);
+		const kept = await protectedReason(abs, entry, busy);
+		if (kept === "running") {
+			throw new Error(
+				`slot ${entry.slot} is running (its ports answer) — stop it first`,
+			);
+		}
+		if (kept && existsSync(abs)) {
+			throw new Error(
+				`slot ${entry.slot} is never released while its project exists (${kept}) — move it with \`pnpm ports set\` or \`pnpm ports unpin\``,
+			);
+		}
+		const database =
+			(existsSync(abs) ? readProject(abs)?.database : undefined) ??
+			entry.database ??
+			null;
+		registry.projects[abs] = { ...entry, database };
+		forget(registry, abs);
 		writeRegistry(registry);
+		return { path: abs, ...entry, database };
 	});
+}
+
+/**
+ * What local data a released slot leaves behind, limited to names that can
+ * only be that slot's: `<db>-s<N>` (+ `-e2e`) and buckets `s<N>-…`. Nothing
+ * for slot 0, an unknown database name, or a slot another project now holds.
+ */
+export function slotData(released, registry = readRegistry()) {
+	const { slot } = released;
+	if (!Number.isInteger(slot) || slot === 0) return null;
+	if (Object.values(registry.projects).some((p) => p.slot === slot)) {
+		return null;
+	}
+	const db = released.database;
+	const inUse = databasesInUse(registry);
+	const safeDb = typeof db === "string" && db.endsWith(`-s${slot}`);
+	return {
+		databases: safeDb
+			? [db, `${db}-e2e`].filter((name) => !inUse.has(name))
+			: [],
+		bucketPrefix: `s${slot}-`,
+	};
+}
+
+/**
+ * Every database name a registered project may use: recorded in the
+ * registry, in its .fuutu/project.json, or derived from its .env now —
+ * each with its `-e2e` twin.
+ */
+export function databasesInUse(registry = readRegistry()) {
+	const names = new Set();
+	for (const [path, entry] of Object.entries(registry.projects)) {
+		const found = [entry.database];
+		if (existsSync(path)) {
+			try {
+				found.push(
+					JSON.parse(readFileSync(join(path, PROJECT_FILE), "utf8")).database,
+				);
+			} catch {}
+			if (Number.isInteger(entry.slot)) {
+				try {
+					found.push(describeProject(path, entry.slot).database);
+				} catch {}
+			}
+		}
+		for (const name of found) {
+			if (typeof name !== "string" || !name) continue;
+			names.add(name);
+			names.add(`${name}-e2e`);
+		}
+	}
+	return names;
+}
+
+/**
+ * For a released slot whose database name was never recorded: the local
+ * databases that can only be that slot's (`<name>-s<N>` or `<name>-s<N>-e2e`),
+ * minus every name a registered project uses.
+ */
+export function legacySlotDatabases(slot, names, inUse = databasesInUse()) {
+	if (!Number.isInteger(slot) || slot === 0) return [];
+	const pattern = new RegExp(`^.+-s${slot}(-e2e)?$`);
+	return names.filter((name) => pattern.test(name) && !inUse.has(name));
+}
+
+/** Free slots whose data was kept when their registry entry went away. */
+export function keptSlots(registry = readRegistry()) {
+	return Object.entries(registry.keptData ?? {})
+		.map(([slot, k]) => ({
+			slot: Number(slot),
+			path: k.path,
+			database: k.database ?? null,
+		}))
+		.sort((a, b) => a.slot - b.slot);
+}
+
+/**
+ * What of a kept slot's data still exists, by the same rules as `release`
+ * (slotData, legacySlotDatabases). `existing` carries the local database and
+ * bucket names, undefined when that service was unreachable. `empty` = both
+ * are known and nothing of the slot is left — the record has nothing to protect.
+ */
+export function planKeptDrop(
+	{ slot, database },
+	existing,
+	registry = readRegistry(),
+) {
+	const data = slotData({ slot, database }, registry);
+	const bucketPrefix = `s${slot}-`;
+	if (!data) return { databases: [], bucketPrefix, buckets: [], empty: false };
+	const { databases: allDatabases, buckets: allBuckets } = existing;
+	let databases = data.databases;
+	if (!databases.length) {
+		databases = legacySlotDatabases(
+			slot,
+			allDatabases ?? [],
+			databasesInUse(registry),
+		);
+	} else if (allDatabases) {
+		databases = databases.filter((name) => allDatabases.includes(name));
+	}
+	const buckets = (allBuckets ?? []).filter((n) => n.startsWith(bucketPrefix));
+	return {
+		databases,
+		bucketPrefix,
+		buckets,
+		empty:
+			allDatabases !== undefined &&
+			allBuckets !== undefined &&
+			!databases.length &&
+			!buckets.length,
+	};
+}
+
+const KNOWN_FLAGS = new Set(["--yes", "--keep-data", "--drop-data"]);
+
+/**
+ * `ports` command line → command, path argument, flags. A flag is never a
+ * path, and an unknown one (a typo like `--drop-dta`) is an error rather than
+ * silently ignored.
+ */
+export function parseArgs(argv) {
+	const flags = new Set();
+	const positional = [];
+	for (const a of argv) {
+		if (!a.startsWith("-")) {
+			positional.push(a);
+		} else if (KNOWN_FLAGS.has(a)) {
+			flags.add(a);
+		} else {
+			throw new Error(
+				`unknown flag ${a} — known: ${[...KNOWN_FLAGS].join(", ")}`,
+			);
+		}
+	}
+	const [command = "list", arg] = positional;
+	return { command, arg, flags };
+}
+
+/**
+ * The main checkout of a git worktree (parent of `git rev-parse
+ * --git-common-dir`), or null for the main checkout itself / no git.
+ */
+export function mainCheckoutRoot(root) {
+	const res = spawnSync("git", ["rev-parse", "--git-common-dir"], {
+		cwd: root,
+		encoding: "utf8",
+	});
+	if (res.status !== 0) return null;
+	const main = dirname(resolve(root, res.stdout.trim()));
+	return main !== resolve(root) && existsSync(join(main, "pnpm-workspace.yaml"))
+		? main
+		: null;
+}
+
+/**
+ * Env for a local service the CLI talks to (Postgres, MinIO), taken whole
+ * from the first source that sets `key`: the process env, this checkout's
+ * .env, or — in a fresh worktree without one — the main checkout's .env.
+ */
+export function serviceEnv(root, key, { env = process.env, mainRoot } = {}) {
+	if (env[key])
+		return { env: { ...readDotEnv(root), ...env }, source: "process env" };
+	const own = readDotEnv(root);
+	if (own[key]) return { env: own, source: join(root, ".env") };
+	if (mainRoot) {
+		const main = readDotEnv(mainRoot);
+		if (main[key]) return { env: main, source: join(mainRoot, ".env") };
+	}
+	return {
+		env: {},
+		source: `${key} not set in the process env, .env${mainRoot ? " or the main checkout's .env" : ""}`,
+	};
+}
+
+/**
+ * MinIO credentials: S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY, else the
+ * MINIO_ROOT_* pair, else the compose default (minioadmin).
+ */
+export function minioCredentials(env) {
+	if (env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY) {
+		return {
+			accessKeyId: env.S3_ACCESS_KEY_ID,
+			secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+			from: "S3_ACCESS_KEY_ID",
+		};
+	}
+	if (env.MINIO_ROOT_USER && env.MINIO_ROOT_PASSWORD) {
+		return {
+			accessKeyId: env.MINIO_ROOT_USER,
+			secretAccessKey: env.MINIO_ROOT_PASSWORD,
+			from: "MINIO_ROOT_USER",
+		};
+	}
+	return {
+		accessKeyId: "minioadmin",
+		secretAccessKey: "minioadmin",
+		from: "compose default",
+	};
 }
 
 // ── environment ─────────────────────────────────────────────────────────
@@ -455,19 +842,24 @@ export function isE2eResetTarget(value, project) {
 	}
 }
 
-/** Set in every slot env so child commands don't re-apply it. */
+/**
+ * Set in every slot env to `<slot>:<root>` so this project's child commands
+ * don't re-apply it. A marker of another checkout (a shell spawned by its
+ * dev session or E2E run) does not match and is resolved again.
+ */
 export const SLOT_ENV_MARKER = "FUUTU_SLOT_ENV";
+const slotEnvMark = (project) => `${project.slot}:${project.root}`;
 
 /**
  * Env for an app process of this project. Local URLs (unset or pointing at
  * localhost) follow the slot; explicit remote values (a tunnel, a cloud DB)
- * are never touched. `e2e` points SaaS/Marketing at the slot's E2E ports.
+ * are never touched. `e2e` points SaaS/Marketing/Docs at the slot's E2E ports.
  */
 export function slotEnv(project, env = process.env, { e2e = false } = {}) {
 	const { ports } = project;
 	const saas = `http://localhost:${e2e ? ports.e2eSaas : ports.saas}`;
 	const marketing = `http://localhost:${e2e ? ports.e2eMarketing : ports.marketing}`;
-	const docs = `http://localhost:${ports.docs}`;
+	const docs = `http://localhost:${e2e ? ports.e2eDocs : ports.docs}`;
 	const out = {};
 	const set = (key, value) => {
 		if (isLocal(env[key])) out[key] = value;
@@ -499,7 +891,7 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
 		}
 	}
 	out.FUUTU_AUTH_COOKIE_PREFIX = project.authCookiePrefix;
-	out[SLOT_ENV_MARKER] = "1";
+	out[SLOT_ENV_MARKER] = slotEnvMark(project);
 	return out;
 }
 
@@ -509,8 +901,8 @@ export function slotEnv(project, env = process.env, { e2e = false } = {}) {
  * this project's slot database — never another checkout's.
  */
 export function commandSlotEnv(root, project, env = process.env) {
-	// Already resolved by a parent (dev launcher, E2E reset → `<db>-e2e`):
-	// re-applying would point the command back at the dev database.
-	if (env[SLOT_ENV_MARKER]) return {};
+	// Already resolved by a parent of THIS project (dev launcher, E2E reset →
+	// `<db>-e2e`): re-applying would point the command back at the dev database.
+	if (env[SLOT_ENV_MARKER] === slotEnvMark(project)) return {};
 	return slotEnv(project, { ...readDotEnv(root), ...env });
 }

@@ -24,6 +24,16 @@ describe("logsConfig", () => {
 		expect(logsConfig.level).toBe("info");
 	});
 
+	it("treats empty LOG_LEVEL and LOG_AUDIT_SINK as unset without warning", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		process.env.LOG_LEVEL = "";
+		process.env.LOG_AUDIT_SINK = "";
+		expect(logsConfig.level).toBe("info");
+		expect(logsConfig.auditSink).toBe("console");
+		expect(warn).not.toHaveBeenCalled();
+		warn.mockRestore();
+	});
+
 	it("parses single drain from LOG_DRAIN", () => {
 		process.env.LOG_DRAIN = "sentry";
 		expect(logsConfig.drains).toEqual(["sentry"]);

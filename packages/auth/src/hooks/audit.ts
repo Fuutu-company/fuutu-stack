@@ -22,6 +22,8 @@ export type AuditableSession = {
 	activeOrganizationId?: string | null;
 	ipAddress?: string | null;
 	userAgent?: string | null;
+	/** Set on sessions started by `admin.users.impersonate` (admin user id). */
+	impersonatedBy?: string | null;
 };
 
 /**
@@ -42,10 +44,23 @@ export async function logSignUp(user: AuditableUser): Promise<void> {
  * one new session — that covers interactive sign-in, multi-session
  * logins, and impersonation starts. Session *refreshes* extend the
  * existing row via `update` and do not produce audit noise here.
+ * An impersonation start stays out of the customer's organization log
+ * and carries no IP/user agent — those belong to support staff.
  */
 export async function logSessionCreated(
 	session: AuditableSession,
 ): Promise<void> {
+	if (session.impersonatedBy) {
+		await audit.record({
+			userId: session.userId,
+			organizationId: null,
+			action: "auth.session_created",
+			ip: null,
+			userAgent: null,
+			metadata: { impersonatedBy: session.impersonatedBy },
+		});
+		return;
+	}
 	await audit.record({
 		userId: session.userId,
 		organizationId: session.activeOrganizationId ?? null,

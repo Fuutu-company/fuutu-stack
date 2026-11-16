@@ -55,7 +55,7 @@ function readEnv(
 	fallback: string,
 	allowed: readonly string[],
 ): string {
-	const value = process.env[key] ?? fallback;
+	const value = process.env[key] || fallback;
 	if (!allowed.includes(value)) {
 		console.warn(
 			`[logs] Invalid ${key} "${stripLineBreaks(value)}" — falling back to "${fallback}".`,

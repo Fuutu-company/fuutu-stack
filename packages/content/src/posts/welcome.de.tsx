@@ -13,12 +13,16 @@ export default function WelcomePostDe() {
 				Rate-Limiting, RBAC, i18n, dateibasierte Inhaltssammlungen und
 				Playwright-E2E-Tests mit — alles hinter Provider-Interfaces verdrahtet,
 				so dass du jeden externen Service per Config-Switch austauschen kannst.
+				Background-Jobs laufen über den eingebauten Cron-Runner (
+				<code>@fuutu/cron</code>, ausgelöst über <code>/api/cron</code>), und
+				Fehler lassen sich über <code>@fuutu/logs</code> an Sentry oder Axiom
+				weiterleiten.
 			</p>
-			<h2>Was (noch) nicht drin ist</h2>
+			<h2>Was nicht drin ist</h2>
 			<p>
-				Background-Jobs, Real-Time-Sockets, Error-Tracking und Feature-Flags
-				sind für v1.1 geplant. Die Provider-Interfaces stehen bereits — nur die
-				aktiven Adapter fehlen.
+				Real-Time-Sockets und ein Feature-Flag-Service gehören nicht zum Kit —
+				ergänze sie hinter einem eigenen Provider-Interface, wenn dein Produkt
+				sie braucht.
 			</p>
 			<h2>Diesen Post ersetzen</h2>
 			<p>

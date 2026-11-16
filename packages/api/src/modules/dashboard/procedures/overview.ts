@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { getCreditBalanceSummary } from "@fuutu/credits";
 import {
 	countApiKeys,
@@ -6,8 +7,6 @@ import {
 	countOrganizationsForUser,
 	countWebhooks,
 	findAuditLogsByOrg,
-	getActiveSubscriptionForOrganization,
-	getActiveSubscriptionForUser,
 	getCreditEventsForOrganization,
 	getCreditEventsForUser,
 	listApiKeys,
@@ -17,7 +16,11 @@ import {
 	listInvoicesByUser,
 	listOrgApiKeys,
 } from "@fuutu/db";
-import { getOrgEntitlement, getUserEntitlement } from "@fuutu/payments";
+import {
+	getOrgEntitlement,
+	getPlanSubscription,
+	getUserEntitlement,
+} from "@fuutu/payments";
 import {
 	CREDITS,
 	type LimitValue,
@@ -125,7 +128,8 @@ export const dashboardOverviewProcedure = authProcedure({
 		const canCredits =
 			paymentsConfig.creditsEnabled && can(PERMISSIONS.CREDIT.VIEW);
 		const canApi = can(PERMISSIONS.API_KEY.VIEW);
-		const canWebhooks = Boolean(org) && can(PERMISSIONS.WEBHOOK.VIEW);
+		const canWebhooks =
+			config.features.webhooks && Boolean(org) && can(PERMISSIONS.WEBHOOK.VIEW);
 
 		const [
 			entitlement,
@@ -145,9 +149,9 @@ export const dashboardOverviewProcedure = authProcedure({
 				? countOrganizationMembers(org.id)
 				: countOrganizationsForUser(user.id),
 			canBilling
-				? org
-					? getActiveSubscriptionForOrganization(org.id)
-					: getActiveSubscriptionForUser(user.id)
+				? getPlanSubscription(
+						org ? { organizationId: org.id } : { userId: user.id },
+					)
 				: null,
 			canCredits ? getCreditBalanceSummary(owner) : null,
 			canApi

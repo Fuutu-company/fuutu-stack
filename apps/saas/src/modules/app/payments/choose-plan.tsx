@@ -3,20 +3,25 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import {
+	BILLING_CURRENCY,
 	type BillingInterval,
 	PLANS,
+	type Plan,
 	type PlanId,
 	paymentsConfig,
 } from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
+	getSeatPlan,
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
 import { PricingCompact, SeatSelector } from "@fuutu/ui";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { isPaymentsUnavailable } from "@/lib/api-error";
+import { paymentsErrorKey } from "@/lib/api-error";
+import { useImpersonating } from "@/lib/use-impersonating";
+import { ImpersonationNotice } from "@/modules/app/components/impersonation-notice";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "choose-plan" });
@@ -27,6 +32,8 @@ export function ChoosePlan() {
 	const [loading, setLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [seatCount, setSeatCount] = useState(1);
+	// Checkout refuses impersonation sessions (denyImpersonation).
+	const impersonating = useImpersonating();
 	const { data: activeOrg, isPending: activeOrgPending } =
 		authClient.useActiveOrganization();
 
@@ -36,8 +43,9 @@ export function ChoosePlan() {
 	// When billing is attached to "organization", the seat selector lives
 	// in the org billing settings page, not here.
 	const isOrgBilling = paymentsConfig.billingAttachedTo === "organization";
-	const showSeatSelector =
-		!isOrgBilling && Object.values(PLANS).some((plan) => plan.seatBased);
+	// The seat-priced plan (first `seatBased` plan) prices the selector.
+	const seatPlan = getSeatPlan()?.plan;
+	const showSeatSelector = !isOrgBilling && seatPlan !== undefined;
 
 	async function checkout(planId: PlanId, interval?: BillingInterval) {
 		// Organization billing: the purchase belongs to the active org — a
@@ -49,7 +57,7 @@ export function ChoosePlan() {
 		setLoading(planId);
 		setError(null);
 		try {
-			const plan = PLANS[planId];
+			const plan: Plan = PLANS[planId];
 			const seats = plan.seatBased ? seatCount : undefined;
 			const result = await orpc.payments.checkout.create.call({
 				planId,
@@ -64,11 +72,7 @@ export function ChoosePlan() {
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
-			setError(
-				isPaymentsUnavailable(e)
-					? t("choosePlan.unavailable")
-					: t("choosePlan.error"),
-			);
+			setError(t(paymentsErrorKey(e) ?? "choosePlan.error"));
 		} finally {
 			setLoading(null);
 		}
@@ -90,37 +94,40 @@ export function ChoosePlan() {
 		onCtaClick: checkout,
 		loadingId: loading,
 		// Org billing needs the active org id — wait until it has loaded.
-		allDisabled: loading !== null || (isOrgBilling && activeOrgPending),
-		seatCountFor: (id) => (PLANS[id].seatBased ? seatCount : undefined),
+		allDisabled:
+			loading !== null || impersonating || (isOrgBilling && activeOrgPending),
+		seatCountFor: (id) =>
+			(PLANS[id] as Plan).seatBased ? seatCount : undefined,
 	});
 
-	// Get the Pro plan for seat selector (it's the seat-based plan)
-	const proPlan = PLANS.pro;
+	const seatCurrency = seatPlan?.currency ?? BILLING_CURRENCY;
 	const currencySymbol =
 		new Intl.NumberFormat(locale, {
 			style: "currency",
-			currency: proPlan.currency,
+			currency: seatCurrency,
 		})
 			.formatToParts(0)
-			.find((part) => part.type === "currency")?.value ?? proPlan.currency;
+			.find((part) => part.type === "currency")?.value ?? seatCurrency;
 
 	return (
 		<div className="space-y-6">
+			{impersonating && <ImpersonationNotice />}
+
 			{error && (
 				<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 					{error}
 				</div>
 			)}
 
-			{showSeatSelector && proPlan && (
+			{showSeatSelector && seatPlan && (
 				<SeatSelector
 					seatCount={seatCount}
 					onChange={setSeatCount}
-					pricePerSeat={proPlan.amount}
-					currency={proPlan.currency}
+					pricePerSeat={seatPlan.amount}
+					currency={seatPlan.currency}
 					currencySymbol={currencySymbol}
 					locale={locale}
-					interval={proPlan.interval}
+					interval={seatPlan.interval}
 					translations={{
 						title: t("seatSelector.title"),
 						seat: t("seatSelector.seat"),

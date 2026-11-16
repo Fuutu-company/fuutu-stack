@@ -5,7 +5,11 @@ export interface AnalyticsConfig {
 	provider: AnalyticsProviderId;
 	/** Website / property identifier (Umami: websiteId, Plausible: domain, GA4: measurementId, …). */
 	websiteId?: string;
-	/** Optional self-hosted script URL (Umami / Plausible). */
+	/**
+	 * Optional self-hosted script URL (Umami / Plausible). Self-hosted
+	 * Umami needs v2.18.0+ for the opt-out to stop auto-tracking
+	 * (`data-before-send`).
+	 */
 	scriptUrl?: string;
 	/**
 	 * Consent override. `true` forces the tracking gate for every

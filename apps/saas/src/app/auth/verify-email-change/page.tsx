@@ -1,64 +1,55 @@
-"use client";
-
-import { AuthCard, Button, Skeleton } from "@fuutu/ui";
+import { AuthCard, Button } from "@fuutu/ui";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { Suspense, useEffect, useState } from "react";
+import { getTranslations } from "next-intl/server";
+import { emailChangeOutcome } from "@/lib/auth-links";
+import { getFreshSession } from "@/lib/auth-server";
 
-export default function VerifyEmailChangePage() {
-	return (
-		<Suspense fallback={<Skeleton className="h-80 w-full max-w-md" />}>
-			<VerifyEmailChangeContent />
-		</Suspense>
-	);
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function param(value: string | string[] | undefined): string | null {
+	return (Array.isArray(value) ? value[0] : value) ?? null;
 }
 
-function VerifyEmailChangeContent() {
-	const t = useTranslations("auth");
-	const params = useSearchParams();
-	const error = params.get("error");
-	const [status, setStatus] = useState<"verifying" | "ok" | "error">(
-		error ? "error" : "verifying",
-	);
-
-	useEffect(() => {
-		if (error) {
-			setStatus("error");
-			return;
-		}
-		// Better Auth processes the token server-side via GET /verify-email
-		// before redirecting to this callbackURL. On success it redirects
-		// without an error query param; on failure it appends ?error=<code>.
-		// The token is consumed server-side and never reaches this page.
-		// Landing here without an error param means verification succeeded.
-		const timer = setTimeout(() => setStatus("ok"), 300);
-		return () => clearTimeout(timer);
-	}, [error]);
+/**
+ * Landing page of the email-change links. Better Auth verifies the token
+ * and redirects here (`?error=…` on failure); success is shown only when
+ * the session really carries the new address (`emailChangeOutcome`).
+ */
+export default async function VerifyEmailChangePage({
+	searchParams,
+}: {
+	searchParams: SearchParams;
+}) {
+	const params = await searchParams;
+	const t = await getTranslations("auth.emailChange");
+	const expectedEmail = param(params.email);
+	const session = await getFreshSession();
+	const outcome = emailChangeOutcome({
+		error: param(params.error),
+		expectedEmail,
+		currentEmail: session?.user.email,
+	});
 
 	return (
-		<AuthCard title={t("emailChange.title")}>
-			{status === "verifying" && (
-				<p className="text-muted-foreground text-sm">
-					{t("emailChange.verifying")}
-				</p>
-			)}
-			{status === "ok" && (
-				<div className="flex flex-col gap-4">
-					<p className="font-medium">{t("emailChange.success")}</p>
-					<Button asChild className="w-full">
-						<Link href="/settings">{t("emailChange.continue")}</Link>
-					</Button>
-				</div>
-			)}
-			{status === "error" && (
-				<div className="flex flex-col gap-4">
-					<p className="text-destructive text-sm">{t("emailChange.error")}</p>
-					<Button asChild variant="outline" className="w-full">
-						<Link href="/settings">{t("emailChange.continue")}</Link>
-					</Button>
-				</div>
-			)}
+		<AuthCard title={t("title")}>
+			<div className="flex flex-col gap-4">
+				{outcome === "updated" && <p className="font-medium">{t("success")}</p>}
+				{outcome === "pending" && (
+					<p className="text-sm">
+						{t("pending", { email: expectedEmail ?? "" })}
+					</p>
+				)}
+				{outcome === "invalid" && (
+					<p className="text-destructive text-sm">{t("error")}</p>
+				)}
+				<Button
+					asChild
+					variant={outcome === "updated" ? "default" : "outline"}
+					className="w-full"
+				>
+					<Link href="/settings">{t("continue")}</Link>
+				</Button>
+			</div>
 		</AuthCard>
 	);
 }

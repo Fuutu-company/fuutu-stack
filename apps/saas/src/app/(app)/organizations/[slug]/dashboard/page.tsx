@@ -14,11 +14,15 @@ export default async function OrgDashboardPage({
 
 	return (
 		<div className="space-y-6">
-			<DashboardOverview
-				firstName={firstName}
-				userId={session.user.id}
-				orgSlug={slug}
-			/>
+			{renderSlot(
+				appSlots.dashboardMain,
+				{ orgSlug: slug, userId: session.user.id, firstName },
+				<DashboardOverview
+					firstName={firstName}
+					userId={session.user.id}
+					orgSlug={slug}
+				/>,
+			)}
 			{renderSlot(appSlots.dashboard, { orgSlug: slug })}
 		</div>
 	);

@@ -7,6 +7,9 @@
  *   pnpm dev:session ensure     same, detached — returns immediately (SessionStart hook)
  *   pnpm dev:session status     what is running
  *   pnpm dev:session stop       stop the apps and close the session browser
+ *   pnpm dev:session reset      restart the apps with an empty Turbopack dev
+ *                               cache (endless reloads or stale builds that
+ *                               survive a restart); the browser stays open
  *
  * Ports, database and storage buckets come from this project's port slot
  * (tooling/ports, `pnpm ports`) — every project and every git worktree gets
@@ -24,7 +27,9 @@ import {
 	existsSync,
 	mkdirSync,
 	openSync,
+	readdirSync,
 	readFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
@@ -314,6 +319,33 @@ async function stop() {
 	}
 }
 
+/**
+ * Turbopack keeps a persistent dev cache on disk (`apps/<app>/.next/dev`).
+ * When it gets corrupted (e.g. generated code rewritten while the server
+ * ran), the browser reloads endlessly and a plain restart does not help.
+ */
+async function reset() {
+	if (existsSync(PID_FILE)) {
+		const pid = Number(readFileSync(PID_FILE, "utf8"));
+		try {
+			process.kill(-pid, "SIGTERM");
+		} catch {}
+	}
+	for (let i = 0; i < 30; i++) {
+		const open = await Promise.all(APPS.map((a) => portOpen(a.port)));
+		if (!open.some(Boolean)) break;
+		await new Promise((r) => setTimeout(r, 1000));
+	}
+	for (const app of readdirSync(join(ROOT, "apps"))) {
+		const cache = join(ROOT, "apps", app, ".next", "dev");
+		if (existsSync(cache)) {
+			rmSync(cache, { recursive: true, force: true });
+			log(`cleared ${app} dev cache`);
+		}
+	}
+	await start();
+}
+
 async function start() {
 	await ensureDatabase();
 	await ensureBuckets();
@@ -336,9 +368,11 @@ if (command === "ensure") {
 	log("starting in the background — log: .fuutu/session/ensure.log");
 	process.exit(0);
 }
-const commands = { start, status, stop };
+const commands = { start, status, stop, reset };
 if (!commands[command]) {
-	log(`unknown command "${command}" — use start | ensure | status | stop`);
+	log(
+		`unknown command "${command}" — use start | ensure | status | stop | reset`,
+	);
 	process.exit(1);
 }
 commands[command]().catch((err) => {

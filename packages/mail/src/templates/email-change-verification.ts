@@ -7,6 +7,7 @@ import {
 	renderButton,
 	renderLayout,
 	safeHref,
+	withLegalFooterText,
 } from "./layout";
 
 export const emailChangeVerificationTemplate: TemplateRenderer<
@@ -31,5 +32,9 @@ export const emailChangeVerificationTemplate: TemplateRenderer<
 		{ locale, previewText: t.subject },
 	);
 
-	return { subject: t.subject, text, html };
+	return {
+		subject: t.subject,
+		text: withLegalFooterText(text, locale),
+		html,
+	};
 };

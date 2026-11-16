@@ -2,10 +2,21 @@ import { resolveAIProvider } from "@fuutu/ai";
 import { addMessage, getConversation } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { PERMISSIONS } from "@fuutu/rbac";
-import { ORPCError } from "@orpc/server";
+import { eventIterator, ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
-import { permissionProcedure } from "../../../../orpc/procedures";
+import {
+	denyImpersonation,
+	permissionProcedure,
+} from "../../../../orpc/procedures";
+import {
+	type AiCreditOwner,
+	assertAiCredits,
+	estimateTokens,
+	recordAiUsage,
+} from "../../../ai/metering";
+import { textChunks } from "../../../ai/text-chunks";
+import { requireConversationOrgAccess } from "../../conversation-access";
 
 const log = createLogger({ scope: "chat-stream" });
 
@@ -18,6 +29,7 @@ const streamMessageSchema = z.object({
 });
 
 export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "aiChat" }))
 	.route({
 		method: "POST",
@@ -25,9 +37,10 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 		tags: ["Chat"],
 		summary: "Stream AI response",
 		description:
-			"Saves the user message, streams the AI response, and saves the full AI response after streaming completes.",
+			"Saves the user message, streams the AI response, and saves the full AI response after streaming completes. Event stream: one `message` event per text chunk (JSON string data), then `done`. An org conversation requires current membership of the organization. Billed on the `ai_tokens` credit meter (the conversation's organization, else the user); 402 when the meter blocks.",
 	})
 	.input(streamMessageSchema)
+	.output(eventIterator(z.string()))
 	.handler(async ({ input, context }) => {
 		const conversation = await getConversation(
 			input.conversationId,
@@ -39,12 +52,12 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 				message: "Conversation not found",
 			});
 		}
-
-		await addMessage(
-			input.conversationId,
+		// Before anything is saved, sent to the provider or billed to the org.
+		await requireConversationOrgAccess(
+			conversation,
 			context.user.id,
-			"user",
-			input.content,
+			PERMISSIONS.CHAT.CREATE,
+			context,
 		);
 
 		// getConversation returned the newest 50 messages descending —
@@ -71,75 +84,62 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 			{ role: "user" as const, content: input.content },
 		];
 
+		const owner: AiCreditOwner = conversation.organizationId
+			? { organizationId: conversation.organizationId }
+			: { userId: context.user.id };
+		const promptTokens = estimateTokens(
+			messages.map((m) => m.content).join(""),
+		);
+		await assertAiCredits(owner, promptTokens);
+
+		const userMessage = await addMessage(
+			input.conversationId,
+			context.user.id,
+			"user",
+			input.content,
+		);
+		if (!userMessage) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Conversation not found",
+			});
+		}
+
 		const provider = resolveAIProvider();
 		const stream = await provider.stream(messages);
 
-		let fullResponse = "";
+		const conversationId = input.conversationId;
+		const userId = context.user.id;
+		const userMessageId = userMessage.id;
 
-		const transformedStream = new ReadableStream<Uint8Array>({
-			start(controller) {
-				const reader = stream.getReader();
-				const decoder = new TextDecoder();
-				async function pump(): Promise<void> {
+		// An async generator: oRPC sends it as an event stream (one text
+		// chunk per event). The reply is saved and billed once the stream
+		// ends — also partially when it fails or the client disconnects.
+		async function* reply(): AsyncGenerator<string, void, undefined> {
+			let fullResponse = "";
+			try {
+				for await (const chunk of textChunks(stream)) {
+					fullResponse += chunk;
+					yield chunk;
+				}
+			} catch (error) {
+				log.error("Stream pump failed", { err: error });
+				throw error;
+			} finally {
+				if (fullResponse) {
 					try {
-						const { done, value } = await reader.read();
-						if (done) {
-							const flushed = decoder.decode();
-							if (flushed) {
-								fullResponse += flushed;
-							}
-							controller.close();
-							if (fullResponse) {
-								try {
-									await addMessage(
-										input.conversationId,
-										context.user.id,
-										"assistant",
-										fullResponse,
-									);
-								} catch (err) {
-									log.error(
-										"Failed to save assistant message on stream close",
-										{ err },
-									);
-								}
-							}
-							return;
-						}
-						const chunk = decoder.decode(value, { stream: true });
-						fullResponse += chunk;
-						controller.enqueue(value);
-						await pump();
-					} catch (error) {
-						log.error("Stream pump failed", { err: error });
-						if (fullResponse) {
-							try {
-								await addMessage(
-									input.conversationId,
-									context.user.id,
-									"assistant",
-									fullResponse,
-								);
-							} catch (err) {
-								log.error("Failed to save assistant message on stream error", {
-									err,
-								});
-							}
-						}
-						controller.error(error);
+						await addMessage(conversationId, userId, "assistant", fullResponse);
+					} catch (err) {
+						log.error("Failed to save assistant message", { err });
 					}
 				}
-				void pump();
-			},
-		});
+				await recordAiUsage(owner, {
+					promptTokens,
+					reply: fullResponse,
+					idempotencyKey: `chat-reply:${userMessageId}`,
+					reason: "chat.messages.stream",
+				});
+			}
+		}
 
-		return new Response(transformedStream, {
-			headers: {
-				// Providers yield raw UTF-8 text chunks — the client
-				// (chat-layout.tsx) rejects anything but text/plain and renders
-				// the bytes directly.
-				"content-type": "text/plain; charset=utf-8",
-				"cache-control": "no-cache",
-			},
-		});
+		return reply();
 	});

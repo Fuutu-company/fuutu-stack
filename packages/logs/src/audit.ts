@@ -63,48 +63,66 @@ export function getAuditSink(): AuditSink {
  *     in the dev/ops log stream.
  *
  * Sink failures never throw — they surface as `error` logs — so auth
- * flows are not blocked by audit infrastructure outages.
+ * flows are not blocked by audit infrastructure outages. `.recordStrict()`
+ * reports the same failure, then rejects (no mirror line).
  */
 export function createAuditLogger(options: LoggerOptions = {}): AuditLogger {
 	const { scope } = options;
 	const tag = scope ?? "audit";
+
+	function reportSinkFailure(event: AuditEvent, error: unknown): void {
+		const failure = {
+			action: event.action,
+			error: error instanceof Error ? error.message : String(error),
+		};
+		// Through evlog so the failure reaches configured drains;
+		// console.error stays as fallback for the drains-broken case.
+		// Each call is guarded separately — a throwing logger must not
+		// break the other fallback or violate the never-throw contract.
+		try {
+			evlogLog.error({
+				tag,
+				message: "audit sink failure",
+				...failure,
+			});
+		} catch {
+			// evlog itself is broken — fall through to console.
+		}
+		try {
+			console.error(`[${tag}] audit sink failure`, failure);
+		} catch {
+			// Nothing left to report to.
+		}
+	}
+
+	function mirror(event: AuditEvent): void {
+		console.info(`[${tag}] audit: ${event.action}`, {
+			// Metadata first — canonical fields must win on key collisions.
+			...safeMetadata(event.metadata),
+			userId: event.userId ?? null,
+			organizationId: event.organizationId ?? null,
+			ip: event.ip ?? null,
+			userAgent: event.userAgent ?? null,
+		});
+	}
 
 	return {
 		async record(event: AuditEvent) {
 			try {
 				await activeAuditSink.record(event);
 			} catch (error) {
-				const failure = {
-					action: event.action,
-					error: error instanceof Error ? error.message : String(error),
-				};
-				// Through evlog so the failure reaches configured drains;
-				// console.error stays as fallback for the drains-broken case.
-				// Each call is guarded separately — a throwing logger must not
-				// break the other fallback or violate the never-throw contract.
-				try {
-					evlogLog.error({
-						tag,
-						message: "audit sink failure",
-						...failure,
-					});
-				} catch {
-					// evlog itself is broken — fall through to console.
-				}
-				try {
-					console.error(`[${tag}] audit sink failure`, failure);
-				} catch {
-					// Nothing left to report to.
-				}
+				reportSinkFailure(event, error);
 			}
-			console.info(`[${tag}] audit: ${event.action}`, {
-				// Metadata first — canonical fields must win on key collisions.
-				...safeMetadata(event.metadata),
-				userId: event.userId ?? null,
-				organizationId: event.organizationId ?? null,
-				ip: event.ip ?? null,
-				userAgent: event.userAgent ?? null,
-			});
+			mirror(event);
+		},
+		async recordStrict(event: AuditEvent) {
+			try {
+				await activeAuditSink.record(event);
+			} catch (error) {
+				reportSinkFailure(event, error);
+				throw error;
+			}
+			mirror(event);
 		},
 	};
 }

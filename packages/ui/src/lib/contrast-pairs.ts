@@ -8,13 +8,18 @@ import { WCAG_AA } from "./color";
  * solid fill in light and `destructive/60` in dark, composited over
  * background, card and popover. The worst ratio counts.
  * `effective: "primary-hover-blend"` measures `primary-foreground` on what
- * `hover:bg-primary/90` renders: primary at 90% over background.
+ * `hover:bg-primary/90` renders: primary at 90% over background, card and
+ * popover. The worst ratio counts.
+ * `effective: "primary-band-tile"` measures `primary-foreground` on the
+ * marketing SecurityBand's inner tile: `bg-primary-foreground/[0.08]` over
+ * the `bg-primary` band (the 8% layer moves the fill toward the text color).
  * `effective: "focus-ring"` measures what `ring-ring/50` renders: ring at
  * 50% over background, card and popover. The worst ratio counts.
  */
 export type EffectiveKind =
 	| "destructive-fill"
 	| "primary-hover-blend"
+	| "primary-band-tile"
 	| "focus-ring";
 
 export type ContrastPair = {
@@ -61,6 +66,10 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
 	{
 		...text("primary-foreground", "primary"),
 		effective: "primary-hover-blend",
+	},
+	{
+		...text("primary-foreground", "primary"),
+		effective: "primary-band-tile",
 	},
 	...AREAS.flatMap((area) => [
 		text(`area-${area}-foreground`, `area-${area}`),

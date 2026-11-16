@@ -34,6 +34,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	SecretRevealDialog,
 	Select,
 	SelectContent,
 	SelectGroup,
@@ -61,6 +62,9 @@ import { type ReactNode, useState } from "react";
 import { richCode } from "../design-section";
 import { DesignSubsection } from "../design-subsection";
 import { ToastDemo } from "./toast-demo";
+
+/** Demo value only — a real key comes from the create response, once. */
+const DEMO_SECRET = "futu_sk_demo0000000000000000000000000000000";
 
 function OverlayCard({
 	title,
@@ -139,6 +143,33 @@ function DropdownDemo() {
 				</DropdownMenuSub>
 			</DropdownMenuContent>
 		</DropdownMenu>
+	);
+}
+
+function SecretRevealDemo() {
+	const t = useTranslations("designSystem.components.overlays");
+	const [open, setOpen] = useState(false);
+
+	return (
+		<>
+			<Button variant="outline" onClick={() => setOpen(true)}>
+				{t("secretReveal.trigger")}
+			</Button>
+			<SecretRevealDialog
+				open={open}
+				secret={DEMO_SECRET}
+				onClose={() => setOpen(false)}
+				title={t("secretReveal.heading")}
+				description={t("secretReveal.body")}
+				labels={{
+					copy: t("secretReveal.copy"),
+					copied: t("secretReveal.copied"),
+					copyFailed: t("secretReveal.copyFailed"),
+					done: t("secretReveal.done"),
+					close: t("closeLabel"),
+				}}
+			/>
+		</>
 	);
 }
 
@@ -263,6 +294,14 @@ export function Overlays() {
 							</SelectGroup>
 						</SelectContent>
 					</Select>
+				</OverlayCard>
+
+				<OverlayCard
+					wide
+					title={t("secretReveal.title")}
+					description={t("secretReveal.description")}
+				>
+					<SecretRevealDemo />
 				</OverlayCard>
 
 				<OverlayCard

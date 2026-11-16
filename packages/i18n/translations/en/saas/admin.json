@@ -2,46 +2,499 @@
 	"admin": {
 		"users": {
 			"title": "Users",
-			"searchPlaceholder": "Search by email…",
+			"searchPlaceholder": "Search by email, name or ID…",
+			"searchLabel": "Search users",
+			"loading": "Loading users…",
+			"loadError": "Users could not be loaded.",
 			"empty": "No users found.",
+			"user": "User",
 			"role": "Role",
+			"status": "Status",
+			"emailStatus": "Email",
+			"createdAt": "Created",
+			"noName": "No name",
 			"roleValue": {
 				"admin": "Admin",
 				"user": "User",
 				"member": "Member",
 				"owner": "Owner"
 			},
-			"email": "Email",
-			"createdAt": "Created",
-			"actions": "Actions",
-			"status": "Status",
 			"banned": "Banned",
 			"active": "Active",
-			"ban": "Ban",
-			"unban": "Unban",
-			"makeAdmin": "Make admin",
-			"makeUser": "Make user",
-			"makeAdminAria": "Make admin",
-			"makeUserAria": "Make user",
-			"banAria": "Ban user",
-			"unbanAria": "Unban user",
-			"defaultBanReason": "Violation of terms",
-			"failed": "Action failed.",
-			"banError": "Failed to update ban status. Please try again.",
-			"roleError": "Failed to update role. Please try again."
+			"verified": "Verified",
+			"unverified": "Unverified",
+			"twoFactorOn": "2FA on",
+			"twoFactorOff": "2FA off",
+			"filter": {
+				"role": "Filter by role",
+				"anyRole": "All roles",
+				"status": "Filter by status",
+				"anyStatus": "All statuses",
+				"email": "Filter by email status",
+				"anyEmail": "All email states"
+			}
+		},
+		"errors": {
+			"forbidden": "You are not allowed to do that to this user.",
+			"conflict": "That conflicts with the current state, for example an email already in use or the only owner of an organization.",
+			"notFound": "Not found. It may have been deleted.",
+			"rateLimited": "Too many actions. Wait a moment and try again.",
+			"invalid": "The request was not valid. Check your input.",
+			"generic": "Something went wrong. Please try again.",
+			"paymentProvider": "Subscriptions could not be cancelled at the payment provider, so nothing was deleted. Try again later."
+		},
+		"pagination": {
+			"summary": "Page {page} of {totalPages} · {total, plural, one {# result} other {# results}}",
+			"prev": "Previous",
+			"next": "Next"
+		},
+		"impersonation": {
+			"message": "You are impersonating {name} ({email}) — ends in {minutes, plural, =0 {less than a minute} one {# minute} other {# minutes}}",
+			"stop": "Stop impersonating",
+			"stopError": "Could not stop impersonating. Please try again."
+		},
+		"userDetail": {
+			"title": "User details",
+			"notFound": "This user does not exist.",
+			"loadError": "The user could not be loaded.",
+			"retry": "Retry",
+			"back": "Back to users",
+			"noName": "No name",
+			"banReason": "Reason: {reason}",
+			"banNoReason": "No reason given.",
+			"banUntil": "Banned until {date}",
+			"banPermanent": "Banned permanently.",
+			"tabs": {
+				"overview": "Overview",
+				"sessions": "Sessions ({count})",
+				"organizations": "Organizations ({count})",
+				"billing": "Billing",
+				"apiKeys": "API keys ({count})",
+				"activity": "Activity"
+			},
+			"overview": {
+				"created": "Created",
+				"lastActive": "Last active",
+				"never": "Never",
+				"userId": "User ID",
+				"username": "Username",
+				"locale": "Locale",
+				"none": "—",
+				"onboarding": "Onboarding",
+				"onboardingDone": "Completed",
+				"onboardingPending": "Not completed",
+				"authMethods": "Sign-in methods",
+				"providers": "Providers",
+				"providerCredential": "Email and password",
+				"password": "Password",
+				"passwordSet": "Set",
+				"passwordNone": "Not set",
+				"passkeys": "Passkeys",
+				"twoFactor": "Two-factor authentication",
+				"emailVerified": "Email",
+				"role": "System role"
+			},
+			"sessions": {
+				"description": "Active sessions of this user. Tokens are never shown.",
+				"revokeAll": "Revoke all sessions",
+				"empty": "No active sessions.",
+				"ip": "IP address",
+				"userAgent": "Device",
+				"created": "Created",
+				"expires": "Expires",
+				"actions": "Actions",
+				"unknown": "Unknown",
+				"impersonated": "Impersonated",
+				"revoke": "Revoke"
+			},
+			"organizations": {
+				"empty": "Not a member of any organization.",
+				"name": "Organization",
+				"role": "Role",
+				"joined": "Joined"
+			},
+			"billing": {
+				"purchases": "Personal subscriptions and purchases",
+				"organizations": "Organizations",
+				"organizationsHint": "Plans are usually billed to the organization: each organization this user belongs to, with its current plan and purchases.",
+				"noOrganizations": "Not a member of any organization.",
+				"plan": "Plan",
+				"noPurchases": "No purchases.",
+				"type": "Type",
+				"status": "Status",
+				"provider": "Provider",
+				"product": "Product",
+				"quantity": "Quantity",
+				"periodEnd": "Current period ends",
+				"none": "—",
+				"typeValue": {
+					"SUBSCRIPTION": "Subscription",
+					"ONE_TIME": "One-time"
+				},
+				"statusValue": {
+					"ACTIVE": "Active",
+					"TRIALING": "Trialing",
+					"PAST_DUE": "Past due",
+					"SCHEDULED_CANCEL": "Cancels at period end",
+					"PAUSED": "Paused",
+					"CANCELED": "Canceled",
+					"EXPIRED": "Expired",
+					"INCOMPLETE": "Incomplete"
+				},
+				"credits": "Credit balances",
+				"noCredits": "No credit balances.",
+				"meter": "Meter",
+				"remaining": "Remaining",
+				"remainingValue": "{remaining} of {granted}",
+				"resets": "Resets"
+			},
+			"apiKeys": {
+				"empty": "No API keys.",
+				"name": "Name",
+				"key": "Key",
+				"scopes": "Scopes",
+				"lastUsed": "Last used",
+				"status": "Status",
+				"allScopes": "All scopes",
+				"never": "Never",
+				"revoked": "Revoked",
+				"expired": "Expired",
+				"active": "Active"
+			},
+			"activity": {
+				"loadError": "The activity could not be loaded.",
+				"empty": "No activity yet.",
+				"by": "By {actor}",
+				"reason": "Reason: {reason}"
+			},
+			"actions": {
+				"menu": "Actions",
+				"edit": "Edit name or email",
+				"verifyEmail": "Mark email as verified",
+				"passwordReset": "Send password reset email",
+				"role": "Change system role",
+				"resetTwoFactor": "Reset two-factor authentication",
+				"unban": "Unban",
+				"ban": "Ban",
+				"impersonate": "Impersonate",
+				"delete": "Delete user",
+				"reason": {
+					"self": "Not available for your own account.",
+					"peerAdmin": "Not available for admins. Change their role first.",
+					"alreadyVerified": "The email is already verified.",
+					"noTwoFactor": "Two-factor authentication is not enabled.",
+					"banned": "Banned users cannot be impersonated."
+				}
+			},
+			"toast": {
+				"verified": "Email marked as verified.",
+				"passwordReset": "Password reset email sent.",
+				"updated": "User updated.",
+				"banned": "User banned.",
+				"unbanned": "User unbanned.",
+				"roleChanged": "Role changed.",
+				"twoFactorReset": "Two-factor authentication reset. The user was signed out.",
+				"impersonating": "Impersonating. Redirecting…",
+				"deleted": "User deleted.",
+				"sessionsRevoked": "All sessions revoked.",
+				"sessionRevoked": "Session revoked."
+			},
+			"dialog": {
+				"reason": "Reason",
+				"reasonOptional": "Reason (optional)",
+				"reasonPlaceholder": "Why are you doing this?",
+				"reasonHint": "Recorded in the audit log. At least 3 characters.",
+				"edit": {
+					"title": "Edit user",
+					"description": "Change the name or email of this user.",
+					"name": "Name",
+					"email": "Email",
+					"emailLockedSelf": "Change your own email in your account settings.",
+					"emailLockedAdmin": "The email of an admin cannot be changed. Change their role first.",
+					"emailWarning": "Changing the email marks it as unverified and signs the user out everywhere.",
+					"confirm": "Save changes"
+				},
+				"ban": {
+					"title": "Ban user",
+					"description": "The user is signed out everywhere and cannot sign in until the ban ends.",
+					"confirm": "Ban user",
+					"until": "Ban ends on (optional)",
+					"untilHint": "Leave empty for a permanent ban."
+				},
+				"unban": {
+					"title": "Unban user",
+					"description": "The user can sign in again.",
+					"confirm": "Unban user"
+				},
+				"role": {
+					"title": "Change system role",
+					"description": "System admins can manage every user and organization.",
+					"role": "Role",
+					"demoteHint": "Demoting an admin signs them out everywhere.",
+					"confirm": "Change role"
+				},
+				"resetTwoFactor": {
+					"title": "Reset two-factor authentication",
+					"description": "Turns off two-factor authentication, deletes the authenticator secret and backup codes, and signs the user out. Use it for locked-out users.",
+					"confirm": "Reset two-factor"
+				},
+				"impersonate": {
+					"title": "Impersonate user",
+					"description": "You will be signed in as {email} for a limited time. Everything you do is recorded.",
+					"limits": "Payments, credentials, two-factor, API keys and leaving or deleting organizations stay blocked while impersonating.",
+					"confirm": "Impersonate"
+				},
+				"delete": {
+					"title": "Delete user",
+					"description": "Permanently deletes {email} and their data. This cannot be undone.",
+					"confirmLabel": "Type {email} to confirm",
+					"confirm": "Delete user"
+				},
+				"revokeAll": {
+					"title": "Revoke all sessions",
+					"description": "The user is signed out everywhere, including connected MCP apps.",
+					"confirm": "Revoke all sessions"
+				}
+			}
+		},
+		"organizations": {
+			"title": "Organizations",
+			"searchPlaceholder": "Search by name, slug or ID…",
+			"searchLabel": "Search organizations",
+			"loading": "Loading organizations…",
+			"loadError": "Organizations could not be loaded.",
+			"empty": "No organizations found.",
+			"organization": "Organization",
+			"members": "Members",
+			"invitations": "Invitations",
+			"plan": "Plan",
+			"createdAt": "Created",
+			"noPlan": "No subscription",
+			"otherPlan": "Other plan"
+		},
+		"organizationDetail": {
+			"title": "Organization details",
+			"notFound": "This organization does not exist.",
+			"loadError": "The organization could not be loaded.",
+			"retry": "Retry",
+			"back": "Back to organizations",
+			"slug": "Slug: {slug}",
+			"memberCount": "{count, plural, one {# member} other {# members}}",
+			"created": "Created {date}",
+			"tabs": {
+				"members": "Members ({count})",
+				"invitations": "Invitations ({count})",
+				"billing": "Billing",
+				"apiKeys": "API keys ({count})",
+				"activity": "Activity"
+			},
+			"members": {
+				"description": "Members and their organization roles. Open a user to manage the account itself.",
+				"empty": "No members.",
+				"truncated": "Showing the first {shown} of {total} members.",
+				"user": "User",
+				"role": "Role",
+				"joined": "Joined",
+				"actions": "Actions",
+				"menu": "Actions for {name}",
+				"changeRole": "Change role",
+				"makeOwner": "Make owner",
+				"remove": "Remove from organization",
+				"alreadyOwner": "Already the only owner."
+			},
+			"invitations": {
+				"description": "Pending invitations. Expired ones can be sent again.",
+				"empty": "No pending invitations.",
+				"email": "Email",
+				"role": "Role",
+				"status": "Status",
+				"expires": "Expires",
+				"inviter": "Invited by",
+				"actions": "Actions",
+				"pending": "Pending",
+				"expired": "Expired",
+				"unknownInviter": "—",
+				"resend": "Resend",
+				"cancel": "Cancel"
+			},
+			"billing": {
+				"summary": "{members, plural, one {# member} other {# members}} · {seats, plural, one {# seat} other {# seats}}",
+				"summaryNoSeats": "{members, plural, one {# member} other {# members}} · no active subscription",
+				"purchases": "Subscriptions and purchases",
+				"noPurchases": "No purchases.",
+				"type": "Type",
+				"status": "Status",
+				"provider": "Provider",
+				"plan": "Plan",
+				"seats": "Seats",
+				"periodEnd": "Current period ends",
+				"none": "—",
+				"otherPlan": "Other",
+				"credits": "Credit balances",
+				"noCredits": "No credit balances.",
+				"meter": "Meter",
+				"remaining": "Remaining",
+				"remainingValue": "{remaining} of {granted}",
+				"resets": "Resets"
+			},
+			"apiKeys": {
+				"empty": "No API keys.",
+				"name": "Name",
+				"key": "Key",
+				"scopes": "Scopes",
+				"lastUsed": "Last used",
+				"status": "Status",
+				"allScopes": "All scopes",
+				"never": "Never",
+				"revoked": "Revoked",
+				"expired": "Expired",
+				"active": "Active"
+			},
+			"activity": {
+				"loadError": "The activity could not be loaded.",
+				"empty": "No activity yet.",
+				"by": "By {actor}",
+				"reason": "Reason: {reason}"
+			},
+			"actions": {
+				"menu": "Actions",
+				"rename": "Rename organization",
+				"delete": "Delete organization"
+			},
+			"toast": {
+				"renamed": "Organization renamed.",
+				"deleted": "Organization deleted.",
+				"roleChanged": "Role changed.",
+				"memberRemoved": "Member removed.",
+				"ownershipTransferred": "Ownership transferred.",
+				"invitationResent": "Invitation sent again.",
+				"invitationResentNoEmail": "The invitation was extended, but the email could not be sent.",
+				"invitationCanceled": "Invitation canceled."
+			},
+			"dialog": {
+				"rename": {
+					"title": "Rename organization",
+					"description": "Changes the display name. The slug and URLs stay the same.",
+					"name": "Name",
+					"confirm": "Save name"
+				},
+				"delete": {
+					"title": "Delete organization",
+					"description": "Permanently deletes {name} with its members, invitations, API keys and billing records. Active subscriptions are canceled first. This cannot be undone.",
+					"confirmLabel": "Type {slug} to confirm",
+					"confirm": "Delete organization"
+				},
+				"role": {
+					"title": "Change role",
+					"description": "Sets the organization role of {name}. An organization always keeps at least one owner.",
+					"role": "Role",
+					"confirm": "Change role"
+				},
+				"removeMember": {
+					"title": "Remove member",
+					"description": "{name} loses access to the organization. Their organization API keys are revoked and seats are updated.",
+					"confirm": "Remove member"
+				},
+				"transferOwnership": {
+					"title": "Make owner",
+					"description": "{name} becomes the owner. Every current owner becomes an admin.",
+					"confirm": "Make owner"
+				},
+				"cancelInvitation": {
+					"title": "Cancel invitation",
+					"description": "The invitation link for {email} stops working.",
+					"confirm": "Cancel invitation"
+				}
+			}
+		},
+		"system": {
+			"title": "System",
+			"loadError": "The system status could not be loaded.",
+			"retry": "Retry",
+			"refresh": "Refresh",
+			"database": {
+				"title": "Database",
+				"ok": "Reachable",
+				"down": "Unreachable",
+				"latency": "Latency",
+				"latencyValue": "{ms} ms",
+				"status": "Status"
+			},
+			"providers": {
+				"title": "Providers",
+				"description": "The active provider per domain. Credentials are never shown.",
+				"configured": "Configured",
+				"notConfigured": "Not configured",
+				"domain": {
+					"mail": "Email",
+					"payments": "Payments",
+					"storage": "Storage",
+					"analytics": "Analytics",
+					"logs": "Logs",
+					"ai": "AI"
+				}
+			},
+			"cron": {
+				"title": "Scheduled jobs",
+				"description": "Last run per job as recorded by the scheduler.",
+				"empty": "No jobs registered.",
+				"job": "Job",
+				"schedule": "Schedule",
+				"lastRun": "Last run",
+				"status": "Status",
+				"neverRun": "Never run",
+				"disabled": "Disabled",
+				"statusValue": {
+					"success": "Success",
+					"error": "Failed",
+					"skipped": "Skipped",
+					"running": "Running"
+				}
+			},
+			"features": {
+				"title": "Feature flags",
+				"description": "Read from the app configuration. Change them in code, not here.",
+				"on": "On",
+				"off": "Off"
+			},
+			"versions": {
+				"title": "Versions",
+				"app": "App version",
+				"kit": "Kit version"
+			}
 		},
 		"auditLogs": {
+			"sinkNotice": {
+				"title": "Audit events are not stored",
+				"description": "The audit sink is \"console\" (the default), so audit events — admin support actions included — are only written to the server log. Set LOG_AUDIT_SINK=db to keep them in the database and list them here."
+			},
 			"title": "Audit logs",
 			"col": {
 				"time": "Time",
 				"action": "Action",
 				"user": "User",
-				"ip": "IP"
+				"ip": "IP",
+				"target": "Target"
 			},
+			"empty": "No audit logs.",
+			"filters": {
+				"actionPrefix": "Action starts with",
+				"actionPrefixPlaceholder": "e.g. admin.user.",
+				"actor": "Actor user ID",
+				"targetUser": "Target user ID",
+				"targetOrganization": "Target organization ID",
+				"from": "From",
+				"to": "To",
+				"clear": "Clear filters"
+			},
+			"loadError": "The audit logs could not be loaded.",
+			"user": "User",
+			"organization": "Organization",
+			"reason": "Reason: {reason}",
 			"prev": "Previous",
 			"next": "Next",
-			"page": "Page {page} · {total}",
-			"empty": "No audit logs."
-		}
+			"page": "Page {page} · {total}"
+		},
+		"sections": {}
 	}
 }

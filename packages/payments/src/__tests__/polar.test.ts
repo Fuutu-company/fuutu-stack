@@ -1,6 +1,15 @@
 import { env } from "@fuutu/env/saas";
+import { AlreadyCanceledSubscription } from "@polar-sh/sdk/models/errors/alreadycanceledsubscription.js";
+import { ConnectionError } from "@polar-sh/sdk/models/errors/httpclienterrors.js";
+import { ResourceNotFound } from "@polar-sh/sdk/models/errors/resourcenotfound.js";
+import { SDKError } from "@polar-sh/sdk/models/errors/sdkerror.js";
+import { SubscriptionLocked } from "@polar-sh/sdk/models/errors/subscriptionlocked.js";
 import { describe, expect, it, vi } from "vitest";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	isProviderRequestError,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const checkoutsCreate = vi
 	.fn()
@@ -56,6 +65,14 @@ vi.mock("@fuutu/env/saas", () => ({
 		NODE_ENV: "test",
 	},
 }));
+
+const mockLog = vi.hoisted(() => ({
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn(),
+	debug: vi.fn(),
+}));
+vi.mock("@fuutu/logs", () => ({ createLogger: () => mockLog }));
 
 const { polarPaymentProvider } = await import("../providers/polar");
 
@@ -129,6 +146,34 @@ describe("polar provider — SDK integration", () => {
 		expect(params.trialIntervalCount).toBe(14);
 	});
 
+	it("createCheckoutLink disables the product's trial when no trial is wanted", async () => {
+		checkoutsCreate.mockClear();
+		await polarPaymentProvider.createCheckoutLink({
+			priceId: "prod_1",
+			userId: "user_1",
+			successUrl: "https://app.test/ok",
+			trial: false,
+		});
+		const params = checkoutsCreate.mock.calls[0]?.[0];
+		expect(params.allowTrial).toBe(false);
+		expect(params).not.toHaveProperty("trialInterval");
+	});
+
+	it("createCheckoutLink sends no allowTrial when a trial is wanted or unspecified", async () => {
+		for (const trial of [true, undefined]) {
+			checkoutsCreate.mockClear();
+			await polarPaymentProvider.createCheckoutLink({
+				priceId: "prod_1",
+				userId: "user_1",
+				successUrl: "https://app.test/ok",
+				trial,
+			});
+			expect(checkoutsCreate.mock.calls[0]?.[0]).not.toHaveProperty(
+				"allowTrial",
+			);
+		}
+	});
+
 	it("createCheckoutLink leaves the product's trial config alone without trialDays", async () => {
 		checkoutsCreate.mockClear();
 		await polarPaymentProvider.createCheckoutLink({
@@ -192,6 +237,21 @@ describe("polar provider — SDK integration", () => {
 		expect(result.customerId).toBe("cust_polar_123");
 		expect(customersCreate).toHaveBeenCalledOnce();
 	});
+
+	it.each([
+		["canceled", "CANCELED"],
+		["active", "ACTIVE"],
+		["incomplete_expired", "EXPIRED"],
+	])(
+		"getSubscriptionStatus maps a %s subscription to %s",
+		async (status, expected) => {
+			subscriptionsGet.mockResolvedValueOnce({ id: "sub_1", status });
+			await expect(
+				polarPaymentProvider.getSubscriptionStatus?.("sub_1"),
+			).resolves.toBe(expected);
+			expect(subscriptionsGet).toHaveBeenLastCalledWith({ id: "sub_1" });
+		},
+	);
 
 	it("cancelSubscription calls subscriptions.revoke", async () => {
 		subscriptionsRevoke.mockClear();
@@ -730,7 +790,286 @@ describe("polar provider — purchased units", () => {
 	});
 });
 
+describe("polar provider — per-call seat proration", () => {
+	it("keeps the organization's proration setting, ignores the input and warns", async () => {
+		subscriptionsUpdate.mockClear();
+		mockLog.warn.mockClear();
+		await polarPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_123",
+			seats: 3,
+			proration: "none",
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { seats: 3 },
+		});
+		expect(mockLog.warn).toHaveBeenCalledWith(
+			expect.stringContaining("proration"),
+			expect.objectContaining({ subscriptionId: "sub_123", proration: "none" }),
+		);
+	});
+});
+
+describe("polar provider — cancel at period end and resume", () => {
+	it("cancel with atPeriodEnd sets cancelAtPeriodEnd instead of revoking", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123", {
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { cancelAtPeriodEnd: true },
+		});
+		expect(subscriptionsRevoke).not.toHaveBeenCalled();
+	});
+
+	it("cancel with mode period_end sets cancelAtPeriodEnd", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123", {
+			mode: "period_end",
+		});
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { cancelAtPeriodEnd: true },
+		});
+		expect(subscriptionsRevoke).not.toHaveBeenCalled();
+	});
+
+	it("cancel with mode immediate revokes now, whatever atPeriodEnd says", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123", {
+			mode: "immediate",
+			atPeriodEnd: true,
+		});
+		expect(subscriptionsRevoke).toHaveBeenCalledWith({ id: "sub_123" });
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("cancel without options revokes immediately, as before", async () => {
+		subscriptionsRevoke.mockClear();
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.cancelSubscription("sub_123");
+		expect(subscriptionsRevoke).toHaveBeenCalledWith({ id: "sub_123" });
+		expect(subscriptionsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("resumeSubscription clears cancelAtPeriodEnd", async () => {
+		subscriptionsUpdate.mockClear();
+		await polarPaymentProvider.resumeSubscription?.("sub_123");
+		expect(subscriptionsUpdate).toHaveBeenCalledWith({
+			id: "sub_123",
+			subscriptionUpdate: { cancelAtPeriodEnd: false },
+		});
+	});
+});
+
+describe("polar provider — scheduled cancel status", () => {
+	it.each([
+		[true, "SCHEDULED_CANCEL"],
+		[false, "ACTIVE"],
+	])(
+		"getSubscriptionStatus with cancelAtPeriodEnd %s reports %s",
+		async (cancelAtPeriodEnd, expected) => {
+			subscriptionsGet.mockResolvedValueOnce({
+				id: "sub_1",
+				status: "active",
+				cancelAtPeriodEnd,
+			});
+			await expect(
+				polarPaymentProvider.getSubscriptionStatus?.("sub_1"),
+			).resolves.toBe(expected);
+		},
+	);
+
+	it("subscription.updated with cancelAtPeriodEnd maps to SCHEDULED_CANCEL", async () => {
+		const events = await parsePayload({
+			type: "subscription.updated",
+			data: {
+				id: "sub_1",
+				status: "active",
+				cancelAtPeriodEnd: true,
+				customerId: "cust_1",
+				productId: "prod_1",
+				metadata: {},
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "subscription.updated",
+			status: "SCHEDULED_CANCEL",
+		});
+	});
+
+	it("subscription.uncanceled reports ACTIVE", async () => {
+		const events = await parsePayload({
+			type: "subscription.uncanceled",
+			data: {
+				id: "sub_1",
+				status: "active",
+				cancelAtPeriodEnd: false,
+				customerId: "cust_1",
+				productId: "prod_1",
+				metadata: {},
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "subscription.updated",
+			status: "ACTIVE",
+		});
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("polar", () => polarPaymentProvider, {
 	behavior: "shape",
+});
+
+describe("polar provider — getSubscriptionSeats", () => {
+	it("reads the subscription's seats", async () => {
+		subscriptionsGet.mockResolvedValueOnce({ id: "sub_1", seats: 5 });
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(5);
+		expect(subscriptionsGet).toHaveBeenLastCalledWith({ id: "sub_1" });
+	});
+
+	it("a subscription that is not seat-based counts as one seat", async () => {
+		subscriptionsGet.mockResolvedValueOnce({ id: "sub_1", seats: null });
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(1);
+	});
+
+	it("throws when the lookup fails", async () => {
+		subscriptionsGet.mockRejectedValueOnce(new Error("polar down"));
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow("polar down");
+	});
+});
+
+describe("polar provider — typed API failures", () => {
+	const httpMeta = (status: number) => ({
+		response: new Response("{}", { status }),
+		request: new Request("https://sandbox-api.polar.sh/v1/subscriptions/x"),
+		body: "{}",
+	});
+
+	it.each([
+		[
+			"an unknown subscription",
+			"not_found",
+			new ResourceNotFound(
+				{ error: "ResourceNotFound", detail: "Not found" },
+				httpMeta(404),
+			),
+		],
+		[
+			"an already canceled subscription (Polar answers 403)",
+			"invalid_state",
+			new AlreadyCanceledSubscription(
+				{
+					error: "AlreadyCanceledSubscription",
+					detail: "This subscription is already canceled.",
+				},
+				httpMeta(403),
+			),
+		],
+		[
+			"a locked subscription",
+			"invalid_state",
+			new SubscriptionLocked(
+				{ error: "SubscriptionLocked", detail: "Locked" },
+				httpMeta(409),
+			),
+		],
+		[
+			"a request Polar refuses",
+			"rejected",
+			new SDKError("API error occurred", httpMeta(400)),
+		],
+		[
+			"a Polar outage",
+			"unavailable",
+			new SDKError("API error occurred", httpMeta(503)),
+		],
+		[
+			"a network failure",
+			"unavailable",
+			new ConnectionError("Unable to make request"),
+		],
+	] as const)(
+		"%s is a ProviderRequestError of kind %s",
+		async (_, kind, err) => {
+			subscriptionsRevoke.mockRejectedValueOnce(err);
+			const failure = await polarPaymentProvider
+				.cancelSubscription("sub_1")
+				.catch((e: unknown) => e);
+			expect(isProviderRequestError(failure)).toBe(true);
+			expect(failure).toMatchObject({
+				kind,
+				message: "Failed to cancel subscription",
+			});
+		},
+	);
+
+	it.each([401, 403])(
+		"HTTP %i (rejected access token) is a configuration error",
+		async (status) => {
+			subscriptionsUpdate.mockRejectedValueOnce(
+				new SDKError("API error occurred", httpMeta(status)),
+			);
+			await expect(
+				polarPaymentProvider.resumeSubscription?.("sub_1"),
+			).rejects.toBeInstanceOf(WebhookConfigError);
+		},
+	);
+
+	it("every Polar call classifies its failure", async () => {
+		const missing = () =>
+			new ResourceNotFound(
+				{ error: "ResourceNotFound", detail: "Not found" },
+				httpMeta(404),
+			);
+		checkoutsCreate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.createCheckoutLink({ priceId: "prod_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		customerSessionsCreate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.createCustomerPortalLink({ customerId: "cus_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		customersCreate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.createCustomer({
+				userId: "u",
+				email: "u@example.com",
+			}),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsGet.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.getSubscriptionStatus?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsGet.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.getSubscriptionSeats?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		subscriptionsUpdate.mockRejectedValueOnce(missing());
+		await expect(
+			polarPaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_x",
+				seats: 2,
+			}),
+		).rejects.toMatchObject({ kind: "not_found" });
+	});
+
+	it("an error that is not from Polar is rethrown unchanged", async () => {
+		const own = new Error("boom");
+		subscriptionsRevoke.mockRejectedValueOnce(own);
+		await expect(polarPaymentProvider.cancelSubscription("sub_1")).rejects.toBe(
+			own,
+		);
+	});
 });

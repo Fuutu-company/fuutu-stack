@@ -3,7 +3,7 @@
 		"metaTitle": "Ein ruhiger Workspace für dein ganzes Team",
 		"hero": {
 			"title": "Dein ganzes Team in <mark>einem ruhigen</mark> Workspace.",
-			"description": "Mitglieder, Abrechnung, ein KI-Assistent und ein CRM, schön verbunden. In Minuten eingerichtet, geliebt von allen, die es öffnen.",
+			"description": "Mitglieder, Abrechnung, ein KI-Assistent und ein CRM, schön verbunden. In Minuten eingerichtet.",
 			"cta": {
 				"start": "Kostenlos starten",
 				"tour": "Tour ansehen"
@@ -155,7 +155,7 @@
 				},
 				{
 					"q": "Was sind KI-Credits, und was passiert, wenn sie aufgebraucht sind?",
-					"a": "Jeder Plan enthält ein monatliches KI-Credit-Kontingent, das sich jeden Monat erneuert. Ist es aufgebraucht, pausiert der Assistent, und der Rest der App läuft weiter. Mit zusätzlichen Credits oder einem größeren Plan geht es sofort weiter."
+					"a": "Jeder Plan enthält ein monatliches KI-Credit-Kontingent, das sich jeden Monat erneuert. Ist es aufgebraucht, pausiert der Assistent, sofern dein Plan keinen Mehrverbrauch erlaubt – sonst läuft er weiter und der Mehrverbrauch wird erfasst. Der Rest der App läuft in jedem Fall weiter. Mit zusätzlichen Credits oder einem größeren Plan geht es sofort weiter."
 				},
 				{
 					"q": "In welchen Sprachen gibt es die App?",

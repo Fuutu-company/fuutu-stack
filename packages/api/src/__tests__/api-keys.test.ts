@@ -65,6 +65,13 @@ const orgFixture = {
 	invitations: [],
 };
 
+const memberContext = makeSession<Context>(
+	makeUser({ id: "user-2", role: "user" }),
+);
+const formerMemberContext = makeSession<Context>(
+	makeUser({ id: "user-3", role: "user" }),
+);
+
 const KEY_ID = "00000000-0000-4000-8000-000000000001";
 const KEY_ID_404 = "00000000-0000-4000-8000-000000000404";
 
@@ -121,7 +128,7 @@ describe("apiKeys.create", () => {
 		});
 	});
 
-	it("allows org-level key creation by a member (member has full CRUD on api-keys)", async () => {
+	it("allows org-level key creation by a member", async () => {
 		const memberContext = makeSession<Context>(
 			makeUser({ id: "user-2", role: "user" }),
 		);
@@ -249,7 +256,14 @@ describe("apiKeys.list", () => {
 			skip: 0,
 		});
 		expect(result).toEqual({
-			items: [{ id: KEY_ID, name: "My Key", prefix: "futu_sk_abc..." }],
+			items: [
+				{
+					id: KEY_ID,
+					name: "My Key",
+					prefix: "futu_sk_abc...",
+					canRevoke: true,
+				},
+			],
 			page: 1,
 			limit: 50,
 			total: 1,
@@ -279,6 +293,70 @@ describe("apiKeys.list", () => {
 		});
 		expect(result.items).toHaveLength(1);
 		expect(result.total).toBe(1);
+	});
+
+	it("filters org keys by scope", async () => {
+		vi.mocked(listOrgApiKeys).mockResolvedValue([] as never);
+		vi.mocked(countOrgApiKeys).mockResolvedValue(0);
+
+		await call(
+			apiKeysRouter.list,
+			{ organizationId: "org-1", scope: "mcp", limit: 100 },
+			{ context: authenticatedContext },
+		);
+
+		expect(listOrgApiKeys).toHaveBeenCalledWith("org-1", {
+			take: 100,
+			skip: 0,
+			scope: "mcp",
+		});
+		expect(countOrgApiKeys).toHaveBeenCalledWith("org-1", { scope: "mcp" });
+	});
+
+	it("rejects an unknown scope filter", async () => {
+		await expect(
+			call(
+				apiKeysRouter.list,
+				{ organizationId: "org-1", scope: "root" as never },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(listOrgApiKeys).not.toHaveBeenCalled();
+	});
+
+	it("marks every org key revocable for an owner", async () => {
+		vi.mocked(listOrgApiKeys).mockResolvedValue([
+			{ id: "key-a", userId: "user-1" },
+			{ id: "key-b", userId: "user-2" },
+		] as never);
+		vi.mocked(countOrgApiKeys).mockResolvedValue(2);
+
+		const result = await call(
+			apiKeysRouter.list,
+			{ organizationId: "org-1" },
+			{ context: authenticatedContext },
+		);
+
+		expect(result.items.map((item) => item.canRevoke)).toEqual([true, true]);
+	});
+
+	it("marks only the member's own org keys revocable", async () => {
+		vi.mocked(listOrgApiKeys).mockResolvedValue([
+			{ id: "key-a", userId: "user-1" },
+			{ id: "key-b", userId: "user-2" },
+		] as never);
+		vi.mocked(countOrgApiKeys).mockResolvedValue(2);
+
+		const result = await call(
+			apiKeysRouter.list,
+			{ organizationId: "org-1" },
+			{ context: memberContext },
+		);
+
+		expect(result.items.map((item) => [item.id, item.canRevoke])).toEqual([
+			["key-a", false],
+			["key-b", true],
+		]);
 	});
 
 	it("returns empty items when no keys exist", async () => {
@@ -351,6 +429,56 @@ describe("apiKeys.revoke", () => {
 			organizationId: "org-1",
 		});
 		expect(result).toEqual({ success: true });
+	});
+
+	it("member cannot revoke another member's org key (admin/owner only)", async () => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-1",
+			organizationId: "org-1",
+		} as never);
+
+		await expect(
+			call(apiKeysRouter.revoke, { id: KEY_ID }, { context: memberContext }),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(revokeApiKey).not.toHaveBeenCalled();
+	});
+
+	it("member may revoke an org key they created", async () => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-2",
+			organizationId: "org-1",
+		} as never);
+		vi.mocked(revokeApiKey).mockResolvedValue({ id: KEY_ID } as never);
+
+		const result = await call(
+			apiKeysRouter.revoke,
+			{ id: KEY_ID },
+			{ context: memberContext },
+		);
+
+		expect(revokeApiKey).toHaveBeenCalledWith(KEY_ID, {
+			organizationId: "org-1",
+		});
+		expect(result).toEqual({ success: true });
+	});
+
+	it("the creator cannot revoke an org key once they left the org", async () => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-3",
+			organizationId: "org-1",
+		} as never);
+
+		await expect(
+			call(
+				apiKeysRouter.revoke,
+				{ id: KEY_ID },
+				{ context: formerMemberContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(revokeApiKey).not.toHaveBeenCalled();
 	});
 
 	it("throws FORBIDDEN when revoking another user's personal key", async () => {
@@ -468,6 +596,56 @@ describe("apiKeys.delete", () => {
 			organizationId: "org-1",
 		});
 		expect(result).toEqual({ success: true });
+	});
+
+	it("member cannot delete another member's org key (admin/owner only)", async () => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-1",
+			organizationId: "org-1",
+		} as never);
+
+		await expect(
+			call(apiKeysRouter.delete, { id: KEY_ID }, { context: memberContext }),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(deleteApiKey).not.toHaveBeenCalled();
+	});
+
+	it("member may delete an org key they created", async () => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-2",
+			organizationId: "org-1",
+		} as never);
+		vi.mocked(deleteApiKey).mockResolvedValue({ id: KEY_ID } as never);
+
+		const result = await call(
+			apiKeysRouter.delete,
+			{ id: KEY_ID },
+			{ context: memberContext },
+		);
+
+		expect(deleteApiKey).toHaveBeenCalledWith(KEY_ID, {
+			organizationId: "org-1",
+		});
+		expect(result).toEqual({ success: true });
+	});
+
+	it("the creator cannot delete an org key once they left the org", async () => {
+		vi.mocked(getApiKey).mockResolvedValue({
+			id: KEY_ID,
+			userId: "user-3",
+			organizationId: "org-1",
+		} as never);
+
+		await expect(
+			call(
+				apiKeysRouter.delete,
+				{ id: KEY_ID },
+				{ context: formerMemberContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(deleteApiKey).not.toHaveBeenCalled();
 	});
 
 	it("throws FORBIDDEN when deleting another user's personal key", async () => {

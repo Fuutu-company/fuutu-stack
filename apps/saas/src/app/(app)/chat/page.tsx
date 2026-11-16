@@ -1,8 +1,11 @@
 import { ChatLayout } from "@app/chat";
+import { config } from "@fuutu/config";
 import { PageHeader } from "@fuutu/ui";
+import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 export default async function ChatPage() {
+	if (!config.features.aiChat) notFound();
 	const t = await getTranslations("chat");
 
 	return (

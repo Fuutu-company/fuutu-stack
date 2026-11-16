@@ -206,12 +206,89 @@ test.describe("organization settings — invite & members", () => {
 	});
 });
 
+test("the org breadcrumb shows the organization's name, not its slug", async ({
+	page,
+	baseURL,
+}) => {
+	const origin = new URL(baseURL ?? page.url()).origin;
+	const slug = `e2e-crumb-${Date.now()}`;
+	const created = await page.request.post("/api/auth/organization/create", {
+		data: { name: "Crumb Labs GmbH", slug },
+		headers: { origin },
+	});
+	expect(created.ok()).toBe(true);
+	const { id: orgId } = (await created.json()) as { id: string };
+	try {
+		await page.goto(`/organizations/${slug}/settings/general`);
+		const crumbs = page.getByRole("navigation", { name: /breadcrumb/i });
+		await expect(
+			crumbs.getByRole("link", { name: "Crumb Labs GmbH" }),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(crumbs).not.toContainText(/e2e-crumb/i);
+	} finally {
+		await page.request.post("/api/auth/organization/delete", {
+			data: { organizationId: orgId },
+			headers: { origin },
+		});
+	}
+});
+
 test.describe("org membership guard", () => {
-	test("unknown org slug redirects to /organizations", async ({ page }) => {
+	test("unknown org slug answers 404 without the app shell", async ({
+		page,
+	}) => {
 		// Regression: organizations/[slug] had no layout guard, so org pages
 		// rendered their shell for non-members / nonexistent orgs.
-		await page.goto("/organizations/no-such-org/dashboard");
-		await expect(page).toHaveURL(/\/organizations$/, { timeout: 10_000 });
+		const response = await page.goto("/organizations/no-such-org/dashboard");
+		expect(response?.status()).toBe(404);
+		await expect(page.locator("[data-sidebar='sidebar']")).toHaveCount(0);
+	});
+
+	test("another org's pages answer 404 to a non-member and never name it", async ({
+		page,
+		browser,
+		baseURL,
+	}) => {
+		const origin = new URL(baseURL ?? page.url()).origin;
+		const slug = `e2e-private-${Date.now()}`;
+		const name = `Private Org ${Date.now()}`;
+		// Created by the seeded admin — the seeded member is not in it.
+		const created = await page.request.post("/api/auth/organization/create", {
+			data: { name, slug },
+			headers: { origin },
+		});
+		expect(created.ok()).toBe(true);
+		const { id: orgId } = (await created.json()) as { id: string };
+
+		const memberContext = await browser.newContext({
+			storageState: { cookies: [], origins: [] },
+		});
+		try {
+			const member = await memberContext.newPage();
+			await member.goto("/auth/sign-in");
+			await member.getByLabel("Email").fill("member@fuutu.local");
+			await member.getByLabel("Password").fill("DevPassword!2345");
+			await member
+				.getByRole("button", { name: "Sign in", exact: true })
+				.click();
+			await member.waitForURL(/\/dashboard|\/onboarding/, {
+				timeout: 30_000,
+			});
+
+			for (const path of ["dashboard", "settings/billing"]) {
+				const response = await member.goto(`/organizations/${slug}/${path}`);
+				expect(response?.status(), path).toBe(404);
+				await expect(member.locator("[data-sidebar='sidebar']")).toHaveCount(0);
+				await expect(member.getByText(/something went wrong/i)).toHaveCount(0);
+				expect(await member.content()).not.toContain(name);
+			}
+		} finally {
+			await memberContext.close();
+			await page.request.post("/api/auth/organization/delete", {
+				data: { organizationId: orgId },
+				headers: { origin },
+			});
+		}
 	});
 });
 

@@ -1,10 +1,12 @@
+import { PrivacySettingsButton } from "@fuutu/analytics/consent";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-select";
 import { setRequestLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
 import { appDocs } from "@/app-docs";
 import { LanguageSelect } from "@/components/language-select";
-import { baseOptions } from "@/lib/layout.shared";
+import { LegalLinks } from "@/components/legal-links";
+import { baseOptions, PRIVACY_LINK_CLASS } from "@/lib/layout.shared";
 import { source } from "@/lib/source";
 
 interface DocsLayoutProps extends PropsWithChildren {
@@ -14,19 +16,25 @@ interface DocsLayoutProps extends PropsWithChildren {
 export default async function Layout({ children, params }: DocsLayoutProps) {
 	const { locale } = await params;
 	setRequestLocale(locale);
-	const { SidebarBanner } = appDocs;
+	const { SidebarBanner, layoutSlots } = appDocs;
 
 	return (
 		<DocsLayout
 			tree={source.getPageTree(locale)}
 			{...baseOptions()}
-			// `sidebar` only with an app banner, so it never replaces sidebar
-			// options for the default case.
-			{...(SidebarBanner
-				? { sidebar: { banner: <SidebarBanner locale={locale} /> } }
-				: {})}
+			sidebar={{
+				...(SidebarBanner ? { banner: <SidebarBanner locale={locale} /> } : {}),
+				// Reopens the consent banner; renders nothing while it is off.
+				footer: (
+					<div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 self-start">
+						<LegalLinks locale={locale} className={PRIVACY_LINK_CLASS} />
+						<PrivacySettingsButton className={PRIVACY_LINK_CLASS} />
+					</div>
+				),
+			}}
 			slots={{
 				languageSelect: { root: LanguageSelect, text: LanguageSelectText },
+				...layoutSlots,
 			}}
 		>
 			{children}

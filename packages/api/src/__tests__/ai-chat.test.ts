@@ -10,6 +10,14 @@ vi.mock("@fuutu/ai", () => ({
 
 vi.mock("@fuutu/db", () => ({
 	db: {},
+	getCreditBalance: vi.fn(async () => null),
+	getActiveCreditPackages: vi.fn(async () => []),
+	consumeCreditsTx: vi.fn(async () => ({
+		ok: true,
+		consumed: 1,
+		remaining: 0,
+		source: "overage",
+	})),
 }));
 
 const { resolveAIProvider } = await import("@fuutu/ai");
@@ -59,12 +67,11 @@ describe("ai.chat", () => {
 		);
 
 		expect(resolveAIProvider).toHaveBeenCalled();
-		expect(result).toBeInstanceOf(Response);
-		// Provider streams carry raw UTF-8 text — the client renders the
-		// bytes directly and rejects anything but text/plain.
-		expect((result as Response).headers.get("content-type")).toBe(
-			"text/plain; charset=utf-8",
-		);
+		// Provider text chunks as an async iterator — oRPC sends it as an
+		// event stream (a returned Response would go out as `{}`).
+		const chunks: string[] = [];
+		for await (const chunk of result) chunks.push(chunk);
+		expect(chunks).toEqual(["Hello"]);
 	});
 
 	it("passes multiple messages to the streaming provider", async () => {

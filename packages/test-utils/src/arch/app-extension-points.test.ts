@@ -47,6 +47,30 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "apps/saas/src/app-main-nav.ts",
+		exports: ["appMainNavItems"],
+		wiredInto: [
+			{
+				file: "apps/saas/src/modules/app/components/nav-config.ts",
+				import: /\{ appMainNavItems \} from "\.\.\/\.\.\/\.\.\/app-main-nav"/,
+			},
+		],
+	},
+	{
+		file: "apps/saas/src/app-admin.tsx",
+		exports: ["appAdminUserSections", "appAdminOrganizationSections"],
+		wiredInto: [
+			{
+				file: "apps/saas/src/modules/app/admin/user-detail/admin-user-detail.tsx",
+				import: /\{ appAdminUserSections \} from "@\/app-admin"/,
+			},
+			{
+				file: "apps/saas/src/modules/app/admin/org-detail/admin-organization-detail.tsx",
+				import: /\{ appAdminOrganizationSections \} from "@\/app-admin"/,
+			},
+		],
+	},
+	{
 		file: "apps/saas/src/app-onboarding.tsx",
 		exports: ["appOnboardingSteps"],
 		wiredInto: [
@@ -96,6 +120,16 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "packages/content/src/app-content.ts",
+		exports: ["appContent"],
+		wiredInto: [
+			{
+				file: "packages/content/src/index.tsx",
+				import: /\{ appContent \} from "\.\/app-content"/,
+			},
+		],
+	},
+	{
 		file: "packages/cron/src/app-jobs.ts",
 		exports: ["appJobs"],
 		wiredInto: [
@@ -106,17 +140,106 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "packages/mail/src/app-mail.ts",
+		exports: ["appMail"],
+		wiredInto: [
+			{
+				file: "packages/mail/src/templates/layout.ts",
+				import: /\{ appMail \} from "\.\.\/app-mail"/,
+			},
+		],
+	},
+	{
 		file: "apps/docs/src/app-docs.tsx",
 		exports: ["appDocs"],
 		wiredInto: [
 			"apps/docs/src/mdx-components.tsx",
 			"apps/docs/src/app/[locale]/docs/layout.tsx",
 			"apps/docs/src/app/[locale]/docs/[[...slug]]/page.tsx",
+			"apps/docs/src/app/llms.mdx/[locale]/docs/[[...slug]]/route.ts",
+			"apps/docs/src/app/llms-full.txt/route.ts",
+			"apps/docs/src/app/og/docs/[...slug]/route.tsx",
+			"apps/docs/src/app/sitemap.ts",
+			"apps/docs/src/app/robots.ts",
 		].map((file) => ({
 			file,
 			import: /\{ appDocs \} from "(\.\/|@\/)app-docs"/,
 		})),
 	},
+	{
+		file: "apps/docs/app-docs-source.ts",
+		exports: ["appDocsSource"],
+		wiredInto: [
+			{
+				file: "apps/docs/source.config.ts",
+				import: /\{ appDocsSource \} from "\.\/app-docs-source"/,
+			},
+			{
+				file: "apps/docs/src/lib/app-docs-hooks.ts",
+				import: /\{ appDocsSource \} from "\.\.\/\.\.\/app-docs-source"/,
+			},
+		],
+	},
+	{
+		file: "apps/marketing/src/app-marketing.tsx",
+		exports: ["appMarketing"],
+		wiredInto: [
+			"apps/marketing/src/app/(marketing)/[locale]/page.tsx",
+			"apps/marketing/src/app/(marketing)/[locale]/layout.tsx",
+			"apps/marketing/src/app/(marketing)/[locale]/pricing/page.tsx",
+			"apps/marketing/src/modules/marketing/pricing/index.ts",
+			"apps/marketing/src/app/sitemap.ts",
+			"apps/marketing/src/app/robots.ts",
+		].map((file) => ({
+			file,
+			import: /\{ appMarketing \} from "@\/app-marketing"/,
+		})),
+	},
+	{
+		file: "apps/marketing/src/app-site-links.ts",
+		exports: [
+			"appNavItems",
+			"appNavDropdownItems",
+			"appFooterColumns",
+			"appHeaderBrand",
+		],
+		wiredInto: [
+			{
+				file: "apps/marketing/src/lib/site-links.ts",
+				import: /from "\.\.\/app-site-links"/,
+			},
+		],
+	},
+	{
+		file: "apps/marketing/src/app-urls.ts",
+		exports: ["appUrls"],
+		wiredInto: [
+			{
+				file: "apps/marketing/src/lib/urls.ts",
+				import: /\{ appUrls \} from "\.\.\/app-urls"/,
+			},
+		],
+	},
+	{
+		file: "packages/db/prisma/app-seed.ts",
+		exports: ["appSeed", "appSeedConfig"],
+		wiredInto: [
+			{
+				file: "packages/db/prisma/seed.ts",
+				import: /\{ appSeed, appSeedConfig \} from "\.\/app-seed"/,
+			},
+		],
+	},
+	...["apps/saas", "apps/marketing", "apps/docs"].map((app) => ({
+		file: `${app}/tests/app-excluded.ts`,
+		exports: ["appExcludedTests"],
+		wiredInto: [
+			{
+				file: `${app}/playwright.config.ts`,
+				import: /\{ appExcludedTests \} from "\.\/tests\/app-excluded"/,
+			},
+		],
+	})),
 	{
 		file: "apps/docs/app-redirects.ts",
 		exports: ["appRedirects"],

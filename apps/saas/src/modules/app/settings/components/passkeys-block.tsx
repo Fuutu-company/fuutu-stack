@@ -5,6 +5,7 @@ import { Button } from "@fuutu/ui";
 import { KeyRound, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 
 type Passkey = {
 	id: string;
@@ -39,7 +40,9 @@ export function PasskeysBlock() {
 		setError(null);
 		try {
 			const res = await authClient.passkey.addPasskey();
-			if (res?.error) setError(t("settings.passkeys.failed"));
+			if (res?.error) {
+				setError(planGateMessage(res.error, t, "settings.passkeys.failed"));
+			}
 			await load();
 		} catch {
 			setError(t("settings.passkeys.failed"));
@@ -95,8 +98,8 @@ export function PasskeysBlock() {
 							className="flex items-center justify-between gap-4 p-4"
 						>
 							<div className="flex items-center gap-3">
-								<div className="flex size-9 items-center justify-center rounded-md bg-muted">
-									<KeyRound className="size-4 text-muted-foreground" />
+								<div className="flex shrink-0 items-center justify-center">
+									<KeyRound className="size-5 text-muted-foreground" />
 								</div>
 								<div>
 									<p className="font-medium text-sm">

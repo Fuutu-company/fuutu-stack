@@ -2,6 +2,7 @@ import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import Stripe from "stripe";
 import type {
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PortalInput,
@@ -9,9 +10,16 @@ import type {
 	ProviderInvoiceData,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
+	SeatProration,
 	SetSeatsInput,
 } from "../types";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	failureKindForStatus,
+	ProviderRequestError,
+	resolveCancelMode,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const log = createLogger({ scope: "payments:stripe" });
 
@@ -51,6 +59,59 @@ function requireAbsoluteUrl(
 	return url;
 }
 
+/** Stripe's message for a change a canceled subscription refuses. */
+const CANCELED_SUBSCRIPTION = /\bcancel(l)?ed subscription\b/i;
+
+/**
+ * A Stripe SDK error as a typed payments error: a rejected key (401/403)
+ * is our configuration, a connection / API / rate-limit error
+ * `unavailable`, `resource_missing` `not_found`, a change a canceled
+ * subscription refuses `invalid_state`, anything else by its status.
+ * Stripe's message goes to the log only. Errors not from Stripe pass
+ * through unchanged.
+ */
+function stripeFailure(err: unknown, failure: string): unknown {
+	if (!(err instanceof Stripe.errors.StripeError)) return err;
+	const { statusCode: status, code, message } = err;
+	log.error(failure, { status, code, type: err.type, err: message });
+	if (
+		err instanceof Stripe.errors.StripeAuthenticationError ||
+		err instanceof Stripe.errors.StripePermissionError
+	) {
+		return new WebhookConfigError(
+			`[payments:stripe] ${failure}: Stripe rejected the API key (HTTP ${status}). Check STRIPE_SECRET_KEY.`,
+		);
+	}
+	const kind =
+		err instanceof Stripe.errors.StripeConnectionError ||
+		err instanceof Stripe.errors.StripeAPIError ||
+		err instanceof Stripe.errors.StripeRateLimitError
+			? "unavailable"
+			: code === "resource_missing"
+				? "not_found"
+				: CANCELED_SUBSCRIPTION.test(message)
+					? "invalid_state"
+					: failureKindForStatus(status);
+	return new ProviderRequestError(failure, kind, {
+		status,
+		detail: message,
+		cause: err,
+	});
+}
+
+/** Run one Stripe API call; its failure becomes a typed payments error. */
+async function stripeCall<T>(
+	failure: string,
+	run: (client: Stripe) => Promise<T>,
+): Promise<T> {
+	const client = getClient();
+	try {
+		return await run(client);
+	} catch (err) {
+		throw stripeFailure(err, failure);
+	}
+}
+
 function mapStripeStatusToPurchaseStatus(
 	status: string,
 ): PurchaseStatusLiteral {
@@ -66,9 +127,31 @@ function mapStripeStatusToPurchaseStatus(
 			return "CANCELED";
 		case "incomplete":
 			return "INCOMPLETE";
+		case "incomplete_expired":
+			return "EXPIRED";
 		default:
 			return "INCOMPLETE";
 	}
+}
+
+/**
+ * Status of a live subscription, with a scheduled cancel
+ * (`cancel_at_period_end`, or a `cancel_at` date as the customer portal
+ * sets it) reported as SCHEDULED_CANCEL instead of ACTIVE/TRIALING.
+ */
+function stripeSubscriptionStatus(
+	subscription: Pick<
+		Stripe.Subscription,
+		"status" | "cancel_at_period_end" | "cancel_at"
+	>,
+): PurchaseStatusLiteral {
+	const status = mapStripeStatusToPurchaseStatus(subscription.status);
+	const scheduled =
+		subscription.cancel_at_period_end === true ||
+		subscription.cancel_at != null;
+	return scheduled && (status === "ACTIVE" || status === "TRIALING")
+		? "SCHEDULED_CANCEL"
+		: status;
 }
 
 /**
@@ -189,7 +272,8 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 					customerId: subscription.customer as string,
 					productId: subscription.items.data[0]?.price.id,
 					units: toUnits(subscription.items.data[0]?.quantity),
-					status: mapStripeStatusToPurchaseStatus(subscription.status),
+					// A cancel scheduled for the period end must not read as ACTIVE.
+					status: stripeSubscriptionStatus(subscription),
 					currentPeriodEnd: subscription.items.data[0]?.current_period_end
 						? new Date(subscription.items.data[0].current_period_end * 1000)
 						: undefined,
@@ -229,9 +313,7 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 						subscriptionId,
 						customerId: invoice.customer as string,
 						status: "ACTIVE",
-						currentPeriodEnd: new Date(
-							(invoice.period_end ?? invoice.period_start) * 1000,
-						),
+						currentPeriodEnd: new Date(invoicePeriodEnd(invoice) * 1000),
 						invoice: toProviderInvoice(invoice, invoice.amount_paid),
 					},
 				];
@@ -268,12 +350,32 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 	}
 }
 
+/**
+ * End of the period a paid invoice starts: the latest line period (the
+ * subscription line covers the new period). `invoice.period_end` is the
+ * end of the period just billed — the fallback when the payload has no
+ * lines.
+ */
+function invoicePeriodEnd(invoice: Stripe.Invoice): number {
+	const lineEnds = (invoice.lines?.data ?? [])
+		.map((line) => line.period?.end)
+		.filter((end): end is number => typeof end === "number");
+	return Math.max(invoice.period_end ?? invoice.period_start, ...lineEnds);
+}
+
+const STRIPE_PRORATION = {
+	"charge-immediately": "always_invoice",
+	none: "none",
+} as const satisfies Record<
+	SeatProration,
+	Stripe.SubscriptionUpdateParams.ProrationBehavior
+>;
+
 export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	id: "stripe",
 	ownsSeatSync: false,
 
 	async createCheckoutLink(input: CheckoutInput) {
-		const client = getClient();
 		const mode: "subscription" | "payment" =
 			input.metadata?.mode === "payment" ? "payment" : "subscription";
 		// Stripe metadata values must be strings; `mode` is a control key
@@ -311,7 +413,9 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 				...(input.trialDays ? { trial_period_days: input.trialDays } : {}),
 			};
 		}
-		const session = await client.checkout.sessions.create(sessionParams);
+		const session = await stripeCall("Failed to create checkout link", (c) =>
+			c.checkout.sessions.create(sessionParams),
+		);
 		if (!session.url) {
 			throw new Error("Stripe checkout session created without URL");
 		}
@@ -319,34 +423,69 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {
-		const client = getClient();
-		const session = await client.billingPortal.sessions.create({
-			customer: input.customerId,
-			return_url: requireAbsoluteUrl(
-				input.returnUrl ?? env.NEXT_PUBLIC_SAAS_URL,
-				"portal return URL (input.returnUrl or NEXT_PUBLIC_SAAS_URL)",
-			),
-		});
+		const returnUrl = requireAbsoluteUrl(
+			input.returnUrl ?? env.NEXT_PUBLIC_SAAS_URL,
+			"portal return URL (input.returnUrl or NEXT_PUBLIC_SAAS_URL)",
+		);
+		const session = await stripeCall(
+			"Failed to create customer portal link",
+			(c) =>
+				c.billingPortal.sessions.create({
+					customer: input.customerId,
+					return_url: returnUrl,
+				}),
+		);
 		return { url: session.url };
 	},
 
 	async createCustomer(input: CustomerInput) {
-		const client = getClient();
-		const customer = await client.customers.create({
-			email: input.email,
-			name: input.name,
-			metadata: {
-				...input.metadata,
-				fuutu_user_id: input.userId,
-			},
-		});
+		const customer = await stripeCall("Failed to create customer", (c) =>
+			c.customers.create({
+				email: input.email,
+				name: input.name,
+				metadata: {
+					...input.metadata,
+					fuutu_user_id: input.userId,
+				},
+			}),
+		);
 		return { customerId: customer.id };
 	},
 
-	async cancelSubscription(subscriptionId: string) {
-		const client = getClient();
-		await client.subscriptions.cancel(subscriptionId);
+	async cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	) {
+		if (resolveCancelMode(options) === "period_end") {
+			await stripeCall("Failed to cancel subscription", (c) =>
+				c.subscriptions.update(subscriptionId, {
+					cancel_at_period_end: true,
+				}),
+			);
+			log.info("scheduled subscription cancel", { subscriptionId });
+			return;
+		}
+		await stripeCall("Failed to cancel subscription", (c) =>
+			c.subscriptions.cancel(subscriptionId),
+		);
 		log.info("cancelled subscription", { subscriptionId });
+	},
+
+	async resumeSubscription(subscriptionId: string) {
+		await stripeCall("Failed to resume subscription", (c) =>
+			c.subscriptions.update(subscriptionId, {
+				cancel_at_period_end: false,
+			}),
+		);
+		log.info("resumed subscription", { subscriptionId });
+	},
+
+	async getSubscriptionStatus(subscriptionId: string) {
+		const subscription = await stripeCall(
+			"Failed to get subscription status",
+			(c) => c.subscriptions.retrieve(subscriptionId),
+		);
+		return stripeSubscriptionStatus(subscription);
 	},
 
 	async parseWebhook(request: Request): Promise<ProviderEvent[]> {
@@ -382,18 +521,42 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		}
 	},
 
-	async setSubscriptionSeats({ subscriptionId, seats }: SetSeatsInput) {
-		const client = getClient();
-		const subscription = await client.subscriptions.retrieve(subscriptionId);
+	async getSubscriptionSeats(subscriptionId: string) {
+		const subscription = await stripeCall("Failed to get subscription", (c) =>
+			c.subscriptions.retrieve(subscriptionId),
+		);
+		// Licensed prices always carry a quantity (default 1); a metered
+		// price has none and cannot count seats.
+		const quantity = subscription.items.data[0]?.quantity;
+		if (quantity == null || quantity < 1) {
+			throw new Error(`Subscription ${subscriptionId} has no seat quantity`);
+		}
+		return quantity;
+	},
+
+	async setSubscriptionSeats({
+		subscriptionId,
+		seats,
+		proration,
+	}: SetSeatsInput) {
+		const subscription = await stripeCall("Failed to get subscription", (c) =>
+			c.subscriptions.retrieve(subscriptionId),
+		);
 		const firstItem = subscription.items.data[0];
 		if (!firstItem) {
 			throw new Error(
 				`Subscription ${subscriptionId} has no items to update seats`,
 			);
 		}
-		await client.subscriptions.update(subscriptionId, {
-			items: [{ id: firstItem.id, quantity: seats }],
-		});
+		await stripeCall("Failed to update subscription seats", (c) =>
+			c.subscriptions.update(subscriptionId, {
+				items: [{ id: firstItem.id, quantity: seats }],
+				// Omitted: the account default (create_prorations).
+				...(proration && {
+					proration_behavior: STRIPE_PRORATION[proration],
+				}),
+			}),
+		);
 		log.info("updated subscription seats", { subscriptionId, seats });
 	},
 };

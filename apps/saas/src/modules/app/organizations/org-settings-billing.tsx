@@ -2,12 +2,16 @@
 
 import { createLogger } from "@fuutu/logs";
 import {
+	BILLING_CURRENCY,
 	type BillingInterval,
 	PLANS,
+	type Plan,
 	type PlanId,
 } from "@fuutu/payments/config";
 import {
 	buildPricingTiers,
+	getFreePlanId,
+	getSeatPlan,
 	type PlanTranslations,
 } from "@fuutu/payments/plans";
 import {
@@ -24,7 +28,9 @@ import { CreditCard, ExternalLink } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { isPaymentsUnavailable } from "@/lib/api-error";
+import { paymentsErrorKey } from "@/lib/api-error";
+import { useImpersonating } from "@/lib/use-impersonating";
+import { ImpersonationNotice } from "@/modules/app/components/impersonation-notice";
 import { orpc } from "@/utils/orpc";
 import {
 	useFullOrganization,
@@ -43,6 +49,9 @@ type ActiveSubscription = {
 	id: string;
 	status: string;
 	productId: string;
+	/** Resolved on the server — covers no-trial products too. */
+	planId: PlanId | null;
+	interval: BillingInterval | null;
 	currentPeriodEnd?: Date;
 };
 
@@ -73,9 +82,13 @@ export function OrgSettingsBilling({
 	const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [seatCount, setSeatCount] = useState(1);
+	// Checkout and portal refuse impersonation sessions (denyImpersonation).
+	const impersonating = useImpersonating();
 
-	// Check if any plan is seat-based
-	const hasSeatBasedPlan = Object.values(PLANS).some((plan) => plan.seatBased);
+	// The seat-priced plan (first `seatBased` plan) prices the selector.
+	const seatPlan = getSeatPlan()?.plan;
+	// Orgs without a matching subscription are on the free plan.
+	const freePlanId = getFreePlanId();
 
 	const loadSubscription = useCallback(async () => {
 		if (!orgId || !paymentsEnabled) {
@@ -93,6 +106,8 @@ export function OrgSettingsBilling({
 					id: sub.id,
 					status: sub.status,
 					productId: sub.productId ?? "",
+					planId: sub.planId,
+					interval: sub.interval,
 					currentPeriodEnd: sub.currentPeriodEnd ?? undefined,
 				});
 			}
@@ -113,9 +128,15 @@ export function OrgSettingsBilling({
 	// A yearly subscription carries the yearly price ID — check both so a
 	// yearly sub resolves to its plan (and the correct interval label).
 	const { activePlanId, activeInterval } = ((): {
-		activePlanId: PlanId;
+		activePlanId: PlanId | undefined;
 		activeInterval: BillingInterval;
 	} => {
+		if (activeSub?.planId) {
+			return {
+				activePlanId: activeSub.planId,
+				activeInterval: activeSub.interval ?? "month",
+			};
+		}
 		if (activeSub?.productId) {
 			for (const id of Object.keys(PLANS) as PlanId[]) {
 				const ids = priceIds[id];
@@ -127,7 +148,7 @@ export function OrgSettingsBilling({
 				}
 			}
 		}
-		return { activePlanId: "free", activeInterval: "month" };
+		return { activePlanId: freePlanId, activeInterval: "month" };
 	})();
 
 	async function checkout(planId: PlanId, interval?: BillingInterval) {
@@ -135,7 +156,7 @@ export function OrgSettingsBilling({
 		setCheckoutLoading(planId);
 		setError(null);
 		try {
-			const plan = PLANS[planId];
+			const plan: Plan = PLANS[planId];
 			const seats = plan.seatBased ? seatCount : undefined;
 			const result = await orpc.payments.checkout.create.call({
 				planId,
@@ -150,11 +171,7 @@ export function OrgSettingsBilling({
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
-			setError(
-				isPaymentsUnavailable(e)
-					? tp("choosePlan.unavailable")
-					: tp("choosePlan.error"),
-			);
+			setError(tp(paymentsErrorKey(e) ?? "choosePlan.error"));
 		} finally {
 			setCheckoutLoading(null);
 		}
@@ -162,6 +179,7 @@ export function OrgSettingsBilling({
 
 	async function openPortal() {
 		if (!org) return;
+		setError(null);
 		try {
 			const result = await orpc.payments.portal.open.call({
 				organizationId: org.id,
@@ -172,6 +190,7 @@ export function OrgSettingsBilling({
 			}
 		} catch (err) {
 			log.warn("portal failed", { err });
+			setError(tp(paymentsErrorKey(err) ?? "errors.portal"));
 		}
 	}
 
@@ -206,8 +225,9 @@ export function OrgSettingsBilling({
 		t: resolve,
 		onCtaClick: checkout,
 		loadingId: checkoutLoading,
-		allDisabled: checkoutLoading !== null,
-		seatCountFor: (id) => (PLANS[id].seatBased ? seatCount : undefined),
+		allDisabled: checkoutLoading !== null || impersonating,
+		seatCountFor: (id) =>
+			(PLANS[id] as Plan).seatBased ? seatCount : undefined,
 	});
 
 	// Mark current plan as disabled (can't "upgrade" to current plan)
@@ -215,20 +235,19 @@ export function OrgSettingsBilling({
 		...tier,
 		disabled:
 			tier.disabled ||
-			(activePlanId === tier.id && tier.id !== "free") ||
-			(tier.id === "free" && (!activeSub || activePlanId === "free")),
+			(activePlanId === tier.id && tier.id !== freePlanId) ||
+			(tier.id === freePlanId && (!activeSub || activePlanId === freePlanId)),
 		onCtaClick: activePlanId === tier.id ? undefined : tier.onCtaClick,
 	}));
 
-	// Get the Pro plan for seat selector (it's the seat-based plan)
-	const proPlan = PLANS.pro;
+	const seatCurrency = seatPlan?.currency ?? BILLING_CURRENCY;
 	const currencySymbol =
 		new Intl.NumberFormat(locale, {
 			style: "currency",
-			currency: proPlan.currency,
+			currency: seatCurrency,
 		})
 			.formatToParts(0)
-			.find((part) => part.type === "currency")?.value ?? proPlan.currency;
+			.find((part) => part.type === "currency")?.value ?? seatCurrency;
 
 	return (
 		<div className="space-y-6">
@@ -248,7 +267,7 @@ export function OrgSettingsBilling({
 							<div className="min-w-0">
 								<p className="font-medium text-sm">{org.name}</p>
 								<p className="text-muted-foreground text-xs">
-									{activeSub
+									{activeSub && activePlanId
 										? tp("planInterval", {
 												plan: tp(`plans.${activePlanId}.name`),
 												interval: tp(
@@ -266,7 +285,11 @@ export function OrgSettingsBilling({
 								{t("organizations.settings.billingCurrentPlan")}
 							</Badge>
 						) : (
-							<Badge variant="outline">{tp("plans.free.name")}</Badge>
+							freePlanId && (
+								<Badge variant="outline">
+									{tp(`plans.${freePlanId}.name`)}
+								</Badge>
+							)
 						)}
 					</div>
 
@@ -280,7 +303,12 @@ export function OrgSettingsBilling({
 									{t("organizations.settings.billingPortalHint")}
 								</p>
 							</div>
-							<Button variant="outline" size="sm" onClick={openPortal}>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={openPortal}
+								disabled={impersonating}
+							>
 								<ExternalLink className="size-4" />
 								{t("organizations.settings.billingManagePortal")}
 							</Button>
@@ -299,21 +327,23 @@ export function OrgSettingsBilling({
 				</p>
 			</div>
 
+			{impersonating && <ImpersonationNotice />}
+
 			{error && (
 				<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 					{error}
 				</div>
 			)}
 
-			{hasSeatBasedPlan && proPlan && (
+			{seatPlan && (
 				<SeatSelector
 					seatCount={seatCount}
 					onChange={setSeatCount}
-					pricePerSeat={proPlan.amount}
-					currency={proPlan.currency}
+					pricePerSeat={seatPlan.amount}
+					currency={seatPlan.currency}
 					currencySymbol={currencySymbol}
 					locale={locale}
-					interval={proPlan.interval}
+					interval={seatPlan.interval}
 					translations={{
 						title: tp("seatSelector.title"),
 						seat: tp("seatSelector.seat"),

@@ -31,14 +31,46 @@ const isEnvKey = (key: string): key is keyof typeof env => key in env;
  * The env var names are declared per plan in `PLANS[].priceIdEnvVars`.
  */
 export function getPlanIdForProductId(productId: string): PlanId | undefined {
+	return getPlanForProductId(productId)?.planId;
+}
+
+/**
+ * Plan and billing interval of a provider-side product/price ID — normal
+ * and no-trial products (`noTrialPriceIdEnvVars`) alike. Billing UIs get
+ * this from the server instead of matching price IDs on the client.
+ */
+export function getPlanForProductId(
+	productId: string,
+): { planId: PlanId; interval: "month" | "year" } | undefined {
 	for (const planId of PLAN_IDS) {
-		for (const key of Object.values(plans[planId].priceIdEnvVars ?? {})) {
-			if (isEnvKey(key) && env[key] === productId) {
-				return planId;
+		const { priceIdEnvVars, noTrialPriceIdEnvVars } = plans[planId];
+		for (const vars of [priceIdEnvVars, noTrialPriceIdEnvVars]) {
+			for (const interval of ["month", "year"] as const) {
+				const key = vars?.[interval];
+				if (key && isEnvKey(key) && env[key] === productId) {
+					return { planId, interval };
+				}
 			}
 		}
 	}
 	return undefined;
+}
+
+function envValue(key: string | undefined): string | undefined {
+	if (!key || !isEnvKey(key)) return undefined;
+	const value = env[key];
+	return typeof value === "string" && value ? value : undefined;
+}
+
+/**
+ * The plan's product WITHOUT a trial for `interval`
+ * (`PLANS[].noTrialPriceIdEnvVars`), `undefined` when none is configured.
+ */
+export function getPlanNoTrialPriceId(
+	planId: PlanId,
+	interval: "month" | "year",
+): string | undefined {
+	return envValue(plans[planId].noTrialPriceIdEnvVars?.[interval]);
 }
 
 /**
@@ -46,12 +78,19 @@ export function getPlanIdForProductId(productId: string): PlanId | undefined {
  * The env var names are declared per plan in `PLANS[].priceIdEnvVars`
  * (same pattern as `CREDIT_TOPUPS[].priceIdEnvVar`). Returns undefined when
  * the plan has no mapping for the interval or the env var is unset —
- * callers fail closed.
+ * callers fail closed. `{ trial: false }` prefers the plan's no-trial
+ * product (`getPlanNoTrialPriceId`) and falls back to the normal one.
  */
 export function getPlanPriceId(
 	planId: PlanId,
 	interval: "month" | "year",
+	opts?: { trial?: boolean },
 ): string | undefined {
+	// No trial: the no-trial product when one is configured.
+	if (opts?.trial === false) {
+		const noTrial = getPlanNoTrialPriceId(planId, interval);
+		if (noTrial) return noTrial;
+	}
 	const key = plans[planId].priceIdEnvVars?.[interval];
 	if (!key || !isEnvKey(key)) return undefined;
 	const value = env[key];
@@ -78,14 +117,16 @@ export function getPlanPriceIds(): Partial<Record<PlanId, PlanPriceIds>> {
 
 /**
  * Provider-side price/product IDs of every `billingType: "one_time"` plan
- * (all intervals, unset env vars skipped). An active one-time purchase of
- * one of these grants its plan for life — see `getActivePlanId`.
+ * (all intervals, unset env vars skipped; add-ons excluded). An active
+ * one-time purchase of one of these grants its plan for life — see
+ * `getActivePlanId`.
  */
 export function getOneTimePlanPriceIds(): string[] {
 	const ids: string[] = [];
 	for (const planId of PLAN_IDS) {
 		const plan = plans[planId];
-		if (plan.billingType !== "one_time") continue;
+		// An add-on (`addonOf`) never stands for a plan — not even for life.
+		if (plan.billingType !== "one_time" || plan.addonOf) continue;
 		for (const key of Object.values(plan.priceIdEnvVars ?? {})) {
 			if (!isEnvKey(key)) continue;
 			const value = env[key];

@@ -7,7 +7,8 @@
  *
  * Key rules (extracted from real-world Creem/Stripe/Polar webhook handling):
  *   - Protected statuses: a renewal event must not undo a scheduled_cancel
- *   - Old subscriptions are canceled when a new one activates for the same owner
+ *   - Old subscriptions are canceled when a new one activates for the same
+ *     owner — unless the policy keeps them (add-ons stack, see billing-policy)
  *   - checkout.completed for one-time purchases creates a Purchase directly
  *   - checkout.completed for subscriptions is handled by subscription.activated
  *   - subscription.canceled respects currentPeriodEnd (scheduled_cancel if future)
@@ -23,8 +24,6 @@ import {
 import {
 	createPurchase,
 	getActiveOneTimePlanPurchase,
-	getActiveSubscriptionForOrganization,
-	getActiveSubscriptionForUser,
 	getCreditBalance,
 	getPurchaseByCheckoutEventId,
 	getPurchaseByProviderSubscriptionId,
@@ -40,6 +39,7 @@ import {
 import { createLogger } from "@fuutu/logs";
 import { dispatchEvent, type WebhookEventType } from "@fuutu/webhooks";
 import { z } from "zod";
+import { getPlanSubscription, shouldSupersede } from "./billing-policy";
 import { CREDIT_TOPUPS, CREDITS, type PlanId } from "./config";
 import {
 	getCreditTopupPriceId,
@@ -48,11 +48,14 @@ import {
 } from "./config.server";
 import { notifyPurchaseChanged } from "./extensions";
 import { resolvePaymentProviderById } from "./resolve";
-import type {
-	ProviderEvent,
-	ProviderEventType,
-	ProviderInvoiceData,
-	PurchaseStatusLiteral,
+import {
+	type PaymentProvider,
+	PaymentsDisabledError,
+	type ProviderEvent,
+	type ProviderEventType,
+	type ProviderInvoiceData,
+	type PurchaseStatusLiteral,
+	WebhookConfigError,
 } from "./types";
 
 const log = createLogger({ scope: "payments:sync" });
@@ -66,7 +69,8 @@ const DEFAULT_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
  *   - Terminal (CANCELED, EXPIRED): a real resubscribe creates a new
  *     subscriptionId — a late activation must never resurrect a dead sub.
  *   - User-intent (SCHEDULED_CANCEL): a renewal must not undo a scheduled
- *     cancel; un-cancel arrives via subscription.updated on all providers.
+ *     cancel; un-cancel arrives via subscription.updated, or as a
+ *     same-period ACTIVE activation (Creem resume, see isResumeTransition).
  *   - Recoverable (PAST_DUE, PAUSED): payment recovery / resume arrives as
  *     subscription.activated or subscription.renewed — blocking it would
  *     keep a paying customer gated out forever (see RECOVERABLE_STATUSES).
@@ -222,7 +226,7 @@ async function processSingleEvent(
 			providerId,
 			existing.id,
 			event,
-			existing.status,
+			existing,
 			resolvedUserId,
 			resolvedOrganizationId,
 			userIdToSet,
@@ -419,7 +423,12 @@ async function createNewSubscriptionPurchase(
 		log.error("subscription activation without subscriptionId, skipping");
 		return;
 	}
-	await cancelOldSubscriptionsForOwner(subId, userId, organizationId);
+	await cancelOldSubscriptionsForOwner(
+		{ ...event, productId: event.productId },
+		subId,
+		userId,
+		organizationId,
+	);
 
 	const status =
 		event.status ?? DEFAULT_STATUS_FOR_TYPE[event.type] ?? "ACTIVE";
@@ -519,28 +528,85 @@ async function updateExistingPurchase(
 	providerId: string,
 	purchaseId: string,
 	event: ProviderEvent,
-	currentStatus: PurchaseStatusLiteral | string | null,
+	stored: {
+		status: PurchaseStatusLiteral | string | null;
+		currentPeriodEnd?: Date | null;
+		productId?: string | null;
+	},
 	userId: string | null,
 	organizationId: string | null,
 	userIdToSet: string | null = null,
 ): Promise<void> {
 	// Protected statuses: don't let a renewal event undo a scheduled cancel
-	const currentStatusLit = currentStatus as PurchaseStatusLiteral;
+	const currentStatusLit = stored.status as PurchaseStatusLiteral;
 	const isProtected = PROTECTED_STATUSES.includes(currentStatusLit);
 
-	// For canceled events, respect currentPeriodEnd
+	// A canceled subscription keeps the rest of its period only when the
+	// stored row grants access for it (ACTIVE, or SCHEDULED_CANCEL inside
+	// its period): a trial has no paid period, an unpaid PAST_DUE/PAUSED
+	// one must not get it for free (Creem's canceled payload still carries
+	// a future period end). A scheduled cancel leaves an unpaid row as is.
 	let resolvedStatus = event.status ?? DEFAULT_STATUS_FOR_TYPE[event.type];
-	if (event.type === "subscription.canceled" && event.currentPeriodEnd) {
-		const periodEnd = new Date(event.currentPeriodEnd);
-		if (periodEnd > new Date()) {
-			resolvedStatus = "SCHEDULED_CANCEL";
-		}
+	if (event.type === "subscription.canceled") {
+		const keepsPeriod =
+			(currentStatusLit === "ACTIVE" ||
+				(currentStatusLit === "SCHEDULED_CANCEL" &&
+					isFuture(stored.currentPeriodEnd))) &&
+			isFuture(event.currentPeriodEnd);
+		resolvedStatus = keepsPeriod ? "SCHEDULED_CANCEL" : "CANCELED";
+	} else if (
+		event.type === "subscription.scheduled_cancel" &&
+		RECOVERABLE_STATUSES.includes(currentStatusLit)
+	) {
+		resolvedStatus = undefined;
+	}
+
+	const revival = resolvedStatus
+		? await lateRevival(providerId, event, currentStatusLit, resolvedStatus)
+		: "none";
+	if (revival === "blocked") {
+		log.info("keeping status on a late event", {
+			purchaseId,
+			eventType: event.type,
+			currentStatus: currentStatusLit,
+			eventStatus: resolvedStatus,
+		});
+		resolvedStatus = undefined;
+	}
+
+	// An older period end never overwrites a newer one (Stripe invoice.paid
+	// carries the billed period, a late event an older one) — unless the
+	// event switches the plan, which may shorten the period.
+	let periodEnd = isOlderPeriodEnd(event, stored)
+		? undefined
+		: event.currentPeriodEnd;
+
+	// A late past_due describes an older state: it may not lock out a row
+	// the provider still reports granting.
+	if (
+		resolvedStatus === "PAST_DUE" &&
+		(await isLatePastDue(providerId, event, currentStatusLit, stored))
+	) {
+		log.info("keeping a granting subscription on a late past_due", {
+			purchaseId,
+			eventType: event.type,
+			currentStatus: currentStatusLit,
+		});
+		resolvedStatus = undefined;
+		periodEnd = undefined;
 	}
 
 	if (
 		isProtected &&
+		revival !== "confirmed" &&
 		isSubscriptionActivationType(event.type) &&
-		!isRecoveryTransition(event.type, currentStatusLit)
+		!isRecoveryTransition(event.type, currentStatusLit) &&
+		!(await isResumeTransition(
+			providerId,
+			event,
+			currentStatusLit,
+			stored.currentPeriodEnd,
+		))
 	) {
 		// Keep the protected status — an activation-type event does not
 		// transition terminal or user-intent states.
@@ -553,10 +619,8 @@ async function updateExistingPurchase(
 		await updatePurchase({
 			id: purchaseId,
 			...(userIdToSet && { userId: userIdToSet }),
-			...(event.currentPeriodEnd !== undefined && {
-				currentPeriodEnd: event.currentPeriodEnd,
-			}),
-			...(event.productId !== undefined && { priceId: event.productId }),
+			...(periodEnd !== undefined && { currentPeriodEnd: periodEnd }),
+			...productFields(event),
 			...(event.units !== undefined && { quantity: event.units }),
 		});
 		return;
@@ -566,10 +630,8 @@ async function updateExistingPurchase(
 		id: purchaseId,
 		...(userIdToSet && { userId: userIdToSet }),
 		...(resolvedStatus && { status: resolvedStatus }),
-		...(event.currentPeriodEnd !== undefined && {
-			currentPeriodEnd: event.currentPeriodEnd,
-		}),
-		...(event.productId !== undefined && { priceId: event.productId }),
+		...(periodEnd !== undefined && { currentPeriodEnd: periodEnd }),
+		...productFields(event),
 		...(event.customerId !== undefined && { customerId: event.customerId }),
 		...(event.units !== undefined && { quantity: event.units }),
 	});
@@ -596,89 +658,184 @@ async function updateExistingPurchase(
 	);
 }
 
+/**
+ * Cancel the owner's other active subscriptions that the new activation
+ * supersedes (`shouldSupersede`: plans replace each other, add-ons stack,
+ * `registerSupersedePolicy` overrides).
+ *
+ * Provider first, then DB. When the provider cancel fails, the DB row
+ * stays ACTIVE: the customer is still billed for it, and marking it
+ * CANCELED would hide a live charge. The provider's own cancel webhook
+ * converges the row once it is canceled there (retry, portal or by
+ * hand); plan resolution meanwhile prefers the newest subscription. A
+ * subscription whose provider this install cannot resolve (removed
+ * after a switch) can never be canceled or reported back here — it is
+ * marked CANCELED with a warning to cancel it at that provider manually.
+ */
 async function cancelOldSubscriptionsForOwner(
+	activatedEvent: ProviderEvent & { productId: string },
 	newSubscriptionId: string,
 	userId: string | null,
 	organizationId: string | null,
 ): Promise<void> {
-	const ownerPurchases = organizationId
-		? await getPurchasesByOrganizationId(organizationId)
+	const owner: PurchaseOwner | null = organizationId
+		? { organizationId }
 		: userId
-			? await getPurchasesByUserId(userId)
-			: [];
+			? { userId }
+			: null;
+	if (!owner) return;
+	const ownerPurchases =
+		"organizationId" in owner
+			? await getPurchasesByOrganizationId(owner.organizationId)
+			: await getPurchasesByUserId(owner.userId);
+	const activated = {
+		planId: getPlanIdForProductId(activatedEvent.productId) ?? null,
+		productId: activatedEvent.productId,
+		subscriptionId: newSubscriptionId,
+		owner,
+	};
 
 	for (const old of ownerPurchases) {
 		if (
-			old.type === "SUBSCRIPTION" &&
-			old.subscriptionId &&
-			old.subscriptionId !== newSubscriptionId &&
-			ACTIVE_STATUSES.includes(old.status as PurchaseStatusLiteral)
+			old.type !== "SUBSCRIPTION" ||
+			!old.subscriptionId ||
+			old.subscriptionId === newSubscriptionId ||
+			!ACTIVE_STATUSES.includes(old.status as PurchaseStatusLiteral)
 		) {
-			// Cancel through the provider that owns the old subscription —
-			// after a provider switch it is not the active one, and sending
-			// its id to the new provider cancels nothing (or the wrong sub).
-			const provider = resolvePaymentProviderById(old.provider);
-			if (!provider) {
-				log.warn(
-					"old subscription's provider is not available — cancel it manually at that provider",
-					{
-						oldSubscriptionId: old.subscriptionId,
-						subscriptionProvider: old.provider,
-						newSubscriptionId,
-					},
-				);
-			} else {
-				try {
-					// Cancel at the provider first — otherwise the customer
-					// keeps getting billed for the old subscription.
-					await provider.cancelSubscription(old.subscriptionId);
-					log.info("canceled old subscription at provider", {
-						oldSubscriptionId: old.subscriptionId,
-						newSubscriptionId,
-						provider: provider.id,
-					});
-				} catch (err) {
-					// Provider cancel failed (already canceled, network error,
-					// missing credentials for a former provider, etc.) — log but
-					// continue to mark the DB as canceled so the user sees the
-					// correct state.
-					log.error("failed to cancel old subscription at provider", {
-						oldSubscriptionId: old.subscriptionId,
-						provider: provider.id,
-						err: String(err),
-					});
-				}
-			}
+			continue;
+		}
+		const oldProductId = old.productId ?? old.priceId ?? null;
+		const supersede = await shouldSupersede(activated, {
+			planId: oldProductId
+				? (getPlanIdForProductId(oldProductId) ?? null)
+				: null,
+			productId: oldProductId,
+			subscriptionId: old.subscriptionId,
+			purchaseId: old.id,
+			status: old.status,
+		});
+		if (!supersede) {
+			log.info("kept active subscription alongside the new one", {
+				keptSubscriptionId: old.subscriptionId,
+				newSubscriptionId,
+			});
+			continue;
+		}
 
+		// Cancel through the provider that owns the old subscription —
+		// after a provider switch it is not the active one, and sending
+		// its id to the new provider cancels nothing (or the wrong sub).
+		const provider = resolvePaymentProviderById(old.provider);
+		if (!provider) {
+			log.warn(
+				"old subscription's provider is not available — cancel it manually at that provider",
+				{
+					oldSubscriptionId: old.subscriptionId,
+					subscriptionProvider: old.provider,
+					newSubscriptionId,
+				},
+			);
+		} else {
 			try {
-				await updatePurchase({
-					id: old.id,
-					status: "CANCELED",
+				// Cancel at the provider first — otherwise the customer
+				// keeps getting billed for the old subscription.
+				await provider.cancelSubscription(old.subscriptionId, {
+					mode: "immediate",
 				});
-				log.info("marked old subscription as canceled in DB", {
+				log.info("canceled old subscription at provider", {
 					oldSubscriptionId: old.subscriptionId,
 					newSubscriptionId,
+					provider: provider.id,
 				});
 			} catch (err) {
-				// CRITICAL: Provider cancel succeeded but DB update failed.
-				// This creates a double-billing risk — the provider thinks
-				// the subscription is canceled, but our DB still shows it as active.
-				// Manual intervention may be required to reconcile.
-				log.error(
-					"CRITICAL: failed to mark old subscription as canceled in DB after provider cancel succeeded",
-					{
+				// The cancel may have failed because the subscription is
+				// already gone at the provider (Creem answers non-2xx then)
+				// — that row may close. Anything else: still billed, keep
+				// the row truthful.
+				if (await isEndedAtProvider(provider, old.subscriptionId)) {
+					log.info("old subscription already ended at provider", {
 						oldSubscriptionId: old.subscriptionId,
 						newSubscriptionId,
-						provider: old.provider,
-						err: String(err),
-					},
-				);
+						provider: provider.id,
+					});
+				} else {
+					log.error(
+						"failed to cancel old subscription at provider — left ACTIVE; cancel it at the provider, its cancel webhook updates the row",
+						{
+							oldSubscriptionId: old.subscriptionId,
+							newSubscriptionId,
+							provider: provider.id,
+							err: String(err),
+						},
+					);
+					continue;
+				}
 			}
+		}
+
+		try {
+			await updatePurchase({
+				id: old.id,
+				status: "CANCELED",
+			});
+			log.info("marked old subscription as canceled in DB", {
+				oldSubscriptionId: old.subscriptionId,
+				newSubscriptionId,
+			});
+		} catch (err) {
+			// CRITICAL: Provider cancel succeeded but DB update failed.
+			// The provider's cancel webhook normally converges the row;
+			// until then the DB still shows it as active.
+			log.error(
+				"CRITICAL: failed to mark old subscription as canceled in DB after provider cancel succeeded",
+				{
+					oldSubscriptionId: old.subscriptionId,
+					newSubscriptionId,
+					provider: old.provider,
+					err: String(err),
+				},
+			);
 		}
 	}
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * True only when the provider positively reports the subscription as
+ * CANCELED/EXPIRED. No status capability, a failing lookup or any other
+ * status → false (treat as still billed).
+ */
+async function isEndedAtProvider(
+	provider: PaymentProvider,
+	subscriptionId: string,
+): Promise<boolean> {
+	if (!provider.getSubscriptionStatus) return false;
+	try {
+		const status = await provider.getSubscriptionStatus(subscriptionId);
+		return status === "CANCELED" || status === "EXPIRED";
+	} catch (err) {
+		log.warn("subscription status lookup failed", {
+			subscriptionId,
+			provider: provider.id,
+			err: String(err),
+		});
+		return false;
+	}
+}
+
+/**
+ * Product of an update event for both columns — `productId` is what plan
+ * resolution reads, so a plan switch inside one subscription (Creem
+ * product switch, Stripe price change) must move it with `priceId`.
+ */
+function productFields(
+	event: ProviderEvent,
+): { productId: string; priceId: string } | Record<string, never> {
+	return event.productId
+		? { productId: event.productId, priceId: event.productId }
+		: {};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -701,6 +858,144 @@ function isSubscriptionActivationType(type: ProviderEventType): boolean {
 	);
 }
 
+const TERMINAL_STATUSES: PurchaseStatusLiteral[] = ["CANCELED", "EXPIRED"];
+
+/**
+ * Whether an event revives a subscription, and whether it may:
+ * - a terminal row (CANCELED, EXPIRED) leaves its status only for
+ *   ACTIVE/TRIALING, and only when the provider confirms that status — a
+ *   real resubscribe creates a new subscriptionId, but Creem retries a
+ *   failed charge after `subscription.expired` and grants access again on
+ *   `subscription.paid`/`active`. A locally canceled, superseded row stays
+ *   CANCELED: the provider reports it canceled.
+ * - a PAST_DUE row goes back to ACTIVE/TRIALING on subscription.updated
+ *   only when the provider confirms that status — updates arrive late
+ *   (provider retries, hours after the failed charge); recovery otherwise
+ *   comes with a payment signal, an activation-type event (Creem
+ *   subscription.paid/active, Stripe invoice.paid, Polar
+ *   subscription.active).
+ * Fails closed: a failed or missing lookup blocks the revival.
+ */
+async function lateRevival(
+	providerId: string,
+	event: ProviderEvent,
+	stored: PurchaseStatusLiteral,
+	sent: PurchaseStatusLiteral,
+): Promise<"none" | "confirmed" | "blocked"> {
+	if (TERMINAL_STATUSES.includes(stored)) {
+		if (TERMINAL_STATUSES.includes(sent)) return "none";
+	} else if (
+		event.type !== "subscription.updated" ||
+		stored !== "PAST_DUE" ||
+		!ACTIVE_STATUSES.includes(sent)
+	) {
+		return "none";
+	}
+	if (!ACTIVE_STATUSES.includes(sent)) return "blocked";
+	try {
+		return (await providerStatus(providerId, event)) === sent
+			? "confirmed"
+			: "blocked";
+	} catch {
+		return "blocked";
+	}
+}
+
+/**
+ * True when a PAST_DUE event must not downgrade the row: it grants access
+ * (ACTIVE, TRIALING, or SCHEDULED_CANCEL inside its period) and the
+ * provider still reports it granting. Stripe can deliver invoice.paid
+ * before a delayed payment_failed, with the same or no period end —
+ * without the check a paying customer loses access for a whole period.
+ * Only a provider without a status lookup downgrades unchecked; a failed
+ * lookup throws, so the delivery fails and the provider redelivers.
+ */
+async function isLatePastDue(
+	providerId: string,
+	event: ProviderEvent,
+	stored: PurchaseStatusLiteral,
+	row: { currentPeriodEnd?: Date | null },
+): Promise<boolean> {
+	const grantsAccess =
+		ACTIVE_STATUSES.includes(stored) ||
+		(stored === "SCHEDULED_CANCEL" && isFuture(row.currentPeriodEnd));
+	if (!grantsAccess) return false;
+	const status = await providerStatus(providerId, event);
+	return status !== undefined && GRANTING_STATUSES.includes(status);
+}
+
+/** Statuses the provider reports for a subscription that still grants access. */
+const GRANTING_STATUSES: PurchaseStatusLiteral[] = [
+	"ACTIVE",
+	"TRIALING",
+	"SCHEDULED_CANCEL",
+];
+
+/** Providers already warned about a lookup they cannot make (once each). */
+const unconfiguredLookupWarned = new Set<string>();
+
+/**
+ * The provider's live status; `undefined` when the provider cannot tell:
+ * no status lookup, or a configuration error (missing API key — the
+ * adapters throw `WebhookConfigError`; payments off) that a redelivery
+ * would hit forever. Any other failed lookup (network, 5xx, timeout)
+ * throws, so the delivery fails and the provider redelivers.
+ */
+async function providerStatus(
+	providerId: string,
+	event: ProviderEvent,
+): Promise<PurchaseStatusLiteral | undefined> {
+	if (!event.subscriptionId) return undefined;
+	const provider = resolvePaymentProviderById(providerId);
+	if (!provider?.getSubscriptionStatus) return undefined;
+	try {
+		return await provider.getSubscriptionStatus(event.subscriptionId);
+	} catch (err) {
+		if (
+			err instanceof WebhookConfigError ||
+			err instanceof PaymentsDisabledError
+		) {
+			if (!unconfiguredLookupWarned.has(providerId)) {
+				unconfiguredLookupWarned.add(providerId);
+				log.warn("subscription status lookup not configured", {
+					provider: providerId,
+					err: String(err),
+				});
+			}
+			return undefined;
+		}
+		log.warn("subscription status lookup failed", {
+			subscriptionId: event.subscriptionId,
+			provider: providerId,
+			err: String(err),
+		});
+		throw err;
+	}
+}
+
+function isFuture(date: Date | null | undefined): boolean {
+	return date != null && new Date(date).getTime() > Date.now();
+}
+
+/** The event's period end is older than the stored one, within one plan. */
+function isOlderPeriodEnd(
+	event: ProviderEvent,
+	stored: { currentPeriodEnd?: Date | null; productId?: string | null },
+): boolean {
+	if (event.currentPeriodEnd === undefined || stored.currentPeriodEnd == null) {
+		return false;
+	}
+	const planSwitch =
+		event.productId !== undefined &&
+		stored.productId != null &&
+		event.productId !== stored.productId;
+	return (
+		!planSwitch &&
+		new Date(event.currentPeriodEnd).getTime() <
+			new Date(stored.currentPeriodEnd).getTime()
+	);
+}
+
 /**
  * True when an activation-type event is a real recovery signal for the
  * stored status — payment recovered from PAST_DUE or subscription resumed
@@ -715,6 +1010,48 @@ function isRecoveryTransition(
 		(type === "subscription.activated" || type === "subscription.renewed") &&
 		RECOVERABLE_STATUSES.includes(currentStatus)
 	);
+}
+
+/**
+ * True when an activation is a resumed scheduled cancel, not a renewal:
+ * Creem answers a resume with `subscription.active` (Stripe and Polar
+ * send `subscription.updated`, which is never blocked). Only an explicit
+ * ACTIVE status for the stored period qualifies — a renewal moves the
+ * period end — and the provider must confirm ACTIVE: a redelivered
+ * activation from before the cancel looks the same. Lookup errors, a
+ * provider without `getSubscriptionStatus` or any other status keep the
+ * scheduled cancel.
+ */
+async function isResumeTransition(
+	providerId: string,
+	event: ProviderEvent,
+	currentStatus: PurchaseStatusLiteral,
+	storedPeriodEnd: Date | null | undefined,
+): Promise<boolean> {
+	const candidate =
+		event.type === "subscription.activated" &&
+		currentStatus === "SCHEDULED_CANCEL" &&
+		event.status === "ACTIVE" &&
+		event.subscriptionId !== undefined &&
+		event.currentPeriodEnd !== undefined &&
+		storedPeriodEnd != null &&
+		new Date(event.currentPeriodEnd).getTime() ===
+			new Date(storedPeriodEnd).getTime();
+	if (!candidate || !event.subscriptionId) return false;
+	const provider = resolvePaymentProviderById(providerId);
+	if (!provider?.getSubscriptionStatus) return false;
+	try {
+		return (
+			(await provider.getSubscriptionStatus(event.subscriptionId)) === "ACTIVE"
+		);
+	} catch (err) {
+		log.warn("resume confirmation lookup failed — keeping SCHEDULED_CANCEL", {
+			subscriptionId: event.subscriptionId,
+			provider: providerId,
+			err: String(err),
+		});
+		return false;
+	}
 }
 
 /**
@@ -761,10 +1098,8 @@ export async function getActivePlanId(
 			: null;
 	if (!owner) return null;
 
-	const subscription =
-		"organizationId" in owner
-			? await getActiveSubscriptionForOrganization(owner.organizationId)
-			: await getActiveSubscriptionForUser(owner.userId);
+	// Add-on subscriptions (`Plan.addonOf`) never stand for the plan.
+	const subscription = await getPlanSubscription(owner);
 	if (subscription) return subscription.productId ?? subscription.priceId;
 
 	const oneTimePriceIds = getOneTimePlanPriceIds();

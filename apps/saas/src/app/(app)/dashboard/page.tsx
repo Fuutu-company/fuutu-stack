@@ -9,11 +9,15 @@ export default async function DashboardPage() {
 
 	return (
 		<div className="space-y-6">
-			<DashboardOverview
-				firstName={firstName}
-				userId={session.user.id}
-				orgSlug={null}
-			/>
+			{renderSlot(
+				appSlots.dashboardMain,
+				{ orgSlug: null, userId: session.user.id, firstName },
+				<DashboardOverview
+					firstName={firstName}
+					userId={session.user.id}
+					orgSlug={null}
+				/>,
+			)}
 			{renderSlot(appSlots.dashboard, { orgSlug: null })}
 		</div>
 	);

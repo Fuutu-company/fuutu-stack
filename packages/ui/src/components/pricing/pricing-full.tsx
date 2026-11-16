@@ -336,9 +336,10 @@ function FeatureRow({
 							)}
 						>
 							{val === true ? (
-								<span className="inline-flex size-5 items-center justify-center rounded-full bg-area-billing text-area-billing-foreground">
-									<Check aria-hidden="true" className="size-3" />
-								</span>
+								<Check
+									aria-hidden="true"
+									className="size-5 text-area-billing-foreground"
+								/>
 							) : val === false || val === undefined ? (
 								<Minus
 									aria-hidden="true"
@@ -357,7 +358,7 @@ function FeatureRow({
 			{/* Video dialog — only rendered when videoSrc is set */}
 			{row.videoSrc && (
 				<Dialog open={videoOpen} onOpenChange={setVideoOpen}>
-					<DialogContent className="max-w-3xl p-4">
+					<DialogContent className="p-4 sm:max-w-3xl">
 						<DialogHeader>
 							<DialogTitle>{row.label}</DialogTitle>
 						</DialogHeader>

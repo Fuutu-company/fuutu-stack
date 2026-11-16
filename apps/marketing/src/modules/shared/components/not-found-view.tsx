@@ -9,6 +9,8 @@ interface NotFoundViewProps {
 	description: string;
 	/** The ink "back home" button — a locale-aware link or a plain anchor. */
 	action: ReactNode;
+	/** Section links under the action (`NotFoundLinks`). */
+	links?: ReactNode;
 	className?: string;
 }
 
@@ -18,6 +20,7 @@ export function NotFoundView({
 	title,
 	description,
 	action,
+	links,
 	className,
 }: NotFoundViewProps) {
 	return (
@@ -39,6 +42,7 @@ export function NotFoundView({
 				description={description}
 			>
 				<div className="mt-3">{action}</div>
+				{links}
 			</PageIntro>
 		</div>
 	);

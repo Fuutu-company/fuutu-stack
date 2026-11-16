@@ -34,6 +34,12 @@
 		},
 		"./insert-after": {
 			"default": "./src/insert-after.ts"
+		},
+		"./public-path": {
+			"default": "./src/public-path.ts"
+		},
+		"./legal-links": {
+			"default": "./src/legal-links.ts"
 		}
 	},
 	"dependencies": {

@@ -414,6 +414,9 @@ importers:
       '@fuutu/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.64.0
       '@tailwindcss/postcss':
         specifier: 'catalog:'
         version: 4.3.3

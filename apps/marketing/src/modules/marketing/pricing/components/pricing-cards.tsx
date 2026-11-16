@@ -1,10 +1,11 @@
 "use client";
 
+import { PLANS, type Plan, TIER_ORDER } from "@fuutu/payments/config";
 import {
 	FEATURE_GROUPS,
 	formatLimit,
+	getFeaturesForTier,
 	getLimit,
-	getPricingFeaturesForPlan,
 } from "@fuutu/payments/features";
 import {
 	buildPricingTiers,
@@ -23,14 +24,17 @@ import { useTranslations } from "next-intl";
 import { urls } from "@/lib/urls";
 import { Link } from "@/navigation";
 
-const PLAN_ICONS: Partial<Record<PlanId, PricingTier["icon"]>> = {
-	free: Sparkles,
-	pro: Rocket,
-	enterprise: Building2,
-};
+/** Tier icon by billing type: free, custom (contact sales), paid. */
+function iconFor(id: PlanId): PricingTier["icon"] {
+	const { billingType } = PLANS[id] as Plan;
+	if (billingType === "free") return Sparkles;
+	if (billingType === "custom") return Building2;
+	return Rocket;
+}
 
 function hrefFor(id: PlanId): string | undefined {
-	if (id === "enterprise") return undefined; // uses PLANS.enterprise.marketingCtaHref
+	// A plan with its own marketing CTA (e.g. contact sales) keeps it.
+	if ((PLANS[id] as Plan).marketingCtaHref) return undefined;
 	return `${urls.auth.signUp}?plan=${id}`;
 }
 
@@ -53,7 +57,7 @@ function usePricingData() {
 		audience: "marketing",
 		t: resolve,
 		hrefFor,
-	}).map((tier) => ({ ...tier, icon: PLAN_ICONS[tier.id as PlanId] }));
+	}).map((tier) => ({ ...tier, icon: iconFor(tier.id as PlanId) }));
 
 	const rawFeatures = t.raw("payments.features") as Record<
 		string,
@@ -71,7 +75,8 @@ function usePricingData() {
 		return id;
 	}
 
-	const allFeatures = getPricingFeaturesForPlan("enterprise");
+	// Every catalog feature up to the highest tier — the matrix rows.
+	const allFeatures = getFeaturesForTier(TIER_ORDER[TIER_ORDER.length - 1]);
 
 	const featureTooltips = t.raw("payments.features.tooltips") as Record<
 		string,

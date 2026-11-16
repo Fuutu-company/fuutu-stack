@@ -1,4 +1,39 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+/**
+ * Post tests run on fixture posts, not on what the app publishes: the app
+ * may hide the kit's demo posts (`appContent.hidePosts`) and ship none of
+ * its own. The mock hides every kit post and injects two fixtures through
+ * `extraPosts`, so the suite holds under any `app-content.ts`.
+ */
+const fixtures = vi.hoisted(() => {
+	const body = (name: string) => {
+		const Body = () => null;
+		Body.displayName = name;
+		return Body;
+	};
+	return {
+		newer: {
+			slug: "fixture-newer",
+			frontmatter: { title: "Newer fixture", publishedAt: "2026-06-01" },
+			bodies: { en: body("NewerEn"), de: body("NewerDe") },
+		},
+		older: {
+			slug: "fixture-older",
+			frontmatter: { title: "Older fixture", publishedAt: "2026-01-15" },
+			bodies: { en: body("OlderEn"), de: body("OlderDe") },
+		},
+	};
+});
+
+vi.mock("../app-content", () => ({
+	appContent: {
+		hidePosts: () => true,
+		// Declared oldest first — the collection must sort them.
+		extraPosts: [fixtures.older, fixtures.newer],
+	},
+}));
+
 import {
 	changelog,
 	changelogFrontmatterSchema,
@@ -20,6 +55,10 @@ describe("Content collections - posts", () => {
 
 	it("posts array has at least one entry", () => {
 		expect(posts.length).toBeGreaterThan(0);
+		expect(posts.map((p) => p.slug)).toEqual([
+			"fixture-newer",
+			"fixture-older",
+		]);
 	});
 
 	it("each post has required fields", () => {
@@ -53,9 +92,10 @@ describe("Content collections - posts", () => {
 	});
 
 	it("getPost returns correct post by slug", () => {
-		const post = getPost("welcome");
+		const post = getPost("fixture-older");
 		expect(post).toBeDefined();
-		expect(post?.slug).toBe("welcome");
+		expect(post?.slug).toBe("fixture-older");
+		expect(post?.frontmatter.title).toBe("Older fixture");
 	});
 
 	it("getPost returns undefined for unknown slug", () => {
@@ -142,6 +182,20 @@ describe("Content collections - changelog", () => {
 		const entry = getChangelogEntry("v0-1-0");
 		expect(entry).toBeDefined();
 		expect(entry?.slug).toBe("v0-1-0");
+	});
+
+	it("changelog versions are unique (they are the entries' anchor ids)", () => {
+		const versions = changelog.map((c) => c.frontmatter.version);
+		expect(new Set(versions).size).toBe(versions.length);
+	});
+
+	it("lists the kit 1.0.0 release first, dated like the kit-v1.0.0 tag, in en + de", () => {
+		const entry = getChangelogEntry("v1-0-0");
+		expect(entry?.frontmatter.version).toBe("1.0.0");
+		expect(entry?.frontmatter.publishedAt).toBe("2026-11-14");
+		expect(changelog[0]?.slug).toBe("v1-0-0");
+		expect(entry && getChangelogBody(entry, "de")).not.toBe(entry?.bodies.en);
+		expect(getChangelogEntry("v0-1-0")?.frontmatter.version).toBe("0.1.0");
 	});
 
 	it("getChangelogEntry returns undefined for unknown slug", () => {

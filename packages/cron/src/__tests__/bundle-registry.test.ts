@@ -8,7 +8,10 @@ import type { CronJob } from "../types";
  * bundle evaluating the package.
  */
 
-vi.mock("@fuutu/webhooks", () => ({ processPendingDeliveries: vi.fn() }));
+vi.mock("@fuutu/webhooks", () => ({
+	processPendingDeliveries: vi.fn(),
+	isWebhooksEnabled: () => true,
+}));
 
 vi.mock("@fuutu/db", () => ({
 	deleteAuditLogsBefore: vi.fn(),
@@ -128,6 +131,7 @@ describe("cron registry across bundles", () => {
 			"subscription-reminder",
 			"telemetry-ping",
 			"oauth-client-cleanup",
+			"auth-retention-cleanup",
 			"app-usage-rollup",
 		]);
 	});

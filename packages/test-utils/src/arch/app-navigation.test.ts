@@ -15,6 +15,31 @@ const extras = vi.hoisted(() => ({
 
 vi.mock("../../../../apps/saas/src/app-navigation", () => extras);
 
+// Platform-group extras live in their own app-owned file.
+const mainExtras = vi.hoisted(() => ({
+	appMainNavItems: [] as unknown[],
+}));
+vi.mock("../../../../apps/saas/src/app-main-nav", () => mainExtras);
+
+// Kit demo flags, fixed: an app that switches the demo modules off keeps
+// these tests meaningful.
+const flags = vi.hoisted(() => ({ aiChat: true, crm: true, webhooks: true }));
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			features: new Proxy(actual.config.features, {
+				get: (target, prop, receiver) =>
+					prop in flags
+						? flags[prop as keyof typeof flags]
+						: Reflect.get(target, prop, receiver),
+			}),
+		},
+	};
+});
+
 const nav = await import(
 	"../../../../apps/saas/src/modules/app/components/nav-config"
 );
@@ -25,10 +50,139 @@ const { buildBreadcrumbs } = await import(
 const keys = (items: { titleKey: string }[]) => items.map((i) => i.titleKey);
 
 beforeEach(() => {
+	flags.aiChat = true;
+	flags.crm = true;
+	flags.webhooks = true;
+	mainExtras.appMainNavItems = [];
 	extras.appOrgSettingsNavItems = [];
 	extras.appAccountNavItems = [];
 	extras.appAdminNavItems = [];
 	extras.appBreadcrumbLabels = {};
+});
+
+/** Stand-in for a lucide icon component. */
+const Icon = () => null;
+const urls = (items: { url: string }[]) => items.map((i) => i.url);
+
+describe("main nav (Platform group)", () => {
+	it("keeps the kit list when there are no extras", () => {
+		expect(keys(nav.getMainItems(null))).toEqual([
+			"dashboard",
+			"aiChat",
+			"crm",
+			"notifications",
+		]);
+		expect(urls(nav.getMainItems(null))).toEqual([
+			"/dashboard",
+			"/chat",
+			"/crm",
+			"/notifications",
+		]);
+		expect(urls(nav.getMainItems("acme"))).toEqual([
+			"/organizations/acme/dashboard",
+			"/organizations/acme/chat",
+			"/organizations/acme/crm",
+			"/notifications",
+		]);
+	});
+
+	it("drops the demo modules whose flag is off; an anchor on them appends", () => {
+		flags.aiChat = false;
+		flags.crm = false;
+		mainExtras.appMainNavItems = [
+			{ titleKey: "agents", icon: Icon, segment: "agents", after: "crm" },
+		];
+		expect(keys(nav.getMainItems(null))).toEqual([
+			"dashboard",
+			"notifications",
+			"agents",
+		]);
+	});
+
+	it("an org-segment item resolves under the current org and is hidden outside org routes", () => {
+		mainExtras.appMainNavItems = [
+			{
+				titleKey: "agents",
+				icon: Icon,
+				orgSegment: "agents",
+				after: "dashboard",
+			},
+		];
+		const inOrg = nav.getMainItems("acme");
+		expect(keys(inOrg).slice(0, 2)).toEqual(["dashboard", "agents"]);
+		expect(inOrg[1]?.url).toBe("/organizations/acme/agents");
+		expect(keys(nav.getMainItems(null))).not.toContain("agents");
+	});
+
+	it("a segment item is scoped like the kit items, an href item is absolute", () => {
+		mainExtras.appMainNavItems = [
+			{ titleKey: "reports", icon: Icon, segment: "reports" },
+			{ titleKey: "releases", icon: Icon, href: "/releases", after: "crm" },
+		];
+		expect(urls(nav.getMainItems(null))).toEqual([
+			"/dashboard",
+			"/chat",
+			"/crm",
+			"/releases",
+			"/notifications",
+			"/reports",
+		]);
+		const inOrg = nav.getMainItems("acme");
+		expect(inOrg.find((i) => i.titleKey === "reports")?.url).toBe(
+			"/organizations/acme/reports",
+		);
+		expect(inOrg.find((i) => i.titleKey === "releases")?.url).toBe("/releases");
+	});
+
+	it("hides an item whose feature gate is off", () => {
+		mainExtras.appMainNavItems = [
+			{ titleKey: "agents", icon: Icon, segment: "agents", enabled: false },
+		];
+		expect(keys(nav.getMainItems("acme"))).not.toContain("agents");
+	});
+
+	it("shows a permission-gated item only inside an org whose role allows it", () => {
+		mainExtras.appMainNavItems = [
+			{
+				titleKey: "agents",
+				icon: Icon,
+				segment: "agents",
+				permission: "update:organization",
+			},
+		];
+		const can = vi.fn(() => true);
+		expect(keys(nav.getMainItems("acme", can))).toContain("agents");
+		expect(can).toHaveBeenCalledWith("update:organization");
+		expect(keys(nav.getMainItems("acme", () => false))).not.toContain("agents");
+		expect(keys(nav.getMainItems("acme"))).not.toContain("agents");
+		// Outside an org there is no role to check — fail closed.
+		expect(keys(nav.getMainItems(null, can))).not.toContain("agents");
+	});
+
+	it("renders only the item fields (icon included), no extension-only ones", () => {
+		mainExtras.appMainNavItems = [
+			{
+				titleKey: "agents",
+				icon: Icon,
+				orgSegment: "agents",
+				after: "dashboard",
+				exact: true,
+			},
+		];
+		expect(nav.getMainItems("acme")[1]).toEqual({
+			titleKey: "agents",
+			url: "/organizations/acme/agents",
+			icon: Icon,
+			exact: true,
+		});
+	});
+
+	it("throws on a key the kit already uses", () => {
+		mainExtras.appMainNavItems = [
+			{ titleKey: "crm", icon: Icon, segment: "x" },
+		];
+		expect(() => nav.getMainItems(null)).toThrow(/duplicate key "crm"/);
+	});
 });
 
 describe("org settings extras", () => {
@@ -89,6 +243,144 @@ describe("org settings extras", () => {
 	});
 });
 
+describe("org settings — replaces", () => {
+	const kitWith = (replacement: string) =>
+		keys(nav.getOrgSettingsItems("acme", true)).map((key) =>
+			key === "apiKeys" ? replacement : key,
+		);
+
+	it("swaps the kit item in place", () => {
+		const expected = kitWith("keys");
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "keys", segment: "keys", replaces: "apiKeys" },
+		];
+		const items = nav.getOrgSettingsItems("acme", true);
+		expect(keys(items)).toEqual(expected);
+		expect(items.find((i) => i.titleKey === "keys")?.href).toBe(
+			"/organizations/acme/settings/keys",
+		);
+	});
+
+	it("wins over after", () => {
+		const expected = kitWith("keys");
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "keys",
+				segment: "keys",
+				replaces: "apiKeys",
+				after: "general",
+			},
+		];
+		expect(keys(nav.getOrgSettingsItems("acme", true))).toEqual(expected);
+	});
+
+	it("an item anchored on the replaced key lands after the replacement", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "keys", segment: "keys", replaces: "apiKeys" },
+			{ titleKey: "usage", segment: "usage", after: "apiKeys" },
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", true));
+		expect(k[k.indexOf("keys") + 1]).toBe("usage");
+	});
+
+	it("two items replacing one kit key throw", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "keys", segment: "keys", replaces: "apiKeys" },
+			{ titleKey: "tokens", segment: "tokens", replaces: "apiKeys" },
+		];
+		expect(() => nav.getOrgSettingsItems("acme", true)).toThrow(/apiKeys/);
+	});
+
+	it("replacing a hidden kit item appends", () => {
+		flags.webhooks = false;
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "hooks", segment: "hooks", replaces: "webhooks" },
+		];
+		expect(keys(nav.getOrgSettingsItems("acme", true)).at(-1)).toBe("hooks");
+	});
+
+	it("replacing a kit item hidden by role drops a replacement without its own permission", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "activity", segment: "activity", replaces: "auditLog" },
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", false, () => true));
+		expect(k).not.toContain("auditLog");
+		expect(k).not.toContain("activity");
+	});
+
+	it("replacing a kit item hidden by role appends a replacement with its own permission", () => {
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "activity",
+				segment: "activity",
+				replaces: "auditLog",
+				permission: "view:activity",
+			},
+		];
+		expect(
+			keys(nav.getOrgSettingsItems("acme", false, () => true)).at(-1),
+		).toBe("activity");
+		expect(
+			keys(nav.getOrgSettingsItems("acme", false, () => false)),
+		).not.toContain("activity");
+	});
+
+	it("a disabled replacement keeps the kit item", () => {
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "keys",
+				segment: "keys",
+				replaces: "apiKeys",
+				enabled: false,
+			},
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", true));
+		expect(k).toContain("apiKeys");
+		expect(k).not.toContain("keys");
+	});
+
+	it("a replacement the role may not see still removes the kit item", () => {
+		extras.appOrgSettingsNavItems = [
+			{
+				titleKey: "keys",
+				segment: "keys",
+				replaces: "apiKeys",
+				permission: "update:organization",
+			},
+		];
+		const k = keys(nav.getOrgSettingsItems("acme", true, () => false));
+		expect(k).not.toContain("apiKeys");
+		expect(k).not.toContain("keys");
+	});
+});
+
+describe("org settings — webhooks flag", () => {
+	it("org settings show Webhooks while the flag is on", () => {
+		const items = nav.getOrgSettingsItems("acme", true);
+		expect(keys(items)).toContain("webhooks");
+		expect(items.find((i) => i.titleKey === "webhooks")?.href).toBe(
+			"/organizations/acme/settings/webhooks",
+		);
+	});
+
+	it("org settings hide Webhooks when the flag is off", () => {
+		flags.webhooks = false;
+		const k = keys(nav.getOrgSettingsItems("acme", true));
+		expect(k).not.toContain("webhooks");
+		expect(k.at(-1)).toBe("danger");
+	});
+
+	it("an app item anchored after webhooks is appended while the flag is off", () => {
+		extras.appOrgSettingsNavItems = [
+			{ titleKey: "usage", segment: "usage", after: "webhooks" },
+		];
+		const on = keys(nav.getOrgSettingsItems("acme", true));
+		expect(on[on.indexOf("webhooks") + 1]).toBe("usage");
+		flags.webhooks = false;
+		expect(keys(nav.getOrgSettingsItems("acme", true)).at(-1)).toBe("usage");
+	});
+});
+
 describe("account + admin extras", () => {
 	it("places an account item after its anchor", () => {
 		extras.appAccountNavItems = [
@@ -122,7 +414,9 @@ describe("account + admin extras", () => {
 		expect(keys(nav.getAdminItems())).toEqual([
 			"adminUsers",
 			"adminTenants",
+			"adminOrganizations",
 			"adminAuditLogs",
+			"adminSystem",
 		]);
 	});
 
@@ -139,14 +433,18 @@ describe("account + admin extras", () => {
 			"adminUsers",
 			"adminTenants",
 			"adminPlans",
+			"adminOrganizations",
 			"adminAuditLogs",
+			"adminSystem",
 		]);
 	});
 
 	it("returns the kit admin list without extras — no overview self-link", () => {
 		expect(nav.getAdminItems()).toEqual([
 			{ titleKey: "adminUsers", href: "/admin/users" },
+			{ titleKey: "adminOrganizations", href: "/admin/organizations" },
 			{ titleKey: "adminAuditLogs", href: "/admin/audit-logs" },
+			{ titleKey: "adminSystem", href: "/admin/system" },
 		]);
 	});
 
@@ -220,11 +518,41 @@ describe("breadcrumb extras", () => {
 		]);
 	});
 
+	it("names the org crumb after the organization, not its slug", () => {
+		expect(
+			buildBreadcrumbs(
+				"/organizations/persona-free/settings/billing",
+				null,
+				"Persona GmbH",
+			)[1],
+		).toEqual({
+			labelKey: null,
+			label: "Persona GmbH",
+			href: "/organizations/persona-free/dashboard",
+		});
+	});
+
 	it("the Admin crumb links to the admin home, not the bare group root", () => {
 		expect(buildBreadcrumbs("/admin/audit-logs", null)).toEqual([
 			{ labelKey: "breadcrumb.admin", href: "/admin/users" },
 			{ labelKey: "breadcrumb.auditLogs", href: "/admin/audit-logs" },
 		]);
+	});
+
+	it("labels the admin organization routes", () => {
+		expect(buildBreadcrumbs("/admin/organizations", null)).toEqual([
+			{ labelKey: "breadcrumb.admin", href: "/admin/users" },
+			{ labelKey: "breadcrumb.organizations", href: "/admin/organizations" },
+		]);
+		expect(buildBreadcrumbs("/admin/organizations/org-1", null)).toEqual([
+			{ labelKey: "breadcrumb.admin", href: "/admin/users" },
+			{ labelKey: "breadcrumb.organizations", href: "/admin/organizations" },
+			{ labelKey: "breadcrumb.orgDetail", href: "/admin/organizations/org-1" },
+		]);
+		expect(buildBreadcrumbs("/admin/system", null).at(-1)).toEqual({
+			labelKey: "breadcrumb.system",
+			href: "/admin/system",
+		});
 	});
 
 	it("skips segments nobody labels", () => {
@@ -262,10 +590,11 @@ describe("breadcrumb extras", () => {
 	});
 });
 
-describe("the shipped app lists (apps/saas/src/app-navigation.ts)", () => {
+describe("the shipped app lists (apps/saas/src/app-navigation.ts, app-main-nav.ts)", () => {
 	// A colliding key throws while the sidebar renders — every app page
 	// would fail. This catches it in CI instead, incl. gated-off items.
 	const KIT_KEYS = {
+		appMainNavItems: ["dashboard", "aiChat", "crm", "notifications"],
 		appOrgSettingsNavItems: [
 			"general",
 			"members",
@@ -285,13 +614,22 @@ describe("the shipped app lists (apps/saas/src/app-navigation.ts)", () => {
 			"apiKeys",
 			"danger",
 		],
-		appAdminNavItems: ["adminUsers", "adminAuditLogs"],
+		appAdminNavItems: [
+			"adminUsers",
+			"adminOrganizations",
+			"adminAuditLogs",
+			"adminSystem",
+		],
 	} as const;
 
-	const loadShipped = () =>
-		vi.importActual<typeof import("../../../../apps/saas/src/app-navigation")>(
-			"../../../../apps/saas/src/app-navigation",
-		);
+	const loadShipped = async () => ({
+		...(await vi.importActual<
+			typeof import("../../../../apps/saas/src/app-navigation")
+		>("../../../../apps/saas/src/app-navigation")),
+		...(await vi.importActual<
+			typeof import("../../../../apps/saas/src/app-main-nav")
+		>("../../../../apps/saas/src/app-main-nav")),
+	});
 
 	for (const group of Object.keys(KIT_KEYS) as (keyof typeof KIT_KEYS)[]) {
 		it(`${group} uses unique keys that no kit item uses`, async () => {
@@ -309,6 +647,7 @@ describe("the shipped app lists (apps/saas/src/app-navigation.ts)", () => {
 	}
 
 	it("the kit key lists above cover every item nav-config renders", () => {
+		expect(keys(nav.getMainItems("acme"))).toEqual(KIT_KEYS.appMainNavItems);
 		for (const key of keys(nav.getOrgSettingsItems("acme", true))) {
 			expect(KIT_KEYS.appOrgSettingsNavItems).toContain(key);
 		}
@@ -320,9 +659,11 @@ describe("the shipped app lists (apps/saas/src/app-navigation.ts)", () => {
 
 	it("renders every group with the shipped lists", async () => {
 		const shipped = await loadShipped();
+		mainExtras.appMainNavItems = [...shipped.appMainNavItems];
 		extras.appOrgSettingsNavItems = [...shipped.appOrgSettingsNavItems];
 		extras.appAccountNavItems = [...shipped.appAccountNavItems];
 		extras.appAdminNavItems = [...shipped.appAdminNavItems];
+		expect(() => nav.getMainItems("acme", () => true)).not.toThrow();
 		expect(() =>
 			nav.getOrgSettingsItems("acme", true, () => true),
 		).not.toThrow();

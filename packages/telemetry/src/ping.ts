@@ -1,5 +1,4 @@
 import {
-	config,
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 	KIT_NAME,
@@ -11,15 +10,21 @@ import { hashLicenseKey } from "@fuutu/license";
 const DEFAULT_ENDPOINT = "https://app.fuutustack.com/api/telemetry/ping";
 const DEFAULT_TIMEOUT_MS = 5_000;
 
+/** Where a ping comes from: the build script or a running app. */
+export type TelemetryKind = "build" | "runtime";
+
+/**
+ * The complete telemetry payload — license-compliance data only, exactly
+ * the fields LICENSE.md §7 lists (a test keeps them in sync).
+ */
 export type TelemetryPayload = {
 	kitName: string;
 	kitVersion: string;
+	/** One-way hash of `FUUTU_LICENSE_KEY`, or `"oss"` without a key. */
 	licenseKeyHash: string;
+	/** Public app URL (`NEXT_PUBLIC_SAAS_URL`), or null. */
 	appUrl: string | null;
-	nodeVersion: string;
-	platform: string;
-	features: string[];
-	sentAt: string;
+	kind: TelemetryKind;
 };
 
 export type PingResult =
@@ -27,26 +32,19 @@ export type PingResult =
 	| { sent: false; reason: string };
 
 /**
- * Build the telemetry payload.
+ * Build the runtime telemetry payload.
  *
- * Hard rule: **no PII, no secrets, no user data, no env values**. Only
- * Kit-identity + a hashed license-key fingerprint + a flat list of
- * top-level feature names. The full schema is documented in LICENSE.md §7.
+ * Hard rule: license-compliance data only — Kit identity, a hashed
+ * license-key fingerprint and the public app URL. No end-user data, no
+ * secrets, no other env values. Schema: LICENSE.md §7.
  */
 export function buildTelemetryPayload(): TelemetryPayload {
-	const features = Object.entries(config.features)
-		.filter(([, enabled]) => enabled === true)
-		.map(([name]) => name);
-
 	return {
 		kitName: KIT_NAME,
 		kitVersion: KIT_VERSION,
 		licenseKeyHash: hashLicenseKey(env.FUUTU_LICENSE_KEY),
-		appUrl: env.NEXT_PUBLIC_SAAS_URL ?? null,
-		nodeVersion: process.version,
-		platform: process.platform,
-		features,
-		sentAt: new Date().toISOString(),
+		appUrl: env.NEXT_PUBLIC_SAAS_URL || null,
+		kind: "runtime",
 	};
 }
 
@@ -68,6 +66,11 @@ export async function pingTelemetry(
 ): Promise<PingResult> {
 	if (env.FUUTU_TELEMETRY_DISABLED) {
 		return { sent: false, reason: "disabled" };
+	}
+	// A dev server on a developer machine never pings; a running
+	// production app always does (LICENSE.md §7).
+	if (env.NODE_ENV !== "production") {
+		return { sent: false, reason: "not-production" };
 	}
 
 	const payload = buildTelemetryPayload();

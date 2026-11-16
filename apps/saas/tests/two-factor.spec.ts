@@ -123,14 +123,22 @@ test.describe("two-factor end to end", () => {
 		const next = page
 			.getByRole("button", { name: /continue/i })
 			.and(page.locator(":enabled"));
+		// A required org step (organizationsMode "forced") has no skip —
+		// it needs an organization.
+		const orgName = page.getByLabel(/organization name/i);
 		const stepHeading = page.getByRole("heading", { level: 2 }).first();
 		const onDashboard = () => /\/dashboard/.test(page.url());
 		for (let step = 0; step < 6 && !onDashboard(); step++) {
-			await expect(done.or(skip).or(next).first()).toBeVisible();
+			await expect(done.or(skip).or(next).or(orgName).first()).toBeVisible();
 			const before = await stepHeading.textContent();
 			if (await done.isVisible()) await done.click();
 			else if (await skip.isVisible()) await skip.click();
-			else await next.click();
+			else if (await orgName.isVisible()) {
+				await orgName.fill("QA Two Factor");
+				await page
+					.getByRole("button", { name: /create organization/i })
+					.click();
+			} else await next.click();
 			await expect
 				.poll(
 					async () =>

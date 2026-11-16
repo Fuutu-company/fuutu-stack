@@ -1,8 +1,9 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { analyticsConfig } from "./config";
+import { needsReloadOnConsentChange } from "./consent-withdrawal";
 import { hasTrackingConsent, resolveAnalyticsProvider } from "./index";
 
 /**
@@ -13,13 +14,27 @@ import { hasTrackingConsent, resolveAnalyticsProvider } from "./index";
  * is dismissed.
  *
  * Script injection is provider-driven via `getScriptProps()`.
+ *
+ * Withdrawing consent stops a loaded script: through the provider's
+ * `installConsentGate`, or — for a provider without one — by reloading
+ * the page, which then injects no script.
  */
 export function AnalyticsScript() {
 	const [granted, setGranted] = useState(false);
+	const grantedRef = useRef(false);
 
 	useEffect(() => {
+		const provider = resolveAnalyticsProvider();
+		// Before the script loads: an opt-out must also stop a loaded script.
+		provider.installConsentGate?.(hasTrackingConsent);
 		const read = () => {
-			setGranted(hasTrackingConsent());
+			const next = hasTrackingConsent();
+			if (needsReloadOnConsentChange(provider, grantedRef.current, next)) {
+				window.location.reload();
+				return;
+			}
+			grantedRef.current = next;
+			setGranted(next);
 		};
 		read();
 		const handler = () => read();

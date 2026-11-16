@@ -9,7 +9,12 @@ vi.mock("../../prisma/client", () => ({
 }));
 
 import { db } from "../../prisma/client";
-import { countApiKeys, listApiKeys } from "../../prisma/queries/api-key";
+import {
+	countApiKeys,
+	countOrgApiKeys,
+	listApiKeys,
+	listOrgApiKeys,
+} from "../../prisma/queries/api-key";
 import {
 	listAuditLogDates,
 	listAuditLogs,
@@ -118,6 +123,60 @@ describe("personal-only owner filters", () => {
 
 		expect(db.apiKey.count).toHaveBeenCalledWith({
 			where: { userId: "u1", revokedAt: null },
+		});
+	});
+});
+
+// Scope filter for the contextual key lists (e.g. only `mcp` keys).
+describe("API key scope filter", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("listOrgApiKeys keeps only keys listing the scope", async () => {
+		await listOrgApiKeys("org-1", { take: 100, scope: "mcp" });
+
+		expect(db.apiKey.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: {
+					organizationId: "org-1",
+					revokedAt: null,
+					scopes: { has: "mcp" },
+				},
+				take: 100,
+			}),
+		);
+	});
+
+	it("countOrgApiKeys counts only keys listing the scope", async () => {
+		await countOrgApiKeys("org-1", { scope: "mcp" });
+
+		expect(db.apiKey.count).toHaveBeenCalledWith({
+			where: {
+				organizationId: "org-1",
+				revokedAt: null,
+				scopes: { has: "mcp" },
+			},
+		});
+	});
+
+	it("listApiKeys and countApiKeys filter the user's keys by scope", async () => {
+		await listApiKeys("u1", { scope: "api" });
+		await countApiKeys("u1", { scope: "api" });
+
+		expect(db.apiKey.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { userId: "u1", revokedAt: null, scopes: { has: "api" } },
+			}),
+		);
+		expect(db.apiKey.count).toHaveBeenCalledWith({
+			where: { userId: "u1", revokedAt: null, scopes: { has: "api" } },
+		});
+	});
+
+	it("without a scope the org filter is unchanged", async () => {
+		await countOrgApiKeys("org-1");
+
+		expect(db.apiKey.count).toHaveBeenCalledWith({
+			where: { organizationId: "org-1", revokedAt: null },
 		});
 	});
 });

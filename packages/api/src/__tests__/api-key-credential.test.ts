@@ -42,6 +42,33 @@ describe("verifyApiKeyCredential", () => {
 		expect(await verifyApiKeyCredential("futu_sk_x")).toBeNull();
 	});
 
+	it("is null while a temporary ban is still running", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			...orgKey(["mcp"]),
+			user: {
+				...owner,
+				banned: true,
+				banExpires: new Date(Date.now() + 60_000),
+			},
+		} as never);
+		expect(await verifyApiKeyCredential("futu_sk_x")).toBeNull();
+	});
+
+	it("accepts the key again once a temporary ban has expired", async () => {
+		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue({
+			...orgKey(["mcp"]),
+			user: {
+				...owner,
+				banned: true,
+				banExpires: new Date(Date.now() - 60_000),
+			},
+		} as never);
+		expect(await verifyApiKeyCredential("futu_sk_x")).toMatchObject({
+			apiKey: { id: "key-1" },
+			orgRole: "admin",
+		});
+	});
+
 	it("is null for an org key whose owner is no longer a member", async () => {
 		vi.mocked(verifyApiKeyWithOwner).mockResolvedValue(
 			orgKey(["mcp"]) as never,

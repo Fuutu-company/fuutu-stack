@@ -1,4 +1,9 @@
-import { type ComponentType, createElement, type ReactElement } from "react";
+import {
+	type ComponentType,
+	createElement,
+	type ReactElement,
+	type ReactNode,
+} from "react";
 
 /**
  * Render slots the kit leaves in its SaaS pages — fill them in
@@ -15,15 +20,34 @@ export interface AppSlots {
 	orgBillingBottom?: ComponentType<{ slug: string }>;
 	/** Dashboards: below the kit widgets; `orgSlug` is null on the personal dashboard. */
 	dashboard?: ComponentType<{ orgSlug: string | null }>;
+	/**
+	 * Dashboards: REPLACES the kit's demo widgets (`DashboardOverview`)
+	 * when set; `dashboard` still renders below it. `firstName` is null
+	 * when the user has no name.
+	 */
+	dashboardMain?: ComponentType<{
+		orgSlug: string | null;
+		userId: string;
+		firstName: string | null;
+	}>;
+	/**
+	 * Desktop app top bar: right before the notification bell, on every
+	 * page of the signed-in shell. Rendered by the server layout, so it may
+	 * be a server component; the mobile header shows nothing here.
+	 */
+	headerActions?: ComponentType;
 }
 
 /**
- * Element for a slot, or `null` when the app left it unset — host pages
- * render every slot through this: `{renderSlot(appSlots.dashboard, { orgSlug })}`.
+ * Element for a slot, or `fallback` (default `null`) when the app left it
+ * unset — host pages render every slot through this:
+ * `{renderSlot(appSlots.dashboard, { orgSlug })}`. A replacing slot passes
+ * the kit content as `fallback`.
  */
 export function renderSlot<P extends object>(
 	Slot: ComponentType<P> | undefined,
 	props: P,
-): ReactElement<P> | null {
-	return Slot ? createElement(Slot, props) : null;
+	fallback: ReactNode = null,
+): ReactElement<P> | ReactNode {
+	return Slot ? createElement(Slot, props) : fallback;
 }

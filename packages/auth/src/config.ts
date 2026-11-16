@@ -9,6 +9,13 @@
  */
 
 export const authConfig = {
+	/**
+	 * Session lifetime, in seconds — document it in your privacy policy.
+	 * `expiresIn`: a session — and the `better-auth.session_token` cookie's
+	 * max-age — ends 30 days after it was last extended; `updateAge`: use
+	 * extends it, at most once a day. `cookieCache.maxAge`: the signed
+	 * `better-auth.session_data` cookie caches the session for 5 minutes.
+	 */
 	session: {
 		expiresIn: 60 * 60 * 24 * 30, // 30 days
 		updateAge: 60 * 60 * 24, // 1 day
@@ -23,7 +30,9 @@ export const authConfig = {
 		// Global per-path budget. Credential endpoints (/sign-in/*, /sign-up/*,
 		// /change-password, /change-email, reset/verify paths) are covered by
 		// Better-Auth's built-in special rules (max 3/10s) — this limit only
-		// governs the rest, including read-heavy paths like /get-session.
+		// governs the rest. GET /get-session and /organization/list are
+		// exempt, GET /organization/get-full-organization is 30/2s
+		// (rate-limit-rules.ts).
 		// These built-in rules are version-pinned behavior — re-verify after
 		// any better-auth bump (if defaults are removed, brute-force
 		// protection silently weakens).
@@ -52,6 +61,13 @@ export const authConfig = {
 		defaultBanReason: "Violation of terms of service",
 		bannedUserMessage:
 			"Your account has been suspended. Please contact support if you believe this is an error.",
+		// How long a support impersonation session lasts, counted from its
+		// start (`isImpersonationExpired`) — refreshes never extend it.
+		impersonationMinutes: 60,
+		// `true` serves Better Auth's own `/api/auth/admin/*` endpoints
+		// (`authClient.admin.*`) again — they bypass the audited `admin.*`
+		// oRPC procedures (reason, audit row, peer and impersonation guards).
+		exposeAuthEndpoints: false as boolean,
 	},
 	features: {
 		emailPassword: true,
@@ -87,6 +103,15 @@ export const authConfig = {
 		//  "none"  — org creation fully disabled; users join via invitation
 		//            only (orgs provisioned externally, e.g. seed/admin API).
 		allowUserToCreateOrganization: "all" as "all" | "admin" | "none",
+		// Most organizations a user may belong to and still create another
+		// (Better Auth `organizationLimit`; created and joined orgs both
+		// count, invitations stay open). Unset = no cap. Applies to every
+		// plan, on top of the per-plan `LIMITS.organizations`
+		// (@fuutu/payments/config); system admins are capped too.
+		organizationLimit: undefined as number | undefined,
+		// Seconds an invitation stays valid (Better Auth `invitationExpiresIn`,
+		// default 48 h); a resend — also from the admin area — restarts it.
+		invitationExpiresIn: 48 * 60 * 60,
 	},
 	// OAuth 2.1 sign-in for MCP clients (Claude.ai, ChatGPT, Claude Code,
 	// Cursor, VS Code) — Better Auth acts as the authorization server for

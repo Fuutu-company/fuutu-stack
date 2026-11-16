@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, scrollThroughPage, test } from "./fixtures";
 import { DEFAULT_LOCALE } from "./locales";
+import { FIRST_POST_SLUG, NO_PUBLISHED_POST } from "./posts";
 
 /**
  * Accessibility: every marketing page type is scanned for WCAG 2.0 A/AA
@@ -16,17 +17,21 @@ const LEGAL_SLUG =
 		.sort()[0]
 		?.split(".")[0] ?? "privacy";
 
-const ROUTES = [
+/** `path: null` — the app serves no such page; the scan is skipped. */
+const ROUTES: readonly { path: string | null; name: string }[] = [
 	{ path: "/", name: "landing" },
 	{ path: "/pricing", name: "pricing" },
 	{ path: "/blog", name: "blog" },
-	{ path: "/blog/welcome", name: "blog post" },
+	{
+		path: FIRST_POST_SLUG ? `/blog/${FIRST_POST_SLUG}` : null,
+		name: "blog post",
+	},
 	{ path: "/changelog", name: "changelog" },
 	{ path: "/contact", name: "contact" },
 	{ path: `/legal/${LEGAL_SLUG}`, name: "legal" },
 	{ path: "/this-page-does-not-exist", name: "404" },
 	{ path: "/blog/this-post-does-not-exist", name: "unknown blog post (404)" },
-] as const;
+];
 
 const THEMES = ["light", "dark"] as const;
 
@@ -44,6 +49,7 @@ for (const theme of THEMES) {
 
 		for (const { path, name } of ROUTES) {
 			test(`${name} has no wcag2a/aa violations`, async ({ page }) => {
+				test.skip(path === null, NO_PUBLISHED_POST);
 				await page.goto(`/${DEFAULT_LOCALE}${path === "/" ? "" : path}`);
 				await expect(page.locator("html")).toHaveClass(new RegExp(theme));
 				await scrollThroughPage(page);
@@ -59,7 +65,8 @@ for (const theme of THEMES) {
 test("a blog post h2 has a top margin (prose styles apply)", async ({
 	page,
 }) => {
-	await page.goto(`/${DEFAULT_LOCALE}/blog/welcome`);
+	test.skip(!FIRST_POST_SLUG, NO_PUBLISHED_POST);
+	await page.goto(`/${DEFAULT_LOCALE}/blog/${FIRST_POST_SLUG}`);
 	const marginTop = await page
 		.locator("article h2")
 		.first()

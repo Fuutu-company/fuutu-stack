@@ -11,8 +11,10 @@ export { resolveFromAddress, resolveProvider } from "./resolve";
 export { type SendEmailOptions, sendEmail } from "./send-email";
 export { renderTemplate, templateRegistry } from "./templates";
 export type {
+	AppMail,
 	EmailMessage,
 	EmailProvider,
+	MailLegalFooter,
 	ProviderName,
 	RenderedTemplate,
 	TemplateName,

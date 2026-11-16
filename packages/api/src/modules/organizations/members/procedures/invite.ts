@@ -21,6 +21,7 @@ const inviteMemberSchema = z.object({
 // invitations) and surfaced below as a typed PAYMENT_REQUIRED error.
 export const inviteMember = authProcedure({
 	org: { permission: PERMISSIONS.INVITE_MEMBER },
+	denyImpersonation: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({

@@ -3,6 +3,8 @@ import { Card } from "@fuutu/ui";
 import { PageIntro } from "@shared/components/page-intro";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { appMarketing } from "@/app-marketing";
+import { withAppMetadata } from "@/lib/page-metadata";
 import { Link } from "@/navigation";
 
 interface BlogPageProps {
@@ -14,7 +16,11 @@ export async function generateMetadata({
 }: BlogPageProps): Promise<Metadata> {
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "blog" });
-	return { title: t("title"), description: t("description") };
+	return withAppMetadata(
+		{ title: t("title"), description: t("description") },
+		appMarketing.metadata?.blog,
+		locale,
+	);
 }
 
 export default async function BlogPage({ params }: BlogPageProps) {

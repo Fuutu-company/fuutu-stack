@@ -139,7 +139,7 @@ function DashboardLoadError({
 		>
 			<span
 				aria-hidden="true"
-				className="inline-flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
+				className="inline-flex items-center justify-center text-destructive"
 			>
 				<CloudAlert className="size-6" />
 			</span>

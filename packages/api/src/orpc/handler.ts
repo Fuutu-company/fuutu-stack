@@ -7,6 +7,7 @@ import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { ResponseHeadersPlugin } from "@orpc/server/plugins";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import {
 	getBetterAuthSpecPaths,
@@ -22,6 +23,9 @@ const log = createLogger({ scope: "rpc-handler" });
 // publicProcedure then adds `operation` (the procedure path) to the event.
 export const rpcHandler = withEvlog(
 	new RPCHandler(router, {
+		// `context.resHeaders` — procedures that call Better Auth with
+		// `returnHeaders: true` forward its Set-Cookie (impersonation).
+		plugins: [new ResponseHeadersPlugin()],
 		clientInterceptors: [
 			onError((error) => {
 				log.error("[RPC Error]", { err: error });
@@ -33,6 +37,7 @@ export const rpcHandler = withEvlog(
 export const openApiHandler = withEvlog(
 	new OpenAPIHandler(router, {
 		plugins: [
+			new ResponseHeadersPlugin(),
 			new OpenAPIReferencePlugin({
 				schemaConverters: [new ZodToJsonSchemaConverter()],
 				specGenerateOptions: async () => {

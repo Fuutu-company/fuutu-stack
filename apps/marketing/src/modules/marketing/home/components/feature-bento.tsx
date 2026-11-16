@@ -1,5 +1,5 @@
 import { i18nConfig } from "@fuutu/i18n/config";
-import { PLANS } from "@fuutu/payments/config";
+import { getShowcasePlan } from "@fuutu/payments/plans";
 import { AREA_CLASSES, type Area, AreaBadge } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
 import { Plus } from "lucide-react";
@@ -133,6 +133,7 @@ function StatusDot({ tone }: { tone: "success" | "warning" }) {
 export function FeatureBento() {
 	const t = useTranslations("home.features");
 	const tPayments = useTranslations("payments");
+	const showcase = getShowcasePlan();
 	const locale = useLocale();
 	const members = t.raw("team.members") as TeamMember[];
 	const locales = Object.entries(i18nConfig.locales) as [
@@ -193,16 +194,23 @@ export function FeatureBento() {
 										{tPayments("choosePlan.yearly")}
 									</span>
 								</span>
-								<AreaBadge area="billing">
-									{tPayments("plans.pro.name")}
-								</AreaBadge>
+								{showcase ? (
+									<AreaBadge area="billing">
+										{tPayments(`plans.${showcase.id}.name`)}
+									</AreaBadge>
+								) : null}
 							</Row>
-							<p className="mt-3.5 flex flex-wrap items-baseline gap-x-1.5 font-extrabold font-heading text-[2.75rem] leading-none tracking-display">
-								{PLANS.pro.yearlyDisplayPrice}
-								<span className="font-sans font-semibold text-[0.9375rem] text-muted-foreground tracking-normal">
-									{t("billing.perSeat")}
-								</span>
-							</p>
+							{showcase ? (
+								<p className="mt-3.5 flex flex-wrap items-baseline gap-x-1.5 font-extrabold font-heading text-[2.75rem] leading-none tracking-display">
+									{showcase.plan.yearlyDisplayPrice ??
+										showcase.plan.displayPrice}
+									{showcase.plan.seatBased ? (
+										<span className="font-sans font-semibold text-[0.9375rem] text-muted-foreground tracking-normal">
+											{t("billing.perSeat")}
+										</span>
+									) : null}
+								</p>
+							) : null}
 							<Row className="mt-3">
 								<Label title={t("billing.invoice")} />
 								<AreaBadge area="billing" className="ml-auto">
