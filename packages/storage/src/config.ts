@@ -18,6 +18,15 @@ export interface StorageBuckets {
 	organizationLogos: string;
 }
 
+/**
+ * Who may read a bucket's objects through `/image-proxy`:
+ * - "owner": the object's first key segment must be the viewer's user id,
+ *   or an org the viewer belongs to with STORAGE.VIEW (system admins with
+ *   ADMIN_ORGANIZATION.VIEW too, for support views).
+ * - "signed-in": any signed-in user — an explicit opt-in per bucket.
+ */
+export type StorageReadAccess = "owner" | "signed-in";
+
 export interface StorageConfig {
 	provider: StorageProviderId;
 	/** Logical → physical bucket name mapping (env-driven). */
@@ -33,6 +42,8 @@ export interface StorageConfig {
 	 * Keyed off `StorageBuckets` for the same reason as above.
 	 */
 	allowedContentTypes: Record<keyof StorageBuckets, readonly string[]>;
+	/** Per-bucket read access through the image proxy (see StorageReadAccess). */
+	readAccess: Record<keyof StorageBuckets, StorageReadAccess>;
 }
 
 export const storageConfig: StorageConfig = {
@@ -53,5 +64,11 @@ export const storageConfig: StorageConfig = {
 	allowedContentTypes: {
 		avatars: ["image/png", "image/jpeg", "image/webp"],
 		organizationLogos: ["image/png", "image/jpeg", "image/webp"],
+	},
+	readAccess: {
+		// Profile pictures render next to names for other users (member
+		// lists, admin tables) — readable by anyone signed in.
+		avatars: "signed-in",
+		organizationLogos: "owner",
 	},
 };

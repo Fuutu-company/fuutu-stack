@@ -10,6 +10,9 @@
 		},
 		"./config": {
 			"default": "./src/config.ts"
+		},
+		"./storage-read-access": {
+			"default": "./src/modules/storage/read-access.ts"
 		}
 	},
 	"scripts": {

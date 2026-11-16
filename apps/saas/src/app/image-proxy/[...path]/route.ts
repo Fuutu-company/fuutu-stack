@@ -1,3 +1,4 @@
+import { canReadStorageObject } from "@fuutu/api/storage-read-access";
 import { createLogger } from "@fuutu/logs";
 import { createEvlog } from "@fuutu/logs/next";
 import { getObjectStream, resolveBucketAlias } from "@fuutu/storage";
@@ -27,8 +28,9 @@ const log = createLogger({ scope: "image-proxy" });
  * Auth: gated behind `getSession()` — unauthenticated enumeration of
  * avatar / org-logo keys is blocked at the edge. Returns 401 (no redirect)
  * so that broken <img> tags surface as missing images, not as HTML pages.
- * Bucket-level ACL (who may see which org-logo) is out of scope here and
- * must be enforced by the feature that mints the key (RBAC on org-read).
+ * Every object is then authorized by `canReadStorageObject` (the key's
+ * first segment must be the viewer or an org they may view, unless the
+ * bucket opts in to `readAccess: "signed-in"`); a denied object is a 404.
  *
  * Content-Type hardening: only `image/*` is served inline — except
  * `image/svg+xml`, which executes script when navigated to directly
@@ -61,6 +63,9 @@ export const GET = withEvlog(async function GET(
 	// Defence in depth: reject path traversal attempts before hitting S3.
 	if (!key || key.includes("..")) {
 		return new Response("bad request", { status: 400 });
+	}
+	if (!(await canReadStorageObject({ alias, key, user: session.user }))) {
+		return new Response("not found", { status: 404 });
 	}
 
 	let obj: Awaited<ReturnType<typeof getObjectStream>>;
