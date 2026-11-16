@@ -4,6 +4,7 @@ import {
 	appSensitiveProcedurePrefixes,
 	appSystemAdminProcedurePrefixes,
 } from "./app-api-policy";
+import { apiConfig } from "./config";
 
 /**
  * The API's security policy as data — checked mechanically by
@@ -102,9 +103,7 @@ const KIT_ROUTE_POLICIES: readonly RoutePolicy[] = [
 		auth: "better-auth",
 		reason:
 			"Better Auth's own endpoints (sign-in, sign-up, OAuth callbacks) — each checks its own credentials",
-		bodyLimit: {
-			none: "Better Auth parses small JSON bodies of its own endpoints",
-		},
+		bodyLimit: apiConfig.maxBodyBytes,
 		rateLimit: "Better Auth rateLimit (authConfig)",
 		proxyPublic: true,
 	},

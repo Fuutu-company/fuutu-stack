@@ -16,6 +16,13 @@ const PRE_AUTH_FAILURES = { maxRequests: 60, windowMs: 60 * 1000 };
  * Defaults are generous; specific endpoints tighten the limits.
  */
 export const apiConfig = {
+	/**
+	 * Largest request body the oRPC/OpenAPI dispatch and Better Auth
+	 * (`/api/auth/**`) read — larger ones get 413 before any context, auth
+	 * or rate limit runs. 1 MiB fits every kit input (an `ai.chat` history
+	 * at its limits is ~0.5 MB of ASCII text); raise it for bigger inputs.
+	 */
+	maxBodyBytes: 1024 * 1024,
 	rateLimit: {
 		enabled: !env.FUUTU_DISABLE_RATE_LIMIT,
 		// `TRUST_PROXY_HEADERS=1` behind a trusted reverse proxy (Traefik in

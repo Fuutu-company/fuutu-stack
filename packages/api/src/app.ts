@@ -132,7 +132,12 @@ const base = new Hono<{
 		}
 		return next();
 	})
-	.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw))
+	.on(
+		["POST", "GET"],
+		"/auth/**",
+		bodyLimit({ maxSize: apiConfig.maxBodyBytes, onError: payloadTooLarge }),
+		(c) => auth.handler(c.req.raw),
+	)
 	.get("/health", (c) => c.json({ status: "healthy" }))
 	.get("/version", (c) =>
 		c.json({
@@ -204,6 +209,12 @@ const base = new Hono<{
 mountCustomRoutes(base);
 
 export const app = base
+	// oRPC decodes the body before any procedure middleware (auth, rate
+	// limit) runs — cap it first.
+	.use(
+		"*",
+		bodyLimit({ maxSize: apiConfig.maxBodyBytes, onError: payloadTooLarge }),
+	)
 	.use("*", async (c, next) => {
 		const context = await createContext({ context: c });
 		// Every request reaching this point goes through a withEvlog-wrapped
