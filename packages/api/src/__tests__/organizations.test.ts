@@ -786,6 +786,22 @@ describe("organizations.invitations.list", () => {
 		});
 	});
 
+	// Pending invitations carry invitee emails — only members who may
+	// invite see them.
+	it("rejects a plain member (needs INVITE_MEMBER)", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		await expect(
+			call(
+				organizationsRouter.invitations.list,
+				{ organizationId: "org-1" },
+				{ context: makeSession<Context>(makeUser({ id: "user-2" })) },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(auth.api.listInvitations).not.toHaveBeenCalled();
+	});
+
 	it("returns invitations in a total order: createdAt desc, id asc on ties", async () => {
 		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
 			orgFixture as never,
