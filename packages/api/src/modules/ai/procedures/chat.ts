@@ -15,11 +15,12 @@ import { textChunks } from "../text-chunks";
 
 const log = createLogger({ scope: "ai-chat" });
 
+// No client `system` role: the system prompt is the server's to set.
 const chatInputSchema = z.object({
 	messages: z
 		.array(
 			z.object({
-				role: z.enum(["user", "assistant", "system"]),
+				role: z.enum(["user", "assistant"]),
 				content: z.string().min(1).max(10000),
 			}),
 		)

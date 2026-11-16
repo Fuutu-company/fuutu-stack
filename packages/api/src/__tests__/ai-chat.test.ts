@@ -34,7 +34,7 @@ vi.mock("@fuutu/db", () => ({
 
 const { resolveAIProvider } = await import("@fuutu/ai");
 
-type ChatRole = "user" | "assistant" | "system";
+type ChatRole = "user" | "assistant";
 
 const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
@@ -90,8 +90,9 @@ describe("ai.chat", () => {
 		mockProviderStream();
 
 		const messages = [
-			msg("system", "You are a helpful assistant."),
 			msg("user", "What plans are available?"),
+			msg("assistant", "Free, Pro and Enterprise."),
+			msg("user", "Which one includes webhooks?"),
 		];
 
 		await call(chat, { messages }, { context: authenticatedContext });
