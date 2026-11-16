@@ -23,6 +23,7 @@ export const createWebhookProcedure = authProcedure({
 		count: async (ctx) => countWebhooks(ctx.org?.id ?? ""),
 	},
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({

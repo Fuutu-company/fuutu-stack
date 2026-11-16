@@ -69,6 +69,8 @@ const KIT_SENSITIVE_PROCEDURE_PREFIXES: readonly string[] = [
 	"apiKeys.",
 	// org structure — members, roles, invitations, the org itself
 	"organizations.",
+	// outgoing webhooks — keep receiving org events after the key is revoked
+	"webhooks.",
 	// back office (systemAdminProcedure)
 	"admin.",
 ];
