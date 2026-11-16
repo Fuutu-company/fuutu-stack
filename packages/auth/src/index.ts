@@ -338,9 +338,10 @@ const authOptions = {
 	},
 
 	emailVerification: {
-		// Without this, enabling `requireEmailVerification` locks users out:
-		// no verification mail would ever fire on sign-up.
-		sendOnSignUp: authConfig.signup.requireEmailVerification,
+		// Always send the verification mail on sign-up: invitations are only
+		// listed and accepted for a verified email, and with
+		// `requireEmailVerification` users would otherwise be locked out.
+		sendOnSignUp: true,
 		sendVerificationEmail: async ({ user, url }) => {
 			try {
 				await sendEmail({
