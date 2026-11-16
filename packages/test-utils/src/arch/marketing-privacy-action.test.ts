@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 /**
  * The marketing footer's kit "Privacy settings" action wraps the trigger
@@ -8,7 +8,15 @@ import { describe, expect, it } from "vitest";
  * lazy element (React Flight); `cloneElement` on it rendered `undefined`
  * and the whole marketing site answered 500. The action must render a
  * lazy trigger as well as a plain one.
+ *
+ * `@fuutu/analytics/consent` is mocked: the real module pulls in the whole
+ * `@fuutu/ui` barrel, next-intl and the env schema, a cold transform that
+ * outran the 5 s test timeout on CI runners. Only its `openConsentBanner`
+ * reaches this component.
  */
+
+const consent = vi.hoisted(() => ({ openConsentBanner: vi.fn() }));
+vi.mock("../../../analytics/src/consent.tsx", () => consent);
 
 const ROOT = join(import.meta.dirname, "../../../..");
 const MARKETING = join(ROOT, "apps/marketing");
@@ -52,6 +60,19 @@ describe("marketing PrivacySettingsAction", () => {
 		expect(
 			renderToStaticMarkup(createElement(Action, { trigger: button() })),
 		).toBe('<button type="button">Privacy settings</button>');
+	});
+
+	it("the trigger's click reopens the consent banner", async () => {
+		const Action = await loadAction();
+		const Probe = (props: { onClick?: () => void }) => {
+			props.onClick?.();
+			return createElement("button", { type: "button" }, "Privacy settings");
+		};
+		consent.openConsentBanner.mockClear();
+		renderToStaticMarkup(
+			createElement(Action, { trigger: createElement(Probe, {}) }),
+		);
+		expect(consent.openConsentBanner).toHaveBeenCalledOnce();
 	});
 
 	it("renders a lazy trigger (next dev)", async () => {
