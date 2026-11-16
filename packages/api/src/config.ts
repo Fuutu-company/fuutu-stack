@@ -144,6 +144,12 @@ export const apiConfig = {
 	 */
 	apiKeyScopeFeatures: {} as Record<string, string>,
 	/**
+	 * Longest lifetime of a new API key in days. `undefined` = no maximum
+	 * (keys may never expire). When set, a key created without `expiresAt`
+	 * expires after this many days and a later `expiresAt` is rejected.
+	 */
+	apiKeyMaxLifetimeDays: undefined as number | undefined,
+	/**
 	 * MCP server at `/api/mcp` (tools in `src/mcp/`). Callers authenticate
 	 * with an organization API key carrying the `mcp` scope, or — with
 	 * `authConfig.mcpOAuth` enabled — an OAuth access token from Better Auth.
