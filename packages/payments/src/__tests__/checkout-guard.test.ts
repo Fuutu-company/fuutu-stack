@@ -35,6 +35,19 @@ vi.mock("../config", async (importOriginal) => {
 			priceIdEnvVars: { month: "PAYMENTS_TEAM_PRICE_ID" },
 			noTrialPriceIdEnvVars: { month: "PAYMENTS_TEAM_NOTRIAL_PRICE_ID" },
 		},
+		// Opted out of the once-only default: a trial on every checkout.
+		trialEvery: {
+			amount: 900,
+			currency: "usd",
+			billingType: "subscription",
+			interval: "month",
+			trialDays: 7,
+			trialOnce: false,
+			displayPrice: "$9",
+			showInSaas: true,
+			showInMarketing: true,
+			priceIdEnvVars: { month: "PAYMENTS_TRIAL_EVERY_PRICE_ID" },
+		},
 	};
 	return { ...actual, PLANS, PLAN_IDS: Object.keys(PLANS) };
 });
@@ -46,22 +59,25 @@ vi.mock("@fuutu/env/saas", () => ({
 		PAYMENTS_PRO_SEATS_PRICE_ID: "price_pro_seats",
 		PAYMENTS_TEAM_PRICE_ID: "price_team",
 		PAYMENTS_TEAM_NOTRIAL_PRICE_ID: "price_team_notrial",
+		PAYMENTS_PRO_YEARLY_PRICE_ID: "price_pro_yearly",
+		PAYMENTS_TRIAL_EVERY_PRICE_ID: "price_trial_every",
 	},
 }));
 
 const mockGetPurchasesByOrganizationId = vi.fn();
 const mockGetPurchasesByUserId = vi.fn();
+const mockGetPurchasesCheckedOutByUser = vi.fn();
 vi.mock("@fuutu/db", () => ({
 	getPurchasesByOrganizationId: mockGetPurchasesByOrganizationId,
 	getPurchasesByUserId: mockGetPurchasesByUserId,
+	getPurchasesCheckedOutByUser: mockGetPurchasesCheckedOutByUser,
 	getActiveSubscriptionForOrganization: vi.fn(),
 	getActiveSubscriptionForUser: vi.fn(),
 	getActiveSubscriptionsForOwner: vi.fn(),
 }));
 
-const { assertCheckoutAllowed, ADDON_REQUIRES_BASE } = await import(
-	"../billing-policy"
-);
+const { assertCheckoutAllowed, ADDON_REQUIRES_BASE, ALREADY_SUBSCRIBED } =
+	await import("../billing-policy");
 const { registerCheckoutGuard, registerTrialEligibilityPolicy } = await import(
 	"../extensions"
 );
@@ -86,7 +102,9 @@ const purchase = (
 	currentPeriodEnd,
 });
 
-const orgCheckout = (planId: FixturePlanId | "proSeats" | "team") => ({
+const orgCheckout = (
+	planId: FixturePlanId | "proSeats" | "team" | "trialEvery",
+) => ({
 	owner: { organizationId: "org_1" },
 	userId: "user_1",
 	// Ids of this test's catalog (fixture + `proSeats`), not the app's —
@@ -101,6 +119,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mockGetPurchasesByOrganizationId.mockResolvedValue([]);
 	mockGetPurchasesByUserId.mockResolvedValue([]);
+	mockGetPurchasesCheckedOutByUser.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -157,10 +176,57 @@ describe("assertCheckoutAllowed — add-on needs its base", () => {
 	});
 });
 
+describe("assertCheckoutAllowed — no second paid subscription of the same plan", () => {
+	it.each([
+		["ACTIVE", null],
+		["SCHEDULED_CANCEL", new Date(Date.now() + DAY)],
+	])(
+		"rejects a checkout of the plan the owner pays for (%s)",
+		async (status, end) => {
+			mockGetPurchasesByOrganizationId.mockResolvedValue([
+				purchase("price_pro", status, end),
+			]);
+			const result = assertCheckoutAllowed(orgCheckout("pro"));
+			await expect(result).rejects.toBeInstanceOf(CheckoutRejectedError);
+			await expect(result).rejects.toMatchObject({
+				reason: ALREADY_SUBSCRIBED,
+			});
+			expect(ALREADY_SUBSCRIBED).toBe("already_subscribed");
+		},
+	);
+
+	it("allows the other billing interval of the plan (switch to yearly)", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro_yearly", "ACTIVE"),
+		]);
+		await expect(
+			assertCheckoutAllowed(orgCheckout("pro")),
+		).resolves.toMatchObject({ trial: false });
+	});
+
+	it("allows buying the plan during its unpaid trial (convert now)", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "TRIALING"),
+		]);
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: false,
+		});
+	});
+
+	it("allows the plan again once the old subscription ended", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "SCHEDULED_CANCEL", new Date(Date.now() - DAY)),
+		]);
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: false,
+		});
+	});
+});
+
 describe("registerCheckoutGuard", () => {
 	it("passes the request and the owner's purchases with resolved plans", async () => {
 		mockGetPurchasesByOrganizationId.mockResolvedValue([
-			purchase("price_pro", "ACTIVE"),
+			purchase("price_team", "ACTIVE"),
 			purchase("prod_topup", "ACTIVE"),
 		]);
 		const guard = vi.fn();
@@ -178,12 +244,13 @@ describe("registerCheckoutGuard", () => {
 			skipTrial: false,
 			existingPurchases: [
 				expect.objectContaining({
-					subscriptionId: "sub_price_pro",
-					planId: "pro",
+					subscriptionId: "sub_price_team",
+					planId: "team",
 					grantsAccess: true,
 				}),
 				expect.objectContaining({ planId: null, grantsAccess: true }),
 			],
+			checkoutUserPurchases: [],
 		});
 	});
 
@@ -238,10 +305,42 @@ describe("registerCheckoutGuard", () => {
 });
 
 describe("assertCheckoutAllowed — trial decision", () => {
-	it("plans without trialOnce grant their trial on every checkout, as before", async () => {
+	// Secure default: trialOnce unset means once. Was "a trial on every
+	// checkout" — cancel and re-checkout handed out unlimited trials.
+	it("a plan without trialOnce grants its trial once per owner", async () => {
 		mockGetPurchasesByOrganizationId.mockResolvedValue([
 			purchase("price_pro", "CANCELED"),
 		]);
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: false,
+		});
+	});
+
+	it("trialOnce: false grants the trial on every checkout", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_trial_every", "CANCELED"),
+		]);
+		await expect(
+			assertCheckoutAllowed(orgCheckout("trialEvery")),
+		).resolves.toEqual({ trial: true });
+	});
+
+	it("no second trial for the same user in another organization", async () => {
+		mockGetPurchasesCheckedOutByUser.mockResolvedValue([
+			{
+				...purchase("price_pro", "CANCELED"),
+				organizationId: "org_2",
+				metadata: { user_id: "user_1", organization_id: "org_2" },
+			},
+		]);
+		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
+			trial: false,
+		});
+		expect(mockGetPurchasesCheckedOutByUser).toHaveBeenCalledWith("user_1");
+	});
+
+	it("another user's earlier trial in another org does not count", async () => {
+		mockGetPurchasesCheckedOutByUser.mockResolvedValue([]);
 		await expect(assertCheckoutAllowed(orgCheckout("pro"))).resolves.toEqual({
 			trial: true,
 		});
@@ -265,7 +364,7 @@ describe("assertCheckoutAllowed — trial decision", () => {
 		});
 	});
 
-	it.each(["CANCELED", "EXPIRED", "ACTIVE", "TRIALING"])(
+	it.each(["CANCELED", "EXPIRED", "TRIALING", "PAST_DUE"])(
 		"trialOnce: a second checkout of the plan has trial false (earlier purchase %s)",
 		async (status) => {
 			mockGetPurchasesByOrganizationId.mockResolvedValue([

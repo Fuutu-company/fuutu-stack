@@ -5,6 +5,7 @@ import type { CronJob } from "../types";
 import { auditLogCleanupJob } from "./audit-log-cleanup";
 import { authRetentionCleanupJob } from "./auth-retention-cleanup";
 import { oauthClientCleanupJob } from "./oauth-client-cleanup";
+import { seatReconcileJob } from "./seat-reconcile";
 import { subscriptionReminderJob } from "./subscription-reminder";
 import { telemetryPingJob } from "./telemetry-ping";
 import { webhookRetryJob } from "./webhook-retry";
@@ -12,6 +13,7 @@ import { webhookRetryJob } from "./webhook-retry";
 export { auditLogCleanupJob } from "./audit-log-cleanup";
 export { authRetentionCleanupJob } from "./auth-retention-cleanup";
 export { oauthClientCleanupJob } from "./oauth-client-cleanup";
+export { seatReconcileJob } from "./seat-reconcile";
 export { subscriptionReminderJob } from "./subscription-reminder";
 export { telemetryPingJob } from "./telemetry-ping";
 export { webhookRetryJob } from "./webhook-retry";
@@ -25,6 +27,7 @@ const BUILT_IN_JOBS: readonly CronJob[] = [
 	telemetryPingJob,
 	oauthClientCleanupJob,
 	authRetentionCleanupJob,
+	seatReconcileJob,
 ];
 
 // State lives on `globalThis` (not module scope): Next.js may evaluate

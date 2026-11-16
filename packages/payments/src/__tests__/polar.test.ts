@@ -1073,3 +1073,88 @@ describe("polar provider — typed API failures", () => {
 		);
 	});
 });
+
+describe("polar provider — refunds", () => {
+	it("keeps the checkout id as the payment reference of a one-time checkout", async () => {
+		const events = await parsePayload({
+			type: "checkout.updated",
+			data: {
+				id: "chk_1",
+				status: "succeeded",
+				productId: "prod_topup",
+				metadata: { user_id: "user_1" },
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "checkout.completed",
+			paymentRef: "chk_1",
+		});
+	});
+
+	it("keeps the order id as the payment reference of an order without checkout", async () => {
+		const events = await parsePayload({
+			type: "order.paid",
+			data: {
+				id: "ord_1",
+				billingReason: "purchase",
+				productId: "prod_topup",
+				metadata: { user_id: "user_1" },
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "one_time.purchased",
+			paymentRef: "ord_1",
+		});
+	});
+
+	it("maps a fully refunded subscription order to payment.reversed of the subscription", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_2",
+				status: "refunded",
+				subscriptionId: "sub_1",
+				checkoutId: null,
+				metadata: {},
+			},
+		});
+		expect(events).toEqual([
+			{ type: "payment.reversed", eventId: "wh_test", subscriptionId: "sub_1" },
+		]);
+	});
+
+	it("maps a fully refunded one-time order to payment.reversed by checkout id", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_3",
+				status: "refunded",
+				subscriptionId: null,
+				checkoutId: "chk_1",
+			},
+		});
+		expect(events).toEqual([
+			{ type: "payment.reversed", eventId: "wh_test", paymentRef: "chk_1" },
+		]);
+	});
+
+	it("falls back to the order id when the order had no checkout", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: { id: "ord_4", status: "refunded", subscriptionId: null },
+		});
+		expect(events[0]).toMatchObject({ paymentRef: "ord_4" });
+	});
+
+	it("ignores a partial refund", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_5",
+				status: "partially_refunded",
+				subscriptionId: "sub_1",
+			},
+		});
+		expect(events).toEqual([]);
+	});
+});

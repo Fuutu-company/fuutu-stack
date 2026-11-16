@@ -31,7 +31,14 @@ export type ProviderEventType =
 	| "subscription.scheduled_cancel"
 	| "subscription.canceled"
 	| "subscription.expired"
-	| "one_time.purchased";
+	| "one_time.purchased"
+	/**
+	 * A payment was taken back — full refund or dispute (chargeback). The
+	 * sync ends what it bought: a subscription is canceled at the provider
+	 * now, a one-time purchase (matched by `paymentRef`) closed; unused
+	 * credits are revoked. Partial refunds are not reversals.
+	 */
+	| "payment.reversed";
 
 /**
  * Normalized event extracted from a provider webhook.
@@ -50,6 +57,13 @@ export interface ProviderEvent {
 	customerId?: string;
 	/** Provider-side product/price ID — mapped to a PlanId via config. */
 	productId?: string;
+	/**
+	 * Provider-side reference of a one-time payment that a later refund or
+	 * dispute names too (Stripe payment intent, Creem checkout, Polar
+	 * checkout or order). Stored on the one-time purchase; a
+	 * `payment.reversed` without `subscriptionId` is matched by it.
+	 */
+	paymentRef?: string;
 	/** Normalized status to write directly to the Purchase row. */
 	status?: PurchaseStatusLiteral;
 	currentPeriodEnd?: Date;

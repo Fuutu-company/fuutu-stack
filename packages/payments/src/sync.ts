@@ -20,16 +20,21 @@ import {
 	grantRecurringCredits,
 	grantTopUpCredits,
 	resetRecurringCredits,
+	revokeRecurringCredits,
+	revokeTopUpCredits,
 } from "@fuutu/credits";
 import {
 	createPurchase,
 	getActiveOneTimePlanPurchase,
+	getActiveSubscriptionsForOwner,
 	getCreditBalance,
+	getOneTimePurchaseByPaymentRef,
 	getPurchaseByCheckoutEventId,
 	getPurchaseByProviderSubscriptionId,
 	getPurchasesByOrganizationId,
 	getPurchasesByUserId,
 	isUniqueViolation,
+	PURCHASE_PAYMENT_REF_KEY,
 	type PurchaseOwner,
 	setOrganizationPaymentsCustomerId,
 	setPaymentsCustomerId,
@@ -172,6 +177,11 @@ async function processSingleEvent(
 		organizationId,
 	});
 
+	if (type === "payment.reversed") {
+		await handlePaymentReversed(providerId, event);
+		return;
+	}
+
 	// One-time purchase — checkout.completed without a subscription, or an
 	// explicit one_time.purchased event (the event type is authoritative,
 	// even when a provider echoes a subscriptionId on the payload).
@@ -222,7 +232,7 @@ async function processSingleEvent(
 			existing.userId ?? (existing.organizationId ? null : userId);
 		const resolvedOrganizationId =
 			existing.organizationId ?? (existing.userId ? null : organizationId);
-		await updateExistingPurchase(
+		const writtenStatus = await updateExistingPurchase(
 			providerId,
 			existing.id,
 			event,
@@ -231,6 +241,44 @@ async function processSingleEvent(
 			resolvedOrganizationId,
 			userIdToSet,
 		);
+		const storedStatus = existing.status as PurchaseStatusLiteral;
+		const nowStatus = writtenStatus ?? storedStatus;
+		// The subscription ended (canceled, expired — an unpaid trial too):
+		// its unused recurring credits go with it.
+		if (
+			writtenStatus !== undefined &&
+			TERMINAL_STATUSES.includes(writtenStatus) &&
+			!TERMINAL_STATUSES.includes(storedStatus)
+		) {
+			await revokeCreditsUnlessOtherAccess(
+				subscriptionId,
+				resolvedUserId,
+				resolvedOrganizationId,
+				"subscription_ended",
+			);
+		}
+		// First payment cleared (Stripe `incomplete` → active after SEPA/ACH):
+		// the supersede and the credit grant skipped at creation run now.
+		const becameActive =
+			writtenStatus !== undefined &&
+			ACTIVE_STATUSES.includes(writtenStatus) &&
+			!ACTIVE_STATUSES.includes(storedStatus) &&
+			!PROTECTED_STATUSES.includes(storedStatus);
+		if (becameActive) {
+			const activatedProductId =
+				event.productId ?? existing.productId ?? existing.priceId;
+			await cancelOldSubscriptionsForOwner(
+				{ ...event, productId: activatedProductId },
+				subscriptionId,
+				resolvedUserId,
+				resolvedOrganizationId,
+			);
+			await grantCreditsForSubscription(
+				{ ...event, productId: activatedProductId },
+				resolvedUserId,
+				resolvedOrganizationId,
+			);
+		}
 		// Invoice-backed events (Stripe invoice.paid / invoice.payment_failed)
 		// persist an Invoice row. Runs after the purchase update and also
 		// covers the protected-status early return inside it. An
@@ -257,9 +305,12 @@ async function processSingleEvent(
 		// Protected statuses are excluded: updateExistingPurchase keeps a
 		// dead subscription dead, so a late renewal/activation must not
 		// top up credits on a plan the owner no longer holds.
+		// An unpaid row (INCOMPLETE) gets none either.
 		if (
+			!becameActive &&
 			isSubscriptionActivationType(type) &&
-			!PROTECTED_STATUSES.includes(existing.status as PurchaseStatusLiteral)
+			!PROTECTED_STATUSES.includes(storedStatus) &&
+			ACTIVE_STATUSES.includes(nowStatus)
 		) {
 			await grantCreditsForSubscription(
 				event,
@@ -344,7 +395,11 @@ async function handleOneTimePurchase(
 			userId,
 			organizationId,
 			currentPeriodEnd: event.currentPeriodEnd ?? null,
-			metadata: event.metadata,
+			// The payment reference names this purchase in a later refund
+			// or dispute (`payment.reversed`).
+			metadata: event.paymentRef
+				? { ...event.metadata, [PURCHASE_PAYMENT_REF_KEY]: event.paymentRef }
+				: event.metadata,
 			checkoutEventId: eventId,
 		});
 		purchaseId = purchase.id;
@@ -417,21 +472,28 @@ async function createNewSubscriptionPurchase(
 		return;
 	}
 
-	// Cancel old active subscriptions for the same owner (upgrade scenario)
 	const subId = event.subscriptionId;
 	if (!subId) {
 		log.error("subscription activation without subscriptionId, skipping");
 		return;
 	}
-	await cancelOldSubscriptionsForOwner(
-		{ ...event, productId: event.productId },
-		subId,
-		userId,
-		organizationId,
-	);
-
 	const status =
 		event.status ?? DEFAULT_STATUS_FOR_TYPE[event.type] ?? "ACTIVE";
+	// Only a paid (or trialing) subscription replaces the old plan and
+	// grants credits — an unpaid one (INCOMPLETE) does both once it turns
+	// ACTIVE/TRIALING (see `becameActive`).
+	const grants = ACTIVE_STATUSES.includes(status);
+
+	// Cancel old active subscriptions for the same owner (upgrade scenario)
+	if (grants) {
+		await cancelOldSubscriptionsForOwner(
+			{ ...event, productId: event.productId },
+			subId,
+			userId,
+			organizationId,
+		);
+	}
+
 	await createPurchase({
 		type: "SUBSCRIPTION",
 		status,
@@ -478,7 +540,9 @@ async function createNewSubscriptionPurchase(
 	// Grant recurring credits for the new subscription. Failures propagate
 	// so the provider retries — the redelivery path above re-attempts the
 	// grant against the already-created purchase.
-	await grantCreditsForSubscription(event, userId, organizationId);
+	if (grants) {
+		await grantCreditsForSubscription(event, userId, organizationId);
+	}
 
 	await notifyPurchaseChanged(userId, organizationId);
 }
@@ -536,7 +600,7 @@ async function updateExistingPurchase(
 	userId: string | null,
 	organizationId: string | null,
 	userIdToSet: string | null = null,
-): Promise<void> {
+): Promise<PurchaseStatusLiteral | undefined> {
 	// Protected statuses: don't let a renewal event undo a scheduled cancel
 	const currentStatusLit = stored.status as PurchaseStatusLiteral;
 	const isProtected = PROTECTED_STATUSES.includes(currentStatusLit);
@@ -623,7 +687,7 @@ async function updateExistingPurchase(
 			...productFields(event),
 			...(event.units !== undefined && { quantity: event.units }),
 		});
-		return;
+		return undefined;
 	}
 
 	await updatePurchase({
@@ -656,6 +720,7 @@ async function updateExistingPurchase(
 			provider: providerId,
 		},
 	);
+	return resolvedStatus;
 }
 
 /**
@@ -797,6 +862,135 @@ async function cancelOldSubscriptionsForOwner(
 			);
 		}
 	}
+}
+
+/** Credit-event reason of a refund or dispute. */
+const PAYMENT_REVERSED = "payment_reversed";
+
+/**
+ * A refund or dispute took the payment back (`payment.reversed`).
+ * Subscription: canceled at the provider now (a refund does not stop
+ * future charges), row CANCELED, unused recurring credits revoked unless
+ * another subscription of the owner grants access. When the provider
+ * cancel fails and the subscription still bills there, the delivery fails
+ * so the provider retries. One-time purchase (by `paymentRef`): row
+ * CANCELED — a lifetime plan stops granting — and the unused rest of its
+ * top-up package revoked. Unknown references are logged and acked.
+ */
+async function handlePaymentReversed(
+	providerId: string,
+	event: ProviderEvent,
+): Promise<void> {
+	if (event.subscriptionId) {
+		const row = await getPurchaseByProviderSubscriptionId(
+			providerId,
+			event.subscriptionId,
+		);
+		if (!row) {
+			log.warn("payment reversed for an unknown subscription, skipping", {
+				provider: providerId,
+				subscriptionId: event.subscriptionId,
+			});
+			return;
+		}
+		if (!TERMINAL_STATUSES.includes(row.status as PurchaseStatusLiteral)) {
+			const provider = resolvePaymentProviderById(providerId);
+			if (!provider) {
+				log.warn(
+					"reversed subscription's provider is not available — cancel it manually at that provider",
+					{ provider: providerId, subscriptionId: event.subscriptionId },
+				);
+			} else {
+				try {
+					await provider.cancelSubscription(event.subscriptionId, {
+						mode: "immediate",
+					});
+				} catch (err) {
+					if (!(await isEndedAtProvider(provider, event.subscriptionId))) {
+						throw err;
+					}
+				}
+			}
+			await updatePurchase({ id: row.id, status: "CANCELED" });
+			await emitWebhookEvent(
+				"subscription.canceled",
+				row.userId,
+				row.organizationId,
+				{
+					purchaseId: row.id,
+					subscriptionId: event.subscriptionId,
+					status: "CANCELED",
+					provider: providerId,
+				},
+			);
+		}
+		await revokeCreditsUnlessOtherAccess(
+			event.subscriptionId,
+			row.userId,
+			row.organizationId,
+			PAYMENT_REVERSED,
+		);
+		log.warn("subscription payment reversed — subscription ended", {
+			provider: providerId,
+			subscriptionId: event.subscriptionId,
+			purchaseId: row.id,
+		});
+		await notifyPurchaseChanged(row.userId, row.organizationId);
+		return;
+	}
+
+	if (event.paymentRef) {
+		const row = await getOneTimePurchaseByPaymentRef(
+			providerId,
+			event.paymentRef,
+		);
+		if (!row) {
+			log.warn("payment reversed for an unknown one-time purchase, skipping", {
+				provider: providerId,
+				paymentRef: event.paymentRef,
+			});
+			return;
+		}
+		if (row.status !== "CANCELED") {
+			await updatePurchase({ id: row.id, status: "CANCELED" });
+		}
+		await revokeTopUpCredits({ purchaseId: row.id, reason: PAYMENT_REVERSED });
+		log.warn("one-time payment reversed — purchase closed", {
+			provider: providerId,
+			purchaseId: row.id,
+		});
+		await notifyPurchaseChanged(row.userId, row.organizationId);
+		return;
+	}
+
+	log.warn("payment reversed without a subscription or payment reference", {
+		provider: providerId,
+		eventId: event.eventId,
+	});
+}
+
+/**
+ * Revoke the owner's unused recurring credits — unless another of their
+ * subscriptions still grants access (credit balances are per owner, not
+ * per subscription).
+ */
+async function revokeCreditsUnlessOtherAccess(
+	endedSubscriptionId: string,
+	userId: string | null,
+	organizationId: string | null,
+	reason: string,
+): Promise<void> {
+	const owner: PurchaseOwner | null = organizationId
+		? { organizationId }
+		: userId
+			? { userId }
+			: null;
+	if (!owner) return;
+	const granting = await getActiveSubscriptionsForOwner(owner);
+	if (granting.some((sub) => sub.subscriptionId !== endedSubscriptionId)) {
+		return;
+	}
+	await revokeRecurringCredits({ ...owner, reason });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

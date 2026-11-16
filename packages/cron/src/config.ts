@@ -23,6 +23,7 @@ export interface CronConfig {
 		telemetryPing: boolean;
 		oauthClientCleanup: boolean;
 		authRetentionCleanup: boolean;
+		seatReconcile: boolean;
 		[customJob: string]: boolean | undefined;
 	};
 }
@@ -38,5 +39,6 @@ export const cronConfig: CronConfig = {
 		telemetryPing: true,
 		oauthClientCleanup: true,
 		authRetentionCleanup: true,
+		seatReconcile: true,
 	},
 };

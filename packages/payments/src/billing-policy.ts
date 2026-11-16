@@ -10,10 +10,11 @@ import {
 	getActiveSubscriptionsForOwner,
 	getPurchasesByOrganizationId,
 	getPurchasesByUserId,
+	getPurchasesCheckedOutByUser,
 	type PurchaseOwner,
 } from "@fuutu/db";
 import { PLANS, type Plan, type PlanId } from "./config";
-import { getPlanIdForProductId } from "./config.server";
+import { getPlanForProductId, getPlanIdForProductId } from "./config.server";
 import {
 	type ActivatedSubscription,
 	type CheckoutGuardContext,
@@ -31,6 +32,13 @@ const plans: Partial<Record<PlanId, Plan>> = PLANS;
 
 /** Rejection reason when an add-on checkout has no active base plan. */
 export const ADDON_REQUIRES_BASE = "addon_requires_base";
+
+/**
+ * Rejection reason when the owner already pays for this plan at this
+ * interval — a second checkout would charge twice (the activation then
+ * cancels the first subscription without a refund).
+ */
+export const ALREADY_SUBSCRIBED = "already_subscribed";
 
 export function isAddonPlan(planId: PlanId | null | undefined): boolean {
 	return planId ? plans[planId]?.addonOf !== undefined : false;
@@ -93,7 +101,7 @@ function grantsAccess(
 
 export type CheckoutRequest = Omit<
 	CheckoutGuardContext,
-	"existingPurchases" | "trial" | "skipTrial"
+	"existingPurchases" | "checkoutUserPurchases" | "trial" | "skipTrial"
 > & {
 	/** Buy now without the plan's trial. Default false. */
 	skipTrial?: boolean;
@@ -105,12 +113,18 @@ export type CheckoutDecision = {
 	trial: boolean;
 };
 
-/** Kit trial rule: `Plan.trialOnce` = no earlier purchase of the plan. */
+/**
+ * Kit trial rule: once (`Plan.trialOnce` unset or true) = no earlier
+ * purchase of the plan by the owner, nor by the checkout user anywhere
+ * (another org, personally). `trialOnce: false` = a trial every checkout.
+ */
 function defaultTrialEligible(ctx: TrialEligibilityContext): boolean {
 	const plan = plans[ctx.planId];
+	if (plan?.trialOnce === false) return true;
+	const ofPlan = (p: OwnerPurchase) => p.planId === ctx.planId;
 	return (
-		!plan?.trialOnce ||
-		!ctx.existingPurchases.some((p) => p.planId === ctx.planId)
+		!ctx.existingPurchases.some(ofPlan) &&
+		!ctx.checkoutUserPurchases.some(ofPlan)
 	);
 }
 
@@ -131,6 +145,9 @@ async function decideTrial(ctx: TrialEligibilityContext): Promise<boolean> {
  * `CheckoutRejectedError` when the checkout must not start:
  * - `addon_requires_base`: the plan is an add-on (`Plan.addonOf`) and the
  *   owner holds no access-granting purchase of its base plan.
+ * - `already_subscribed`: the owner already pays for this plan at this
+ *   interval (ACTIVE, or SCHEDULED_CANCEL in its period — resume it
+ *   instead). A trial of it may be converted; add-ons may stack.
  */
 export async function assertCheckoutAllowed(
 	request: CheckoutRequest,
@@ -141,11 +158,12 @@ export async function assertCheckoutAllowed(
 			? await getPurchasesByOrganizationId(owner.organizationId)
 			: await getPurchasesByUserId(owner.userId);
 	const now = new Date();
-	const existingPurchases: OwnerPurchase[] = stored.map((purchase) => ({
+	const toOwnerPurchase = (purchase: (typeof stored)[number]) => ({
 		...purchase,
 		planId: planIdOfPurchase(purchase),
 		grantsAccess: grantsAccess(purchase, now),
-	}));
+	});
+	const existingPurchases: OwnerPurchase[] = stored.map(toOwnerPurchase);
 
 	const baseOf = plans[request.planId]?.addonOf;
 	if (
@@ -155,10 +173,28 @@ export async function assertCheckoutAllowed(
 		throw new CheckoutRejectedError(ADDON_REQUIRES_BASE);
 	}
 
+	if (
+		!baseOf &&
+		existingPurchases.some(
+			(p) =>
+				p.planId === request.planId &&
+				p.grantsAccess &&
+				p.status !== "TRIALING" &&
+				getPlanForProductId(p.productId ?? p.priceId)?.interval ===
+					request.interval,
+		)
+	) {
+		throw new CheckoutRejectedError(ALREADY_SUBSCRIBED);
+	}
+
+	const checkoutUserPurchases: OwnerPurchase[] = (
+		await getPurchasesCheckedOutByUser(request.userId)
+	).map(toOwnerPurchase);
 	const trialCtx: TrialEligibilityContext = {
 		...request,
 		skipTrial: request.skipTrial ?? false,
 		existingPurchases,
+		checkoutUserPurchases,
 	};
 	const trial = await decideTrial(trialCtx);
 	const ctx: CheckoutGuardContext = { ...trialCtx, trial };

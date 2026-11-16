@@ -26,3 +26,8 @@ export {
 	ResetRecurringCreditsSchema,
 	resetRecurringCredits,
 } from "./reset";
+export {
+	RevokeRecurringCreditsSchema,
+	revokeRecurringCredits,
+	revokeTopUpCredits,
+} from "./revoke";

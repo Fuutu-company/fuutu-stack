@@ -933,6 +933,30 @@ describe("creem provider — typed API failures", () => {
 		});
 	});
 
+	it("every Creem call carries a timeout signal, so a hanging API cannot stall the request", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ customer_portal_link: "https://portal.test/url" }),
+		});
+		await creemPaymentProvider.createCustomerPortalLink({
+			customerId: "cus_1",
+		});
+		const init = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+		expect(init?.signal).toBeInstanceOf(AbortSignal);
+	});
+
+	it("a timed-out Creem call is unavailable", async () => {
+		mockFetch.mockRejectedValueOnce(
+			new DOMException("The operation timed out.", "TimeoutError"),
+		);
+		await expect(
+			creemPaymentProvider.createCustomerPortalLink({ customerId: "cus_1" }),
+		).rejects.toMatchObject({
+			name: "ProviderRequestError",
+			kind: "unavailable",
+		});
+	});
+
 	it("an error body that is not JSON still classifies by status", async () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: false,
@@ -989,5 +1013,128 @@ describe("creem provider — trials", () => {
 		// Creem test mode, 2026-11-15: POST /subscriptions/{id}/cancel with
 		// mode "scheduled" on a trialing subscription answers "canceled".
 		expect(creemPaymentProvider.cancelEndsTrial).toBe(true);
+	});
+});
+
+describe("creem provider — refunds and disputes", () => {
+	async function parse(payload: unknown) {
+		const crypto = await import("node:crypto");
+		const body = JSON.stringify(payload);
+		const signature = crypto
+			.createHmac("sha256", "test-webhook-secret")
+			.update(body)
+			.digest("hex");
+		return creemPaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "creem-signature": signature },
+				body,
+			}),
+		);
+	}
+
+	// Shape of Creem's refund.created object (refund + its transaction,
+	// subscription, checkout and order).
+	const refund = (overrides: Record<string, unknown> = {}) => ({
+		id: "evt_refund",
+		eventType: "refund.created",
+		object: {
+			id: "ref_1",
+			object: "refund",
+			status: "succeeded",
+			refund_amount: 1900,
+			transaction: {
+				id: "tran_1",
+				amount_paid: 1900,
+				status: "refunded",
+			},
+			subscription: { id: "sub_1", status: "active" },
+			checkout: { id: "ch_1" },
+			order: { id: "ord_1" },
+			customer: { id: "cust_1" },
+			...overrides,
+		},
+	});
+
+	it("keeps the checkout id as the payment reference of a one-time checkout", async () => {
+		const events = await parse({
+			id: "evt_co",
+			eventType: "checkout.completed",
+			object: {
+				id: "ch_1",
+				product: { id: "prod_topup" },
+				metadata: { user_id: "user_1" },
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "checkout.completed",
+			paymentRef: "ch_1",
+		});
+	});
+
+	it("maps a full refund of a subscription payment to payment.reversed of the subscription", async () => {
+		const events = await parse(refund());
+		expect(events).toEqual([
+			{
+				type: "payment.reversed",
+				eventId: "evt_refund",
+				subscriptionId: "sub_1",
+			},
+		]);
+	});
+
+	it("maps a full refund of a one-time payment to payment.reversed by checkout", async () => {
+		const events = await parse(refund({ subscription: null }));
+		expect(events).toEqual([
+			{ type: "payment.reversed", eventId: "evt_refund", paymentRef: "ch_1" },
+		]);
+	});
+
+	it("counts a refund of the whole paid amount as full", async () => {
+		const events = await parse(
+			refund({
+				transaction: { id: "tran_1", amount_paid: 1900, status: "paid" },
+			}),
+		);
+		expect(events[0]?.type).toBe("payment.reversed");
+	});
+
+	it("ignores a partial refund", async () => {
+		const events = await parse(
+			refund({
+				refund_amount: 500,
+				transaction: {
+					id: "tran_1",
+					amount_paid: 1900,
+					status: "partialRefund",
+				},
+			}),
+		);
+		expect(events).toEqual([]);
+	});
+
+	it("ignores a refund it cannot tell full from partial", async () => {
+		const events = await parse(
+			refund({ refund_amount: undefined, transaction: undefined }),
+		);
+		expect(events).toEqual([]);
+	});
+
+	it("maps a dispute to payment.reversed", async () => {
+		const events = await parse({
+			id: "evt_dispute",
+			eventType: "dispute.created",
+			object: {
+				id: "disp_1",
+				object: "dispute",
+				amount: 1900,
+				transaction: { id: "tran_1", status: "chargedBack" },
+				subscription: null,
+				checkout: { id: "ch_2" },
+			},
+		});
+		expect(events).toEqual([
+			{ type: "payment.reversed", eventId: "evt_dispute", paymentRef: "ch_2" },
+		]);
 	});
 });

@@ -273,12 +273,11 @@ export interface Plan {
 	 */
 	priceIdEnvVars?: { month?: string; year?: string };
 	/**
-	 * Grant `trialDays` once per owner: a checkout of an owner with any
-	 * earlier purchase of this plan (any status) gets no trial. The owner
-	 * is the billing owner — the organization while billing is attached
-	 * to organizations, so it means once per org, and a user with several
-	 * orgs gets one trial in each. For once per user (or per org AND
-	 * user), use `registerTrialEligibilityPolicy` (`./extensions`).
+	 * Grant `trialDays` once — the default when unset: a checkout gets no
+	 * trial when the billing owner (organization or user) or the checkout
+	 * user — in any org or personally — has an earlier purchase of this
+	 * plan (any status). `false`: a trial on every checkout. Finer rules:
+	 * `registerTrialEligibilityPolicy` (`./extensions`).
 	 */
 	trialOnce?: boolean;
 	/**

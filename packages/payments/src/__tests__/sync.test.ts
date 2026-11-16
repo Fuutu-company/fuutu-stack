@@ -34,6 +34,9 @@ vi.mock("@fuutu/db", () => ({
 	getPurchasesByUserId: mockGetPurchasesByUserId,
 	getActiveSubscriptionForUser: vi.fn(),
 	getActiveSubscriptionForOrganization: vi.fn(),
+	getActiveSubscriptionsForOwner: vi.fn().mockResolvedValue([]),
+	getOneTimePurchaseByPaymentRef: vi.fn().mockResolvedValue(null),
+	PURCHASE_PAYMENT_REF_KEY: "fuutu_payment_ref",
 	setPaymentsCustomerId: vi.fn(),
 	setOrganizationPaymentsCustomerId: vi.fn(),
 	upsertInvoiceByProviderId: mockUpsertInvoiceByProviderId,
@@ -52,6 +55,8 @@ vi.mock("@fuutu/credits", () => ({
 	grantRecurringCredits: mockGrantRecurringCredits,
 	grantTopUpCredits: mockGrantTopUpCredits,
 	resetRecurringCredits: mockResetRecurringCredits,
+	revokeRecurringCredits: vi.fn(),
+	revokeTopUpCredits: vi.fn(),
 }));
 
 const mockLogWarn = vi.hoisted(() => vi.fn());

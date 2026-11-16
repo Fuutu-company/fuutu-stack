@@ -92,6 +92,17 @@ function providerFailure(err: unknown): ProviderFailureKind | null {
 		: null;
 }
 
+/** The org's billing portal is open to the member who pays only. */
+function isPortalPayerOnly(err: unknown): boolean {
+	if (!(err instanceof ORPCError)) return false;
+	const data: unknown = err.data;
+	return (
+		typeof data === "object" &&
+		data !== null &&
+		(data as Record<string, unknown>).reason === "portal_payer_only"
+	);
+}
+
 /**
  * True when a payments call failed because the deployment cannot take
  * payments — provider off (`NOT_IMPLEMENTED`) or misconfigured, e.g. a
@@ -121,8 +132,10 @@ export function paymentsErrorKey(
 	| (typeof PROVIDER_FAILURE_KEY)[ProviderFailureKind]
 	| "choosePlan.unavailable"
 	| "errors.impersonationForbidden"
+	| "errors.portalPayerOnly"
 	| null {
 	if (isImpersonationForbidden(err)) return "errors.impersonationForbidden";
+	if (isPortalPayerOnly(err)) return "errors.portalPayerOnly";
 	const failure = providerFailure(err);
 	if (failure) return PROVIDER_FAILURE_KEY[failure];
 	return isPaymentsUnavailable(err) ? "choosePlan.unavailable" : null;
