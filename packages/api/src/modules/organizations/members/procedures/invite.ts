@@ -22,6 +22,7 @@ const inviteMemberSchema = z.object({
 export const inviteMember = authProcedure({
 	org: { permission: PERMISSIONS.INVITE_MEMBER },
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({

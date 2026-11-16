@@ -35,6 +35,7 @@ const TRIAL_UNAVAILABLE = "trial_unavailable";
 export const createCheckout = authProcedure({
 	org: { permission: PERMISSIONS.PAYMENT.CREATE, optional: true },
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({

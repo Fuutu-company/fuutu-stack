@@ -8,6 +8,7 @@ import { requireOrgPermissionAccess } from "../../../orpc/org-access";
 import {
 	denyImpersonation,
 	protectedProcedure,
+	sessionOnly,
 } from "../../../orpc/procedures";
 import { sanitizePaymentUrl, throwIfPaymentsDisabled } from "../shared";
 
@@ -20,6 +21,7 @@ const topupSchema = z.object({
 
 export const createTopupCheckout = protectedProcedure
 	.use(denyImpersonation)
+	.use(sessionOnly)
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",

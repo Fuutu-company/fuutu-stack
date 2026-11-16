@@ -195,6 +195,12 @@ export type AuthorizeOptions = {
 	 * deleting or leaving organizations.
 	 */
 	denyImpersonation?: boolean;
+	/**
+	 * Reject API-key callers — a signed-in session only. A key authenticates
+	 * as its owner, so money, credentials and org structure stay out of its
+	 * reach (a leaked key must not open a portal, cancel a plan or mint keys).
+	 */
+	sessionOnly?: boolean;
 	/** Resolve org from input, verify membership, check org-level permission. */
 	org?: {
 		/** Permission to check against ORG_POLICY. Mutually exclusive with minRole. */
@@ -258,6 +264,20 @@ export function assertNotImpersonating(
 }
 
 /**
+ * Throws FORBIDDEN for an API-key caller (`context.apiKey` set) — the
+ * session-only guard behind `authProcedure({ sessionOnly: true })` and
+ * the `sessionOnly` middleware.
+ */
+export function assertSessionCaller(
+	context: { apiKey: Pick<ApiKeyAuth, "id"> | null },
+	message = "API keys cannot perform this action",
+): void {
+	if (context.apiKey) {
+		throw new ORPCError("FORBIDDEN", { message });
+	}
+}
+
+/**
  * Safely extract a string field from raw (possibly unparsed) input.
  * Returns undefined when input is null/undefined or the field is absent.
  */
@@ -292,6 +312,9 @@ export async function runAuthorize(
 	}
 	if (options.denyImpersonation) {
 		assertNotImpersonating(context);
+	}
+	if (options.sessionOnly) {
+		assertSessionCaller(context);
 	}
 	const systemRole = toSystemRole(user.role);
 

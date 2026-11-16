@@ -8,6 +8,7 @@ import { requireOrgPermissionAccess } from "../../../../orpc/org-access";
 import {
 	denyImpersonation,
 	protectedProcedure,
+	sessionOnly,
 } from "../../../../orpc/procedures";
 
 const revokeInvitationSchema = z.object({
@@ -16,6 +17,7 @@ const revokeInvitationSchema = z.object({
 
 export const revokeInvitation = protectedProcedure
 	.use(denyImpersonation)
+	.use(sessionOnly)
 	.use(createRateLimitMiddleware({ endpoint: "organizationMember" }))
 	.route({
 		method: "DELETE",

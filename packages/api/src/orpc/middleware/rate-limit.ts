@@ -8,6 +8,7 @@ import { ORPCError } from "@orpc/server";
 import { getClientIp } from "../../client-ip";
 import { apiConfig } from "../../config";
 import type { Context } from "../../context";
+import { markPolicy } from "../policy-markers";
 
 type RateLimitEndpoint = keyof typeof apiConfig.rateLimit.endpoints;
 
@@ -59,7 +60,13 @@ type RateLimitOptions = {
 type OrpcNext = (...args: any[]) => any;
 
 export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
-	return async ({ context, next }: { context: Context; next: OrpcNext }) => {
+	const rateLimit = async ({
+		context,
+		next,
+	}: {
+		context: Context;
+		next: OrpcNext;
+	}) => {
 		if (!apiConfig.rateLimit.enabled) {
 			return next();
 		}
@@ -106,4 +113,5 @@ export function createRateLimitMiddleware(options: RateLimitOptions = {}) {
 
 		return next();
 	};
+	return markPolicy(rateLimit, { rateLimit: true });
 }

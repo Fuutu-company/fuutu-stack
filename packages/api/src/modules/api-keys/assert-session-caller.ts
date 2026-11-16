@@ -1,5 +1,5 @@
-import { ORPCError } from "@orpc/server";
 import type { ApiKeyAuth } from "../../context";
+import { assertSessionCaller as assertSessionOnly } from "../../orpc/middleware/authorize";
 
 /**
  * API-key management is session-only: a key reaching oRPC authenticates as
@@ -9,9 +9,5 @@ import type { ApiKeyAuth } from "../../context";
 export function assertSessionCaller(context: {
 	apiKey: Pick<ApiKeyAuth, "id"> | null;
 }): void {
-	if (context.apiKey) {
-		throw new ORPCError("FORBIDDEN", {
-			message: "API keys cannot manage API keys",
-		});
-	}
+	assertSessionOnly(context, "API keys cannot manage API keys");
 }
