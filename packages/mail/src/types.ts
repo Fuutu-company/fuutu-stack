@@ -63,6 +63,10 @@ export interface TemplatePayloads {
 		verificationUrl: string;
 		newEmail: string;
 	};
+	"email-changed": BasePayload & {
+		name?: string;
+		newEmail: string;
+	};
 	notification: BasePayload & {
 		name?: string;
 		title: string;

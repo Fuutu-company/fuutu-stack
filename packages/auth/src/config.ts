@@ -14,15 +14,19 @@ export const authConfig = {
 	 * `expiresIn`: a session — and the `better-auth.session_token` cookie's
 	 * max-age — ends 30 days after it was last extended; `updateAge`: use
 	 * extends it, at most once a day. `cookieCache.maxAge`: the signed
-	 * `better-auth.session_data` cookie caches the session for 5 minutes.
+	 * `better-auth.session_data` cookie caches the session for 1 minute —
+	 * a revoked session or a ban takes effect within that window.
+	 * `freshSessionMaxAge`: an email change needs a sign-in at most this
+	 * long ago (hooks/fresh-session.ts).
 	 */
 	session: {
 		expiresIn: 60 * 60 * 24 * 30, // 30 days
 		updateAge: 60 * 60 * 24, // 1 day
 		cookieCache: {
 			enabled: true,
-			maxAge: 5 * 60, // 5 minutes
+			maxAge: 60, // 1 minute
 		},
+		freshSessionMaxAge: 15 * 60, // 15 minutes
 	},
 	rateLimiting: {
 		enabled: true,
@@ -54,7 +58,10 @@ export const authConfig = {
 	},
 	accountLinking: {
 		enabled: true,
-		trustedProviders: ["google", "github"] as const,
+		// Providers whose sign-in links into an existing account even when
+		// the provider reports the email as unverified. Empty: only a
+		// verified provider email links (Google and GitHub report it).
+		trustedProviders: [] as ("google" | "github")[],
 	},
 	// Admin-plugin messages — customization point for kit buyers.
 	admin: {
@@ -76,6 +83,15 @@ export const authConfig = {
 		passkeys: true,
 		twoFactor: true,
 		changeEmail: true,
+		// Self-service account deletion (Settings → Danger zone). Sole
+		// owners of an organization are refused; subscriptions are
+		// cancelled first and a failed cancel aborts the delete.
+		deleteAccount: true,
+		// Better Auth plugins the kit ships no UI for — off, so their
+		// endpoints are not served. `username`: sign-in by username;
+		// `multiSession`: several accounts in one browser.
+		username: false,
+		multiSession: false,
 	},
 	socialProviders: {
 		google: {
@@ -112,6 +128,13 @@ export const authConfig = {
 		// Seconds an invitation stays valid (Better Auth `invitationExpiresIn`,
 		// default 48 h); a resend — also from the admin area — restarts it.
 		invitationExpiresIn: 48 * 60 * 60,
+		// `true` serves Better Auth's organization mutations
+		// (`/api/auth/organization/create`, `update`, `delete`,
+		// `invite-member`, `update-member-role`, `remove-member`,
+		// `cancel-invitation`) over HTTP again — they bypass the oRPC
+		// procedures' slug rules, plan limits, rate limits, webhooks and
+		// role checks. Accept/reject, list, set-active and leave stay open.
+		exposeAuthEndpoints: false as boolean,
 	},
 	// OAuth 2.1 sign-in for MCP clients (Claude.ai, ChatGPT, Claude Code,
 	// Cursor, VS Code) — Better Auth acts as the authorization server for

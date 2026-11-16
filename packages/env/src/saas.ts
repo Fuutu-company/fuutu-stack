@@ -16,18 +16,59 @@ const LOG_DRAIN_VALUES = ["console", "sentry", "axiom", "fs", "memory"];
 const strictFlag = () =>
 	z.stringbool({ truthy: ["1", "true"], falsy: ["0", "false"] });
 
+const isProduction = () => process.env.NODE_ENV === "production";
+
+// Published in `.env.example` and CI until 2026-10-11 — anyone can sign
+// session cookies with it. Rotate if a deployment ever used it.
+const LEAKED_AUTH_SECRETS: ReadonlySet<string> = new Set([
+	"gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=",
+]);
+
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
+	"localhost",
+	"127.0.0.1",
+	"[::1]",
+]);
+
 const kitServerEnv = {
 	DATABASE_URL: z.url(),
 	// Selects the Redis rate-limit store when set — driver is a stub
 	// until implemented, see @fuutu/utils/rate-limit.
 	REDIS_URL: z.url().optional(),
-	BETTER_AUTH_SECRET: z.string().min(32),
-	BETTER_AUTH_URL: z.url(),
+	BETTER_AUTH_SECRET: z
+		.string()
+		.min(32)
+		.refine((v) => !isProduction() || v.trim().length >= 32, {
+			message: "BETTER_AUTH_SECRET needs 32+ characters in production",
+		})
+		.refine((v) => !isProduction() || !LEAKED_AUTH_SECRETS.has(v.trim()), {
+			message:
+				"BETTER_AUTH_SECRET is a published value — generate a new one (openssl rand -base64 32)",
+		}),
+	// https in production; plain http only on loopback (CI's `next start`).
+	BETTER_AUTH_URL: z.url().refine(
+		(v) => {
+			if (!isProduction()) return true;
+			const url = new URL(v);
+			return url.protocol === "https:" || LOOPBACK_HOSTS.has(url.hostname);
+		},
+		{ message: "BETTER_AUTH_URL must be https in production" },
+	),
 	// CORS origin for the Hono API — must be a concrete URL, never "*"
 	// (the API sends credentials; "*" + credentials is an invalid and
 	// dangerous combination that browsers reject anyway). URL
-	// validation already rejects "*".
-	CORS_ORIGIN: z.url().optional().default("http://localhost:3000"),
+	// validation already rejects "*". Unset in production: the app's own
+	// origin (BETTER_AUTH_URL), never a localhost default.
+	CORS_ORIGIN: z
+		.url()
+		.optional()
+		.default(() => {
+			const appUrl = process.env.BETTER_AUTH_URL;
+			if (isProduction() && appUrl && URL.canParse(appUrl)) {
+				return new URL(appUrl).origin;
+			}
+			return "http://localhost:3000";
+		}),
 	POLAR_ACCESS_TOKEN: z.string().optional(),
 	POLAR_SUCCESS_URL: z.url().optional(),
 	GOOGLE_CLIENT_ID: z.string().optional(),

@@ -15,6 +15,7 @@ import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { deleteSessionCookie } from "better-auth/cookies";
 import {
 	admin,
 	jwt,
@@ -26,18 +27,31 @@ import {
 	twoFactor,
 	username,
 } from "better-auth/plugins";
+import { authIpAddressOptions } from "./client-ip-header";
 import { authConfig } from "./config";
+import {
+	beforeOrganizationDelete,
+	beforeUserDelete,
+} from "./hooks/account-deletion";
 import {
 	persistActiveOrganizationChange,
 	restoreActiveOrganization,
 } from "./hooks/active-organization";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
+import { notifyPreviousEmailAfterChange } from "./hooks/email-change-notice";
+import { assertFreshSession } from "./hooks/fresh-session";
 import { assertNotImpersonating } from "./hooks/impersonation-guard";
 import {
 	assertImpersonationActive,
 	isEndedImpersonationResult,
 } from "./hooks/impersonation-session";
 import { assertInvitationForSignup } from "./hooks/invitation-only";
+import {
+	assertOwnerRemainsAfterRemoval,
+	assertOwnerRemainsAfterRoleChange,
+	restoreOwnerIfNoneLeft,
+} from "./hooks/last-owner";
+import { blockMagicLinkSecondFactorBypass } from "./hooks/magic-link-two-factor";
 import {
 	assertRegistrationWithinLimits,
 	getAuthorizeParams,
@@ -53,11 +67,8 @@ import {
 	revokeApiKeysOfRemovedMember,
 } from "./hooks/member-api-keys";
 import { assertPasswordPolicy } from "./hooks/password-policy";
-import {
-	cancelActiveSubscriptionsForOrganization,
-	cancelActiveSubscriptionsForUser,
-	syncSeatsForOrganization,
-} from "./hooks/payments-sync";
+import { syncSeatsForOrganization } from "./hooks/payments-sync";
+import { assertProfileInput } from "./hooks/profile-input";
 import {
 	assertInviteSeatAvailable,
 	assertSeatAvailable,
@@ -91,6 +102,17 @@ if (env.FUUTU_DISABLE_RATE_LIMIT) {
 	);
 }
 
+if (
+	env.NODE_ENV === "production" &&
+	!env.TRUST_PROXY_HEADERS &&
+	authConfig.rateLimiting.enabled &&
+	!env.FUUTU_DISABLE_RATE_LIMIT
+) {
+	log.warn(
+		"TRUST_PROXY_HEADERS is off: client IPs are untrusted, so every client shares one auth rate-limit bucket per endpoint (sign-in, sign-up, password reset). Set TRUST_PROXY_HEADERS=1 behind a reverse proxy that writes X-Forwarded-For.",
+	);
+}
+
 if (!env.NEXT_PUBLIC_SAAS_URL && env.NODE_ENV === "production") {
 	log.warn(
 		"NEXT_PUBLIC_SAAS_URL is unset — auth emails and passkeys will point at http://localhost:3000.",
@@ -119,6 +141,21 @@ const adminEndpointPaths = Object.values(adminPlugin.endpoints).map(
 	(endpoint) => endpoint.path,
 );
 
+/**
+ * Organization mutations wrapped by the oRPC `organizations.*` procedures
+ * (slug rules, plan limits, rate limits, webhooks, role checks) — closed
+ * to direct HTTP via `disabledPaths`.
+ */
+const organizationMutationPaths = [
+	"/organization/create",
+	"/organization/update",
+	"/organization/delete",
+	"/organization/invite-member",
+	"/organization/update-member-role",
+	"/organization/remove-member",
+	"/organization/cancel-invitation",
+];
+
 const authOptions = {
 	database: prismaAdapter(db, {
 		provider: "postgresql",
@@ -140,10 +177,14 @@ const authOptions = {
 	// Every admin-plugin endpoint is closed to direct HTTP too: support
 	// actions run through the audited oRPC procedures, which call
 	// `auth.api.*` server-side (not affected by `disabledPaths`).
-	// `authConfig.admin.exposeAuthEndpoints` opts back in.
+	// `authConfig.admin.exposeAuthEndpoints` opts back in. Same for the
+	// organization mutations (`authConfig.organizations.exposeAuthEndpoints`).
 	disabledPaths: [
 		...(mcpOAuth.active ? ["/token"] : []),
 		...(authConfig.admin.exposeAuthEndpoints ? [] : adminEndpointPaths),
+		...(authConfig.organizations.exposeAuthEndpoints
+			? []
+			: organizationMutationPaths),
 	],
 
 	// Rate limiting: Prevent brute-force attacks and email spam.
@@ -191,8 +232,17 @@ const authOptions = {
 				input: false,
 			},
 		},
+		// Self-service delete (`/delete-user`); the guards run in
+		// `databaseHooks.user.delete.before`.
+		deleteUser: {
+			enabled: authConfig.features.deleteAccount,
+		},
 		changeEmail: {
 			enabled: authConfig.features.changeEmail,
+			// Confirmation goes to the CURRENT address: whoever holds only the
+			// session cannot move the account to their own mailbox. Once
+			// confirmed, Better Auth verifies the new address, and the old one
+			// is told when the change is done (hooks/email-change-notice.ts).
 			sendChangeEmailConfirmation: async ({
 				user,
 				newEmail,
@@ -204,7 +254,7 @@ const authOptions = {
 			}) => {
 				try {
 					await sendEmail({
-						to: newEmail,
+						to: user.email,
 						template: "email-change-verification",
 						data: {
 							name: user.name,
@@ -227,6 +277,15 @@ const authOptions = {
 		before: createAuthMiddleware(async (ctx) => {
 			assertPasswordPolicy(ctx.path, ctx.body);
 			await assertNotImpersonating({
+				path: ctx.path,
+				getSession: () => getSessionFromCtx(ctx),
+			});
+			await assertProfileInput({
+				path: ctx.path,
+				body: ctx.body,
+				getSession: () => getSessionFromCtx(ctx),
+			});
+			await assertFreshSession({
 				path: ctx.path,
 				getSession: () => getSessionFromCtx(ctx),
 			});
@@ -266,6 +325,23 @@ const authOptions = {
 			}
 		}),
 		after: createAuthMiddleware(async (ctx) => {
+			const secondFactorUrl = await blockMagicLinkSecondFactorBypass({
+				path: ctx.path,
+				newSession: ctx.context.newSession,
+				endSession: async (token) => {
+					deleteSessionCookie(ctx);
+					await ctx.context.internalAdapter.deleteSession(token);
+					ctx.context.setNewSession(null);
+				},
+				errorPageUrl: () => getErrorPageUrl(ctx.context),
+			});
+			if (secondFactorUrl) throw ctx.redirect(secondFactorUrl);
+			await notifyPreviousEmailAfterChange({
+				path: ctx.path,
+				token: ctx.query?.token,
+				returned: ctx.context.returned,
+				secret: ctx.context.secret,
+			});
 			if (
 				await isEndedImpersonationResult({
 					path: ctx.path,
@@ -309,6 +385,9 @@ const authOptions = {
 		requireEmailVerification: authConfig.signup.requireEmailVerification,
 		minPasswordLength: authConfig.passwordPolicy.minLength,
 		maxPasswordLength: authConfig.passwordPolicy.maxLength,
+		// A reset is account recovery: every existing session (possibly the
+		// attacker's) ends.
+		revokeSessionsOnPasswordReset: true,
 		// MCP refresh tokens outlive sessions — a reset (account recovery)
 		// must cut off connected OAuth clients too.
 		onPasswordReset: async ({ user }) => {
@@ -398,12 +477,12 @@ const authOptions = {
 		...(env.FUUTU_AUTH_COOKIE_PREFIX
 			? { cookiePrefix: env.FUUTU_AUTH_COOKIE_PREFIX }
 			: {}),
-		// Rate limits (incl. open MCP client registration) key on the client
-		// IP from `advanced.ipAddress.ipAddressHeaders` (default:
-		// x-forwarded-for). Behind a reverse proxy / load balancer, set it to
-		// the header your trusted proxy writes (e.g. ["cf-connecting-ip"]), or
-		// list the proxies in `trustedProxies` — otherwise clients can spoof
-		// their IP and dodge the limits. Default intentionally unchanged.
+		// Rate limits (incl. open MCP client registration) and
+		// `session.ipAddress` key on the client IP. Better Auth reads it only
+		// from the kit's own header, which the API's `/auth/**` handler sets
+		// from `getClientIp()` (TRUST_PROXY_HEADERS) — never from a
+		// client-sent X-Forwarded-For (client-ip-header.ts).
+		ipAddress: authIpAddressOptions,
 		defaultCookieAttributes: {
 			sameSite: authConfig.cookies.sameSite,
 			// `secure` is intentionally NOT overridden — Better Auth derives it
@@ -459,8 +538,9 @@ const authOptions = {
 			},
 			delete: {
 				before: async (user) => {
-					// Cancel active subscriptions before the user row is deleted.
-					await cancelActiveSubscriptionsForUser(user.id);
+					// Sole owners are refused; subscriptions are cancelled before
+					// the user row is deleted — a failed cancel aborts.
+					await beforeUserDelete(user.id);
 				},
 			},
 		},
@@ -520,7 +600,7 @@ const authOptions = {
 			: []),
 
 		// Username login (enables `username` field + sign-in by username).
-		username(),
+		...(authConfig.features.username ? [username()] : []),
 
 		// OpenAPI doc endpoint at `/api/auth/reference` (+ `/api/auth/open-api/generate-schema`).
 		// Dev/staging only — not exposed in production.
@@ -586,13 +666,22 @@ const authOptions = {
 								);
 							},
 							beforeRemoveMember: async ({ member }) => {
+								await assertOwnerRemainsAfterRemoval({ member });
 								await revokeApiKeysOfRemovedMember(member);
+							},
+							// The organization always keeps an owner (hooks/last-owner.ts).
+							beforeUpdateMemberRole: async ({ member, newRole }) => {
+								await assertOwnerRemainsAfterRoleChange({ member, newRole });
+							},
+							afterUpdateMemberRole: async ({ member, previousRole }) => {
+								await restoreOwnerIfNoneLeft({ member, previousRole });
 							},
 							afterRemoveMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);
 							},
 							beforeDeleteOrganization: async ({ organization }) => {
-								await cancelActiveSubscriptionsForOrganization(organization.id);
+								// A subscription that cannot be cancelled aborts the delete.
+								await beforeOrganizationDelete(organization.id);
 							},
 						},
 					}),
@@ -601,7 +690,7 @@ const authOptions = {
 
 		adminPlugin,
 
-		multiSession(),
+		...(authConfig.features.multiSession ? [multiSession()] : []),
 
 		// Track the last authentication method (email, google, github, passkey,
 		// magic-link) in a cookie so the sign-in page can highlight the method

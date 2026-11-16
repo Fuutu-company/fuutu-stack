@@ -38,6 +38,10 @@ export const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
 			"https://example.test/auth/verify-email-change?token=preview-token",
 		newEmail: "ada.new@example.test",
 	},
+	"email-changed": {
+		name: "Ada",
+		newEmail: "ada.new@example.test",
+	},
 	notification: {
 		name: "Ada",
 		title: "Subscription reminder",
@@ -50,6 +54,7 @@ export const TEMPLATES: TemplateName[] = [
 	"new-user",
 	"email-verification",
 	"email-change-verification",
+	"email-changed",
 	"magic-link",
 	"password-reset",
 	"organization-invitation",
