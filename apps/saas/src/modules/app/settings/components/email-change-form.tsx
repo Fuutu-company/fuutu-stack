@@ -28,7 +28,9 @@ export function EmailChangeForm() {
 				// carries this address.
 				callbackURL: `/auth/verify-email-change?email=${encodeURIComponent(newEmail)}`,
 			});
-			if (res.error) {
+			if (res.error?.code === "SESSION_NOT_FRESH") {
+				setStatus(t("emailChange.reauthRequired"));
+			} else if (res.error) {
 				setStatus(
 					planGateMessage(res.error, tRoot, "settings.emailChange.failed"),
 				);

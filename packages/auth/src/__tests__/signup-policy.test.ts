@@ -47,6 +47,29 @@ describe("assertSignupPolicy()", () => {
 		).toThrow(APIError);
 	});
 
+	it.each([
+		// Google One Tap / native apps: `idToken` sign-in creates users too.
+		"/sign-in/social",
+		// Any other user-creating endpoint a plugin adds later.
+		"/one-tap/callback",
+		"/oauth2/callback/acme",
+		"/sign-in/email-otp",
+	])("rejects sign-up on %s when disabled", (path) => {
+		expect(() =>
+			assertSignupPolicy({ email: "a@b.dev" }, { path }, closed),
+		).toThrow(APIError);
+	});
+
+	it("applies allowedDomains to the idToken sign-in", () => {
+		expect(() =>
+			assertSignupPolicy(
+				{ email: "dev@evil.dev" },
+				{ path: "/sign-in/social" },
+				restricted,
+			),
+		).toThrow(APIError);
+	});
+
 	it("does not block admin-provisioned users when disabled", () => {
 		expect(() =>
 			assertSignupPolicy(

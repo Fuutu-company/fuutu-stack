@@ -36,7 +36,14 @@ export function DeleteAccountBlock() {
 		try {
 			const res = await authClient.deleteUser({ password });
 			if (res.error) {
-				setError(planGateMessage(res.error, t, "settings.danger.failed"));
+				const code = res.error.code;
+				setError(
+					code === "SOLE_ORGANIZATION_OWNER"
+						? t("settings.danger.soleOwner")
+						: code === "SUBSCRIPTION_CANCELLATION_FAILED"
+							? t("settings.danger.subscriptionNotCancelled")
+							: planGateMessage(res.error, t, "settings.danger.failed"),
+				);
 				return;
 			}
 			router.push("/");

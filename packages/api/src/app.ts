@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { auth } from "@fuutu/auth";
+import { withClientIp } from "@fuutu/auth/client-ip-header";
 import {
 	config,
 	KIT_FINGERPRINT_HEADER_NAME,
@@ -136,7 +137,8 @@ const base = new Hono<{
 		["POST", "GET"],
 		"/auth/**",
 		bodyLimit({ maxSize: apiConfig.maxBodyBytes, onError: payloadTooLarge }),
-		(c) => auth.handler(c.req.raw),
+		(c) =>
+			auth.handler(withClientIp(c.req.raw, getClientIp(c.req.raw.headers))),
 	)
 	.get("/health", (c) => c.json({ status: "healthy" }))
 	.get("/version", (c) =>

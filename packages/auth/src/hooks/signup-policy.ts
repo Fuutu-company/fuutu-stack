@@ -3,11 +3,12 @@
  *
  * Runs in `databaseHooks.user.create.before` (alongside the invitation-only
  * gate) so every self-registration path is covered — email/password,
- * social `/callback/*`, and magic-link `/magic-link/verify` auto-sign-up.
+ * social `/callback/*` and `/sign-in/social` (idToken), magic-link
+ * `/magic-link/verify` auto-sign-up, and any user-creating endpoint a
+ * plugin adds later (deny by default).
  *
- * Scoped to self-service endpoint paths: admin provisioning
- * (`/admin/create-user`) and context-free creations (seed/CLI scripts)
- * are unaffected. `emailAndPassword.disableSignUp` and the magicLink
+ * Admin provisioning (`/admin/create-user`) and context-free creations
+ * (seed/CLI scripts) are unaffected. `emailAndPassword.disableSignUp` and the magicLink
  * plugin's `disableSignUp` short-circuit earlier for nicer client errors;
  * this hook is the uniform backstop, including the domain allow-list.
  */
@@ -19,15 +20,16 @@ export interface SignupPolicy {
 	allowedDomains: readonly string[];
 }
 
-const SELF_SERVICE_SIGNUP_PATHS: ReadonlySet<string> = new Set([
-	"/sign-up/email",
-	"/magic-link/verify",
-]);
+/** User creations that are provisioning, not sign-up. */
+const PROVISIONING_PATHS: ReadonlySet<string> = new Set(["/admin/create-user"]);
 
-/** `/callback/<provider>` covers every social provider callback. */
+/**
+ * Every endpoint that creates a user is self-service sign-up unless it is
+ * a provisioning path — a new user-creating endpoint is gated by default.
+ */
 export function isSelfServiceSignupPath(path: string | undefined): boolean {
 	if (!path) return false;
-	return SELF_SERVICE_SIGNUP_PATHS.has(path) || path.startsWith("/callback/");
+	return !PROVISIONING_PATHS.has(path);
 }
 
 /**

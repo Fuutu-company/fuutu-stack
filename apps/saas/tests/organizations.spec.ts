@@ -1,6 +1,7 @@
 import { config } from "@fuutu/config";
 import { expect, test } from "./fixtures";
 import { orgSettingsCopy } from "./kit-catalog";
+import { createThrowawayOrg } from "./throwaway-org";
 
 test.describe("organization flows", () => {
 	test("organizations page renders for authenticated user", async ({
@@ -209,16 +210,18 @@ test.describe("organization settings — invite & members", () => {
 
 test("the org breadcrumb shows the organization's name, not its slug", async ({
 	page,
+	browser,
 	baseURL,
 }) => {
-	const origin = new URL(baseURL ?? page.url()).origin;
 	const slug = `e2e-crumb-${Date.now()}`;
-	const created = await page.request.post("/api/auth/organization/create", {
-		data: { name: "Crumb Labs GmbH", slug },
-		headers: { origin },
+	const org = await createThrowawayOrg({
+		browser,
+		baseURL: baseURL ?? new URL(page.url()).origin,
+		admin: page.request,
+		name: "Crumb Labs GmbH",
+		slug,
+		joinAsOwner: true,
 	});
-	expect(created.ok()).toBe(true);
-	const { id: orgId } = (await created.json()) as { id: string };
 	try {
 		await page.goto(`/organizations/${slug}/settings/general`);
 		const crumbs = page.getByRole("navigation", { name: /breadcrumb/i });
@@ -227,10 +230,7 @@ test("the org breadcrumb shows the organization's name, not its slug", async ({
 		).toBeVisible({ timeout: 10_000 });
 		await expect(crumbs).not.toContainText(/e2e-crumb/i);
 	} finally {
-		await page.request.post("/api/auth/organization/delete", {
-			data: { organizationId: orgId },
-			headers: { origin },
-		});
+		await org.cleanup();
 	}
 });
 
@@ -250,16 +250,16 @@ test.describe("org membership guard", () => {
 		browser,
 		baseURL,
 	}) => {
-		const origin = new URL(baseURL ?? page.url()).origin;
 		const slug = `e2e-private-${Date.now()}`;
 		const name = `Private Org ${Date.now()}`;
-		// Created by the seeded admin — the seeded member is not in it.
-		const created = await page.request.post("/api/auth/organization/create", {
-			data: { name, slug },
-			headers: { origin },
+		// Created by a throwaway user — the seeded member is not in it.
+		const org = await createThrowawayOrg({
+			browser,
+			baseURL: baseURL ?? new URL(page.url()).origin,
+			admin: page.request,
+			name,
+			slug,
 		});
-		expect(created.ok()).toBe(true);
-		const { id: orgId } = (await created.json()) as { id: string };
 
 		const memberContext = await browser.newContext({
 			storageState: { cookies: [], origins: [] },
@@ -285,10 +285,7 @@ test.describe("org membership guard", () => {
 			}
 		} finally {
 			await memberContext.close();
-			await page.request.post("/api/auth/organization/delete", {
-				data: { organizationId: orgId },
-				headers: { origin },
-			});
+			await org.cleanup();
 		}
 	});
 });
@@ -326,10 +323,10 @@ test.describe("invitations need a verified email", () => {
 				"/api/auth/organization/get-full-organization?organizationSlug=acme",
 			)
 		).json()) as { id: string };
-		const invited = await request.post("/api/auth/organization/invite-member", {
-			data: { email, role: "admin", organizationId: org.id },
-			headers,
-		});
+		const invited = await request.post(
+			`/api/organizations/${org.id}/members/invite`,
+			{ data: { email, role: "admin" }, headers },
+		);
 		expect(invited.ok(), await invited.text()).toBe(true);
 		const invitation = (await invited.json()) as { id: string };
 
@@ -416,15 +413,14 @@ test.describe("invitations need a verified email", () => {
 			expect(orgs.map((o) => o.slug)).toContain("acme");
 		} finally {
 			await context.close();
-			await request.post("/api/auth/organization/cancel-invitation", {
-				data: { invitationId: invitation.id },
+			await request.delete(`/api/organizations/invitations/${invitation.id}`, {
 				headers,
 			});
 			if (userId) {
-				await request.post("/api/auth/organization/remove-member", {
-					data: { memberIdOrEmail: email, organizationId: org.id },
-					headers,
-				});
+				await request.delete(
+					`/api/organizations/${org.id}/members/${encodeURIComponent(email)}`,
+					{ headers },
+				);
 				await request.delete(`/api/admin/users/${userId}`, {
 					data: { reason: "E2E cleanup", confirmEmail: email },
 					headers,

@@ -110,6 +110,8 @@
 			"confirmDescription": "Diese Aktion ist nicht umkehrbar. Alle Daten werden dauerhaft entfernt.",
 			"confirmPassword": "Passwort bestätigen",
 			"confirmCta": "Ja, löschen",
+			"soleOwner": "Du bist der einzige Owner einer Organisation. Übertrage die Inhaberschaft oder lösche die Organisation zuerst.",
+			"subscriptionNotCancelled": "Dein Abonnement konnte nicht gekündigt werden, daher wurde nichts gelöscht. Versuche es gleich noch einmal.",
 			"failed": "Konto konnte nicht gelöscht werden."
 		},
 		"billing": {
@@ -120,12 +122,13 @@
 		},
 		"emailChange": {
 			"title": "E-Mail ändern",
-			"description": "Beantrage eine E-Mail-Änderung. Ein Bestätigungslink wird an deine neue Adresse gesendet.",
+			"description": "Beantrage eine E-Mail-Änderung. Wir senden zuerst einen Bestätigungslink an deine aktuelle Adresse, danach einen Bestätigungslink an die neue.",
 			"newEmail": "Neue E-Mail",
 			"newEmailPlaceholder": "neu@beispiel.de",
 			"submit": "Bestätigung senden",
 			"sending": "Sendet…",
-			"sent": "Bestätigungs-E-Mail gesendet. Prüfe dein neues Postfach.",
+			"sent": "Bestätigung an deine aktuelle E-Mail-Adresse gesendet. Öffne den Link darin, um fortzufahren.",
+			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und ändere dann deine E-Mail.",
 			"failed": "E-Mail-Änderung konnte nicht beantragt werden."
 		}
 	}

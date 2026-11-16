@@ -156,6 +156,71 @@ describe("@fuutu/env/saas", () => {
 		expect(env.BETTER_AUTH_SECRET).toBe("a".repeat(32));
 	});
 
+	describe("production hardening", () => {
+		const LEAKED_SECRET = "gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=";
+		const STRONG_SECRET = "k3Xv9pQ2mR7tW1yZ4bN8cF6hJ0sL5dG2aE9uI3oP7qM=";
+
+		function setProductionEnv() {
+			setRequiredSaasEnv();
+			process.env.NODE_ENV = "production";
+			process.env.BETTER_AUTH_SECRET = STRONG_SECRET;
+			process.env.BETTER_AUTH_URL = "https://app.example.com";
+		}
+
+		it("accepts a strong secret and an https app URL", async () => {
+			setProductionEnv();
+			const { env } = await import("../saas");
+			expect(env.BETTER_AUTH_URL).toBe("https://app.example.com");
+		});
+
+		it("rejects the BETTER_AUTH_SECRET once published in .env.example", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_SECRET = LEAKED_SECRET;
+			await expect(import("../saas")).rejects.toThrow();
+		});
+
+		it("still accepts the published secret outside production (local dev)", async () => {
+			setRequiredSaasEnv();
+			process.env.NODE_ENV = "development";
+			process.env.BETTER_AUTH_SECRET = LEAKED_SECRET;
+			const { env } = await import("../saas");
+			expect(env.BETTER_AUTH_SECRET).toBe(LEAKED_SECRET);
+		});
+
+		it("rejects a secret that is under 32 chars once whitespace is trimmed", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_SECRET = `  ${"a".repeat(20)}            `;
+			await expect(import("../saas")).rejects.toThrow();
+		});
+
+		it("rejects a plain-http BETTER_AUTH_URL on a public host", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_URL = "http://app.example.com";
+			await expect(import("../saas")).rejects.toThrow();
+		});
+
+		it("allows plain http on loopback (CI runs next start on localhost)", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_URL = "http://localhost:3000";
+			const { env } = await import("../saas");
+			expect(env.BETTER_AUTH_URL).toBe("http://localhost:3000");
+		});
+
+		it("defaults CORS_ORIGIN to the app origin instead of localhost", async () => {
+			setProductionEnv();
+			delete process.env.CORS_ORIGIN;
+			const { env } = await import("../saas");
+			expect(env.CORS_ORIGIN).toBe("https://app.example.com");
+		});
+
+		it("keeps an explicit CORS_ORIGIN", async () => {
+			setProductionEnv();
+			process.env.CORS_ORIGIN = "https://www.example.com";
+			const { env } = await import("../saas");
+			expect(env.CORS_ORIGIN).toBe("https://www.example.com");
+		});
+	});
+
 	it("rejects a CRON_SECRET shorter than 16 chars", async () => {
 		setRequiredSaasEnv();
 		process.env.CRON_SECRET = "too-short";
