@@ -27,6 +27,9 @@
 .fuutu
 .shadcn-staging
 .pnpm-store
+# Agent tooling: worktrees (whole repo copies) and private overlays
+.claude
+CLAUDE.local.md
 
 # Tests are not needed to build or run the apps
 apps/*/tests
