@@ -1,0 +1,49 @@
+name: DCO
+
+# Every commit in a pull request must carry a `Signed-off-by:` line that
+# matches the commit author (Developer Certificate of Origin 1.1, see
+# CONTRIBUTING.md). Uses the GitHub API only: no checkout, no third-party actions.
+#
+# Runs for external contributions only: pull requests from a fork. A branch
+# in this repository needs write access, so its work is the maintainers'
+# (owned by Fuutu, see CONTRIBUTING.md). The head repo is a fact of the PR;
+# `author_association` is not (private org membership reports CONTRIBUTOR).
+# A deleted fork (head repo null) still runs the check.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  dco:
+    name: DCO
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Signed-off-by on every commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          failed=0
+          while IFS=$'\t' read -r sha name email parents message; do
+            if [ "$parents" -gt 1 ]; then
+              echo "skip merge commit $sha"
+              continue
+            fi
+            trailer="Signed-off-by: $name <$email>"
+            if printf '%b' "$message" | grep -Fxq -- "$trailer"; then
+              echo "ok   $sha"
+            else
+              echo "::error::Commit $sha is missing '$trailer'. Sign off with 'git commit -s' (existing commits: 'git rebase --signoff')."
+              failed=1
+            fi
+          done < <(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/commits" \
+            --jq '.[] | [.sha, .commit.author.name, .commit.author.email, (.parents | length), .commit.message] | @tsv')
+          exit "$failed"

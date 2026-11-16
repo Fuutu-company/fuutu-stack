@@ -27,6 +27,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
 import {
 	useFullOrganization,
@@ -85,7 +86,7 @@ export function OrgSettingsDanger({ slug }: { slug: string }) {
 			router.refresh();
 		} catch (e) {
 			log.error("deleteOrg failed", { err: e });
-			setDeleteError(t("organizations.settings.failed"));
+			setDeleteError(planGateMessage(e, t, "organizations.settings.failed"));
 		} finally {
 			setBusy(null);
 		}

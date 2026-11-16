@@ -185,6 +185,14 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+      # `next build` inlines NEXT_PUBLIC_* into client bundles; local builds
+      # get it from the slot env (tooling/scripts/next.mjs), CI's plain
+      # `next build` from here (slot 0 marketing port).
+      NEXT_PUBLIC_MARKETING_URL: http://localhost:3001
+      # Any non-empty id: the seed puts Acme on Pro with it and the app maps
+      # it back to Pro, like a local .env with a test price. Unset, Acme is
+      # Free and plan-gated specs (webhooks) answer 403.
+      PAYMENTS_PRO_PRICE_ID: ci_pro_month
     steps:
       - name: Generate CI auth secret
         run: |
@@ -250,10 +258,10 @@ jobs:
           case "$head_msg" in
             chore\(visual\)*)
               echo "mode=compare" >> "$GITHUB_OUTPUT"
-              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --project=chromium --project=mobile-safari
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --project=chromium --project=mobile-safari
               ;;
             *)
-              pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots --project=chromium --project=mobile-safari
               if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
                 echo "changed=1" >> $GITHUB_OUTPUT
               fi
@@ -289,13 +297,13 @@ jobs:
 
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
-        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots --project=chromium --project=mobile-safari
+        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots --project=chromium --project=mobile-safari
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
       - name: Update baselines (merge to main — all browsers)
         if: github.event_name == 'push' && github.ref_name == 'main'
-        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test tests/visual.spec.ts --update-snapshots
+        run: pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
@@ -363,6 +371,50 @@ jobs:
             apps/${{ matrix.app }}/playwright-report
             apps/${{ matrix.app }}/test-results
             apps/${{ matrix.app }}/visual-report
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Docs E2E — same container, build and production server as the e2e
+  # matrix above, non-visual only (docs has no visual baselines), so the
+  # matrix keeps its baseline steps and check names. No database: docs
+  # reads only public env.
+  e2e-docs:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && vars.FUUTU_CI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Must match the pinned catalog @playwright/test version exactly — bump both together.
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    env:
+      SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
+      HOME: /tmp/pw-home
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+    steps:
+      - run: mkdir -p "$HOME"
+      - uses: actions/checkout@v5
+      # Docs never import @fuutu/db, and Prisma generate needs DATABASE_URL.
+      - uses: ./.github/actions/setup
+        with:
+          db-generate: "false"
+      - name: Create .env for dotenv-cli
+        run: |
+          cat > .env << 'EOF'
+          NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
+          FUUTU_TELEMETRY_DISABLED=1
+          EOF
+      - name: Build docs
+        run: pnpm -F @fuutu/docs build
+      - name: Run non-visual tests (must pass, chromium only)
+        run: pnpm -F @fuutu/docs exec playwright test --grep-invert "visual regression" --project=chromium
+        env:
+          PLAYWRIGHT_USE_PROD: "1"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-docs-report
+          path: |
+            apps/docs/playwright-report
+            apps/docs/test-results
           if-no-files-found: ignore
           retention-days: 14
 

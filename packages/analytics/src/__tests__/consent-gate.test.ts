@@ -3,7 +3,9 @@ import { analyticsConfig } from "../config";
 import { readConsentCookie } from "../consent-cookie";
 import {
 	analyticsCspOrigins,
+	consentBannerMode,
 	consentBannerVisible,
+	consentDecisionNeeded,
 	hasTrackingConsent,
 	providerRequiresConsent,
 	trackEvent,
@@ -79,7 +81,56 @@ describe("consentBannerVisible", () => {
 	});
 });
 
+describe("consentBannerMode", () => {
+	it("is a notice for providers that track without consent", () => {
+		analyticsConfig.provider = "umami";
+		expect(consentBannerMode()).toBe("notice");
+	});
+
+	it("asks for consent when the provider requires it", () => {
+		analyticsConfig.provider = "ga4";
+		expect(consentBannerMode()).toBe("consent");
+	});
+
+	it("asks for consent when requireConsent forces the gate", () => {
+		analyticsConfig.provider = "umami";
+		analyticsConfig.requireConsent = true;
+		expect(consentBannerMode()).toBe("consent");
+	});
+});
+
+describe("consentDecisionNeeded", () => {
+	it("notice mode: any stored answer counts, only no answer shows the banner", () => {
+		analyticsConfig.provider = "umami";
+		expect(consentDecisionNeeded(null)).toBe(true);
+		expect(consentDecisionNeeded("bogus")).toBe(true);
+		expect(consentDecisionNeeded("acknowledged")).toBe(false);
+		expect(consentDecisionNeeded("granted")).toBe(false);
+		expect(consentDecisionNeeded("denied")).toBe(false);
+	});
+
+	it("consent mode: an acknowledged notice is no consent, the banner asks again", () => {
+		analyticsConfig.provider = "ga4";
+		expect(consentDecisionNeeded(null)).toBe(true);
+		expect(consentDecisionNeeded("acknowledged")).toBe(true);
+		expect(consentDecisionNeeded("granted")).toBe(false);
+		expect(consentDecisionNeeded("denied")).toBe(false);
+	});
+});
+
 describe("hasTrackingConsent", () => {
+	it("an acknowledged notice keeps a consent-free provider tracking", () => {
+		analyticsConfig.provider = "umami";
+		setCookie(`${analyticsConfig.consentCookieName}=acknowledged`);
+		expect(hasTrackingConsent()).toBe(true);
+	});
+
+	it("an acknowledged notice does not unlock a consent-required provider", () => {
+		analyticsConfig.provider = "ga4";
+		setCookie(`${analyticsConfig.consentCookieName}=acknowledged`);
+		expect(hasTrackingConsent()).toBe(false);
+	});
+
 	it("is true for consent-free providers without any cookie", () => {
 		analyticsConfig.provider = "umami";
 		expect(hasTrackingConsent()).toBe(true);

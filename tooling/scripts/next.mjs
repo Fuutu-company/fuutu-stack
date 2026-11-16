@@ -7,6 +7,7 @@
  *   node ../../tooling/scripts/next.mjs dev saas
  *   node ../../tooling/scripts/next.mjs start marketing
  *   node ../../tooling/scripts/next.mjs e2e saas   # build + start on the E2E port
+ *   node ../../tooling/scripts/next.mjs e2e docs   # same, no E2E database reset
  *
  * In CI there is no registry: slot 0 (the classic ports).
  */
@@ -28,7 +29,14 @@ const APP_PORT = {
 	docs: "docs",
 	"mail-preview": "mailPreview",
 };
-const E2E_PORT = { saas: "e2eSaas", marketing: "e2eMarketing" };
+const E2E_PORT = {
+	saas: "e2eSaas",
+	marketing: "e2eMarketing",
+	docs: "e2eDocs",
+};
+// No database: skip the E2E reset, which would drop `<db>-e2e` under a
+// SaaS E2E server running in parallel.
+const E2E_NO_DB = new Set(["docs"]);
 
 const [mode, app, ...rest] = process.argv.slice(2);
 if (!["dev", "start", "e2e"].includes(mode) || !APP_PORT[app]) {
@@ -103,7 +111,7 @@ function resetE2eDatabase() {
 }
 
 if (e2e) {
-	const reset = resetE2eDatabase();
+	const reset = E2E_NO_DB.has(app) ? 0 : resetE2eDatabase();
 	if (reset !== 0) process.exit(reset);
 	// `next build` with a custom distDir repoints next-env.d.ts at
 	// `.next-e2e/types`; plain `tsc` would then depend on the E2E output.

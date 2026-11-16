@@ -30,6 +30,7 @@ const DARK_DESTRUCTIVE_FILL_ALPHA = 0.6;
 const FOCUS_RING_ALPHA = 0.5;
 /** Default Button hover is `hover:bg-primary/90`. */
 const PRIMARY_HOVER_FILL_ALPHA = 0.9;
+const PRIMARY_BAND_TILE_ALPHA = 0.08;
 /** Button/Badge destructive render `text-white`, whatever --destructive-foreground says. */
 const WHITE: Vec3 = [1, 1, 1];
 /** Surfaces a destructive button sits on (page, cards, dialogs/popovers). */
@@ -268,7 +269,11 @@ function measureFocusRing(
 	return worst ?? { error: `${mode}: no surface to measure the ring on` };
 }
 
-/** `primary-foreground` on `hover:bg-primary/90` composited over the page background. */
+/**
+ * `primary-foreground` on `hover:bg-primary/90` composited over every surface
+ * a button sits on (background, card, popover). Returns the worst ratio and
+ * names that surface.
+ */
 function measurePrimaryHoverFill(
 	blocks: ThemeBlocks,
 	mode: ThemeMode,
@@ -278,13 +283,39 @@ function measurePrimaryHoverFill(
 	if ("error" in primary) return primary;
 	const fg = parseToken(blocks, mode, pair.fg);
 	if ("error" in fg) return fg;
-	const under = surface(blocks, mode, "background");
-	if ("error" in under) return under;
-	const fill = compositeOver(
-		{ rgb: primary.rgb, alpha: primary.alpha * PRIMARY_HOVER_FILL_ALPHA },
-		under.rgb,
+
+	let worst: { ratio: number; surface: string } | undefined;
+	for (const name of FILL_SURFACES) {
+		const under = surface(blocks, mode, name);
+		if ("error" in under) return under;
+		const fill = compositeOver(
+			{ rgb: primary.rgb, alpha: primary.alpha * PRIMARY_HOVER_FILL_ALPHA },
+			under.rgb,
+		);
+		const ratio = contrastRatio(compositeOver(fg, fill), fill);
+		if (!worst || ratio < worst.ratio) worst = { ratio, surface: name };
+	}
+	return worst ?? { error: `${mode}: no surface to measure the fill on` };
+}
+
+/**
+ * `primary-foreground` on the SecurityBand tile: `bg-primary-foreground/[0.08]`
+ * over the solid `bg-primary` band.
+ */
+function measurePrimaryBandTile(
+	blocks: ThemeBlocks,
+	mode: ThemeMode,
+	pair: ContrastPair,
+): PairResult {
+	const band = surface(blocks, mode, pair.bg);
+	if ("error" in band) return band;
+	const fg = parseToken(blocks, mode, pair.fg);
+	if ("error" in fg) return fg;
+	const tile = compositeOver(
+		{ rgb: fg.rgb, alpha: fg.alpha * PRIMARY_BAND_TILE_ALPHA },
+		band.rgb,
 	);
-	return { ratio: contrastRatio(compositeOver(fg, fill), fill) };
+	return { ratio: contrastRatio(compositeOver(fg, tile), tile) };
 }
 
 /**
@@ -302,6 +333,9 @@ export function measurePair(
 	}
 	if (pair.effective === "primary-hover-blend") {
 		return measurePrimaryHoverFill(blocks, mode, pair);
+	}
+	if (pair.effective === "primary-band-tile") {
+		return measurePrimaryBandTile(blocks, mode, pair);
 	}
 	if (pair.effective === "focus-ring") {
 		return measureFocusRing(blocks, mode, pair);

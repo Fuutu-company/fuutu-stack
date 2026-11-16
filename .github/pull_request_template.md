@@ -26,6 +26,7 @@
 
 ## Checklist
 
+- [ ] Every commit is signed off (`git commit -s`), and I agree to the contribution terms in [CONTRIBUTING.md](../CONTRIBUTING.md#contribution-terms)
 - [ ] PR title follows [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `breaking:`, `docs:`, `chore:`)
 - [ ] Branch targets `develop` (or `main` for hotfixes)
 - [ ] `pnpm check` passes (lint + types + tests)
@@ -37,3 +38,4 @@
 - [ ] Tests added for new functionality
 - [ ] No secrets, API keys, or credentials in the diff
 - [ ] Provider interfaces used (no direct concrete provider imports)
+- [ ] If this pull request is merged, list me on the contributors page at fuutustack.com with my GitHub username, avatar and profile link. (Optional. Withdraw any time: privacy@fuutustack.com.)

@@ -17,6 +17,12 @@ describe("buildConsentCookie", () => {
 		expect(cookie).toContain("SameSite=Lax");
 	});
 
+	it("stores an acknowledged notice as its own value", () => {
+		expect(buildConsentCookie("acknowledged")).toContain(
+			`${analyticsConfig.consentCookieName}=acknowledged`,
+		);
+	});
+
 	it("does not set a domain attribute by default (host-scoped)", () => {
 		// Regression: deriving `domain=` from the hostname sliced the last
 		// two labels, so app.example.co.uk produced `domain=.co.uk` — a

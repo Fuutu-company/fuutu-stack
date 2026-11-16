@@ -12,12 +12,41 @@ import { setRequestLocale } from "next-intl/server";
 import { appDocs } from "@/app-docs";
 import { LLMCopyButton, ViewOptions } from "@/components/ai/page-actions";
 import { OpenAPIPage } from "@/components/openapi/api-page";
-import { defaultLocale, locales } from "@/i18n/config";
+import { resolveOgImageUrl, resolveSourceUrl } from "@/lib/app-docs-hooks";
+import type { DocsPage as DocsPageData } from "@/lib/extensions";
+import { docsPageMetadata } from "@/lib/page-metadata";
 import { getPageImage, source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
 interface PageProps {
 	params: Promise<{ locale: string; slug?: string[] }>;
+}
+
+/** Copy Markdown / Open, then the app's `PageActions` — MDX and OpenAPI pages. */
+function DocsPageActions({
+	page,
+	locale,
+}: {
+	page: DocsPageData;
+	locale: string;
+}) {
+	const { PageActions } = appDocs;
+	return (
+		<div className="flex flex-row items-center gap-2 border-b pb-6">
+			<LLMCopyButton markdownUrl={`${page.url}.mdx`} />
+			<ViewOptions
+				markdownUrl={`${page.url}.mdx`}
+				githubUrl={resolveSourceUrl(page, appDocs.sourceUrl)}
+			/>
+			{PageActions && (
+				<PageActions
+					url={page.url}
+					markdownUrl={`${page.url}.mdx`}
+					locale={locale}
+				/>
+			)}
+		</div>
+	);
 }
 
 export default async function Page({ params }: PageProps) {
@@ -31,7 +60,10 @@ export default async function Page({ params }: PageProps) {
 		return (
 			<DocsPage full>
 				<DocsTitle>{page.data.title}</DocsTitle>
-				<DocsDescription>{page.data.description}</DocsDescription>
+				<DocsDescription className="mb-0">
+					{page.data.description}
+				</DocsDescription>
+				<DocsPageActions page={page} locale={locale} />
 				<DocsBody>
 					<OpenAPIPage {...page.data.getOpenAPIPageProps()} />
 				</DocsBody>
@@ -40,12 +72,6 @@ export default async function Page({ params }: PageProps) {
 	}
 
 	const MDX = page.data.body;
-	const { PageActions } = appDocs;
-	const gitConfig = {
-		user: "Fuutu-company",
-		repo: "fuutu-stack",
-		branch: "main",
-	};
 
 	return (
 		<DocsPage toc={page.data.toc} full={page.data.full}>
@@ -53,20 +79,7 @@ export default async function Page({ params }: PageProps) {
 			<DocsDescription className="mb-0">
 				{page.data.description}
 			</DocsDescription>
-			<div className="flex flex-row items-center gap-2 border-b pb-6">
-				<LLMCopyButton markdownUrl={`${page.url}.mdx`} />
-				<ViewOptions
-					markdownUrl={`${page.url}.mdx`}
-					githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/apps/docs/content/docs/${page.path}`}
-				/>
-				{PageActions && (
-					<PageActions
-						url={page.url}
-						markdownUrl={`${page.url}.mdx`}
-						locale={locale}
-					/>
-				)}
-			</div>
+			<DocsPageActions page={page} locale={locale} />
 			<DocsBody>
 				<MDX
 					components={getMDXComponents({
@@ -89,31 +102,21 @@ export async function generateMetadata({
 	const page = source.getPage(slug, locale);
 	if (!page) notFound();
 
-	// Build hreflang alternates — all locales point to the same docs slug.
+	// hreflang alternates — all locales point to the same docs slug.
 	// `page.url` includes the locale prefix (e.g. `/de/docs`), so we rebuild
 	// the base path from slugs to avoid double-prefixing.
-	const basePath = `/docs${page.slugs.length > 0 ? `/${page.slugs.join("/")}` : ""}`;
-	const languages: Record<string, string> = {};
-	for (const loc of locales) {
-		languages[loc] = loc === defaultLocale ? basePath : `/${loc}${basePath}`;
-	}
-
-	return {
-		title: page.data.title,
-		description: page.data.description,
-		alternates: {
-			languages,
-		},
-		openGraph: {
+	return docsPageMetadata(
+		{
 			title: page.data.title,
 			description: page.data.description,
 			locale,
-			images: getPageImage(page).url,
+			path: `/docs${page.slugs.length > 0 ? `/${page.slugs.join("/")}` : ""}`,
+			image: resolveOgImageUrl(
+				page,
+				getPageImage(page).url,
+				appDocs.ogImage?.url,
+			),
 		},
-		twitter: {
-			card: "summary_large_image",
-			title: page.data.title,
-			description: page.data.description,
-		},
-	};
+		appDocs.metadata,
+	);
 }

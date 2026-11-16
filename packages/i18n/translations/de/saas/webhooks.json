@@ -58,7 +58,8 @@
 			"description": "Kopiere dieses Signatur-Geheimnis jetzt — du kannst es später nicht mehr sehen.",
 			"copy": "Kopieren",
 			"copied": "Kopiert!",
-			"done": "Habe ich kopiert"
+			"done": "Habe ich kopiert",
+			"copyFailed": "Kopieren fehlgeschlagen. Markiere das Geheimnis und kopiere es selbst."
 		},
 		"deleteDialog": {
 			"title": "Webhook löschen?",

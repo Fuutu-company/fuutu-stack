@@ -1,7 +1,9 @@
 import { env } from "@fuutu/env/docs";
 import { i18nConfig } from "@fuutu/i18n/config";
 import type { MetadataRoute } from "next";
+import { appDocs } from "@/app-docs";
 import { defaultLocale, locales } from "@/i18n/config";
+import type { DocsSitemapRoute } from "@/lib/extensions";
 import { source } from "@/lib/source";
 
 /**
@@ -22,30 +24,42 @@ function alternates(base: string, path: string) {
 	return { languages };
 }
 
+/** The kit values of one entry with the app's (`appDocs.sitemap`) over them. */
+function withAppValues(route: DocsSitemapRoute) {
+	const app = appDocs.sitemap?.(route) ?? {};
+	return {
+		lastModified: app.lastModified ?? route.lastModified,
+		changeFrequency: app.changeFrequency ?? route.changeFrequency,
+		priority: app.priority ?? route.priority,
+	};
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
 	const base = env.NEXT_PUBLIC_DOCS_URL ?? "http://localhost:4000";
 	const now = new Date();
 
 	const entries: MetadataRoute.Sitemap = [];
+	const home = {
+		path: "",
+		kind: "home",
+		lastModified: now,
+		changeFrequency: "weekly",
+		priority: 1,
+	} as const;
 
 	// Home page — one entry per locale with hreflang alternates
-	const homePath = "";
 	if (i18nConfig.enabled) {
 		for (const locale of locales) {
 			entries.push({
-				url: localeUrl(base, locale, homePath),
-				lastModified: now,
-				changeFrequency: "weekly",
-				priority: 1,
-				alternates: alternates(base, homePath),
+				url: localeUrl(base, locale, home.path),
+				...withAppValues({ ...home, locale }),
+				alternates: alternates(base, home.path),
 			});
 		}
 	} else {
 		entries.push({
-			url: `${base}${homePath}`,
-			lastModified: now,
-			changeFrequency: "weekly",
-			priority: 1,
+			url: `${base}${home.path}`,
+			...withAppValues({ ...home, locale: defaultLocale }),
 		});
 	}
 
@@ -59,9 +73,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
 				const path = `/docs${page.slugs.length > 0 ? `/${page.slugs.join("/")}` : ""}`;
 				entries.push({
 					url: localeUrl(base, locale, path),
-					lastModified: now,
-					changeFrequency: "weekly",
-					priority: 0.8,
+					...withAppValues({
+						path,
+						locale,
+						kind: "page",
+						page,
+						lastModified: now,
+						changeFrequency: "weekly",
+						priority: 0.8,
+					}),
 					alternates: alternates(base, path),
 				});
 			}
@@ -70,9 +90,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
 		for (const page of source.getPages()) {
 			entries.push({
 				url: `${base}${page.url}`,
-				lastModified: now,
-				changeFrequency: "weekly",
-				priority: 0.8,
+				...withAppValues({
+					path: page.url,
+					locale: defaultLocale,
+					kind: "page",
+					page,
+					lastModified: now,
+					changeFrequency: "weekly",
+					priority: 0.8,
+				}),
 			});
 		}
 	}

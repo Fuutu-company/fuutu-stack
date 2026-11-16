@@ -5,6 +5,7 @@ const envStub = {
 	FUUTU_TELEMETRY_ENDPOINT: undefined as string | undefined,
 	FUUTU_TELEMETRY_DISABLED: false as boolean | undefined,
 	NEXT_PUBLIC_SAAS_URL: undefined as string | undefined,
+	NODE_ENV: "production" as "development" | "production" | "test",
 };
 
 vi.mock("@fuutu/env/saas", () => ({
@@ -27,6 +28,7 @@ beforeEach(() => {
 	envStub.FUUTU_TELEMETRY_ENDPOINT = undefined;
 	envStub.FUUTU_TELEMETRY_DISABLED = false;
 	envStub.NEXT_PUBLIC_SAAS_URL = undefined;
+	envStub.NODE_ENV = "production";
 });
 
 afterEach(() => {
@@ -36,6 +38,7 @@ afterEach(() => {
 	envStub.FUUTU_TELEMETRY_ENDPOINT = undefined;
 	envStub.FUUTU_TELEMETRY_DISABLED = false;
 	envStub.NEXT_PUBLIC_SAAS_URL = undefined;
+	envStub.NODE_ENV = "production";
 });
 
 describe("buildTelemetryPayload()", () => {
@@ -68,32 +71,32 @@ describe("buildTelemetryPayload()", () => {
 		expect(payload).toHaveProperty("appUrl");
 	});
 
-	it("includes features as an array", () => {
+	it("contains exactly the license-compliance fields", () => {
 		const payload = buildTelemetryPayload();
-		expect(Array.isArray(payload.features)).toBe(true);
+		expect(Object.keys(payload).sort()).toEqual([
+			"appUrl",
+			"kind",
+			"kitName",
+			"kitVersion",
+			"licenseKeyHash",
+		]);
 	});
 
-	it("features contains only enabled feature names", () => {
-		const payload = buildTelemetryPayload();
-		for (const feature of payload.features) {
-			expect(typeof feature).toBe("string");
+	it("marks the ping as a runtime ping", () => {
+		expect(buildTelemetryPayload().kind).toBe("runtime");
+	});
+
+	it("appUrl is the public app URL, or null", () => {
+		expect(buildTelemetryPayload().appUrl).toBeNull();
+		envStub.NEXT_PUBLIC_SAAS_URL = "https://app.example.com";
+		expect(buildTelemetryPayload().appUrl).toBe("https://app.example.com");
+	});
+
+	it("sends no runtime, platform, feature or timestamp data", () => {
+		const payload: Record<string, unknown> = buildTelemetryPayload();
+		for (const key of ["nodeVersion", "platform", "features", "sentAt"]) {
+			expect(payload, key).not.toHaveProperty(key);
 		}
-	});
-
-	it("includes sentAt ISO timestamp", () => {
-		const payload = buildTelemetryPayload();
-		expect(payload.sentAt).toBeDefined();
-		expect(() => new Date(payload.sentAt).toISOString()).not.toThrow();
-	});
-
-	it("includes nodeVersion", () => {
-		const payload = buildTelemetryPayload();
-		expect(payload.nodeVersion).toBe(process.version);
-	});
-
-	it("includes platform", () => {
-		const payload = buildTelemetryPayload();
-		expect(payload.platform).toBe(process.platform);
 	});
 
 	it("does not include PII or secrets", () => {
@@ -161,6 +164,18 @@ describe("pingTelemetry()", () => {
 		expect(result.sent).toBe(false);
 		expect(mockFetch).not.toHaveBeenCalled();
 	});
+
+	it.each(["development", "test"] as const)(
+		"skips the runtime ping outside production (NODE_ENV=%s)",
+		async (nodeEnv) => {
+			envStub.NODE_ENV = nodeEnv;
+			const mockFetch = vi.fn();
+			globalThis.fetch = mockFetch;
+			const result = await pingTelemetry("https://test.example.com/ping");
+			expect(result).toEqual({ sent: false, reason: "not-production" });
+			expect(mockFetch).not.toHaveBeenCalled();
+		},
+	);
 
 	it("does not skip when FUUTU_TELEMETRY_DISABLED is not set", async () => {
 		const mockFetch = vi

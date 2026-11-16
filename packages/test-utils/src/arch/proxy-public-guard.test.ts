@@ -34,7 +34,9 @@ function entriesWithComments(
 			comment.push(line);
 			continue;
 		}
-		const value = line.match(/^["'`]([^"'`]*)["'`],?$/)?.[1];
+		const value =
+			line.match(/^["'`]([^"'`]*)["'`],?$/)?.[1] ??
+			line.match(/^\{\s*exact:\s*["'`]([^"'`]*)["'`]\s*\},?$/)?.[1];
 		if (value !== undefined) {
 			entries.push({ value, comment: comment.join(" ") });
 		}
@@ -60,6 +62,22 @@ describe("proxy public-prefix extension point", () => {
 			/import\s*\{\s*APP_PUBLIC_PREFIXES\s*\}\s*from\s*["']\.\/proxy-public["']/,
 		);
 		expect(proxy).toMatch(/\.\.\.APP_PUBLIC_PREFIXES/);
+	});
+
+	it("parses { exact } entries like string entries", () => {
+		const entries = entriesWithComments(
+			'\n\t// reason: status page\n\t{ exact: "/status" },\n\t{ exact: "/open" },\n',
+		);
+		expect(entries).toEqual([
+			{ value: "/status", comment: "// reason: status page" },
+			{ value: "/open", comment: "" },
+		]);
+	});
+
+	it("proxy.ts matches through matchesPublicPath so { exact } entries work", () => {
+		expect(read("proxy.ts")).toMatch(
+			/matchesPublicPath\(pathname,\s*PUBLIC_PREFIXES\)/,
+		);
 	});
 
 	it("the reason check rejects an undocumented entry", () => {

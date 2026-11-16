@@ -17,7 +17,8 @@
 			"forbidden": "You don't have permission to access that page.",
 			"retry": "Retry",
 			"planLimitReached": "Plan limit reached. Upgrade to do more.",
-			"planFeatureRequired": "This feature is not available on your plan."
+			"planFeatureRequired": "This feature is not available on your plan.",
+			"impersonationForbidden": "Not available while you're signed in as this user (impersonation). Stop impersonating to do this."
 		}
 	}
 }

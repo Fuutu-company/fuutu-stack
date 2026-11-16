@@ -1,3 +1,4 @@
+import { fixturePlanId } from "@fuutu/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 // Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
@@ -43,18 +44,24 @@ describe("getPlanIdForProductId()", () => {
 
 describe("getPlanPriceId()", () => {
 	it("returns the monthly price ID for the pro plan", () => {
-		expect(getPlanPriceId("pro", "month")).toBe("price-pro-monthly");
+		expect(getPlanPriceId(fixturePlanId("pro"), "month")).toBe(
+			"price-pro-monthly",
+		);
 	});
 
 	it("returns the yearly price ID for the pro plan", () => {
-		expect(getPlanPriceId("pro", "year")).toBe("price-pro-yearly");
+		expect(getPlanPriceId(fixturePlanId("pro"), "year")).toBe(
+			"price-pro-yearly",
+		);
 	});
 
 	it("returns undefined for a plan without a price mapping", () => {
 		// Fails closed — a checkoutable plan with no `priceIdEnvVars` entry
 		// must never fall through to another plan's price.
-		expect(getPlanPriceId("free", "month")).toBeUndefined();
-		expect(getPlanPriceId("enterprise", "month")).toBeUndefined();
+		expect(getPlanPriceId(fixturePlanId("free"), "month")).toBeUndefined();
+		expect(
+			getPlanPriceId(fixturePlanId("enterprise"), "month"),
+		).toBeUndefined();
 	});
 });
 

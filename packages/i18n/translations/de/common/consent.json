@@ -1,8 +1,16 @@
 {
 	"consent": {
 		"title": "Wir nutzen datenschutzfreundliche Analytics",
-		"description": "Hilf uns, dieses Produkt zu verbessern, indem du anonyme Nutzungsstatistiken erlaubst. Keine Cookies, keine personenbezogenen Daten — du kannst deine Wahl jederzeit ändern.",
+		"description": "Hilf uns, dieses Produkt zu verbessern, indem du Nutzungsstatistiken erlaubst. Wir nutzen datenschutzfreundliche, cookielose Analytics, die keine personenbezogenen Daten speichern und dich nicht seitenübergreifend verfolgen. Du kannst deine Wahl jederzeit ändern.",
 		"accept": "Akzeptieren",
-		"deny": "Ablehnen"
+		"deny": "Ablehnen",
+		"privacyPolicy": "Datenschutzerklärung",
+		"privacySettings": "Datenschutz-Einstellungen",
+		"notice": {
+			"label": "Datenschutzfreundliche Analytics",
+			"description": "Wir nutzen datenschutzfreundliche, cookielose Analytics, die keine personenbezogenen Daten speichern und dich nicht seitenübergreifend verfolgen. Du kannst jederzeit widersprechen.",
+			"ok": "OK",
+			"optOut": "Widersprechen"
+		}
 	}
 }

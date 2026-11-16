@@ -5,6 +5,7 @@ export type SlotPorts = {
 	mailPreview: number;
 	e2eSaas: number;
 	e2eMarketing: number;
+	e2eDocs: number;
 	browser: number;
 };
 
@@ -43,7 +44,17 @@ export function readRegistry(): {
 	version: number;
 	projects: Record<
 		string,
-		{ slot: number; name: string; lastStarted: string | null }
+		{
+			slot: number;
+			name: string;
+			database?: string;
+			lastStarted: string | null;
+		}
+	>;
+	/** Slots whose released project's local data was kept (not dropped). */
+	keptData?: Record<
+		string,
+		{ path: string; database: string | null; keptAt: string }
 	>;
 };
 export function staleProjects(
@@ -60,7 +71,75 @@ export function setSlot(
 	slot: number | undefined,
 	opts?: SlotOptions,
 ): Promise<Project>;
-export function releaseSlot(path: string): Promise<void>;
+type RegistryEntry = ReturnType<typeof readRegistry>["projects"][string];
+export type ReleasedSlot = RegistryEntry & {
+	path: string;
+	database: string | null;
+};
+export type PruneCandidate = RegistryEntry & {
+	path: string;
+	reason: "missing" | "not-a-project" | "orphaned-worktree";
+	/** Why the entry stays: slot 0, pinned or running. null = dropped / droppable. */
+	kept: string | null;
+};
+export function isSlotRunning(
+	slot: number,
+	busy?: (port: number) => Promise<boolean>,
+): Promise<boolean>;
+export function checkoutKind(path: string): "main" | "worktree";
+export function projectGone(path: string): PruneCandidate["reason"] | null;
+export function pruneRegistry(opts?: {
+	apply?: boolean;
+	busy?: (port: number) => Promise<boolean>;
+	keep?: string;
+	missingOnly?: boolean;
+}): Promise<PruneCandidate[]>;
+export function releaseSlot(
+	path: string,
+	opts?: { busy?: (port: number) => Promise<boolean> },
+): Promise<ReleasedSlot>;
+export function clearKeptData(slot: number): Promise<void>;
+export function databasesInUse(
+	registry?: ReturnType<typeof readRegistry>,
+): Set<string>;
+export function legacySlotDatabases(
+	slot: number,
+	names: string[],
+	inUse?: Set<string>,
+): string[];
+export function keptSlots(
+	registry?: ReturnType<typeof readRegistry>,
+): { slot: number; path: string; database: string | null }[];
+export function planKeptDrop(
+	kept: { slot: number; database: string | null },
+	existing: { databases?: string[]; buckets?: string[] },
+	registry?: ReturnType<typeof readRegistry>,
+): {
+	databases: string[];
+	bucketPrefix: string;
+	buckets: string[];
+	empty: boolean;
+};
+export function parseArgs(argv: string[]): {
+	command: string;
+	arg: string | undefined;
+	flags: Set<string>;
+};
+export function mainCheckoutRoot(root: string): string | null;
+export function serviceEnv(
+	root: string,
+	key: string,
+	opts?: { env?: Record<string, string | undefined>; mainRoot?: string | null },
+): { env: Record<string, string | undefined>; source: string };
+export function minioCredentials(env: Record<string, string | undefined>): {
+	accessKeyId: string;
+	secretAccessKey: string;
+	from: "S3_ACCESS_KEY_ID" | "MINIO_ROOT_USER" | "compose default";
+};
+export function slotData(
+	released: { slot: number; database?: string | null },
+	registry?: ReturnType<typeof readRegistry>,
+): { databases: string[]; bucketPrefix: string } | null;
 export function readPreferredSlot(root: string): number | undefined;
 export function pinSlot(root: string, slot: number | undefined): Promise<void>;
 export function slotEnv(

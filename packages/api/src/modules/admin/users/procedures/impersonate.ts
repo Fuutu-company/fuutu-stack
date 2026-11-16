@@ -1,0 +1,71 @@
+import { auth } from "@fuutu/auth";
+import { PERMISSIONS } from "@fuutu/rbac";
+import { ORPCError } from "@orpc/server";
+import { z } from "zod";
+import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
+import { systemAdminProcedure } from "../../../../orpc/procedures";
+import { recordAdminAction, recordAdminActionStrict } from "../../audit";
+import {
+	adminIdSchema,
+	assertNotAdmin,
+	assertNotSelf,
+	forwardSetCookies,
+	loadTargetUser,
+	reasonSchema,
+	requireResponseHeaders,
+	withAuthErrors,
+} from "../../shared";
+
+export const impersonateUserProcedure = systemAdminProcedure(
+	PERMISSIONS.IMPERSONATE_USER,
+)
+	.use(createRateLimitMiddleware({ endpoint: "adminMutation" }))
+	.route({
+		method: "POST",
+		path: "/admin/users/{userId}/impersonate",
+		tags: ["Admin"],
+		summary: "Impersonate user",
+		description:
+			"Signs the browser in as the user for `authConfig.admin.impersonationMinutes` (session cookies in the response). Never yourself, another admin or a banned user. Money, credentials and leaving or deleting organizations stay blocked. System admin only.",
+	})
+	.input(z.object({ userId: adminIdSchema, reason: reasonSchema }))
+	.handler(async ({ input, context }) => {
+		const resHeaders = requireResponseHeaders(context);
+		assertNotSelf(
+			context.user.id,
+			input.userId,
+			"You cannot impersonate yourself",
+		);
+		const target = await loadTargetUser(input.userId);
+		assertNotAdmin(target, "Admins cannot be impersonated");
+		if (target.isBanned) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Banned users cannot be impersonated",
+			});
+		}
+
+		// Audited first and strictly: no impersonation session may exist
+		// without its persisted row.
+		const audited = { targetUserId: target.id, reason: input.reason };
+		await recordAdminActionStrict(context, {
+			action: "admin.user.impersonate_start",
+			...audited,
+		});
+
+		const { headers, response } = await withAuthErrors(() =>
+			auth.api.impersonateUser({
+				body: { userId: target.id },
+				headers: context.headers,
+				returnHeaders: true,
+			}),
+		).catch(async (err: unknown) => {
+			// The start row above stays; this one says no session came of it.
+			await recordAdminAction(context, {
+				action: "admin.user.impersonate_failed",
+				...audited,
+			});
+			throw err;
+		});
+		forwardSetCookies(headers, resHeaders);
+		return { success: true, expiresAt: response.session.expiresAt };
+	});

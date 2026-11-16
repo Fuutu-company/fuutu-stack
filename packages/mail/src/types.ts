@@ -98,3 +98,18 @@ export type ProviderName =
 	| "nodemailer"
 	| "postmark"
 	| "mailgun";
+
+/** Footer lines: one string = one line, a list = one line each. */
+export type MailLegalFooter = string | readonly string[];
+
+/** App-owned mail extensions — fill them in `src/app-mail.ts`. */
+export interface AppMail {
+	/**
+	 * Company details under every transactional email (e.g. name, address,
+	 * register court and number, managing directors — what § 35a GmbHG
+	 * requires of a German GmbH). A function gets the recipient locale.
+	 * Rendered small below the email card, and after a `-- ` line in the
+	 * plain-text part. Unset or blank: no footer.
+	 */
+	legalFooter?: MailLegalFooter | ((locale: string) => MailLegalFooter);
+}

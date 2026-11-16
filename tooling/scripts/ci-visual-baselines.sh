@@ -36,5 +36,5 @@ done
 if [ "$mode" = "push" ]; then
   echo "::warning::Baseline push rejected (branch protection?) — baselines arrive via PR-branch commits instead."
 else
-  echo "::warning::Could not push baselines to ${branch} (fork PR?). Regenerate locally: pnpm -F @fuutu/${app} exec playwright test tests/visual.spec.ts --update-snapshots"
+  echo "::warning::Could not push baselines to ${branch} (fork PR?). Regenerate locally: pnpm -F @fuutu/${app} exec playwright test --grep \"visual regression\" --update-snapshots"
 fi

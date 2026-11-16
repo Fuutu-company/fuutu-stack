@@ -19,6 +19,9 @@ import { DesignSubsection } from "../design-subsection";
 const DESTRUCTIVE_SURFACE = "bg-destructive dark:bg-destructive/60";
 /** The hover pair is measured on what `hover:bg-primary/90` renders. */
 const PRIMARY_HOVER_SURFACE = "bg-primary/90 text-primary-foreground";
+/** The marketing SecurityBand tile (`bg-primary-foreground/[0.08]` over `bg-primary`) flattened to one opaque fill. */
+const PRIMARY_BAND_SURFACE =
+	"bg-[color-mix(in_srgb,var(--primary-foreground)_8%,var(--primary))] text-primary-foreground";
 /** The focus-ring pair is measured on what `ring-ring/50` renders over the page. */
 const FOCUS_RING_SAMPLE = "color-mix(in oklch, var(--ring) 50%, transparent)";
 
@@ -41,7 +44,8 @@ function PairTile({ pair }: { pair: ContrastPair }) {
 	const isDestructiveFill = pair.effective === "destructive-fill";
 	const isPrimaryHover = pair.effective === "primary-hover-blend";
 	const isFocusRing = pair.effective === "focus-ring";
-	const isEffective = isDestructiveFill || isPrimaryHover;
+	const isPrimaryBand = pair.effective === "primary-band-tile";
+	const isEffective = isDestructiveFill || isPrimaryHover || isPrimaryBand;
 	const kind = sampleKindOf(pair);
 
 	return (
@@ -52,6 +56,7 @@ function PairTile({ pair }: { pair: ContrastPair }) {
 					"flex size-14 shrink-0 items-center justify-center rounded-lg border",
 					isDestructiveFill && DESTRUCTIVE_SURFACE,
 					isPrimaryHover && PRIMARY_HOVER_SURFACE,
+					isPrimaryBand && PRIMARY_BAND_SURFACE,
 				)}
 				style={
 					isEffective ? undefined : { backgroundColor: `var(--${pair.bg})` }

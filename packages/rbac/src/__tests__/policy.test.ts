@@ -181,12 +181,27 @@ describe("ORG_POLICY", () => {
 	});
 
 	// Member base tier — mirrors system user for shared resources
-	it("member has full CRUD on api-keys", () => {
+	it("member can view, create and update api-keys", () => {
 		expect(hasOrgPermission(ac, "member", PERMISSIONS.API_KEY.VIEW)).toBe(true);
 		expect(hasOrgPermission(ac, "member", PERMISSIONS.API_KEY.CREATE)).toBe(
 			true,
 		);
+		expect(hasOrgPermission(ac, "member", PERMISSIONS.API_KEY.UPDATE)).toBe(
+			true,
+		);
+	});
+	// Revoking any org key (an admin's included) is admin-only; a member
+	// revokes the keys they created through the creator check in the procedure.
+	it("member cannot delete org api-keys", () => {
 		expect(hasOrgPermission(ac, "member", PERMISSIONS.API_KEY.DELETE)).toBe(
+			false,
+		);
+	});
+	it("admin and owner can delete org api-keys", () => {
+		expect(hasOrgPermission(ac, "admin", PERMISSIONS.API_KEY.DELETE)).toBe(
+			true,
+		);
+		expect(hasOrgPermission(ac, "owner", PERMISSIONS.API_KEY.DELETE)).toBe(
 			true,
 		);
 	});

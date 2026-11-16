@@ -117,6 +117,14 @@ export interface CheckoutInput {
 	 * parameter, trials are configured on the Creem product.
 	 */
 	trialDays?: number;
+	/**
+	 * Whether this checkout starts a trial (the billing policy's decision).
+	 * `false`: no trial even when the product carries one — Polar sends
+	 * `allowTrial: false`; Creem trials live on the product, so the caller
+	 * picks a no-trial product instead (`Plan.noTrialPriceIdEnvVars`).
+	 * Omitted: the provider default.
+	 */
+	trial?: boolean;
 	successUrl?: string;
 	cancelUrl?: string;
 	customerEmail?: string;
@@ -135,9 +143,50 @@ export interface CustomerInput {
 	metadata?: Record<string, unknown>;
 }
 
+/**
+ * How a seat change is billed:
+ * - "charge-immediately": the prorated difference is settled now — an
+ *   increase is charged right away; for a decrease Creem applies its
+ *   proration rules and Stripe (`always_invoice`) leaves an account
+ *   credit on the customer balance for later invoices, not a refund
+ * - "none": no proration — the new count is billed from the next period
+ * Polar ignores it (its organization setting applies; logged as a warning).
+ */
+export type SeatProration = "charge-immediately" | "none";
+
 export interface SetSeatsInput {
 	subscriptionId: string;
 	seats: number;
+	/**
+	 * Per-call billing of the change. Omitted: the provider default
+	 * (Creem `paymentsConfig.creemUpdateBehavior`, Stripe
+	 * `create_prorations`). Polar ignores it and applies its organization
+	 * setting.
+	 */
+	proration?: SeatProration;
+}
+
+export interface CancelSubscriptionOptions {
+	/**
+	 * - "immediate": end the subscription now
+	 * - "period_end": cancel when the current period ends — it keeps
+	 *   granting access until then and can be resumed (`resumeSubscription`)
+	 * Omitted: `atPeriodEnd`, else cancel now (Creem: the store's
+	 * configured cancellation mode). Pass it whenever the outcome matters.
+	 */
+	mode?: CancelMode;
+	/** Alias of `mode: "period_end"`; `mode` wins when both are set. */
+	atPeriodEnd?: boolean;
+}
+
+export type CancelMode = "immediate" | "period_end";
+
+/** The requested cancel mode; `undefined` leaves it to the provider default. */
+export function resolveCancelMode(
+	options: CancelSubscriptionOptions | undefined,
+): CancelMode | undefined {
+	if (options?.mode) return options.mode;
+	return options?.atPeriodEnd ? "period_end" : undefined;
 }
 
 // ─── PaymentProvider interface ────────────────────────────────────────────────
@@ -153,6 +202,20 @@ export interface PaymentProvider {
 	 * to avoid races / double mutations. Defaults to `false`.
 	 */
 	readonly ownsSeatSync?: boolean;
+	/**
+	 * When `true`, trials are configured on the provider product, not per
+	 * checkout (Creem) — `CheckoutInput.trialDays` is ignored, so a
+	 * checkout without a trial needs a product without one
+	 * (`Plan.noTrialPriceIdEnvVars`).
+	 */
+	readonly trialsOnProduct?: boolean;
+	/**
+	 * When `true`, canceling a trialing subscription ends the trial now,
+	 * whatever mode is requested — the provider has no cancel at trial end
+	 * (Creem). `payments.subscription.cancel` then cancels a trial in
+	 * `"immediate"` mode and says so.
+	 */
+	readonly cancelEndsTrial?: boolean;
 
 	/** Create a provider-hosted checkout URL and redirect the user there. */
 	createCheckoutLink(input: CheckoutInput): Promise<{ url: string }>;
@@ -169,9 +232,29 @@ export interface PaymentProvider {
 
 	/**
 	 * Cancel a subscription at the provider. Called from org-delete
-	 * automation — not user-facing (users cancel via the portal).
+	 * automation and `payments.subscription.cancel`.
 	 */
-	cancelSubscription(subscriptionId: string): Promise<void>;
+	cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	): Promise<void>;
+
+	/**
+	 * Optional: undo a cancellation scheduled for the period end
+	 * (`cancelSubscription(id, { atPeriodEnd: true })`). Providers without
+	 * it answer `payments.subscription.resume` with NOT_IMPLEMENTED.
+	 */
+	resumeSubscription?(subscriptionId: string): Promise<void>;
+
+	/**
+	 * Optional: the subscription's current status at the provider. Webhook
+	 * sync calls it after a failed `cancelSubscription` to tell "already
+	 * canceled" (row may be closed) from a transient failure (row stays
+	 * active). Throw when the lookup itself fails.
+	 */
+	getSubscriptionStatus?(
+		subscriptionId: string,
+	): Promise<PurchaseStatusLiteral>;
 
 	/**
 	 * Verify the webhook signature and parse the raw request into
@@ -193,6 +276,16 @@ export interface PaymentProvider {
  */
 export interface SeatAwarePaymentProvider extends PaymentProvider {
 	setSubscriptionSeats(input: SetSeatsInput): Promise<void>;
+	/**
+	 * Optional provider capability for apps — the kit itself does not call
+	 * it: the seats the provider bills for the subscription right now (e.g.
+	 * to decide add vs remove against the provider instead of a possibly
+	 * stale `Purchase.quantity`). Creem: the item's `units`; Stripe: the
+	 * item's `quantity`; Polar: `seats` (1 for a subscription that is not
+	 * seat-based — Polar reports none). Throws when the lookup fails or the
+	 * provider reports no count.
+	 */
+	getSubscriptionSeats?(subscriptionId: string): Promise<number>;
 }
 
 /**
@@ -242,5 +335,107 @@ export class WebhookConfigError extends Error {
 	constructor(message?: string) {
 		super(message);
 		this.name = "WebhookConfigError";
+	}
+}
+
+/**
+ * Why a provider API call failed, as callers can explain it:
+ * - "not_found": the provider has no such subscription or customer (an
+ *   id from another account or mode, or a locally seeded row)
+ * - "invalid_state": the object is in a state that refuses the change
+ *   (e.g. canceling an already canceled subscription)
+ * - "rejected": the provider refused the request itself
+ * - "unavailable": the provider could not be reached or failed (5xx, 429,
+ *   network) — nothing is known to have changed
+ * A rejected API key (401/403) is not one of these: providers throw
+ * `WebhookConfigError` for it.
+ */
+export type ProviderFailureKind =
+	| "not_found"
+	| "invalid_state"
+	| "rejected"
+	| "unavailable";
+
+/**
+ * A provider API call failed. `message` stays the generic operation text
+ * ("Failed to cancel subscription"); `detail` carries the provider's own
+ * messages for logs only — never show it to users.
+ */
+export class ProviderRequestError extends Error {
+	readonly kind: ProviderFailureKind;
+	readonly status: number | undefined;
+	readonly detail: string | undefined;
+	constructor(
+		message: string,
+		kind: ProviderFailureKind,
+		options: { status?: number; detail?: string; cause?: unknown } = {},
+	) {
+		super(message, { cause: options.cause });
+		this.name = "ProviderRequestError";
+		this.kind = kind;
+		this.status = options.status;
+		this.detail = options.detail;
+	}
+}
+
+/** By name and kind, so it also holds across bundles (see CheckoutRejectedError). */
+export function isProviderRequestError(
+	err: unknown,
+): err is ProviderRequestError {
+	return (
+		err instanceof Error &&
+		err.name === "ProviderRequestError" &&
+		typeof (err as { kind?: unknown }).kind === "string"
+	);
+}
+
+/**
+ * The failure kind of an HTTP status other than 401/403: 404 is
+ * `not_found`, 409 `invalid_state`, 429 / 5xx / none `unavailable`, any
+ * other status `rejected`. Providers refine it with the error body.
+ */
+export function failureKindForStatus(
+	status: number | undefined,
+): ProviderFailureKind {
+	if (status === 404) return "not_found";
+	if (status === 409) return "invalid_state";
+	if (!status || status === 429 || status >= 500) return "unavailable";
+	return "rejected";
+}
+
+const CHECKOUT_REJECTED = Symbol.for("fuutu.payments.CheckoutRejectedError");
+
+/**
+ * A checkout guard refused the plan checkout (`registerCheckoutGuard`).
+ * `reason` is a stable, app-defined code (e.g. `"addon_requires_base"`)
+ * the client may branch on; it reaches the caller as
+ * `PRECONDITION_FAILED` with `data.reason`, so it must not carry secrets.
+ */
+export class CheckoutRejectedError extends Error {
+	readonly reason: string;
+	readonly [CHECKOUT_REJECTED] = true;
+	constructor(reason: string, message?: string) {
+		super(message ?? `Checkout rejected: ${reason}`);
+		this.name = "CheckoutRejectedError";
+		this.reason = reason;
+	}
+
+	/**
+	 * Guards are registered in one bundle (server start) and run in
+	 * another (the API route): Next.js evaluates this module once per
+	 * bundle, so `instanceof` checks a global brand, not class identity.
+	 * Subclasses inherit this method; they keep the prototype check.
+	 */
+	static [Symbol.hasInstance](value: unknown): boolean {
+		// biome-ignore lint/complexity/noThisInStatic: `this` is the class `instanceof` asks about — a subclass must not match by the shared brand.
+		if (this !== CheckoutRejectedError) {
+			// biome-ignore lint/complexity/noThisInStatic: as above.
+			return Function.prototype[Symbol.hasInstance].call(this, value);
+		}
+		return (
+			typeof value === "object" &&
+			value !== null &&
+			(value as { [CHECKOUT_REJECTED]?: unknown })[CHECKOUT_REJECTED] === true
+		);
 	}
 }

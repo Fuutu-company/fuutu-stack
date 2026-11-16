@@ -2,11 +2,16 @@ import { config } from "@fuutu/config";
 import { AREA_CLASSES, AREAS, BrandLogo } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
 import { useTranslations } from "next-intl";
-import { FOOTER_COLUMNS } from "@/lib/site-links";
+import {
+	FOOTER_ACTIONS,
+	FOOTER_AREA_LINE,
+	FOOTER_COLUMNS,
+	FOOTER_TAGLINE_KEY,
+} from "@/lib/site-links";
 import { Link } from "@/navigation";
+import { FOOTER_LINK_CLASS, FooterActionItem } from "./footer-action";
 
-const LINK_CLASS =
-	"text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4";
+const LINK_CLASS = FOOTER_LINK_CLASS;
 
 /** The four product areas as a 2×2 mark — the kit's signature in one glyph. */
 function AreaMark() {
@@ -21,6 +26,10 @@ function AreaMark() {
 		</span>
 	);
 }
+
+const AreaLineMark =
+	FOOTER_AREA_LINE &&
+	(FOOTER_AREA_LINE.Mark === undefined ? AreaMark : FOOTER_AREA_LINE.Mark);
 
 export function MarketingFooter() {
 	const t = useTranslations();
@@ -37,7 +46,7 @@ export function MarketingFooter() {
 							</p>
 						</div>
 						<p className="max-w-xs text-muted-foreground text-sm leading-6">
-							{t("footer.tagline")}
+							{t(FOOTER_TAGLINE_KEY)}
 						</p>
 					</div>
 					{FOOTER_COLUMNS.map((column) => (
@@ -64,6 +73,15 @@ export function MarketingFooter() {
 										)}
 									</li>
 								))}
+								{FOOTER_ACTIONS.filter(
+									(action) => action.column === column.titleKey,
+								).map((action) => (
+									<FooterActionItem
+										key={action.key}
+										action={action}
+										label={t(action.labelKey)}
+									/>
+								))}
 							</ul>
 						</div>
 					))}
@@ -73,10 +91,12 @@ export function MarketingFooter() {
 						© <span data-volatile>{new Date().getFullYear()}</span>{" "}
 						{config.app.name}. {t("footer.rights")}
 					</p>
-					<p className="flex items-center gap-2.5">
-						<AreaMark />
-						{t("footer.areas")}
-					</p>
+					{FOOTER_AREA_LINE && (
+						<p className="flex items-center gap-2.5">
+							{AreaLineMark && <AreaLineMark />}
+							{t(FOOTER_AREA_LINE.textKey)}
+						</p>
+					)}
 				</div>
 			</div>
 		</footer>

@@ -115,6 +115,40 @@ describe("visual-local: wiring", () => {
 		expect(read(".gitignore")).toContain(".fuutu/*");
 	});
 
+	it("selects visual specs by title, so app-owned visual specs run too (CI parity)", () => {
+		// Any spec whose titles carry "visual regression" is a visual spec —
+		// the exact complement of CI's non-visual `--grep-invert` run.
+		const runners = {
+			container: read("tooling", "scripts", "visual-local-container.sh"),
+			native: read("tooling", "scripts", "visual-local.mjs"),
+			ci: read(".github", "workflows", "ci.yml"),
+		};
+		for (const [name, src] of Object.entries(runners)) {
+			expect(src, name).not.toContain("tests/visual.spec.ts");
+		}
+		expect(runners.container).toMatch(
+			/playwright test --grep "visual regression"/,
+		);
+		expect(runners.native).toMatch(/"--grep",\s*"visual regression",/);
+		const ciVisual = runners.ci.match(
+			/playwright test --grep "visual regression"/g,
+		);
+		expect(ciVisual?.length).toBe(4);
+		expect(runners.ci).toContain('--grep-invert "visual regression"');
+	});
+
+	it("updates snapshots of every visual spec by title, in both apps", () => {
+		const packageJson = read("package.json");
+		expect(packageJson).not.toContain("visual.spec.ts");
+		const update: string =
+			JSON.parse(packageJson).scripts["test:visual:update"];
+		for (const app of ["@fuutu/saas", "@fuutu/marketing"]) {
+			expect(update).toContain(
+				`pnpm -F ${app} exec playwright test --grep "visual regression" --update-snapshots`,
+			);
+		}
+	});
+
 	it("both playwright configs honour the snapshot dir override", () => {
 		for (const app of ["saas", "marketing"]) {
 			expect(read("apps", app, "playwright.config.ts")).toContain(

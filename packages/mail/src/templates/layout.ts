@@ -9,6 +9,8 @@
  * No external CSS, no webfonts.
  */
 import { getDirection, isValidLocale } from "@fuutu/i18n";
+import { i18nConfig } from "@fuutu/i18n/config";
+import { appMail } from "../app-mail";
 import { MAIL_COLORS } from "./colors";
 
 export interface LayoutOptions {
@@ -27,10 +29,12 @@ export function renderLayout(body: string, opts: LayoutOptions = {}): string {
 		? `<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">${escapeHtml(opts.previewText)}</div>`
 		: "";
 	return `<!doctype html>
-<html lang="${opts.locale ?? "en"}" dir="${direction}">
+<html lang="${opts.locale ?? "en"}" dir="${direction}" style="color-scheme:light;supported-color-schemes:light;">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
     <title>Fuutu</title><!-- intentional: kit's own demo branding -->
   </head>
   <body style="margin:0;padding:24px;background:${MAIL_COLORS.page};font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;color:${MAIL_COLORS.text};">
@@ -41,9 +45,37 @@ export function renderLayout(body: string, opts: LayoutOptions = {}): string {
           ${body}
         </td>
       </tr>
-    </table>
+    </table>${renderLegalFooter(opts.locale)}
   </body>
 </html>`.trim();
+}
+
+/** `appMail.legalFooter` (`src/app-mail.ts`) as trimmed, non-blank lines. */
+export function legalFooterLines(locale?: string): string[] {
+	const footer = appMail.legalFooter;
+	const value =
+		typeof footer === "function"
+			? footer(locale ?? i18nConfig.defaultLocale)
+			: footer;
+	const lines = typeof value === "string" ? [value] : (value ?? []);
+	return lines.map((line) => line.trim()).filter(Boolean);
+}
+
+function renderLegalFooter(locale?: string): string {
+	const lines = legalFooterLines(locale);
+	if (lines.length === 0) return "";
+	return `
+    <table role="presentation" data-legal-footer="" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:16px auto 0;">
+      <tr>
+        <td style="padding:0 32px;font-size:12px;line-height:1.5;color:${MAIL_COLORS.muted};text-align:center;">${lines.map(escapeHtml).join("<br />")}</td>
+      </tr>
+    </table>`;
+}
+
+/** The plain-text part with `appMail.legalFooter` after a `-- ` line. */
+export function withLegalFooterText(text: string, locale?: string): string {
+	const lines = legalFooterLines(locale);
+	return lines.length === 0 ? text : `${text}\n\n-- \n${lines.join("\n")}`;
 }
 
 /**

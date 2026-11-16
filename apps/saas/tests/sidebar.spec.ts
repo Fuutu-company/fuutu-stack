@@ -83,6 +83,29 @@ test.describe("sidebar navigation", () => {
 		);
 	});
 
+	test("top bar controls start with the notification bell (no app header actions)", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Desktop top bar hidden on mobile");
+		await page.goto("/dashboard");
+		const header = page.locator("header", {
+			has: page.locator("[aria-current='page']"),
+		});
+		const controls = header
+			.locator(":scope > div")
+			.last()
+			.locator(":scope > *");
+		await expect(controls.first()).toHaveAccessibleName(/notifications/i, {
+			timeout: 10_000,
+		});
+		for (const control of await controls.all()) {
+			await expect(control).toHaveAccessibleName(
+				/notifications|switch language|toggle theme/i,
+			);
+		}
+	});
+
 	test("user dropdown menu opens with sign out", async ({ page, isMobile }) => {
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/dashboard");
@@ -145,7 +168,9 @@ test.describe("sidebar navigation", () => {
 
 		await expect(adminGroup.getByRole("link")).toHaveText([
 			/^users$/i,
+			/^organizations$/i,
 			/^audit logs$/i,
+			/^system$/i,
 		]);
 		await expect(
 			adminGroup.getByRole("link", { name: /overview/i }),

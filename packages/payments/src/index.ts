@@ -8,6 +8,15 @@
  *   `@fuutu/payments/plans`   — buildPricingTiers()
  *   `@fuutu/payments/features`— feature/limit helpers
  */
+
+export {
+	ADDON_REQUIRES_BASE,
+	assertCheckoutAllowed,
+	type CheckoutDecision,
+	type CheckoutRequest,
+	getPlanSubscription,
+	isAddonPlan,
+} from "./billing-policy";
 export {
 	type AudienceId,
 	type BillingAttachedTo,
@@ -16,6 +25,7 @@ export {
 	CREDIT_TOPUPS,
 	CREDITS,
 	type CreditTopupPackage,
+	type CreemUpdateBehavior,
 	FEATURE_CATALOG,
 	type FeatureEntry,
 	getSeatUpgradeUrl,
@@ -46,11 +56,22 @@ export {
 	hasFeature,
 } from "./entitlements";
 export {
+	type ActivatedSubscription,
+	type CheckoutGuard,
+	type CheckoutGuardContext,
 	type EntitlementResolver,
 	type EntitlementResolverFn,
+	type ExistingSubscription,
+	type OwnerPurchase,
 	onPurchaseChanged,
 	type PurchaseChangedHandler,
+	registerCheckoutGuard,
 	registerEntitlementResolver,
+	registerSupersedePolicy,
+	registerTrialEligibilityPolicy,
+	type SupersedePolicy,
+	type TrialEligibilityContext,
+	type TrialEligibilityPolicy,
 } from "./extensions";
 export {
 	type CatalogFeature,
@@ -83,11 +104,16 @@ export { noopPaymentProvider } from "./providers/skeletons";
 export { stripePaymentProvider } from "./providers/stripe";
 export { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
 export {
+	CHARGEABLE_SUBSCRIPTION_STATUSES,
 	cancelAllSubscriptionsForOrganization,
+	cancelAllSubscriptionsForOrganizationOrThrow,
+	cancelSubscriptionNowOrThrow,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
 export { getActivePlanId, processWebhookEvents } from "./sync";
 export type {
+	CancelMode,
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PaymentProvider,
@@ -95,13 +121,19 @@ export type {
 	PortalInput,
 	ProviderEvent,
 	ProviderEventType,
+	ProviderFailureKind,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
+	SeatProration,
 	SetSeatsInput,
 } from "./types";
 export {
+	CheckoutRejectedError,
+	failureKindForStatus,
+	isProviderRequestError,
 	isSeatAware,
 	PaymentsDisabledError,
+	ProviderRequestError,
 	WebhookConfigError,
 	WebhookSignatureError,
 } from "./types";

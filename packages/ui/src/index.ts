@@ -30,6 +30,7 @@ export * from "./components/page-header";
 export * from "./components/pricing";
 export * from "./components/progress";
 export * from "./components/radio-group";
+export * from "./components/secret-reveal";
 export * from "./components/select";
 export * from "./components/separator";
 export * from "./components/sheet";

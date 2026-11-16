@@ -9,6 +9,23 @@ import {
 	mergeFeed,
 } from "../modules/dashboard/feed";
 
+const flags = vi.hoisted(() => ({ webhooks: true }));
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			features: new Proxy(actual.config.features, {
+				get: (target, prop, receiver) =>
+					prop in flags
+						? flags[prop as keyof typeof flags]
+						: Reflect.get(target, prop, receiver),
+			}),
+		},
+	};
+});
+
 // Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
 // app's PLANS — an app that replaces its catalog keeps them meaningful.
 vi.mock("@fuutu/payments/config", async (importOriginal) => ({
@@ -637,6 +654,22 @@ describe("dashboard.overview — shape", () => {
 		});
 		expect(result.feed.map((item) => item.id)).toEqual(["audit:log-own-1"]);
 		expect(result.activity.days).toHaveLength(30);
+	});
+});
+
+describe("dashboard.overview — config.features.webhooks", () => {
+	afterEach(() => {
+		flags.webhooks = true;
+	});
+
+	it("counts no webhooks while the module is off", async () => {
+		useOrgRole("owner");
+		flags.webhooks = false;
+
+		const result = await overview({ organizationId: "org-1" });
+
+		expect(db.countWebhooks).not.toHaveBeenCalled();
+		expect(result.api).toMatchObject({ apiKeys: 1, webhooks: null });
 	});
 });
 

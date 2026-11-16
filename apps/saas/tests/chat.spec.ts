@@ -1,4 +1,8 @@
+import type { Page } from "@playwright/test";
+import { featureOff } from "./features";
 import { expect, test } from "./fixtures";
+
+test.skip(...featureOff("aiChat"));
 
 test.describe("AI chat", () => {
 	test("chat page renders with title and conversation sidebar", async ({
@@ -30,13 +34,18 @@ test.describe("AI chat", () => {
 	test("can create a conversation, type a message, and see it appear", async ({
 		page,
 	}) => {
-		// Mock the AI streaming endpoint — no API key needed in CI.
-		// Returns a simple text body that ChatStreamingText decodes.
+		// Mock the AI streaming endpoint — no API key needed in CI. The body
+		// is the oRPC event stream the server sends (one text chunk per
+		// event; wire shape covered by packages/api chat-stream-wire.test.ts).
 		await page.route("**/api/rpc/chat/messages/stream", async (route) => {
 			await route.fulfill({
 				status: 200,
-				contentType: "text/plain",
-				body: "This is a mocked AI response.",
+				contentType: "text/event-stream",
+				body: [
+					'event: message\ndata: {"json":"This is a mocked "}\n\n',
+					'event: message\ndata: {"json":"AI response."}\n\n',
+					"event: done\n\n",
+				].join(""),
 			});
 		});
 
@@ -70,6 +79,73 @@ test.describe("AI chat", () => {
 
 		// The user message appears immediately in the message list (optimistic update)
 		await expect(page.getByText(testMessage)).toBeVisible({
+			timeout: 10_000,
+		});
+
+		// Regression: the reply used to arrive as `{"json":{}}` and never render.
+		await expect(page.getByText("This is a mocked AI response.")).toBeVisible({
+			timeout: 10_000,
+		});
+	});
+
+	/** Opens /chat, creates a conversation and sends one message. */
+	async function sendInNewConversation(page: Page) {
+		await page.goto("/chat");
+		await page.getByRole("button", { name: /new conversation/i }).click();
+		const input = page.getByPlaceholder(/type your message/i);
+		await expect(input).toBeEnabled({ timeout: 10_000 });
+		await input.fill("Hello from the E2E test");
+		await page.getByRole("button", { name: /^send$/i }).click();
+	}
+
+	test("a reply cut off by a server error keeps the partial text and says sending failed", async ({
+		page,
+	}) => {
+		// Wire shape of a provider error mid-stream (chat-stream-wire.test.ts).
+		await page.route("**/api/rpc/chat/messages/stream", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "text/event-stream",
+				body: [
+					'event: message\ndata: {"json":"A partial answer"}\n\n',
+					'event: error\ndata: {"json":{"defined":false,"code":"INTERNAL_SERVER_ERROR","status":500,"message":"Internal server error"}}\n\n',
+				].join(""),
+			});
+		});
+
+		await sendInNewConversation(page);
+
+		await expect(page.getByText("A partial answer")).toBeVisible({
+			timeout: 10_000,
+		});
+		await expect(page.getByText(/failed to send message/i)).toBeVisible({
+			timeout: 10_000,
+		});
+	});
+
+	test("an exhausted AI credit balance shows a credits message", async ({
+		page,
+	}) => {
+		// Wire shape of the API's credit gate (chat-credits.test.ts).
+		await page.route("**/api/rpc/chat/messages/stream", async (route) => {
+			await route.fulfill({
+				status: 402,
+				contentType: "application/json",
+				body: JSON.stringify({
+					json: {
+						defined: false,
+						code: "PAYMENT_REQUIRED",
+						status: 402,
+						message: "AI credits exhausted",
+						data: { meterKey: "ai_tokens" },
+					},
+				}),
+			});
+		});
+
+		await sendInNewConversation(page);
+
+		await expect(page.getByText(/used up your ai credits/i)).toBeVisible({
 			timeout: 10_000,
 		});
 	});

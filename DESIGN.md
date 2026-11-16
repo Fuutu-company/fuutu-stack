@@ -249,6 +249,7 @@ Don't:
 - Use `text-warning` or `text-info` on a surface.
 - Put opacity on area text (`text-area-ai-foreground/60`); it drops below 4.5:1.
 - Rely on color alone to convey state; pair it with an icon or label.
+- Put an icon on a round or filled chip (`size-9 rounded-lg bg-muted`); draw the plain icon in a text role or area ink.
 - Remove the focus ring or shrink hit targets below the `sm` control height.
 - Add new tokens to `brand.css` outside the shadcn set and the kit status and area blocks.
 
@@ -259,6 +260,8 @@ Short and functional: 150 to 250ms for state changes and overlay enter/exit, usi
 ## Iconography
 
 Lucide, outline style, 16px (`size-4`) inside controls and 20 to 24px for standalone icons. Icons inherit `currentColor`, so they follow the text role around them. Icon-only controls need an `aria-label` from the translations.
+
+Icons stand on their own. A standalone icon (list rows, empty states, settings cards, notifications, feature lists, menus) is the plain stroke in a text role (`text-muted-foreground`, `text-primary`, `text-destructive`) or an area ink, never on a round or filled chip: no `bg-*` and no radius behind it. `AreaIcon` is that plain icon in the area ink. Shapes that look alike but are not icons keep their fill: avatars (initials, logos), counters and badges, controls, and icon buttons over images. `icon-chip-guard` in `@fuutu/test-utils` flags a filled, rounded, centered square box and lists the exceptions with their reason.
 
 ## Accessibility
 
@@ -286,6 +289,7 @@ Target is WCAG 2.2 AA. Text pairs need 4.5:1; borders of form controls, focus ri
 | Fonts load with `next/font/google` from `fonts.ts` in each app | The `geist` package is gone; three variable fonts, no `weight` argument, identical files kept in sync by a guard | 2026-11-13 |
 | Default control height is 40px (`sm` 32, `lg` 44) | Larger pill targets feel tactile and meet the 24px target size with room to spare | 2026-11-13 |
 | Email and OG colors are light-palette hex literals | Mail clients and social crawlers cannot read CSS variables; `MAIL_COLORS` and `og-image.html` carry the values | 2026-11-13 |
+| Plain icons, no icon chips | A chip behind every icon adds a second shape per row and competes with avatars, badges and buttons; the stroke in a text role or area ink is enough. `AreaIcon` lost its fill, the hero cut-out icons became plain area icons, and a guard keeps chips out | 2026-11-14 |
 
 ## Iteration Guide
 
@@ -308,7 +312,7 @@ Pasting an export from tweakcn or ui.shadcn.com/create:
 - Copy the new values into the frontmatter `colors` (and `rounded.lg` if `--radius` changed), update the Colors prose, then run `pnpm -F @fuutu/ui test`. The sync test fails until the two agree; the contrast audit fails if a pair drops below AA.
 - Open `/design` and check key routes in both modes.
 
-Guided path: the `setup-brand` skill (Fuutu MCP Plus) interviews you, proposes a direction, computes accessible tokens, applies them and updates this file.
+Guided path: the `setup-brand` skill (Fuutu Pro) interviews you, proposes a direction, computes accessible tokens, applies them and updates this file.
 
 ## Known Gaps
 
@@ -316,7 +320,7 @@ Honest list of places that do not yet follow the tokens. Fix these before relyin
 
 - **Destructive text is literal white.** Button and Badge `destructive` render `text-white`, so `--destructive-foreground` is ignored. The audit measures white on the destructive fill, which is what users see.
 - **Shadows cannot be recolored.** Shadow tokens are mapped with fallbacks, so `shadow-<color>` utilities do not recolor them (they only change when the theme defines `--shadow-*`).
-- **Older shadcn class patterns.** Dialog, sheet, select, tabs and switch still use earlier shadcn class compositions. They work with the tokens but differ from current registry output.
+- **Older shadcn class patterns.** Sheet, select, tabs and switch still use earlier shadcn class compositions. They work with the tokens but differ from current registry output.
 - **Email templates use inline hex**, because mail clients do not support CSS variables. `MAIL_COLORS` in `packages/mail/src/templates/colors.ts` holds the light palette: page `#f0f4f7`, card `#ffffff`, border `#d9dfe3`, text `#151b24`, muted `#545b66`, button `#181f2e`, button text `#f7f8fc`. They do not follow a pasted theme; update them by hand. The `mail-colors-sync` test in `pnpm -F @fuutu/ui test` fails, naming the key, until they match the light tokens.
 - **OG images use literal hex.** Social cards can't read CSS variables. The static card is rendered from `packages/config/assets/og-image.html` (light palette, Google Fonts at render time; distributed with `pnpm assets:sync`); the blog card (`apps/marketing/src/app/(marketing)/[locale]/blog/[slug]/opengraph-image.tsx`) hard-codes the light background, text, muted text and the Users Blue pill as hex and renders with the default OG font. The docs app uses Fumadocs' own OG image generator, which does not read the tokens. Re-render or update all of them after a color change.
 - **Google logo** keeps its official brand hex values.

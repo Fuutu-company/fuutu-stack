@@ -7,6 +7,7 @@ import {
 	renderButton,
 	renderLayout,
 	safeHref,
+	withLegalFooterText,
 } from "./layout";
 
 /**
@@ -39,5 +40,9 @@ export const newUserTemplate: TemplateRenderer<"new-user"> = ({
 		{ locale, previewText: t.headline },
 	);
 
-	return { subject: t.subject, text, html };
+	return {
+		subject: t.subject,
+		text: withLegalFooterText(text, locale),
+		html,
+	};
 };

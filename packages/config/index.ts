@@ -112,12 +112,25 @@ export const config = {
 		aiChat: true,
 		crm: true,
 		/**
+		 * Outgoing webhooks: org settings page, `webhooks.*` API, delivery
+		 * retry job, event dispatch. Incoming provider webhooks
+		 * (`/api/webhooks/payments`) are never affected.
+		 */
+		webhooks: true,
+		/**
 		 * Live design-system page at `/design`: the link under "Administration"
 		 * in the sidebar and the route itself. Off: link hidden, route 404s.
 		 * A selling point of the demo — turn it off before you launch.
 		 * Deleting the module is safe, its guards skip.
 		 */
 		designSystem: true,
+		/**
+		 * Links to the marketing site's imprint and privacy pages from the
+		 * saas app (auth pages, user menu), the docs app (sidebar, home
+		 * footer) and the consent banner (§ 5 DDG: reachable from every
+		 * page). Off: no links. Also hidden without NEXT_PUBLIC_MARKETING_URL.
+		 */
+		legalPages: true,
 	},
 	theme: {
 		modes: ["light", "dark"] as const,

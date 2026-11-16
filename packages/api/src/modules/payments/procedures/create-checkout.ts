@@ -1,6 +1,13 @@
-import { resolvePaymentProvider } from "@fuutu/payments";
+import {
+	assertCheckoutAllowed,
+	CheckoutRejectedError,
+	resolvePaymentProvider,
+} from "@fuutu/payments";
 import { PLAN_IDS, PLANS, type Plan } from "@fuutu/payments/config";
-import { getPlanPriceId } from "@fuutu/payments/config.server";
+import {
+	getPlanNoTrialPriceId,
+	getPlanPriceId,
+} from "@fuutu/payments/config.server";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
@@ -8,17 +15,26 @@ import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
 import { sanitizePaymentUrl, throwIfPaymentsDisabled } from "../shared";
 
+/** Upper bound for a checkout's seat count. */
+const MAX_CHECKOUT_SEATS = 1000;
+
 const checkoutSchema = z.object({
 	planId: z.enum(PLAN_IDS),
 	interval: z.enum(["month", "year"]).optional(),
 	organizationId: z.string().min(1).optional(),
 	successUrl: z.string().optional(),
 	cancelUrl: z.string().optional(),
-	seats: z.number().int().min(1).optional(),
+	seats: z.number().int().min(1).max(MAX_CHECKOUT_SEATS).optional(),
+	/** Buy now without the plan's trial. */
+	skipTrial: z.boolean().optional(),
 });
+
+/** Rejection reason when a checkout must skip the trial but the provider cannot (no no-trial product). */
+const TRIAL_UNAVAILABLE = "trial_unavailable";
 
 export const createCheckout = authProcedure({
 	org: { permission: PERMISSIONS.PAYMENT.CREATE, optional: true },
+	denyImpersonation: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
@@ -38,14 +54,44 @@ export const createCheckout = authProcedure({
 				message: "This plan is not available for checkout",
 			});
 		}
+		const interval = input.interval ?? plan.interval ?? "month";
+		// Only a seat-based plan is bought per seat — any other plan is one
+		// unit, whatever the client sent.
+		const seatBased = plan.seatBased === true;
+		const seats = seatBased ? input.seats : undefined;
+		// Billing rules: an add-on (`Plan.addonOf`) needs an active base,
+		// plus every app guard (`registerCheckoutGuard`). The owner mirrors
+		// the webhook's: the organization when one is passed (its access
+		// was checked by authProcedure), else the signed-in user.
+		let trial: boolean;
+		try {
+			({ trial } = await assertCheckoutAllowed({
+				owner: input.organizationId
+					? { organizationId: input.organizationId }
+					: { userId: context.user.id },
+				userId: context.user.id,
+				planId: input.planId,
+				interval,
+				seats: seatBased ? seats : 1,
+				skipTrial: input.skipTrial,
+			}));
+		} catch (err) {
+			if (err instanceof CheckoutRejectedError) {
+				// The brand matches across bundles, so the shape is not
+				// guaranteed: only a string reason reaches the client.
+				throw new ORPCError("PRECONDITION_FAILED", {
+					message: "This plan can't be purchased right now",
+					data: typeof err.reason === "string" ? { reason: err.reason } : {},
+				});
+			}
+			throw err;
+		}
 		// Provider-side price/product IDs are resolved server-side from env —
 		// clients must never pick the catalog price themselves. The env var
 		// names are declared per plan in `PLANS[].priceIdEnvVars`; a
 		// checkoutable plan without a mapping (or unset env var) fails closed.
-		const priceId = getPlanPriceId(
-			input.planId,
-			input.interval ?? plan.interval ?? "month",
-		);
+		// Without the trial: the plan's no-trial product when it has one.
+		const priceId = getPlanPriceId(input.planId, interval, { trial });
 		if (!priceId) {
 			throw new ORPCError("PRECONDITION_FAILED", {
 				message: "Checkout is not configured for this plan",
@@ -54,25 +100,38 @@ export const createCheckout = authProcedure({
 		// One-time plans are a single charge (lifetime access); trials only
 		// apply to subscriptions.
 		const isOneTime = plan.billingType === "one_time";
-		const trialDays = plan.trialDays;
+		const trialDays = trial ? plan.trialDays : undefined;
 		try {
 			const provider = resolvePaymentProvider();
-			// seats is used for seat-based plans (quantity on Stripe, units on Creem)
+			// Product-level trials (Creem): without a no-trial product the
+			// checkout would hand out the trial anyway — fail closed.
+			if (
+				!trial &&
+				!isOneTime &&
+				plan.trialDays &&
+				provider.trialsOnProduct &&
+				!getPlanNoTrialPriceId(input.planId, interval)
+			) {
+				throw new ORPCError("PRECONDITION_FAILED", {
+					message: "This plan can't be purchased right now",
+					data: { reason: TRIAL_UNAVAILABLE },
+				});
+			}
+			// seats only for seat-based plans (quantity on Stripe, units on
+			// Creem, seats on Polar); omitted, the provider bills one unit.
 			return await provider.createCheckoutLink({
 				priceId,
 				userId: context.user.id,
 				organizationId: input.organizationId,
 				successUrl: sanitizePaymentUrl(input.successUrl),
 				cancelUrl: sanitizePaymentUrl(input.cancelUrl),
-				seats: input.seats,
+				seats,
 				// Session email, not client input — providers pre-fill the
 				// checkout form with it.
 				customerEmail: context.user.email,
 				...(isOneTime
 					? { metadata: { mode: "payment" } }
-					: trialDays
-						? { trialDays }
-						: {}),
+					: { trial, ...(trialDays ? { trialDays } : {}) }),
 			});
 		} catch (err) {
 			throwIfPaymentsDisabled(err);

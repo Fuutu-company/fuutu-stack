@@ -4,6 +4,7 @@ export {
 	getDateFormat,
 	getDirection,
 	getLocaleConfig,
+	getRoutableLocales,
 	hasMultipleLocales,
 	isValidLocale,
 } from "./lib/locale-utils";

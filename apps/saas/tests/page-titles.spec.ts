@@ -1,4 +1,6 @@
 import { config } from "@fuutu/config";
+import { paymentsConfig } from "@fuutu/payments/config";
+import { featureOff, routeOff } from "./features";
 import { expect, test } from "./fixtures";
 
 /**
@@ -19,7 +21,9 @@ const COMPACT_ROUTES = [
 	"/settings?tab=danger",
 	"/settings/api-keys",
 	"/settings/credits",
-	"/settings/billing",
+	// Personal billing exists only while billing is attached to users; the
+	// org invoice list below covers the org-attached default.
+	...(paymentsConfig.billingAttachedTo === "user" ? ["/settings/billing"] : []),
 	"/organizations",
 	"/organizations/acme/settings/general",
 	"/organizations/acme/settings/members",
@@ -31,7 +35,9 @@ const COMPACT_ROUTES = [
 	"/organizations/acme/settings/danger",
 	"/organizations/acme/invoices",
 	"/admin/users",
+	"/admin/organizations",
 	"/admin/audit-logs",
+	"/admin/system",
 	"/choose-plan",
 ];
 
@@ -49,6 +55,7 @@ const isVisuallyHidden = (el: Element) => {
 test.describe("page titles", () => {
 	for (const route of COMPACT_ROUTES) {
 		test(`${route} has exactly one h1, visually hidden`, async ({ page }) => {
+			test.skip(...routeOff(route));
 			await page.goto(route);
 			const h1 = page.getByRole("main").getByRole("heading", { level: 1 });
 			await expect(h1).toHaveCount(1, { timeout: 10_000 });
@@ -75,6 +82,7 @@ test.describe("page titles", () => {
 	test("CRM keeps its New contact action in the compact row", async ({
 		page,
 	}) => {
+		test.skip(...featureOff("crm"));
 		await page.goto("/organizations/acme/crm");
 		const header = page.locator(
 			"[data-slot='page-header'][data-variant='compact']",

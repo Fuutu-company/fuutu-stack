@@ -1,5 +1,5 @@
-import { getActiveSubscriptionForUser, getOrganizationById } from "@fuutu/db";
-import { resolvePaymentProvider } from "@fuutu/payments";
+import { getOrganizationById } from "@fuutu/db";
+import { getPlanSubscription, resolvePaymentProvider } from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
@@ -14,6 +14,7 @@ const portalSchema = z.object({
 
 export const createBillingPortal = authProcedure({
 	org: { permission: PERMISSIONS.PAYMENT.UPDATE, optional: true },
+	denyImpersonation: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
@@ -40,7 +41,9 @@ export const createBillingPortal = authProcedure({
 				});
 			}
 		} else {
-			const subscription = await getActiveSubscriptionForUser(context.user.id);
+			const subscription = await getPlanSubscription({
+				userId: context.user.id,
+			});
 			if (!subscription?.customerId) {
 				throw new ORPCError("NOT_FOUND", {
 					message: "No active subscription found for this user",

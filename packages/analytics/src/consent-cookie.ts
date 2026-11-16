@@ -10,8 +10,14 @@ import { analyticsConfig } from "./config";
  * consent persistence. Cross-subdomain sharing stays opt-in via
  * `analyticsConfig.consentCookieDomain` (e.g. `.example.com`).
  */
+/**
+ * Stored decision: `"granted"` / `"denied"` answer the consent banner,
+ * `"acknowledged"` is the OK on the notice banner (not a consent).
+ */
+export type ConsentCookieValue = "granted" | "denied" | "acknowledged";
+
 export function buildConsentCookie(
-	value: "granted" | "denied",
+	value: ConsentCookieValue,
 	opts: { secure?: boolean } = {},
 ): string {
 	const parts = [
@@ -31,7 +37,7 @@ export function buildConsentCookie(
 
 /**
  * Read the consent decision cookie. Returns the raw stored value
- * (`"granted"` / `"denied"`) or null when absent or malformed — a
+ * (`"granted"` / `"denied"` / `"acknowledged"`) or null when absent or malformed — a
  * foreign cookie containing a bare `%` must never crash the caller.
  */
 export function readConsentCookie(): string | null {
@@ -49,7 +55,7 @@ export function readConsentCookie(): string | null {
 	}
 }
 
-export function writeConsentCookie(value: "granted" | "denied") {
+export function writeConsentCookie(value: ConsentCookieValue) {
 	if (typeof document === "undefined") return;
 	// Consent must be readable from JS (useConsent + <AnalyticsScript />),
 	// so httpOnly is not an option — SameSite=Lax still applies.

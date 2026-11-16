@@ -1,7 +1,9 @@
 import { config } from "@fuutu/config";
 import { CONTRAST_PAIRS } from "@fuutu/ui/color";
 import type { Page } from "@playwright/test";
+import { DIALOG_VIEWPORTS, expectContentInsideDialog } from "./dialog-geometry";
 import { expect, test } from "./fixtures";
+import { expectedFontFamily } from "./font-families";
 
 // The style guide is optional: buyers turn it off before launch.
 test.skip(!config.features.designSystem, "config.features.designSystem is off");
@@ -102,10 +104,15 @@ test.describe("/design", () => {
 	}) => {
 		await page.goto("/design");
 		const nav = page.getByRole("navigation", { name: /on this page/i });
-		const hrefs = await nav
-			.getByRole("link")
-			.evaluateAll((links) => links.map((a) => a.getAttribute("href")));
-		expect(hrefs).toEqual(SECTION_IDS.map((id) => `#${id}`));
+		// The page streams in behind loading.tsx: at `load` it can still sit
+		// in React's hidden segment, so wait for the revealed nav.
+		await expect
+			.poll(() =>
+				nav
+					.getByRole("link")
+					.evaluateAll((links) => links.map((a) => a.getAttribute("href"))),
+			)
+			.toEqual(SECTION_IDS.map((id) => `#${id}`));
 
 		for (const id of SECTION_IDS) {
 			const section = page.locator(`section#${id}`);
@@ -348,16 +355,16 @@ test.describe("/design", () => {
 			const cs = getComputedStyle(el);
 			return { family: cs.fontFamily, weight: cs.fontWeight };
 		});
-		expect(display800.family).toMatch(/schibsted/i);
+		expect(display800.family).toMatch(expectedFontFamily("heading"));
 		expect(display800.weight).toBe("800");
 		const body = section.locator("[data-type-role='body'] p").last();
 		expect(
 			await body.evaluate((el) => getComputedStyle(el).fontFamily),
-		).toMatch(/manrope/i);
+		).toMatch(expectedFontFamily("sans"));
 		const mono = section.locator("[data-type-role='mono'] p").last();
 		expect(
 			await mono.evaluate((el) => getComputedStyle(el).fontFamily),
-		).toMatch(/geist mono/i);
+		).toMatch(expectedFontFamily("mono"));
 	});
 
 	test("scales show radius sm to 4xl and shadows 2xs to 2xl", async ({
@@ -376,14 +383,18 @@ test.describe("/design", () => {
 
 	test("area tiles and swatches name their tokens", async ({ page }) => {
 		await page.goto("/design");
+		// Visible only: while the streamed page is revealed, React's hidden
+		// segment can still hold a second copy of it.
 		const swatches = page
 			.locator("section#foundations")
-			.getByTestId("area-swatch");
+			.getByTestId("area-swatch")
+			.filter({ visible: true });
 		await expect(swatches).toHaveCount(4, { timeout: 10_000 });
 		for (const area of ["users", "billing", "ai", "api"]) {
 			const swatch = page
 				.locator("section#foundations")
-				.locator(`[data-testid='area-swatch'][data-area='${area}']`);
+				.locator(`[data-testid='area-swatch'][data-area='${area}']`)
+				.filter({ visible: true });
 			await expect(swatch).toContainText(`area-${area}`);
 			await expect(swatch).toContainText(`area-${area}-foreground`);
 		}
@@ -391,7 +402,11 @@ test.describe("/design", () => {
 
 	test("mesh demo is tinted by area tokens", async ({ page }) => {
 		await page.goto("/design");
-		const demo = page.locator("section#patterns").getByTestId("mesh-area-demo");
+		// Visible only: React's hidden streaming segment can hold a copy.
+		const demo = page
+			.locator("section#patterns")
+			.getByTestId("mesh-area-demo")
+			.filter({ visible: true });
 		await expect(demo).toBeVisible({ timeout: 10_000 });
 		await expect(demo).toContainText("var(--area-users)");
 		await expect(demo).toContainText("var(--area-ai)");
@@ -544,4 +559,18 @@ test.describe("/design", () => {
 		await page.keyboard.press("Escape");
 		await expect(dialog).toBeHidden();
 	});
+
+	for (const viewport of DIALOG_VIEWPORTS) {
+		test(`dialog content stays inside the dialog at ${viewport.width}px`, async ({
+			page,
+		}) => {
+			await page.setViewportSize(viewport);
+			await page.goto("/design");
+			await page
+				.locator("section#components")
+				.getByRole("button", { name: /^open dialog$/i })
+				.click();
+			await expectContentInsideDialog(page, page.getByRole("dialog"));
+		});
+	}
 });

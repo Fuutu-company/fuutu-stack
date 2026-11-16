@@ -23,7 +23,7 @@ for (const theme of THEMES) {
 			}, theme);
 		});
 
-		test("four floating cards, each with a cut-out icon in the card's own surface color", async ({
+		test("four floating cards, each with a plain area icon (no chip behind it)", async ({
 			page,
 			isMobile,
 		}) => {
@@ -42,30 +42,24 @@ for (const theme of THEMES) {
 				await expect(float).not.toHaveText(/\p{Extended_Pictographic}/u);
 
 				const icon = await float
-					.locator('[data-slot="cutout-icon"]')
+					.locator('[data-slot="area-icon"]')
 					.evaluate((root) => {
-						const card = root.closest('[data-slot="hero-float"]');
-						const tile = root.querySelector('[data-slot="cutout-icon-tile"]');
 						const svg = root.querySelector("svg");
-						if (!card || !tile || !svg) return null;
-						const t = tile.getBoundingClientRect();
-						const s = svg.getBoundingClientRect();
+						if (!svg) return null;
+						const style = getComputedStyle(root);
 						return {
-							cardBackground: getComputedStyle(card).backgroundColor,
-							tileBackground: getComputedStyle(tile).backgroundColor,
+							background: style.backgroundColor,
+							radius: style.borderTopLeftRadius,
 							stroke: getComputedStyle(svg).stroke,
-							svgLarger: s.width > t.width && s.height > t.height,
-							centered:
-								Math.abs(s.left + s.width / 2 - (t.left + t.width / 2)) < 1 &&
-								Math.abs(s.top + s.height / 2 - (t.top + t.height / 2)) < 1,
+							color: style.color,
 						};
 					});
 
 				expect(icon).not.toBeNull();
-				expect(icon?.stroke).toBe(icon?.cardBackground);
-				expect(icon?.tileBackground).not.toBe(icon?.cardBackground);
-				expect(icon?.svgLarger).toBe(true);
-				expect(icon?.centered).toBe(true);
+				expect(icon?.background).toBe("rgba(0, 0, 0, 0)");
+				expect(icon?.radius).toBe("0px");
+				// Drawn in the area ink.
+				expect(icon?.stroke).toBe(icon?.color);
 			}
 		});
 	});
@@ -79,17 +73,24 @@ test("headline highlight is the area marker, not the browser's yellow mark", asy
 		.locator('[data-slot="hero"] h1 mark')
 		.evaluate((mark) => {
 			const computed = getComputedStyle(mark);
+			const probe = document.createElement("span");
+			probe.style.color = "var(--area-billing)";
+			document.body.append(probe);
+			const marker = getComputedStyle(probe).color;
+			probe.remove();
+			// Painted with the area token: a gradient shape (fallback) or the
+			// token as a solid fill on the trimmed inline box.
 			return {
-				backgroundColor: computed.backgroundColor,
-				usesAreaGradient: computed.backgroundImage.includes("gradient"),
+				usesAreaMarker:
+					computed.backgroundImage.includes("gradient") ||
+					computed.backgroundColor === marker,
 				inheritsColor:
 					computed.color ===
 					getComputedStyle(mark.parentElement as Element).color,
 			};
 		});
 	expect(style).toEqual({
-		backgroundColor: "rgba(0, 0, 0, 0)",
-		usesAreaGradient: true,
+		usesAreaMarker: true,
 		inheritsColor: true,
 	});
 });
@@ -97,8 +98,9 @@ test("headline highlight is the area marker, not the browser's yellow mark", asy
 /**
  * The marker must read as a full highlighter stroke: from just above the cap
  * height to below the descenders on every line the phrase wraps onto, without
- * spilling up to the top of the (taller-than-the-line) inline box, where it
- * would cover the descenders of the line above. Headline text on it ≥ 4.5:1.
+ * climbing into the line above, where it would cover that line's descenders.
+ * Measured against the rendered glyph box (canvas font metrics), so it holds
+ * for any heading font. Headline text on it ≥ 4.5:1.
  */
 for (const theme of THEMES) {
 	for (const locale of [DEFAULT_LOCALE, ...OTHER_LOCALES]) {
@@ -204,18 +206,40 @@ for (const theme of THEMES) {
 							return total ? hits / total : 0;
 						};
 
-						const fragments = [...mark.getClientRects()].map((rect) => {
-							const baseline = rect.top + ascent;
+						// Text lines come from a range over the mark's text: its rects
+						// follow the font's own ascent/descent, whatever box the mark's
+						// decoration paints, so the baseline is font-independent.
+						const range = document.createRange();
+						range.selectNodeContents(mark);
+						const lines = [...range.getClientRects()].filter(
+							(line) => line.width > 0,
+						);
+						const boxes = [...mark.getClientRects()];
+						const fontSize = Number.parseFloat(cs.fontSize);
+						/** Contiguous marker rows (px) going up from `y`. */
+						const climb = (rect: DOMRect, y: number) => {
+							let rows = 0;
+							while (rows < fontSize && rowShare(rect, y - rows) > 0.5)
+								rows += 1;
+							return rows;
+						};
+						const fragments = lines.map((line, index) => {
+							const rect = boxes[index] ?? line;
+							const baseline = line.top + ascent;
 							painted = pixel(rect.left + 2, baseline - cap / 2);
 							return {
 								paintedIsToken: near(painted, marker, 24),
 								aboveCaps: rowShare(rect, baseline - cap - 1),
 								belowDescenders: rowShare(rect, baseline + descent),
-								boxTop: rowShare(rect, rect.top + 1),
+								// How far the marker climbs above the cap line before a gap:
+								// a merge with the line above's marker would run on for ~1em.
+								climbAboveCaps: climb(rect, baseline - cap - 1),
+								fontSize,
 							};
 						});
 						return {
 							fragments,
+							boxCount: boxes.length,
 							decorationBreak:
 								getComputedStyle(mark).boxDecorationBreak ||
 								getComputedStyle(mark).getPropertyValue(
@@ -232,11 +256,14 @@ for (const theme of THEMES) {
 				if (!result) return;
 				expect(result.decorationBreak).toBe("clone");
 				expect(result.fragments.length).toBeGreaterThan(0);
+				expect(result.fragments).toHaveLength(result.boxCount);
 				for (const fragment of result.fragments) {
 					expect(fragment.paintedIsToken).toBe(true);
 					expect(fragment.aboveCaps).toBeGreaterThan(0.7);
 					expect(fragment.belowDescenders).toBeGreaterThan(0.7);
-					expect(fragment.boxTop).toBeLessThan(0.1);
+					expect(fragment.climbAboveCaps).toBeLessThan(
+						fragment.fontSize * 0.12,
+					);
 				}
 				const ratio = contrastRatio(
 					result.ink.map((c) => c / 255) as Vec3,

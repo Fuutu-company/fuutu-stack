@@ -61,8 +61,9 @@ function isProcedureFile(content: string): boolean {
  * We look for `organizationId` in a Zod schema definition.
  */
 function acceptsOrganizationIdFromInput(content: string): boolean {
-	// Match: organizationId: z.<anything> — string, uuid, coerce, etc.
-	return /organizationId\s*:\s*z\./.test(content);
+	// Match: organizationId: z.<anything> — string, uuid, coerce, etc. —
+	// or a shared named validator (`organizationId: adminIdSchema`).
+	return /organizationId\s*:\s*(?:z\.|[A-Za-z_$][\w$]*Schema\b)/.test(content);
 }
 
 /**
@@ -85,10 +86,11 @@ function callsRequireOrgPermissionAccess(content: string): boolean {
 }
 
 /**
- * Check if a file uses `adminProcedure` (global admin guard — no org membership needed).
+ * Check if a file uses `adminProcedure` / `systemAdminProcedure(...)`
+ * (global system-admin guard — no org membership needed).
  */
 function usesAdminProcedure(content: string): boolean {
-	return /\badminProcedure\b/.test(content);
+	return /\b(?:adminProcedure|systemAdminProcedure)\b/.test(content);
 }
 
 /**
@@ -146,6 +148,35 @@ describe("handlerOnlyUsesContextUserId detection", () => {
 	it("returns true when destructuring omits organizationId", () => {
 		expect(
 			handlerOnlyUsesContextUserId(wrap("const { id } = input; return id;")),
+		).toBe(true);
+	});
+});
+
+describe("organizationId input and admin guard detection", () => {
+	it("sees organizationId validated by a named schema", () => {
+		expect(
+			acceptsOrganizationIdFromInput(
+				"z.object({ organizationId: organizationIdSchema })",
+			),
+		).toBe(true);
+		expect(
+			acceptsOrganizationIdFromInput(
+				"z.object({ organizationId: adminIdSchema.optional() })",
+			),
+		).toBe(true);
+	});
+
+	it("ignores organizationId that is not an input schema field", () => {
+		expect(
+			acceptsOrganizationIdFromInput("payload: { organizationId: input.id }"),
+		).toBe(false);
+	});
+
+	it("accepts systemAdminProcedure as a global admin guard", () => {
+		expect(
+			usesAdminProcedure(
+				"export const p = systemAdminProcedure(PERMISSIONS.ADMIN_ORGANIZATION.VIEW)",
+			),
 		).toBe(true);
 	});
 });

@@ -89,8 +89,8 @@ export function ConnectedAppsBlock() {
 							data-testid="connected-app"
 						>
 							<div className="flex min-w-0 items-center gap-3">
-								<div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-									<PlugZap className="size-4 text-muted-foreground" />
+								<div className="flex shrink-0 items-center justify-center">
+									<PlugZap className="size-5 text-muted-foreground" />
 								</div>
 								<div className="min-w-0 space-y-0.5">
 									<div className="flex flex-wrap items-center gap-2 font-medium text-sm">

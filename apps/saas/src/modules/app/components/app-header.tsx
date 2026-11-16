@@ -16,13 +16,18 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { NotificationBell } from "@/modules/app/notifications/components/notification-bell";
+import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
 import { type BreadcrumbSegment, buildBreadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
+
+const ORG_SLUG = /^\/organizations\/([^/]+)/;
 
 function useBreadcrumbs(): BreadcrumbSegment[] {
 	const pathname = usePathname();
 	const tab = useSearchParams().get("tab");
-	return buildBreadcrumbs(pathname, tab);
+	// Same cache entry the sidebar reads — no extra request.
+	const org = useFullOrganization(pathname.match(ORG_SLUG)?.[1]).data;
+	return buildBreadcrumbs(pathname, tab, org?.name);
 }
 
 function BreadcrumbLabel({
@@ -35,7 +40,12 @@ function BreadcrumbLabel({
 	return <>{crumbs.labelKey ? t(crumbs.labelKey) : crumbs.label}</>;
 }
 
-export function AppHeader() {
+export interface AppHeaderProps {
+	/** `appSlots.headerActions`, rendered by the server layout — before the bell. */
+	actions?: React.ReactNode;
+}
+
+export function AppHeader({ actions }: AppHeaderProps) {
 	const t = useTranslations("navigation");
 	const crumbs = useBreadcrumbs();
 
@@ -76,6 +86,7 @@ export function AppHeader() {
 				</BreadcrumbList>
 			</Breadcrumb>
 			<div className="ml-auto flex items-center gap-1">
+				{actions}
 				<NotificationBell />
 				<LocaleSwitcher />
 				<ThemeToggle />

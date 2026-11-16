@@ -1,10 +1,17 @@
 import type { ComponentType } from "react";
-import { z } from "zod";
-
+import { appContent } from "./app-content";
 import ChangelogV010 from "./changelog/v0-1-0";
 import ChangelogV010De from "./changelog/v0-1-0.de";
-import { type ChangelogFrontmatter, changelogMeta } from "./changelog-meta";
-import { isoDate } from "./iso-date";
+import ChangelogV100 from "./changelog/v1-0-0";
+import ChangelogV100De from "./changelog/v1-0-0.de";
+import ChangelogV110 from "./changelog/v1-1-0";
+import ChangelogV110De from "./changelog/v1-1-0.de";
+import {
+	type ChangelogFrontmatter,
+	changelogDraftMeta,
+	changelogMeta,
+} from "./changelog-meta";
+import { applyAppContent, applyAppLegal } from "./content-extensions";
 import ImprintDe, {
 	frontmatter as imprintDeFrontmatter,
 } from "./legal/imprint.de";
@@ -19,6 +26,8 @@ import PrivacyEn, {
 } from "./legal/privacy.en";
 import TermsDe, { frontmatter as termsDeFrontmatter } from "./legal/terms.de";
 import TermsEn, { frontmatter as termsEnFrontmatter } from "./legal/terms.en";
+import { legalDocumentFrontmatterSchema } from "./legal-frontmatter";
+import { postFrontmatterSchema } from "./post-frontmatter";
 import WelcomePost, {
 	frontmatter as welcomeFrontmatter,
 } from "./posts/welcome";
@@ -53,6 +62,7 @@ export interface PostFrontmatter {
 export {
 	type ChangelogFrontmatter,
 	type ChangelogMeta,
+	changelogDraftMeta,
 	changelogFrontmatterSchema,
 	changelogMeta,
 } from "./changelog-meta";
@@ -82,19 +92,8 @@ export interface LegalDocument {
 	body: ComponentType;
 }
 
-export const postFrontmatterSchema = z.object({
-	title: z.string().min(1),
-	description: z.string().optional(),
-	publishedAt: isoDate,
-	draft: z.boolean().optional(),
-	authors: z.array(z.string()).optional(),
-	tags: z.array(z.string()).optional(),
-});
-
-export const legalDocumentFrontmatterSchema = z.object({
-	title: z.string().min(1),
-	updatedAt: isoDate,
-});
+export { legalDocumentFrontmatterSchema } from "./legal-frontmatter";
+export { postFrontmatterSchema } from "./post-frontmatter";
 
 function resolveBody(
 	bodies: Record<string, ComponentType>,
@@ -108,26 +107,41 @@ function resolveBody(
 	return resolved;
 }
 
-export const posts: readonly PostEntry[] = Object.freeze(
-	[
-		{
-			slug: "welcome",
-			frontmatter: postFrontmatterSchema.parse(welcomeFrontmatter),
-			bodies: { en: WelcomePost, de: WelcomePostDe },
-		},
-	].sort(
-		(a, b) =>
-			new Date(b.frontmatter.publishedAt).getTime() -
-			new Date(a.frontmatter.publishedAt).getTime(),
-	),
+const kitPosts: PostEntry[] = [
+	{
+		slug: "welcome",
+		frontmatter: postFrontmatterSchema.parse(welcomeFrontmatter),
+		bodies: { en: WelcomePost, de: WelcomePostDe },
+	},
+];
+
+/**
+ * Blog posts, newest first: the kit's demo posts with `appContent`
+ * applied (`./app-content.ts` — hide kit posts, add your own). Listing,
+ * post pages, static params and the sitemap all read this collection.
+ */
+export const posts: readonly PostEntry[] = applyAppContent(
+	kitPosts,
+	appContent,
 );
 
 /** Changelog bodies per slug — frontmatter lives in `changelog/<slug>.meta.ts`. */
 const CHANGELOG_BODIES: Record<string, Record<string, ComponentType>> = {
+	"v1-1-0": { en: ChangelogV110, de: ChangelogV110De },
+	"v1-0-0": { en: ChangelogV100, de: ChangelogV100De },
 	"v0-1-0": { en: ChangelogV010, de: ChangelogV010De },
 };
 
-/** Newest first — order and frontmatter come from `changelogMeta`. */
+for (const { slug } of changelogDraftMeta) {
+	if (!Object.hasOwn(CHANGELOG_BODIES, slug)) {
+		throw new Error(`Changelog draft "${slug}" has no bodies`);
+	}
+}
+
+/**
+ * Released entries, newest first — order and frontmatter come from
+ * `changelogMeta`; drafts (`changelogDraftMeta`) are left out.
+ */
 export const changelog: readonly ChangelogEntry[] = Object.freeze(
 	changelogMeta.map(({ slug, frontmatter }) => {
 		const bodies = Object.hasOwn(CHANGELOG_BODIES, slug)
@@ -138,7 +152,7 @@ export const changelog: readonly ChangelogEntry[] = Object.freeze(
 	}),
 );
 
-const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
+const KIT_LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 	privacy: {
 		en: {
 			slug: "privacy",
@@ -182,6 +196,13 @@ const LEGAL_REGISTRY: Record<string, Record<string, LegalDocument>> = {
 		},
 	},
 };
+
+/**
+ * Legal documents per slug and locale: the kit's with `appContent.legal`
+ * applied (`./app-content.ts` — replace a kit document, add a page). The
+ * legal pages, their static params and the sitemap read it.
+ */
+const LEGAL_REGISTRY = applyAppLegal(KIT_LEGAL_REGISTRY, appContent.legal);
 
 export const legal: readonly LegalDocument[] = Object.freeze(
 	Object.values(LEGAL_REGISTRY).flatMap((byLocale) => Object.values(byLocale)),

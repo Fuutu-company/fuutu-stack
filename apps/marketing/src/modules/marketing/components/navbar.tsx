@@ -18,8 +18,10 @@ import {
 } from "react";
 import { defaultLocale } from "@/i18n/config";
 import {
+	HEADER_BRAND,
 	NAV_DROPDOWNS,
 	NAV_ITEMS,
+	NAV_ORDER,
 	type NavDropdownItem,
 	type NavItem,
 } from "@/lib/site-links";
@@ -33,6 +35,10 @@ const DROPDOWN_GROUPS: Record<string, NavDropdownItem[]> = Object.fromEntries(
 );
 
 const DROPDOWN_ORDER = NAV_DROPDOWNS.map((group) => group.key);
+
+const ITEMS_BY_KEY: Record<string, NavItem> = Object.fromEntries(
+	NAV_ITEMS.map((item) => [item.key, item]),
+);
 
 function isActive(pathname: string, href: string, hash?: string): boolean {
 	if (href === "/") return pathname === "/" && !hash;
@@ -168,8 +174,8 @@ function MegaMenu({
 									item={item}
 									className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-accent"
 								>
-									<span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
-										<Icon className="size-4" />
+									<span className="flex shrink-0 items-center justify-center text-primary">
+										<Icon className="size-5" />
 									</span>
 									<span className="min-w-0 flex-1">
 										<span className="block font-semibold text-foreground text-sm">
@@ -247,36 +253,40 @@ const NavLinks = memo(function NavLinks() {
 
 	return (
 		<div ref={navRef} className="hidden items-center gap-1 lg:flex">
-			{NAV_ITEMS.map((item) => (
-				<SiteLink
-					key={item.key}
-					item={item}
-					className={cn(
-						PILL_ITEM,
-						isActive(pathname, item.href, hash) ? PILL_ACTIVE : PILL_IDLE,
-					)}
-				>
-					{t(`nav.${item.key}`)}
-					{item.badgeKey && <NewBadge badgeKey={item.badgeKey} />}
-				</SiteLink>
-			))}
-
-			{DROPDOWN_ORDER.map((groupKey) => (
-				<MegaMenu
-					key={groupKey}
-					groupKey={groupKey}
-					items={DROPDOWN_GROUPS[groupKey]}
-					isOpen={openDropdown === groupKey}
-					active={isDropdownActive(pathname, DROPDOWN_GROUPS[groupKey], hash)}
-					onEnter={() => handleEnter(groupKey)}
-					onLeave={handleLeave}
-					onTriggerClick={() =>
-						setOpenDropdown((current) =>
-							current === groupKey ? null : groupKey,
-						)
-					}
-				/>
-			))}
+			{NAV_ORDER.map(({ kind, key }) => {
+				const item = ITEMS_BY_KEY[key];
+				if (kind === "item" && item) {
+					return (
+						<SiteLink
+							key={key}
+							item={item}
+							className={cn(
+								PILL_ITEM,
+								isActive(pathname, item.href, hash) ? PILL_ACTIVE : PILL_IDLE,
+							)}
+						>
+							{t(`nav.${key}`)}
+							{item.badgeKey && <NewBadge badgeKey={item.badgeKey} />}
+						</SiteLink>
+					);
+				}
+				const items = DROPDOWN_GROUPS[key];
+				if (kind !== "dropdown" || !items) return null;
+				return (
+					<MegaMenu
+						key={key}
+						groupKey={key}
+						items={items}
+						isOpen={openDropdown === key}
+						active={isDropdownActive(pathname, items, hash)}
+						onEnter={() => handleEnter(key)}
+						onLeave={handleLeave}
+						onTriggerClick={() =>
+							setOpenDropdown((current) => (current === key ? null : key))
+						}
+					/>
+				);
+			})}
 		</div>
 	);
 });
@@ -334,6 +344,7 @@ export function MarketingNavbar() {
 		setOpen(false);
 	}, [pathname]);
 
+	const { Brand, After } = HEADER_BRAND;
 	const close = () => setOpen(false);
 	const mobileLinkClass = (href: string) =>
 		cn(
@@ -355,14 +366,21 @@ export function MarketingNavbar() {
 					href="/"
 					className="flex w-fit shrink-0 items-center gap-2.5 rounded-full"
 				>
-					<BrandLogo
-						size="xl"
-						alt={config.app.name}
-						className="size-[1.625rem] dark:invert"
-					/>
-					<span className="font-extrabold font-heading text-[1.0625rem] text-foreground tracking-heading">
-						{config.app.name}
-					</span>
+					{Brand ? (
+						<Brand />
+					) : (
+						<>
+							<BrandLogo
+								size="xl"
+								alt={config.app.name}
+								className="size-[1.625rem] dark:invert"
+							/>
+							<span className="font-extrabold font-heading text-[1.0625rem] text-foreground tracking-heading">
+								{config.app.name}
+							</span>
+						</>
+					)}
+					{After && <After />}
 				</Link>
 
 				<NavLinks />

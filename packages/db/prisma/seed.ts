@@ -24,6 +24,7 @@
  *   - 4 demo invoices for the acme org (2 paid, 1 open, 1 void)
  *   - 2 demo webhooks for the acme org (active + inactive)
  *   - 4 demo notifications for the admin (read/unread, mixed types)
+ *   - your app's demo data: `prisma/app-seed.ts` runs last
  *
  * Safety: the script refuses `NODE_ENV === "production"` and any non-local
  * `DATABASE_URL` host. Production seeding is an explicit, ticketed operation —
@@ -33,15 +34,23 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "@better-auth/utils/password";
 import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
+import { appSeed, appSeedConfig } from "./app-seed";
 import { db } from "./client";
+import { seedInvoiceCurrency } from "./seed-context";
 
 // Dashboard demo data. Marked rows (`metadata.seed`) are inserted only while
 // none exist, so re-runs stay idempotent and real audit rows never block them.
 const DEMO_ACTIVITY_MARKER = "demo-activity";
+// The plan Acme is seeded on — seed-demo-data-guard checks its CREDITS and
+// price env var against @fuutu/payments/config (skipped once PLANS drop it).
+const DEMO_PLAN_ID = "pro";
 // = CREDITS.pro.ai_tokens (@fuutu/payments/config) — the seed cannot import
 // payments; seed-demo-data-guard keeps the two aligned.
 const DEMO_AI_TOKENS_GRANTED = 500_000;
 const DAY_MS = 1000 * 60 * 60 * 24;
+// = BILLING_CURRENCY (@fuutu/payments/config) — kit default or the app's
+// `appSeedConfig.invoiceCurrency`; seed-currency-guard keeps them aligned.
+const INVOICE_CURRENCY = seedInvoiceCurrency(appSeedConfig);
 
 // [days ago, minutes before the seed time, actor, kit-emitted action]
 const DEMO_AUDIT_ACTIVITY: [number, number, "admin" | "member", string][] = [
@@ -293,7 +302,8 @@ async function main() {
 	// Acme's purchase (below) uses the Pro price id the app resolves plans from
 	// (`PLANS.pro.priceIdEnvVars.month`). Unset env falls back to a placeholder
 	// that the app maps to Free.
-	const proPriceId = env.PAYMENTS_PRO_PRICE_ID ?? "seed_product_pro";
+	const proPriceId =
+		env.PAYMENTS_PRO_PRICE_ID ?? `seed_product_${DEMO_PLAN_ID}`;
 	const acmeOnPro = Boolean(env.PAYMENTS_PRO_PRICE_ID);
 
 	// Demo AI usage — the org's ai_tokens balance (pro grant) plus the usage
@@ -404,7 +414,7 @@ async function main() {
 					url: "https://billing.acme.dev/invoices/001",
 					pdfUrl: "https://billing.acme.dev/invoices/001.pdf",
 					amount: 49.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "paid",
 					issuedAt: days(30),
 					paidAt: days(29),
@@ -416,7 +426,7 @@ async function main() {
 					url: "https://billing.acme.dev/invoices/002",
 					pdfUrl: "https://billing.acme.dev/invoices/002.pdf",
 					amount: 49.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "paid",
 					issuedAt: days(60),
 					paidAt: days(59),
@@ -427,7 +437,7 @@ async function main() {
 					providerInvoiceId: "seed_inv_003",
 					url: "https://billing.acme.dev/invoices/003",
 					amount: 149.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "open",
 					issuedAt: days(1),
 				},
@@ -436,7 +446,7 @@ async function main() {
 					userId: admin.id,
 					providerInvoiceId: "seed_inv_004",
 					amount: 49.0,
-					currency: "USD",
+					currency: INVOICE_CURRENCY,
 					status: "void",
 					issuedAt: days(45),
 				},
@@ -523,6 +533,14 @@ async function main() {
 			],
 		});
 	}
+
+	// App demo data (prisma/app-seed.ts) — last, so it can reference the kit rows.
+	await appSeed({
+		db,
+		users: { admin, member },
+		orgs: { acme },
+		now: seedStart,
+	});
 
 	console.log("✓ Seed complete.");
 	console.log("  admin@fuutu.local / DevPassword!2345");

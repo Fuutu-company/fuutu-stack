@@ -1,3 +1,4 @@
+import { planCatalogFixture } from "@fuutu/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Kit tests run on a fixed plan catalog (@fuutu/test-utils), not the
@@ -61,7 +62,9 @@ const { getOrgEntitlement, getUserEntitlement, hasFeature } = await import(
 	"../entitlements"
 );
 const { registerEntitlementResolver } = await import("../extensions");
-const { LIMITS } = await import("../config");
+// The mocked config exposes the fixture objects; typed via the fixture so
+// the plan keys type-check under any app catalog.
+const { LIMITS } = planCatalogFixture;
 
 const PRO_PURCHASE = {
 	id: "purchase_1",

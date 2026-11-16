@@ -7,12 +7,16 @@ import {
 import { PERMISSIONS } from "@fuutu/rbac";
 
 import { z } from "zod";
+import { apiConfig } from "../../../config";
 import { authProcedure } from "../../../orpc/procedures";
+import { canManageOrgApiKey } from "../org-key-access";
 
 const listApiKeysSchema = z.object({
 	organizationId: z.string().optional(),
 	page: z.coerce.number().int().min(1).default(1),
 	limit: z.coerce.number().int().min(1).max(100).default(50),
+	/** Only keys carrying this scope (e.g. the MCP keys of an org). */
+	scope: z.enum(apiConfig.apiKeyScopes).optional(),
 });
 
 export const listApiKeysProcedure = authProcedure({
@@ -25,7 +29,7 @@ export const listApiKeysProcedure = authProcedure({
 		tags: ["API Keys"],
 		summary: "List API keys",
 		description:
-			"Returns paginated API keys for the current user or a specific organization.",
+			"Returns paginated API keys for the current user or a specific organization. `canRevoke` says whether the caller may revoke the key.",
 	})
 	.input(listApiKeysSchema)
 	.handler(async ({ input, context }) => {
@@ -35,11 +39,20 @@ export const listApiKeysProcedure = authProcedure({
 				listOrgApiKeys(context.org.id, {
 					take: input.limit,
 					skip,
+					...(input.scope ? { scope: input.scope } : {}),
 				}),
-				countOrgApiKeys(context.org.id),
+				countOrgApiKeys(
+					context.org.id,
+					input.scope ? { scope: input.scope } : {},
+				),
 			]);
+			const member = context.membership;
 			return {
-				items,
+				// What apiKeys.revoke would allow — the UI hides the action otherwise.
+				items: items.map((item) => ({
+					...item,
+					canRevoke: member ? canManageOrgApiKey(member, item) : false,
+				})),
 				page: input.page,
 				limit: input.limit,
 				total,
@@ -50,11 +63,14 @@ export const listApiKeysProcedure = authProcedure({
 			listApiKeys(context.user.id, {
 				take: input.limit,
 				skip,
+				...(input.scope ? { scope: input.scope } : {}),
 			}),
-			countApiKeys(context.user.id),
+			countApiKeys(context.user.id, input.scope ? { scope: input.scope } : {}),
 		]);
 		return {
-			items,
+			// The caller's own keys (org keys they created included — the
+			// creator may revoke those while still a member).
+			items: items.map((item) => ({ ...item, canRevoke: true })),
 			page: input.page,
 			limit: input.limit,
 			total,

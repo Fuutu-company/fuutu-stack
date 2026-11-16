@@ -7,6 +7,7 @@ import {
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
 import { env } from "@fuutu/env/saas";
+import { matchesPublicPath } from "@fuutu/utils/public-path";
 import { type NextRequest, NextResponse } from "next/server";
 import { APP_PUBLIC_PREFIXES } from "./proxy-public";
 
@@ -71,6 +72,9 @@ const PUBLIC_PREFIXES = [
 	"/.well-known",
 	"/auth",
 	"/image-proxy",
+	// reason: crawlers fetch robots.txt without a session; it only says
+	// "Disallow: /" (src/app/robots.ts).
+	{ exact: "/robots.txt" },
 	// reason: app-owned prefixes — each documented in proxy-public.ts
 	...APP_PUBLIC_PREFIXES,
 ];
@@ -78,7 +82,7 @@ const AUTH_PREFIX = "/auth";
 
 function isPublic(pathname: string): boolean {
 	if (pathname === "/") return true;
-	return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+	return matchesPublicPath(pathname, PUBLIC_PREFIXES);
 }
 
 export async function proxy(req: NextRequest) {

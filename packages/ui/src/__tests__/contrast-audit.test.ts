@@ -222,20 +222,86 @@ describe("audit mechanics (fixtures)", () => {
 			).toBe(true);
 		});
 
-		it("measures primary/90 over background (light and dark)", () => {
+		it("measures primary/90 over the surfaces (light and dark)", () => {
 			const css =
-				":root { --background: #ffffff; --primary: #000000; --primary-foreground: #ffffff; } .dark { --background: #000000; --primary: #ffffff; --primary-foreground: #000000; }";
+				":root { --background: #ffffff; --card: #ffffff; --popover: #ffffff; --primary: #000000; --primary-foreground: #ffffff; } .dark { --background: #000000; --card: #000000; --popover: #000000; --primary: #ffffff; --primary-foreground: #000000; }";
 			// light: 90% black over white = #1a1a1a, white text
 			expect(ratioOf(css, "light", hover)).toBeCloseTo(17.49, 1);
 			// dark: 90% white over black = #e6e6e6, black text
 			expect(ratioOf(css, "dark", hover)).toBeCloseTo(16.7, 1);
 		});
 
+		it("takes the worst of background, card and popover in light and names it", () => {
+			const css =
+				":root { --background: #808080; --card: #ffffff; --popover: #808080; --primary: #6a6a6a; --primary-foreground: #ffffff; }";
+			const result = measurePair(parseThemeBlocks(css), "light", hover);
+			expect(result).toEqual({
+				ratio: expect.closeTo(4.36, 1),
+				surface: "card",
+			});
+			expect(result).toHaveProperty("surface", "card");
+		});
+
+		it("takes the worst surface in dark too (popover)", () => {
+			const css =
+				".dark { --background: #ffffff; --card: #ffffff; --popover: #000000; --primary: #999999; --primary-foreground: #000000; }";
+			const result = measurePair(parseThemeBlocks(css), "dark", hover);
+			if ("error" in result) expect.fail(result.error);
+			expect(result.surface).toBe("popover");
+			expect(result.ratio).toBeLessThan(
+				ratioOf(css, "dark", { ...hover, bg: "primary", effective: undefined }),
+			);
+		});
+
+		it("fails naming a missing surface", () => {
+			const css =
+				".dark { --background: #000000; --popover: #000000; --primary: #ffffff; --primary-foreground: #000000; }";
+			const result = measurePair(parseThemeBlocks(css), "dark", hover);
+			expect(result).toHaveProperty("error");
+			if ("error" in result) expect(result.error).toContain("dark: --card");
+		});
+
 		it("is weaker than the solid pair when the fill blends toward the page", () => {
 			const css =
-				":root { --background: #ffffff; --primary: #767676; --primary-foreground: #ffffff; }";
+				":root { --background: #ffffff; --card: #ffffff; --popover: #ffffff; --primary: #767676; --primary-foreground: #ffffff; }";
 			const solid = ratioOf(css, "light", { ...hover, effective: undefined });
 			expect(ratioOf(css, "light", hover)).toBeLessThan(solid);
+		});
+	});
+
+	describe("primary band tile", () => {
+		const tile: ContrastPair = {
+			fg: "primary-foreground",
+			bg: "primary",
+			min: 4.5,
+			effective: "primary-band-tile",
+		};
+
+		it("is part of CONTRAST_PAIRS at 4.5", () => {
+			expect(
+				CONTRAST_PAIRS.some(
+					(p) => p.effective === "primary-band-tile" && p.min === 4.5,
+				),
+			).toBe(true);
+		});
+
+		it("measures primary-foreground on primary + 8% primary-foreground (light and dark)", () => {
+			const css =
+				":root { --background: #ffffff; --primary: #000000; --primary-foreground: #ffffff; } .dark { --background: #000000; --primary: #ffffff; --primary-foreground: #000000; }";
+			// light: 8% white over black = #141414, white text
+			expect(ratioOf(css, "light", tile)).toBeCloseTo(18.4, 1);
+			// dark: 8% black over white = #ebebeb, black text
+			expect(ratioOf(css, "dark", tile)).toBeCloseTo(17.55, 1);
+		});
+
+		it("fails an orange primary that passes solid but not on the tile", () => {
+			const css =
+				":root { --background: #ffffff; --primary: #d4400f; --primary-foreground: #ffffff; }";
+			expect(
+				ratioOf(css, "light", { ...tile, effective: undefined }),
+			).toBeGreaterThanOrEqual(4.5);
+			expect(ratioOf(css, "light", tile)).toBeCloseTo(4.16, 1);
+			expect(ratioOf(css, "light", tile)).toBeLessThan(4.5);
 		});
 	});
 

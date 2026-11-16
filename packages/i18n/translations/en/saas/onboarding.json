@@ -7,7 +7,8 @@
 			"heading": "Your profile",
 			"fullName": "Full name",
 			"placeholder": "Your full name",
-			"continue": "Continue"
+			"continue": "Continue",
+			"impersonating": "Support can't change this user's name while impersonating — edit it on the admin user page."
 		},
 		"org": {
 			"heading": "Create an organization",

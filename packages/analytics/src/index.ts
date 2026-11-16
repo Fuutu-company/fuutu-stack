@@ -108,12 +108,38 @@ export function consentBannerVisible(): boolean {
 }
 
 /**
+ * How the banner talks to the user. `"consent"` asks before anything is
+ * tracked (Accept / Decline) — consent-required providers and
+ * `requireConsent: true`. `"notice"` tells the user that anonymous,
+ * cookieless analytics already run and offers an opt-out (OK / Opt out) —
+ * providers that track without consent (Umami).
+ */
+export type ConsentBannerMode = "consent" | "notice";
+
+export function consentBannerMode(): ConsentBannerMode {
+	return providerRequiresConsent() ? "consent" : "notice";
+}
+
+/**
+ * Whether the stored decision (raw cookie value) still needs the banner.
+ * In notice mode every answer counts (`"acknowledged"`, `"granted"`,
+ * `"denied"`). In consent mode only `"granted"` / `"denied"` do — an OK on
+ * a notice is no consent, so a switch to a consent-required provider asks
+ * again.
+ */
+export function consentDecisionNeeded(value: string | null): boolean {
+	if (value === "granted" || value === "denied") return false;
+	return consentBannerMode() === "consent" || value !== "acknowledged";
+}
+
+/**
  * True when the active provider may track right now. Consent-required
  * providers need a `"granted"` cookie; consent-free providers track
  * immediately but still honor an explicit `"denied"` — a decline click
  * on a transparency banner is a real opt-out, not decoration. Read per
- * call so `deny()` gates manual `trackEvent`/`trackPageview` — an
- * already-injected script (e.g. Umami auto-track) keeps running until reload.
+ * call so `deny()` gates manual `trackEvent`/`trackPageview`; an
+ * already-injected script is gated through the provider's
+ * `installConsentGate` (Umami: `data-before-send`).
  */
 export function hasTrackingConsent(): boolean {
 	const value = readConsentCookie();

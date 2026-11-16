@@ -3,9 +3,12 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { requireOrgPermissionAccess } from "../../../orpc/org-access";
-import { permissionProcedure } from "../../../orpc/procedures";
+import {
+	denyImpersonation,
+	permissionProcedure,
+} from "../../../orpc/procedures";
 import { assertSessionCaller } from "../assert-session-caller";
+import { requireOrgApiKeyManageAccess } from "../org-key-access";
 
 const apiKeyIdSchema = z.object({
 	id: z.string().min(1).max(64),
@@ -14,6 +17,7 @@ const apiKeyIdSchema = z.object({
 export const revokeApiKeyProcedure = permissionProcedure(
 	PERMISSIONS.API_KEY.DELETE,
 )
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",
@@ -21,7 +25,7 @@ export const revokeApiKeyProcedure = permissionProcedure(
 		tags: ["API Keys"],
 		summary: "Revoke API key",
 		description:
-			"Revokes an API key. Personal keys can only be revoked by the owner. Org-level keys require admin role in the organization.",
+			"Revokes an API key. Personal keys can only be revoked by the owner. Org keys: an org admin or owner may revoke any key of the organization, a member only the keys they created.",
 	})
 	.input(apiKeyIdSchema)
 	.handler(async ({ input, context }) => {
@@ -31,10 +35,9 @@ export const revokeApiKeyProcedure = permissionProcedure(
 			throw new ORPCError("NOT_FOUND", { message: "API key not found" });
 		}
 		if (key.organizationId) {
-			await requireOrgPermissionAccess(
-				key.organizationId,
+			await requireOrgApiKeyManageAccess(
+				{ organizationId: key.organizationId, userId: key.userId },
 				context.user.id,
-				PERMISSIONS.API_KEY.DELETE,
 				context,
 			);
 			const result = await revokeApiKey(input.id, {

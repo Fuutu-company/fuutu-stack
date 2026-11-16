@@ -49,5 +49,11 @@ export const SYSTEM_POLICY: SystemAccessPolicy = Object.freeze({
 		PERMISSIONS.PAYMENT.DELETE,
 		...crud("admin"),
 		PERMISSIONS.VIEW_ADMIN,
+		// Support access to any organization (admin.organizations.*) — a
+		// separate resource so ORGANIZATION.* stays an org-level decision.
+		PERMISSIONS.ADMIN_ORGANIZATION.VIEW,
+		PERMISSIONS.ADMIN_ORGANIZATION.UPDATE,
+		PERMISSIONS.ADMIN_ORGANIZATION.DELETE,
+		PERMISSIONS.IMPERSONATE_USER,
 	]),
 });

@@ -29,9 +29,11 @@ import {
 } from "@fuutu/ui";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { planGateMessage } from "@/lib/api-error";
+import { useImpersonating } from "@/lib/use-impersonating";
 import { orpc } from "@/utils/orpc";
+import { initialApiKeyScopes, offeredApiKeyScopes } from "../scope-selection";
 
 type ApiKeyResult = {
 	id: string;
@@ -47,29 +49,45 @@ type KeyType = "personal" | "org";
 
 const log = createLogger({ scope: "api-keys" });
 
-export function ApiKeyCreateDialog({
-	organizationId,
-	orgs = [],
-	isSystemAdmin = false,
-	onCreated,
-}: {
+export type ApiKeyCreateDialogProps = {
 	/** Fixed org context (org settings page) — no picker, no personal keys. */
 	organizationId?: string;
 	/** Orgs offered in the picker when there is no fixed org (user settings). */
 	orgs?: readonly ApiKeyOrgOption[];
 	/** Shows admin-only scopes — UI only, the API enforces it (FORBIDDEN). */
 	isSystemAdmin?: boolean;
-	onCreated: (key: ApiKeyResult) => void;
-}) {
+	/**
+	 * Scopes checked on open instead of `API_KEY_DEFAULT_SCOPES`. Entries the
+	 * viewer is not offered are dropped; nothing left → submit stays disabled.
+	 */
+	presetScopes?: readonly ApiKeyScope[];
+	/** Trigger button text. Default: `apiKeys.create`. */
+	triggerLabel?: string;
+	triggerVariant?: ComponentProps<typeof Button>["variant"];
+	onCreated: (key: ApiKeyResult, scopes: readonly ApiKeyScope[]) => void;
+};
+
+export function ApiKeyCreateDialog({
+	organizationId,
+	orgs = [],
+	isSystemAdmin = false,
+	presetScopes,
+	triggerLabel,
+	triggerVariant,
+	onCreated,
+}: ApiKeyCreateDialogProps) {
 	const t = useTranslations("apiKeys");
 	const tRoot = useTranslations();
 	const tCommon = useTranslations("common");
-	const offeredScopes = API_KEY_SCOPES.filter(
-		(scope) => isSystemAdmin || !API_KEY_ADMIN_SCOPES.includes(scope),
+	const offeredScopes = offeredApiKeyScopes(
+		API_KEY_SCOPES,
+		API_KEY_ADMIN_SCOPES,
+		isSystemAdmin,
 	);
 	const defaultType: KeyType = organizationId ? "org" : "personal";
-	const defaultScopes = offeredScopes.filter((scope) =>
-		API_KEY_DEFAULT_SCOPES.includes(scope),
+	const defaultScopes = initialApiKeyScopes(
+		offeredScopes,
+		presetScopes ?? API_KEY_DEFAULT_SCOPES,
 	);
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
@@ -80,12 +98,28 @@ export function ApiKeyCreateDialog({
 	const [pickedOrgId, setPickedOrgId] = useState("");
 	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	// apiKeys.create refuses impersonation sessions (denyImpersonation).
+	const impersonating = useImpersonating();
 
 	// The org id can resolve after mount (loaded async by the parent) —
 	// re-apply the context default when it changes.
 	useEffect(() => {
 		setType(defaultType);
 	}, [defaultType]);
+
+	// Every open starts from the defaults — a cancelled draft never leaks
+	// into the next key.
+	function changeOpen(next: boolean) {
+		if (next) {
+			setName("");
+			setExpiresAt("");
+			setType(defaultType);
+			setSelectedScopes(defaultScopes);
+			setPickedOrgId("");
+			setError(null);
+		}
+		setOpen(next);
+	}
 
 	const canCreateOrgKeys = Boolean(organizationId) || orgs.length > 0;
 	const isOrgKey = type === "org";
@@ -128,11 +162,7 @@ export function ApiKeyCreateDialog({
 				...(expiresAt ? { expiresAt: new Date(expiresAt) } : {}),
 			});
 			setOpen(false);
-			setName("");
-			setExpiresAt("");
-			setType(defaultType);
-			setSelectedScopes(defaultScopes);
-			onCreated(result);
+			onCreated(result, isOrgKey ? scopes : []);
 		} catch (e) {
 			log.error("api key creation failed", { err: e });
 			setError(planGateMessage(e, tRoot, "apiKeys.failed"));
@@ -142,11 +172,19 @@ export function ApiKeyCreateDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog open={open} onOpenChange={changeOpen}>
 			<DialogTrigger asChild>
-				<Button>
+				<Button
+					variant={triggerVariant}
+					disabled={impersonating}
+					title={
+						impersonating
+							? tRoot("common.errors.impersonationForbidden")
+							: undefined
+					}
+				>
 					<Plus className="size-4" />
-					{t("create")}
+					{triggerLabel ?? t("create")}
 				</Button>
 			</DialogTrigger>
 			<DialogContent closeLabel={tCommon("close")}>

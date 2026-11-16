@@ -1,6 +1,12 @@
+import {
+	type FixturePlanId,
+	fixturePlanId,
+	fixtureTier,
+	planCatalogFixture,
+} from "@fuutu/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { LIMITS, PLANS, type PlanId } from "../config";
+import type { PlanId } from "../config";
 import {
 	formatLimit,
 	getFeaturesForTier,
@@ -17,7 +23,10 @@ vi.mock("../config", async (importOriginal) => ({
 	...(await import("@fuutu/test-utils")).planCatalogFixture,
 }));
 
-const ALL_PLAN_IDS: PlanId[] = ["free", "pro", "enterprise"];
+// The mocked config exposes these very objects; read through the fixture
+// so the ids type-check under any app catalog.
+const { LIMITS, PLANS } = planCatalogFixture;
+const ALL_PLAN_IDS: FixturePlanId[] = ["free", "pro", "enterprise"];
 const ALL_LIMIT_KEYS: LimitKey[] = [
 	"organizations",
 	"membersPerOrg",
@@ -194,7 +203,7 @@ describe("buildPricingTiers()", () => {
 		const tiers = buildPricingTiers({
 			audience: "saas",
 			t: mockTranslations,
-			loadingId: "pro",
+			loadingId: fixturePlanId("pro"),
 		});
 		const proTier = tiers.find((t) => t.id === "pro");
 		expect(proTier?.disabled).toBe(true);
@@ -224,7 +233,7 @@ describe("buildPricingTiers()", () => {
 
 describe("getFeaturesForTier()", () => {
 	it("returns features for free tier", () => {
-		const features = getFeaturesForTier("free");
+		const features = getFeaturesForTier(fixtureTier("free"));
 		expect(features.length).toBeGreaterThan(0);
 		for (const f of features) {
 			expect(f.tier).toBe("free");
@@ -232,22 +241,22 @@ describe("getFeaturesForTier()", () => {
 	});
 
 	it("returns more features for pro than free", () => {
-		const freeFeatures = getFeaturesForTier("free");
-		const proFeatures = getFeaturesForTier("pro");
+		const freeFeatures = getFeaturesForTier(fixtureTier("free"));
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
 		expect(proFeatures.length).toBeGreaterThan(freeFeatures.length);
 	});
 
 	it("returns most features for enterprise", () => {
-		const proFeatures = getFeaturesForTier("pro");
-		const enterpriseFeatures = getFeaturesForTier("enterprise");
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
+		const enterpriseFeatures = getFeaturesForTier(fixtureTier("enterprise"));
 		expect(enterpriseFeatures.length).toBeGreaterThanOrEqual(
 			proFeatures.length,
 		);
 	});
 
 	it("free features are subset of pro features", () => {
-		const freeFeatures = getFeaturesForTier("free");
-		const proFeatures = getFeaturesForTier("pro");
+		const freeFeatures = getFeaturesForTier(fixtureTier("free"));
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
 		const proIds = new Set(proFeatures.map((f) => f.id));
 		for (const f of freeFeatures) {
 			expect(proIds.has(f.id)).toBe(true);
@@ -255,8 +264,8 @@ describe("getFeaturesForTier()", () => {
 	});
 
 	it("pro features are subset of enterprise features", () => {
-		const proFeatures = getFeaturesForTier("pro");
-		const enterpriseFeatures = getFeaturesForTier("enterprise");
+		const proFeatures = getFeaturesForTier(fixtureTier("pro"));
+		const enterpriseFeatures = getFeaturesForTier(fixtureTier("enterprise"));
 		const enterpriseIds = new Set(enterpriseFeatures.map((f) => f.id));
 		for (const f of proFeatures) {
 			expect(enterpriseIds.has(f.id)).toBe(true);
@@ -268,7 +277,7 @@ describe("getLimit()", () => {
 	for (const planId of ALL_PLAN_IDS) {
 		for (const limitKey of ALL_LIMIT_KEYS) {
 			it(`returns correct value for ${planId}.${limitKey}`, () => {
-				const result = getLimit(planId, limitKey);
+				const result = getLimit(fixturePlanId(planId), limitKey);
 				expect(result).toBe(LIMITS[planId][limitKey]);
 			});
 		}
@@ -279,7 +288,9 @@ describe("getLimit()", () => {
 	});
 
 	it("returns 'unlimited' for enterprise.organizations", () => {
-		expect(getLimit("enterprise", "organizations")).toBe("unlimited");
+		expect(getLimit(fixturePlanId("enterprise"), "organizations")).toBe(
+			"unlimited",
+		);
 	});
 });
 
@@ -305,14 +316,14 @@ describe("formatLimit()", () => {
 
 describe("planIdToTier()", () => {
 	it("maps free to free", () => {
-		expect(planIdToTier("free")).toBe("free");
+		expect(planIdToTier(fixturePlanId("free"))).toBe("free");
 	});
 
 	it("maps pro to pro", () => {
-		expect(planIdToTier("pro")).toBe("pro");
+		expect(planIdToTier(fixturePlanId("pro"))).toBe("pro");
 	});
 
 	it("maps enterprise to enterprise", () => {
-		expect(planIdToTier("enterprise")).toBe("enterprise");
+		expect(planIdToTier(fixturePlanId("enterprise"))).toBe("enterprise");
 	});
 });

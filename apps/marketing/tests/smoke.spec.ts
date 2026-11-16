@@ -6,6 +6,7 @@ import {
 	localePrefix,
 	OTHER_LOCALES,
 } from "./locales";
+import { FIRST_POST_SLUG } from "./posts";
 
 /**
  * Smoke tests for the marketing site.
@@ -103,6 +104,19 @@ test.describe("navigation", () => {
 		expect(count).toBeGreaterThan(0);
 	});
 
+	test("footer action buttons are named, non-submitting buttons", async ({
+		page,
+	}) => {
+		// App footer actions (`appFooter.actions`) render as buttons; the kit
+		// footer alone has none. Whatever the app adds must stay accessible.
+		await page.goto("/");
+		const buttons = page.locator("footer").first().locator("button");
+		for (const button of await buttons.all()) {
+			await expect(button).toHaveAttribute("type", "button");
+			await expect(button).toHaveAccessibleName(/\S/);
+		}
+	});
+
 	test("footer links are present", async ({ page }) => {
 		await page.goto("/");
 		const footer = page.locator("footer").first();
@@ -161,6 +175,21 @@ test.describe("navigation", () => {
 		expect(res?.status()).toBe(404);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 	});
+
+	// Regression: in production a `loading.tsx` above a `[slug]` page started
+	// the stream (status 200) before the page's `notFound()` ran.
+	for (const path of [
+		"/blog/this-post-does-not-exist",
+		"/legal/this-document-does-not-exist",
+	]) {
+		test(`unknown slug ${path} answers 404`, async ({ page }) => {
+			const res = await page.goto(`/${DEFAULT_LOCALE}${path}`);
+			expect(res?.status()).toBe(404);
+			await expect(
+				page.getByRole("heading", { level: 1 }).first(),
+			).toBeVisible();
+		});
+	}
 
 	test("404 page logs no console errors", async ({ page }) => {
 		const errors: string[] = [];
@@ -343,6 +372,37 @@ test.describe("page metadata", () => {
 			const html = await res.text();
 			expect(html).toMatch(/<title[^>]*>[^<]+<\/title>/i);
 			expect(html).toMatch(/<meta\s+name="description"/i);
+		});
+	}
+});
+
+// ── SEO defaults: no app sitemap exclusions, no robots meta ─────────────
+
+test.describe("SEO defaults", () => {
+	const paths = [
+		...PAGES.map(({ path }) => path),
+		...(FIRST_POST_SLUG ? [`/blog/${FIRST_POST_SLUG}`] : []),
+	];
+
+	test("/sitemap.xml lists every kit page, legal page and post per locale", async ({
+		request,
+	}) => {
+		const xml = await (await request.get("/sitemap.xml")).text();
+		const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+			([, loc]) => new URL(loc ?? "").pathname,
+		);
+		for (const locale of LOCALES) {
+			for (const path of paths) {
+				expect(locs).toContain(`${localePrefix(locale)}${path}` || "/");
+			}
+		}
+	});
+
+	for (const path of paths) {
+		test(`${path || "/"} sets no robots meta`, async ({ request }) => {
+			const res = await request.get(`/${DEFAULT_LOCALE}${path}`);
+			expect(res.status()).toBeLessThan(400);
+			expect(await res.text()).not.toMatch(/<meta\s+name="robots"/i);
 		});
 	}
 });

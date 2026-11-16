@@ -12,7 +12,7 @@
 			"!**/.next",
 			"!**/.next-e2e",
 			"!**/.fuutu/browser",
-			"!**/.claude/worktrees",
+			"!.claude/worktrees",
 			"!**/.fuutu/session",
 			"!**/.fuutu/visual-report",
 			"!**/.fuutu/visual-local",

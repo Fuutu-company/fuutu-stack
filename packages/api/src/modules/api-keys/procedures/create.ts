@@ -22,6 +22,7 @@ const createApiKeySchema = z.object({
 
 export const createApiKeyProcedure = authProcedure({
 	systemPermission: PERMISSIONS.API_KEY.CREATE,
+	denyImpersonation: true,
 	org: {
 		permission: PERMISSIONS.API_KEY.CREATE,
 		optional: true,

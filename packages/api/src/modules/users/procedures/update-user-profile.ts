@@ -3,7 +3,10 @@ import { createLogger } from "@fuutu/logs";
 import { dispatchEvent } from "@fuutu/webhooks";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { protectedProcedure } from "../../../orpc/procedures";
+import {
+	denyImpersonation,
+	protectedProcedure,
+} from "../../../orpc/procedures";
 
 const log = createLogger({ scope: "api:users" });
 
@@ -13,6 +16,7 @@ const updateProfileSchema = z.object({
 });
 
 export const updateUserProfile = protectedProcedure
+	.use(denyImpersonation)
 	.use(createRateLimitMiddleware({ endpoint: "userUpdate" }))
 	.route({
 		method: "PATCH",

@@ -21,6 +21,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 
 export function DeleteAccountBlock() {
 	const t = useTranslations();
@@ -35,7 +36,7 @@ export function DeleteAccountBlock() {
 		try {
 			const res = await authClient.deleteUser({ password });
 			if (res.error) {
-				setError(t("settings.danger.failed"));
+				setError(planGateMessage(res.error, t, "settings.danger.failed"));
 				return;
 			}
 			router.push("/");

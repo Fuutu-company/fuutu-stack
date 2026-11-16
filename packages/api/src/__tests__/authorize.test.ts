@@ -1,6 +1,7 @@
 // The repeated `as unknown as Context` casts below are intentional
 // test-mock shims — they adapt partial fixtures to the full Context shape.
 import { checkLimit, meetsTier } from "@fuutu/payments/plan-resolver";
+import { fixtureTier } from "@fuutu/test-utils";
 import { ORPCError } from "@orpc/server";
 import { describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
@@ -9,24 +10,30 @@ import type { Context } from "../context";
 
 describe("meetsTier", () => {
 	it("free meets free", () => {
-		expect(meetsTier("free", "free")).toBe(true);
+		expect(meetsTier(fixtureTier("free"), fixtureTier("free"))).toBe(true);
 	});
 	it("free does not meet pro", () => {
-		expect(meetsTier("free", "pro")).toBe(false);
+		expect(meetsTier(fixtureTier("free"), fixtureTier("pro"))).toBe(false);
 	});
 	it("pro meets free", () => {
-		expect(meetsTier("pro", "free")).toBe(true);
+		expect(meetsTier(fixtureTier("pro"), fixtureTier("free"))).toBe(true);
 	});
 	it("pro meets pro", () => {
-		expect(meetsTier("pro", "pro")).toBe(true);
+		expect(meetsTier(fixtureTier("pro"), fixtureTier("pro"))).toBe(true);
 	});
 	it("pro does not meet enterprise", () => {
-		expect(meetsTier("pro", "enterprise")).toBe(false);
+		expect(meetsTier(fixtureTier("pro"), fixtureTier("enterprise"))).toBe(
+			false,
+		);
 	});
 	it("enterprise meets all", () => {
-		expect(meetsTier("enterprise", "free")).toBe(true);
-		expect(meetsTier("enterprise", "pro")).toBe(true);
-		expect(meetsTier("enterprise", "enterprise")).toBe(true);
+		expect(meetsTier(fixtureTier("enterprise"), fixtureTier("free"))).toBe(
+			true,
+		);
+		expect(meetsTier(fixtureTier("enterprise"), fixtureTier("pro"))).toBe(true);
+		expect(
+			meetsTier(fixtureTier("enterprise"), fixtureTier("enterprise")),
+		).toBe(true);
 	});
 });
 

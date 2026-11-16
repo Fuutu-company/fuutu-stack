@@ -22,7 +22,9 @@ import { CreditCard, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { isPaymentsUnavailable } from "@/lib/api-error";
+import { paymentsErrorKey } from "@/lib/api-error";
+import { useImpersonating } from "@/lib/use-impersonating";
+import { ImpersonationNotice } from "@/modules/app/components/impersonation-notice";
 import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "user-billing" });
@@ -31,6 +33,9 @@ type ActiveSubscription = {
 	id: string;
 	status: string;
 	productId: string | null;
+	/** Resolved on the server — covers no-trial products too. */
+	planId: PlanId | null;
+	interval: BillingInterval | null;
 	currentPeriodEnd?: Date | null;
 };
 
@@ -48,6 +53,8 @@ export function UserSettingsBilling({
 	const [loading, setLoading] = useState(true);
 	const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	// Checkout and portal refuse impersonation sessions (denyImpersonation).
+	const impersonating = useImpersonating();
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -58,6 +65,8 @@ export function UserSettingsBilling({
 					id: sub.id,
 					status: sub.status,
 					productId: sub.productId ?? null,
+					planId: sub.planId,
+					interval: sub.interval,
 					currentPeriodEnd: sub.currentPeriodEnd ?? null,
 				});
 			}
@@ -78,6 +87,12 @@ export function UserSettingsBilling({
 		activePlanId: PlanId;
 		activeInterval: BillingInterval;
 	} => {
+		if (activeSub?.planId) {
+			return {
+				activePlanId: activeSub.planId,
+				activeInterval: activeSub.interval ?? "month",
+			};
+		}
 		if (activeSub?.productId) {
 			for (const id of Object.keys(PLANS) as PlanId[]) {
 				const ids = priceIds[id];
@@ -107,17 +122,14 @@ export function UserSettingsBilling({
 			}
 		} catch (e) {
 			log.error("checkout failed", { err: e });
-			setError(
-				isPaymentsUnavailable(e)
-					? tp("choosePlan.unavailable")
-					: tp("choosePlan.error"),
-			);
+			setError(tp(paymentsErrorKey(e) ?? "choosePlan.error"));
 		} finally {
 			setCheckoutLoading(null);
 		}
 	}
 
 	async function openPortal() {
+		setError(null);
 		try {
 			const result = await orpc.payments.portal.open.call({
 				returnUrl: "/settings?tab=billing",
@@ -127,6 +139,7 @@ export function UserSettingsBilling({
 			}
 		} catch (err) {
 			log.warn("portal failed", { err });
+			setError(tp(paymentsErrorKey(err) ?? "errors.portal"));
 		}
 	}
 
@@ -158,7 +171,7 @@ export function UserSettingsBilling({
 		t: resolve,
 		onCtaClick: checkout,
 		loadingId: checkoutLoading,
-		allDisabled: checkoutLoading !== null,
+		allDisabled: checkoutLoading !== null || impersonating,
 	});
 
 	const tiersWithCurrent = tiers.map((tier) => ({
@@ -213,7 +226,12 @@ export function UserSettingsBilling({
 									{t("organizations.settings.billingPortalHint")}
 								</p>
 							</div>
-							<Button variant="outline" size="sm" onClick={openPortal}>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={openPortal}
+								disabled={impersonating}
+							>
 								<ExternalLink className="size-4" />
 								{t("organizations.settings.billingManagePortal")}
 							</Button>
@@ -221,6 +239,8 @@ export function UserSettingsBilling({
 					)}
 				</CardContent>
 			</Card>
+
+			{impersonating && <ImpersonationNotice />}
 
 			{error && (
 				<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">

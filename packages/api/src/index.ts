@@ -8,10 +8,12 @@ export { createRateLimitMiddleware } from "./orpc/middleware/rate-limit";
 export {
 	adminProcedure,
 	authProcedure,
+	denyImpersonation,
 	PERMISSIONS,
 	permissionProcedure,
 	protectedProcedure,
 	publicProcedure,
+	systemAdminProcedure,
 } from "./orpc/procedures";
 export type { AppRouter, AppRouterClient } from "./orpc/router";
 export { appRouter, router } from "./orpc/router";

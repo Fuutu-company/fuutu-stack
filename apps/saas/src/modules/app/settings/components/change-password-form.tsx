@@ -5,10 +5,12 @@ import { validatePassword } from "@fuutu/auth/validate-password";
 import { Button, Field, FieldGroup, FieldLabel, Input } from "@fuutu/ui";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { planGateMessage } from "@/lib/api-error";
 import { usePasswordPolicyTranslator } from "@/lib/password-policy";
 
 export function ChangePasswordForm() {
 	const t = useTranslations("settings.changePassword");
+	const tRoot = useTranslations();
 	const translatePolicy = usePasswordPolicyTranslator();
 	const [current, setCurrent] = useState("");
 	const [next, setNext] = useState("");
@@ -38,7 +40,9 @@ export function ChangePasswordForm() {
 				revokeOtherSessions: true,
 			});
 			if (res.error) {
-				setError(t("failed"));
+				setError(
+					planGateMessage(res.error, tRoot, "settings.changePassword.failed"),
+				);
 				return;
 			}
 			setStatus(t("success"));

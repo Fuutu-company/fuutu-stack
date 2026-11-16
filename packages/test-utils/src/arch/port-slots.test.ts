@@ -1,18 +1,28 @@
+import { execFileSync } from "node:child_process";
 import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const lib = await import("../../../../tooling/ports/index.mjs");
 
 const idle = async () => false;
 let sandbox: string;
+
+/** Marks a project as a live git worktree (`.git` file → existing gitdir). */
+function asWorktree(root: string) {
+	const gitdir = join(sandbox, "repo/.git/worktrees", basename(root));
+	mkdirSync(gitdir, { recursive: true });
+	writeFileSync(join(root, ".git"), `gitdir: ${gitdir}\n`);
+	return root;
+}
 
 function project(name: string, dbUrl = "postgresql://u:p@localhost:5432/acme") {
 	const root = join(sandbox, name);
@@ -40,6 +50,7 @@ describe("slot layout", () => {
 			mailPreview: 4003,
 			e2eSaas: 4050,
 			e2eMarketing: 4051,
+			e2eDocs: 4052,
 			browser: 4099,
 		});
 		expect(lib.slotPorts(1).saas).toBe(3100);
@@ -71,6 +82,20 @@ describe("slot assignment", () => {
 		expect(b.slot).toBe(1);
 		// Nothing is running, yet a third project never reuses 0 or 1.
 		expect((await lib.ensureSlot(project("c"), { busy: idle })).slot).toBe(2);
+	});
+
+	it("refreshes a project file written before a kit update added a port", async () => {
+		const root = project("a");
+		await lib.ensureSlot(project("other"), { busy: idle });
+		const first = await lib.ensureSlot(root, { busy: idle });
+		const file = join(root, ".fuutu", "project.json");
+		const { e2eDocs: _added, ...oldPorts } = first.ports;
+		writeFileSync(file, JSON.stringify({ ...first, ports: oldPorts }));
+		const read = lib.readProject(root);
+		expect(read?.slot).toBe(1);
+		expect(read?.ports.e2eDocs).toBe(4152);
+		expect(JSON.parse(readFileSync(file, "utf8")).ports.e2eDocs).toBe(4152);
+		expect((await lib.ensureSlot(root, { busy: idle })).slot).toBe(1);
 	});
 
 	it("keeps the slot on every start", async () => {
@@ -112,14 +137,14 @@ describe("slot assignment", () => {
 
 	it("moves to a requested slot only if no other project owns it", async () => {
 		const a = project("a");
-		const b = project("b");
+		const b = asWorktree(project("b"));
 		await lib.ensureSlot(a, { busy: idle });
 		await lib.ensureSlot(b, { busy: idle });
 		await expect(lib.setSlot(b, 0, { busy: idle })).rejects.toThrow(
 			/belongs to/,
 		);
 		expect((await lib.setSlot(b, 5, { busy: idle })).slot).toBe(5);
-		await lib.releaseSlot(b);
+		await lib.releaseSlot(b, { busy: idle });
 		expect(lib.readRegistry().projects[b]).toBeUndefined();
 	});
 
@@ -128,6 +153,419 @@ describe("slot assignment", () => {
 		const b = await lib.ensureSlot(project("b"), { busy: idle });
 		expect(b.database).toBe("acme-s1");
 		expect(b.authCookiePrefix).toBe("better-auth-s1");
+	});
+});
+
+describe("release and prune", () => {
+	const registered = async (...names: string[]) => {
+		const roots = names.map((n) => asWorktree(project(n)));
+		for (const r of roots) await lib.ensureSlot(r, { busy: idle });
+		return roots;
+	};
+
+	it("a released slot is reused — the lowest free slot wins", async () => {
+		const [, b] = await registered("a", "b", "c");
+		await lib.releaseSlot(b as string, { busy: idle });
+		await lib.clearKeptData(1);
+		expect((await lib.ensureSlot(project("d"), { busy: idle })).slot).toBe(1);
+	});
+
+	it("prefers slots without kept data over a lower one that kept it", async () => {
+		const [, b] = await registered("a", "b", "c");
+		await lib.releaseSlot(b as string, { busy: idle });
+		expect(lib.readRegistry().keptData?.[1]).toMatchObject({
+			path: b,
+			database: "acme-s1",
+		});
+		const d = await lib.ensureSlot(project("d"), { busy: idle });
+		expect(d.slot).toBe(4);
+		expect(d.notice).toBeUndefined();
+	});
+
+	it("reuses a slot with kept data only when no clean slot is left, with a warning", async () => {
+		const [, b] = await registered("a", "b");
+		await lib.releaseSlot(b as string, { busy: idle });
+		const keptPorts = new Set(Object.values(lib.slotPorts(1)));
+		const onlyKeptFree = async (port: number) => !keptPorts.has(port);
+		const d = await lib.ensureSlot(project("d"), { busy: onlyKeptFree });
+		expect(d.slot).toBe(1);
+		expect(d.notice).toMatch(/slot 1 still holds data kept from .*acme-s1/);
+		expect(lib.readRegistry().keptData?.[1]).toBeUndefined();
+	});
+
+	it("the automatic prune on start records the deleted folder's data as kept", async () => {
+		const [, gone] = await registered("a", "gone");
+		rmSync(gone as string, { recursive: true });
+		await lib.ensureSlot(project("next"), { busy: idle });
+		expect(lib.readRegistry().keptData?.[1]?.path).toBe(gone);
+	});
+
+	it("legacy entries: matches <name>-sN(-e2e) but never a name a registered project uses", async () => {
+		await registered("a", "b"); // b = slot 1, its .env says acme → acme-s1
+		const other = project("other", "postgresql://u:p@localhost:5432/shop");
+		await lib.setSlot(other, 7, { busy: idle });
+		const names = [
+			"acme",
+			"acme-s1",
+			"acme-s1-e2e",
+			"shop-s7",
+			"shop-s7-e2e",
+			"fuutu-kit-s7",
+			"fuutu-kit-s7-e2e",
+			"fuutu-s12-e2e",
+			"x-s17",
+			"postgres",
+		];
+		expect(lib.legacySlotDatabases(7, names)).toEqual([
+			"fuutu-kit-s7",
+			"fuutu-kit-s7-e2e",
+		]);
+		expect(lib.legacySlotDatabases(12, names)).toEqual(["fuutu-s12-e2e"]);
+		expect(lib.legacySlotDatabases(1, names)).toEqual([]);
+		expect(lib.legacySlotDatabases(0, names)).toEqual([]);
+	});
+
+	it("excludes database names derived from a registered project's current .env", async () => {
+		const [, b] = await registered("a", "b");
+		writeFileSync(
+			join(b as string, ".env"),
+			'DATABASE_URL="postgresql://u:p@localhost:5432/renamed"\n',
+		);
+		const inUse = lib.databasesInUse();
+		expect(inUse.has("renamed-s1")).toBe(true);
+		expect(inUse.has("renamed-s1-e2e")).toBe(true);
+		expect(inUse.has("acme-s1")).toBe(true);
+	});
+
+	it("records the slot database so released data can be named later", async () => {
+		const [, b] = await registered("a", "b");
+		expect(lib.readRegistry().projects[b as string]?.database).toBe("acme-s1");
+		const released = await lib.releaseSlot(b as string, { busy: idle });
+		expect(lib.slotData(released)).toEqual({
+			databases: ["acme-s1", "acme-s1-e2e"],
+			bucketPrefix: "s1-",
+		});
+	});
+
+	it("never names data of slot 0, an unknown database or a taken slot", () => {
+		const registry = {
+			version: 1,
+			projects: { "/x": { slot: 2, name: "x", lastStarted: null } },
+		};
+		expect(lib.slotData({ slot: 0, database: "acme" }, registry)).toBeNull();
+		expect(lib.slotData({ slot: 2, database: "acme-s2" }, registry)).toBeNull();
+		expect(lib.slotData({ slot: 1, database: null }, registry)).toEqual({
+			databases: [],
+			bucketPrefix: "s1-",
+		});
+		// A database without this slot's suffix is never a drop target.
+		expect(
+			lib.slotData({ slot: 1, database: "acme" }, registry)?.databases,
+		).toEqual([]);
+	});
+
+	it("never releases or prunes a main checkout while its folder exists", async () => {
+		await registered("a");
+		const main = project("main"); // .git missing → a main checkout
+		await lib.setSlot(main, 5, { busy: idle });
+		const repo = project("mainrepo");
+		mkdirSync(join(repo, ".git"));
+		await lib.setSlot(repo, 6, { busy: idle });
+		expect(lib.checkoutKind(main)).toBe("main");
+		expect(lib.checkoutKind(repo)).toBe("main");
+		for (const root of [main, repo]) {
+			await expect(lib.releaseSlot(root, { busy: idle })).rejects.toThrow(
+				/main checkout/,
+			);
+		}
+		rmSync(join(repo, "pnpm-workspace.yaml"));
+		const found = await lib.pruneRegistry({ apply: true, busy: idle });
+		expect(found.map((f) => [f.path, f.kept])).toEqual([
+			[repo, "main checkout"],
+		]);
+		expect(lib.readRegistry().projects[main]?.slot).toBe(5);
+		expect(lib.readRegistry().projects[repo]?.slot).toBe(6);
+	});
+
+	it("a deleted main checkout frees its slot like any project", async () => {
+		await registered("a");
+		const main = project("main");
+		await lib.setSlot(main, 5, { busy: idle });
+		rmSync(main, { recursive: true });
+		await lib.pruneRegistry({ apply: true, busy: idle });
+		expect(lib.readRegistry().projects[main]).toBeUndefined();
+	});
+
+	it("refuses to release a running slot", async () => {
+		const [, b] = await registered("a", "b");
+		const busy = async (port: number) => port === lib.slotPorts(1).browser;
+		await expect(lib.releaseSlot(b as string, { busy })).rejects.toThrow(
+			/running/,
+		);
+		expect(lib.readRegistry().projects[b as string]?.slot).toBe(1);
+	});
+
+	it("never releases slot 0 or a pinned slot of an existing project", async () => {
+		const [a, b] = await registered("a", "b");
+		await expect(lib.releaseSlot(a as string, { busy: idle })).rejects.toThrow(
+			/slot 0/,
+		);
+		writeFileSync(join(b as string, "package.json"), "{}\n");
+		await lib.pinSlot(b as string, 1);
+		await expect(lib.releaseSlot(b as string, { busy: idle })).rejects.toThrow(
+			/pinned/,
+		);
+	});
+
+	it("prune is a dry run unless applied", async () => {
+		const [, gone] = await registered("a", "gone");
+		rmSync(gone as string, { recursive: true });
+		const found = await lib.pruneRegistry({ busy: idle });
+		expect(found.map((f) => [f.path, f.reason, f.kept])).toEqual([
+			[gone, "missing", null],
+		]);
+		expect(lib.readRegistry().projects[gone as string]).toBeDefined();
+		await lib.pruneRegistry({ apply: true, busy: idle });
+		expect(lib.readRegistry().projects[gone as string]).toBeUndefined();
+	});
+
+	it("prunes folders that are no longer a project or a live worktree", async () => {
+		const [, plain, worktree, live] = await registered(
+			"a",
+			"plain",
+			"worktree",
+			"live",
+		);
+		rmSync(join(plain as string, "pnpm-workspace.yaml"));
+		writeFileSync(
+			join(worktree as string, ".git"),
+			`gitdir: ${join(sandbox, "repo/.git/worktrees/removed")}\n`,
+		);
+		mkdirSync(join(sandbox, "repo/.git/worktrees/live"), { recursive: true });
+		writeFileSync(
+			join(live as string, ".git"),
+			`gitdir: ${join(sandbox, "repo/.git/worktrees/live")}\n`,
+		);
+		const found = await lib.pruneRegistry({ busy: idle });
+		expect(Object.fromEntries(found.map((f) => [f.path, f.reason]))).toEqual({
+			[plain as string]: "not-a-project",
+			[worktree as string]: "orphaned-worktree",
+		});
+	});
+
+	it("keeps slot 0 while its folder exists and running slots always", async () => {
+		const [zero, one] = await registered("zero", "one");
+		rmSync(join(zero as string, "pnpm-workspace.yaml"));
+		rmSync(one as string, { recursive: true });
+		const busy = async (port: number) => port === lib.slotPorts(1).saas;
+		const found = await lib.pruneRegistry({ apply: true, busy });
+		expect(found.map((f) => f.kept)).toEqual(["slot 0", "running"]);
+		expect(Object.keys(lib.readRegistry().projects)).toHaveLength(2);
+	});
+
+	it("start prunes only deleted folders, and never a running slot", async () => {
+		const [, gone, plain, running] = await registered(
+			"a",
+			"gone",
+			"plain",
+			"running",
+		);
+		rmSync(gone as string, { recursive: true });
+		rmSync(plain as string, { recursive: true });
+		mkdirSync(plain as string);
+		rmSync(running as string, { recursive: true });
+		const busy = async (port: number) => port === lib.slotPorts(4).saas;
+		const runningSlot = lib.readRegistry().projects[running as string]?.slot;
+		expect(runningSlot).toBe(4);
+		await lib.ensureSlot(project("next"), { busy });
+		const paths = Object.keys(lib.readRegistry().projects);
+		expect(paths).not.toContain(gone);
+		expect(paths).toContain(plain);
+		expect(paths).toContain(running);
+	});
+});
+
+describe("kept data of pruned slots", () => {
+	const kept = (database: string | null) => ({
+		path: "/gone",
+		database,
+		keptAt: "2026-01-01T00:00:00.000Z",
+	});
+
+	it("lists kept slots with their recorded database", () => {
+		const registry = {
+			version: 1,
+			projects: {},
+			keptData: { 3: kept("acme-s3"), 5: kept(null) },
+		};
+		expect(lib.keptSlots(registry)).toEqual([
+			{ slot: 3, path: "/gone", database: "acme-s3" },
+			{ slot: 5, path: "/gone", database: null },
+		]);
+	});
+
+	it("plans the drop from the recorded database and the slot's buckets", () => {
+		const registry = { version: 1, projects: {}, keptData: {} };
+		const plan = lib.planKeptDrop(
+			{ slot: 3, database: "acme-s3" },
+			{
+				databases: ["postgres", "acme-s3", "acme-s3-e2e", "other-s30"],
+				buckets: ["s3-uploads", "s30-uploads", "s4-uploads"],
+			},
+			registry,
+		);
+		expect(plan).toEqual({
+			databases: ["acme-s3", "acme-s3-e2e"],
+			bucketPrefix: "s3-",
+			buckets: ["s3-uploads"],
+			empty: false,
+		});
+	});
+
+	it("matches by suffix when no database was recorded, sparing registered projects", () => {
+		const registry = {
+			version: 1,
+			projects: {
+				"/p": {
+					slot: 1,
+					name: "p",
+					database: "mine-s7",
+					lastStarted: null,
+				},
+			},
+			keptData: {},
+		};
+		const plan = lib.planKeptDrop(
+			{ slot: 7, database: null },
+			{ databases: ["old-s7", "mine-s7", "old-s7-e2e"], buckets: [] },
+			registry,
+		);
+		expect(plan.databases).toEqual(["old-s7", "old-s7-e2e"]);
+	});
+
+	it("is empty only when databases and buckets are both known and gone", () => {
+		const registry = { version: 1, projects: {}, keptData: {} };
+		const slot = { slot: 3, database: "acme-s3" };
+		expect(
+			lib.planKeptDrop(slot, { databases: ["postgres"], buckets: [] }, registry)
+				.empty,
+		).toBe(true);
+		expect(
+			lib.planKeptDrop(slot, { databases: undefined, buckets: [] }, registry)
+				.empty,
+		).toBe(false);
+		expect(
+			lib.planKeptDrop(
+				slot,
+				{ databases: ["postgres"], buckets: undefined },
+				registry,
+			).empty,
+		).toBe(false);
+	});
+
+	it("clearKeptData frees the slot of its warning", async () => {
+		const [a, b] = ["a", "b"].map((n) => asWorktree(project(n)));
+		await lib.ensureSlot(a as string, { busy: idle });
+		await lib.ensureSlot(b as string, { busy: idle });
+		await lib.releaseSlot(b as string, { busy: idle });
+		expect(lib.keptSlots(lib.readRegistry()).map((k) => k.slot)).toEqual([1]);
+		await lib.clearKeptData(1);
+		expect(lib.keptSlots(lib.readRegistry())).toEqual([]);
+	});
+});
+
+describe("ports command line", () => {
+	it("splits command, path argument and known flags", () => {
+		expect(lib.parseArgs(["release", "/x", "--drop-data"])).toEqual({
+			command: "release",
+			arg: "/x",
+			flags: new Set(["--drop-data"]),
+		});
+		expect(lib.parseArgs([])).toEqual({
+			command: "list",
+			arg: undefined,
+			flags: new Set(),
+		});
+	});
+
+	it("never takes a flag for a path and rejects unknown flags", () => {
+		expect(lib.parseArgs(["release", "--drop-data"]).arg).toBeUndefined();
+		expect(() => lib.parseArgs(["release", "--drop-dta"])).toThrow(
+			/unknown flag --drop-dta/,
+		);
+		expect(() => lib.parseArgs(["release", "-x"])).toThrow(/unknown flag -x/);
+	});
+});
+
+describe("local services for data drop", () => {
+	it("falls back to the main checkout's .env in a worktree without one", () => {
+		const main = project("main");
+		writeFileSync(
+			join(main, ".env"),
+			'S3_ENDPOINT="http://localhost:9000"\nS3_ACCESS_KEY_ID="k"\nS3_SECRET_ACCESS_KEY="s"\n',
+		);
+		const wt = join(sandbox, "wt");
+		mkdirSync(wt);
+		const found = lib.serviceEnv(wt, "S3_ENDPOINT", {
+			env: {},
+			mainRoot: main,
+		});
+		expect(found.source).toBe(join(main, ".env"));
+		expect(found.env.S3_ACCESS_KEY_ID).toBe("k");
+		expect(
+			lib.serviceEnv(wt, "S3_ENDPOINT", { env: {}, mainRoot: null }).env,
+		).toEqual({});
+	});
+
+	it("prefers the checkout's own .env over the main checkout's", () => {
+		const main = project("main");
+		writeFileSync(join(main, ".env"), 'S3_ENDPOINT="http://localhost:1"\n');
+		const wt = project("wt");
+		writeFileSync(join(wt, ".env"), 'S3_ENDPOINT="http://localhost:2"\n');
+		expect(
+			lib.serviceEnv(wt, "S3_ENDPOINT", { env: {}, mainRoot: main }).env
+				.S3_ENDPOINT,
+		).toBe("http://localhost:2");
+	});
+
+	it("finds the main checkout of a git worktree", () => {
+		const main = project("main");
+		const git = (...args: string[]) =>
+			execFileSync("git", args, { cwd: main, stdio: "ignore" });
+		git("init", "-q");
+		git(
+			"-c",
+			"user.email=t@t",
+			"-c",
+			"user.name=t",
+			"commit",
+			"-q",
+			"--allow-empty",
+			"-m",
+			"init",
+		);
+		const wt = join(sandbox, "wt");
+		git("worktree", "add", "-q", wt);
+		expect(lib.mainCheckoutRoot(wt)).toBe(realpathSync(main));
+		expect(lib.mainCheckoutRoot(main)).toBeNull();
+	});
+
+	it("uses S3 keys, then MINIO_ROOT_*, then the compose default", () => {
+		expect(
+			lib.minioCredentials({
+				S3_ACCESS_KEY_ID: "a",
+				S3_SECRET_ACCESS_KEY: "b",
+				MINIO_ROOT_USER: "c",
+				MINIO_ROOT_PASSWORD: "d",
+			}).accessKeyId,
+		).toBe("a");
+		expect(
+			lib.minioCredentials({ MINIO_ROOT_USER: "c", MINIO_ROOT_PASSWORD: "d" }),
+		).toMatchObject({ accessKeyId: "c", from: "MINIO_ROOT_USER" });
+		expect(lib.minioCredentials({})).toMatchObject({
+			accessKeyId: "minioadmin",
+			from: "compose default",
+		});
 	});
 });
 
@@ -287,8 +725,12 @@ describe("slot environment", () => {
 
 	it("uses the E2E ports for E2E servers", async () => {
 		const p = await lib.ensureSlot(project("a"), { busy: idle });
-		expect(lib.slotEnv(p, {}, { e2e: true }).BETTER_AUTH_URL).toBe(
-			"http://localhost:4050",
+		const env = lib.slotEnv(p, {}, { e2e: true });
+		expect(env.BETTER_AUTH_URL).toBe("http://localhost:4050");
+		expect(env.NEXT_PUBLIC_MARKETING_URL).toBe("http://localhost:4051");
+		expect(env.NEXT_PUBLIC_DOCS_URL).toBe("http://localhost:4052");
+		expect(lib.slotEnv(p, {}).NEXT_PUBLIC_DOCS_URL).toBe(
+			"http://localhost:4000",
 		);
 	});
 });
@@ -332,8 +774,42 @@ describe("db command environment", () => {
 			{ DATABASE_URL: "postgresql://u:p@localhost:5432/acme" },
 			{ e2e: true },
 		);
-		expect(e2e[lib.SLOT_ENV_MARKER]).toBe("1");
+		expect(e2e[lib.SLOT_ENV_MARKER]).toBe(`1:${root}`);
 		expect(lib.commandSlotEnv(root, p, { ...e2e })).toEqual({});
+	});
+
+	it("re-resolves a slot env inherited from another checkout", async () => {
+		const main = project("main");
+		const mainProject = await lib.ensureSlot(main, { busy: idle });
+		const root = project("worktree");
+		const p = await lib.ensureSlot(root, { busy: idle });
+		// A shell spawned by the main checkout's dev session or E2E run.
+		const inherited = {
+			...lib.slotEnv(mainProject, {
+				DATABASE_URL: "postgresql://u:p@localhost:5432/acme",
+			}),
+		};
+		expect(lib.commandSlotEnv(root, p, inherited).DATABASE_URL).toBe(
+			"postgresql://u:p@localhost:5432/acme-s1",
+		);
+	});
+
+	it("follows .env once it appears after the slot was taken", async () => {
+		await lib.ensureSlot(project("a"), { busy: idle });
+		const root = join(sandbox, "fresh");
+		mkdirSync(root);
+		writeFileSync(join(root, "pnpm-workspace.yaml"), "packages: []\n");
+		const first = await lib.ensureSlot(root, { busy: idle });
+		expect(first.database).toBe("fuutu-s1");
+		writeFileSync(
+			join(root, ".env"),
+			'DATABASE_URL="postgresql://u:p@localhost:5432/acme"\n',
+		);
+		const p = lib.readProject(root);
+		expect(p?.database).toBe("acme-s1");
+		expect(lib.commandSlotEnv(root, p as never, {}).DATABASE_URL).toBe(
+			"postgresql://u:p@localhost:5432/acme-s1",
+		);
 	});
 
 	it("lets the process env win over .env", async () => {

@@ -9,7 +9,10 @@
 import { countOrganizationMembers, getPurchasesByUserId } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import {
+	CHARGEABLE_SUBSCRIPTION_STATUSES,
 	cancelAllSubscriptionsForOrganization,
+	cancelAllSubscriptionsForOrganizationOrThrow,
+	cancelSubscriptionNowOrThrow,
 	resolvePaymentProviderById,
 	updateSeatsInOrganizationSubscription,
 } from "@fuutu/payments";
@@ -77,7 +80,9 @@ export async function cancelActiveSubscriptionsForUser(
 					);
 					return Promise.resolve();
 				}
-				return provider.cancelSubscription(p.subscriptionId);
+				return provider.cancelSubscription(p.subscriptionId, {
+					mode: "immediate",
+				});
 			}),
 	);
 	for (const r of results) {
@@ -100,5 +105,94 @@ export async function cancelActiveSubscriptionsForOrganization(
 			organizationId,
 			err: String(err),
 		});
+	}
+}
+
+/**
+ * Thrown by the `…OrThrow` variants: at least one subscription is still
+ * billing (provider rejected, provider unavailable or purchases
+ * unreadable). Details are logged; the message stays generic.
+ */
+export class SubscriptionCancellationError extends Error {
+	constructor(message = "Subscriptions could not be cancelled") {
+		super(message);
+		this.name = "SubscriptionCancellationError";
+	}
+}
+
+/**
+ * Strict `cancelActiveSubscriptionsForUser` for support deletes: tries
+ * every cancel — every status that can still charge
+ * (`CHARGEABLE_SUBSCRIPTION_STATUSES`) — then throws
+ * `SubscriptionCancellationError` if any subscription is still billing.
+ */
+export async function cancelActiveSubscriptionsForUserOrThrow(
+	userId: string,
+): Promise<void> {
+	let purchases: Awaited<ReturnType<typeof getPurchasesByUserId>>;
+	try {
+		purchases = await getPurchasesByUserId(userId);
+	} catch (err) {
+		log.error("cancelActiveSubscriptionsForUser: load failed", {
+			userId,
+			err: String(err),
+		});
+		throw new SubscriptionCancellationError();
+	}
+
+	let failed = 0;
+	const results = await Promise.allSettled(
+		purchases
+			.filter(
+				(p): p is UserPurchase & { subscriptionId: string } =>
+					p.type === "SUBSCRIPTION" &&
+					p.subscriptionId != null &&
+					CHARGEABLE_SUBSCRIPTION_STATUSES.includes(p.status),
+			)
+			.map((p) => {
+				const provider = resolvePaymentProviderById(p.provider);
+				if (!provider) {
+					failed++;
+					log.warn(
+						"cancelActiveSubscriptionsForUser: unknown provider, cancel it manually",
+						{
+							userId,
+							provider: p.provider,
+							subscriptionId: p.subscriptionId,
+						},
+					);
+					return Promise.resolve();
+				}
+				return cancelSubscriptionNowOrThrow(provider, p.subscriptionId);
+			}),
+	);
+	for (const r of results) {
+		if (r.status === "rejected") {
+			failed++;
+			log.error("cancelActiveSubscriptionsForUser: one cancel failed", {
+				userId,
+				err: String(r.reason),
+			});
+		}
+	}
+	if (failed > 0) throw new SubscriptionCancellationError();
+}
+
+/**
+ * Strict `cancelActiveSubscriptionsForOrganization` for support deletes:
+ * throws `SubscriptionCancellationError` if any subscription is still
+ * billing.
+ */
+export async function cancelActiveSubscriptionsForOrganizationOrThrow(
+	organizationId: string,
+): Promise<void> {
+	try {
+		await cancelAllSubscriptionsForOrganizationOrThrow(organizationId);
+	} catch (err) {
+		log.error("cancelActiveSubscriptionsForOrganization failed", {
+			organizationId,
+			err: String(err),
+		});
+		throw new SubscriptionCancellationError();
 	}
 }

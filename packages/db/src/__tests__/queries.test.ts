@@ -55,6 +55,7 @@ vi.mock("../../prisma/client", () => ({
 		},
 		purchase: {
 			findFirst: vi.fn(),
+			findMany: vi.fn(),
 			update: vi.fn(),
 		},
 		invoice: {
@@ -389,6 +390,58 @@ describe("DB query functions - smoke tests", () => {
 			};
 			expect(where.where.organizationId).toBe("org_1");
 			expect(where.where.OR).toHaveLength(2);
+		});
+
+		it("getActiveSubscriptionFor* return the newest access-gating subscription", async () => {
+			// Two active subscriptions (an upgrade whose old-sub cancel failed,
+			// or a base plan plus an add-on) — the newest one must win, not
+			// whichever row Postgres happens to return first.
+			vi.mocked(db.purchase.findFirst).mockResolvedValue(null as never);
+
+			await purchaseQueries.getActiveSubscriptionForUser("user_1");
+			expect(
+				vi.mocked(db.purchase.findFirst).mock.calls.at(-1)?.[0],
+			).toMatchObject({ orderBy: [{ createdAt: "desc" }, { id: "asc" }] });
+
+			await purchaseQueries.getActiveSubscriptionForOrganization("org_1");
+			expect(
+				vi.mocked(db.purchase.findFirst).mock.calls.at(-1)?.[0],
+			).toMatchObject({ orderBy: [{ createdAt: "desc" }, { id: "asc" }] });
+		});
+
+		it("getActiveSubscriptionsForOwner lists every access-gating subscription of one owner, newest first", async () => {
+			vi.mocked(db.purchase.findMany).mockResolvedValueOnce([] as never);
+
+			await purchaseQueries.getActiveSubscriptionsForOwner({
+				organizationId: "org_1",
+			});
+
+			const args = vi.mocked(db.purchase.findMany).mock.calls.at(-1)?.[0] as
+				| {
+						where: {
+							organizationId?: string;
+							userId?: string;
+							type: string;
+							OR: unknown[];
+						};
+						orderBy: unknown;
+				  }
+				| undefined;
+			expect(args?.where.organizationId).toBe("org_1");
+			expect(args?.where.userId).toBeUndefined();
+			expect(args?.where.type).toBe("SUBSCRIPTION");
+			expect(args?.where.OR).toHaveLength(2);
+			expect(args?.orderBy).toEqual([{ createdAt: "desc" }, { id: "asc" }]);
+
+			vi.mocked(db.purchase.findMany).mockResolvedValueOnce([] as never);
+			await purchaseQueries.getActiveSubscriptionsForOwner({
+				userId: "user_1",
+			});
+			const userArgs = vi.mocked(db.purchase.findMany).mock.calls.at(-1)?.[0] as
+				| { where: { organizationId?: string; userId?: string } }
+				| undefined;
+			expect(userArgs?.where.userId).toBe("user_1");
+			expect(userArgs?.where.organizationId).toBeUndefined();
 		});
 
 		it("getActiveOneTimePlanPurchase finds an ACTIVE one-time purchase of a plan product", async () => {

@@ -4,10 +4,16 @@ import { PageIntro } from "@shared/components/page-intro";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { appMarketing } from "@/app-marketing";
+import { withAppMetadata } from "@/lib/page-metadata";
 
 interface LegalPageProps {
 	params: Promise<{ locale: string; slug: string }>;
 }
+
+// Unlisted slugs are a plain 404 — even when the list is empty, where an
+// on-demand not-found render would turn the static route dynamic (500).
+export const dynamicParams = false;
 
 export function generateStaticParams() {
 	return [...new Set(legal.map((d) => d.slug))].map((slug) => ({ slug }));
@@ -22,10 +28,15 @@ export async function generateMetadata({
 		const t = await getTranslations({ locale, namespace: "notFound" });
 		return { title: t("title") };
 	}
-	return {
-		title: doc.frontmatter.title,
-		description: `${doc.frontmatter.title} — ${doc.frontmatter.updatedAt}`,
-	};
+	return withAppMetadata(
+		{
+			title: doc.frontmatter.title,
+			description: `${doc.frontmatter.title} — ${doc.frontmatter.updatedAt}`,
+		},
+		appMarketing.metadata?.legal,
+		locale,
+		{ slug },
+	);
 }
 
 export default async function LegalPage({ params }: LegalPageProps) {

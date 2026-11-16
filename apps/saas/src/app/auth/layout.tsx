@@ -1,8 +1,13 @@
+import { PrivacySettingsButton } from "@fuutu/analytics/consent";
 import { config } from "@fuutu/config";
 import { AreaBackdrop, BrandLogo } from "@fuutu/ui";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { getLegalLinks } from "@/lib/legal-links";
+
+const FOOTER_LINK_CLASS =
+	"text-muted-foreground text-xs hover:text-foreground hover:underline hover:underline-offset-4";
 
 export default async function AuthLayout({
 	children,
@@ -11,6 +16,8 @@ export default async function AuthLayout({
 }) {
 	const locale = await getLocale();
 	const messages = await getMessages();
+	const t = await getTranslations("legal");
+	const legal = getLegalLinks(locale);
 
 	return (
 		<NextIntlClientProvider locale={locale} messages={messages}>
@@ -25,6 +32,21 @@ export default async function AuthLayout({
 						{config.app.name}
 					</a>
 					{children}
+					<div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+						{legal && (
+							<>
+								<a href={legal.imprint} className={FOOTER_LINK_CLASS}>
+									{t("imprint")}
+								</a>
+								<a href={legal.privacy} className={FOOTER_LINK_CLASS}>
+									{t("privacy")}
+								</a>
+							</>
+						)}
+						<PrivacySettingsButton
+							className={`cursor-pointer ${FOOTER_LINK_CLASS}`}
+						/>
+					</div>
 				</div>
 			</div>
 		</NextIntlClientProvider>

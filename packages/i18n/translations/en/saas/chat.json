@@ -29,6 +29,7 @@
 		"noConversations": "No conversations yet",
 		"deleteConversationAria": "Delete conversation",
 		"sendError": "Failed to send message. Please try again.",
-		"deleteError": "Failed to delete conversation. Please try again."
+		"deleteError": "Failed to delete conversation. Please try again.",
+		"creditsExhausted": "You have used up your AI credits. Top up or upgrade your plan to keep chatting."
 	}
 }

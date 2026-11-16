@@ -1,6 +1,11 @@
 import { env } from "@fuutu/env/saas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	isProviderRequestError,
+	ProviderRequestError,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -16,6 +21,7 @@ vi.mock("@fuutu/env/saas", () => ({
 }));
 
 const { creemPaymentProvider } = await import("../providers/creem");
+const { paymentsConfig } = await import("../config");
 
 describe("creem provider — SDK integration", () => {
 	beforeEach(() => {
@@ -360,7 +366,9 @@ describe("creem provider — SDK integration", () => {
 		mockFetch
 			.mockResolvedValueOnce({
 				ok: true,
-				json: async () => ({ items: [{ id: "item_123" }] }),
+				json: async () => ({
+					items: [{ id: "item_123", product_id: "prod_123" }],
+				}),
 			})
 			.mockResolvedValueOnce({
 				ok: true,
@@ -371,6 +379,185 @@ describe("creem provider — SDK integration", () => {
 			seats: 5,
 		});
 		expect(mockFetch).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("creem provider — setSubscriptionSeats request (update-subscription schema)", () => {
+	const defaultBehavior = paymentsConfig.creemUpdateBehavior;
+
+	beforeEach(() => {
+		mockFetch.mockReset();
+		paymentsConfig.creemUpdateBehavior = defaultBehavior;
+	});
+
+	function stubSubscription(subscription: unknown) {
+		mockFetch
+			.mockResolvedValueOnce({ ok: true, json: async () => subscription })
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+	}
+
+	const updateCall = () => {
+		const [url, init] = mockFetch.mock.calls[1] ?? [];
+		return {
+			url: String(url),
+			method: (init as RequestInit | undefined)?.method,
+			body: JSON.parse(String((init as RequestInit | undefined)?.body)),
+		};
+	};
+
+	it("sends items[{ id, price_id, units }] and an explicit update_behavior", async () => {
+		stubSubscription({
+			id: "sub_1",
+			product: { id: "prod_seat" },
+			items: [
+				{
+					id: "sitem_1",
+					product_id: "prod_seat",
+					price_id: "pprice_seat",
+					units: 3,
+				},
+			],
+		});
+
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 15,
+		});
+
+		const call = updateCall();
+		expect(call.url).toBe("https://test-api.creem.io/v1/subscriptions/sub_1");
+		expect(call.method).toBe("POST");
+		expect(call.body).toEqual({
+			items: [{ id: "sitem_1", price_id: "pprice_seat", units: 15 }],
+			update_behavior: "proration-charge-immediately",
+		});
+		// `quantity` is not part of UpsertSubscriptionItemEntity.
+		expect(call.body.items[0]).not.toHaveProperty("quantity");
+	});
+
+	it("falls back to the item's product_id, then the subscription product", async () => {
+		stubSubscription({
+			items: [{ id: "sitem_1", product_id: "prod_item" }],
+		});
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 2,
+		});
+		expect(updateCall().body.items).toEqual([
+			{ id: "sitem_1", product_id: "prod_item", units: 2 },
+		]);
+
+		mockFetch.mockReset();
+		stubSubscription({ product: "prod_sub", items: [{ id: "sitem_2" }] });
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_2",
+			seats: 4,
+		});
+		expect(updateCall().body.items).toEqual([
+			{ id: "sitem_2", product_id: "prod_sub", units: 4 },
+		]);
+	});
+
+	it("refuses to send an item Creem cannot resolve (no price or product)", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ items: [{ id: "sitem_1" }] }),
+		});
+		await expect(
+			creemPaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_1",
+				seats: 4,
+			}),
+		).rejects.toThrow(/product or price/);
+		expect(mockFetch).toHaveBeenCalledTimes(1);
+	});
+
+	it("uses paymentsConfig.creemUpdateBehavior", async () => {
+		paymentsConfig.creemUpdateBehavior = "proration-none";
+		stubSubscription({ items: [{ id: "sitem_1", price_id: "pprice_1" }] });
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 6,
+		});
+		expect(updateCall().body.update_behavior).toBe("proration-none");
+	});
+});
+
+describe("creem provider — getSubscriptionStatus", () => {
+	beforeEach(() => mockFetch.mockReset());
+
+	it.each([
+		["canceled", "CANCELED"],
+		["expired", "EXPIRED"],
+		["active", "ACTIVE"],
+		["unpaid", "PAST_DUE"],
+	])("maps a %s subscription to %s", async (status, expected) => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ id: "sub_1", status }),
+		});
+		await expect(
+			creemPaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).resolves.toBe(expected);
+		expect(String(mockFetch.mock.calls[0]?.[0])).toBe(
+			"https://test-api.creem.io/v1/subscriptions?subscription_id=sub_1",
+		);
+	});
+
+	it("throws when the lookup fails", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			status: 503,
+			json: async () => ({}),
+		});
+		await expect(
+			creemPaymentProvider.getSubscriptionStatus?.("sub_1"),
+		).rejects.toThrow();
+	});
+});
+
+describe("creem provider — subscription.unpaid", () => {
+	async function parseSigned(payload: unknown) {
+		const crypto = await import("node:crypto");
+		const body = JSON.stringify(payload);
+		const signature = crypto
+			.createHmac("sha256", "test-webhook-secret")
+			.update(body)
+			.digest("hex");
+		return creemPaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "creem-signature": signature },
+				body,
+			}),
+		);
+	}
+
+	it("maps subscription.unpaid with status unpaid to a PAST_DUE event", async () => {
+		const events = await parseSigned({
+			id: "evt_unpaid",
+			eventType: "subscription.unpaid",
+			object: {
+				id: "sub_1",
+				product: { id: "prod_1" },
+				status: "unpaid",
+				metadata: { organization_id: "org_1" },
+			},
+		});
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			type: "subscription.past_due",
+			subscriptionId: "sub_1",
+			status: "PAST_DUE",
+		});
+	});
+
+	it("maps an unpaid status on other events to PAST_DUE, not INCOMPLETE", async () => {
+		const events = await parseSigned({
+			eventType: "subscription.update",
+			object: { id: "sub_1", product: { id: "prod_1" }, status: "unpaid" },
+		});
+		expect(events[0]?.status).toBe("PAST_DUE");
 	});
 });
 
@@ -435,7 +622,372 @@ describe("creem provider — purchased units", () => {
 	});
 });
 
+describe("creem provider — per-call seat proration", () => {
+	const defaultBehavior = paymentsConfig.creemUpdateBehavior;
+
+	beforeEach(() => {
+		mockFetch.mockReset();
+		paymentsConfig.creemUpdateBehavior = defaultBehavior;
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					items: [{ id: "sitem_1", price_id: "pprice_1" }],
+				}),
+			})
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+	});
+
+	const sentBehavior = () =>
+		JSON.parse(
+			String((mockFetch.mock.calls[1]?.[1] as RequestInit | undefined)?.body),
+		).update_behavior;
+
+	it("setSubscriptionSeats sends proration-none when asked", async () => {
+		paymentsConfig.creemUpdateBehavior = "proration-charge-immediately";
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 2,
+			proration: "none",
+		});
+		expect(sentBehavior()).toBe("proration-none");
+	});
+
+	it("setSubscriptionSeats sends proration-charge-immediately when asked", async () => {
+		paymentsConfig.creemUpdateBehavior = "proration-none";
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 4,
+			proration: "charge-immediately",
+		});
+		expect(sentBehavior()).toBe("proration-charge-immediately");
+	});
+
+	it("without proration it sends the configured default", async () => {
+		paymentsConfig.creemUpdateBehavior = "proration-none";
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub_1",
+			seats: 3,
+		});
+		expect(sentBehavior()).toBe("proration-none");
+	});
+});
+
+describe("creem provider — cancel at period end and resume", () => {
+	beforeEach(() => {
+		mockFetch.mockReset();
+	});
+
+	const call = (index = 0) => {
+		const [url, init] = mockFetch.mock.calls[index] ?? [];
+		const request = init as RequestInit | undefined;
+		return {
+			url: String(url),
+			method: request?.method,
+			body:
+				request?.body === undefined
+					? undefined
+					: JSON.parse(String(request.body)),
+		};
+	};
+
+	it("cancel with atPeriodEnd sends the scheduled mode", async () => {
+		mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.cancelSubscription("sub_1", {
+			atPeriodEnd: true,
+		});
+		expect(call()).toEqual({
+			url: "https://test-api.creem.io/v1/subscriptions/sub_1/cancel",
+			method: "POST",
+			body: { mode: "scheduled" },
+		});
+	});
+
+	it.each([
+		["immediate", "immediate"],
+		["period_end", "scheduled"],
+	] as const)(
+		"cancel with mode %s sends Creem mode %s",
+		async (mode, creemMode) => {
+			mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+			await creemPaymentProvider.cancelSubscription("sub_1", { mode });
+			expect(call()).toEqual({
+				url: "https://test-api.creem.io/v1/subscriptions/sub_1/cancel",
+				method: "POST",
+				body: { mode: creemMode },
+			});
+		},
+	);
+
+	it("an explicit mode wins over atPeriodEnd", async () => {
+		mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.cancelSubscription("sub_1", {
+			mode: "immediate",
+			atPeriodEnd: true,
+		});
+		expect(call().body).toEqual({ mode: "immediate" });
+	});
+
+	it("cancel without options sends no body (store default, as before)", async () => {
+		mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.cancelSubscription("sub_1");
+		expect(call()).toEqual({
+			url: "https://test-api.creem.io/v1/subscriptions/sub_1/cancel",
+			method: "POST",
+			body: undefined,
+		});
+	});
+
+	it("resumeSubscription posts to the resume endpoint", async () => {
+		mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.resumeSubscription?.("sub_1");
+		expect(call()).toEqual({
+			url: "https://test-api.creem.io/v1/subscriptions/sub_1/resume",
+			method: "POST",
+			body: undefined,
+		});
+	});
+
+	it("resumeSubscription throws when Creem refuses", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			json: async () => ({ message: "not scheduled" }),
+		});
+		await expect(
+			creemPaymentProvider.resumeSubscription?.("sub_1"),
+		).rejects.toThrow("Failed to resume subscription");
+	});
+
+	it("encodes the subscription id in cancel and resume paths", async () => {
+		mockFetch
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) })
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.cancelSubscription("sub/../x?y", {
+			atPeriodEnd: true,
+		});
+		await creemPaymentProvider.resumeSubscription?.("sub/../x?y");
+		expect(call(0).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions/sub%2F..%2Fx%3Fy/cancel",
+		);
+		expect(call(1).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions/sub%2F..%2Fx%3Fy/resume",
+		);
+	});
+
+	it("encodes the subscription id in the seat update paths", async () => {
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					items: [{ id: "sitem_1", price_id: "pprice_1" }],
+				}),
+			})
+			.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+		await creemPaymentProvider.setSubscriptionSeats({
+			subscriptionId: "sub/x&y",
+			seats: 2,
+		});
+		expect(call(0).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions?subscription_id=sub%2Fx%26y",
+		);
+		expect(call(1).url).toBe(
+			"https://test-api.creem.io/v1/subscriptions/sub%2Fx%26y",
+		);
+	});
+
+	it("declares that its trials live on the product", () => {
+		expect(creemPaymentProvider.trialsOnProduct).toBe(true);
+	});
+});
+
 const { testPaymentProviderContract } = await import("./provider-contract");
 testPaymentProviderContract("creem", () => creemPaymentProvider, {
 	behavior: "shape",
+});
+
+describe("creem provider — getSubscriptionSeats", () => {
+	beforeEach(() => mockFetch.mockReset());
+
+	it("reads the units of the subscription's item", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				id: "sub_1",
+				items: [{ id: "sitem_1", product_id: "prod_seat", units: 4 }],
+			}),
+		});
+
+		await expect(
+			creemPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).resolves.toBe(4);
+		const [url, init] = mockFetch.mock.calls[0] ?? [];
+		expect(String(url)).toBe(
+			"https://test-api.creem.io/v1/subscriptions?subscription_id=sub_1",
+		);
+		expect((init as RequestInit).method).toBe("GET");
+	});
+
+	it("fails closed when the item reports no units (Creem always sends them)", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ items: [{ id: "sitem_1", product_id: "p" }] }),
+		});
+		await expect(
+			creemPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow();
+	});
+
+	it("fails closed when Creem answers with an error or no item", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			status: 404,
+			json: async () => ({ message: "not found" }),
+		});
+		await expect(
+			creemPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow();
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({ items: [] }),
+		});
+		await expect(
+			creemPaymentProvider.getSubscriptionSeats?.("sub_1"),
+		).rejects.toThrow();
+	});
+});
+
+describe("creem provider — typed API failures", () => {
+	beforeEach(() => {
+		mockFetch.mockReset();
+	});
+
+	const creemError = (status: number, message: string | readonly string[]) => ({
+		ok: false,
+		status,
+		json: async () => ({
+			trace_id: "t",
+			status,
+			error: "Bad Request",
+			message,
+		}),
+	});
+
+	it.each([
+		// What Creem test mode answers (probed 2026-11-15).
+		[404, ["Subscription does not exist"], "not_found"],
+		[400, "Subscription does not exist", "not_found"],
+		[404, ["Customer was not found"], "not_found"],
+		[
+			400,
+			"Subscription cannot be canceled in state: canceled",
+			"invalid_state",
+		],
+		[400, "Cannot resume subscription in active status", "invalid_state"],
+		[400, ["units must be a positive number"], "rejected"],
+		[500, ["Internal error"], "unavailable"],
+		[429, ["Too many requests"], "unavailable"],
+	] as const)(
+		"HTTP %i %j is a ProviderRequestError of kind %s",
+		async (status, message, kind) => {
+			mockFetch.mockResolvedValueOnce(creemError(status, message));
+			const failure = await creemPaymentProvider
+				.cancelSubscription("sub_1", { atPeriodEnd: true })
+				.catch((err: unknown) => err);
+			expect(failure).toBeInstanceOf(ProviderRequestError);
+			expect(failure).toMatchObject({ kind, status });
+			expect(isProviderRequestError(failure)).toBe(true);
+		},
+	);
+
+	it("keeps the provider's own messages out of the error message", async () => {
+		mockFetch.mockResolvedValueOnce(
+			creemError(400, ["Subscription cannot be canceled in state: canceled"]),
+		);
+		const failure = await creemPaymentProvider
+			.cancelSubscription("sub_1")
+			.catch((err: unknown) => err);
+		expect(failure).toMatchObject({
+			message: "Failed to cancel subscription",
+			detail: "Subscription cannot be canceled in state: canceled",
+		});
+	});
+
+	it.each([401, 403])(
+		"HTTP %i (wrong or missing API key) is a configuration error",
+		async (status) => {
+			mockFetch.mockResolvedValueOnce(creemError(status, ["Invalid API Key"]));
+			await expect(
+				creemPaymentProvider.resumeSubscription?.("sub_1"),
+			).rejects.toBeInstanceOf(WebhookConfigError);
+		},
+	);
+
+	it("a network failure is unavailable, not a raw TypeError", async () => {
+		mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+		await expect(
+			creemPaymentProvider.createCustomerPortalLink({ customerId: "cus_1" }),
+		).rejects.toMatchObject({
+			name: "ProviderRequestError",
+			kind: "unavailable",
+		});
+	});
+
+	it("an error body that is not JSON still classifies by status", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			status: 502,
+			json: async () => {
+				throw new SyntaxError("Unexpected token <");
+			},
+		});
+		await expect(
+			creemPaymentProvider.createCheckoutLink({ priceId: "prod_1" }),
+		).rejects.toMatchObject({ kind: "unavailable", status: 502 });
+	});
+
+	it("every Creem call classifies its failure (portal, seats lookup, seat update)", async () => {
+		mockFetch.mockResolvedValueOnce(
+			creemError(404, ["Customer was not found"]),
+		);
+		await expect(
+			creemPaymentProvider.createCustomerPortalLink({ customerId: "cus_x" }),
+		).rejects.toMatchObject({ kind: "not_found" });
+		mockFetch.mockResolvedValueOnce(
+			creemError(404, ["Subscription does not exist"]),
+		);
+		await expect(
+			creemPaymentProvider.getSubscriptionSeats?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		mockFetch.mockResolvedValueOnce(
+			creemError(404, ["Subscription does not exist"]),
+		);
+		await expect(
+			creemPaymentProvider.getSubscriptionStatus?.("sub_x"),
+		).rejects.toMatchObject({ kind: "not_found" });
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({
+					items: [{ id: "item_1", price_id: "pprice_1", units: 1 }],
+				}),
+			})
+			.mockResolvedValueOnce(
+				creemError(400, ["units must be a positive number"]),
+			);
+		await expect(
+			creemPaymentProvider.setSubscriptionSeats({
+				subscriptionId: "sub_1",
+				seats: 2,
+			}),
+		).rejects.toMatchObject({ kind: "rejected" });
+	});
+});
+
+describe("creem provider — trials", () => {
+	it("declares that a cancel ends a trial now (no cancel at trial end)", () => {
+		// Creem test mode, 2026-11-15: POST /subscriptions/{id}/cancel with
+		// mode "scheduled" on a trialing subscription answers "canceled".
+		expect(creemPaymentProvider.cancelEndsTrial).toBe(true);
+	});
 });

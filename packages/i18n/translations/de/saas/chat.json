@@ -29,6 +29,7 @@
 		"noConversations": "Noch keine Konversationen",
 		"deleteConversationAria": "Konversation löschen",
 		"sendError": "Nachricht konnte nicht gesendet werden. Bitte erneut versuchen.",
-		"deleteError": "Konversation konnte nicht gelöscht werden. Bitte erneut versuchen."
+		"deleteError": "Konversation konnte nicht gelöscht werden. Bitte erneut versuchen.",
+		"creditsExhausted": "Deine KI-Credits sind aufgebraucht. Lade Credits nach oder wechsle den Plan, um weiterzuchatten."
 	}
 }

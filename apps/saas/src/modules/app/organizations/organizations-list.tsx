@@ -183,8 +183,8 @@ export function OrganizationsList({
 			) : orgs.length === 0 ? (
 				<Card className="py-0">
 					<CardContent className="p-10 text-center">
-						<div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-							<Building2 className="size-5 text-muted-foreground" />
+						<div className="mb-4 flex items-center justify-center">
+							<Building2 className="size-6 text-muted-foreground" />
 						</div>
 						<h3 className="font-bold font-heading">
 							{t("organizations.list.empty")}

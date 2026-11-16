@@ -40,6 +40,19 @@ export type BillingAttachedTo = "user" | "organization";
  */
 export type SeatSyncMode = "members" | "none";
 
+/**
+ * Creem `update_behavior` for seat changes (`POST /subscriptions/{id}`):
+ * - "proration-charge-immediately": seats change now, the prorated
+ *   difference is charged (or refunded) immediately
+ * - "proration-none": seats change now, no proration — the new count is
+ *   billed from the next period
+ * Creem's own default, the deprecated "proration-charge", behaves like
+ * "proration-charge-immediately" — the kit always sends one explicitly.
+ */
+export type CreemUpdateBehavior =
+	| "proration-charge-immediately"
+	| "proration-none";
+
 export interface PaymentsConfig {
 	provider: PaymentProviderId;
 	/**
@@ -72,6 +85,8 @@ export interface PaymentsConfig {
 	 * Default: the org's in-app billing page — see `getSeatUpgradeUrl`.
 	 */
 	seatUpgradeUrl?: (orgSlug: string) => string;
+	/** Creem only: how a seat change is billed. Default "proration-charge-immediately". */
+	creemUpdateBehavior: CreemUpdateBehavior;
 }
 
 export const paymentsConfig: PaymentsConfig = {
@@ -98,6 +113,7 @@ export const paymentsConfig: PaymentsConfig = {
 	requireActiveSubscription: false,
 	creditsEnabled: config.features.credits ?? true,
 	seatSync: "members",
+	creemUpdateBehavior: "proration-charge-immediately",
 };
 
 /** Seat-limit upgrade target for an org — one source for API and UI. */
@@ -208,6 +224,22 @@ export interface Plan {
 	trialDays?: number;
 	/** Seat-based billing — checkout must pass current member count. */
 	seatBased?: boolean;
+	/**
+	 * Add-on of another plan (e.g. a seat pack on top of a base plan): a
+	 * separate subscription that stacks with its base instead of replacing
+	 * it. Checkout requires an active base subscription; an activation
+	 * never cancels the base, a base activation never cancels its add-ons;
+	 * an add-on alone grants no plan (one-time add-ons included). Policy
+	 * hooks: `registerSupersedePolicy` / `registerCheckoutGuard`
+	 * (`./extensions`).
+	 *
+	 * Add-ons outlive their base: when the base subscription ends, the kit
+	 * does NOT cancel its add-ons (they keep billing, granting nothing).
+	 * Cancel them yourself — in `registerSupersedePolicy` (a new base
+	 * supersedes the old one's add-ons) or in an `onPurchaseChanged`
+	 * handler that cancels orphaned add-ons once no base grants access.
+	 */
+	addonOf?: PlanId;
 	/** Display string shown in pricing UI (e.g. "$19"). */
 	displayPrice: string;
 	/** Optional yearly display price (e.g. "$190"). Shown when billing toggle is yearly. */
@@ -240,6 +272,23 @@ export interface Plan {
 	 * checkoutable plan without a mapping fails closed at checkout.
 	 */
 	priceIdEnvVars?: { month?: string; year?: string };
+	/**
+	 * Grant `trialDays` once per owner: a checkout of an owner with any
+	 * earlier purchase of this plan (any status) gets no trial. The owner
+	 * is the billing owner — the organization while billing is attached
+	 * to organizations, so it means once per org, and a user with several
+	 * orgs gets one trial in each. For once per user (or per org AND
+	 * user), use `registerTrialEligibilityPolicy` (`./extensions`).
+	 */
+	trialOnce?: boolean;
+	/**
+	 * Env var names of provider products WITHOUT the trial, per billing
+	 * interval — for providers whose trials live on the product (Creem,
+	 * `PaymentProvider.trialsOnProduct`). Checkouts without a trial use
+	 * them; webhooks map them back to this plan. Never listed by
+	 * `getPlanPriceIds`.
+	 */
+	noTrialPriceIdEnvVars?: { month?: string; year?: string };
 }
 
 export const PLANS = {

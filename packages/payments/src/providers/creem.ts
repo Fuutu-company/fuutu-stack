@@ -2,7 +2,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
+import { type CreemUpdateBehavior, paymentsConfig } from "../config";
 import type {
+	CancelMode,
+	CancelSubscriptionOptions,
 	CheckoutInput,
 	CustomerInput,
 	PortalInput,
@@ -10,9 +13,16 @@ import type {
 	ProviderEventType,
 	PurchaseStatusLiteral,
 	SeatAwarePaymentProvider,
+	SeatProration,
 	SetSeatsInput,
 } from "../types";
-import { WebhookConfigError, WebhookSignatureError } from "../types";
+import {
+	failureKindForStatus,
+	ProviderRequestError,
+	resolveCancelMode,
+	WebhookConfigError,
+	WebhookSignatureError,
+} from "../types";
 
 const log = createLogger({ scope: "payments:creem" });
 
@@ -30,21 +40,31 @@ function getApiKey(): string {
 	return env.CREEM_API_KEY;
 }
 
-function creemFetch(path: string, init: RequestInit = {}) {
+async function creemFetch(path: string, init: RequestInit = {}) {
 	const baseUrl = env.CREEM_TEST_MODE
 		? "https://test-api.creem.io/v1"
 		: "https://api.creem.io/v1";
 
 	const url = `${baseUrl}${path}`;
+	const apiKey = getApiKey();
 
-	return fetch(url, {
-		...init,
-		headers: {
-			"x-api-key": getApiKey(),
-			"Content-Type": "application/json",
-			...init.headers,
-		},
-	});
+	try {
+		return await fetch(url, {
+			...init,
+			headers: {
+				"x-api-key": apiKey,
+				"Content-Type": "application/json",
+				...init.headers,
+			},
+		});
+	} catch (cause) {
+		log.error("Creem could not be reached", { path, err: String(cause) });
+		throw new ProviderRequestError(
+			"Creem could not be reached",
+			"unavailable",
+			{ cause },
+		);
+	}
 }
 
 /**
@@ -69,6 +89,16 @@ function requireAbsoluteUrl(
 	return url;
 }
 
+const CREEM_CANCEL_MODE = {
+	immediate: "immediate",
+	period_end: "scheduled",
+} as const satisfies Record<CancelMode, string>;
+
+const CREEM_PRORATION = {
+	"charge-immediately": "proration-charge-immediately",
+	none: "proration-none",
+} as const satisfies Record<SeatProration, CreemUpdateBehavior>;
+
 function mapCreemStatus(status: string): PurchaseStatusLiteral {
 	switch (status) {
 		case "active":
@@ -76,6 +106,9 @@ function mapCreemStatus(status: string): PurchaseStatusLiteral {
 		case "trialing":
 			return "TRIALING";
 		case "past_due":
+		// Payment collection failed for good — the kit has no separate
+		// unpaid state; Creem says to treat it like past_due.
+		case "unpaid":
 			return "PAST_DUE";
 		case "scheduled_cancel":
 			return "SCHEDULED_CANCEL";
@@ -101,6 +134,7 @@ function mapCreemEvent(eventType: string): ProviderEventType | null {
 		case "subscription.update":
 			return "subscription.updated";
 		case "subscription.past_due":
+		case "subscription.unpaid":
 			return "subscription.past_due";
 		case "subscription.paused":
 			return "subscription.paused";
@@ -164,15 +198,80 @@ const CreemPortalResponseSchema = z.object({
 });
 const CreemCustomerResponseSchema = z.object({ id: z.string() });
 const CreemSubscriptionResponseSchema = z.object({
-	items: z.array(z.object({ id: z.string() })).optional(),
+	product: z.union([z.string(), z.object({ id: z.string() })]).optional(),
+	items: z
+		.array(
+			z.object({
+				id: z.string(),
+				product_id: z.string().nullish(),
+				price_id: z.string().nullish(),
+				units: z.number().int().nullish(),
+			}),
+		)
+		.optional(),
 });
 
 const ErrorBodySchema = z.record(z.string(), z.unknown());
 
 /** Best-effort parse of an error body for logging — never throws. */
 async function readErrorBody(response: Response) {
-	const parsed = ErrorBodySchema.safeParse(await response.json());
+	const parsed = ErrorBodySchema.safeParse(
+		await response.json().catch(() => null),
+	);
 	return parsed.success ? parsed.data : { raw: "unparseable" };
+}
+
+/** Creem's `message` — a string or a list of strings — as one line. */
+function errorMessages(body: Record<string, unknown>): string {
+	const { message } = body;
+	if (typeof message === "string") return message;
+	if (Array.isArray(message)) {
+		return message.filter((m) => typeof m === "string").join("; ");
+	}
+	return "";
+}
+
+/**
+ * Creem answers an unknown id with 404 or with 400 "… does not exist",
+ * and a change the object's state refuses with 400 "… in state: x" /
+ * "Cannot resume subscription in active status".
+ */
+const NOT_FOUND = /does not exist|not found/i;
+const INVALID_STATE =
+	/\bin (state|status)\b|cannot (be )?(cancel|resume|update|pause)/i;
+
+/**
+ * Log a failed Creem response and turn it into a typed error: 401/403 is
+ * our configuration (wrong or missing key), everything else a
+ * `ProviderRequestError` the caller can explain. Creem's own messages go
+ * to the log and `detail`, never into the error message.
+ */
+async function creemFailure(
+	response: Response,
+	failure: string,
+): Promise<Error> {
+	const body = await readErrorBody(response);
+	const status = response.status;
+	log.error(failure, { status, ...body });
+	if (status === 401 || status === 403) {
+		return new WebhookConfigError(
+			`[payments:creem] ${failure}: Creem rejected the API key (HTTP ${status}). Check CREEM_API_KEY and CREEM_TEST_MODE.`,
+		);
+	}
+	const detail = errorMessages(body);
+	const byStatus = failureKindForStatus(status);
+	const kind =
+		byStatus === "unavailable"
+			? byStatus
+			: NOT_FOUND.test(detail)
+				? "not_found"
+				: byStatus === "rejected" && INVALID_STATE.test(detail)
+					? "invalid_state"
+					: byStatus;
+	return new ProviderRequestError(failure, kind, {
+		status,
+		detail: detail || undefined,
+	});
 }
 
 /** Parse a Creem API response — fail closed on an unexpected shape. */
@@ -191,6 +290,11 @@ async function parseCreemResponse<T extends z.ZodType>(
 export const creemPaymentProvider: SeatAwarePaymentProvider = {
 	id: "creem",
 	ownsSeatSync: false,
+	// Creem's checkout API has no trial parameter — trials are a product setting.
+	trialsOnProduct: true,
+	// Creem cancels a trialing subscription right away, even in
+	// "scheduled" mode — there is no cancel at trial end.
+	cancelEndsTrial: true,
 
 	async createCheckoutLink(input: CheckoutInput) {
 		// Note: Creem's checkout API does not accept a cancel_url parameter —
@@ -220,9 +324,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		});
 
 		if (!response.ok) {
-			const error = await readErrorBody(response);
-			log.error("Failed to create checkout link", error);
-			throw new Error("Failed to create checkout link");
+			throw await creemFailure(response, "Failed to create checkout link");
 		}
 
 		const { checkout_url } = await parseCreemResponse(
@@ -242,9 +344,10 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		});
 
 		if (!response.ok) {
-			const error = await readErrorBody(response);
-			log.error("Failed to create customer portal link", error);
-			throw new Error("Failed to create customer portal link");
+			throw await creemFailure(
+				response,
+				"Failed to create customer portal link",
+			);
 		}
 
 		const { customer_portal_link } = await parseCreemResponse(
@@ -269,9 +372,7 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		});
 
 		if (!response.ok) {
-			const error = await readErrorBody(response);
-			log.error("Failed to create customer", error);
-			throw new Error("Failed to create customer");
+			throw await creemFailure(response, "Failed to create customer");
 		}
 
 		const { id } = await parseCreemResponse(
@@ -282,19 +383,52 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		return { customerId: id };
 	},
 
-	async cancelSubscription(subscriptionId: string) {
+	async cancelSubscription(
+		subscriptionId: string,
+		options?: CancelSubscriptionOptions,
+	) {
+		// Without a mode Creem applies the store's configured default.
+		const mode = resolveCancelMode(options);
 		const response = await creemFetch(
-			`/subscriptions/${subscriptionId}/cancel`,
+			`/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
 			{
 				method: "POST",
+				...(mode && {
+					body: JSON.stringify({ mode: CREEM_CANCEL_MODE[mode] }),
+				}),
 			},
 		);
 
 		if (!response.ok) {
-			const error = await readErrorBody(response);
-			log.error("Failed to cancel subscription", error);
-			throw new Error("Failed to cancel subscription");
+			throw await creemFailure(response, "Failed to cancel subscription");
 		}
+	},
+
+	async resumeSubscription(subscriptionId: string) {
+		const response = await creemFetch(
+			`/subscriptions/${encodeURIComponent(subscriptionId)}/resume`,
+			{ method: "POST" },
+		);
+
+		if (!response.ok) {
+			throw await creemFailure(response, "Failed to resume subscription");
+		}
+	},
+
+	async getSubscriptionStatus(subscriptionId: string) {
+		const response = await creemFetch(
+			`/subscriptions?subscription_id=${encodeURIComponent(subscriptionId)}`,
+			{ method: "GET" },
+		);
+		if (!response.ok) {
+			throw await creemFailure(response, "Failed to get subscription status");
+		}
+		const { status } = await parseCreemResponse(
+			response,
+			z.object({ status: z.string() }),
+			"Failed to get subscription status",
+		);
+		return mapCreemStatus(status);
 	},
 
 	async parseWebhook(request: Request) {
@@ -386,23 +520,42 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 		return [event];
 	},
 
+	async getSubscriptionSeats(subscriptionId: string) {
+		const response = await creemFetch(
+			`/subscriptions?subscription_id=${encodeURIComponent(subscriptionId)}`,
+			{ method: "GET" },
+		);
+		if (!response.ok) {
+			throw await creemFailure(response, "Failed to get subscription");
+		}
+		const { items } = await parseCreemResponse(
+			response,
+			CreemSubscriptionResponseSchema,
+			"Failed to get subscription",
+		);
+		// Creem reports `units` on every subscription item (1 without seats).
+		const units = items?.[0]?.units;
+		if (units == null || units < 1) {
+			throw new Error("Creem subscription item has no unit count");
+		}
+		return units;
+	},
+
 	async setSubscriptionSeats(input: SetSeatsInput) {
-		const { subscriptionId, seats } = input;
+		const { subscriptionId, seats, proration } = input;
 
 		const getResponse = await creemFetch(
-			`/subscriptions?subscription_id=${subscriptionId}`,
+			`/subscriptions?subscription_id=${encodeURIComponent(subscriptionId)}`,
 			{
 				method: "GET",
 			},
 		);
 
 		if (!getResponse.ok) {
-			const error = await readErrorBody(getResponse);
-			log.error("Failed to get subscription", error);
-			throw new Error("Failed to get subscription");
+			throw await creemFailure(getResponse, "Failed to get subscription");
 		}
 
-		const { items } = await parseCreemResponse(
+		const { items, product } = await parseCreemResponse(
 			getResponse,
 			CreemSubscriptionResponseSchema,
 			"Failed to get subscription",
@@ -417,25 +570,42 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			throw new Error("No subscription items found");
 		}
 
+		// UpsertSubscriptionItemEntity: { id, price_id | product_id, units } —
+		// Creem resolves the item through its price or product and answers
+		// 404 "Could not find product or price" without one.
+		const subscriptionProductId =
+			typeof product === "string" ? product : product?.id;
+		const itemRef = firstItem.price_id
+			? { price_id: firstItem.price_id }
+			: firstItem.product_id
+				? { product_id: firstItem.product_id }
+				: subscriptionProductId
+					? { product_id: subscriptionProductId }
+					: null;
+		if (!itemRef) {
+			throw new Error(
+				"Creem subscription item has no product or price — cannot update seats",
+			);
+		}
+
 		const updateResponse = await creemFetch(
-			`/subscriptions/${subscriptionId}`,
+			`/subscriptions/${encodeURIComponent(subscriptionId)}`,
 			{
 				method: "POST",
 				body: JSON.stringify({
-					items: [
-						{
-							id: firstItem.id,
-							quantity: seats,
-						},
-					],
+					items: [{ id: firstItem.id, ...itemRef, units: seats }],
+					update_behavior: proration
+						? CREEM_PRORATION[proration]
+						: paymentsConfig.creemUpdateBehavior,
 				}),
 			},
 		);
 
 		if (!updateResponse.ok) {
-			const error = await readErrorBody(updateResponse);
-			log.error("Failed to update subscription seats", error);
-			throw new Error("Failed to update subscription seats");
+			throw await creemFailure(
+				updateResponse,
+				"Failed to update subscription seats",
+			);
 		}
 	},
 };

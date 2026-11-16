@@ -1,6 +1,6 @@
 "use client";
 
-import { PLANS } from "@fuutu/payments/config";
+import { getShowcasePlan } from "@fuutu/payments/plans";
 import { BillingToggle, SeatSelector } from "@fuutu/ui";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
@@ -11,7 +11,9 @@ export function PricingParts() {
 	const locale = useLocale();
 	const [isYearly, setIsYearly] = useState(false);
 	const [seatCount, setSeatCount] = useState(5);
-	const { amount, currency, interval } = PLANS.pro;
+	const showcase = getShowcasePlan();
+	if (!showcase) return null;
+	const { amount, currency, interval } = showcase.plan;
 
 	const currencySymbol =
 		new Intl.NumberFormat(locale, { style: "currency", currency })

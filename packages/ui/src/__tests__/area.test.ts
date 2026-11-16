@@ -120,12 +120,25 @@ describe("AreaIcon, AreaBadge, AreaBackdrop", () => {
 		expect(sm).toContain('aria-hidden="true"');
 		expect(classesOf(sm, "area-icon")).toEqual(
 			expect.arrayContaining([
-				"size-6",
-				"bg-area-api",
+				"[&amp;&gt;svg]:size-4",
 				"text-area-api-foreground",
 			]),
 		);
-		expect(classesOf(md, "area-icon")).toContain("size-9");
+		expect(classesOf(md, "area-icon")).toContain("[&amp;&gt;svg]:size-5");
+	});
+
+	it("AreaIcon is a plain icon in the area ink: no fill, no shape behind it (DESIGN.md Iconography)", () => {
+		for (const size of ["sm", "md"] as const) {
+			const html = renderToString(
+				createElement(AreaIcon, { area: "billing", size }, "i"),
+			);
+			const classes = classesOf(html, "area-icon");
+			expect(classes).toContain("text-area-billing-foreground");
+			// Never stretched by a column parent: the icon keeps its own width.
+			expect(classes).toContain("w-fit");
+			expect(classes.filter((c) => c.startsWith("bg-"))).toEqual([]);
+			expect(classes.filter((c) => /^rounded/.test(c))).toEqual([]);
+		}
 	});
 
 	it("AreaBadge uses the area fill and ink", () => {

@@ -22,6 +22,7 @@ export interface CronConfig {
 		subscriptionReminder: boolean;
 		telemetryPing: boolean;
 		oauthClientCleanup: boolean;
+		authRetentionCleanup: boolean;
 		[customJob: string]: boolean | undefined;
 	};
 }
@@ -36,5 +37,6 @@ export const cronConfig: CronConfig = {
 		subscriptionReminder: true,
 		telemetryPing: true,
 		oauthClientCleanup: true,
+		authRetentionCleanup: true,
 	},
 };
