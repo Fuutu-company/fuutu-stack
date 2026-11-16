@@ -105,13 +105,13 @@ const base = new Hono<{
 			origin: env.CORS_ORIGIN,
 			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 			allowHeaders: CORS_ALLOW_HEADERS,
-			credentials: true,
+			credentials: env.CORS_CREDENTIALS,
 		}),
 	)
 	// CSRF guard for mutating requests — defense in depth on top of
 	// SameSite=Lax cookies. Browsers always send `Origin` on cross-site
-	// posts; when present it must match this app (BETTER_AUTH_URL) or the configured
-	// CORS_ORIGIN. Requests without an Origin (server-to-server webhooks,
+	// posts; when present it must match this app (BETTER_AUTH_URL), or
+	// CORS_ORIGIN with CORS_CREDENTIALS. Requests without an Origin (server-to-server webhooks,
 	// cron triggers, API-key clients) carry no ambient cookies and pass.
 	.use("*", async (c, next) => {
 		const method = c.req.method;
@@ -125,7 +125,7 @@ const base = new Hono<{
 		const allowed = isOriginAllowed(origin, {
 			requestUrl: c.req.url,
 			appUrl: env.BETTER_AUTH_URL,
-			corsOrigin: env.CORS_ORIGIN,
+			corsOrigin: env.CORS_CREDENTIALS ? env.CORS_ORIGIN : undefined,
 		});
 		if (!allowed) {
 			return c.json({ error: "forbidden_origin" }, 403);

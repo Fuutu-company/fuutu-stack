@@ -72,6 +72,23 @@ describe("@fuutu/env/saas", () => {
 		await expect(import("../saas")).rejects.toThrow();
 	});
 
+	it("keeps CORS uncredentialed unless CORS_CREDENTIALS opts in", async () => {
+		setRequiredSaasEnv();
+		delete process.env.CORS_CREDENTIALS;
+		expect((await import("../saas")).env.CORS_CREDENTIALS).toBe(false);
+
+		vi.resetModules();
+		process.env.CORS_CREDENTIALS = "1";
+		expect((await import("../saas")).env.CORS_CREDENTIALS).toBe(true);
+	});
+
+	it("rejects a vague CORS_CREDENTIALS value", async () => {
+		setRequiredSaasEnv();
+		process.env.CORS_CREDENTIALS = "yes";
+
+		await expect(import("../saas")).rejects.toThrow();
+	});
+
 	it("accepts valid AI_PROVIDER enum values", async () => {
 		const validProviders = ["google", "openai", "anthropic", "noop"] as const;
 		for (const provider of validProviders) {

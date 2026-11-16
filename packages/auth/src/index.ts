@@ -125,7 +125,8 @@ const authOptions = {
 	}),
 	baseURL: env.BETTER_AUTH_URL,
 	secret: env.BETTER_AUTH_SECRET,
-	trustedOrigins: [env.CORS_ORIGIN],
+	trustedOrigins:
+		env.CORS_CREDENTIALS && env.CORS_ORIGIN ? [env.CORS_ORIGIN] : [],
 
 	// Without this, production builds redirect auth errors to `/?error=…`
 	// and the app root forwards signed-in users to the dashboard — the

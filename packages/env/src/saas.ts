@@ -28,6 +28,10 @@ const kitServerEnv = {
 	// dangerous combination that browsers reject anyway). URL
 	// validation already rejects "*".
 	CORS_ORIGIN: z.url().optional().default("http://localhost:3000"),
+	// Credentialed CORS for CORS_ORIGIN (cookies on cross-origin calls) and
+	// trust in the CSRF guard / Better Auth trustedOrigins — off unless set:
+	// script on that origin would otherwise act as the signed-in user.
+	CORS_CREDENTIALS: strictFlag().default(false),
 	POLAR_ACCESS_TOKEN: z.string().optional(),
 	POLAR_SUCCESS_URL: z.url().optional(),
 	GOOGLE_CLIENT_ID: z.string().optional(),
@@ -194,6 +198,7 @@ export const env = createEnv({
 		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
 		BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
 		CORS_ORIGIN: process.env.CORS_ORIGIN,
+		CORS_CREDENTIALS: process.env.CORS_CREDENTIALS,
 		POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN,
 		POLAR_SUCCESS_URL: process.env.POLAR_SUCCESS_URL,
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
