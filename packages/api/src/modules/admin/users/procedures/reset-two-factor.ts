@@ -4,7 +4,7 @@ import { PERMISSIONS } from "@fuutu/rbac";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { runAuditedAdminAction } from "../../audit";
 import {
 	adminIdSchema,
 	assertNotAdmin,
@@ -39,18 +39,22 @@ export const resetTwoFactorProcedure = systemAdminProcedure(
 			"Two-factor authentication of an admin cannot be reset. Demote them first.",
 		);
 
-		await adminResetTwoFactor(target.id);
-		await withAuthErrors(() =>
-			auth.api.revokeUserSessions({
-				body: { userId: target.id },
-				headers: context.headers,
-			}),
+		await runAuditedAdminAction(
+			context,
+			{
+				action: "admin.user.two_factor_reset",
+				targetUserId: target.id,
+				reason: input.reason,
+			},
+			async () => {
+				await adminResetTwoFactor(target.id);
+				await withAuthErrors(() =>
+					auth.api.revokeUserSessions({
+						body: { userId: target.id },
+						headers: context.headers,
+					}),
+				);
+			},
 		);
-
-		await recordAdminAction(context, {
-			action: "admin.user.two_factor_reset",
-			targetUserId: target.id,
-			reason: input.reason,
-		});
 		return { success: true };
 	});

@@ -624,6 +624,46 @@ describe("admin.users.update", () => {
 		});
 	});
 
+	it("writes the audit row before the email changes", async () => {
+		await call(
+			users.update,
+			{ userId: "user-2", email: "ada.new@fuutu.local", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(audit.recordStrict).toHaveBeenCalledOnce();
+		expectAuditedBefore(vi.mocked(auth.api.adminUpdateUser));
+		expect(auditedActions()).toEqual(["admin.user.update"]);
+	});
+
+	it("never changes an email without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(
+				users.update,
+				{ userId: "user-2", email: "ada.new@fuutu.local", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow("audit sink down");
+		expect(auth.api.adminUpdateUser).not.toHaveBeenCalled();
+	});
+
+	it("records update_failed when the email change fails", async () => {
+		vi.mocked(auth.api.adminUpdateUser).mockRejectedValueOnce(
+			new Error("db down"),
+		);
+		await expect(
+			call(
+				users.update,
+				{ userId: "user-2", email: "ada.new@fuutu.local", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow();
+		expect(auditedActions()).toEqual([
+			"admin.user.update",
+			"admin.user.update_failed",
+		]);
+	});
+
 	it("requires a reason for an email change", async () => {
 		await expect(
 			call(
@@ -1166,6 +1206,29 @@ describe("admin.users.resetTwoFactor", () => {
 			targetUserId: "user-2",
 			reason: REASON,
 		});
+	});
+
+	it("writes the audit row before the 2FA secret is deleted", async () => {
+		await call(
+			users.resetTwoFactor,
+			{ userId: "user-2", reason: REASON },
+			{ context: adminContext() },
+		);
+		expect(audit.recordStrict).toHaveBeenCalledOnce();
+		expectAuditedBefore(vi.mocked(db.adminResetTwoFactor));
+		expect(auditedActions()).toEqual(["admin.user.two_factor_reset"]);
+	});
+
+	it("never resets 2FA without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(
+				users.resetTwoFactor,
+				{ userId: "user-2", reason: REASON },
+				{ context: adminContext() },
+			),
+		).rejects.toThrow("audit sink down");
+		expect(db.adminResetTwoFactor).not.toHaveBeenCalled();
 	});
 
 	it.each([ADMIN_ID, "admin-2"])("refuses for admin %s", async (userId) => {

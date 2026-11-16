@@ -1,10 +1,11 @@
 import { supportRemoveMember } from "@fuutu/auth/admin-support";
+import { getOrganizationMemberForAdmin } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { runAuditedAdminAction } from "../../audit";
 import { adminIdSchema, reasonSchema } from "../../shared";
 import {
 	dispatchOrganizationEvent,
@@ -32,16 +33,35 @@ export const removeMemberProcedure = systemAdminProcedure(
 	})
 	.input(removeMemberInput)
 	.handler(async ({ input, context }) => {
-		const result = await supportRemoveMember({
-			organizationId: input.organizationId,
-			memberId: input.memberId,
-		});
-		if (result.status === "not_found") throw memberNotFound();
-		if (result.status === "last_owner") {
-			throw new ORPCError("CONFLICT", {
-				message: "The last owner cannot be removed. Transfer ownership first.",
-			});
-		}
+		// Read first: the audit row names the user before anything is removed.
+		const member = await getOrganizationMemberForAdmin(
+			input.organizationId,
+			input.memberId,
+		);
+		if (!member) throw memberNotFound();
+		const result = await runAuditedAdminAction(
+			context,
+			{
+				action: "admin.org.member_remove",
+				targetOrganizationId: input.organizationId,
+				targetUserId: member.userId,
+				reason: input.reason,
+			},
+			async () => {
+				const removed = await supportRemoveMember({
+					organizationId: input.organizationId,
+					memberId: member.id,
+				});
+				if (removed.status === "not_found") throw memberNotFound();
+				if (removed.status === "last_owner") {
+					throw new ORPCError("CONFLICT", {
+						message:
+							"The last owner cannot be removed. Transfer ownership first.",
+					});
+				}
+				return removed;
+			},
+		);
 		await dispatchOrganizationEvent({
 			event: "member.removed",
 			organizationId: input.organizationId,
@@ -49,12 +69,6 @@ export const removeMemberProcedure = systemAdminProcedure(
 				organizationId: input.organizationId,
 				memberIdOrEmail: result.member.id,
 			},
-		});
-		await recordAdminAction(context, {
-			action: "admin.org.member_remove",
-			targetOrganizationId: input.organizationId,
-			targetUserId: result.member.userId,
-			reason: input.reason,
 		});
 		return { success: true };
 	});

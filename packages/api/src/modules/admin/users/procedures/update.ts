@@ -5,7 +5,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { recordAdminAction, runAuditedAdminAction } from "../../audit";
 import {
 	adminIdSchema,
 	assertNotAdmin,
@@ -80,27 +80,34 @@ export const updateUserProcedure = systemAdminProcedure(PERMISSIONS.USER.UPDATE)
 			throw new ORPCError("BAD_REQUEST", { message: "Nothing to update" });
 		}
 
-		await withAuthErrors(() =>
-			auth.api.adminUpdateUser({
-				body: { userId: target.id, data },
-				headers: context.headers,
-			}),
-		);
-		if (emailChanged) {
-			await withAuthErrors(() =>
-				auth.api.revokeUserSessions({
-					body: { userId: target.id },
-					headers: context.headers,
-				}),
-			);
-			await revokeOAuthTokensForUser(target.id);
-		}
-
-		await recordAdminAction(context, {
+		const entry = {
 			action: "admin.user.update",
 			targetUserId: target.id,
 			reason: input.reason,
 			changedFields,
-		});
+		} as const;
+		const update = () =>
+			withAuthErrors(() =>
+				auth.api.adminUpdateUser({
+					body: { userId: target.id, data },
+					headers: context.headers,
+				}),
+			);
+		if (emailChanged) {
+			// An email change is a takeover step — audited before it happens.
+			await runAuditedAdminAction(context, entry, async () => {
+				await update();
+				await withAuthErrors(() =>
+					auth.api.revokeUserSessions({
+						body: { userId: target.id },
+						headers: context.headers,
+					}),
+				);
+				await revokeOAuthTokensForUser(target.id);
+			});
+		} else {
+			await update();
+			await recordAdminAction(context, entry);
+		}
 		return { success: true, changedFields };
 	});

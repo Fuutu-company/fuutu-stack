@@ -33,6 +33,7 @@ vi.mock("@fuutu/db", () => ({
 	adminCancelOrganizationInvitation: vi.fn(),
 	adminRenameOrganization: vi.fn(),
 	getOrganizationById: vi.fn(),
+	getOrganizationMemberForAdmin: vi.fn(),
 }));
 
 vi.mock("@fuutu/webhooks", () => ({ dispatchEvent: vi.fn() }));
@@ -161,6 +162,7 @@ beforeEach(() => {
 		purchases: [],
 	} as never);
 	vi.mocked(db.getOrganizationById).mockResolvedValue(ORG as never);
+	vi.mocked(db.getOrganizationMemberForAdmin).mockResolvedValue(MEMBER);
 	vi.mocked(db.adminRenameOrganization).mockResolvedValue({
 		id: ORG_ID,
 		name: "Acme Inc",
@@ -675,17 +677,36 @@ describe("admin.organizations.removeMember", () => {
 	});
 
 	it("returns 404 for a member of another organization (IDOR)", async () => {
-		vi.mocked(support.supportRemoveMember).mockResolvedValue({
-			status: "not_found",
-		});
+		vi.mocked(db.getOrganizationMemberForAdmin).mockResolvedValue(null);
 		await expect(
 			call(orgs.removeMember, input, { context: adminContext() }),
 		).rejects.toMatchObject({ code: "NOT_FOUND" });
+		expect(db.getOrganizationMemberForAdmin).toHaveBeenCalledWith(
+			ORG_ID,
+			"mem-2",
+		);
+		expect(support.supportRemoveMember).not.toHaveBeenCalled();
 		expect(dispatchEvent).not.toHaveBeenCalled();
 		expect(audit.record).not.toHaveBeenCalled();
 	});
 
-	it("never removes the last owner", async () => {
+	it("writes the audit row before keys are revoked and the member removed", async () => {
+		await call(orgs.removeMember, input, { context: adminContext() });
+		expect(audit.recordStrict).toHaveBeenCalledOnce();
+		expect(audit.record.mock.invocationCallOrder[0]).toBeLessThan(
+			vi.mocked(support.supportRemoveMember).mock.invocationCallOrder[0] ?? 0,
+		);
+	});
+
+	it("never removes without a persisted audit row", async () => {
+		audit.recordStrict.mockRejectedValueOnce(new Error("audit sink down"));
+		await expect(
+			call(orgs.removeMember, input, { context: adminContext() }),
+		).rejects.toThrow("audit sink down");
+		expect(support.supportRemoveMember).not.toHaveBeenCalled();
+	});
+
+	it("never removes the last owner (member_remove_failed recorded)", async () => {
 		vi.mocked(support.supportRemoveMember).mockResolvedValue({
 			status: "last_owner",
 		});
@@ -693,6 +714,10 @@ describe("admin.organizations.removeMember", () => {
 			call(orgs.removeMember, input, { context: adminContext() }),
 		).rejects.toMatchObject({ code: "CONFLICT" });
 		expect(dispatchEvent).not.toHaveBeenCalled();
+		expect(audit.record.mock.calls.map(([event]) => event.action)).toEqual([
+			"admin.org.member_remove",
+			"admin.org.member_remove_failed",
+		]);
 	});
 
 	it("requires a reason", async () => {
