@@ -27,7 +27,6 @@ import { pathToFileURL } from "node:url";
 import {
 	appPaths,
 	isCiBaseline,
-	orphanedBaselines,
 	parseArgs,
 	playwrightImage,
 	playwrightVersion,
@@ -203,18 +202,16 @@ async function dockerApp(app, image) {
 	if (opts.update) {
 		copyPngs(p.actualDir, p.committedDir, isCiBaseline);
 		label = `Linux baselines UPDATED in .fuutu/visual-baselines/${app} (${image}) — review the diffs below, then commit them`;
-		// Orphans are only known after a complete run: a failed one may have
-		// skipped specs, which must not delete their baselines.
+		// Same prune as CI: only baselines orphaned by name (disabled locale,
+		// page no spec names, viewport on the wrong project class) — never
+		// one this run did not shoot (it covers chromium + mobile-safari).
 		if (code === 0) {
-			const orphans = orphanedBaselines(
-				pngs(p.committedDir),
-				pngs(p.actualDir),
+			const prune = run(
+				"node",
+				[path.join(SCRIPTS, "visual-prune.mjs"), "--app", app],
+				{ stdio: "inherit", cwd: ROOT },
 			);
-			for (const f of orphans) rmSync(path.join(p.committedDir, f));
-			if (orphans.length > 0)
-				console.log(
-					`\n${app}: removed ${orphans.length} orphaned baseline(s) no spec writes any more:\n  ${orphans.join("\n  ")}`,
-				);
+			if (prune.status !== 0) throw new Error(`visual-prune failed for ${app}`);
 		} else {
 			console.error(
 				`\n${app}: the run failed — orphaned baselines were NOT pruned.`,

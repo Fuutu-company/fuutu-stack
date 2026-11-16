@@ -33,12 +33,16 @@ PNPM_VERSION="$(node -p 'require("./package.json").packageManager.split("@")[1]'
 npm install -g "pnpm@${PNPM_VERSION}" >/dev/null 2>&1 || fail "could not install pnpm@${PNPM_VERSION}"
 pnpm config set store-dir /pnpm-store >/dev/null
 
-# Minimal env only — no host provider secrets reach the container.
+# Minimal env only — no host provider secrets reach the container. Same
+# render-relevant values as the CI e2e job env (Acme on Pro via the seed,
+# marketing links), so local renders match the CI baselines.
 cat > .env <<ENV
 DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@postgres:5432/fuutu-stack}
 BETTER_AUTH_URL=http://localhost:3000
 EMAIL_PROVIDER=console
 NEXT_PUBLIC_ANALYTICS_PROVIDER=noop
+NEXT_PUBLIC_MARKETING_URL=http://localhost:3001
+PAYMENTS_PRO_PRICE_ID=ci_pro_month
 FUUTU_TELEMETRY_DISABLED=1
 ENV
 if [ "$APP" = "saas" ]; then
