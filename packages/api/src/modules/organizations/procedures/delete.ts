@@ -11,6 +11,7 @@ const deleteOrgSchema = z.object({
 export const deleteOrganization = authProcedure({
 	org: { permission: PERMISSIONS.ORGANIZATION.DELETE },
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMutation" }))
 	.route({

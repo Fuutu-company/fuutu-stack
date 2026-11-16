@@ -19,6 +19,7 @@ const updateOrgSchema = z.object({
 export const updateOrganization = authProcedure({
 	org: { permission: PERMISSIONS.ORGANIZATION.UPDATE },
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "organizationMutation" }))
 	.route({

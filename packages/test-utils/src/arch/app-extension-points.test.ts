@@ -130,6 +130,20 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "packages/api/src/app-api-policy.ts",
+		exports: [
+			"appSensitiveProcedurePrefixes",
+			"appProcedurePolicyExceptions",
+			"appRoutePolicies",
+		],
+		wiredInto: [
+			{
+				file: "packages/api/src/api-policy.ts",
+				import: /from "\.\/app-api-policy"/,
+			},
+		],
+	},
+	{
 		file: "packages/cron/src/app-jobs.ts",
 		exports: ["appJobs"],
 		wiredInto: [

@@ -85,3 +85,48 @@ export function appPaths(root, app, mode) {
 
 /** Committed baselines are CI renders — Linux only. */
 export const isCiBaseline = (file) => file.endsWith("-linux.png");
+
+/**
+ * Projects whose baselines are committed and refreshed on PRs, develop and
+ * locally. A main-branch CI run also writes the other browsers.
+ */
+export const BASELINE_PROJECTS = ["chromium", "mobile-safari"];
+
+const inProjects = (file, projects) =>
+	projects === null ||
+	projects.some((project) => file.endsWith(`-${project}-linux.png`));
+
+/**
+ * Committed CI baselines (of `projects`) that a complete update run did not
+ * write: no spec emits them any more (removed page, disabled locale, a
+ * viewport a project no longer shoots).
+ */
+export function orphanedBaselines(
+	committed,
+	produced,
+	projects = BASELINE_PROJECTS,
+) {
+	const written = new Set(produced);
+	return committed.filter(
+		(file) =>
+			isCiBaseline(file) && inProjects(file, projects) && !written.has(file),
+	);
+}
+
+/**
+ * Same for CI, where the update run writes straight into the committed dir:
+ * a baseline of `projects` last modified before the run started was not
+ * rewritten. `projects: null` covers every browser (main branch run).
+ *
+ * @param {{ file: string; mtimeMs: number }[]} entries
+ */
+export function staleBaselines(entries, startedAtMs, projects = null) {
+	return entries
+		.filter(
+			({ file, mtimeMs }) =>
+				isCiBaseline(file) &&
+				inProjects(file, projects) &&
+				mtimeMs < startedAtMs,
+		)
+		.map(({ file }) => file);
+}

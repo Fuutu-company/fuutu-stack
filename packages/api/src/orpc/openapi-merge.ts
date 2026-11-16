@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { env } from "@fuutu/env/saas";
 import { createLogger } from "@fuutu/logs";
 import { getBaseUrl } from "@fuutu/utils";
 
@@ -8,10 +9,6 @@ interface BetterAuthSpec {
 	paths?: Record<string, Record<string, unknown>>;
 	components?: { schemas?: Record<string, unknown> };
 }
-
-let cachedSpec: BetterAuthSpec | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL = 60_000;
 
 async function fetchBetterAuthSpec(): Promise<BetterAuthSpec | null> {
 	try {
@@ -32,17 +29,20 @@ async function fetchBetterAuthSpec(): Promise<BetterAuthSpec | null> {
 	}
 }
 
-async function getBetterAuthSpec(): Promise<BetterAuthSpec | null> {
-	const now = Date.now();
-	if (cachedSpec && now - cacheTimestamp < CACHE_TTL) {
-		return cachedSpec;
-	}
-	const spec = await fetchBetterAuthSpec();
-	if (spec) {
-		cachedSpec = spec;
-		cacheTimestamp = now;
-	}
-	return spec;
+/**
+ * Fetched once per process — a failure (null) is kept too, so a broken
+ * Better Auth spec is not retried (and logged) on every docs request.
+ * Production skips it: Better Auth's OpenAPI plugin only runs outside
+ * production (`@fuutu/auth`), so the fetch could only fail there.
+ */
+let betterAuthSpec: Promise<BetterAuthSpec | null> | null = null;
+
+function getBetterAuthSpec(): Promise<BetterAuthSpec | null> {
+	betterAuthSpec ??=
+		env.NODE_ENV === "production"
+			? Promise.resolve(null)
+			: fetchBetterAuthSpec();
+	return betterAuthSpec;
 }
 
 export async function getBetterAuthSpecPaths(): Promise<

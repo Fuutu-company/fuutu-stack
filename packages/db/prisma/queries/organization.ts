@@ -167,11 +167,19 @@ export const countOrganizationsForUser = (userId: string) =>
  * surfaces list these so invitees can accept without any membership yet.
  * Better Auth's list-user-invitations endpoint 403s for org-less users,
  * so this is queried server-side and passed down as props.
+ *
+ * Verified emails only (`emailVerified: true` — the type makes callers
+ * check): anyone can sign up with an invited address, and the listed ids
+ * are enough to accept. Unverified, the list is empty.
  */
-export const listPendingInvitationsForUser = (email: string) =>
-	db.invitation.findMany({
+export const listPendingInvitationsForUser = async (user: {
+	email: string;
+	emailVerified: true;
+}) => {
+	if (user.emailVerified !== true) return [];
+	return db.invitation.findMany({
 		where: {
-			email: { equals: email, mode: "insensitive" },
+			email: { equals: user.email, mode: "insensitive" },
 			status: "pending",
 			expiresAt: { gt: new Date() },
 		},
@@ -182,3 +190,4 @@ export const listPendingInvitationsForUser = (email: string) =>
 		},
 		orderBy: [{ createdAt: "desc" }, { id: "asc" }],
 	});
+};

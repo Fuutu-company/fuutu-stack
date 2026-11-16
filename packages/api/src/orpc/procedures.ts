@@ -17,8 +17,10 @@ import type { Context } from "../context";
 import {
 	type AuthorizeOptions,
 	assertNotImpersonating,
+	assertSessionCaller,
 	runAuthorize,
 } from "./middleware/authorize";
+import { markPolicy } from "./policy-markers";
 
 // System AC — checks the user's SYSTEM role (Better-Auth admin plugin: "admin"/"user")
 const systemAC = new SystemAccessControl(SYSTEM_POLICY);
@@ -103,12 +105,26 @@ export const adminProcedure = systemAdminProcedure(PERMISSIONS.VIEW_ADMIN);
  * procedures that must not run while support acts as the user (the
  * `authProcedure` equivalent is `denyImpersonation: true`).
  */
-export const denyImpersonation = os
-	.$context<Pick<Context, "session">>()
-	.middleware(({ context, next }) => {
+export const denyImpersonation = markPolicy(
+	os.$context<Pick<Context, "session">>().middleware(({ context, next }) => {
 		assertNotImpersonating(context);
 		return next();
-	});
+	}),
+	{ denyImpersonation: true },
+);
+
+/**
+ * Rejects API-key callers — for `protectedProcedure`-based procedures that
+ * only a signed-in session may run (the `authProcedure` equivalent is
+ * `sessionOnly: true`).
+ */
+export const sessionOnly = markPolicy(
+	os.$context<Pick<Context, "apiKey">>().middleware(({ context, next }) => {
+		assertSessionCaller(context);
+		return next();
+	}),
+	{ sessionOnly: true },
+);
 
 /**
  * Procedure that requires a specific SYSTEM permission.
@@ -143,30 +159,41 @@ export function permissionProcedure(permission: KnownPermission) {
  * in the input must never switch the check to org scope.
  */
 export function systemAdminProcedure(permission: KnownPermission) {
-	return permissionProcedure(permission).use(async ({ context, next }) => {
-		if (context.apiKey || !context.session?.session) {
-			throw new ORPCError("FORBIDDEN", {
-				message: "Admin actions require a signed-in session",
+	return permissionProcedure(permission).use(
+		markPolicy(systemAdminMiddleware(permission), {
+			denyImpersonation: true,
+			sessionOnly: true,
+		}),
+	);
+}
+
+function systemAdminMiddleware(permission: KnownPermission) {
+	return os
+		.$context<Context & { user: UserWithRole }>()
+		.middleware(async ({ context, next }) => {
+			if (context.apiKey || !context.session?.session) {
+				throw new ORPCError("FORBIDDEN", {
+					message: "Admin actions require a signed-in session",
+				});
+			}
+			assertNotImpersonating(context);
+			const state = await getUserAccessState(context.user.id);
+			if (!state) {
+				throw new ORPCError("UNAUTHORIZED");
+			}
+			if (isBanActive(state)) {
+				throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
+			}
+			const role = toSystemRole(state.role);
+			if (!hasSystemPermission(systemAC, role, permission)) {
+				throw new ORPCError("FORBIDDEN", {
+					message: "Insufficient permissions",
+				});
+			}
+			return next({
+				context: { user: { ...context.user, role: state.role }, role },
 			});
-		}
-		assertNotImpersonating(context);
-		const state = await getUserAccessState(context.user.id);
-		if (!state) {
-			throw new ORPCError("UNAUTHORIZED");
-		}
-		if (isBanActive(state)) {
-			throw new ORPCError("FORBIDDEN", { message: "Account is banned" });
-		}
-		const role = toSystemRole(state.role);
-		if (!hasSystemPermission(systemAC, role, permission)) {
-			throw new ORPCError("FORBIDDEN", {
-				message: "Insufficient permissions",
-			});
-		}
-		return next({
-			context: { user: { ...context.user, role: state.role }, role },
 		});
-	});
 }
 
 /**
@@ -217,8 +244,16 @@ export function systemAdminProcedure(permission: KnownPermission) {
  *   .handler(...)
  */
 export function authProcedure(options: AuthorizeOptions = {}) {
-	return publicProcedure.use(async ({ context, next }, input) => {
-		const authCtx = await runAuthorize(options, context, input);
-		return next({ context: authCtx });
-	});
+	const authorize = os
+		.$context<Context & Partial<EvlogOrpcContext>>()
+		.middleware(async ({ context, next }, input) => {
+			const authCtx = await runAuthorize(options, context, input);
+			return next({ context: authCtx });
+		});
+	return publicProcedure.use(
+		markPolicy(authorize, {
+			...(options.denyImpersonation && { denyImpersonation: true }),
+			...(options.sessionOnly && { sessionOnly: true }),
+		}),
+	);
 }

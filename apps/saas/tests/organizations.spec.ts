@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { expect, test } from "./fixtures";
 import { orgSettingsCopy } from "./kit-catalog";
 
@@ -300,5 +301,135 @@ test.describe("org membership guard (unauthenticated)", () => {
 	}) => {
 		await page.goto("/organizations/acme/dashboard");
 		await expect(page).toHaveURL(/\/auth\/sign-in/);
+	});
+});
+
+// Anyone can sign up with an invited address. Until that address is
+// verified, the invitation is neither listed nor accepted — the pages ask
+// to verify the email instead.
+test.describe("invitations need a verified email", () => {
+	test("an unverified sign-up with the invited address cannot see or accept it; once verified it can", async ({
+		browser,
+		baseURL,
+		request,
+	}) => {
+		test.skip(
+			config.features.organizationsMode === "off",
+			"organizations are off — no invitations",
+		);
+		// Better Auth refuses cookie-authenticated POSTs without an Origin.
+		const headers = { origin: new URL(baseURL ?? "").origin };
+		const email = `qa-unverified-${Date.now()}@fuutu.local`;
+		const password = "InviteePassword!2345";
+		const org = (await (
+			await request.get(
+				"/api/auth/organization/get-full-organization?organizationSlug=acme",
+			)
+		).json()) as { id: string };
+		const invited = await request.post("/api/auth/organization/invite-member", {
+			data: { email, role: "admin", organizationId: org.id },
+			headers,
+		});
+		expect(invited.ok(), await invited.text()).toBe(true);
+		const invitation = (await invited.json()) as { id: string };
+
+		const context = await browser.newContext({
+			baseURL,
+			storageState: { cookies: [], origins: [] },
+		});
+		await context.addCookies([
+			{ name: "fuutu.consent.v1", value: "granted", url: baseURL },
+		]);
+		let userId: string | undefined;
+		try {
+			const signUp = await context.request.post("/api/auth/sign-up/email", {
+				data: { email, password, name: "Unverified Invitee" },
+				headers,
+			});
+			expect(signUp.ok()).toBe(true);
+			userId = ((await signUp.json()) as { user: { id: string } }).user.id;
+
+			// Better Auth refuses the accept itself, not only the UI.
+			const accept = await context.request.post(
+				"/api/auth/organization/accept-invitation",
+				{ data: { invitationId: invitation.id }, headers },
+			);
+			expect(accept.status()).toBe(403);
+
+			const page = await context.newPage();
+			await page.goto(`/auth/accept-invitation?id=${invitation.id}`);
+			await expect(page.getByText("Verify your email first")).toBeVisible({
+				timeout: 10_000,
+			});
+			await expect(
+				page.getByRole("button", { name: "Send verification email" }),
+			).toBeVisible();
+			await expect(
+				page.getByRole("button", { name: "Accept invitation" }),
+			).toHaveCount(0);
+
+			// A new user lands in onboarding; its org step lists invitations.
+			await page.goto("/onboarding");
+			await expect(page.getByLabel(/full name/i)).toBeVisible({
+				timeout: 10_000,
+			});
+			await page.getByRole("button", { name: /continue/i }).click();
+			await expect(page.getByText("Verify your email first")).toBeVisible({
+				timeout: 10_000,
+			});
+			await expect(
+				page.getByRole("link", { name: /accept invitation/i }),
+			).toHaveCount(0);
+
+			// Verified (here by a system admin), the invitation opens up —
+			// a fresh sign-in carries the verified flag in the session.
+			const verified = await request.patch(`/api/admin/users/${userId}`, {
+				data: { emailVerified: true },
+				headers,
+			});
+			expect(verified.ok()).toBe(true);
+			await context.clearCookies();
+			await context.addCookies([
+				{ name: "fuutu.consent.v1", value: "granted", url: baseURL },
+			]);
+			const signIn = await context.request.post("/api/auth/sign-in/email", {
+				data: { email, password },
+				headers,
+			});
+			expect(signIn.ok()).toBe(true);
+
+			// The reload resumes at the org step.
+			await page.goto("/onboarding");
+			await expect(
+				page.getByRole("link", { name: /acme.*accept invitation/i }),
+			).toBeVisible({ timeout: 10_000 });
+			await expect(page.getByText("Verify your email first")).toHaveCount(0);
+
+			await page.goto(`/auth/accept-invitation?id=${invitation.id}`);
+			await page.getByRole("button", { name: "Accept invitation" }).click();
+			await expect(page).not.toHaveURL(/\/auth\/accept-invitation/, {
+				timeout: 15_000,
+			});
+			const orgs = (await (
+				await context.request.get("/api/auth/organization/list")
+			).json()) as { slug: string }[];
+			expect(orgs.map((o) => o.slug)).toContain("acme");
+		} finally {
+			await context.close();
+			await request.post("/api/auth/organization/cancel-invitation", {
+				data: { invitationId: invitation.id },
+				headers,
+			});
+			if (userId) {
+				await request.post("/api/auth/organization/remove-member", {
+					data: { memberIdOrEmail: email, organizationId: org.id },
+					headers,
+				});
+				await request.delete(`/api/admin/users/${userId}`, {
+					data: { reason: "E2E cleanup", confirmEmail: email },
+					headers,
+				});
+			}
+		}
 	});
 });

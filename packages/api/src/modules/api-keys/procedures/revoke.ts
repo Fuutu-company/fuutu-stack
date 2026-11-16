@@ -6,8 +6,8 @@ import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import {
 	denyImpersonation,
 	permissionProcedure,
+	sessionOnly,
 } from "../../../orpc/procedures";
-import { assertSessionCaller } from "../assert-session-caller";
 import { requireOrgApiKeyManageAccess } from "../org-key-access";
 
 const apiKeyIdSchema = z.object({
@@ -18,6 +18,7 @@ export const revokeApiKeyProcedure = permissionProcedure(
 	PERMISSIONS.API_KEY.DELETE,
 )
 	.use(denyImpersonation)
+	.use(sessionOnly)
 	.use(createRateLimitMiddleware({ endpoint: "apiKeyMutation" }))
 	.route({
 		method: "POST",
@@ -29,7 +30,6 @@ export const revokeApiKeyProcedure = permissionProcedure(
 	})
 	.input(apiKeyIdSchema)
 	.handler(async ({ input, context }) => {
-		assertSessionCaller(context);
 		const key = await getApiKey(input.id);
 		if (!key) {
 			throw new ORPCError("NOT_FOUND", { message: "API key not found" });

@@ -42,6 +42,7 @@ function toOrganizationLimitError(
 
 export const createOrganization = authProcedure({
 	systemPermission: PERMISSIONS.ORGANIZATION.CREATE,
+	sessionOnly: true,
 	limit: {
 		key: "organizations",
 		count: async (ctx) => countOrganizationsForUser(ctx.user.id),

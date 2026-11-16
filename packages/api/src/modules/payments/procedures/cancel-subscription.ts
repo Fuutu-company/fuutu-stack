@@ -8,6 +8,7 @@ import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import {
 	denyImpersonation,
 	protectedProcedure,
+	sessionOnly,
 } from "../../../orpc/procedures";
 import { throwIfPaymentsDisabled } from "../shared";
 import {
@@ -71,6 +72,7 @@ async function cancelModeFor(
 
 export const cancelSubscription = protectedProcedure
 	.use(denyImpersonation)
+	.use(sessionOnly)
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
 		method: "POST",

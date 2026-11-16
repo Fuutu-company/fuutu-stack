@@ -15,6 +15,7 @@ const portalSchema = z.object({
 export const createBillingPortal = authProcedure({
 	org: { permission: PERMISSIONS.PAYMENT.UPDATE, optional: true },
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "paymentsMutation" }))
 	.route({
