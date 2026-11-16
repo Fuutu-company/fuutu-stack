@@ -164,6 +164,7 @@ export function systemAdminProcedure(permission: KnownPermission) {
 		markPolicy(systemAdminMiddleware(permission), {
 			denyImpersonation: true,
 			sessionOnly: true,
+			systemAdmin: true,
 		}),
 	);
 }
