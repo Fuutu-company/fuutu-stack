@@ -49,3 +49,25 @@ describe("deploy env guard", () => {
 		});
 	}
 });
+
+/**
+ * Published container ports bypass host firewalls (ufw/iptables INPUT), so
+ * a port on all interfaces lets callers skip the reverse proxy — and forge
+ * the forwarding headers its rate limits rely on. Compose files publish on
+ * loopback only; the proxy on the host reaches them there.
+ */
+describe("compose port bindings", () => {
+	for (const file of [
+		"docker-compose.deploy.yml",
+		"docker-compose.deploy.local.yml",
+	]) {
+		it(`${file} publishes ports on 127.0.0.1 only`, () => {
+			const source = readFileSync(join(REPO_ROOT, file), "utf8");
+			const ports = [...source.matchAll(/^\s+- "([^"]*:\d+)"$/gm)].map(
+				(m) => m[1],
+			);
+			expect(ports.length).toBeGreaterThan(0);
+			for (const port of ports) expect(port).toMatch(/^127\.0\.0\.1:\d+:\d+$/);
+		});
+	}
+});
