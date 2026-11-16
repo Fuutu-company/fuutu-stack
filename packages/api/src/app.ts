@@ -25,6 +25,7 @@ import { apiConfig } from "./config";
 import { createContext } from "./context";
 import { CORS_ALLOW_HEADERS } from "./cors";
 import { mountCustomRoutes } from "./custom-routes";
+import { errorInfo } from "./error-info";
 import { handleMcpRequest } from "./mcp";
 import { isOriginAllowed } from "./origin-guard";
 import { type ApiDocsPath, serveApiDocs } from "./orpc/api-docs";
@@ -244,7 +245,7 @@ export const app = base
 	// error response here too so emission point 1 covers every /api/* response.
 	.onError((err, c) => {
 		log.error("unhandled error", {
-			err,
+			err: errorInfo(err),
 			method: c.req.method,
 			path: c.req.path,
 		});

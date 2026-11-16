@@ -17,7 +17,13 @@ export const authIpAddressOptions = {
 	ipAddressHeaders: [CLIENT_IP_HEADER],
 };
 
-/** `request` with `CLIENT_IP_HEADER` set to `clientIp` (removed when null). */
+/**
+ * `request` with `CLIENT_IP_HEADER` set to `clientIp` (removed when null).
+ *
+ * Built from the request's parts, not `new Request(request, init)`: under
+ * Next.js the incoming request is a wrapper whose private state the
+ * constructor cannot read (`TypeError: Cannot read private member #state`).
+ */
 export function withClientIp(
 	request: Request,
 	clientIp: string | null,
@@ -25,5 +31,12 @@ export function withClientIp(
 	const headers = new Headers(request.headers);
 	headers.delete(CLIENT_IP_HEADER);
 	if (clientIp) headers.set(CLIENT_IP_HEADER, clientIp);
-	return new Request(request, { headers });
+	const hasBody = request.method !== "GET" && request.method !== "HEAD";
+	const init: RequestInit & { duplex?: "half" } = {
+		method: request.method,
+		headers,
+		signal: request.signal,
+		...(hasBody ? { body: request.body, duplex: "half" } : {}),
+	};
+	return new Request(request.url, init);
 }
