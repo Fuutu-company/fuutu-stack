@@ -62,11 +62,13 @@ if [ "$APP" = "saas" ]; then
 fi
 pnpm -F "@fuutu/$APP" build || fail "build failed"
 
-# --update-snapshots "passes" on pixel diffs — the report diffs ./actual against
-# the pristine copy in /out/../expected, exactly like CI diffs against git HEAD.
+# --update-snapshots=all rewrites every snapshot (the default only rewrites those
+# beyond the maxDiffPixelRatio tolerance, so small drifts would stay stale) and
+# "passes" on pixel diffs — the report diffs ./actual against the pristine copy
+# in /out/../expected, exactly like CI diffs against git HEAD.
 # Visual specs are selected by title ("visual regression", like CI), so
 # app-owned visual specs run next to the kit visual spec.
 pnpm -F "@fuutu/$APP" exec playwright test --grep "visual regression" \
-  --update-snapshots --project=chromium --project=mobile-safari --reporter=list
+  --update-snapshots=all --project=chromium --project=mobile-safari --reporter=list
 status=$?
 finish "$status"

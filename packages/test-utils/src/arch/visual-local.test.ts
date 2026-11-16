@@ -106,6 +106,49 @@ describe("visual-local: paths", () => {
 	});
 });
 
+describe("visual-local: orphaned baselines", () => {
+	const committed = [
+		"a--x-en-desktop-chromium-linux.png",
+		"a--x-de-desktop-chromium-linux.png",
+		"a--x-en-mobile-mobile-safari-linux.png",
+		"a--x-en-desktop-firefox-linux.png",
+		"a--x-en-desktop-chromium-darwin.png",
+	];
+
+	it("flags committed baselines of the run's projects that the run did not write", () => {
+		expect(
+			lib.orphanedBaselines(committed, [
+				"a--x-en-desktop-chromium-linux.png",
+				"a--x-en-mobile-mobile-safari-linux.png",
+			]),
+		).toEqual(["a--x-de-desktop-chromium-linux.png"]);
+	});
+
+	it("leaves other browsers' and host-platform files alone", () => {
+		expect(lib.orphanedBaselines(committed, [])).not.toContain(
+			"a--x-en-desktop-firefox-linux.png",
+		);
+		expect(lib.orphanedBaselines(committed, [])).not.toContain(
+			"a--x-en-desktop-chromium-darwin.png",
+		);
+	});
+
+	it("flags baselines not rewritten since the CI run started", () => {
+		const entries = [
+			{ file: "a--x-en-desktop-chromium-linux.png", mtimeMs: 2000 },
+			{ file: "a--y-en-desktop-chromium-linux.png", mtimeMs: 500 },
+			{ file: "a--y-en-desktop-firefox-linux.png", mtimeMs: 500 },
+		];
+		expect(lib.staleBaselines(entries, 1000)).toEqual([
+			"a--y-en-desktop-chromium-linux.png",
+			"a--y-en-desktop-firefox-linux.png",
+		]);
+		expect(lib.staleBaselines(entries, 1000, ["chromium"])).toEqual([
+			"a--y-en-desktop-chromium-linux.png",
+		]);
+	});
+});
+
 describe("visual-local: wiring", () => {
 	it("exposes one root script and ignores the output dirs", () => {
 		const scripts = JSON.parse(read("package.json")).scripts;
@@ -147,6 +190,27 @@ describe("visual-local: wiring", () => {
 				`pnpm -F ${app} exec playwright test --grep "visual regression" --update-snapshots`,
 			);
 		}
+	});
+
+	it("every update run rewrites all snapshots, not only those past the tolerance", () => {
+		const sources = {
+			container: read("tooling", "scripts", "visual-local-container.sh"),
+			native: read("tooling", "scripts", "visual-local.mjs"),
+			ci: read(".github", "workflows", "ci.yml"),
+			pkg: read("package.json"),
+		};
+		for (const [name, src] of Object.entries(sources)) {
+			expect(src, name).toContain("--update-snapshots=all");
+			// A bare flag means "changed": drifts under maxDiffPixelRatio stay stale.
+			expect(src, name).not.toMatch(/--update-snapshots(?!=)/);
+		}
+	});
+
+	it("CI prunes orphaned baselines after every complete update run", () => {
+		const ci = read(".github", "workflows", "ci.yml");
+		expect(ci.match(/node tooling\/scripts\/visual-prune\.mjs/g)?.length).toBe(
+			3,
+		);
 	});
 
 	it("both playwright configs honour the snapshot dir override", () => {

@@ -27,6 +27,7 @@ import { pathToFileURL } from "node:url";
 import {
 	appPaths,
 	isCiBaseline,
+	orphanedBaselines,
 	parseArgs,
 	playwrightImage,
 	playwrightVersion,
@@ -131,7 +132,9 @@ async function dockerApp(app, image) {
 	const p = appPaths(ROOT, app, "docker");
 	resetDir(p.workDir);
 	copyPngs(p.committedDir, p.expectedDir, isCiBaseline);
-	copyPngs(p.expectedDir, p.actualDir);
+	// `actual` starts empty: it holds exactly what this run wrote, so a
+	// baseline no spec writes any more shows as removed.
+	mkdirSync(p.actualDir, { recursive: true });
 
 	const id = `fuutu-visual-${app}-${process.pid}`;
 	const net = `${id}-net`;
@@ -200,6 +203,23 @@ async function dockerApp(app, image) {
 	if (opts.update) {
 		copyPngs(p.actualDir, p.committedDir, isCiBaseline);
 		label = `Linux baselines UPDATED in .fuutu/visual-baselines/${app} (${image}) — review the diffs below, then commit them`;
+		// Orphans are only known after a complete run: a failed one may have
+		// skipped specs, which must not delete their baselines.
+		if (code === 0) {
+			const orphans = orphanedBaselines(
+				pngs(p.committedDir),
+				pngs(p.actualDir),
+			);
+			for (const f of orphans) rmSync(path.join(p.committedDir, f));
+			if (orphans.length > 0)
+				console.log(
+					`\n${app}: removed ${orphans.length} orphaned baseline(s) no spec writes any more:\n  ${orphans.join("\n  ")}`,
+				);
+		} else {
+			console.error(
+				`\n${app}: the run failed — orphaned baselines were NOT pruned.`,
+			);
+		}
 	}
 	buildReport(app, p, label);
 	return code;
@@ -213,7 +233,6 @@ async function nativeApp(app) {
 	resetDir(p.workDir);
 	copyPngs(p.nativeBaselineDir, p.expectedDir);
 	mkdirSync(p.expectedDir, { recursive: true });
-	copyPngs(p.expectedDir, p.actualDir);
 	mkdirSync(p.actualDir, { recursive: true });
 
 	console.log(
@@ -235,7 +254,7 @@ async function nativeApp(app) {
 			// By title, like CI — app-owned visual specs run too.
 			"--grep",
 			"visual regression",
-			"--update-snapshots",
+			"--update-snapshots=all",
 			"--project=chromium",
 			"--reporter=list",
 		],

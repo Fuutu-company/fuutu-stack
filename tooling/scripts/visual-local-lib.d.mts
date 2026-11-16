@@ -22,3 +22,14 @@ export function appPaths(
 	nativeBaselineDir: string;
 };
 export function isCiBaseline(file: string): boolean;
+export const BASELINE_PROJECTS: string[];
+export function orphanedBaselines(
+	committed: string[],
+	produced: string[],
+	projects?: string[] | null,
+): string[];
+export function staleBaselines(
+	entries: { file: string; mtimeMs: number }[],
+	startedAtMs: number,
+	projects?: string[] | null,
+): string[];
