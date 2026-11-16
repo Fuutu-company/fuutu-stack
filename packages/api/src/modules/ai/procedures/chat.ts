@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { resolveAIProvider } from "@fuutu/ai";
+import { aiConfig } from "@fuutu/ai/config";
 import { createLogger } from "@fuutu/logs";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { eventIterator } from "@orpc/server";
@@ -23,7 +24,13 @@ const chatInputSchema = z.object({
 			}),
 		)
 		.min(1)
-		.max(50),
+		.max(50)
+		.refine(
+			(messages) =>
+				messages.reduce((n, m) => n + m.content.length, 0) <=
+				aiConfig.maxPromptChars,
+			{ message: "Prompt too long" },
+		),
 });
 
 export const chat = permissionProcedure(PERMISSIONS.USE_AI)
@@ -44,7 +51,7 @@ export const chat = permissionProcedure(PERMISSIONS.USE_AI)
 		const promptTokens = estimateTokens(
 			input.messages.map((m) => m.content).join(""),
 		);
-		await assertAiCredits(owner, promptTokens);
+		const spend = await assertAiCredits(owner, promptTokens);
 
 		const provider = resolveAIProvider();
 		const stream = await provider.stream(input.messages);
@@ -69,6 +76,7 @@ export const chat = permissionProcedure(PERMISSIONS.USE_AI)
 					reply: fullResponse,
 					idempotencyKey,
 					reason: "ai.chat",
+					spend,
 				});
 			}
 		}

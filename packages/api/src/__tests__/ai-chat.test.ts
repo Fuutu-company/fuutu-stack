@@ -11,6 +11,18 @@ vi.mock("@fuutu/ai", () => ({
 vi.mock("@fuutu/db", () => ({
 	db: {},
 	getCreditBalance: vi.fn(async () => null),
+	// A paying owner: null balances run on overage, which needs a paid plan.
+	getActiveSubscriptionForUser: vi.fn(async () => ({
+		status: "ACTIVE",
+		productId: "prod-pro",
+		priceId: "price-pro",
+	})),
+	getActiveSubscriptionForOrganization: vi.fn(async () => ({
+		status: "ACTIVE",
+		productId: "prod-pro",
+		priceId: "price-pro",
+	})),
+	getActiveSubscriptionsForOwner: vi.fn(async () => []),
 	getActiveCreditPackages: vi.fn(async () => []),
 	consumeCreditsTx: vi.fn(async () => ({
 		ok: true,

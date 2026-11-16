@@ -5,10 +5,18 @@ import {
 } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { z } from "zod";
-import { getMeter } from "./meters";
+import { type CreditMeter, getMeter } from "./meters";
 import { ownerXorCheck } from "./owner";
 
 const log = createLogger({ scope: "credits" });
+
+/** Overage needs both the meter's and the caller's consent. */
+function overageAllowed(
+	meter: CreditMeter,
+	callerAllows: boolean | undefined,
+): boolean {
+	return meter.allowOverage === true && callerAllows === true;
+}
 
 export const ConsumeCreditsSchema = ownerXorCheck(
 	z.object({
@@ -19,6 +27,7 @@ export const ConsumeCreditsSchema = ownerXorCheck(
 		reason: z.string(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
 		idempotencyKey: z.string().min(1).max(255).optional(),
+		allowOverage: z.boolean().optional(),
 	}),
 );
 
@@ -30,6 +39,12 @@ export interface ConsumeCreditsParams {
 	reason: string;
 	metadata?: Record<string, unknown>;
 	idempotencyKey?: string;
+	/**
+	 * The caller's overage decision (e.g. the owner holds an active paid
+	 * plan). Overage happens only when this AND `meter.allowOverage` are
+	 * true. Default false.
+	 */
+	allowOverage?: boolean;
 }
 
 export interface ConsumeCreditsResult {
@@ -47,7 +62,7 @@ export interface ConsumeCreditsResult {
  * Consumption order:
  * 1. Recurring (monthly) balance — until exhausted
  * 2. Top-up packages — oldest/lowest-priority first, until exhausted
- * 3. Overage — only if meter.allowOverage is true
+ * 3. Overage — only if meter.allowOverage and params.allowOverage are true
  * 4. If none of the above: return { ok: false, error: "credits_exceeded" }
  */
 export async function consumeCredits(
@@ -61,6 +76,7 @@ export async function consumeCredits(
 		reason,
 		metadata,
 		idempotencyKey,
+		allowOverage,
 	} = ConsumeCreditsSchema.parse(params);
 
 	const meter = getMeter(meterKey);
@@ -76,7 +92,7 @@ export async function consumeCredits(
 		reason,
 		metadata,
 		idempotencyKey,
-		allowOverage: meter.allowOverage ?? false,
+		allowOverage: overageAllowed(meter, allowOverage),
 	});
 
 	if (result.ok) {
@@ -114,6 +130,7 @@ export const CheckCreditsSchema = ownerXorCheck(
 		organizationId: z.string().optional(),
 		meterKey: z.string().min(1),
 		amount: z.number().int().positive().max(2_147_483_647),
+		allowOverage: z.boolean().optional(),
 	}),
 );
 
@@ -131,7 +148,7 @@ export async function checkCredits(
 	remaining: number;
 	wouldUseTopup: boolean;
 }> {
-	const { userId, organizationId, meterKey, amount } =
+	const { userId, organizationId, meterKey, amount, allowOverage } =
 		CheckCreditsSchema.parse(params);
 	const meter = getMeter(meterKey);
 	if (!meter) throw new Error(`checkCredits: unknown meter key "${meterKey}"`);
@@ -158,7 +175,7 @@ export async function checkCredits(
 			wouldUseTopup: recurringRemaining < amount,
 		};
 	}
-	if (meter.allowOverage) {
+	if (overageAllowed(meter, allowOverage)) {
 		return {
 			allowed: true,
 			remaining: totalRemaining - amount,

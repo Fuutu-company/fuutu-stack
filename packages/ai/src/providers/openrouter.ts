@@ -3,6 +3,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createLogger } from "@fuutu/logs";
 import type { ModelMessage } from "ai";
 import { generateText, streamText, wrapLanguageModel } from "ai";
+import { DEFAULT_MAX_OUTPUT_TOKENS } from "../limits";
 import type {
 	AIChatOptions,
 	AIChatResponse,
@@ -16,6 +17,8 @@ export interface OpenRouterProviderOptions {
 	model?: string;
 	/** Whether to apply the AI SDK devtools middleware. Defaults to false. */
 	devtools?: boolean;
+	/** Reply cap when a call sets no `maxTokens`. Default 1024. */
+	maxOutputTokens?: number;
 }
 
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
@@ -41,9 +44,12 @@ export class OpenRouterProvider implements AIProvider {
 
 	private readonly model: Parameters<typeof generateText>[0]["model"];
 
+	private readonly maxOutputTokens: number;
+
 	private readonly log = createLogger({ scope: "ai:openrouter" });
 
 	constructor(options: OpenRouterProviderOptions = {}) {
+		this.maxOutputTokens = options.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
 		const openai = createOpenAI({
 			apiKey: options.apiKey,
 			baseURL: options.baseURL ?? DEFAULT_BASE_URL,
@@ -72,7 +78,7 @@ export class OpenRouterProvider implements AIProvider {
 					content: m.content,
 				})) as ModelMessage[],
 				temperature: options?.temperature,
-				maxOutputTokens: options?.maxTokens,
+				maxOutputTokens: options?.maxTokens ?? this.maxOutputTokens,
 			});
 			return {
 				content: result.text,
@@ -99,7 +105,7 @@ export class OpenRouterProvider implements AIProvider {
 					content: m.content,
 				})) as ModelMessage[],
 				temperature: options?.temperature,
-				maxOutputTokens: options?.maxTokens,
+				maxOutputTokens: options?.maxTokens ?? this.maxOutputTokens,
 			});
 			// Plain UTF-8 text chunks (not SSE UI-message frames) — the API
 			// accumulates the raw text for persistence and the client renders
