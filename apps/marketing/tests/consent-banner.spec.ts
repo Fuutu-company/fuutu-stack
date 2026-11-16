@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { consentBannerMode, consentBannerVisible } from "@fuutu/analytics";
 import { expect, type Page, test } from "@playwright/test";
 import { PLAN_IDS, PLANS } from "../../../packages/payments/src/config";
+import { LOCALES, localePrefix } from "./locales";
 
 /** English CTA label of every plan the marketing pricing page shows. */
 function marketingPlanCtas(): string[] {
@@ -36,11 +37,10 @@ test.describe("consent banner", () => {
 	test.use({ viewport: { width: 1280, height: 720 } });
 
 	test("links the privacy policy in the user's locale", async ({ page }) => {
-		for (const [path, href] of [
-			["/en", /\/legal\/privacy$/],
-			["/de", /\/de\/legal\/privacy$/],
-		] as const) {
-			await page.goto(path);
+		// Enabled locales only — a dormant one is not routable.
+		for (const locale of LOCALES) {
+			const href = new RegExp(`${localePrefix(locale)}/legal/privacy$`);
+			await page.goto(`/${locale}`);
 			const banner = page.getByRole("dialog", { name: /analytics/i });
 			await expect(banner).toBeVisible({ timeout: 10_000 });
 			await expect(banner.getByRole("link")).toHaveAttribute("href", href);
