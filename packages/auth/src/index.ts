@@ -15,7 +15,6 @@ import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
-import { deleteSessionCookie } from "better-auth/cookies";
 import {
 	admin,
 	jwt,
@@ -51,7 +50,6 @@ import {
 	assertOwnerRemainsAfterRoleChange,
 	restoreOwnerIfNoneLeft,
 } from "./hooks/last-owner";
-import { blockMagicLinkSecondFactorBypass } from "./hooks/magic-link-two-factor";
 import {
 	assertRegistrationWithinLimits,
 	getAuthorizeParams,
@@ -73,6 +71,7 @@ import {
 	assertInviteSeatAvailable,
 	assertSeatAvailable,
 } from "./hooks/seat-limit";
+import { assertSecondFactorForNewSession } from "./hooks/second-factor-session";
 import { assertSignupPolicy } from "./hooks/signup-policy";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
 import { sendEmail } from "./lib/email";
@@ -326,17 +325,6 @@ const authOptions = {
 			}
 		}),
 		after: createAuthMiddleware(async (ctx) => {
-			const secondFactorUrl = await blockMagicLinkSecondFactorBypass({
-				path: ctx.path,
-				newSession: ctx.context.newSession,
-				endSession: async (token) => {
-					deleteSessionCookie(ctx);
-					await ctx.context.internalAdapter.deleteSession(token);
-					ctx.context.setNewSession(null);
-				},
-				errorPageUrl: () => getErrorPageUrl(ctx.context),
-			});
-			if (secondFactorUrl) throw ctx.redirect(secondFactorUrl);
 			await notifyPreviousEmailAfterChange({
 				path: ctx.path,
 				token: ctx.query?.token,
@@ -549,7 +537,18 @@ const authOptions = {
 			create: {
 				// Start a new session in the org the user last worked in
 				// (`user.lastActiveOrganizationId`), if still a member.
-				before: async (session) => {
+				before: async (session, ctx) => {
+					// Magic link / social sign-in never skip a user's 2FA
+					// (hooks/second-factor-session.ts).
+					if (authConfig.features.twoFactor && ctx) {
+						await assertSecondFactorForNewSession({
+							path: ctx.path,
+							userId: session.userId,
+							findUser: (id) => ctx.context.internalAdapter.findUserById(id),
+							errorPageUrl: () => getErrorPageUrl(ctx.context),
+							redirect: (url) => ctx.redirect(url),
+						});
+					}
 					if (config.features.organizationsMode === "off") return;
 					const activeOrganizationId = await restoreActiveOrganization(session);
 					if (activeOrganizationId) {
