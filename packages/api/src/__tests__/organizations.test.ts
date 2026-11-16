@@ -362,6 +362,76 @@ describe("organizations.update", () => {
 	});
 });
 
+describe("organizations.update logo and Better Auth errors", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+	});
+
+	it.each([
+		"https://evil.example/pixel.png",
+		"/image-proxy/organization-logos/org-2/logo.png",
+		"/image-proxy/avatars/org-1/logo.png",
+		"/image-proxy/organization-logos/org-1/../logo.png",
+	])("rejects logo %s with BAD_REQUEST before Better Auth", async (logo) => {
+		await expect(
+			call(
+				organizationsRouter.update,
+				{ organizationId: "org-1", logo },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(auth.api.updateOrganization).not.toHaveBeenCalled();
+	});
+
+	it("maps a Better Auth INVALID_PROFILE_INPUT APIError to BAD_REQUEST", async () => {
+		vi.mocked(auth.api.updateOrganization).mockRejectedValue(
+			Object.assign(new Error("Name must be at most 100 characters"), {
+				name: "APIError",
+				statusCode: 400,
+				body: { code: "INVALID_PROFILE_INPUT" },
+			}),
+		);
+		await expect(
+			call(
+				organizationsRouter.update,
+				{ organizationId: "org-1", name: "Acme" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST", status: 400 });
+	});
+
+	it("maps a failed subscription cancel on delete to BAD_GATEWAY", async () => {
+		vi.mocked(auth.api.deleteOrganization).mockRejectedValue(
+			Object.assign(new Error("Subscriptions could not be cancelled"), {
+				name: "APIError",
+				statusCode: 502,
+				body: { code: "SUBSCRIPTION_CANCELLATION_FAILED" },
+			}),
+		);
+		await expect(
+			call(
+				organizationsRouter.delete,
+				{ organizationId: "org-1" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_GATEWAY", status: 502 });
+	});
+
+	it("rethrows errors that are not Better Auth client errors", async () => {
+		vi.mocked(auth.api.deleteOrganization).mockRejectedValue(new Error("boom"));
+		await expect(
+			call(
+				organizationsRouter.delete,
+				{ organizationId: "org-1" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ message: "boom" });
+	});
+});
+
 describe("organizations.delete", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

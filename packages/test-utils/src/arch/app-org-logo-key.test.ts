@@ -31,3 +31,27 @@ describe("orgLogoKey", () => {
 		expect(orgLogoKey("???.")).toMatch(/^logo-[0-9a-f-]{36}$/);
 	});
 });
+
+describe("orgLogoKey and the profile-input logo rule", () => {
+	const RULE_MODULE = join(
+		import.meta.dirname,
+		"../../../auth/src/hooks/profile-input.ts",
+	);
+
+	it.each([
+		"Acme Logo.png",
+		"???.",
+		"Ünïcode näme.JPG",
+		"a/b\\c.png",
+		"..hidden.png",
+	])("builds a URL the owner's rule accepts for %s", async (fileName) => {
+		const { isOwnOrganizationLogo } = (await import(
+			/* @vite-ignore */ RULE_MODULE
+		)) as {
+			isOwnOrganizationLogo: (logo: string, organizationId: string) => boolean;
+		};
+		const url = `/image-proxy/organization-logos/org-1/${orgLogoKey(fileName)}`;
+		expect(isOwnOrganizationLogo(url, "org-1")).toBe(true);
+		expect(isOwnOrganizationLogo(url, "org-2")).toBe(false);
+	});
+});

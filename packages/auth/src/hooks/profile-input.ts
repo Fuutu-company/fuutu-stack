@@ -45,6 +45,19 @@ function isOwnUpload(
 	return url.startsWith(prefix) && OBJECT_KEY.test(url.slice(prefix.length));
 }
 
+/**
+ * True when `logo` is a path under the organization's own
+ * `/image-proxy/organization-logos/<organizationId>/` uploads. The same
+ * rule Better Auth's `/organization/update` hook enforces — the API input
+ * schema uses it to answer 400 instead of a 500.
+ */
+export function isOwnOrganizationLogo(
+	logo: string,
+	organizationId: string,
+): boolean {
+	return isOwnUpload(logo, "organization-logos", organizationId);
+}
+
 const asBody = (value: unknown): Body =>
 	typeof value === "object" && value !== null ? (value as Body) : {};
 
