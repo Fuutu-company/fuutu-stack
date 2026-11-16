@@ -14,7 +14,7 @@ catalog:
   # MCP — pinned exactly: the v2 SDK ships minors every few weeks
   "@modelcontextprotocol/server": 2.4.0
   # Next.js / React
-  next: ^16.4.2
+  next: ^16.4.5
   react: ^19.3.0
   react-dom: ^19.3.0
   "@types/react": ^19.3.0
