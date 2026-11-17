@@ -2,12 +2,7 @@ import { mcp } from "@better-auth/mcp";
 import { DEFAULT_OAUTH_SCOPES } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { config } from "@fuutu/config";
-import {
-	getUserByEmail,
-	prismaAuditSink,
-	revokeApiKeysForUser,
-	revokeOAuthTokensForUser,
-} from "@fuutu/db";
+import { getUserByEmail, prismaAuditSink } from "@fuutu/db";
 import { db } from "@fuutu/db/internal/client";
 import { env } from "@fuutu/env/saas";
 import { createLogger, logsConfig, setAuditSink } from "@fuutu/logs";
@@ -15,11 +10,6 @@ import { createCustomerForUser } from "@fuutu/payments";
 import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import {
-	createAuthMiddleware,
-	getOAuthState,
-	getSessionFromCtx,
-} from "better-auth/api";
 import {
 	admin,
 	jwt,
@@ -31,66 +21,19 @@ import {
 	twoFactor,
 	username,
 } from "better-auth/plugins";
-import { authIpAddressOptions } from "./client-ip-header";
 import { authConfig } from "./config";
-import {
-	beforeOrganizationDelete,
-	beforeUserDelete,
-} from "./hooks/account-deletion";
+import { beforeOrganizationDelete } from "./hooks/account-deletion";
 import {
 	persistActiveOrganizationChange,
 	restoreActiveOrganization,
 } from "./hooks/active-organization";
-import { logApiKeysRevoked, logSessionCreated, logSignUp } from "./hooks/audit";
-import { assertDeleteUserReauth } from "./hooks/delete-user-reauth";
-import { notifyPreviousEmailAfterChange } from "./hooks/email-change-notice";
-import { assertSessionForEmailVerification } from "./hooks/email-verification-session";
-import { assertFreshSession } from "./hooks/fresh-session";
-import { assertNotImpersonating } from "./hooks/impersonation-guard";
-import {
-	assertImpersonationActive,
-	isEndedImpersonationResult,
-} from "./hooks/impersonation-session";
-import { assertInvitationForSignup } from "./hooks/invitation-only";
-import {
-	assertOwnerRemainsAfterRemoval,
-	assertOwnerRemainsAfterRoleChange,
-	restoreOwnerIfNoneLeft,
-} from "./hooks/last-owner";
-import {
-	assertRegistrationWithinLimits,
-	getAuthorizeParams,
-	getPromptNoneBlockUrl,
-	getUnverifiedErrorRedirect,
-} from "./hooks/mcp-oauth-guards";
-import {
-	revokeOAuthTokensAfterAccountChange,
-	revokeOAuthTokensBeforeConsentDelete,
-} from "./hooks/mcp-oauth-revocation";
-import {
-	revokeApiKeysAfterLeave,
-	revokeApiKeysOfRemovedMember,
-} from "./hooks/member-api-keys";
-import { hideInvitationsFromNonInviters } from "./hooks/organization-invitations";
-import { assertPasswordPolicy } from "./hooks/password-policy";
+import { logSessionCreated, logSignUp } from "./hooks/audit";
 import { syncSeatsForOrganization } from "./hooks/payments-sync";
-import { assertProfileInput } from "./hooks/profile-input";
 import {
 	assertInviteSeatAvailable,
 	assertSeatAvailable,
 } from "./hooks/seat-limit";
-import {
-	assertSecondFactorForNewAccountLink,
-	assertSecondFactorForNewSession,
-} from "./hooks/second-factor-session";
-import { assertSignupPolicy } from "./hooks/signup-policy";
-import {
-	markMailboxProof,
-	revokeUnprovenCredentials,
-} from "./hooks/unproven-credentials";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
-import { assertVerifiedEmailForChange } from "./hooks/verified-email-change";
-import { assertVerifiedEmailForCredential } from "./hooks/verified-email-credentials";
 import { sendEmail } from "./lib/email";
 import { sendOrganizationInvitationEmail } from "./lib/invitation-email";
 import { saasBaseUrl } from "./lib/saas-url";
@@ -98,6 +41,14 @@ import { MCP_ORG_CLAIM, mcpOAuth } from "./mcp-oauth";
 import { getSocialCredentials, isSocialProviderActive } from "./methods";
 import { mcpConnectedApps } from "./plugins/mcp-connected-apps";
 import { readOnlyRateLimitRules } from "./rate-limit-rules";
+import {
+	authIpAddressOptions,
+	composeDisabledPaths,
+	revokeCredentialsOnPasswordReset,
+	securityDatabaseHooks,
+	securityHooks,
+	securityOrganizationHooks,
+} from "./security";
 
 // Route every `createAuditLogger` call across the monorepo into the canonical
 // Postgres `AuditLog` table — but only when LOG_AUDIT_SINK=db (the default is
@@ -140,12 +91,6 @@ const socialCredentials = getSocialCredentials();
 /** Lifetime of MCP OAuth access tokens (JWT, not revocable). */
 const MCP_ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 
-/** Error page for OAuth errors that must not go back to the client. */
-const getErrorPageUrl = (context: {
-	baseURL: string;
-	options: { onAPIError?: { errorURL?: string } };
-}) => context.options.onAPIError?.errorURL || `${context.baseURL}/error`;
-
 const adminPlugin = admin({
 	defaultBanReason: authConfig.admin.defaultBanReason,
 	bannedUserMessage: authConfig.admin.bannedUserMessage,
@@ -156,28 +101,6 @@ const adminPlugin = admin({
 const adminEndpointPaths = Object.values(adminPlugin.endpoints).map(
 	(endpoint) => endpoint.path,
 );
-
-/**
- * Organization mutations wrapped by the oRPC `organizations.*` procedures
- * (slug rules, plan limits, rate limits, webhooks, role checks) — closed
- * to direct HTTP via `disabledPaths`.
- */
-const organizationMutationPaths = [
-	"/organization/create",
-	"/organization/update",
-	"/organization/delete",
-	"/organization/invite-member",
-	"/organization/update-member-role",
-	"/organization/remove-member",
-	"/organization/cancel-invitation",
-];
-
-/**
- * Organization reads with invitee emails for any member — the kit UI lists
- * invitations through the oRPC `organizations.invitations.list`
- * (INVITE_MEMBER). Closed with the mutations above.
- */
-const organizationInvitationReadPaths = ["/organization/list-invitations"];
 
 const authOptions = {
 	database: prismaAdapter(db, {
@@ -195,21 +118,14 @@ const authOptions = {
 		errorURL: `${saasBaseUrl}${authConfig.redirects.error}`,
 	},
 
-	// The JWT plugin's session-to-JWT route would mint tokens signed with
-	// the same key as MCP access tokens — disabled per the oauth-provider docs.
-	//
-	// Every admin-plugin endpoint is closed to direct HTTP too: support
-	// actions run through the audited oRPC procedures, which call
-	// `auth.api.*` server-side (not affected by `disabledPaths`).
-	// `authConfig.admin.exposeAuthEndpoints` opts back in. Same for the
-	// organization mutations (`authConfig.organizations.exposeAuthEndpoints`).
-	disabledPaths: [
-		...(mcpOAuth.active ? ["/token"] : []),
-		...(authConfig.admin.exposeAuthEndpoints ? [] : adminEndpointPaths),
-		...(authConfig.organizations.exposeAuthEndpoints
-			? []
-			: [...organizationMutationPaths, ...organizationInvitationReadPaths]),
-	],
+	// `/token` (MCP OAuth), the admin endpoints and the organization
+	// mutations are closed to direct HTTP (security/disabled-paths.ts).
+	disabledPaths: composeDisabledPaths({
+		mcpOAuthActive: mcpOAuth.active,
+		adminEndpointPaths,
+		exposeAdminEndpoints: authConfig.admin.exposeAuthEndpoints,
+		exposeOrganizationEndpoints: authConfig.organizations.exposeAuthEndpoints,
+	}),
 
 	// Rate limiting: Prevent brute-force attacks and email spam.
 	// Disabled when FUUTU_DISABLE_RATE_LIMIT is set (CI E2E).
@@ -294,135 +210,8 @@ const authOptions = {
 		},
 	},
 
-	// Server-side enforcement of authConfig.passwordPolicy complexity rules
-	// (Better-Auth itself only checks min/max length). Runs for every
-	// endpoint that carries a plaintext password.
-	hooks: {
-		before: createAuthMiddleware(async (ctx) => {
-			assertPasswordPolicy(ctx.path, ctx.body);
-			await assertNotImpersonating({
-				path: ctx.path,
-				getSession: () => getSessionFromCtx(ctx),
-			});
-			await assertProfileInput({
-				path: ctx.path,
-				body: ctx.body,
-				getSession: () => getSessionFromCtx(ctx),
-			});
-			await assertFreshSession({
-				path: ctx.path,
-				getSession: () => getSessionFromCtx(ctx),
-			});
-			await assertVerifiedEmailForChange({
-				path: ctx.path,
-				getSession: () => getSessionFromCtx(ctx),
-			});
-			await assertVerifiedEmailForCredential({
-				path: ctx.path,
-				getSession: () => getSessionFromCtx(ctx),
-			});
-			await assertSessionForEmailVerification({
-				enabled: !authConfig.signup.requireEmailVerification,
-				path: ctx.path,
-				query: ctx.query,
-				secret: ctx.context.secret,
-				appBaseUrl: saasBaseUrl,
-				getSession: () => getSessionFromCtx(ctx),
-				redirect: (url) => ctx.redirect(url),
-			});
-			await assertDeleteUserReauth({
-				path: ctx.path,
-				body: ctx.body,
-				getSession: () => getSessionFromCtx(ctx),
-				hasPassword: async (userId) =>
-					Boolean(
-						(await ctx.context.internalAdapter.findCredentialAccount(userId))
-							?.password,
-					),
-			});
-			await assertImpersonationActive({
-				path: ctx.path,
-				getSession: () => getSessionFromCtx(ctx),
-			});
-			if (!mcpOAuth.active) return;
-
-			// MCP OAuth guards — see hooks/mcp-oauth-guards.ts.
-			if (ctx.path === "/oauth2/register") {
-				assertRegistrationWithinLimits(
-					ctx.body,
-					ctx.request?.headers.get("content-length"),
-				);
-			}
-			if (ctx.path === "/oauth2/authorize") {
-				const url = await getPromptNoneBlockUrl(
-					getAuthorizeParams(ctx.query, ctx.body),
-					getErrorPageUrl(ctx.context),
-				);
-				if (url) {
-					const fromFetch =
-						ctx.request?.headers.get("sec-fetch-mode") === "cors" ||
-						ctx.headers?.get("accept")?.includes("application/json");
-					if (fromFetch) return ctx.json({ redirect: true, url });
-					throw ctx.redirect(url);
-				}
-			}
-			if (ctx.path === "/oauth2/delete-consent") {
-				const session = await getSessionFromCtx(ctx);
-				await revokeOAuthTokensBeforeConsentDelete({
-					path: ctx.path,
-					body: ctx.body,
-					userId: session?.user.id,
-				});
-			}
-		}),
-		after: createAuthMiddleware(async (ctx) => {
-			const withoutInvitations = hideInvitationsFromNonInviters({
-				path: ctx.path,
-				returned: ctx.context.returned,
-				userId: ctx.context.session?.user.id,
-			});
-			if (withoutInvitations) return ctx.json(withoutInvitations);
-			await notifyPreviousEmailAfterChange({
-				path: ctx.path,
-				token: ctx.query?.token,
-				returned: ctx.context.returned,
-				secret: ctx.context.secret,
-			});
-			if (
-				await isEndedImpersonationResult({
-					path: ctx.path,
-					returned: ctx.context.returned,
-				})
-			) {
-				return ctx.json(null);
-			}
-			await revokeApiKeysAfterLeave({
-				path: ctx.path,
-				returned: ctx.context.returned,
-				body: ctx.body,
-				userId: ctx.context.session?.user.id,
-			});
-			if (!mcpOAuth.active) return;
-			if (ctx.path === "/oauth2/authorize") {
-				const replacement = await getUnverifiedErrorRedirect({
-					returned: ctx.context.returned,
-					params: getAuthorizeParams(ctx.query, ctx.body),
-					appOrigin: new URL(ctx.context.baseURL).origin,
-					errorPageUrl: getErrorPageUrl(ctx.context),
-				});
-				if (replacement?.mode === "json") {
-					return ctx.json({ redirect: true, url: replacement.url });
-				}
-				if (replacement) throw ctx.redirect(replacement.url);
-				return;
-			}
-			await revokeOAuthTokensAfterAccountChange({
-				path: ctx.path,
-				returned: ctx.context.returned,
-				userId: ctx.context.session?.user.id,
-			});
-		}),
-	},
+	// Request guards and response filters, in order (security/index.ts).
+	hooks: securityHooks,
 
 	emailAndPassword: {
 		enabled: authConfig.features.emailPassword,
@@ -434,17 +223,8 @@ const authOptions = {
 		// A reset is account recovery: every existing session (possibly the
 		// attacker's) ends.
 		revokeSessionsOnPasswordReset: true,
-		// MCP refresh tokens and API keys outlive sessions — a reset
-		// (account recovery) must cut off connected OAuth clients and keys
-		// minted with a stolen session too (audited: org integrations stop).
-		onPasswordReset: async ({ user }) => {
-			if (mcpOAuth.active) await revokeOAuthTokensForUser(user.id);
-			await logApiKeysRevoked({
-				userId: user.id,
-				count: await revokeApiKeysForUser(user.id),
-				reason: "password_reset",
-			});
-		},
+		// OAuth tokens and API keys end too (security/index.ts).
+		onPasswordReset: revokeCredentialsOnPasswordReset,
 		sendResetPassword: async ({
 			user,
 			url,
@@ -552,12 +332,8 @@ const authOptions = {
 	databaseHooks: {
 		user: {
 			create: {
-				before: async (user, ctx) => {
-					// authConfig.signup gate (enabled / allowedDomains) on
-					// self-service paths, then the invitation-only gate.
-					assertSignupPolicy({ email: user.email }, ctx);
-					await assertInvitationForSignup({ email: user.email }, ctx);
-				},
+				// Sign-up gates first (security/index.ts).
+				before: securityDatabaseHooks.user.create.before,
 				after: async (user) => {
 					await logSignUp({ id: user.id });
 					// Create a customer record at the active payment provider.
@@ -588,86 +364,17 @@ const authOptions = {
 					}
 				},
 			},
-			delete: {
-				before: async (user) => {
-					// Sole owners are refused; subscriptions are cancelled before
-					// the user row is deleted — a failed cancel aborts.
-					await beforeUserDelete(user.id);
-				},
-			},
-			// Magic link / email OTP proving the mailbox of an unverified
-			// account: the squatter's passkeys, 2FA, API keys and OAuth tokens
-			// go with its password (hooks/unproven-credentials.ts).
-			update: {
-				before: async (data, ctx) =>
-					markMailboxProof(data, ctx, {
-						twoFactor: authConfig.features.twoFactor,
-					}),
-				after: async (user, ctx) => {
-					const adapter = ctx?.context.adapter;
-					const deleteRows = async (model: string, userId: string) => {
-						await adapter?.deleteMany({
-							model,
-							where: [{ field: "userId", value: userId }],
-						});
-					};
-					await revokeUnprovenCredentials(user, ctx, {
-						deletePasskeys: async (id) => {
-							if (authConfig.features.passkeys) await deleteRows("passkey", id);
-						},
-						deleteTwoFactor: async (id) => {
-							if (authConfig.features.twoFactor) {
-								await deleteRows("twoFactor", id);
-							}
-						},
-						revokeApiKeys: async (id) => {
-							await logApiKeysRevoked({
-								userId: id,
-								count: await revokeApiKeysForUser(id),
-								reason: "mailbox_proof",
-							});
-						},
-						revokeOAuthTokens: async (id) => {
-							if (mcpOAuth.active) await revokeOAuthTokensForUser(id);
-						},
-					});
-				},
-			},
+			delete: securityDatabaseHooks.user.delete,
+			update: securityDatabaseHooks.user.update,
 		},
-		account: {
-			create: {
-				// A refused social sign-in must not leave the provider account
-				// linked to a 2FA user (hooks/second-factor-session.ts).
-				before: async (account, ctx) => {
-					if (!authConfig.features.twoFactor || !ctx) return;
-					await assertSecondFactorForNewAccountLink({
-						path: ctx.path,
-						userId: account.userId,
-						isLinkFlow: async () =>
-							Boolean((await getOAuthState().catch(() => null))?.link),
-						findUser: (id) => ctx.context.internalAdapter.findUserById(id),
-						errorPageUrl: () => getErrorPageUrl(ctx.context),
-						redirect: (url) => ctx.redirect(url),
-					});
-				},
-			},
-		},
+		account: securityDatabaseHooks.account,
 		session: {
 			create: {
 				// Start a new session in the org the user last worked in
 				// (`user.lastActiveOrganizationId`), if still a member.
 				before: async (session, ctx) => {
-					// Magic link / social sign-in never skip a user's 2FA
-					// (hooks/second-factor-session.ts).
-					if (authConfig.features.twoFactor && ctx) {
-						await assertSecondFactorForNewSession({
-							path: ctx.path,
-							userId: session.userId,
-							findUser: (id) => ctx.context.internalAdapter.findUserById(id),
-							errorPageUrl: () => getErrorPageUrl(ctx.context),
-							redirect: (url) => ctx.redirect(url),
-						});
-					}
+					// 2FA first (security/index.ts).
+					await securityDatabaseHooks.session.create.before(session, ctx);
 					if (config.features.organizationsMode === "off") return;
 					const activeOrganizationId = await restoreActiveOrganization(session);
 					if (activeOrganizationId) {
@@ -784,17 +491,8 @@ const authOptions = {
 									invitation.organizationId,
 								);
 							},
-							beforeRemoveMember: async ({ member }) => {
-								await assertOwnerRemainsAfterRemoval({ member });
-								await revokeApiKeysOfRemovedMember(member);
-							},
-							// The organization always keeps an owner (hooks/last-owner.ts).
-							beforeUpdateMemberRole: async ({ member, newRole }) => {
-								await assertOwnerRemainsAfterRoleChange({ member, newRole });
-							},
-							afterUpdateMemberRole: async ({ member, previousRole }) => {
-								await restoreOwnerIfNoneLeft({ member, previousRole });
-							},
+							// Last owner and API-key revocation (security/index.ts).
+							...securityOrganizationHooks,
 							afterRemoveMember: async ({ member }) => {
 								await syncSeatsForOrganization(member.organizationId);
 							},
