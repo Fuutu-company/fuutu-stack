@@ -251,13 +251,14 @@ jobs:
           pnpm -F @fuutu/db exec prisma db push --force-reset
           NODE_ENV=development pnpm db:seed
 
-      # --update-snapshots=all rewrites every snapshot (the bare flag only
-      # rewrites those beyond the maxDiffPixelRatio tolerance, so small drifts
-      # stayed stale) and "passes" on pixel diffs — the diff signal is the
-      # git diff afterwards. A finished run then deletes the baselines whose
+      # --update-snapshots=changed rewrites only the snapshots beyond the
+      # maxDiffPixelRatio tolerance and "passes" on those diffs — the diff
+      # signal is the git diff afterwards. (`all` rewrote every render whose
+      # PNG bytes differed, so anti-aliasing noise became a baseline commit on
+      # every run.) A finished run then deletes the baselines whose
       # name alone makes them orphans (visual-prune.mjs: disabled locale, page
       # no spec names, viewport on the wrong project class) — never the ones
-      # this run left untouched: Playwright skips byte-identical renders, and
+      # this run left untouched: Playwright keeps renders within tolerance, and
       # each job covers one app and a subset of projects. A real failure aborts before the status check.
       # Update mode only on user commits: when the head commit is already a
       # CI baseline commit (bot push → synchronize run), we compare instead
@@ -276,7 +277,7 @@ jobs:
               pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --project=chromium --project=mobile-safari
               ;;
             *)
-              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=all --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=changed --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
               if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
                 echo "changed=1" >> $GITHUB_OUTPUT
               fi
@@ -296,14 +297,14 @@ jobs:
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
         run: |
-          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=all --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
+          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=changed --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
       - name: Update baselines (merge to main — all browsers)
         if: github.event_name == 'push' && github.ref_name == 'main'
         run: |
-          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=all && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
+          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=changed && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
         env:
           PLAYWRIGHT_USE_PROD: "1"
 

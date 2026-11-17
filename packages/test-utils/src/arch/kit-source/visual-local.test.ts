@@ -355,7 +355,10 @@ describe("visual-local: wiring", () => {
 		}
 	});
 
-	it("every update run rewrites all snapshots, not only those past the tolerance", () => {
+	it("every update run rewrites only the snapshots past the tolerance", () => {
+		// `all` rewrites every render whose PNG bytes differ — sub-pixel
+		// anti-aliasing noise then lands as a "changed" baseline commit on
+		// every run. `changed` keeps a render within maxDiffPixelRatio.
 		const sources = {
 			container: read("tooling", "scripts", "visual-local-container.sh"),
 			native: read("tooling", "scripts", "visual-local.mjs"),
@@ -363,10 +366,20 @@ describe("visual-local: wiring", () => {
 			pkg: read("package.json"),
 		};
 		for (const [name, src] of Object.entries(sources)) {
-			expect(src, name).toContain("--update-snapshots=all");
-			// A bare flag means "changed": drifts under maxDiffPixelRatio stay stale.
+			expect(src, name).toContain("--update-snapshots=changed");
+			expect(src, name).not.toContain("--update-snapshots=all");
 			expect(src, name).not.toMatch(/--update-snapshots(?!=)/);
 		}
+	});
+
+	it("the local runner compares against the baselines, not an empty dir", () => {
+		// With an empty snapshot dir every shot is "missing" and gets
+		// rewritten — `changed` would then commit the noise it exists to skip.
+		const runner = read("tooling", "scripts", "visual-local.mjs");
+		expect(runner).toContain(
+			"copyPngs(p.committedDir, p.actualDir, isCiBaseline);",
+		);
+		expect(runner).toContain("copyPngs(p.nativeBaselineDir, p.actualDir);");
 	});
 
 	it("CI prunes orphaned baselines after every complete update run", () => {

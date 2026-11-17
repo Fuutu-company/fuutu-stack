@@ -131,9 +131,10 @@ async function dockerApp(app, image) {
 	const p = appPaths(ROOT, app, "docker");
 	resetDir(p.workDir);
 	copyPngs(p.committedDir, p.expectedDir, isCiBaseline);
-	// `actual` starts empty: it holds exactly what this run wrote, so a
-	// baseline no spec writes any more shows as removed.
-	mkdirSync(p.actualDir, { recursive: true });
+	// `actual` starts as the baselines themselves: --update-snapshots=changed
+	// then rewrites only the shots beyond the tolerance, like CI. An empty dir
+	// would make every shot "missing" and rewrite it with its pixel noise.
+	copyPngs(p.committedDir, p.actualDir, isCiBaseline);
 
 	const id = `fuutu-visual-${app}-${process.pid}`;
 	const net = `${id}-net`;
@@ -212,6 +213,10 @@ async function dockerApp(app, image) {
 				{ stdio: "inherit", cwd: ROOT },
 			);
 			if (prune.status !== 0) throw new Error(`visual-prune failed for ${app}`);
+			// Pruned baselines show as removed in the report.
+			const kept = new Set(pngs(p.committedDir));
+			for (const f of pngs(p.actualDir))
+				if (!kept.has(f)) rmSync(path.join(p.actualDir, f));
 		} else {
 			console.error(
 				`\n${app}: the run failed — orphaned baselines were NOT pruned.`,
@@ -230,7 +235,9 @@ async function nativeApp(app) {
 	resetDir(p.workDir);
 	copyPngs(p.nativeBaselineDir, p.expectedDir);
 	mkdirSync(p.expectedDir, { recursive: true });
-	mkdirSync(p.actualDir, { recursive: true });
+	// Compared against the host baselines (see dockerApp); the first run
+	// starts empty and writes them all.
+	copyPngs(p.nativeBaselineDir, p.actualDir);
 
 	console.log(
 		`\n▶ ${app}: running visual specs on the host (${process.platform}, chromium)`,
@@ -251,7 +258,7 @@ async function nativeApp(app) {
 			// By title, like CI — app-owned visual specs run too.
 			"--grep",
 			"visual regression",
-			"--update-snapshots=all",
+			"--update-snapshots=changed",
 			"--project=chromium",
 			"--reporter=list",
 		],

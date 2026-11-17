@@ -123,7 +123,7 @@ export function parseBaseline(file) {
 /**
  * Why a committed CI baseline is orphaned, decided from its name and the
  * app's visual specs alone — never from what an update run rewrote:
- * Playwright leaves a byte-identical render untouched, and CI runs cover a
+ * Playwright leaves a render within tolerance untouched, and CI runs cover a
  * subset of apps and projects. Null when the baseline is still current.
  *
  * @param {string} file
