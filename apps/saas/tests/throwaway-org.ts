@@ -8,7 +8,10 @@ import { type APIRequestContext, type Browser, expect } from "@playwright/test";
  * so the test's page can open it: the admin creates it itself when its
  * plan allows another organization, otherwise (the kit's free plan allows
  * one, Acme) the throwaway user's org invites it as owner — which needs a
- * second seat. `cleanup` deletes the organization, then the throwaway user.
+ * second seat. Creating or joining switches the admin's session to the
+ * org; `cleanup` switches it back to the org it had before (the session is
+ * shared by every later test), then deletes the organization and the
+ * throwaway user.
  */
 export async function createThrowawayOrg(input: {
 	browser: Browser;
@@ -30,6 +33,7 @@ export async function createThrowawayOrg(input: {
 	let userId: string | undefined;
 	let orgId: string | undefined;
 	let adminOwned = false;
+	let adminActiveOrgId: string | null = null;
 	const cleanup = async () => {
 		try {
 			if (orgId) {
@@ -44,6 +48,15 @@ export async function createThrowawayOrg(input: {
 					headers,
 				});
 			}
+			if (input.joinAsOwner && orgId) {
+				// Past the cookie cache: a cached session that still shows the
+				// earlier org makes set-active skip the write.
+				const restored = await input.admin.post(
+					"/api/auth/organization/set-active?disableCookieCache=true",
+					{ data: { organizationId: adminActiveOrgId }, headers },
+				);
+				expect(restored.ok(), await restored.text()).toBe(true);
+			}
 		} finally {
 			await context.close();
 		}
@@ -51,6 +64,17 @@ export async function createThrowawayOrg(input: {
 
 	try {
 		if (input.joinAsOwner) {
+			const session = await input.admin.get(
+				"/api/auth/get-session?disableCookieCache=true",
+			);
+			expect(session.ok(), await session.text()).toBe(true);
+			adminActiveOrgId =
+				(
+					(await session.json()) as {
+						session?: { activeOrganizationId?: string | null };
+					} | null
+				)?.session?.activeOrganizationId ?? null;
+
 			const created = await input.admin.post("/api/organizations", {
 				data: { name: input.name, slug: input.slug },
 				headers,
