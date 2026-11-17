@@ -1,6 +1,6 @@
 import { APIError } from "better-auth/api";
 import { describe, expect, it, vi } from "vitest";
-import { assertProfileInput } from "../hooks/profile-input";
+import { assertProfileInput, isOwnUserImage } from "../hooks/profile-input";
 
 const session = async () => ({
 	user: { id: "user-1" },
@@ -170,4 +170,16 @@ it("ignores other paths", async () => {
 		}),
 	).resolves.toBeUndefined();
 	expect(getSession).not.toHaveBeenCalled();
+});
+
+describe("isOwnUserImage", () => {
+	it("accepts only the user's own avatar uploads", () => {
+		expect(isOwnUserImage("/image-proxy/avatars/user-1/a.png", "user-1")).toBe(
+			true,
+		);
+		expect(isOwnUserImage("/image-proxy/avatars/user-2/a.png", "user-1")).toBe(
+			false,
+		);
+		expect(isOwnUserImage("https://evil.example/a.png", "user-1")).toBe(false);
+	});
 });
