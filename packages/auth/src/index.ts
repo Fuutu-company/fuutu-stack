@@ -44,6 +44,7 @@ import {
 import { logSessionCreated, logSignUp } from "./hooks/audit";
 import { assertDeleteUserReauth } from "./hooks/delete-user-reauth";
 import { notifyPreviousEmailAfterChange } from "./hooks/email-change-notice";
+import { assertSessionForEmailVerification } from "./hooks/email-verification-session";
 import { assertFreshSession } from "./hooks/fresh-session";
 import { assertNotImpersonating } from "./hooks/impersonation-guard";
 import {
@@ -319,6 +320,15 @@ const authOptions = {
 			await assertVerifiedEmailForCredential({
 				path: ctx.path,
 				getSession: () => getSessionFromCtx(ctx),
+			});
+			await assertSessionForEmailVerification({
+				enabled: !authConfig.signup.requireEmailVerification,
+				path: ctx.path,
+				query: ctx.query,
+				secret: ctx.context.secret,
+				appBaseUrl: saasBaseUrl,
+				getSession: () => getSessionFromCtx(ctx),
+				redirect: (url) => ctx.redirect(url),
 			});
 			await assertDeleteUserReauth({
 				path: ctx.path,

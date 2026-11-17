@@ -127,6 +127,16 @@ describe("umami provider — window.umami integration", () => {
 			});
 		});
 
+		it("strips secrets nested in a redirect target", () => {
+			umamiAnalyticsProvider.installConsentGate?.(() => true);
+			const sent = beforeSend()?.("event", {
+				url: "/auth/sign-in?redirect=%2Fauth%2Fverify%3Ftoken%3Dt0k3n%26callbackURL%3D%252Fdashboard",
+			});
+			expect(sent).toEqual({
+				url: "/auth/sign-in?redirect=%2Fauth%2Fverify%3FcallbackURL%3D%252Fdashboard",
+			});
+		});
+
 		it("leaves URLs without secrets untouched", () => {
 			umamiAnalyticsProvider.installConsentGate?.(() => true);
 			const sent = beforeSend()?.("event", {
