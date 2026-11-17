@@ -1,4 +1,5 @@
 import { authConfig } from "@fuutu/auth/config";
+import { getAuthErrorHintKey } from "@fuutu/auth/two-factor";
 import { AuthCard, Button } from "@fuutu/ui";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -21,11 +22,14 @@ export default async function AuthErrorPage({
 	]);
 	const raw = typeof params.error === "string" ? params.error : "";
 	const code = /^[A-Za-z0-9_'-]{1,64}$/.test(raw) ? raw : "unknown";
+	const hint = getAuthErrorHintKey(code);
 
 	return (
 		<AuthCard title={t("title")}>
 			<div className="flex flex-col gap-4">
-				<p className="text-muted-foreground text-sm">{t("description")}</p>
+				<p className="text-muted-foreground text-sm">
+					{hint ? t(`hints.${hint}`) : t("description")}
+				</p>
 				<p className="text-muted-foreground text-xs">
 					{t("code")} <code className="font-mono">{code}</code>
 				</p>

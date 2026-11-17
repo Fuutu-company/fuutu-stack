@@ -80,6 +80,16 @@ function wrongTotp(secret: string): string {
 test.describe("two-factor end to end", () => {
 	test.use({ storageState: { cookies: [], origins: [] } });
 
+	test("a refused magic-link or social sign-in tells the user to use password + code", async ({
+		page,
+	}) => {
+		await page.goto("/auth/error?error=TWO_FACTOR_REQUIRED");
+		await expect(
+			page.getByText(/sign in with your password and authentication code/i),
+		).toBeVisible();
+		await expect(page.getByText("TWO_FACTOR_REQUIRED")).toBeVisible();
+	});
+
 	test("an unverified account cannot turn 2FA on", async ({
 		playwright,
 		baseURL,

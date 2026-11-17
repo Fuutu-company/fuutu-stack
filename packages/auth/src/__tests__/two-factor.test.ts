@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	getAuthErrorHintKey,
 	getTotpSecret,
 	getTwoFactorErrorKey,
 	getTwoFactorPath,
@@ -80,4 +81,20 @@ describe("getTwoFactorErrorKey()", () => {
 		expect(getTwoFactorErrorKey(undefined)).toBe("failed");
 		expect(getTwoFactorErrorKey("SOMETHING_NEW")).toBe("failed");
 	});
+});
+
+describe("getAuthErrorHintKey()", () => {
+	it("explains the refused magic-link / social sign-in of a 2FA user", async () => {
+		const { TWO_FACTOR_REQUIRED } = await import(
+			"../hooks/second-factor-session"
+		);
+		expect(getAuthErrorHintKey(TWO_FACTOR_REQUIRED)).toBe("twoFactorRequired");
+	});
+
+	it.each(["access_denied", "unknown", ""])(
+		"has no hint for %s (the generic text stays)",
+		(code) => {
+			expect(getAuthErrorHintKey(code)).toBeNull();
+		},
+	);
 });
