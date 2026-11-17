@@ -50,6 +50,7 @@ const logSessionCreated = vi.fn();
 vi.mock("../hooks/audit", () => ({
 	logSignUp: vi.fn(),
 	logSessionCreated: (...args: unknown[]) => logSessionCreated(...args),
+	logApiKeysRevoked: vi.fn(),
 }));
 
 const MODELS = [

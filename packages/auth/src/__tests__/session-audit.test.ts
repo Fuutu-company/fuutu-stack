@@ -6,7 +6,7 @@ vi.mock("@fuutu/logs", () => ({
 	createAuditLogger: () => ({ record }),
 }));
 
-const { logSessionCreated } = await import("../hooks/audit");
+const { logApiKeysRevoked, logSessionCreated } = await import("../hooks/audit");
 
 beforeEach(() => record.mockReset());
 
@@ -57,5 +57,30 @@ describe("logSessionCreated", () => {
 			ip: null,
 			userAgent: null,
 		});
+	});
+});
+
+describe("logApiKeysRevoked", () => {
+	it("records the user, the count and the reason, no key material", async () => {
+		await logApiKeysRevoked({
+			userId: "user-4",
+			count: 3,
+			reason: "password_reset",
+		});
+		expect(record).toHaveBeenCalledWith({
+			userId: "user-4",
+			organizationId: null,
+			action: "auth.api_keys_revoked",
+			metadata: { count: 3, reason: "password_reset" },
+		});
+	});
+
+	it("records nothing when no key was live", async () => {
+		await logApiKeysRevoked({
+			userId: "user-4",
+			count: 0,
+			reason: "mailbox_proof",
+		});
+		expect(record).not.toHaveBeenCalled();
 	});
 });

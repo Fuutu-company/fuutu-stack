@@ -41,7 +41,7 @@ import {
 	persistActiveOrganizationChange,
 	restoreActiveOrganization,
 } from "./hooks/active-organization";
-import { logSessionCreated, logSignUp } from "./hooks/audit";
+import { logApiKeysRevoked, logSessionCreated, logSignUp } from "./hooks/audit";
 import { assertDeleteUserReauth } from "./hooks/delete-user-reauth";
 import { notifyPreviousEmailAfterChange } from "./hooks/email-change-notice";
 import { assertSessionForEmailVerification } from "./hooks/email-verification-session";
@@ -436,10 +436,14 @@ const authOptions = {
 		revokeSessionsOnPasswordReset: true,
 		// MCP refresh tokens and API keys outlive sessions — a reset
 		// (account recovery) must cut off connected OAuth clients and keys
-		// minted with a stolen session too.
+		// minted with a stolen session too (audited: org integrations stop).
 		onPasswordReset: async ({ user }) => {
 			if (mcpOAuth.active) await revokeOAuthTokensForUser(user.id);
-			await revokeApiKeysForUser(user.id);
+			await logApiKeysRevoked({
+				userId: user.id,
+				count: await revokeApiKeysForUser(user.id),
+				reason: "password_reset",
+			});
 		},
 		sendResetPassword: async ({
 			user,
@@ -616,7 +620,13 @@ const authOptions = {
 								await deleteRows("twoFactor", id);
 							}
 						},
-						revokeApiKeys: revokeApiKeysForUser,
+						revokeApiKeys: async (id) => {
+							await logApiKeysRevoked({
+								userId: id,
+								count: await revokeApiKeysForUser(id),
+								reason: "mailbox_proof",
+							});
+						},
 						revokeOAuthTokens: async (id) => {
 							if (mcpOAuth.active) await revokeOAuthTokensForUser(id);
 						},
