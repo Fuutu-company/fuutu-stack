@@ -361,7 +361,7 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 				metadata,
 			}),
 		);
-		return { url: checkout.url };
+		return { url: checkout.url, checkoutId: checkout.id };
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {

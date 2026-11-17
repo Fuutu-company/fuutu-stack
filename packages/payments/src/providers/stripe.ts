@@ -513,7 +513,7 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		if (!session.url) {
 			throw new Error("Stripe checkout session created without URL");
 		}
-		return { url: session.url };
+		return { url: session.url, checkoutId: session.id };
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {

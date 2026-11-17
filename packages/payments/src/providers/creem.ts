@@ -248,7 +248,10 @@ function getCustomerId(
 	return customer?.id;
 }
 
-const CreemCheckoutResponseSchema = z.object({ checkout_url: z.string() });
+const CreemCheckoutResponseSchema = z.object({
+	id: z.string().optional(),
+	checkout_url: z.string(),
+});
 const CreemPortalResponseSchema = z.object({
 	customer_portal_link: z.string(),
 });
@@ -383,12 +386,12 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 			throw await creemFailure(response, "Failed to create checkout link");
 		}
 
-		const { checkout_url } = await parseCreemResponse(
+		const { id, checkout_url } = await parseCreemResponse(
 			response,
 			CreemCheckoutResponseSchema,
 			"Failed to create checkout link",
 		);
-		return { url: checkout_url };
+		return { url: checkout_url, ...(id ? { checkoutId: id } : {}) };
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {

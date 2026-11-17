@@ -103,6 +103,21 @@ describe("polar provider — SDK integration", () => {
 		expect(checkoutsCreate).toHaveBeenCalledOnce();
 	});
 
+	it("createCheckoutLink also returns the Polar checkout id", async () => {
+		checkoutsCreate.mockResolvedValueOnce({
+			id: "chk_123",
+			url: "https://checkout.test/url",
+		} as never);
+		const result = await polarPaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+		});
+		expect(result).toEqual({
+			url: "https://checkout.test/url",
+			checkoutId: "chk_123",
+		});
+	});
+
 	it("createCheckoutLink keeps owner metadata authoritative over input.metadata", async () => {
 		checkoutsCreate.mockClear();
 		await polarPaymentProvider.createCheckoutLink({

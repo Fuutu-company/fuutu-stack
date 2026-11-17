@@ -104,6 +104,21 @@ describe("stripe provider — SDK integration", () => {
 		expect(checkoutCreate).toHaveBeenCalledOnce();
 	});
 
+	it("createCheckoutLink also returns the Stripe session id", async () => {
+		checkoutCreate.mockResolvedValueOnce({
+			id: "cs_123",
+			url: "https://checkout.test/url",
+		} as never);
+		const result = await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+		});
+		expect(result).toEqual({
+			url: "https://checkout.test/url",
+			checkoutId: "cs_123",
+		});
+	});
+
 	it("createCheckoutLink defaults success/cancel URL to the SaaS app URL", async () => {
 		checkoutCreate.mockClear();
 		await stripePaymentProvider.createCheckoutLink({ priceId: "price_abc" });

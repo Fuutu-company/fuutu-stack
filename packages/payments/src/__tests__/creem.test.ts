@@ -40,6 +40,24 @@ describe("creem provider — SDK integration", () => {
 		expect(mockFetch).toHaveBeenCalledTimes(1);
 	});
 
+	it("createCheckoutLink also returns the Creem checkout id", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				id: "ch_123",
+				checkout_url: "https://checkout.test/url",
+			}),
+		});
+		const result = await creemPaymentProvider.createCheckoutLink({
+			priceId: "prod_abc",
+			userId: "user_123",
+		});
+		expect(result).toEqual({
+			url: "https://checkout.test/url",
+			checkoutId: "ch_123",
+		});
+	});
+
 	it("createCustomerPortalLink calls Creem API and returns the url", async () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,

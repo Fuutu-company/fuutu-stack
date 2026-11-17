@@ -122,6 +122,7 @@ export type {
 	CancelMode,
 	CancelSubscriptionOptions,
 	CheckoutInput,
+	CheckoutLink,
 	CustomerInput,
 	PaymentProvider,
 	PaymentsWebhookHandler,

@@ -201,6 +201,17 @@ export interface CancelSubscriptionOptions {
 
 export type CancelMode = "immediate" | "period_end";
 
+/** A provider-hosted checkout. */
+export type CheckoutLink = {
+	url: string;
+	/**
+	 * Provider-side checkout id (Stripe session `cs_…`, Creem checkout,
+	 * Polar checkout) — to match the checkout's webhooks or look it up
+	 * later. Optional: custom providers may not have one.
+	 */
+	checkoutId?: string;
+};
+
 /** The requested cancel mode; `undefined` leaves it to the provider default. */
 export function resolveCancelMode(
 	options: CancelSubscriptionOptions | undefined,
@@ -238,7 +249,7 @@ export interface PaymentProvider {
 	readonly cancelEndsTrial?: boolean;
 
 	/** Create a provider-hosted checkout URL and redirect the user there. */
-	createCheckoutLink(input: CheckoutInput): Promise<{ url: string }>;
+	createCheckoutLink(input: CheckoutInput): Promise<CheckoutLink>;
 
 	/** Create a provider-hosted customer portal URL for billing management. */
 	createCustomerPortalLink(input: PortalInput): Promise<{ url: string }>;
