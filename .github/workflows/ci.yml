@@ -117,6 +117,12 @@ jobs:
       - run: pnpm check-types
       - run: pnpm check-translations
       - run: pnpm test
+      # Guards on the kit's own demo source (packages/test-utils/src/arch/
+      # kit-source/): they break once an app rewrites its UI, so only the
+      # kit repository runs them; `pnpm test` above runs the invariants.
+      - name: Kit-source guards (kit repository only)
+        if: github.repository == 'Fuutu-company/fuutu-stack'
+        run: pnpm -F @fuutu/test-utils test:kit-source
       - run: pnpm -F @fuutu/db test:integration
 
   build:
@@ -129,6 +135,8 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3000
       EMAIL_PROVIDER: console
       NEXT_PUBLIC_ANALYTICS_PROVIDER: noop
+      # Required in production builds; no proxy in CI.
+      TRUST_PROXY_HEADERS: "0"
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup
@@ -147,7 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: write       # baseline auto-commit pushes to the branch
+      contents: read        # baselines are pushed by the visual-baselines job
       pull-requests: write  # slim visual-result comment
     # Must match the pinned catalog @playwright/test version exactly — bump both together.
     container: mcr.microsoft.com/playwright:v1.64.0-noble
@@ -170,10 +178,6 @@ jobs:
       matrix:
         app: [saas, marketing]
     env:
-      # PAT/GitHub App token for the baseline auto-commit push — empty means
-      # the feature degrades to report-only (GITHUB_TOKEN pushes only
-      # produce "action_required" ghost suites).
-      BOT_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN }}
       # SWC materializes its native binding into a cache dir and validates
       # parent permissions — /github/home fails that check inside containers.
       SWC_NATIVE_BINDING_CACHE: /tmp/swc-binding-cache
@@ -193,6 +197,11 @@ jobs:
       # it back to Pro, like a local .env with a test price. Unset, Acme is
       # Free and plan-gated specs (webhooks) answer 403.
       PAYMENTS_PRO_PRICE_ID: ci_pro_month
+      # Required by `next build` / `next start` (NODE_ENV=production); no
+      # proxy in CI.
+      TRUST_PROXY_HEADERS: "0"
+      # The seed refuses the compose host `postgres` without it.
+      FUUTU_ALLOW_SEED: "1"
     steps:
       - name: Generate CI auth secret
         run: |
@@ -202,12 +211,12 @@ jobs:
         with:
           # PRs check out the branch tip — baseline commits must be pushable
           # back onto the PR branch; full history for the rebase-retry.
-          # FUUTU_CI_BOT_TOKEN (PAT/GitHub App token) makes the baseline push
-          # fire a real pull_request synchronize run — GITHUB_TOKEN pushes
-          # only produce permanently "action_required" ghost suites.
-          token: ${{ secrets.FUUTU_CI_BOT_TOKEN || github.token }}
           ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
+          # This job runs dependency code (install, build, Playwright): no
+          # token in .git/config, and no push token in the job at all — the
+          # visual-baselines job pushes the baselines this job uploads.
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Create .env for dotenv-cli
         run: |
@@ -284,23 +293,6 @@ jobs:
         env:
           GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
 
-      # Baselines live in-repo and must be CI-generated (screenshots differ
-      # per OS/GPU — local updates would break the comparison). The push
-      # only happens when FUUTU_CI_BOT_TOKEN (PAT or GitHub App token) is
-      # configured: it fires a REAL pull_request synchronize run whose
-      # checks conclude on the baseline commit — the loop-terminating
-      # mechanism, since that run sees a chore(visual) head and only
-      # compares. With plain GITHUB_TOKEN the push would leave permanently
-      # "action_required" ghost suites, so the feature degrades to
-      # report-only (baselines still refresh on merge to develop/main).
-      - name: Commit updated baselines to PR branch
-        id: baseline-pr
-        if: github.event_name == 'pull_request' && steps.visual.outputs.changed == '1' && env.BOT_TOKEN != ''
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-        run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "$HEAD_REF" pr
-
-
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
         run: |
@@ -321,9 +313,17 @@ jobs:
         if: github.event_name == 'push'
         run: node tooling/scripts/visual-report.mjs --app "${{ matrix.app }}"
 
-      - name: Commit updated baselines (push)
-        if: github.event_name == 'push'
-        run: tooling/scripts/ci-visual-baselines.sh "${{ matrix.app }}" "${{ github.ref_name }}" push
+      # Handed to the visual-baselines job, which commits and pushes them:
+      # this job runs dependency code, so it never holds a push token.
+      - name: Keep updated baselines for the push job
+        if: (github.event_name == 'pull_request' && steps.visual.outputs.changed == '1') || github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-baselines-${{ matrix.app }}
+          path: .fuutu/visual-baselines/${{ matrix.app }}
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 1
 
       # Hosted report (opt-in via FUUTU_PAGES_ENABLED): handed to the pages
       # job below, which publishes it to pr-<N>/<app>/ or <branch>/<app>/.
@@ -381,6 +381,88 @@ jobs:
             apps/${{ matrix.app }}/visual-report
           if-no-files-found: ignore
           retention-days: 14
+
+  # Commits the baselines the e2e job regenerated (artifact) back to the
+  # branch. Baselines live in-repo and must be CI-generated (screenshots
+  # differ per OS/GPU). This job runs NO dependency code — no setup action,
+  # no install, no build — so the push token never shares a job with code
+  # from node_modules, and it takes only PNG files from the artifact.
+  # PRs: the push happens only when FUUTU_CI_BOT_TOKEN (PAT or GitHub App
+  # token) is configured — it fires a REAL pull_request synchronize run
+  # whose checks conclude on the baseline commit (that run sees a
+  # chore(visual) head and only compares, which ends the chain). Plain
+  # GITHUB_TOKEN would leave "action_required" ghost suites, so without the
+  # bot token PRs stay report-only. Pushes to develop/main always commit.
+  visual-baselines:
+    needs: e2e
+    if: ${{ !cancelled() && needs.e2e.result != 'skipped' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write       # baseline commit
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [saas, marketing]
+    steps:
+      - name: Download updated baselines
+        id: download
+        continue-on-error: true  # no artifact: nothing changed / e2e failed
+        uses: actions/download-artifact@v8
+        with:
+          name: visual-baselines-${{ matrix.app }}
+          path: ${{ runner.temp }}/baselines
+      - uses: actions/checkout@v5
+        if: steps.download.outcome == 'success'
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Replace baselines with the artifact (PNG files only)
+        if: steps.download.outcome == 'success'
+        env:
+          APP: ${{ matrix.app }}
+        run: |
+          dir=".fuutu/visual-baselines/${APP}"
+          src="$RUNNER_TEMP/baselines"
+          # The artifact is written by dependency code: an empty or gutted
+          # one must not delete the baselines. A few orphans pruned by
+          # visual-prune.mjs pass; a larger deliberate prune is committed by
+          # hand (run visual-prune.mjs locally, commit the deletions).
+          count() {
+            if [ -d "$1" ]; then
+              find "$1" -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' '
+            else
+              echo 0
+            fi
+          }
+          new=$(count "$src")
+          old=$(count "$dir")
+          if [ "$new" -eq 0 ]; then
+            echo "::error::Artifact holds no PNG baselines — refusing to replace ${old} baselines"
+            exit 1
+          fi
+          if [ $((new * 5)) -lt $((old * 4)) ]; then
+            echo "::error::Artifact holds ${new} PNG baselines, the branch ${old} (more than 20% fewer) — refusing. Prune deliberately with tooling/scripts/visual-prune.mjs and commit the deletions."
+            exit 1
+          fi
+          rm -rf "$dir"
+          mkdir -p "$dir"
+          find "$src" -maxdepth 1 -type f -name '*.png' -exec cp -- {} "$dir/" \;
+      - name: Commit updated baselines to PR branch
+        if: steps.download.outcome == 'success' && github.event_name == 'pull_request'
+        env:
+          APP: ${{ matrix.app }}
+          HEAD_REF: ${{ github.head_ref }}
+          GIT_PUSH_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN }}
+        run: tooling/scripts/ci-visual-baselines.sh "$APP" "$HEAD_REF" pr
+      - name: Commit updated baselines (push)
+        if: steps.download.outcome == 'success' && github.event_name == 'push'
+        env:
+          APP: ${{ matrix.app }}
+          BRANCH: ${{ github.ref_name }}
+          GIT_PUSH_TOKEN: ${{ secrets.FUUTU_CI_BOT_TOKEN || github.token }}
+        run: tooling/scripts/ci-visual-baselines.sh "$APP" "$BRANCH" push
 
   # Docs E2E — same container, build and production server as the e2e
   # matrix above, non-visual only (docs has no visual baselines), so the

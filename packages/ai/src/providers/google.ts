@@ -3,6 +3,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createLogger } from "@fuutu/logs";
 import type { ModelMessage } from "ai";
 import { generateText, streamText, wrapLanguageModel } from "ai";
+import { DEFAULT_MAX_OUTPUT_TOKENS } from "../limits";
 import type {
 	AIChatOptions,
 	AIChatResponse,
@@ -15,6 +16,8 @@ export interface GoogleProviderOptions {
 	model?: string;
 	/** Whether to apply the AI SDK devtools middleware. Defaults to false. */
 	devtools?: boolean;
+	/** Reply cap when a call sets no `maxTokens`. Default 1024. */
+	maxOutputTokens?: number;
 }
 
 /**
@@ -32,9 +35,12 @@ export class GoogleProvider implements AIProvider {
 
 	private readonly model: Parameters<typeof generateText>[0]["model"];
 
+	private readonly maxOutputTokens: number;
+
 	private readonly log = createLogger({ scope: "ai:google" });
 
 	constructor(options: GoogleProviderOptions = {}) {
+		this.maxOutputTokens = options.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
 		const google = createGoogleGenerativeAI(
 			options.apiKey ? { apiKey: options.apiKey } : {},
 		);
@@ -62,7 +68,7 @@ export class GoogleProvider implements AIProvider {
 					content: m.content,
 				})) as ModelMessage[],
 				temperature: options?.temperature,
-				maxOutputTokens: options?.maxTokens,
+				maxOutputTokens: options?.maxTokens ?? this.maxOutputTokens,
 			});
 			return {
 				content: result.text,
@@ -89,7 +95,7 @@ export class GoogleProvider implements AIProvider {
 					content: m.content,
 				})) as ModelMessage[],
 				temperature: options?.temperature,
-				maxOutputTokens: options?.maxTokens,
+				maxOutputTokens: options?.maxTokens ?? this.maxOutputTokens,
 			});
 			// Plain UTF-8 text chunks (not SSE UI-message frames) — the API
 			// accumulates the raw text for persistence and the client renders

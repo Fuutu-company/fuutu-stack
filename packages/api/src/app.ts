@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { auth } from "@fuutu/auth";
+import { withClientIp } from "@fuutu/auth/client-ip-header";
 import {
 	config,
 	KIT_FINGERPRINT_HEADER_NAME,
@@ -16,14 +17,15 @@ import { handlePaymentsWebhook } from "@fuutu/payments";
 import { pingTelemetry } from "@fuutu/telemetry";
 import { defaultRateLimitStore } from "@fuutu/utils/rate-limit";
 import { Hono, type Context as HonoContext } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+import { bodyLimit } from "./body-limit";
 import { getClientIp } from "./client-ip";
 import { apiConfig } from "./config";
 import { createContext } from "./context";
 import { CORS_ALLOW_HEADERS } from "./cors";
 import { mountCustomRoutes } from "./custom-routes";
+import { errorInfo } from "./error-info";
 import { handleMcpRequest } from "./mcp";
 import { isOriginAllowed } from "./origin-guard";
 import { type ApiDocsPath, serveApiDocs } from "./orpc/api-docs";
@@ -105,13 +107,13 @@ const base = new Hono<{
 			origin: env.CORS_ORIGIN,
 			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 			allowHeaders: CORS_ALLOW_HEADERS,
-			credentials: true,
+			credentials: env.CORS_CREDENTIALS,
 		}),
 	)
 	// CSRF guard for mutating requests — defense in depth on top of
 	// SameSite=Lax cookies. Browsers always send `Origin` on cross-site
-	// posts; when present it must match this app (BETTER_AUTH_URL) or the configured
-	// CORS_ORIGIN. Requests without an Origin (server-to-server webhooks,
+	// posts; when present it must match this app (BETTER_AUTH_URL), or
+	// CORS_ORIGIN with CORS_CREDENTIALS. Requests without an Origin (server-to-server webhooks,
 	// cron triggers, API-key clients) carry no ambient cookies and pass.
 	.use("*", async (c, next) => {
 		const method = c.req.method;
@@ -125,14 +127,20 @@ const base = new Hono<{
 		const allowed = isOriginAllowed(origin, {
 			requestUrl: c.req.url,
 			appUrl: env.BETTER_AUTH_URL,
-			corsOrigin: env.CORS_ORIGIN,
+			corsOrigin: env.CORS_CREDENTIALS ? env.CORS_ORIGIN : undefined,
 		});
 		if (!allowed) {
 			return c.json({ error: "forbidden_origin" }, 403);
 		}
 		return next();
 	})
-	.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw))
+	.on(
+		["POST", "GET"],
+		"/auth/**",
+		bodyLimit({ maxSize: apiConfig.maxBodyBytes, onError: payloadTooLarge }),
+		(c) =>
+			auth.handler(withClientIp(c.req.raw, getClientIp(c.req.raw.headers))),
+	)
 	.get("/health", (c) => c.json({ status: "healthy" }))
 	.get("/version", (c) =>
 		c.json({
@@ -204,6 +212,12 @@ const base = new Hono<{
 mountCustomRoutes(base);
 
 export const app = base
+	// oRPC decodes the body before any procedure middleware (auth, rate
+	// limit) runs — cap it first.
+	.use(
+		"*",
+		bodyLimit({ maxSize: apiConfig.maxBodyBytes, onError: payloadTooLarge }),
+	)
 	.use("*", async (c, next) => {
 		const context = await createContext({ context: c });
 		// Every request reaching this point goes through a withEvlog-wrapped
@@ -231,7 +245,7 @@ export const app = base
 	// error response here too so emission point 1 covers every /api/* response.
 	.onError((err, c) => {
 		log.error("unhandled error", {
-			err,
+			err: errorInfo(err),
 			method: c.req.method,
 			path: c.req.path,
 		});

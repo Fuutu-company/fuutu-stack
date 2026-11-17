@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  */
 const LAYOUT = join(
 	import.meta.dirname,
-	"../../../../apps/saas/src/modules/app/layouts/dashboard-layout.tsx",
+	"../../../../../apps/saas/src/modules/app/layouts/dashboard-layout.tsx",
 );
 
 describe("app shell content column", () => {

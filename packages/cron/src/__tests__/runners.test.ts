@@ -54,7 +54,7 @@ describe("InlineJobRunner", () => {
 	it("list() returns all 5 registered jobs", () => {
 		const runner = new InlineJobRunner();
 		const jobs = runner.list();
-		expect(jobs.length).toBe(6);
+		expect(jobs.length).toBe(7);
 		expect(jobs.map((j) => j.name)).toEqual(
 			expect.arrayContaining([
 				"webhook-retry",
@@ -63,6 +63,7 @@ describe("InlineJobRunner", () => {
 				"telemetry-ping",
 				"oauth-client-cleanup",
 				"auth-retention-cleanup",
+				"seat-reconcile",
 			]),
 		);
 	});
@@ -115,6 +116,6 @@ describe("TriggerDevJobRunner", () => {
 	it("list() still returns all registered jobs", () => {
 		const runner = new TriggerDevJobRunner();
 		const jobs = runner.list();
-		expect(jobs.length).toBe(6);
+		expect(jobs.length).toBe(7);
 	});
 });

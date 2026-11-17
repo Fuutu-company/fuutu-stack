@@ -1,7 +1,7 @@
 name: Maintenance
 run-name: ${{ vars.FUUTU_CI_ENABLED == 'true' && 'Maintenance' || 'Maintenance disabled — set FUUTU_CI_ENABLED=true' }}
 
-# Weekly maintenance: dependency report → job summary (replaces the old per-PR
+# Weekly maintenance: dependency + security audit report → job summary (replaces the old per-PR
 # audit job and Dependabot; updates are batched consciously from this report).
 # Pruning of closed-PR visual reports lives in pages.yml.
 
@@ -39,3 +39,13 @@ jobs:
           db-generate: "false"
       - name: Write dependency report to job summary
         run: node tooling/scripts/dependency-report.mjs >> "$GITHUB_STEP_SUMMARY"
+      # Report only: advisories are triaged with the weekly update batch.
+      - name: Write security audit to job summary
+        run: |
+          {
+            echo "## Security audit (production dependencies, high and above)"
+            echo ""
+            echo '```'
+            pnpm audit --prod --audit-level=high || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

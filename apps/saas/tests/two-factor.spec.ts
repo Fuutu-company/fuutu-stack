@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { config } from "@fuutu/config";
 import { expect, test } from "./fixtures";
 
 test.describe("two-factor authentication", () => {
@@ -80,15 +81,59 @@ function wrongTotp(secret: string): string {
 test.describe("two-factor end to end", () => {
 	test.use({ storageState: { cookies: [], origins: [] } });
 
+	test("a refused magic-link or social sign-in tells the user to use password + code", async ({
+		page,
+	}) => {
+		await page.goto("/auth/error?error=TWO_FACTOR_REQUIRED");
+		await expect(
+			page.getByText(/sign in with your password and authentication code/i),
+		).toBeVisible();
+		await expect(page.getByText("TWO_FACTOR_REQUIRED")).toBeVisible();
+	});
+
+	test("an unverified account cannot turn 2FA on", async ({
+		playwright,
+		baseURL,
+	}) => {
+		// Anyone can sign up with someone else's address: a TOTP secret set
+		// before the mailbox is proven would lock its real owner out.
+		const headers = { origin: new URL(baseURL ?? "").origin };
+		const client = await playwright.request.newContext({
+			baseURL,
+			storageState: { cookies: [], origins: [] },
+		});
+		try {
+			const email = `qa-2fa-unverified-${Date.now()}@fuutu.local`;
+			const password = "TwoFactor!2345";
+			const signUp = await client.post("/api/auth/sign-up/email", {
+				data: { email, password, name: "QA Unverified" },
+				headers,
+			});
+			expect(signUp.ok()).toBe(true);
+			const enable = await client.post("/api/auth/two-factor/enable", {
+				data: { password },
+				headers,
+			});
+			expect(enable.status()).toBe(403);
+			expect(await enable.json()).toMatchObject({ code: "EMAIL_NOT_VERIFIED" });
+		} finally {
+			await client.dispose();
+		}
+	});
+
 	test("enable in settings, then sign-in requires a TOTP or backup code", async ({
 		page,
 		isMobile,
+		playwright,
+		baseURL,
 	}) => {
 		test.skip(isMobile, "signs out through the desktop sidebar user menu");
 		test.setTimeout(120_000);
 
-		const email = `qa-2fa-${Date.now()}@fuutu.local`;
-		const password = "TwoFactor!2345";
+		// Seeded, verified user of its own (2FA needs a verified email), so
+		// the accounts used by other specs stay 2FA-free.
+		const email = "two-factor@fuutu.local";
+		const password = "DevPassword!2345";
 
 		async function signOut() {
 			await page.getByRole("button", { name: new RegExp(email) }).click();
@@ -105,48 +150,59 @@ test.describe("two-factor end to end", () => {
 			await page.getByLabel("Password").press("Enter");
 		}
 
-		// Fresh user so the seeded accounts used by other specs stay 2FA-free.
-		await page.goto("/auth/sign-up");
-		await page.getByLabel("Name", { exact: true }).fill("QA Two Factor");
-		await page.getByLabel("Email").fill(email);
-		await page.getByLabel("Password", { exact: true }).fill(password);
-		await page.getByLabel("Confirm password").fill(password);
-		await page.getByRole("button", { name: "Sign up", exact: true }).click();
-		await expect(page).toHaveURL(/\/onboarding/, { timeout: 30_000 });
-
-		await page.getByLabel(/full name/i).fill("QA Two Factor");
-		await page.getByRole("button", { name: /continue/i }).click();
-		// Click through the optional onboarding steps until the dashboard —
-		// how many there are, and how the last one is labeled, differs per app.
-		const done = page.getByRole("button", { name: /go to dashboard/i });
-		const skip = page.getByRole("button", { name: /skip for now/i });
-		const next = page
-			.getByRole("button", { name: /continue/i })
-			.and(page.locator(":enabled"));
-		// A required org step (organizationsMode "forced") has no skip —
-		// it needs an organization.
-		const orgName = page.getByLabel(/organization name/i);
-		const stepHeading = page.getByRole("heading", { level: 2 }).first();
-		const onDashboard = () => /\/dashboard/.test(page.url());
-		for (let step = 0; step < 6 && !onDashboard(); step++) {
-			await expect(done.or(skip).or(next).or(orgName).first()).toBeVisible();
-			const before = await stepHeading.textContent();
-			if (await done.isVisible()) await done.click();
-			else if (await skip.isVisible()) await skip.click();
-			else if (await orgName.isVisible()) {
-				await orgName.fill("QA Two Factor");
-				await page
-					.getByRole("button", { name: /create organization/i })
-					.click();
-			} else await next.click();
-			await expect
-				.poll(
-					async () =>
-						onDashboard() ||
-						(await stepHeading.textContent().catch(() => null)) !== before,
-				)
-				.toBe(true);
+		// Start with 2FA off — an earlier run left it on (admin reset).
+		const admin = await playwright.request.newContext({
+			baseURL,
+			storageState: "tests/.auth/user.json",
+		});
+		try {
+			const headers = { origin: new URL(baseURL ?? "").origin };
+			const users = await admin.get(
+				`/api/admin/users?q=${encodeURIComponent(email)}`,
+			);
+			expect(users.ok()).toBe(true);
+			const userId = (
+				(await users.json()) as { items: { id: string; email: string }[] }
+			).items.find((user) => user.email === email)?.id;
+			expect(userId, "seeded two-factor user").toBeTruthy();
+			const reset = await admin.post(
+				`/api/admin/users/${userId}/two-factor/reset`,
+				{ data: { reason: "E2E: start with 2FA off" }, headers },
+			);
+			expect(reset.ok()).toBe(true);
+		} finally {
+			await admin.dispose();
 		}
+
+		// Forced organizations send a user without one to /organizations
+		// instead of the dashboard and settings — the seeded user has none.
+		if (config.features.organizationsMode === "forced") {
+			const user = await playwright.request.newContext({
+				baseURL,
+				storageState: { cookies: [], origins: [] },
+			});
+			try {
+				const headers = { origin: new URL(baseURL ?? "").origin };
+				const signIn = await user.post("/api/auth/sign-in/email", {
+					data: { email, password },
+					headers,
+				});
+				expect(signIn.ok(), await signIn.text()).toBe(true);
+				const orgs = await user.get("/api/organizations");
+				expect(orgs.ok(), await orgs.text()).toBe(true);
+				if (((await orgs.json()) as { total: number }).total === 0) {
+					const created = await user.post("/api/organizations", {
+						data: { name: "Two-Factor Demo", slug: "two-factor-demo" },
+						headers,
+					});
+					expect(created.ok(), await created.text()).toBe(true);
+				}
+			} finally {
+				await user.dispose();
+			}
+		}
+
+		await signInWithPassword();
 		await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
 
 		// Enable: password → setup key + backup codes → authenticator code.

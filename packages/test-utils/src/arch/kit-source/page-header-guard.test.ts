@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  * surface style. Hand-built `<h1>` blocks and bordered divs drift from it.
  */
 
-const REPO_ROOT = join(import.meta.dirname, "../../../../");
+const REPO_ROOT = join(import.meta.dirname, "../../../../../");
 const SCAN_DIRS = ["apps/saas/src"];
 /** Own their heading: the design-system specimens and the onboarding wizard. */
 const H1_ALLOWLIST = [

@@ -196,8 +196,22 @@ function toProviderInvoice(
 
 async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 	switch (event.type) {
-		case "checkout.session.completed": {
+		// A delayed payment method (SEPA, ACH, Bacs) completes the session
+		// `unpaid`; the money arrives with async_payment_succeeded. Only a
+		// paid (or free) session grants — a missing status fails closed.
+		case "checkout.session.completed":
+		case "checkout.session.async_payment_succeeded": {
 			const session = event.data.object as Stripe.Checkout.Session;
+			if (
+				session.payment_status !== "paid" &&
+				session.payment_status !== "no_payment_required"
+			) {
+				log.info("checkout session not paid yet — waiting for payment", {
+					sessionId: session.id,
+					paymentStatus: session.payment_status ?? null,
+				});
+				return [];
+			}
 			const subscriptionId =
 				typeof session.subscription === "string"
 					? session.subscription
@@ -228,10 +242,13 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 				{ limit: 1 },
 			);
 			const productId = lineItems.data[0]?.price?.id ?? undefined;
+			const paymentIntent = idOf(session.payment_intent);
 			return [
 				{
 					type: "checkout.completed",
 					eventId: event.id,
+					// A refund or dispute names the payment intent.
+					...(paymentIntent ? { paymentRef: paymentIntent } : {}),
 					customerId:
 						typeof session.customer === "string"
 							? session.customer
@@ -345,9 +362,86 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 			return [];
 		}
 
+		// A full refund or a dispute takes the payment back; a partial
+		// refund (goodwill, proration) does not end what it paid for.
+		case "charge.refunded": {
+			const charge = event.data.object as Stripe.Charge;
+			if (!charge.refunded) return [];
+			return reversalEvent(
+				event.id,
+				idOf(charge.payment_intent),
+				eventTime(event.created),
+			);
+		}
+
+		case "charge.dispute.created": {
+			const dispute = event.data.object as Stripe.Dispute;
+			return reversalEvent(
+				event.id,
+				idOf(dispute.payment_intent),
+				eventTime(event.created),
+			);
+		}
+
 		default:
 			return [];
 	}
+}
+
+function idOf(
+	value: string | { id: string } | null | undefined,
+): string | null {
+	if (!value) return null;
+	return typeof value === "string" ? value : value.id;
+}
+
+/**
+ * `payment.reversed` for a payment intent: of the subscription its
+ * invoice bills, else of the one-time purchase it paid (`paymentRef`).
+ * A Stripe API error propagates → non-2xx → Stripe retries.
+ */
+async function reversalEvent(
+	eventId: string,
+	paymentIntent: string | null,
+	occurredAt: Date | undefined,
+): Promise<ProviderEvent[]> {
+	if (!paymentIntent) return [];
+	const client = getClient();
+	const payments = await client.invoicePayments.list({
+		payment: { type: "payment_intent", payment_intent: paymentIntent },
+		limit: 1,
+	});
+	const invoiceRef = payments.data[0]?.invoice;
+	if (invoiceRef) {
+		const invoice =
+			typeof invoiceRef === "string"
+				? await client.invoices.retrieve(invoiceRef)
+				: invoiceRef;
+		const subscriptionId =
+			!("deleted" in invoice && invoice.deleted) &&
+			"parent" in invoice &&
+			invoice.parent?.type === "subscription_details"
+				? idOf(invoice.parent.subscription_details?.subscription)
+				: null;
+		if (subscriptionId) {
+			return [
+				{ type: "payment.reversed", eventId, subscriptionId, occurredAt },
+			];
+		}
+	}
+	return [
+		{
+			type: "payment.reversed",
+			eventId,
+			paymentRef: paymentIntent,
+			occurredAt,
+		},
+	];
+}
+
+/** Stripe `event.created` (Unix seconds) as a Date. */
+function eventTime(created: number | undefined): Date | undefined {
+	return typeof created === "number" ? new Date(created * 1000) : undefined;
 }
 
 /**
@@ -419,7 +513,7 @@ export const stripePaymentProvider: SeatAwarePaymentProvider = {
 		if (!session.url) {
 			throw new Error("Stripe checkout session created without URL");
 		}
-		return { url: session.url };
+		return { url: session.url, checkoutId: session.id };
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {

@@ -31,7 +31,14 @@ export type ProviderEventType =
 	| "subscription.scheduled_cancel"
 	| "subscription.canceled"
 	| "subscription.expired"
-	| "one_time.purchased";
+	| "one_time.purchased"
+	/**
+	 * A payment was taken back — full refund or dispute (chargeback). The
+	 * sync ends what it bought: a subscription is canceled at the provider
+	 * now, a one-time purchase (matched by `paymentRef`) closed; unused
+	 * credits are revoked. Partial refunds are not reversals.
+	 */
+	| "payment.reversed";
 
 /**
  * Normalized event extracted from a provider webhook.
@@ -50,6 +57,20 @@ export interface ProviderEvent {
 	customerId?: string;
 	/** Provider-side product/price ID — mapped to a PlanId via config. */
 	productId?: string;
+	/**
+	 * Provider-side reference of a one-time payment that a later refund or
+	 * dispute names too (Stripe payment intent, Creem checkout, Polar
+	 * checkout or order). Stored on the one-time purchase; a
+	 * `payment.reversed` without `subscriptionId` is matched by it.
+	 */
+	paymentRef?: string;
+	/**
+	 * When the provider created the event (Stripe `created`, Creem
+	 * `created_at`, Polar order `modifiedAt` / `createdAt` — never a
+	 * per-delivery time). A recent `payment.reversed`
+	 * for a purchase not stored yet fails so the provider redelivers it.
+	 */
+	occurredAt?: Date;
 	/** Normalized status to write directly to the Purchase row. */
 	status?: PurchaseStatusLiteral;
 	currentPeriodEnd?: Date;
@@ -181,6 +202,17 @@ export interface CancelSubscriptionOptions {
 
 export type CancelMode = "immediate" | "period_end";
 
+/** A provider-hosted checkout. */
+export type CheckoutLink = {
+	url: string;
+	/**
+	 * Provider-side checkout id (Stripe session `cs_…`, Creem checkout,
+	 * Polar checkout) — to match the checkout's webhooks or look it up
+	 * later. Optional: custom providers may not have one.
+	 */
+	checkoutId?: string;
+};
+
 /** The requested cancel mode; `undefined` leaves it to the provider default. */
 export function resolveCancelMode(
 	options: CancelSubscriptionOptions | undefined,
@@ -218,7 +250,7 @@ export interface PaymentProvider {
 	readonly cancelEndsTrial?: boolean;
 
 	/** Create a provider-hosted checkout URL and redirect the user there. */
-	createCheckoutLink(input: CheckoutInput): Promise<{ url: string }>;
+	createCheckoutLink(input: CheckoutInput): Promise<CheckoutLink>;
 
 	/** Create a provider-hosted customer portal URL for billing management. */
 	createCustomerPortalLink(input: PortalInput): Promise<{ url: string }>;

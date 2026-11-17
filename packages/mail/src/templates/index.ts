@@ -4,6 +4,7 @@ import type {
 	TemplatePayloads,
 } from "../types";
 import { emailChangeVerificationTemplate } from "./email-change-verification";
+import { emailChangedTemplate } from "./email-changed";
 import { emailVerificationTemplate } from "./email-verification";
 import { magicLinkTemplate } from "./magic-link";
 import { newUserTemplate } from "./new-user";
@@ -22,6 +23,7 @@ const registry = {
 	"magic-link": magicLinkTemplate,
 	"email-verification": emailVerificationTemplate,
 	"email-change-verification": emailChangeVerificationTemplate,
+	"email-changed": emailChangedTemplate,
 	"organization-invitation": organizationInvitationTemplate,
 	"new-user": newUserTemplate,
 	notification: notificationTemplate,

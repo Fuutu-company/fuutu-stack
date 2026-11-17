@@ -1,4 +1,4 @@
-import type { StorageBuckets } from "./config";
+import type { StorageBuckets, StorageReadAccess } from "./config";
 import { storageConfig } from "./config";
 import { s3StorageProvider } from "./providers/s3";
 import {
@@ -11,6 +11,7 @@ export {
 	type StorageBuckets,
 	type StorageConfig,
 	type StorageProviderId,
+	type StorageReadAccess,
 	storageConfig,
 } from "./config";
 export { s3StorageProvider } from "./providers/s3";
@@ -96,6 +97,17 @@ export function resolveBucketAlias(alias: string): string {
 		throw new StorageBucketError(alias);
 	}
 	return storageConfig.buckets[ALIAS_TO_LOGICAL[alias]];
+}
+
+/**
+ * Read access of a bucket alias through the image proxy.
+ * Throws `StorageBucketError` for an unknown alias.
+ */
+export function resolveBucketReadAccess(alias: string): StorageReadAccess {
+	if (!isStorageBucketAlias(alias)) {
+		throw new StorageBucketError(alias);
+	}
+	return storageConfig.readAccess[ALIAS_TO_LOGICAL[alias]];
 }
 
 /**

@@ -23,6 +23,10 @@ const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
 		verificationUrl: "https://app.test/verify-email?token=v2",
 		newEmail: "new@test.dev",
 	},
+	"email-changed": {
+		name: "Rush",
+		newEmail: "new@test.dev",
+	},
 	"organization-invitation": {
 		organizationName: "Acme",
 		inviteUrl: "https://app.test/invite?token=inv",
@@ -91,6 +95,15 @@ describe("renderTemplate", () => {
 		});
 		expect(rendered.html).not.toContain("<script>alert");
 		expect(rendered.html).toContain("&lt;script&gt;");
+	});
+
+	it("names the new address in the email-changed notice, escaped", () => {
+		const rendered = renderTemplate("email-changed", {
+			newEmail: '"><img src=x>@test.dev',
+		});
+		expect(rendered.html).not.toContain('"><img');
+		expect(rendered.html).toContain("&quot;&gt;&lt;img src=x&gt;@test.dev");
+		expect(rendered.text).toContain('"><img src=x>@test.dev');
 	});
 
 	it("escapes quotes in URLs so attributes cannot be broken out of", () => {

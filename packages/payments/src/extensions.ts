@@ -43,6 +43,7 @@ interface ExtensionRegistry {
 	supersedePolicy?: SupersedePolicy | null;
 	checkoutGuards?: Set<CheckoutGuard>;
 	trialEligibilityPolicy?: TrialEligibilityPolicy | null;
+	seatGate?: SeatGate | null;
 }
 
 const REGISTRY_KEY = Symbol.for("fuutu.payments.extensions");
@@ -190,6 +191,12 @@ export type CheckoutGuardContext = {
 	trial: boolean;
 	/** Every purchase of `owner`, newest first. */
 	existingPurchases: readonly OwnerPurchase[];
+	/**
+	 * Every purchase `userId` checked out — their own and organizations'
+	 * (`metadata.user_id`), newest first. Rows of deleted organizations
+	 * are gone with them.
+	 */
+	checkoutUserPurchases: readonly OwnerPurchase[];
 };
 
 /**
@@ -226,8 +233,9 @@ export type TrialEligibilityContext = Omit<CheckoutGuardContext, "trial">;
 
 /**
  * `true` = this checkout gets the plan's trial. `defaults` returns the kit
- * decision: no earlier purchase of the plan by the owner when the plan
- * sets `trialOnce`, else always. Consulted only when the plan has
+ * decision: no earlier purchase of the plan by the owner nor by the
+ * checkout user (`checkoutUserPurchases`), unless the plan sets
+ * `trialOnce: false` (then always). Consulted only when the plan has
  * `trialDays` and the caller did not pass `skipTrial` — it can deny a
  * trial, never add one the plan does not offer.
  */
@@ -251,4 +259,41 @@ export function registerTrialEligibilityPolicy(
 
 export function getTrialEligibilityPolicy(): TrialEligibilityPolicy | null {
 	return registry().trialEligibilityPolicy ?? null;
+}
+
+// ─── Seat gate ────────────────────────────────────────────────────────────────
+
+/** A membership change the seat limit is checked for. */
+export type SeatGateContext = {
+	organizationId: string;
+	/** Seats in use: members, plus pending invitations for `"invitation"`. */
+	usedSeats: number;
+	/** The entitlement's seat cap (`null` = unlimited). */
+	seatsTotal: number | null;
+	/** `"member"`: direct add / invitation accept; `"invitation"`: invite. */
+	purpose: "member" | "invitation";
+};
+
+/**
+ * The seat cap for this change (`null` = unlimited) — the change is
+ * refused (402) when `usedSeats` reaches it. `defaults` returns the kit
+ * cap, the entitlement's `seatsTotal`.
+ */
+export type SeatGate = (
+	ctx: SeatGateContext,
+	defaults: () => number | null,
+) => number | null | Promise<number | null>;
+
+/**
+ * Decide the seat cap for new members and invitations (e.g. seats bought
+ * per organization outside the plan). Runs in the Better Auth organization
+ * hooks (`@fuutu/auth` seat-limit). One gate at a time; `null` restores
+ * the kit default (`seatsTotal`).
+ */
+export function registerSeatGate(gate: SeatGate | null): void {
+	registry().seatGate = gate;
+}
+
+export function getSeatGate(): SeatGate | null {
+	return registry().seatGate ?? null;
 }

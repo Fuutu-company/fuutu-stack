@@ -9,6 +9,10 @@
  * Users
  *   - admin@fuutu.local  / DevPassword!2345  (role: admin)
  *   - member@fuutu.local / DevPassword!2345  (role: member)
+ *   - two-factor@fuutu.local / DevPassword!2345  (role: member, no org —
+ *     the two-factor E2E turns 2FA on for it; 2FA needs a verified email)
+ *   - invitee@fuutu.local / DevPassword!2345  (role: member, verified, no
+ *     org, onboarding open — the invitation E2E invites and removes it)
  *
  * Data
  *   - 1 Organization "Acme" with both users as members
@@ -27,7 +31,8 @@
  *   - your app's demo data: `prisma/app-seed.ts` runs last
  *
  * Safety: the script refuses `NODE_ENV === "production"` and any non-local
- * `DATABASE_URL` host. Production seeding is an explicit, ticketed operation —
+ * `DATABASE_URL` host (the compose host `postgres` only with
+ * `FUUTU_ALLOW_SEED=1`). Production seeding is an explicit, ticketed operation —
  * not an auto-run.
  */
 import { randomBytes, randomUUID } from "node:crypto";
@@ -37,6 +42,7 @@ import { sha256 } from "@fuutu/utils/hash";
 import { appSeed, appSeedConfig } from "./app-seed";
 import { db } from "./client";
 import { seedInvoiceCurrency } from "./seed-context";
+import { assertLocalHost } from "./seed-guards";
 
 // Dashboard demo data. Marked rows (`metadata.seed`) are inserted only while
 // none exist, so re-runs stay idempotent and real audit rows never block them.
@@ -122,25 +128,19 @@ async function main() {
 		);
 	}
 
-	let seedHost: string;
-	try {
-		seedHost = new URL(env.DATABASE_URL).hostname;
-	} catch {
-		throw new Error("Refusing to seed: DATABASE_URL is not a valid URL");
-	}
-	// WHATWG URL wraps IPv6 literals in brackets — hostname reports "[::1]".
-	// "postgres" = the docker-compose / Actions service-container hostname —
-	// still a local throwaway DB, just reached over the container network.
-	if (
-		!["localhost", "127.0.0.1", "::1", "[::1]", "postgres"].includes(seedHost)
-	) {
-		throw new Error(`Refusing to seed non-local database (${seedHost})`);
-	}
+	// "postgres" = the compose / Actions service-container host: a throwaway
+	// DB in CI, the production DB inside a deployed compose stack — so it
+	// counts as local only with FUUTU_ALLOW_SEED=1.
+	assertLocalHost(env.DATABASE_URL, "database", {
+		allowComposeHost: env.FUUTU_ALLOW_SEED === "1",
+	});
 
 	console.log("Seeding development data…");
 
 	const adminId = randomUUID();
 	const memberId = randomUUID();
+	const twoFactorId = randomUUID();
+	const inviteeId = randomUUID();
 	const orgId = randomUUID();
 	const password = await hashPassword("DevPassword!2345");
 	// Every seeded list gets distinct `createdAt` values (1 s apart) so list
@@ -184,6 +184,48 @@ async function main() {
 				create: {
 					id: randomUUID(),
 					accountId: memberId,
+					providerId: "credential",
+					password,
+				},
+			},
+		},
+	});
+
+	await db.user.upsert({
+		where: { email: "two-factor@fuutu.local" },
+		update: {},
+		create: {
+			id: twoFactorId,
+			email: "two-factor@fuutu.local",
+			name: "Two-Factor Demo",
+			emailVerified: true,
+			role: "member",
+			onboardingComplete: true,
+			accounts: {
+				create: {
+					id: randomUUID(),
+					accountId: twoFactorId,
+					providerId: "credential",
+					password,
+				},
+			},
+		},
+	});
+
+	await db.user.upsert({
+		where: { email: "invitee@fuutu.local" },
+		update: {},
+		create: {
+			id: inviteeId,
+			email: "invitee@fuutu.local",
+			name: "Invited Teammate",
+			emailVerified: true,
+			role: "member",
+			onboardingComplete: false,
+			accounts: {
+				create: {
+					id: randomUUID(),
+					accountId: inviteeId,
 					providerId: "credential",
 					password,
 				},

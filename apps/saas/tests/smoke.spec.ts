@@ -122,6 +122,19 @@ test.describe("security headers + kit fingerprint", () => {
 		// Retired FLoC token — current Chrome logs an error for it on every page.
 		expect(h["permissions-policy"]).not.toContain("interest-cohort");
 		expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
+		expect(h["content-security-policy"]).not.toContain("cdn.jsdelivr.net");
+		expect(h["cross-origin-opener-policy"]).toBe("same-origin");
+		expect(h["cross-origin-resource-policy"]).toBe("same-site");
+	});
+
+	test("/api/docs runs sandboxed under its own CSP", async ({ request }) => {
+		const res = await request.get("/api/docs");
+		const csp = res.headers()["content-security-policy"] ?? "";
+		expect(csp).toContain("sandbox allow-scripts");
+		expect(csp).not.toContain("allow-same-origin");
+		// Only the docs CSP: the sitewide one would add a second policy.
+		expect(csp).not.toContain("script-src 'self'");
+		expect(await res.text()).toContain('integrity="sha384-');
 	});
 });
 

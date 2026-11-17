@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from "vitest";
  * Auth link pages of the SaaS app (`apps/saas/src/lib/auth-links.ts`):
  * `/auth/verify-email-change` reports success only when the session's
  * email really is the new one, and `/auth/reset-password` shows its form
- * only for a token Better Auth still knows.
+ * only for a token Better Auth still knows. `/auth/verify` sends a
+ * signed-out visitor to sign-in and back with the token.
  */
 
 const AUTH_LINKS = join(
@@ -23,6 +24,13 @@ type AuthLinks = {
 		input: { token?: string | null; error?: string | null },
 		tokenIsValid: (token: string) => Promise<boolean>,
 	) => Promise<boolean>;
+	emailVerificationFailure: (
+		code: string | undefined,
+	) => "sign-in" | "other-account" | "failed";
+	emailVerificationSignInHref: (
+		token: string,
+		callbackURL: string | null,
+	) => string;
 };
 
 const links = (await import(/* @vite-ignore */ AUTH_LINKS)) as AuthLinks;
@@ -93,5 +101,43 @@ describe("resetLinkIsUsable", () => {
 				Promise.resolve(t === "real"),
 			),
 		).toBe(true);
+	});
+});
+
+describe("emailVerificationFailure", () => {
+	it("sends a signed-out visitor to sign-in", () => {
+		expect(links.emailVerificationFailure("SIGN_IN_TO_VERIFY_EMAIL")).toBe(
+			"sign-in",
+		);
+	});
+
+	it("tells another account's session apart", () => {
+		expect(
+			links.emailVerificationFailure("EMAIL_VERIFICATION_OTHER_ACCOUNT"),
+		).toBe("other-account");
+	});
+
+	it("reports every other error as failed", () => {
+		expect(links.emailVerificationFailure("INVALID_TOKEN")).toBe("failed");
+		expect(links.emailVerificationFailure(undefined)).toBe("failed");
+	});
+});
+
+describe("emailVerificationSignInHref", () => {
+	it("returns to the verify page with token and landing page after sign-in", () => {
+		const href = links.emailVerificationSignInHref("t0k", "/dashboard");
+		const url = new URL(href, "http://localhost");
+		expect(url.pathname).toBe("/auth/sign-in");
+		expect(url.searchParams.get("redirect")).toBe(
+			"/auth/verify?token=t0k&callbackURL=%2Fdashboard",
+		);
+	});
+
+	it("leaves out a missing landing page", () => {
+		const url = new URL(
+			links.emailVerificationSignInHref("t0k", null),
+			"http://localhost",
+		);
+		expect(url.searchParams.get("redirect")).toBe("/auth/verify?token=t0k");
 	});
 });

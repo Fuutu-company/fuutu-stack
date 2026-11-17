@@ -272,6 +272,17 @@ describe("DB query functions - smoke tests", () => {
 				data: { revokedAt: expect.any(Date) },
 			});
 		});
+
+		it("revokeApiKeysForUser revokes every live key the user holds (personal and org)", async () => {
+			vi.mocked(db.apiKey.updateMany).mockResolvedValue({ count: 3 });
+			await expect(apiKeyQueries.revokeApiKeysForUser("user-1")).resolves.toBe(
+				3,
+			);
+			expect(db.apiKey.updateMany).toHaveBeenCalledWith({
+				where: { userId: "user-1", revokedAt: null },
+				data: { revokedAt: expect.any(Date) },
+			});
+		});
 	});
 
 	describe("notification queries", () => {
@@ -580,6 +591,26 @@ describe("DB query functions - smoke tests", () => {
 
 		it("exports listDeliveries function", () => {
 			expect(typeof webhookQueries.listDeliveries).toBe("function");
+		});
+
+		it("listDeliveries never selects the stored response body or payload", async () => {
+			vi.mocked(db.webhookDelivery.findMany).mockResolvedValueOnce([] as never);
+
+			await webhookQueries.listDeliveries("wh-1");
+
+			const args = vi
+				.mocked(db.webhookDelivery.findMany)
+				.mock.calls.at(-1)?.[0];
+			expect(args?.select).toBeDefined();
+			expect(args?.select).not.toHaveProperty("responseBody");
+			expect(args?.select).not.toHaveProperty("payload");
+			expect(args?.select).toMatchObject({
+				id: true,
+				eventType: true,
+				status: true,
+				responseCode: true,
+				attemptedAt: true,
+			});
 		});
 
 		it("exports countDeliveries function", () => {

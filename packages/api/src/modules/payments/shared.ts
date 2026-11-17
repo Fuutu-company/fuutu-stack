@@ -72,3 +72,24 @@ export function throwIfPaymentsDisabled(err: unknown): never {
 	}
 	throw err;
 }
+
+type PayerSource = { userId: string | null; metadata: unknown };
+
+/** The checkout user of a purchase: `metadata.user_id`, else its user owner. */
+export function payerId(purchase: PayerSource): string | null {
+	const { metadata } = purchase;
+	const fromMetadata =
+		metadata && typeof metadata === "object" && !Array.isArray(metadata)
+			? (metadata as Record<string, unknown>).user_id
+			: undefined;
+	return typeof fromMetadata === "string" && fromMetadata.length > 0
+		? fromMetadata
+		: purchase.userId;
+}
+
+/** `jane@acme.com` → `j***@acme.com` — names the payer without exposing it. */
+export function maskEmail(email: string): string {
+	const at = email.lastIndexOf("@");
+	if (at < 1) return "***";
+	return `${email[0]}***${email.slice(at)}`;
+}

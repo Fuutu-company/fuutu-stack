@@ -5,7 +5,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../../orpc/middleware/rate-limit";
 import { systemAdminProcedure } from "../../../../orpc/procedures";
-import { recordAdminAction } from "../../audit";
+import { recordAdminAction, runAuditedAdminAction } from "../../audit";
 import {
 	adminIdSchema,
 	assertNotAdmin,
@@ -20,16 +20,15 @@ const updateUserInput = z
 		userId: adminIdSchema,
 		name: z.string().trim().min(1).max(100).optional(),
 		email: z.email().max(254).optional(),
-		emailVerified: z.boolean().optional(),
+		// Only ever unverify: "verified" needs proof of the mailbox
+		// (`sendVerificationEmail`) — an admin's word would let a
+		// pre-registered account absorb the owner's social sign-in.
+		emailVerified: z.literal(false).optional(),
 		reason: reasonSchema.optional(),
 	})
 	.refine((input) => !input.email || input.reason, {
 		message: "A reason is required to change the email",
 		path: ["reason"],
-	})
-	.refine((input) => !(input.email && input.emailVerified === true), {
-		message: "A changed email starts unverified",
-		path: ["emailVerified"],
 	});
 
 type UserUpdate = { name?: string; email?: string; emailVerified?: boolean };
@@ -42,7 +41,7 @@ export const updateUserProcedure = systemAdminProcedure(PERMISSIONS.USER.UPDATE)
 		tags: ["Admin"],
 		summary: "Update user",
 		description:
-			"Edit name, email or email verification. An email change requires a reason, leaves the new address unverified and signs the user out everywhere. Not for your own or another admin's email. System admin only.",
+			"Edit name or email, or mark the email unverified (to verify it, send a verification email). An email change requires a reason, leaves the new address unverified and signs the user out everywhere. Not for your own or another admin's email. System admin only.",
 	})
 	.input(updateUserInput)
 	.handler(async ({ input, context }) => {
@@ -81,27 +80,34 @@ export const updateUserProcedure = systemAdminProcedure(PERMISSIONS.USER.UPDATE)
 			throw new ORPCError("BAD_REQUEST", { message: "Nothing to update" });
 		}
 
-		await withAuthErrors(() =>
-			auth.api.adminUpdateUser({
-				body: { userId: target.id, data },
-				headers: context.headers,
-			}),
-		);
-		if (emailChanged) {
-			await withAuthErrors(() =>
-				auth.api.revokeUserSessions({
-					body: { userId: target.id },
-					headers: context.headers,
-				}),
-			);
-			await revokeOAuthTokensForUser(target.id);
-		}
-
-		await recordAdminAction(context, {
+		const entry = {
 			action: "admin.user.update",
 			targetUserId: target.id,
 			reason: input.reason,
 			changedFields,
-		});
+		} as const;
+		const update = () =>
+			withAuthErrors(() =>
+				auth.api.adminUpdateUser({
+					body: { userId: target.id, data },
+					headers: context.headers,
+				}),
+			);
+		if (emailChanged) {
+			// An email change is a takeover step — audited before it happens.
+			await runAuditedAdminAction(context, entry, async () => {
+				await update();
+				await withAuthErrors(() =>
+					auth.api.revokeUserSessions({
+						body: { userId: target.id },
+						headers: context.headers,
+					}),
+				);
+				await revokeOAuthTokensForUser(target.id);
+			});
+		} else {
+			await update();
+			await recordAdminAction(context, entry);
+		}
 		return { success: true, changedFields };
 	});

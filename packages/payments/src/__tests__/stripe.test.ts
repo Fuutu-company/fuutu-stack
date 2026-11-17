@@ -32,6 +32,8 @@ const webhooksConstructEventAsync = vi.fn().mockResolvedValue({
 		},
 	},
 });
+const invoicePaymentsList = vi.fn().mockResolvedValue({ data: [] });
+const invoicesRetrieve = vi.fn();
 const listLineItems = vi.fn().mockResolvedValue({
 	data: [{ price: { id: "price_topup" } }],
 });
@@ -73,6 +75,8 @@ vi.mock("stripe", async () => {
 				update: subscriptionsUpdate,
 			};
 			webhooks = { constructEventAsync: webhooksConstructEventAsync };
+			invoicePayments = { list: invoicePaymentsList };
+			invoices = { retrieve: invoicesRetrieve };
 		},
 	};
 });
@@ -98,6 +102,21 @@ describe("stripe provider — SDK integration", () => {
 		});
 		expect(result.url).toBe("https://checkout.test/url");
 		expect(checkoutCreate).toHaveBeenCalledOnce();
+	});
+
+	it("createCheckoutLink also returns the Stripe session id", async () => {
+		checkoutCreate.mockResolvedValueOnce({
+			id: "cs_123",
+			url: "https://checkout.test/url",
+		} as never);
+		const result = await stripePaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+		});
+		expect(result).toEqual({
+			url: "https://checkout.test/url",
+			checkoutId: "cs_123",
+		});
 	});
 
 	it("createCheckoutLink defaults success/cancel URL to the SaaS app URL", async () => {
@@ -380,6 +399,7 @@ describe("stripe provider — SDK integration", () => {
 				object: {
 					id: "cs_test_123",
 					subscription: null,
+					payment_status: "paid",
 					customer: "cust_123",
 					metadata: { user_id: "user_123" },
 				},
@@ -633,6 +653,7 @@ describe("stripe provider — purchased units", () => {
 				object: {
 					id: "cs_1",
 					subscription: null,
+					payment_status: "paid",
 					customer: "cust_1",
 					metadata: { user_id: "user_1" },
 				},
@@ -683,6 +704,7 @@ describe("stripe provider — purchased units", () => {
 					object: {
 						id: "cs_1",
 						subscription: null,
+						payment_status: "paid",
 						customer: "cust_1",
 						metadata: { user_id: "user_1" },
 					},
@@ -1017,5 +1039,245 @@ describe("stripe provider — typed API failures", () => {
 
 	it("does not end a trial on cancel (cancel at period end waits for the trial end)", () => {
 		expect(stripePaymentProvider.cancelEndsTrial).toBeFalsy();
+	});
+});
+
+describe("stripe provider — checkout payment status", () => {
+	function parseEvent(event: unknown) {
+		webhooksConstructEventAsync.mockResolvedValueOnce(event as never);
+		return stripePaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "stripe-signature": "test" },
+				body: "{}",
+			}),
+		);
+	}
+
+	const oneTimeSession = (payment_status: string) => ({
+		id: "cs_async",
+		subscription: null,
+		customer: "cust_1",
+		payment_status,
+		metadata: { user_id: "user_1" },
+	});
+
+	it("ignores a one-time checkout that completed unpaid (SEPA/ACH still processing)", async () => {
+		listLineItems.mockClear();
+		const events = await parseEvent({
+			type: "checkout.session.completed",
+			id: "evt_unpaid",
+			data: { object: oneTimeSession("unpaid") },
+		});
+		expect(events).toEqual([]);
+		expect(listLineItems).not.toHaveBeenCalled();
+	});
+
+	it("ignores a subscription checkout that completed unpaid", async () => {
+		const events = await parseEvent({
+			type: "checkout.session.completed",
+			id: "evt_unpaid_sub",
+			data: {
+				object: {
+					id: "cs_sub",
+					subscription: "sub_1",
+					customer: "cust_1",
+					payment_status: "unpaid",
+					metadata: { organization_id: "org_1" },
+				},
+			},
+		});
+		expect(events).toEqual([]);
+	});
+
+	it("fails closed on a session without a payment status", async () => {
+		const events = await parseEvent({
+			type: "checkout.session.completed",
+			id: "evt_nostatus",
+			data: {
+				object: {
+					id: "cs_x",
+					subscription: null,
+					customer: "cust_1",
+					metadata: { user_id: "user_1" },
+				},
+			},
+		});
+		expect(events).toEqual([]);
+	});
+
+	it("processes a checkout with no payment required (100% discount)", async () => {
+		listLineItems.mockResolvedValueOnce({
+			data: [{ price: { id: "price_topup" }, quantity: 1 }],
+		});
+		const events = await parseEvent({
+			type: "checkout.session.completed",
+			id: "evt_free",
+			data: { object: oneTimeSession("no_payment_required") },
+		});
+		expect(events[0]).toMatchObject({
+			type: "checkout.completed",
+			productId: "price_topup",
+		});
+	});
+
+	it("maps checkout.session.async_payment_succeeded to checkout.completed", async () => {
+		listLineItems.mockResolvedValueOnce({
+			data: [{ price: { id: "price_topup" }, quantity: 1 }],
+		});
+		const events = await parseEvent({
+			type: "checkout.session.async_payment_succeeded",
+			id: "evt_async_ok",
+			data: { object: oneTimeSession("paid") },
+		});
+		expect(events).toEqual([
+			expect.objectContaining({
+				type: "checkout.completed",
+				eventId: "evt_async_ok",
+				productId: "price_topup",
+				metadata: { user_id: "user_1" },
+			}),
+		]);
+	});
+
+	it("ignores checkout.session.async_payment_failed", async () => {
+		const events = await parseEvent({
+			type: "checkout.session.async_payment_failed",
+			id: "evt_async_fail",
+			data: { object: oneTimeSession("unpaid") },
+		});
+		expect(events).toEqual([]);
+	});
+});
+
+describe("stripe provider — refunds and disputes", () => {
+	function parseEvent(event: unknown) {
+		webhooksConstructEventAsync.mockResolvedValueOnce(event as never);
+		return stripePaymentProvider.parseWebhook(
+			new Request("https://app.test/api/webhooks/payments", {
+				method: "POST",
+				headers: { "stripe-signature": "test" },
+				body: "{}",
+			}),
+		);
+	}
+
+	const charge = (overrides: Record<string, unknown> = {}) => ({
+		id: "ch_1",
+		payment_intent: "pi_1",
+		refunded: true,
+		amount: 1900,
+		amount_refunded: 1900,
+		...overrides,
+	});
+
+	it("stores the payment intent as the payment reference of a one-time checkout", async () => {
+		listLineItems.mockResolvedValueOnce({
+			data: [{ price: { id: "price_topup" }, quantity: 1 }],
+		});
+		const events = await parseEvent({
+			type: "checkout.session.completed",
+			id: "evt_paid",
+			data: {
+				object: {
+					id: "cs_1",
+					subscription: null,
+					payment_status: "paid",
+					payment_intent: "pi_1",
+					customer: "cust_1",
+					metadata: { user_id: "user_1" },
+				},
+			},
+		});
+		expect(events[0]?.paymentRef).toBe("pi_1");
+	});
+
+	it("maps a full refund of a one-time payment to payment.reversed by payment intent", async () => {
+		invoicePaymentsList.mockResolvedValueOnce({ data: [] });
+		const events = await parseEvent({
+			type: "charge.refunded",
+			id: "evt_refund",
+			data: { object: charge() },
+		});
+		expect(invoicePaymentsList).toHaveBeenCalledWith({
+			payment: { type: "payment_intent", payment_intent: "pi_1" },
+			limit: 1,
+		});
+		expect(events).toEqual([
+			{ type: "payment.reversed", eventId: "evt_refund", paymentRef: "pi_1" },
+		]);
+	});
+
+	it("maps a full refund of a subscription invoice to payment.reversed of that subscription", async () => {
+		invoicePaymentsList.mockResolvedValueOnce({
+			data: [{ invoice: "in_1" }],
+		});
+		invoicesRetrieve.mockResolvedValueOnce({
+			id: "in_1",
+			parent: {
+				type: "subscription_details",
+				subscription_details: { subscription: "sub_1" },
+			},
+		});
+		const events = await parseEvent({
+			type: "charge.refunded",
+			id: "evt_refund_sub",
+			data: { object: charge() },
+		});
+		expect(invoicesRetrieve).toHaveBeenCalledWith("in_1");
+		expect(events).toEqual([
+			{
+				type: "payment.reversed",
+				eventId: "evt_refund_sub",
+				subscriptionId: "sub_1",
+			},
+		]);
+	});
+
+	it("ignores a partial refund", async () => {
+		invoicePaymentsList.mockClear();
+		const events = await parseEvent({
+			type: "charge.refunded",
+			id: "evt_partial",
+			data: { object: charge({ refunded: false, amount_refunded: 500 }) },
+		});
+		expect(events).toEqual([]);
+		expect(invoicePaymentsList).not.toHaveBeenCalled();
+	});
+
+	it("maps a dispute to payment.reversed", async () => {
+		invoicePaymentsList.mockResolvedValueOnce({ data: [] });
+		const events = await parseEvent({
+			type: "charge.dispute.created",
+			id: "evt_dispute",
+			data: {
+				object: { id: "dp_1", charge: "ch_1", payment_intent: "pi_9" },
+			},
+		});
+		expect(events).toEqual([
+			{ type: "payment.reversed", eventId: "evt_dispute", paymentRef: "pi_9" },
+		]);
+	});
+
+	it("carries the event time, so an early reversal can be retried", async () => {
+		invoicePaymentsList.mockResolvedValueOnce({ data: [] });
+		const events = await parseEvent({
+			type: "charge.dispute.created",
+			id: "evt_dispute_t",
+			created: 1_763_380_800,
+			data: {
+				object: { id: "dp_2", charge: "ch_1", payment_intent: "pi_9" },
+			},
+		});
+		expect(events[0]?.occurredAt).toEqual(new Date(1_763_380_800_000));
+	});
+
+	it("ignores a refund without a payment intent", async () => {
+		const events = await parseEvent({
+			type: "charge.refunded",
+			id: "evt_nopi",
+			data: { object: charge({ payment_intent: null }) },
+		});
+		expect(events).toEqual([]);
 	});
 });

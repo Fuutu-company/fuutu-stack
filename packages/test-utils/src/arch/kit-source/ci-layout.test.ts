@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { workflowJob as job } from "./workflow-job";
 
 /**
- * Guard test: CI workflow settings the E2E and DCO jobs depend on.
+ * Guard test: the kit repository's CI layout the E2E and DCO jobs depend on.
  *
  * - `next build` inlines `NEXT_PUBLIC_*` into client bundles. Locally every
  *   build runs through `tooling/scripts/next.mjs` (slot env); CI calls
@@ -15,17 +16,8 @@ import { describe, expect, it } from "vitest";
  * - DCO sign-off applies to external contributions: fork pull requests only.
  */
 
-const REPO_ROOT = join(import.meta.dirname, "../../../../");
+const REPO_ROOT = join(import.meta.dirname, "../../../../../");
 const read = (path: string) => readFileSync(join(REPO_ROOT, path), "utf-8");
-
-/** A job's block from a workflow (jobs sit at two-space indent). */
-function job(workflow: string, name: string): string {
-	const start = workflow.indexOf(`\n  ${name}:\n`);
-	if (start === -1) return "";
-	const rest = workflow.slice(start + 1);
-	const next = rest.slice(1).search(/\n {2}[\w-]+:\n/);
-	return next === -1 ? rest : rest.slice(0, next + 1);
-}
 
 const ci = read(".github/workflows/ci.yml");
 
@@ -39,6 +31,20 @@ describe("ci workflow guard", () => {
 		);
 		expect(env).toMatch(
 			/^ {6}NEXT_PUBLIC_MARKETING_URL: http:\/\/localhost:3001$/m,
+		);
+	});
+
+	it("the kit-source guards run in the kit repository only", () => {
+		const verify = ci.slice(
+			ci.indexOf("\n  verify:\n"),
+			ci.indexOf("\n  build:\n"),
+		);
+		expect(verify).toContain(
+			[
+				"      - name: Kit-source guards (kit repository only)",
+				"        if: github.repository == 'Fuutu-company/fuutu-stack'",
+				"        run: pnpm -F @fuutu/test-utils test:kit-source",
+			].join("\n"),
 		);
 	});
 

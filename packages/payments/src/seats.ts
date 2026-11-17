@@ -1,7 +1,10 @@
-import { getPurchasesByOrganizationId } from "@fuutu/db";
+import {
+	getOrganizationSeatSubscriptions,
+	getPurchasesByOrganizationId,
+} from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { getPlanSubscription } from "./billing-policy";
-import { PLANS } from "./config";
+import { PLANS, paymentsConfig } from "./config";
 import { getPlanIdForProductId } from "./config.server";
 import { resolvePaymentProvider, resolvePaymentProviderById } from "./resolve";
 import {
@@ -99,6 +102,52 @@ export async function updateSeatsInOrganizationSubscription(
 		seats,
 	});
 	log.info("seats synced", { organizationId, seats });
+}
+
+export type SeatReconcileResult = {
+	/** Seat-based org subscriptions compared with their member count. */
+	checked: number;
+	/** Seat counts sent to the provider. */
+	synced: number;
+	/** Syncs that failed — logged per organization, retried next run. */
+	failed: number;
+};
+
+/**
+ * Re-sync every seat-based organization subscription whose billed seats
+ * differ from the member count — the safety net for a membership-hook sync
+ * that failed (provider down) or a checkout with fewer seats than members.
+ * Run daily by the `seat-reconcile` cron job. Each failure is logged and
+ * counted; the rest carry on. No-op when `paymentsConfig.seatSync` is
+ * "none". Same skips as `updateSeatsInOrganizationSubscription`.
+ */
+export async function reconcileOrganizationSeats(): Promise<SeatReconcileResult> {
+	const result: SeatReconcileResult = { checked: 0, synced: 0, failed: 0 };
+	if (paymentsConfig.seatSync === "none") return result;
+	const subscriptions = await getOrganizationSeatSubscriptions();
+	for (const sub of subscriptions) {
+		const planId = getPlanIdForProductId(sub.productId ?? sub.priceId);
+		if (!planId || PLANS[planId].seatBased !== true) continue;
+		result.checked++;
+		if (sub.memberCount === sub.quantity) continue;
+		try {
+			await updateSeatsInOrganizationSubscription(
+				sub.organizationId,
+				sub.memberCount,
+			);
+			result.synced++;
+		} catch (err) {
+			result.failed++;
+			log.error("seat reconcile failed — billed seats differ from members", {
+				organizationId: sub.organizationId,
+				subscriptionId: sub.subscriptionId,
+				billedSeats: sub.quantity,
+				members: sub.memberCount,
+				err: String(err),
+			});
+		}
+	}
+	return result;
 }
 
 /**

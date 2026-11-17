@@ -46,6 +46,23 @@ describe("mcpRateLimitBucket", () => {
 		expect(mcpRateLimitBucket(user, fromIp("1.1.1.1"))).toBe("mcp:key:key-1");
 	});
 
+	// Minting or refreshing a token must not buy a fresh budget: OAuth
+	// callers share one bucket per user and client app.
+	it("keys OAuth callers on user and client, not the token", () => {
+		const oauth = (credentialId: string) => ({
+			...user,
+			via: "oauth" as const,
+			credentialId,
+			clientId: "client-claude",
+		});
+		expect(mcpRateLimitBucket(oauth("jti-1"), new Headers())).toBe(
+			"mcp:oauth:user-1:client-claude",
+		);
+		expect(mcpRateLimitBucket(oauth("jti-2"), new Headers())).toBe(
+			mcpRateLimitBucket(oauth("jti-1"), new Headers()),
+		);
+	});
+
 	it("keys anonymous callers on their IP", () => {
 		expect(mcpRateLimitBucket(anonymous, fromIp("1.1.1.1"))).toBe(
 			"mcp:ip:1.1.1.1",

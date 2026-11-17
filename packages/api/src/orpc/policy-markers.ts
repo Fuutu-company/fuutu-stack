@@ -13,6 +13,8 @@ export type PolicyMarker = {
 	denyImpersonation?: true;
 	/** API-key callers are rejected — a signed-in session only. */
 	sessionOnly?: true;
+	/** A system-admin procedure (`systemAdminProcedure`): role, ban and session re-read. */
+	systemAdmin?: true;
 };
 
 const markers = new WeakMap<object, PolicyMarker>();

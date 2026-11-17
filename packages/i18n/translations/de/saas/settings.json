@@ -80,7 +80,8 @@
 			"removeSr": "Passkey entfernen",
 			"defaultName": "Passkey",
 			"addedOn": "Hinzugefügt am {date}",
-			"failed": "Passkey konnte nicht geändert werden."
+			"failed": "Passkey konnte nicht geändert werden.",
+			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und füge dann den Passkey hinzu."
 		},
 		"sessions": {
 			"title": "Aktive Sitzungen",
@@ -110,7 +111,11 @@
 			"confirmDescription": "Diese Aktion ist nicht umkehrbar. Alle Daten werden dauerhaft entfernt.",
 			"confirmPassword": "Passwort bestätigen",
 			"confirmCta": "Ja, löschen",
-			"failed": "Konto konnte nicht gelöscht werden."
+			"soleOwner": "Du bist der einzige Owner einer Organisation. Übertrage die Inhaberschaft oder lösche die Organisation zuerst.",
+			"subscriptionNotCancelled": "Dein Abonnement konnte nicht gekündigt werden, daher wurde nichts gelöscht. Versuche es gleich noch einmal.",
+			"failed": "Konto konnte nicht gelöscht werden.",
+			"passwordlessHint": "Dein Konto hat kein Passwort. Zum Löschen brauchst du eine frische Anmeldung.",
+			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und lösche dann dein Konto."
 		},
 		"billing": {
 			"title": "Abrechnung",
@@ -120,13 +125,17 @@
 		},
 		"emailChange": {
 			"title": "E-Mail ändern",
-			"description": "Beantrage eine E-Mail-Änderung. Ein Bestätigungslink wird an deine neue Adresse gesendet.",
+			"description": "Beantrage eine E-Mail-Änderung. Wir senden zuerst einen Bestätigungslink an deine aktuelle Adresse, danach einen Bestätigungslink an die neue.",
 			"newEmail": "Neue E-Mail",
 			"newEmailPlaceholder": "neu@beispiel.de",
 			"submit": "Bestätigung senden",
 			"sending": "Sendet…",
-			"sent": "Bestätigungs-E-Mail gesendet. Prüfe dein neues Postfach.",
-			"failed": "E-Mail-Änderung konnte nicht beantragt werden."
+			"sent": "Bestätigung an deine aktuelle E-Mail-Adresse gesendet. Öffne den Link darin, um fortzufahren.",
+			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und ändere dann deine E-Mail.",
+			"failed": "E-Mail-Änderung konnte nicht beantragt werden.",
+			"verifyCurrentFirst": "Bestätige zuerst deine aktuelle E-Mail-Adresse — dorthin senden wir die Bestätigung der Änderung.",
+			"sendVerification": "Bestätigungs-E-Mail senden",
+			"verificationSent": "Bestätigungs-E-Mail gesendet. Öffne den Link darin und ändere dann deine E-Mail."
 		}
 	}
 }

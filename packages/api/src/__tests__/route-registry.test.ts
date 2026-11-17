@@ -14,6 +14,7 @@ import {
 } from "@fuutu/utils/public-path";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTE_POLICIES, type RoutePolicy } from "../api-policy";
+import { apiConfig } from "../config";
 
 vi.mock("@fuutu/auth", () => ({
 	auth: { api: {}, handler: vi.fn(async () => new Response("auth")) },
@@ -57,7 +58,7 @@ function registeredRoutes(): RegisteredRoute[] {
 			hasBodyLimit: false,
 		};
 		if (!entry.methods.includes(route.method)) entry.methods.push(route.method);
-		// hono/body-limit returns a function named `bodyLimit`.
+		// The kit's body-limit.ts returns a function named `bodyLimit`.
 		if (route.handler.name === "bodyLimit") entry.hasBodyLimit = true;
 		byPath.set(route.path, entry);
 	}
@@ -153,7 +154,7 @@ describe("Hono route registry (api-policy.ts)", () => {
 			if (route && route.hasBodyLimit !== listedLimit) {
 				problems.push(
 					listedLimit
-						? `${policy.path} is listed with a ${policy.bodyLimit}-byte body limit but has no bodyLimit middleware — add \`bodyLimit({ maxSize })\` (hono/body-limit) before its handler.`
+						? `${policy.path} is listed with a ${policy.bodyLimit}-byte body limit but has no bodyLimit middleware — add \`bodyLimit({ maxSize })\` (./body-limit) before its handler.`
 						: `${policy.path} has a bodyLimit middleware — list its maxSize as bodyLimit in the registry.`,
 				);
 			}
@@ -169,7 +170,9 @@ describe("Hono route registry (api-policy.ts)", () => {
 	it.each(limited)(
 		"$path answers 413 above $bodyLimit bytes",
 		async (policy) => {
-			const method = policy.methods[0] === "ALL" ? "POST" : policy.methods[0];
+			// A body needs a method that carries one.
+			const listed = policy.methods.find((m) => m !== "GET" && m !== "HEAD");
+			const method = !listed || listed === "ALL" ? "POST" : listed;
 			const res = await app.request(samplePath(policy.path), {
 				method,
 				body: "x".repeat(policy.bodyLimit + 1),
@@ -178,6 +181,27 @@ describe("Hono route registry (api-policy.ts)", () => {
 			expect(res.status).toBe(413);
 		},
 	);
+
+	// The oRPC/OpenAPI dispatch is the `/api/*` middleware, not a route —
+	// its limit is checked here, before any context, auth or rate limit runs.
+	it.each(["/api/rpc/users/me", "/api/users/me"])(
+		"the oRPC dispatch answers 413 above apiConfig.maxBodyBytes (%s)",
+		async (path) => {
+			const res = await app.request(path, {
+				method: "POST",
+				body: "x".repeat(apiConfig.maxBodyBytes + 1),
+				headers: { "content-type": "application/json" },
+			});
+			expect(res.status).toBe(413);
+		},
+	);
+
+	it("limits Better Auth bodies to apiConfig.maxBodyBytes", () => {
+		const authRoute = ROUTE_POLICIES.find(
+			(policy) => policy.path === "/api/auth/**",
+		);
+		expect(authRoute?.bodyLimit).toBe(apiConfig.maxBodyBytes);
+	});
 
 	it("matches the saas proxy's public prefixes in both directions", async () => {
 		const publicPaths = await proxyPublicPaths();

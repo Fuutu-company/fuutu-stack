@@ -5,6 +5,11 @@
 #
 # Coolify itself does not consume this file — services there are created
 # individually from the same Dockerfiles.
+#
+# Ports are published on 127.0.0.1 only: Docker-published ports bypass
+# host firewall rules, and a reachable app port would let callers skip the
+# reverse proxy (TLS, forwarding headers for per-IP rate limits). Put a
+# proxy on the host in front of them.
 
 services:
   postgres:
@@ -36,7 +41,7 @@ services:
         NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
 
   web-docs:
     build:
@@ -52,7 +57,7 @@ services:
         NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
 
   app:
     build:
@@ -75,11 +80,17 @@ services:
       EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
       LOG_AUDIT_SINK: ${LOG_AUDIT_SINK:-db}
       FUUTU_LICENSE_KEY: ${FUUTU_LICENSE_KEY:-}
+      # Required in production — a conscious choice, no default: 1 when the
+      # host proxy writes X-Forwarded-For (nginx, Caddy, Traefik), else 0
+      # (every client then shares one auth rate-limit bucket).
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:?set TRUST_PROXY_HEADERS to 1 behind a proxy that writes X-Forwarded-For, else 0}
+      # Behind a CDN: the header it sets with the client IP (e.g. CF-Connecting-IP).
+      TRUSTED_CLIENT_IP_HEADER: ${TRUSTED_CLIENT_IP_HEADER:-}
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
   # One-shot migration runner — `migrator` stage of the app Dockerfile.
   #   docker compose -f docker-compose.deploy.yml run --rm migrate

@@ -179,6 +179,42 @@ export default function ChangelogV110De() {
 					h) und <code>authConfig.admin.exposeAuthEndpoints</code> (Standard{" "}
 					<code>false</code>).
 				</li>
+				<li>
+					Security-Härtung nach einem vollständigen Review von Auth, Admin, API,
+					Payments, Storage, Headern und CI: geschlossene
+					Better-Auth-Organisations- und Admin-Endpunkte, Gates für verifizierte
+					E-Mail und frische Sitzung bei API-Schlüsseln, Passkeys, 2FA,
+					MCP-Consent und E-Mail-Änderung, rückabgewickelte Erstattungen und
+					Disputes, an die validierte IP gebundene Webhook-Zustellung,
+					Zugriffsprüfung pro Objekt im Image-Proxy, ein Limit für Request-Bodys
+					und gehärtete Response-Header. Alle Auth-Sicherheitsregeln laufen über
+					ein Modul, <code>packages/auth/src/security/index.ts</code>, das jede
+					Regel, ihre Pfade und ihren Konfigurationsschalter auflistet.
+				</li>
+				<li>
+					Payments: Das Billing-Portal öffnet nur für den Zahler, Stripe
+					aktiviert nur bei bezahlten Checkouts, vollständige Erstattungen und
+					Disputes werden bei jedem Provider rückgängig gemacht (zu früh
+					eintreffende werden wiederholt), Testphasen laufen einmal pro Nutzer
+					und Organisation, Organisations-Checkouts rechnen mindestens die
+					Mitgliederzahl ab (täglicher Job <code>seat-reconcile</code>) und
+					derselbe Plan lässt sich nicht doppelt kaufen. Neuer Erweiterungspunkt{" "}
+					<code>registerSeatGate</code>; <code>createCheckoutLink</code> liefert
+					zusätzlich die <code>checkoutId</code> des Providers.
+				</li>
+				<li>
+					<code>apiConfig.apiKeyMaxLifetimeDays</code> begrenzt die Laufzeit von
+					API-Schlüsseln (ungesetzt: keine Grenze); <code>requireScopes()</code>{" "}
+					aus <code>@fuutu/mcp</code> beschränkt MCP-Tools auf OAuth-Scopes.
+				</li>
+				<li>
+					Die Architektur-Guards sind getrennt: <code>arch/*</code> in{" "}
+					<code>@fuutu/test-utils</code> sind Kit-Invarianten und laufen in
+					jedem <code>pnpm test</code>; <code>arch/kit-source/*</code> prüfen
+					die Demo-Dateien und das CI-Layout des Kits und laufen nur im
+					Kit-Repository (<code>pnpm -F @fuutu/test-utils test:kit-source</code>
+					) — du kannst deine UI und CI ändern, ohne rote Tests.
+				</li>
 			</ul>
 			<h3>Änderungen</h3>
 			<ul>
@@ -431,6 +467,81 @@ export default function ChangelogV110De() {
 					Die Admin-Gruppe der Seitenleiste zeigt Nutzer, Organisationen,
 					Audit-Logs und System in dieser Reihenfolge. Ein App-Eintrag mit{" "}
 					<code>after: "adminUsers"</code> steht jetzt vor Organisationen.
+				</li>
+				<li>
+					<strong>Deployment:</strong> <code>TRUST_PROXY_HEADERS</code> ist in
+					Produktion Pflicht (<code>0</code> oder <code>1</code>). Hinter einem
+					Proxy, der <code>X-Forwarded-For</code> schreibt (Coolify, Traefik),
+					setze <code>1</code>; hinter einem CDN zusätzlich{" "}
+					<code>TRUSTED_CLIENT_IP_HEADER</code> (z. B.{" "}
+					<code>cf-connecting-ip</code>). Die Compose-Dateien verlangen es
+					ausdrücklich.
+				</li>
+				<li>
+					<strong>Deployment:</strong> Produktion lehnt den{" "}
+					<code>BETTER_AUTH_SECRET</code>-Wert ab, der früher in{" "}
+					<code>.env.example</code> stand (öffentliche Git-Historie), ebenso
+					jedes Secret unter 32 Zeichen und eine <code>BETTER_AUTH_URL</code>{" "}
+					ohne https. Rotiere das Secret, falls ein Deployment je den alten Wert
+					nutzte.
+				</li>
+				<li>
+					<strong>Deployment:</strong> CORS mit Credentials ist Opt-in (
+					<code>CORS_CREDENTIALS=1</code>; <code>CORS_ORIGIN</code> wird nur
+					damit vertraut), und die Compose-Dateien veröffentlichen ihre Ports
+					nur auf <code>127.0.0.1</code>. Das Seeden des Docker-Host-
+					<code>postgres</code> braucht <code>FUUTU_ALLOW_SEED=1</code>.
+				</li>
+				<li>
+					Better-Auth-Organisationsmutationen (
+					<code>authClient.organization.create</code>, <code>update</code>,{" "}
+					<code>delete</code>, <code>inviteMember</code>,{" "}
+					<code>updateMemberRole</code>, <code>removeMember</code>,{" "}
+					<code>cancelInvitation</code>, <code>listInvitations</code>) sind über
+					HTTP geschlossen; nutze die oRPC-Prozeduren. Um sie zu behalten, setze{" "}
+					<code>authConfig.organizations.exposeAuthEndpoints: true</code>.
+					Einladungen aufzulisten braucht <code>INVITE_MEMBER</code>.
+				</li>
+				<li>
+					Die Admin-Aktion „E-Mail als verifiziert markieren“ ist durch ein
+					auditiertes „Verifizierungs-E-Mail senden“ ersetzt (
+					<code>admin.users.sendVerificationEmail</code>);{" "}
+					<code>admin.users.update</code> akzeptiert nur noch{" "}
+					<code>emailVerified: false</code>.
+				</li>
+				<li>
+					Das Anlegen von API-Schlüsseln, die Passkey-Registrierung, das
+					Aktivieren von 2FA, der MCP-OAuth-Consent und eine E-Mail-Änderung
+					setzen eine verifizierte E-Mail voraus. API-Schlüssel, Passkeys, eine
+					E-Mail-Änderung und das Löschen eines Kontos ohne Passwort brauchen
+					zusätzlich eine frische Sitzung (
+					<code>authConfig.session.freshSessionMaxAge</code>, 15 Minuten).
+				</li>
+				<li>
+					<code>/delete-user</code> verlangt das Passwort, bei Konten ohne
+					Passwort eine frische Sitzung; es lehnt alleinige Owner ab und bricht
+					ab, wenn das Kündigen eines Abos fehlschlägt.
+				</li>
+				<li>
+					Eine E-Mail-Änderung wird an der aktuellen Adresse bestätigt, die alte
+					Adresse erhält eine Benachrichtigung. Ein Passwort-Reset widerruft
+					Sitzungen, OAuth-Tokens und API-Schlüssel (mit Audit-Eintrag).
+				</li>
+				<li>
+					MCP <code>whoami</code> braucht die Scopes <code>profile</code> und{" "}
+					<code>email</code> auf OAuth-Tokens; API-Key-Principals sind nicht
+					betroffen.
+				</li>
+				<li>
+					Webhooks anlegen, ändern und löschen ist Admin-Stufe und nur per
+					Sitzung möglich; gespeicherte Antworten der Empfänger werden nie
+					zurückgegeben.
+				</li>
+				<li>
+					<code>createCheckoutLink</code> liefert{" "}
+					<code>{"{ url, checkoutId? }"}</code> statt eines Strings; ein
+					Checkout für denselben Plan bei einem zur Kündigung vorgemerkten Abo
+					antwortet mit <code>resume_instead</code>.
 				</li>
 			</ul>
 		</>

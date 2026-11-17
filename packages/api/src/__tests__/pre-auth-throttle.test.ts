@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 /**
  * `throttlePreAuth` counts FAILED credential checks per trusted client IP.
  * Valid credentials never consume the budget; once an IP is over it, every

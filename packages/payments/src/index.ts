@@ -11,11 +11,13 @@
 
 export {
 	ADDON_REQUIRES_BASE,
+	ALREADY_SUBSCRIBED,
 	assertCheckoutAllowed,
 	type CheckoutDecision,
 	type CheckoutRequest,
 	getPlanSubscription,
 	isAddonPlan,
+	RESUME_INSTEAD,
 } from "./billing-policy";
 export {
 	type AudienceId,
@@ -62,13 +64,17 @@ export {
 	type EntitlementResolver,
 	type EntitlementResolverFn,
 	type ExistingSubscription,
+	getSeatGate,
 	type OwnerPurchase,
 	onPurchaseChanged,
 	type PurchaseChangedHandler,
 	registerCheckoutGuard,
 	registerEntitlementResolver,
+	registerSeatGate,
 	registerSupersedePolicy,
 	registerTrialEligibilityPolicy,
+	type SeatGate,
+	type SeatGateContext,
 	type SupersedePolicy,
 	type TrialEligibilityContext,
 	type TrialEligibilityPolicy,
@@ -108,6 +114,8 @@ export {
 	cancelAllSubscriptionsForOrganization,
 	cancelAllSubscriptionsForOrganizationOrThrow,
 	cancelSubscriptionNowOrThrow,
+	reconcileOrganizationSeats,
+	type SeatReconcileResult,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
 export { getActivePlanId, processWebhookEvents } from "./sync";
@@ -115,6 +123,7 @@ export type {
 	CancelMode,
 	CancelSubscriptionOptions,
 	CheckoutInput,
+	CheckoutLink,
 	CustomerInput,
 	PaymentProvider,
 	PaymentsWebhookHandler,

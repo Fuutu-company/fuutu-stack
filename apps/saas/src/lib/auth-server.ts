@@ -13,9 +13,17 @@ import { config } from "@fuutu/config";
 import {
 	countOrganizationsForUser,
 	getOrganizationBySlug,
+	getUserAccessState,
 	isOrganizationMember,
+	isUserSessionLive,
 } from "@fuutu/db";
-import { PERMISSIONS, SYSTEM_POLICY, SystemAccessControl } from "@fuutu/rbac";
+import {
+	hasSystemPermission,
+	PERMISSIONS,
+	SYSTEM_POLICY,
+	SystemAccessControl,
+	toSystemRole,
+} from "@fuutu/rbac";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
@@ -98,7 +106,9 @@ export async function redirectIfSignedIn(
 
 /**
  * Require admin role - redirect if not authenticated or not admin
- * Better Auth stores role on user record (set via admin plugin)
+ * Better Auth stores role on user record (set via admin plugin).
+ * Role, ban and the session row are re-read from the database — a
+ * demotion, ban or revoked session must not survive the cookie cache.
  */
 export async function requireAdmin() {
 	const session = await requireAuth();
@@ -110,6 +120,21 @@ export async function requireAdmin() {
 	}
 	// Support acting as a user never reaches the admin area.
 	if ((session.session as { impersonatedBy?: string | null }).impersonatedBy) {
+		redirect("/dashboard?error=forbidden");
+	}
+	const [state, live] = await Promise.all([
+		getUserAccessState(session.user.id),
+		isUserSessionLive({
+			userId: session.user.id,
+			sessionId: session.session.id,
+		}),
+	]);
+	if (
+		!state ||
+		!live ||
+		isBanActive(state) ||
+		!hasSystemPermission(ac, toSystemRole(state.role), PERMISSIONS.VIEW_ADMIN)
+	) {
 		redirect("/dashboard?error=forbidden");
 	}
 

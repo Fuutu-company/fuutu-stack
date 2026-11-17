@@ -80,7 +80,8 @@
 			"removeSr": "Remove passkey",
 			"defaultName": "Passkey",
 			"addedOn": "Added {date}",
-			"failed": "Could not change passkey."
+			"failed": "Could not change passkey.",
+			"reauthRequired": "For your security, sign out and sign in again, then add the passkey."
 		},
 		"sessions": {
 			"title": "Active sessions",
@@ -110,7 +111,11 @@
 			"confirmDescription": "This action cannot be undone. All your data will be permanently removed.",
 			"confirmPassword": "Confirm password",
 			"confirmCta": "Yes, delete",
-			"failed": "Could not delete account."
+			"soleOwner": "You're the only owner of an organization. Transfer ownership or delete the organization first.",
+			"subscriptionNotCancelled": "Your subscription could not be cancelled, so nothing was deleted. Try again in a moment.",
+			"failed": "Could not delete account.",
+			"passwordlessHint": "Your account has no password. Deleting it needs a recent sign-in.",
+			"reauthRequired": "For your security, sign out and sign in again, then delete your account."
 		},
 		"billing": {
 			"title": "Billing",
@@ -120,13 +125,17 @@
 		},
 		"emailChange": {
 			"title": "Change email",
-			"description": "Request an email change. A verification link will be sent to your new address.",
+			"description": "Request an email change. We send a confirmation link to your current address first, then a verification link to the new one.",
 			"newEmail": "New email",
 			"newEmailPlaceholder": "new@example.com",
 			"submit": "Send verification",
 			"sending": "Sending…",
-			"sent": "Verification email sent. Check your new inbox.",
-			"failed": "Could not request email change."
+			"sent": "Confirmation sent to your current email address. Open the link in it to continue.",
+			"reauthRequired": "For your security, sign out and sign in again, then change your email.",
+			"failed": "Could not request email change.",
+			"verifyCurrentFirst": "Verify your current email address first — we send the change confirmation there.",
+			"sendVerification": "Send verification email",
+			"verificationSent": "Verification email sent. Open the link in it, then change your email."
 		}
 	}
 }

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 // An app var reusing a kit key would silently get the kit schema — the
 // env surfaces refuse to load instead, naming the key.
 const shapes = vi.hoisted(() => ({

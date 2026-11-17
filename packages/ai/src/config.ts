@@ -1,4 +1,5 @@
 import { env } from "@fuutu/env/saas";
+import { DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_PROMPT_CHARS } from "./limits";
 import type { AIProviderId } from "./types";
 
 /**
@@ -39,4 +40,8 @@ export const aiConfig = {
 	defaultModelFor(provider: AIProviderId): string {
 		return env.AI_MODEL ?? DEFAULT_MODELS[provider];
 	},
+	/** Reply cap (tokens) for every provider call without its own `maxTokens`. */
+	maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+	/** Prompt cap (characters across all messages) on the AI chat routes. */
+	maxPromptChars: DEFAULT_MAX_PROMPT_CHARS,
 };

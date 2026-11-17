@@ -26,6 +26,7 @@ export const pageSchema = z.coerce
 export type AdminTargetUser = {
 	id: string;
 	email: string;
+	emailVerified: boolean;
 	isAdmin: boolean;
 	isBanned: boolean;
 };
@@ -39,6 +40,7 @@ export async function loadTargetUser(userId: string): Promise<AdminTargetUser> {
 	return {
 		id: target.id,
 		email: target.email,
+		emailVerified: target.emailVerified === true,
 		isAdmin: toSystemRole(target.role) === "admin",
 		isBanned: isBanActive(target),
 	};

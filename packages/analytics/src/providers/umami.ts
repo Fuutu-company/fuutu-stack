@@ -1,4 +1,5 @@
 import { analyticsConfig } from "../config";
+import { redactUrl } from "../redact-url";
 import type {
 	AnalyticsCspOrigins,
 	AnalyticsEventProps,
@@ -51,7 +52,7 @@ export const umamiAnalyticsProvider: AnalyticsProvider = {
 	trackPageview(url) {
 		try {
 			if (url) {
-				getUmami()?.track({ url });
+				getUmami()?.track({ url: redactUrl(url) });
 			} else {
 				getUmami()?.track();
 			}
@@ -75,11 +76,12 @@ export const umamiAnalyticsProvider: AnalyticsProvider = {
 	},
 
 	installConsentGate(hasConsent) {
-		// Returning null makes the script drop the send.
+		// Returning null makes the script drop the send. Every send passes
+		// here, so auth-link secrets are stripped from its URLs too.
 		(globalThis as Record<string, unknown>)[BEFORE_SEND_GLOBAL] = (
 			_type: string,
 			payload: unknown,
-		) => (hasConsent() ? payload : null);
+		) => (hasConsent() ? redactPayloadUrls(payload) : null);
 	},
 
 	getCspOrigins(): AnalyticsCspOrigins {
@@ -94,6 +96,22 @@ export const umamiAnalyticsProvider: AnalyticsProvider = {
 		}
 	},
 };
+
+function redactPayloadUrls(payload: unknown): unknown {
+	if (typeof payload !== "object" || payload === null) return payload;
+	const record = payload as Record<string, unknown>;
+	let next: Record<string, unknown> | null = null;
+	for (const key of ["url", "referrer"] as const) {
+		const value = record[key];
+		if (typeof value !== "string") continue;
+		const redacted = redactUrl(value);
+		if (redacted !== value) {
+			next ??= { ...record };
+			next[key] = redacted;
+		}
+	}
+	return next ?? payload;
+}
 
 function umamiScriptUrl(): string {
 	return analyticsConfig.scriptUrl ?? "https://cloud.umami.is/script.js";

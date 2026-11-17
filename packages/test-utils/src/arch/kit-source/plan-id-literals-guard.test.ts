@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
  * not a plan id.
  */
 
-const ROOT = join(import.meta.dirname, "../../../..");
+const ROOT = join(import.meta.dirname, "../../../../..");
 
 const FILES = [
 	"apps/saas/src/modules/app/payments/choose-plan.tsx",

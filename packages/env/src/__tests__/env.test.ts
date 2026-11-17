@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 function setRequiredSaasEnv() {
 	process.env.DATABASE_URL = "postgresql://localhost:5432/test";
 	process.env.BETTER_AUTH_SECRET = "a".repeat(32);
 	process.env.BETTER_AUTH_URL = "http://localhost:3000";
+	// Required (explicitly 0 or 1) in production.
+	process.env.TRUST_PROXY_HEADERS = "0";
 }
 
 describe("@fuutu/env/saas", () => {
@@ -68,6 +73,23 @@ describe("@fuutu/env/saas", () => {
 	it("rejects CORS_ORIGIN='*'", async () => {
 		setRequiredSaasEnv();
 		process.env.CORS_ORIGIN = "*";
+
+		await expect(import("../saas")).rejects.toThrow();
+	});
+
+	it("keeps CORS uncredentialed unless CORS_CREDENTIALS opts in", async () => {
+		setRequiredSaasEnv();
+		delete process.env.CORS_CREDENTIALS;
+		expect((await import("../saas")).env.CORS_CREDENTIALS).toBe(false);
+
+		vi.resetModules();
+		process.env.CORS_CREDENTIALS = "1";
+		expect((await import("../saas")).env.CORS_CREDENTIALS).toBe(true);
+	});
+
+	it("rejects a vague CORS_CREDENTIALS value", async () => {
+		setRequiredSaasEnv();
+		process.env.CORS_CREDENTIALS = "yes";
 
 		await expect(import("../saas")).rejects.toThrow();
 	});
@@ -137,6 +159,71 @@ describe("@fuutu/env/saas", () => {
 
 		const { env } = await import("../saas");
 		expect(env.BETTER_AUTH_SECRET).toBe("a".repeat(32));
+	});
+
+	describe("production hardening", () => {
+		const LEAKED_SECRET = "gVq2v3iiw7jd5dggl/z6Vk1iPqUMhMinbKq56R/Z6x8=";
+		const STRONG_SECRET = "k3Xv9pQ2mR7tW1yZ4bN8cF6hJ0sL5dG2aE9uI3oP7qM=";
+
+		function setProductionEnv() {
+			setRequiredSaasEnv();
+			process.env.NODE_ENV = "production";
+			process.env.BETTER_AUTH_SECRET = STRONG_SECRET;
+			process.env.BETTER_AUTH_URL = "https://app.example.com";
+		}
+
+		it("accepts a strong secret and an https app URL", async () => {
+			setProductionEnv();
+			const { env } = await import("../saas");
+			expect(env.BETTER_AUTH_URL).toBe("https://app.example.com");
+		});
+
+		it("rejects the BETTER_AUTH_SECRET once published in .env.example", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_SECRET = LEAKED_SECRET;
+			await expect(import("../saas")).rejects.toThrow();
+		});
+
+		it("still accepts the published secret outside production (local dev)", async () => {
+			setRequiredSaasEnv();
+			process.env.NODE_ENV = "development";
+			process.env.BETTER_AUTH_SECRET = LEAKED_SECRET;
+			const { env } = await import("../saas");
+			expect(env.BETTER_AUTH_SECRET).toBe(LEAKED_SECRET);
+		});
+
+		it("rejects a secret that is under 32 chars once whitespace is trimmed", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_SECRET = `  ${"a".repeat(20)}            `;
+			await expect(import("../saas")).rejects.toThrow();
+		});
+
+		it("rejects a plain-http BETTER_AUTH_URL on a public host", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_URL = "http://app.example.com";
+			await expect(import("../saas")).rejects.toThrow();
+		});
+
+		it("allows plain http on loopback (CI runs next start on localhost)", async () => {
+			setProductionEnv();
+			process.env.BETTER_AUTH_URL = "http://localhost:3000";
+			const { env } = await import("../saas");
+			expect(env.BETTER_AUTH_URL).toBe("http://localhost:3000");
+		});
+
+		it("defaults CORS_ORIGIN to the app origin instead of localhost", async () => {
+			setProductionEnv();
+			delete process.env.CORS_ORIGIN;
+			const { env } = await import("../saas");
+			expect(env.CORS_ORIGIN).toBe("https://app.example.com");
+		});
+
+		it("keeps an explicit CORS_ORIGIN", async () => {
+			setProductionEnv();
+			process.env.CORS_ORIGIN = "https://www.example.com";
+			const { env } = await import("../saas");
+			expect(env.CORS_ORIGIN).toBe("https://www.example.com");
+		});
 	});
 
 	it("rejects a CRON_SECRET shorter than 16 chars", async () => {
@@ -223,6 +310,67 @@ describe("@fuutu/env/saas", () => {
 			await expect(import("../saas")).rejects.toThrow();
 		}
 		delete process.env.TRUST_PROXY_HEADERS;
+	});
+
+	it("TRUST_PROXY_HEADERS must be set explicitly in production", async () => {
+		setRequiredSaasEnv();
+		process.env.NODE_ENV = "production";
+		delete process.env.TRUST_PROXY_HEADERS;
+		await expect(import("../saas")).rejects.toThrow();
+
+		for (const [value, expected] of [
+			["0", false],
+			["1", true],
+		] as const) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.NODE_ENV = "production";
+			process.env.TRUST_PROXY_HEADERS = value;
+			const { env } = await import("../saas");
+			expect(env.TRUST_PROXY_HEADERS).toBe(expected);
+		}
+		delete process.env.TRUST_PROXY_HEADERS;
+	});
+
+	it("TRUSTED_CLIENT_IP_HEADER accepts a header name, lowercased", async () => {
+		setRequiredSaasEnv();
+		delete process.env.TRUSTED_CLIENT_IP_HEADER;
+		let mod = await import("../saas");
+		expect(mod.env.TRUSTED_CLIENT_IP_HEADER).toBeUndefined();
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+		process.env.TRUSTED_CLIENT_IP_HEADER = "CF-Connecting-IP";
+		mod = await import("../saas");
+		expect(mod.env.TRUSTED_CLIENT_IP_HEADER).toBe("cf-connecting-ip");
+
+		for (const value of [
+			"x forwarded",
+			"x-ip:1",
+			"a".repeat(65),
+			// Client-writable, or a list — never a trusted single client IP.
+			"X-Forwarded-For",
+			"x-real-ip",
+			"X-Fuutu-Client-IP",
+		]) {
+			vi.resetModules();
+			setRequiredSaasEnv();
+			process.env.TRUSTED_CLIENT_IP_HEADER = value;
+			await expect(import("../saas")).rejects.toThrow();
+		}
+		delete process.env.TRUSTED_CLIENT_IP_HEADER;
+	});
+
+	it("FUUTU_ALLOW_SEED accepts only 0 or 1", async () => {
+		setRequiredSaasEnv();
+		process.env.FUUTU_ALLOW_SEED = "1";
+		expect((await import("../saas")).env.FUUTU_ALLOW_SEED).toBe("1");
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+		process.env.FUUTU_ALLOW_SEED = "yes";
+		await expect(import("../saas")).rejects.toThrow();
+		delete process.env.FUUTU_ALLOW_SEED;
 	});
 
 	it("accepts noop and custom PAYMENTS_PROVIDER values", async () => {
@@ -415,5 +563,13 @@ describe("@fuutu/env/docs", () => {
 
 		const { env } = await import("../docs");
 		expect(env.NEXT_PUBLIC_DOCS_URL).toBe("https://docs.example.com");
+	});
+
+	it("TRUST_PROXY_HEADERS (search rate limit) defaults to false", async () => {
+		delete process.env.TRUST_PROXY_HEADERS;
+		expect((await import("../docs")).env.TRUST_PROXY_HEADERS).toBe(false);
+		vi.resetModules();
+		process.env.TRUST_PROXY_HEADERS = "1";
+		expect((await import("../docs")).env.TRUST_PROXY_HEADERS).toBe(true);
 	});
 });

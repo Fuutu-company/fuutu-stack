@@ -27,7 +27,8 @@ import type { auth } from "./index";
  * - inferAdditionalFields: Syncs custom user fields with server
  * - adminClient: Admin features
  * - magicLinkClient: Magic link authentication (gated on features.magicLink)
- * - multiSessionClient: Multiple device sessions
+ * - multiSessionClient: Multiple device sessions (gated on features.multiSession)
+ * - usernameClient: Sign-in by username (gated on features.username)
  * - organizationClient: Organization management (gated on organizationsMode)
  * - twoFactorClient: 2FA (gated on features.twoFactor)
  * - passkeyClient: Passkeys (gated on features.passkeys)
@@ -38,8 +39,8 @@ const authClientOptions = {
 	plugins: [
 		inferAdditionalFields<typeof auth>(),
 		adminClient(),
-		multiSessionClient(),
-		usernameClient(),
+		...(authConfig.features.multiSession ? [multiSessionClient()] : []),
+		...(authConfig.features.username ? [usernameClient()] : []),
 		lastLoginMethodClient(),
 		...(authConfig.features.magicLink ? [magicLinkClient()] : []),
 		...(config.features.organizationsMode !== "off"

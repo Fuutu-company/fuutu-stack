@@ -32,6 +32,10 @@ const fixtures: { [K in Name]: Parameters<(typeof templateRegistry)[K]>[0] } = {
 		verificationUrl: "https://app.test/verify-email",
 		newEmail: "new@test.dev",
 	},
+	"email-changed": {
+		name: "Rush",
+		newEmail: "new@test.dev",
+	},
 	"organization-invitation": {
 		organizationName: "Acme",
 		inviteUrl: "https://app.test/invite",

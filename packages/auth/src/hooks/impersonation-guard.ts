@@ -28,6 +28,12 @@ const GUARDED_PATHS: ReadonlySet<string> = new Set([
 	"/account-info",
 	"/oauth2/client/rotate-secret",
 	"/oauth2/update-client",
+	// Removing the user's OAuth clients, keys and grants (connected apps).
+	"/oauth2/delete-client",
+	"/oauth2/delete-consent",
+	"/oauth2/client/rotate-keys",
+	"/oauth2/register",
+	"/mcp-oauth/connected-apps/revoke",
 	// Switching device sessions would leave the impersonation without the
 	// audited stop (`admin.impersonation.stop`).
 	"/multi-session/set-active",

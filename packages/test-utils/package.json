@@ -10,7 +10,8 @@
 	},
 	"scripts": {
 		"check-types": "tsc --noEmit",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:kit-source": "vitest run --config vitest.kit-source.config.ts"
 	},
 	"dependencies": {},
 	"peerDependencies": {

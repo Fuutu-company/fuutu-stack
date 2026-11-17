@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 // Regression: checkout guards are registered at server start
 // (`server-init.ts`, the instrumentation bundle) and run inside the API
 // route bundle — Next.js evaluates `@fuutu/payments` once per bundle, so

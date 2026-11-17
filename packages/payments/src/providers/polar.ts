@@ -77,6 +77,10 @@ const PolarEventDataSchema = z
 		// for non-seat products.
 		seats: z.number().nullish(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
+		// Order times — part of the signed payload, the same on every
+		// redelivery (unlike `webhook-timestamp`).
+		createdAt: z.union([z.date(), z.string()]).nullish(),
+		modifiedAt: z.union([z.date(), z.string()]).nullish(),
 	})
 	.optional();
 
@@ -246,6 +250,7 @@ function polarSubscriptionStatus(subscription: {
 const PARSED_POLAR_EVENT_TYPES = new Set([
 	"checkout.updated",
 	"order.paid",
+	"order.refunded",
 	"subscription.created",
 	"subscription.active",
 	"subscription.updated",
@@ -285,6 +290,9 @@ function mapPolarEventToProviderEvent(
 				return "one_time.purchased";
 			}
 			return null;
+		// Only a full refund takes back what the order bought.
+		case "order.refunded":
+			return data?.status === "refunded" ? "payment.reversed" : null;
 		// subscription.created fires BEFORE the first payment clears —
 		// mapping it to activated would cancel the owner's existing
 		// subscription and grant credits pre-payment. The real activation
@@ -357,7 +365,7 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 				metadata,
 			}),
 		);
-		return { url: checkout.url };
+		return { url: checkout.url, checkoutId: checkout.id };
 	},
 
 	async createCustomerPortalLink(input: PortalInput) {
@@ -447,13 +455,35 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		const subscriptionId = isSubscriptionPayload
 			? (data?.subscriptionId ?? data?.id ?? undefined)
 			: (data?.subscriptionId ?? undefined);
+		const eventId = headers["webhook-id"] || data?.id || undefined;
+
+		// A refunded order names its subscription, else the one-time
+		// purchase by the checkout (or, without one, the order) it paid.
+		if (eventType === "payment.reversed") {
+			// When the order was refunded (last modified, else created) —
+			// not `webhook-timestamp`: that is each delivery attempt's time,
+			// always within minutes of now, so the early-reversal retry
+			// window would never run out.
+			const refundedAt = data?.modifiedAt ?? data?.createdAt;
+			const occurredAt = refundedAt ? toDate(refundedAt) : undefined;
+			return [
+				subscriptionId
+					? { type: eventType, eventId, subscriptionId, occurredAt }
+					: {
+							type: eventType,
+							eventId,
+							paymentRef: data?.checkoutId ?? data?.id,
+							occurredAt,
+						},
+			];
+		}
 
 		const providerEvent: ProviderEvent = {
 			type: eventType,
 			// Standard-webhooks delivery id — dedup marker for
 			// checkout.completed redeliveries. Falls back to the
 			// payload id (checkout/order id) when the header is absent.
-			eventId: headers["webhook-id"] || data?.id || undefined,
+			eventId,
 			metadata: data?.metadata,
 			subscriptionId,
 			customerId: data?.customerId ?? undefined,
@@ -465,6 +495,14 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 					? data.seats
 					: undefined,
 		};
+		// One-time payments: the checkout (or the order without one) a later
+		// order.refunded names.
+		if (
+			eventType === "checkout.completed" ||
+			eventType === "one_time.purchased"
+		) {
+			providerEvent.paymentRef = data?.id;
+		}
 
 		if (isSubscriptionPayload) {
 			// scheduled_cancel / expired are derived transitions —

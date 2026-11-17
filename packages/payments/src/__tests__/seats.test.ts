@@ -22,8 +22,10 @@ const mocks = vi.hoisted((): { provider: MockProviderShape } => ({
 
 const mockGetActiveSubscriptionForOrganization = vi.fn();
 const mockGetPurchasesByOrganizationId = vi.fn();
+const mockGetOrganizationSeatSubscriptions = vi.fn();
 
 vi.mock("@fuutu/db", () => ({
+	getOrganizationSeatSubscriptions: mockGetOrganizationSeatSubscriptions,
 	getActiveSubscriptionForOrganization:
 		mockGetActiveSubscriptionForOrganization,
 	getPurchasesByOrganizationId: mockGetPurchasesByOrganizationId,
@@ -31,11 +33,12 @@ vi.mock("@fuutu/db", () => ({
 }));
 
 const mockWarn = vi.fn();
+const mockError = vi.hoisted(() => vi.fn());
 vi.mock("@fuutu/logs", () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: mockWarn,
-		error: vi.fn(),
+		error: mockError,
 		debug: vi.fn(),
 	}),
 }));
@@ -86,7 +89,9 @@ const {
 	updateSeatsInOrganizationSubscription,
 	cancelAllSubscriptionsForOrganization,
 	cancelAllSubscriptionsForOrganizationOrThrow,
+	reconcileOrganizationSeats,
 } = await import("../seats");
+const { paymentsConfig } = await import("../config");
 
 describe("updateSeatsInOrganizationSubscription", () => {
 	beforeEach(() => {
@@ -448,5 +453,108 @@ describe("cancelAllSubscriptionsForOrganization", () => {
 		await cancelAllSubscriptionsForOrganization("org_1");
 
 		expect(mockCancelSubscription).not.toHaveBeenCalled();
+	});
+});
+
+describe("reconcileOrganizationSeats", () => {
+	const candidate = (overrides: Record<string, unknown> = {}) => ({
+		purchaseId: "purchase_1",
+		organizationId: "org_1",
+		subscriptionId: "sub_123",
+		provider: "test-provider",
+		productId: "price-pro",
+		priceId: "price-pro",
+		quantity: 3,
+		memberCount: 3,
+		...overrides,
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		paymentsConfig.seatSync = "members";
+		mocks.provider = {
+			id: "test-provider",
+			ownsSeatSync: false,
+			setSubscriptionSeats: mockSetSubscriptionSeats,
+			cancelSubscription: mockCancelSubscription,
+		};
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue({
+			id: "purchase_1",
+			provider: "test-provider",
+			subscriptionId: "sub_123",
+			productId: "price-pro",
+			priceId: "price-pro",
+			status: "ACTIVE",
+		});
+	});
+
+	it("syncs a subscription that bills fewer seats than the org has members", async () => {
+		mockGetOrganizationSeatSubscriptions.mockResolvedValue([
+			candidate({ quantity: 2, memberCount: 5 }),
+		]);
+
+		const result = await reconcileOrganizationSeats();
+
+		expect(mockSetSubscriptionSeats).toHaveBeenCalledWith({
+			subscriptionId: "sub_123",
+			seats: 5,
+		});
+		expect(result).toEqual({ checked: 1, synced: 1, failed: 0 });
+	});
+
+	it("leaves a subscription whose seats match its members", async () => {
+		mockGetOrganizationSeatSubscriptions.mockResolvedValue([candidate()]);
+
+		const result = await reconcileOrganizationSeats();
+
+		expect(mockSetSubscriptionSeats).not.toHaveBeenCalled();
+		expect(result).toEqual({ checked: 1, synced: 0, failed: 0 });
+	});
+
+	it("skips a plan that is not seat-based", async () => {
+		mockGetOrganizationSeatSubscriptions.mockResolvedValue([
+			candidate({
+				productId: "price-flat",
+				priceId: "price-flat",
+				quantity: 1,
+				memberCount: 4,
+			}),
+		]);
+
+		const result = await reconcileOrganizationSeats();
+
+		expect(mockSetSubscriptionSeats).not.toHaveBeenCalled();
+		expect(result).toEqual({ checked: 0, synced: 0, failed: 0 });
+	});
+
+	it("logs and counts a failed sync, then carries on with the next org", async () => {
+		mockGetOrganizationSeatSubscriptions.mockResolvedValue([
+			candidate({ organizationId: "org_1", quantity: 1, memberCount: 2 }),
+			candidate({ organizationId: "org_2", quantity: 1, memberCount: 4 }),
+		]);
+		mockSetSubscriptionSeats
+			.mockRejectedValueOnce(new Error("provider down"))
+			.mockResolvedValueOnce(undefined);
+
+		const result = await reconcileOrganizationSeats();
+
+		expect(result).toEqual({ checked: 2, synced: 1, failed: 1 });
+		expect(mockError).toHaveBeenCalledWith(
+			expect.stringContaining("seat reconcile failed"),
+			expect.objectContaining({ organizationId: "org_1" }),
+		);
+	});
+
+	it("does nothing when seats do not follow members", async () => {
+		paymentsConfig.seatSync = "none";
+		mockGetOrganizationSeatSubscriptions.mockResolvedValue([
+			candidate({ quantity: 1, memberCount: 9 }),
+		]);
+
+		const result = await reconcileOrganizationSeats();
+
+		expect(mockGetOrganizationSeatSubscriptions).not.toHaveBeenCalled();
+		expect(result).toEqual({ checked: 0, synced: 0, failed: 0 });
+		paymentsConfig.seatSync = "members";
 	});
 });

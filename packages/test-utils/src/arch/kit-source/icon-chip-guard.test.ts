@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  * buttons share that shape; they are listed below with the reason.
  */
 
-const REPO_ROOT = join(import.meta.dirname, "../../../../");
+const REPO_ROOT = join(import.meta.dirname, "../../../../../");
 const SCAN_DIRS = [
 	"apps/saas/src",
 	"apps/marketing/src",

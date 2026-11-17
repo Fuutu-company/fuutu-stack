@@ -126,6 +126,31 @@ describe("organizations.get", () => {
 		expect(result).toEqual(orgFixture);
 	});
 
+	it("returns no invitations (invitee emails) to a member who may not invite", async () => {
+		vi.mocked(getOrganizationBySlug).mockResolvedValue({
+			id: "org-1",
+			slug: "acme",
+		} as never);
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			invitations: [{ id: "inv-1", email: "invitee@acme.dev" }],
+		} as never);
+
+		const asMember = await call(
+			organizationsRouter.get,
+			{ slug: "acme" },
+			{ context: makeSession<Context>(makeUser({ id: "user-2" })) },
+		);
+		expect(asMember.invitations).toEqual([]);
+
+		const asOwner = await call(
+			organizationsRouter.get,
+			{ slug: "acme" },
+			{ context: authenticatedContext },
+		);
+		expect(asOwner.invitations).toHaveLength(1);
+	});
+
 	it("throws NOT_FOUND when org does not exist", async () => {
 		vi.mocked(getOrganizationBySlug).mockResolvedValue(null as never);
 
@@ -359,6 +384,76 @@ describe("organizations.update", () => {
 				},
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
+	});
+});
+
+describe("organizations.update logo and Better Auth errors", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+	});
+
+	it.each([
+		"https://evil.example/pixel.png",
+		"/image-proxy/organization-logos/org-2/logo.png",
+		"/image-proxy/avatars/org-1/logo.png",
+		"/image-proxy/organization-logos/org-1/../logo.png",
+	])("rejects logo %s with BAD_REQUEST before Better Auth", async (logo) => {
+		await expect(
+			call(
+				organizationsRouter.update,
+				{ organizationId: "org-1", logo },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
+		expect(auth.api.updateOrganization).not.toHaveBeenCalled();
+	});
+
+	it("maps a Better Auth INVALID_PROFILE_INPUT APIError to BAD_REQUEST", async () => {
+		vi.mocked(auth.api.updateOrganization).mockRejectedValue(
+			Object.assign(new Error("Name must be at most 100 characters"), {
+				name: "APIError",
+				statusCode: 400,
+				body: { code: "INVALID_PROFILE_INPUT" },
+			}),
+		);
+		await expect(
+			call(
+				organizationsRouter.update,
+				{ organizationId: "org-1", name: "Acme" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST", status: 400 });
+	});
+
+	it("maps a failed subscription cancel on delete to BAD_GATEWAY", async () => {
+		vi.mocked(auth.api.deleteOrganization).mockRejectedValue(
+			Object.assign(new Error("Subscriptions could not be cancelled"), {
+				name: "APIError",
+				statusCode: 502,
+				body: { code: "SUBSCRIPTION_CANCELLATION_FAILED" },
+			}),
+		);
+		await expect(
+			call(
+				organizationsRouter.delete,
+				{ organizationId: "org-1" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "BAD_GATEWAY", status: 502 });
+	});
+
+	it("rethrows errors that are not Better Auth client errors", async () => {
+		vi.mocked(auth.api.deleteOrganization).mockRejectedValue(new Error("boom"));
+		await expect(
+			call(
+				organizationsRouter.delete,
+				{ organizationId: "org-1" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ message: "boom" });
 	});
 });
 
@@ -784,6 +879,22 @@ describe("organizations.invitations.list", () => {
 			limit: 1,
 			totalPages: 1,
 		});
+	});
+
+	// Pending invitations carry invitee emails — only members who may
+	// invite see them.
+	it("rejects a plain member (needs INVITE_MEMBER)", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue(
+			orgFixture as never,
+		);
+		await expect(
+			call(
+				organizationsRouter.invitations.list,
+				{ organizationId: "org-1" },
+				{ context: makeSession<Context>(makeUser({ id: "user-2" })) },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(auth.api.listInvitations).not.toHaveBeenCalled();
 	});
 
 	it("returns invitations in a total order: createdAt desc, id asc on ties", async () => {

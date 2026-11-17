@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { i18nConfig } from "../../../i18n/config";
+import { i18nConfig } from "../../../../i18n/config";
 
 /**
  * Orphaned visual baselines: a committed PNG that no visual spec writes any
@@ -14,13 +14,13 @@ import { i18nConfig } from "../../../i18n/config";
  * delete its baseline with the change that skips it.
  */
 
-const REPO_ROOT = join(import.meta.dirname, "../../../../");
+const REPO_ROOT = join(import.meta.dirname, "../../../../../");
 const APPS = ["saas", "marketing"] as const;
 const LOCALES = Object.keys(i18nConfig.locales);
 
 // Same parser and rules as tooling/scripts/visual-prune.mjs — what this
 // guard rejects is exactly what the CI and local update runs delete.
-const lib = await import("../../../../tooling/scripts/visual-local-lib.mjs");
+const lib = await import("../../../../../tooling/scripts/visual-local-lib.mjs");
 const parse = lib.parseBaseline;
 
 const specSource = (app: string) => {

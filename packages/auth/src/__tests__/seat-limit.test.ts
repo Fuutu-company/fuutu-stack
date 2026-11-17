@@ -19,8 +19,10 @@ vi.mock("@fuutu/db", () => ({
 	getOrganizationById: (...args: unknown[]) => getOrganizationById(...args),
 }));
 
+const seatGate = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("@fuutu/payments", () => ({
 	getOrgEntitlement: (...args: unknown[]) => getOrgEntitlement(...args),
+	getSeatGate: () => seatGate.current,
 }));
 
 // Limits deliberately disagree with seatsTotal — the gate must read
@@ -37,6 +39,7 @@ const entitlement = (seatsTotal: number | null) => ({
 
 afterEach(() => {
 	paymentsConfig.seatUpgradeUrl = undefined;
+	seatGate.current = null;
 });
 
 describe("assertSeatAvailable()", () => {
@@ -128,5 +131,45 @@ describe("assertInviteSeatAvailable()", () => {
 		countPendingInvitations.mockResolvedValue(999);
 
 		await expect(assertInviteSeatAvailable("org-1")).resolves.toBeUndefined();
+	});
+});
+
+describe("app seat gate (registerSeatGate)", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		getOrgEntitlement.mockResolvedValue(entitlement(5));
+		getOrganizationById.mockResolvedValue({ id: "org-1", slug: "acme" });
+		countOrganizationMembers.mockResolvedValue(3);
+		countPendingInvitations.mockResolvedValue(0);
+	});
+
+	it("caps new members below seatsTotal and reports the cap", async () => {
+		seatGate.current = vi.fn(async () => 3);
+		const err = await assertSeatAvailable("org-1").catch((e) => e);
+		expect((err as APIError).statusCode).toBe(402);
+		expect((err as APIError).body).toMatchObject({ seatsTotal: 3 });
+	});
+
+	it("gets the org, the used seats, the purpose and the default cap", async () => {
+		const gate = vi.fn(async (_ctx: unknown, defaults: () => number | null) =>
+			defaults(),
+		);
+		seatGate.current = gate;
+		await expect(assertInviteSeatAvailable("org-1")).resolves.toBeUndefined();
+		expect(gate).toHaveBeenCalledWith(
+			{
+				organizationId: "org-1",
+				usedSeats: 3,
+				seatsTotal: 5,
+				purpose: "invitation",
+			},
+			expect.any(Function),
+		);
+	});
+
+	it("can lift the cap (null = unlimited)", async () => {
+		getOrgEntitlement.mockResolvedValue(entitlement(1));
+		seatGate.current = vi.fn(async () => null);
+		await expect(assertSeatAvailable("org-1")).resolves.toBeUndefined();
 	});
 });

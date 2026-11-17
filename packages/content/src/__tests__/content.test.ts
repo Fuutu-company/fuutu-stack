@@ -189,11 +189,14 @@ describe("Content collections - changelog", () => {
 		expect(new Set(versions).size).toBe(versions.length);
 	});
 
-	it("lists the kit 1.0.0 release first, dated like the kit-v1.0.0 tag, in en + de", () => {
+	it("lists the kit 1.1.0 release first and keeps 1.0.0 dated like its tag, in en + de", () => {
+		const latest = getChangelogEntry("v1-1-0");
+		expect(latest?.frontmatter.version).toBe("1.1.0");
+		expect(latest?.frontmatter.publishedAt).toBe("2026-11-17");
+		expect(changelog[0]?.slug).toBe("v1-1-0");
 		const entry = getChangelogEntry("v1-0-0");
 		expect(entry?.frontmatter.version).toBe("1.0.0");
 		expect(entry?.frontmatter.publishedAt).toBe("2026-11-14");
-		expect(changelog[0]?.slug).toBe("v1-0-0");
 		expect(entry && getChangelogBody(entry, "de")).not.toBe(entry?.bodies.en);
 		expect(getChangelogEntry("v0-1-0")?.frontmatter.version).toBe("0.1.0");
 	});

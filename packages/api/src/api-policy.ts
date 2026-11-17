@@ -2,7 +2,9 @@ import {
 	appProcedurePolicyExceptions,
 	appRoutePolicies,
 	appSensitiveProcedurePrefixes,
+	appSystemAdminProcedurePrefixes,
 } from "./app-api-policy";
+import { apiConfig } from "./config";
 
 /**
  * The API's security policy as data — checked mechanically by
@@ -12,7 +14,11 @@ import {
  */
 
 /** A guard a procedure may lack, with the reason it does. */
-export type ProcedureGuard = "rateLimit" | "denyImpersonation" | "sessionOnly";
+export type ProcedureGuard =
+	| "rateLimit"
+	| "denyImpersonation"
+	| "sessionOnly"
+	| "systemAdmin";
 
 /**
  * Procedure path (`payments.portal.open`) → the guards it deliberately
@@ -63,9 +69,17 @@ const KIT_SENSITIVE_PROCEDURE_PREFIXES: readonly string[] = [
 	"apiKeys.",
 	// org structure — members, roles, invitations, the org itself
 	"organizations.",
+	// outgoing webhooks — keep receiving org events after the key is revoked
+	"webhooks.",
 	// back office (systemAdminProcedure)
 	"admin.",
 ];
+
+/**
+ * Procedure path prefixes of the back office: every procedure under them —
+ * reads included — is built on `systemAdminProcedure`.
+ */
+const KIT_SYSTEM_ADMIN_PROCEDURE_PREFIXES: readonly string[] = ["admin."];
 
 const KIT_PROCEDURE_POLICY_EXCEPTIONS: ProcedurePolicyExceptions = {
 	"organizations.create": {
@@ -77,6 +91,8 @@ const KIT_PROCEDURE_POLICY_EXCEPTIONS: ProcedurePolicyExceptions = {
 			"runs inside the impersonation session it ends — the signed-in user is the target",
 		sessionOnly:
 			"checked in the handler (API keys cannot stop an impersonation) before Better Auth is called",
+		systemAdmin:
+			"called by the impersonation session — the signed-in user is the target, not an admin",
 	},
 };
 
@@ -89,9 +105,7 @@ const KIT_ROUTE_POLICIES: readonly RoutePolicy[] = [
 		auth: "better-auth",
 		reason:
 			"Better Auth's own endpoints (sign-in, sign-up, OAuth callbacks) — each checks its own credentials",
-		bodyLimit: {
-			none: "Better Auth parses small JSON bodies of its own endpoints",
-		},
+		bodyLimit: apiConfig.maxBodyBytes,
 		rateLimit: "Better Auth rateLimit (authConfig)",
 		proxyPublic: true,
 	},
@@ -170,6 +184,11 @@ const KIT_ROUTE_POLICIES: readonly RoutePolicy[] = [
 export const SENSITIVE_PROCEDURE_PREFIXES: readonly string[] = [
 	...KIT_SENSITIVE_PROCEDURE_PREFIXES,
 	...appSensitiveProcedurePrefixes,
+];
+
+export const SYSTEM_ADMIN_PROCEDURE_PREFIXES: readonly string[] = [
+	...KIT_SYSTEM_ADMIN_PROCEDURE_PREFIXES,
+	...appSystemAdminProcedurePrefixes,
 ];
 
 export const PROCEDURE_POLICY_EXCEPTIONS: ProcedurePolicyExceptions = {

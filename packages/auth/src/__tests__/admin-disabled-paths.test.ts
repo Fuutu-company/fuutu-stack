@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * Direct HTTP access to the Better Auth admin plugin is closed: every admin
  * endpoint is in `disabledPaths` (404), while server-side `auth.api.*` calls

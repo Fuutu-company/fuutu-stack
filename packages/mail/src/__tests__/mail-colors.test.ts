@@ -16,6 +16,10 @@ const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
 		verificationUrl: "https://app.test/verify-email?t=1",
 		newEmail: "new@test.dev",
 	},
+	"email-changed": {
+		name: "Rush",
+		newEmail: "new@test.dev",
+	},
 	"organization-invitation": {
 		organizationName: "Acme",
 		inviteUrl: "https://app.test/invite?t=1",

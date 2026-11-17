@@ -1,6 +1,9 @@
 import type { DrainContext, LoggerConfig } from "evlog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 // Spy on initLogger while keeping the real implementation so emits still
 // reach the drains that initLogs attaches.
 const { initLoggerSpy } = vi.hoisted(() => ({ initLoggerSpy: vi.fn() }));

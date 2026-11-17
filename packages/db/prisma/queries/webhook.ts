@@ -150,6 +150,10 @@ export const updateDeliveryStatus = (id: string, data: DeliveryStatusUpdate) =>
 		},
 	});
 
+/**
+ * Delivery history for the UI/API. Never selects `responseBody`: it holds
+ * whatever the receiver answered (up to 64 KB) and must not be echoed back.
+ */
 export const listDeliveries = (
 	webhookId: string,
 	opts: { take?: number; skip?: number; status?: string } = {},
@@ -157,6 +161,16 @@ export const listDeliveries = (
 	const { take = 50, skip = 0, status } = opts;
 	return db.webhookDelivery.findMany({
 		where: { webhookId, ...(status ? { status } : {}) },
+		select: {
+			id: true,
+			eventId: true,
+			eventType: true,
+			status: true,
+			responseCode: true,
+			attempt: true,
+			attemptedAt: true,
+			nextRetryAt: true,
+		},
 		orderBy: [{ attemptedAt: "desc" }, { id: "asc" }],
 		take,
 		skip,

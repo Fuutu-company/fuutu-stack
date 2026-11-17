@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
  * - Every agent is listed in the AGENTS.md team table.
  */
 
-const REPO_ROOT = join(import.meta.dirname, "../../../../");
+const REPO_ROOT = join(import.meta.dirname, "../../../../../");
 const AGENTS_DIR = join(REPO_ROOT, ".claude", "agents");
 const SKILLS_DIR = join(REPO_ROOT, ".claude", "skills");
 

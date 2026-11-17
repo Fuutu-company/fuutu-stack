@@ -76,6 +76,39 @@ describe("paymentsErrorKey", () => {
 		);
 	});
 
+	it("says only the payer may open the org's billing portal", () => {
+		expect(
+			apiError.paymentsErrorKey(
+				new ORPCError("PRECONDITION_FAILED", {
+					message: "Only the member who pays can open the billing portal",
+					data: { reason: "portal_payer_only", payer: "j***@acme.com" },
+				}),
+			),
+		).toBe("errors.portalPayerOnly");
+	});
+
+	it("says an active same-plan checkout is already subscribed", () => {
+		expect(
+			apiError.paymentsErrorKey(
+				new ORPCError("PRECONDITION_FAILED", {
+					message: "This plan can't be purchased right now",
+					data: { reason: "already_subscribed" },
+				}),
+			),
+		).toBe("errors.alreadySubscribed");
+	});
+
+	it("points a cancel-scheduled same-plan checkout to resuming it", () => {
+		expect(
+			apiError.paymentsErrorKey(
+				new ORPCError("PRECONDITION_FAILED", {
+					message: "This plan can't be purchased right now",
+					data: { reason: "resume_instead" },
+				}),
+			),
+		).toBe("errors.resumeInstead");
+	});
+
 	it("still falls back to the caller's key for other failures", () => {
 		expect(
 			apiError.paymentsErrorKey(new ORPCError("INTERNAL_SERVER_ERROR")),

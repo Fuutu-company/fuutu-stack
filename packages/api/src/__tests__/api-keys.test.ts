@@ -1,6 +1,8 @@
+import { authConfig } from "@fuutu/auth/config";
 import { makeSession, makeUser } from "@fuutu/test-utils";
 import { call } from "@orpc/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { apiConfig } from "../config";
 import type { Context } from "../context";
 import { apiKeysRouter } from "../modules/api-keys/router";
 
@@ -111,6 +113,48 @@ describe("apiKeys.create", () => {
 		});
 	});
 
+	it.each([false, null])(
+		"refuses a key while the email is unverified (%s)",
+		async (emailVerified) => {
+			const unverified = makeSession<Context>(makeUser({ emailVerified }));
+			await expect(
+				call(apiKeysRouter.create, { name: "K" }, { context: unverified }),
+			).rejects.toMatchObject({
+				code: "FORBIDDEN",
+				data: { code: "EMAIL_NOT_VERIFIED" },
+			});
+			expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
+		},
+	);
+
+	it("refuses a key from a session signed in longer ago than freshSessionMaxAge", async () => {
+		// A stolen cookie (sessions last 30 days) must not mint a credential
+		// that outlives the session and a password reset.
+		const stale = makeSession<Context>(makeUser()) as Context & {
+			session: { session: { createdAt: Date } };
+		};
+		stale.session.session.createdAt = new Date(
+			Date.now() - (authConfig.session.freshSessionMaxAge + 60) * 1000,
+		);
+		await expect(
+			call(apiKeysRouter.create, { name: "K" }, { context: stale }),
+		).rejects.toMatchObject({
+			code: "FORBIDDEN",
+			data: { code: "SESSION_NOT_FRESH" },
+		});
+		expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
+	});
+
+	it("allows a key right after signing in", async () => {
+		const fresh = makeSession<Context>(makeUser()) as Context & {
+			session: { session: { createdAt: Date } };
+		};
+		fresh.session.session.createdAt = new Date(Date.now() - 60_000);
+		await expect(
+			call(apiKeysRouter.create, { name: "K" }, { context: fresh }),
+		).resolves.toMatchObject({ id: KEY_ID });
+	});
+
 	it("passes organizationId and expiresAt when provided", async () => {
 		const expiry = new Date("2025-12-31");
 		await call(
@@ -125,6 +169,63 @@ describe("apiKeys.create", () => {
 			organizationId: "org-1",
 			expiresAt: expiry,
 			max: 2,
+		});
+	});
+
+	describe("with apiConfig.apiKeyMaxLifetimeDays", () => {
+		const NOW = new Date("2026-06-01T12:00:00Z");
+		const DAY = 24 * 60 * 60 * 1000;
+		const setMax = (days: number | undefined) => {
+			(
+				apiConfig as { apiKeyMaxLifetimeDays: number | undefined }
+			).apiKeyMaxLifetimeDays = days;
+		};
+
+		beforeEach(() => {
+			vi.useFakeTimers({ toFake: ["Date"] });
+			vi.setSystemTime(NOW);
+			setMax(90);
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+			setMax(undefined);
+		});
+
+		it("gives a key without expiry the maximum lifetime", async () => {
+			await call(
+				apiKeysRouter.create,
+				{ name: "CI" },
+				{ context: authenticatedContext },
+			);
+			expect(createApiKeyWithinLimit).toHaveBeenCalledWith(
+				expect.objectContaining({
+					expiresAt: new Date(NOW.getTime() + 90 * DAY),
+				}),
+			);
+		});
+
+		it("accepts an expiry within the maximum", async () => {
+			const expiresAt = new Date(NOW.getTime() + 30 * DAY);
+			await call(
+				apiKeysRouter.create,
+				{ name: "CI", expiresAt },
+				{ context: authenticatedContext },
+			);
+			expect(createApiKeyWithinLimit).toHaveBeenCalledWith(
+				expect.objectContaining({ expiresAt }),
+			);
+		});
+
+		it("rejects an expiry beyond the maximum", async () => {
+			await expect(
+				call(
+					apiKeysRouter.create,
+					{ name: "CI", expiresAt: new Date(NOW.getTime() + 91 * DAY) },
+					{ context: authenticatedContext },
+				),
+			).rejects.toMatchObject({ code: "BAD_REQUEST" });
+			expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
 		});
 	});
 
