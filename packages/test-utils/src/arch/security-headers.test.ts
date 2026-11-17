@@ -22,23 +22,42 @@ const { getPathMatch } = createRequire(join(APPS, "saas/package.json"))(
 };
 
 const rules = new Map<string, HeaderRule[]>();
+/** The same production build served over plain http (local `next start`). */
+const httpRules = new Map<string, HeaderRule[]>();
 
-beforeAll(async () => {
+async function loadRules(
+	into: Map<string, HeaderRule[]>,
+	origin: (port: number) => string,
+) {
+	vi.resetModules();
 	vi.stubEnv("SKIP_ENV_VALIDATION", "1");
 	vi.stubEnv("NODE_ENV", "production");
+	vi.stubEnv("BETTER_AUTH_URL", origin(3000));
+	vi.stubEnv("NEXT_PUBLIC_SAAS_URL", origin(3000));
+	vi.stubEnv("NEXT_PUBLIC_MARKETING_URL", origin(3001));
+	vi.stubEnv("NEXT_PUBLIC_DOCS_URL", origin(4000));
 	for (const app of ["saas", "marketing", "docs"]) {
 		const mod = (await import(
 			/* @vite-ignore */ join(APPS, app, "next.config.ts")
 		)) as { default: { headers: () => Promise<HeaderRule[]> } };
-		rules.set(app, await mod.default.headers());
+		into.set(app, await mod.default.headers());
 	}
 	vi.unstubAllEnvs();
-});
+}
+
+beforeAll(async () => {
+	await loadRules(rules, (port) => `https://app${port}.example.com`);
+	await loadRules(httpRules, (port) => `http://localhost:${port}`);
+}, 60_000);
 
 /** Headers for `path` — a later rule overrides an earlier one per key. */
-function headersFor(app: string, path: string): Map<string, string> {
+function headersFor(
+	app: string,
+	path: string,
+	from: Map<string, HeaderRule[]> = rules,
+): Map<string, string> {
 	const out = new Map<string, string>();
-	for (const rule of rules.get(app) ?? []) {
+	for (const rule of from.get(app) ?? []) {
 		if (!getPathMatch(rule.source, { strict: true, sensitive: false })(path))
 			continue;
 		for (const { key, value } of rule.headers)
@@ -72,6 +91,17 @@ describe.each([
 		expect(h.get("content-security-policy")).toContain(
 			"upgrade-insecure-requests",
 		);
+	});
+
+	it("does not upgrade requests when the app is served over plain http", () => {
+		// WebKit then skips every CSS/JS request of a production build on
+		// http://localhost (E2E and visual containers).
+		const h = headersFor(app, path, httpRules);
+		expect(h.get("content-security-policy")).toBeTruthy();
+		expect(h.get("content-security-policy")).not.toContain(
+			"upgrade-insecure-requests",
+		);
+		expect(h.get("x-framework")).toMatch(/^Fuutu-Stack\//);
 	});
 });
 

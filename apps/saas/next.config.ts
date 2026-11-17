@@ -11,6 +11,14 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProd = env.NODE_ENV === "production";
+// Only for an https deployment: on a production build served over plain
+// http (local `next start`, E2E/visual containers) WebKit would upgrade —
+// and so drop — every CSS/JS request.
+const servedOverHttps =
+	isProd &&
+	Boolean(
+		(env.NEXT_PUBLIC_SAAS_URL ?? env.BETTER_AUTH_URL)?.startsWith("https://"),
+	);
 
 // Analytics CSP origins come from the active provider — switching
 // providers via NEXT_PUBLIC_ANALYTICS_PROVIDER needs no edits here.
@@ -73,7 +81,7 @@ const contentSecurityPolicy = {
 		"base-uri 'self'",
 		"form-action 'self'",
 		"object-src 'none'",
-		...(isProd ? ["upgrade-insecure-requests"] : []),
+		...(servedOverHttps ? ["upgrade-insecure-requests"] : []),
 	].join("; "),
 };
 

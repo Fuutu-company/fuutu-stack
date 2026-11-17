@@ -11,6 +11,11 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProd = env.NODE_ENV === "production";
+// Only for an https deployment: on a production build served over plain
+// http (local `next start`, E2E/visual containers) WebKit would upgrade —
+// and so drop — every CSS/JS request.
+const servedOverHttps =
+	isProd && Boolean(env.NEXT_PUBLIC_MARKETING_URL?.startsWith("https://"));
 
 // Security headers for the public marketing surface.
 // Slightly looser than SaaS: allows the active analytics provider's
@@ -41,7 +46,7 @@ const securityHeaders = [
 			"base-uri 'self'",
 			"form-action 'self'",
 			"object-src 'none'",
-			...(isProd ? ["upgrade-insecure-requests"] : []),
+			...(servedOverHttps ? ["upgrade-insecure-requests"] : []),
 		].join("; "),
 	},
 	...(isProd
