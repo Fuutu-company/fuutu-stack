@@ -50,7 +50,10 @@ export function makeSession<T>(user: SessionUser | null): T {
 						token: "test-token",
 						userId: user.id,
 						expiresAt: new Date(Date.now() + 3_600_000),
-						createdAt: new Date("2024-01-01"),
+						// Signed in just now — steps that need a recent sign-in
+						// (API key creation) accept it; tests of a stale session
+						// set an older `createdAt` themselves.
+						createdAt: new Date(),
 						updatedAt: new Date("2024-01-01"),
 					},
 				},

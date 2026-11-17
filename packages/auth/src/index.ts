@@ -417,10 +417,12 @@ const authOptions = {
 		// A reset is account recovery: every existing session (possibly the
 		// attacker's) ends.
 		revokeSessionsOnPasswordReset: true,
-		// MCP refresh tokens outlive sessions — a reset (account recovery)
-		// must cut off connected OAuth clients too.
+		// MCP refresh tokens and API keys outlive sessions — a reset
+		// (account recovery) must cut off connected OAuth clients and keys
+		// minted with a stolen session too.
 		onPasswordReset: async ({ user }) => {
 			if (mcpOAuth.active) await revokeOAuthTokensForUser(user.id);
+			await revokeApiKeysForUser(user.id);
 		},
 		sendResetPassword: async ({
 			user,

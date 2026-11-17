@@ -414,3 +414,47 @@ describe("an unverified account the mailbox owner takes over (magic link)", () =
 		expect(store.passkey).toHaveLength(1);
 	});
 });
+
+describe("password reset (account recovery)", () => {
+	it("revokes the user's API keys — a key minted with a stolen session dies too", async () => {
+		const { revokeApiKeysForUser } = await import("@fuutu/db");
+		vi.mocked(revokeApiKeysForUser).mockClear();
+		await signUp();
+		const userId = String(store.user?.[0]?.id);
+		sendEmail.mockClear();
+		const requested = await auth.handler(
+			new Request("http://localhost:3000/api/auth/request-password-reset", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					origin: "http://localhost:3000",
+				},
+				body: JSON.stringify({
+					email: "ada@fuutu.dev",
+					redirectTo: "/auth/reset-password",
+				}),
+			}),
+		);
+		expect(requested.status).toBe(200);
+		const resetUrl = String(
+			sendEmail.mock.calls.find(
+				([mail]) => mail.template === "password-reset",
+			)?.[0].data.resetUrl,
+		);
+		const token = new URL(resetUrl).pathname.split("/").pop();
+		expect(token).toBeTruthy();
+
+		const reset = await auth.handler(
+			new Request("http://localhost:3000/api/auth/reset-password", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					origin: "http://localhost:3000",
+				},
+				body: JSON.stringify({ newPassword: "NewValidPassw0rd!", token }),
+			}),
+		);
+		expect(reset.status).toBe(200);
+		expect(revokeApiKeysForUser).toHaveBeenCalledWith(userId);
+	});
+});

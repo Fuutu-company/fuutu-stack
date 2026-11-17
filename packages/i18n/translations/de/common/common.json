@@ -19,7 +19,8 @@
 			"planLimitReached": "Plan-Limit erreicht. Upgrade für mehr.",
 			"planFeatureRequired": "Diese Funktion ist in deinem Plan nicht verfügbar.",
 			"impersonationForbidden": "Nicht verfügbar, solange du als dieser Nutzer angemeldet bist (Impersonation). Beende die Impersonation, um das zu tun.",
-			"verifyEmailFirst": "Bestätige zuerst deine E-Mail-Adresse: Öffne den Bestätigungslink, den wir dir geschickt haben. Passkeys, Zwei-Faktor-Authentifizierung und API-Keys brauchen eine bestätigte Adresse."
+			"verifyEmailFirst": "Bestätige zuerst deine E-Mail-Adresse: Öffne den Bestätigungslink, den wir dir geschickt haben. Passkeys, Zwei-Faktor-Authentifizierung und API-Keys brauchen eine bestätigte Adresse.",
+			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und versuche es dann erneut."
 		}
 	}
 }

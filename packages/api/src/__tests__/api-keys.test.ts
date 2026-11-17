@@ -1,3 +1,4 @@
+import { authConfig } from "@fuutu/auth/config";
 import { makeSession, makeUser } from "@fuutu/test-utils";
 import { call } from "@orpc/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -125,6 +126,34 @@ describe("apiKeys.create", () => {
 			expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
 		},
 	);
+
+	it("refuses a key from a session signed in longer ago than freshSessionMaxAge", async () => {
+		// A stolen cookie (sessions last 30 days) must not mint a credential
+		// that outlives the session and a password reset.
+		const stale = makeSession<Context>(makeUser()) as Context & {
+			session: { session: { createdAt: Date } };
+		};
+		stale.session.session.createdAt = new Date(
+			Date.now() - (authConfig.session.freshSessionMaxAge + 60) * 1000,
+		);
+		await expect(
+			call(apiKeysRouter.create, { name: "K" }, { context: stale }),
+		).rejects.toMatchObject({
+			code: "FORBIDDEN",
+			data: { code: "SESSION_NOT_FRESH" },
+		});
+		expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
+	});
+
+	it("allows a key right after signing in", async () => {
+		const fresh = makeSession<Context>(makeUser()) as Context & {
+			session: { session: { createdAt: Date } };
+		};
+		fresh.session.session.createdAt = new Date(Date.now() - 60_000);
+		await expect(
+			call(apiKeysRouter.create, { name: "K" }, { context: fresh }),
+		).resolves.toMatchObject({ id: KEY_ID });
+	});
 
 	it("passes organizationId and expiresAt when provided", async () => {
 		const expiry = new Date("2025-12-31");

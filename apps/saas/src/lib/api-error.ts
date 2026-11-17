@@ -76,6 +76,10 @@ export function planGateMessage(
 	if (refusalCode(err) === "EMAIL_NOT_VERIFIED") {
 		return t("common.errors.verifyEmailFirst");
 	}
+	// API keys need a recent sign-in.
+	if (refusalCode(err) === "SESSION_NOT_FRESH") {
+		return t("common.errors.reauthRequired");
+	}
 	const message = err instanceof Error ? err.message : "";
 	if (message.includes("Limit exceeded")) {
 		return t("common.errors.planLimitReached");
