@@ -7,6 +7,8 @@ export type McpUserPrincipal = {
 	via: "api-key" | "oauth";
 	/** Id of the API key / OAuth token — for audit + rate limiting. */
 	credentialId: string;
+	/** OAuth client the token was issued to (`azp`) — OAuth callers only. */
+	clientId?: string;
 	userId: string;
 	organizationId: string | null;
 	/** Role inside `organizationId` (Better Auth member role), if any. */
@@ -23,7 +25,8 @@ export type McpPrincipal = { kind: "anonymous" } | McpUserPrincipal;
  * Who may see and call a tool / prompt.
  * - `"public"`: everyone, including anonymous callers
  * - `"authenticated"`: any verified credential
- * - predicate: verified credential + custom rule (role, scope, org, …)
+ * - predicate: verified credential + custom rule (role, scope, org, …) —
+ *   `requireScopes(...)` for "granted these scopes"
  */
 export type McpAccess =
 	| "public"

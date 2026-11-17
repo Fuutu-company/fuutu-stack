@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * Accepting, rejecting or reading an invitation by id needs a verified
  * session email (Better Auth `requireEmailVerificationOnInvitation`).

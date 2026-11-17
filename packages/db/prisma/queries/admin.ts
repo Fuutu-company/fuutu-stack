@@ -259,6 +259,7 @@ export const getUserAccessState = (id: string) =>
 		select: {
 			id: true,
 			email: true,
+			emailVerified: true,
 			role: true,
 			banned: true,
 			banExpires: true,

@@ -3,8 +3,26 @@
 # Usage: ci-visual-baselines.sh <app> <branch> <mode>   mode = pr | push
 # Writes pushed=1 to $GITHUB_OUTPUT when the push succeeds.
 set -euo pipefail
+# The token comes in GIT_PUSH_TOKEN (step env) of the CI visual-baselines
+# job, which runs no dependency code; its checkout keeps no credentials.
 app="$1"; branch="$2"; mode="${3:-push}"
 dir=".fuutu/visual-baselines/${app}"
+
+if [ -z "${GIT_PUSH_TOKEN:-}" ]; then
+  if [ "$mode" = "pr" ]; then
+    echo "FUUTU_CI_BOT_TOKEN not set — baselines stay report-only on PRs"
+    exit 0
+  fi
+  echo "::error::GIT_PUSH_TOKEN is not set — cannot push baselines"
+  exit 1
+fi
+# Auth header through git's env config (not argv, not .git/config), for
+# the fetch/rebase/push below only.
+auth="$(printf 'x-access-token:%s' "$GIT_PUSH_TOKEN" | base64 | tr -d '\n')"
+echo "::add-mask::${auth}"
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0="http.${GITHUB_SERVER_URL:-https://github.com}/.extraheader"
+export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth}"
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

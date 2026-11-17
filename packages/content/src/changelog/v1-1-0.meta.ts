@@ -1,11 +1,9 @@
 import type { ChangelogFrontmatter } from "../changelog-meta";
 
-/** Unreleased — `draft` keeps it off the changelog page and out of `changelogMeta`. */
 export const frontmatter: ChangelogFrontmatter = {
 	title: "Fuutu Stack 1.1",
-	publishedAt: "2026-11-14",
+	publishedAt: "2026-11-17",
 	version: "1.1.0",
 	description:
-		"App extension points for marketing, docs, seed data and E2E, a plan-catalog-agnostic kit, and metered AI chat over an event stream.",
-	draft: true,
+		"Security hardening of auth, admin, API, payments and deployment defaults (read the upgrade notes: TRUST_PROXY_HEADERS, secret rotation, closed endpoints), app extension points, a plan-catalog-agnostic kit and metered AI chat.",
 };

@@ -1,50 +1,16 @@
 import { KIT_NAME, KIT_VERSION } from "@fuutu/config";
 import { createLogger } from "@fuutu/logs";
 import { webhooksConfig } from "./config";
+import { pinnedPost } from "./pinned-post";
 import { signPayloadWithTimestamp } from "./sign";
 import type {
 	WebhookDeliveryResult,
 	WebhookEndpoint,
 	WebhookEvent,
 } from "./types";
-import { validateWebhookUrl } from "./validate-url";
+import { createPinnedLookup, validateWebhookUrl } from "./validate-url";
 
 const log = createLogger({ scope: "webhooks:deliver" });
-
-/**
- * Read a response body with a hard byte cap — `res.text()` would buffer the
- * full body before truncating, leaving worker memory unbounded. The reader
- * cancels the stream as soon as the cap is hit.
- */
-async function readCappedBody(
-	res: Response,
-	maxBytes: number,
-): Promise<string> {
-	if (!res.body) return "";
-	const reader = res.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let total = 0;
-	try {
-		for (;;) {
-			const { done, value } = await reader.read();
-			if (done || !value) break;
-			const remaining = maxBytes - total;
-			if (value.length <= remaining) {
-				chunks.push(value);
-				total += value.length;
-			} else {
-				chunks.push(value.subarray(0, remaining));
-				total += remaining;
-				break;
-			}
-		}
-	} finally {
-		await reader.cancel().catch(() => undefined);
-	}
-	return new TextDecoder().decode(
-		chunks.length === 1 ? chunks[0] : Buffer.concat(chunks),
-	);
-}
 
 /**
  * Deliver a webhook event to an endpoint via HTTP POST.
@@ -54,9 +20,11 @@ async function readCappedBody(
  * headers. The event ID is stable across retries — receivers should use it
  * as their deduplication key (delivery is at-least-once). The signature
  * covers only `timestamp.body`; the ID header is informational.
- * Uses AbortController for timeout. Validates the target URL — including DNS
- * resolution — to prevent SSRF, and refuses redirects so a validated public
- * endpoint can't bounce the request to an internal address.
+ * Validates the target URL — including DNS resolution — to prevent SSRF,
+ * then connects only to an address re-checked at connect time (pinned
+ * lookup, so DNS rebinding cannot swap in an internal IP), and never
+ * follows redirects so a validated public endpoint can't bounce the
+ * request to an internal address.
  */
 export async function deliverWebhook(
 	webhook: WebhookEndpoint,
@@ -84,12 +52,8 @@ export async function deliverWebhook(
 		timestamp,
 	);
 
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), webhooksConfig.timeoutMs);
-
 	try {
-		const res = await fetch(webhook.url, {
-			method: "POST",
+		const res = await pinnedPost(new URL(webhook.url), {
 			headers: {
 				"Content-Type": "application/json",
 				// Lets receivers identify/allowlist kit-originated deliveries.
@@ -100,19 +64,14 @@ export async function deliverWebhook(
 				"X-Fuutu-Event-Id": event.id,
 			},
 			body,
-			signal: controller.signal,
-			// Webhooks must never follow redirects — a validated public URL
-			// could otherwise 302 to an internal address (SSRF).
-			redirect: "error",
+			lookup: createPinnedLookup(),
+			timeoutMs: webhooksConfig.timeoutMs,
+			maxResponseBytes: webhooksConfig.maxResponseBodyBytes,
 		});
-		const responseBody = await readCappedBody(
-			res,
-			webhooksConfig.maxResponseBodyBytes,
-		);
 		return {
-			success: res.ok,
+			success: res.status >= 200 && res.status < 300,
 			responseCode: res.status,
-			responseBody,
+			responseBody: res.body,
 			error: null,
 		};
 	} catch (err) {
@@ -127,7 +86,5 @@ export async function deliverWebhook(
 			responseBody: null,
 			error: message,
 		};
-	} finally {
-		clearTimeout(timer);
 	}
 }

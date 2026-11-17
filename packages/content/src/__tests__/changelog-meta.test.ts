@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { frontmatter as v110 } from "../changelog/v1-1-0.meta";
 import * as metaModule from "../changelog-meta";
 import { changelog } from "../index";
 
@@ -59,13 +58,11 @@ describe("changelog drafts (unreleased entries)", () => {
 	const slugs = (list: readonly { slug: string }[]) => list.map((e) => e.slug);
 
 	it("keeps a draft out of changelogMeta — what feeds and MCP version checks read", () => {
-		expect(v110.draft).toBe(true);
-		expect(slugs(changelogMeta)).not.toContain("v1-1-0");
 		expect(changelogMeta.every((e) => !e.frontmatter.draft)).toBe(true);
 	});
 
 	it("keeps a draft out of the collection the changelog page renders", () => {
-		expect(slugs(changelog)).not.toContain("v1-1-0");
+		expect(changelog.every((e) => !e.frontmatter.draft)).toBe(true);
 		expect(slugs(changelog)).toContain("v1-0-0");
 	});
 
@@ -73,7 +70,8 @@ describe("changelog drafts (unreleased entries)", () => {
 		const drafts = (
 			metaModule as { changelogDraftMeta?: readonly { slug: string }[] }
 		).changelogDraftMeta;
-		expect(slugs(drafts ?? [])).toEqual(["v1-1-0"]);
+		expect(Array.isArray(drafts)).toBe(true);
+		expect(slugs(drafts ?? [])).toEqual([]);
 		expect(
 			metaModule.changelogFrontmatterSchema.parse({
 				title: "T",

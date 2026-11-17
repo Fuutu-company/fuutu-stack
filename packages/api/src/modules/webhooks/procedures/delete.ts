@@ -13,6 +13,7 @@ const deleteWebhookSchema = z.object({
 export const deleteWebhookProcedure = authProcedure({
 	org: { permission: PERMISSIONS.WEBHOOK.DELETE },
 	denyImpersonation: true,
+	sessionOnly: true,
 })
 	.use(createRateLimitMiddleware({ endpoint: "webhookMutation" }))
 	.route({

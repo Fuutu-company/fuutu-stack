@@ -1,7 +1,7 @@
 import { config, KIT_NAME, KIT_VERSION } from "@fuutu/config";
 import { APP_VERSION } from "@fuutu/config/app-version";
 import { getOrganizationById, getUserById } from "@fuutu/db";
-import { defineMcpTool, McpToolError } from "@fuutu/mcp";
+import { defineMcpTool, McpToolError, requireScopes } from "@fuutu/mcp";
 import { z } from "zod";
 
 /**
@@ -23,12 +23,17 @@ export const appInfoTool = defineMcpTool({
 	}),
 });
 
+const hasProfileAndEmail = requireScopes("profile", "email");
+
 export const whoamiTool = defineMcpTool({
 	name: "whoami",
 	title: "Who am I",
 	description:
 		"Returns the authenticated caller: user, organization, organization role and granted scopes.",
-	access: "authenticated",
+	// Name and email are OIDC `profile` / `email` claims: an OAuth token
+	// needs both grants. An API key's scopes are the key's own.
+	access: (principal) =>
+		principal.via === "api-key" || hasProfileAndEmail(principal),
 	input: z.object({}),
 	annotations: { readOnlyHint: true },
 	handler: async (_input, { principal }) => {

@@ -1,9 +1,15 @@
+import { countOrganizationMembers } from "@fuutu/db";
 import {
 	assertCheckoutAllowed,
 	CheckoutRejectedError,
 	resolvePaymentProvider,
 } from "@fuutu/payments";
-import { PLAN_IDS, PLANS, type Plan } from "@fuutu/payments/config";
+import {
+	PLAN_IDS,
+	PLANS,
+	type Plan,
+	paymentsConfig,
+} from "@fuutu/payments/config";
 import {
 	getPlanNoTrialPriceId,
 	getPlanPriceId,
@@ -59,7 +65,17 @@ export const createCheckout = authProcedure({
 		// Only a seat-based plan is bought per seat — any other plan is one
 		// unit, whatever the client sent.
 		const seatBased = plan.seatBased === true;
-		const seats = seatBased ? input.seats : undefined;
+		let seats = seatBased ? input.seats : undefined;
+		// Seats that follow members bill at least every current member —
+		// fewer would leave members unpaid until the next membership change.
+		if (
+			seatBased &&
+			input.organizationId &&
+			paymentsConfig.seatSync === "members"
+		) {
+			const members = await countOrganizationMembers(input.organizationId);
+			seats = Math.max(seats ?? 1, members);
+		}
 		// Billing rules: an add-on (`Plan.addonOf`) needs an active base,
 		// plus every app guard (`registerCheckoutGuard`). The owner mirrors
 		// the webhook's: the organization when one is passed (its access

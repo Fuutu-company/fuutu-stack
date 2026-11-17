@@ -3,7 +3,11 @@ import { resolveStorageProvider, STORAGE_BUCKET_ALIASES } from "@fuutu/storage";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
-import { callStorageOrThrow, resolveBucketOrThrow } from "../shared";
+import {
+	callStorageOrThrow,
+	requireBucketWriteAccess,
+	resolveBucketOrThrow,
+} from "../shared";
 
 const fileDeleteSchema = z.object({
 	bucket: z.enum(STORAGE_BUCKET_ALIASES),
@@ -30,6 +34,7 @@ export const deleteObject = authProcedure({
 	})
 	.input(fileDeleteSchema)
 	.handler(async ({ input, context }) => {
+		requireBucketWriteAccess(input.bucket, context);
 		const bucket = resolveBucketOrThrow(input.bucket);
 		const prefix = context.org?.id ?? context.user.id;
 		const scopedKey = `${prefix}/${input.key}`;

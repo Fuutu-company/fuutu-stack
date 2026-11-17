@@ -38,3 +38,29 @@ export async function resetLinkIsUsable(
 	if (input.error || !input.token) return false;
 	return tokenIsValid(input.token);
 }
+
+export type EmailVerificationFailure = "sign-in" | "other-account" | "failed";
+
+/**
+ * `/auth/verify`: the sign-up link counts only for a session of the same
+ * user (`@fuutu/auth` hooks/email-verification-session.ts) — a signed-out
+ * visitor signs in first, another account's session is refused.
+ */
+export function emailVerificationFailure(
+	code: string | undefined,
+): EmailVerificationFailure {
+	if (code === "SIGN_IN_TO_VERIFY_EMAIL") return "sign-in";
+	if (code === "EMAIL_VERIFICATION_OTHER_ACCOUNT") return "other-account";
+	return "failed";
+}
+
+/** Sign-in that returns to `/auth/verify` with the token and landing page. */
+export function emailVerificationSignInHref(
+	token: string,
+	callbackURL: string | null,
+): string {
+	const verify = new URLSearchParams({ token });
+	if (callbackURL) verify.set("callbackURL", callbackURL);
+	const redirect = `/auth/verify?${verify.toString()}`;
+	return `/auth/sign-in?redirect=${encodeURIComponent(redirect)}`;
+}

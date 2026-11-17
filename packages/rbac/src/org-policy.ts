@@ -13,8 +13,8 @@ import { crud, PERMISSIONS } from "./permissions";
  * for resources that exist in both scopes. The admin/owner tiers add management, not
  * more resource access.
  *
- * - member: full CRUD on org resources (webhook, chat, storage, crm) + view/create/update api-key + view credit/activity/payment
- * - admin:  everything member has + revoke/delete any org api-key, manage members, update org, manage billing (checkout, portal, cancel)
+ * - member: full CRUD on org resources (chat, storage, crm) + view/create/update api-key + view webhook/credit/activity/payment
+ * - admin:  everything member has + create/update/delete webhooks, revoke/delete any org api-key, manage members, update org, manage billing (checkout, portal, cancel)
  * - owner:  everything admin has + delete org
  *
  * Note: Notifications are NOT here — they are always user-scoped (checked via SYSTEM_POLICY).
@@ -27,11 +27,14 @@ export const ORG_POLICY: OrgAccessPolicy = Object.freeze({
 		PERMISSIONS.API_KEY.VIEW,
 		PERMISSIONS.API_KEY.CREATE,
 		PERMISSIONS.API_KEY.UPDATE,
-		...crud("webhook"),
 		...crud("chat"),
+		// Storage: a bucket in BUCKET_WRITE_ORG_PERMISSION (api storage
+		// module) also needs that permission — organization-logos writes
+		// and deletes need ORGANIZATION.UPDATE.
 		...crud("storage"),
 		...crud("crm"),
 		// View-only resources
+		PERMISSIONS.WEBHOOK.VIEW,
 		PERMISSIONS.CREDIT.VIEW,
 		PERMISSIONS.ACTIVITY.VIEW,
 		PERMISSIONS.PAYMENT.VIEW,
@@ -41,6 +44,10 @@ export const ORG_POLICY: OrgAccessPolicy = Object.freeze({
 	admin: Object.freeze([
 		// Revoke/delete any org API key, an admin's included
 		PERMISSIONS.API_KEY.DELETE,
+		// Webhooks keep receiving org events after their creator leaves
+		PERMISSIONS.WEBHOOK.CREATE,
+		PERMISSIONS.WEBHOOK.UPDATE,
+		PERMISSIONS.WEBHOOK.DELETE,
 		// Org management
 		PERMISSIONS.ORGANIZATION.UPDATE,
 		PERMISSIONS.INVITE_MEMBER,

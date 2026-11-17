@@ -1,12 +1,17 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
-import { authConfig } from "@fuutu/auth/config";
+import { getEmailVerificationRedirect } from "@fuutu/auth/redirect";
 import { AuthCard, Button, Skeleton } from "@fuutu/ui";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Suspense, useEffect, useState } from "react";
+import {
+	emailVerificationFailure,
+	emailVerificationSignInHref,
+} from "@/lib/auth-links";
+import { useStripQueryParam } from "@/lib/strip-query-param";
 
 export default function VerifyPage() {
 	return (
@@ -18,8 +23,12 @@ export default function VerifyPage() {
 
 function VerifyContent() {
 	const t = useTranslations("auth");
+	const router = useRouter();
 	const params = useSearchParams();
-	const token = params.get("token");
+	const [token] = useState(() => params.get("token"));
+	// Landing page of the mailed link, kept across the sign-in round trip.
+	const [callbackURL] = useState(() => params.get("callbackURL"));
+	useStripQueryParam("token", token);
 	const [status, setStatus] = useState<"idle" | "verifying" | "ok" | "error">(
 		token ? "verifying" : "idle",
 	);
@@ -33,8 +42,19 @@ function VerifyContent() {
 				const res = await authClient.verifyEmail({ query: { token } });
 				if (cancelled) return;
 				if (res.error) {
+					const failure = emailVerificationFailure(res.error.code);
+					if (failure === "sign-in") {
+						router.replace(emailVerificationSignInHref(token, callbackURL));
+						return;
+					}
 					setStatus("error");
-					setMessage(t("verify.failed"));
+					setMessage(
+						t(
+							failure === "other-account"
+								? "verify.otherAccount"
+								: "verify.failed",
+						),
+					);
 				} else {
 					setStatus("ok");
 				}
@@ -48,7 +68,7 @@ function VerifyContent() {
 		return () => {
 			cancelled = true;
 		};
-	}, [token, t]);
+	}, [token, callbackURL, router, t]);
 
 	return (
 		<AuthCard title={t("verify.title")}>
@@ -67,7 +87,7 @@ function VerifyContent() {
 				<div className="flex flex-col gap-4">
 					<p className="font-medium">{t("verify.ok")}</p>
 					<Button asChild className="w-full">
-						<Link href={authConfig.redirects.afterEmailVerification}>
+						<Link href={getEmailVerificationRedirect(callbackURL)}>
 							{t("verify.continue")}
 						</Link>
 					</Button>

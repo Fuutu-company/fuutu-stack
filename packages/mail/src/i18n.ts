@@ -60,6 +60,12 @@ export interface MailStrings {
 		orCopy: string;
 		ignore: string;
 	};
+	emailChanged: {
+		subject: string;
+		intro: string;
+		newEmailLabel: string;
+		notYou: string;
+	};
 	notification: {
 		button: string;
 		orCopy: string;
@@ -116,14 +122,22 @@ const en: MailStrings = {
 		orCopy: "Or copy this link:",
 	},
 	emailChangeVerification: {
-		subject: "Confirm your new email address",
+		subject: "Confirm your email change",
 		intro:
-			"Please confirm your new email address by clicking the button below:",
+			"We received a request to change your account's email address. Confirm it with the button below — we then send a verification link to the new address:",
 		newEmailLabel: "New email address:",
 		button: "Confirm email change",
 		orCopy: "Or copy this link:",
 		ignore:
-			"If you didn't request this change, you can safely ignore this email.",
+			"If you didn't request this change, ignore this email and change your password — your email stays as it is.",
+	},
+	emailChanged: {
+		subject: "Your email address was changed",
+		intro:
+			"The email address of your account was just changed. Sign-in links and notifications now go to the new address.",
+		newEmailLabel: "New email address:",
+		notYou:
+			"If you didn't make this change, contact support right away — someone else may have access to your account.",
 	},
 	notification: {
 		button: "Open app",
@@ -179,13 +193,22 @@ const de: MailStrings = {
 		orCopy: "Oder kopiere diesen Link:",
 	},
 	emailChangeVerification: {
-		subject: "Bestätige deine neue E-Mail-Adresse",
-		intro: "Bitte bestätige deine neue E-Mail-Adresse über den Button unten:",
+		subject: "Bestätige die Änderung deiner E-Mail-Adresse",
+		intro:
+			"Wir haben eine Anfrage erhalten, die E-Mail-Adresse deines Kontos zu ändern. Bestätige sie über den Button unten — danach schicken wir einen Bestätigungslink an die neue Adresse:",
 		newEmailLabel: "Neue E-Mail-Adresse:",
 		button: "E-Mail-Änderung bestätigen",
 		orCopy: "Oder kopiere diesen Link:",
 		ignore:
-			"Falls du diese Änderung nicht angefordert hast, kannst du diese E-Mail ignorieren.",
+			"Falls du diese Änderung nicht angefordert hast, ignoriere diese E-Mail und ändere dein Passwort — deine E-Mail-Adresse bleibt unverändert.",
+	},
+	emailChanged: {
+		subject: "Deine E-Mail-Adresse wurde geändert",
+		intro:
+			"Die E-Mail-Adresse deines Kontos wurde gerade geändert. Anmeldelinks und Benachrichtigungen gehen ab jetzt an die neue Adresse.",
+		newEmailLabel: "Neue E-Mail-Adresse:",
+		notYou:
+			"Falls du das nicht warst, wende dich sofort an den Support — möglicherweise hat jemand anderes Zugriff auf dein Konto.",
 	},
 	notification: {
 		button: "App öffnen",

@@ -34,8 +34,9 @@ export interface CreditMeter {
 	resetOn: "month" | "year" | "never";
 	/**
 	 * Allow consumption beyond the granted amount?
-	 * If true, overage is tracked but not blocked.
-	 * Useful for AI tokens with pay-as-you-go billing.
+	 * If true, overage is tracked but not blocked — for callers that pass
+	 * `allowOverage: true` (the AI meter does so only for owners with an
+	 * active paid plan). Useful for AI tokens with pay-as-you-go billing.
 	 */
 	allowOverage?: boolean;
 }

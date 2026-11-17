@@ -1,10 +1,13 @@
 import { createLogger } from "@fuutu/logs";
+import { type KnownPermission, PERMISSIONS } from "@fuutu/rbac";
 import {
 	resolveBucketAlias,
+	type StorageBucketAlias,
 	StorageBucketError,
 	StorageInputError,
 } from "@fuutu/storage";
 import { ORPCError } from "@orpc/server";
+import { requireOrgPermission } from "../../orpc/org-access";
 
 const log = createLogger({ scope: "storage" });
 
@@ -49,4 +52,30 @@ export async function callStorageOrThrow<T>(fn: () => Promise<T>): Promise<T> {
 		}
 		throw e;
 	}
+}
+
+/**
+ * Org permission a bucket's writes and deletes need on top of
+ * STORAGE.CREATE / STORAGE.DELETE. A bucket listed here is org-only: its
+ * objects are shared org assets, so a plain member must not replace them.
+ */
+export const BUCKET_WRITE_ORG_PERMISSION: Partial<
+	Record<StorageBucketAlias, KnownPermission>
+> = {
+	"organization-logos": PERMISSIONS.ORGANIZATION.UPDATE,
+};
+
+/** Throws FORBIDDEN when the caller may not write/delete in `alias`. */
+export function requireBucketWriteAccess(
+	alias: StorageBucketAlias,
+	context: { membership?: { role: string | null | undefined } },
+): void {
+	const permission = BUCKET_WRITE_ORG_PERMISSION[alias];
+	if (!permission) return;
+	if (!context.membership) {
+		throw new ORPCError("FORBIDDEN", {
+			message: "This bucket is organization-scoped",
+		});
+	}
+	requireOrgPermission(context.membership, permission);
 }

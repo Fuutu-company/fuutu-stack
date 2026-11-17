@@ -8,7 +8,11 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
-import { callStorageOrThrow, resolveBucketOrThrow } from "../shared";
+import {
+	callStorageOrThrow,
+	requireBucketWriteAccess,
+	resolveBucketOrThrow,
+} from "../shared";
 
 const BLOCKED_EXTENSIONS: readonly string[] = [
 	".exe",
@@ -72,6 +76,7 @@ export const createPresigned = authProcedure({
 	})
 	.input(uploadCreatePresignedSchema)
 	.handler(async ({ input, context }) => {
+		requireBucketWriteAccess(input.bucket, context);
 		const bucket = resolveBucketOrThrow(input.bucket);
 		// resolveBucketOrThrow already proved the bucket is configured, so
 		// resolveMaxUploadBytes cannot throw here.

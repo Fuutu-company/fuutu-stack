@@ -18,5 +18,7 @@ test.describe("email verification", () => {
 		await page.goto("/auth/verify?token=invalid");
 
 		await expect(page.getByText(/verification failed/i)).toBeVisible();
+		// The one-time token leaves the address bar once it was read.
+		await expect(page).toHaveURL(/\/auth\/verify$/);
 	});
 });

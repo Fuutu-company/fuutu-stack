@@ -11,6 +11,18 @@ vi.mock("@fuutu/ai", () => ({
 vi.mock("@fuutu/db", () => ({
 	db: {},
 	getCreditBalance: vi.fn(async () => null),
+	// A paying owner: null balances run on overage, which needs a paid plan.
+	getActiveSubscriptionForUser: vi.fn(async () => ({
+		status: "ACTIVE",
+		productId: "prod-pro",
+		priceId: "price-pro",
+	})),
+	getActiveSubscriptionForOrganization: vi.fn(async () => ({
+		status: "ACTIVE",
+		productId: "prod-pro",
+		priceId: "price-pro",
+	})),
+	getActiveSubscriptionsForOwner: vi.fn(async () => []),
 	getActiveCreditPackages: vi.fn(async () => []),
 	consumeCreditsTx: vi.fn(async () => ({
 		ok: true,
@@ -22,7 +34,7 @@ vi.mock("@fuutu/db", () => ({
 
 const { resolveAIProvider } = await import("@fuutu/ai");
 
-type ChatRole = "user" | "assistant" | "system";
+type ChatRole = "user" | "assistant";
 
 const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
@@ -78,8 +90,9 @@ describe("ai.chat", () => {
 		mockProviderStream();
 
 		const messages = [
-			msg("system", "You are a helpful assistant."),
 			msg("user", "What plans are available?"),
+			msg("assistant", "Free, Pro and Enterprise."),
+			msg("user", "Which one includes webhooks?"),
 		];
 
 		await call(chat, { messages }, { context: authenticatedContext });

@@ -69,3 +69,26 @@ export async function logSessionCreated(
 		userAgent: session.userAgent ?? null,
 	});
 }
+
+/** Why account recovery revoked a user's API keys. */
+export type ApiKeyRevocationReason = "password_reset" | "mailbox_proof";
+
+/**
+ * Account recovery (password reset, a mailbox proof taking over an
+ * unverified account) revokes every live key of the user, org keys
+ * included — CI and server integrations stop. Recorded so it is not
+ * silent; only the count, never key ids or material.
+ */
+export async function logApiKeysRevoked(input: {
+	userId: string;
+	count: number;
+	reason: ApiKeyRevocationReason;
+}): Promise<void> {
+	if (input.count <= 0) return;
+	await audit.record({
+		userId: input.userId,
+		organizationId: null,
+		action: "auth.api_keys_revoked",
+		metadata: { count: input.count, reason: input.reason },
+	});
+}

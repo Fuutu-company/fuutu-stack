@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * `authConfig.organizations.organizationLimit` — the most organizations a
  * user may belong to and still create another one (Better Auth

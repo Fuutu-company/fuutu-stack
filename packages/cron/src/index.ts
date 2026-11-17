@@ -5,6 +5,7 @@ export {
 	authRetentionCleanupJob,
 	oauthClientCleanupJob,
 	registerJob,
+	seatReconcileJob,
 	subscriptionReminderJob,
 	telemetryPingJob,
 	webhookRetryJob,

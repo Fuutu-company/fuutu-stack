@@ -16,6 +16,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { usePasswordPolicyTranslator } from "@/lib/password-policy";
+import { useStripQueryParam } from "@/lib/strip-query-param";
 
 export function AuthResetPassword({
 	className,
@@ -25,7 +26,8 @@ export function AuthResetPassword({
 	const translatePolicy = usePasswordPolicyTranslator();
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const token = searchParams.get("token");
+	const [token] = useState(() => searchParams.get("token"));
+	useStripQueryParam("token", token);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);

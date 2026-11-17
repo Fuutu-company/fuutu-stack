@@ -1,9 +1,85 @@
+import type { LookupFunction } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const fetchMock = vi.fn();
-const lookupMock = vi.fn();
+/**
+ * `node:https` is faked: `request()` runs the request's own `lookup` the
+ * way `net.connect` does at connect time, then answers with `net.reply`.
+ * `net.requests` records what was sent and which addresses it connected to.
+ */
+type Reply =
+	| { status: number; body?: string; location?: string }
+	| { error: Error }
+	| "hang";
 
-vi.stubGlobal("fetch", fetchMock);
+const net = vi.hoisted(() => ({
+	reply: { status: 200, body: "OK" } as Reply,
+	requests: [] as {
+		url: URL;
+		method?: string;
+		headers: Record<string, string>;
+		body: string;
+		connectedTo: unknown;
+	}[],
+}));
+const lookupMock = vi.hoisted(() => vi.fn());
+
+vi.mock("node:https", async () => {
+	const { EventEmitter } = await import("node:events");
+	const { Readable } = await import("node:stream");
+	return {
+		request: (
+			url: URL,
+			options: {
+				method?: string;
+				headers: Record<string, string>;
+				lookup: LookupFunction;
+			},
+			onResponse: (res: unknown) => void,
+		) => {
+			const req = Object.assign(new EventEmitter(), {
+				destroyed: false,
+				destroy(err?: Error) {
+					if (req.destroyed) return req;
+					req.destroyed = true;
+					if (err) req.emit("error", err);
+					req.emit("close");
+					return req;
+				},
+				end(body: string) {
+					options.lookup(url.hostname, { all: true }, (err, addresses) => {
+						if (err) {
+							req.destroy(err);
+							return;
+						}
+						net.requests.push({
+							url,
+							method: options.method,
+							headers: options.headers,
+							body,
+							connectedTo: addresses,
+						});
+						const reply = net.reply;
+						if (reply === "hang") return;
+						if ("error" in reply) {
+							req.destroy(reply.error);
+							return;
+						}
+						const res = Object.assign(
+							Readable.from([Buffer.from(reply.body ?? "")]),
+							{
+								statusCode: reply.status,
+								headers: reply.location ? { location: reply.location } : {},
+							},
+						);
+						onResponse(res);
+					});
+					return req;
+				},
+			});
+			return req;
+		},
+	};
+});
 
 vi.mock("node:dns/promises", () => ({
 	lookup: (...args: unknown[]) => lookupMock(...args),
@@ -27,6 +103,8 @@ import { deliverWebhook } from "../deliver";
 import { signPayloadWithTimestamp } from "../sign";
 import type { WebhookEndpoint, WebhookEvent } from "../types";
 
+const PUBLIC_IP = { address: "93.184.216.34", family: 4 };
+
 const webhook: WebhookEndpoint = {
 	id: "wh-1",
 	url: "https://example.com/webhook",
@@ -43,9 +121,10 @@ const event: WebhookEvent = {
 
 describe("deliverWebhook", () => {
 	beforeEach(() => {
-		fetchMock.mockReset();
+		net.reply = { status: 200, body: "OK" };
+		net.requests = [];
 		lookupMock.mockReset();
-		lookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
+		lookupMock.mockResolvedValue([PUBLIC_IP]);
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
 	});
@@ -55,31 +134,26 @@ describe("deliverWebhook", () => {
 	});
 
 	it("sends POST with correct headers and body on success", async () => {
-		fetchMock.mockResolvedValue(new Response("OK", { status: 200 }));
-
 		const result = await deliverWebhook(webhook, event);
 
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-		const call = fetchMock.mock.calls[0];
-		const url = call?.[0] as string;
-		const init = call?.[1] as RequestInit & { headers: Record<string, string> };
-		expect(url).toBe("https://example.com/webhook");
-		expect(init.method).toBe("POST");
-		expect(init.redirect).toBe("error");
-		expect(init.headers["Content-Type"]).toBe("application/json");
-		expect(init.headers["X-Fuutu-Event"]).toBe("order.created");
-		expect(init.headers["X-Fuutu-Event-Id"]).toBe("evt-1");
-		expect(init.headers["User-Agent"]).toBe(
+		expect(net.requests).toHaveLength(1);
+		const sent = net.requests[0];
+		expect(sent?.url.href).toBe("https://example.com/webhook");
+		expect(sent?.method).toBe("POST");
+		expect(sent?.headers["Content-Type"]).toBe("application/json");
+		expect(sent?.headers["X-Fuutu-Event"]).toBe("order.created");
+		expect(sent?.headers["X-Fuutu-Event-Id"]).toBe("evt-1");
+		expect(sent?.headers["User-Agent"]).toBe(
 			`${KIT_NAME}-Webhook/${KIT_VERSION}`,
 		);
 
 		const timestamp = Math.floor(Date.now() / 1000);
-		expect(init.headers["X-Fuutu-Timestamp"]).toBe(String(timestamp));
-		expect(init.headers["X-Fuutu-Signature"]).toBe(
+		expect(sent?.headers["X-Fuutu-Timestamp"]).toBe(String(timestamp));
+		expect(sent?.headers["X-Fuutu-Signature"]).toBe(
 			signPayloadWithTimestamp("test-secret", event.payload, timestamp),
 		);
-		expect(init.headers["X-Fuutu-Signature"]).toMatch(/^t=\d+,v1=[0-9a-f]+$/);
-		expect(init.body).toBe(JSON.stringify(event.payload));
+		expect(sent?.headers["X-Fuutu-Signature"]).toMatch(/^t=\d+,v1=[0-9a-f]+$/);
+		expect(sent?.body).toBe(JSON.stringify(event.payload));
 
 		expect(result).toEqual({
 			success: true,
@@ -89,10 +163,26 @@ describe("deliverWebhook", () => {
 		});
 	});
 
+	it("connects only to the address it validated at connect time", async () => {
+		await deliverWebhook(webhook, event);
+
+		expect(net.requests[0]?.connectedTo).toEqual([PUBLIC_IP]);
+	});
+
+	it("refuses the connection when DNS flips to an internal IP after validation (rebinding)", async () => {
+		lookupMock
+			.mockResolvedValueOnce([PUBLIC_IP])
+			.mockResolvedValue([{ address: "127.0.0.1", family: 4 }]);
+
+		const result = await deliverWebhook(webhook, event);
+
+		expect(result.success).toBe(false);
+		expect(result.error).toContain("private/reserved IP range blocked");
+		expect(net.requests).toHaveLength(0);
+	});
+
 	it("returns failure for non-ok response", async () => {
-		fetchMock.mockResolvedValue(
-			new Response("Internal Server Error", { status: 500 }),
-		);
+		net.reply = { status: 500, body: "Internal Server Error" };
 
 		const result = await deliverWebhook(webhook, event);
 
@@ -105,7 +195,7 @@ describe("deliverWebhook", () => {
 	});
 
 	it("returns failure on network error", async () => {
-		fetchMock.mockRejectedValue(new Error("network error"));
+		net.reply = { error: new Error("network error") };
 
 		const result = await deliverWebhook(webhook, event);
 
@@ -118,16 +208,13 @@ describe("deliverWebhook", () => {
 	});
 
 	it("never follows redirects (SSRF via 302 → internal URL)", async () => {
-		fetchMock.mockRejectedValue(
-			new TypeError("fetch failed", { cause: "redirect" }),
-		);
+		net.reply = { status: 302, location: "http://169.254.169.254/" };
 
 		const result = await deliverWebhook(webhook, event);
 
-		const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
-		expect(init.redirect).toBe("error");
 		expect(result.success).toBe(false);
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(result.responseCode).toBe(302);
+		expect(net.requests).toHaveLength(1);
 	});
 
 	it("blocks hostnames that resolve to a private IP (nip.io-style DNS bypass)", async () => {
@@ -142,18 +229,11 @@ describe("deliverWebhook", () => {
 
 		expect(result.success).toBe(false);
 		expect(result.error).toContain("private/reserved IP range blocked");
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(net.requests).toHaveLength(0);
 	});
 
 	it("fails when the request exceeds the timeout", async () => {
-		fetchMock.mockImplementation(
-			(_url: string, init: RequestInit) =>
-				new Promise((_resolve, reject) => {
-					init.signal?.addEventListener("abort", () =>
-						reject(new Error("The operation timed out")),
-					);
-				}),
-		);
+		net.reply = "hang";
 
 		const pending = deliverWebhook(webhook, event);
 		await vi.advanceTimersByTimeAsync(10_001);
@@ -164,9 +244,7 @@ describe("deliverWebhook", () => {
 	});
 
 	it("caps the persisted response body at maxResponseBodyBytes", async () => {
-		fetchMock.mockResolvedValue(
-			new Response("x".repeat(200 * 1024), { status: 200 }),
-		);
+		net.reply = { status: 200, body: "x".repeat(200 * 1024) };
 
 		const result = await deliverWebhook(webhook, event);
 
@@ -184,7 +262,7 @@ describe("deliverWebhook", () => {
 
 		expect(result.success).toBe(false);
 		expect(result.error).toContain("private/reserved IP range blocked");
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(net.requests).toHaveLength(0);
 	});
 
 	it("blocks IPv4-mapped IPv6 loopback (::ffff:127.0.0.1) to prevent SSRF", async () => {
@@ -197,7 +275,7 @@ describe("deliverWebhook", () => {
 
 		expect(result.success).toBe(false);
 		expect(result.error).toContain("private/reserved IP range blocked");
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(net.requests).toHaveLength(0);
 	});
 
 	it("blocks IPv4-mapped IPv6 loopback in hex form (::ffff:7f00:1) to prevent SSRF", async () => {
@@ -210,7 +288,7 @@ describe("deliverWebhook", () => {
 
 		expect(result.success).toBe(false);
 		expect(result.error).toContain("private/reserved IP range blocked");
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(net.requests).toHaveLength(0);
 	});
 
 	it("blocks IPv4-mapped IPv6 private range in hex form (::ffff:c0a8:1 → 192.168.0.1)", async () => {
@@ -223,6 +301,6 @@ describe("deliverWebhook", () => {
 
 		expect(result.success).toBe(false);
 		expect(result.error).toContain("private/reserved IP range blocked");
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(net.requests).toHaveLength(0);
 	});
 });

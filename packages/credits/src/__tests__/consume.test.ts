@@ -78,7 +78,28 @@ describe("consumeCredits", () => {
 		);
 	});
 
-	it("passes allowOverage=true from meter with allowOverage", async () => {
+	it("passes allowOverage=true when the meter and the caller allow overage", async () => {
+		vi.mocked(consumeCreditsTx).mockResolvedValue({
+			ok: true,
+			consumed: 10,
+			remaining: 90,
+			source: "recurring",
+		});
+
+		await consumeCredits({
+			userId: "user-1",
+			meterKey: "ai_tokens",
+			amount: 10,
+			reason: "test",
+			allowOverage: true,
+		});
+
+		expect(consumeCreditsTx).toHaveBeenCalledWith(
+			expect.objectContaining({ allowOverage: true }),
+		);
+	});
+
+	it("passes allowOverage=false on an overage meter unless the caller allows it", async () => {
 		vi.mocked(consumeCreditsTx).mockResolvedValue({
 			ok: true,
 			consumed: 10,
@@ -94,7 +115,28 @@ describe("consumeCredits", () => {
 		});
 
 		expect(consumeCreditsTx).toHaveBeenCalledWith(
-			expect.objectContaining({ allowOverage: true }),
+			expect.objectContaining({ allowOverage: false }),
+		);
+	});
+
+	it("passes allowOverage=false when the caller allows overage but the meter does not", async () => {
+		vi.mocked(consumeCreditsTx).mockResolvedValue({
+			ok: true,
+			consumed: 10,
+			remaining: 90,
+			source: "recurring",
+		});
+
+		await consumeCredits({
+			userId: "user-1",
+			meterKey: "api_calls",
+			amount: 10,
+			reason: "test",
+			allowOverage: true,
+		});
+
+		expect(consumeCreditsTx).toHaveBeenCalledWith(
+			expect.objectContaining({ allowOverage: false }),
 		);
 	});
 
@@ -394,7 +436,7 @@ describe("checkCredits", () => {
 		});
 	});
 
-	it("allows via overage when meter allows it", async () => {
+	it("denies on an overage meter when the caller does not allow overage", async () => {
 		vi.mocked(getCreditBalance).mockResolvedValue({
 			recurringGranted: 100,
 			recurringConsumed: 100,
@@ -405,6 +447,27 @@ describe("checkCredits", () => {
 			userId: "user-1",
 			meterKey: "ai_tokens",
 			amount: 10,
+		});
+
+		expect(result).toEqual({
+			allowed: false,
+			remaining: 0,
+			wouldUseTopup: false,
+		});
+	});
+
+	it("allows via overage when the meter and the caller allow it", async () => {
+		vi.mocked(getCreditBalance).mockResolvedValue({
+			recurringGranted: 100,
+			recurringConsumed: 100,
+		} as never);
+		vi.mocked(getActiveCreditPackages).mockResolvedValue([]);
+
+		const result = await checkCredits({
+			userId: "user-1",
+			meterKey: "ai_tokens",
+			amount: 10,
+			allowOverage: true,
 		});
 
 		expect(result).toEqual({
@@ -431,7 +494,7 @@ describe("checkCredits", () => {
 		});
 	});
 
-	it("treats null balance as zero but allows overage meters", async () => {
+	it("treats null balance as zero but allows overage the caller allows", async () => {
 		vi.mocked(getCreditBalance).mockResolvedValue(null);
 		vi.mocked(getActiveCreditPackages).mockResolvedValue([]);
 
@@ -439,6 +502,7 @@ describe("checkCredits", () => {
 			userId: "user-1",
 			meterKey: "ai_tokens",
 			amount: 10,
+			allowOverage: true,
 		});
 
 		expect(result).toEqual({

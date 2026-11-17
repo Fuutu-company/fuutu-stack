@@ -13,6 +13,7 @@ vi.mock("@fuutu/auth", () => ({
 
 vi.mock("@fuutu/db", () => ({
 	getUserAccessState: vi.fn(),
+	isUserSessionLive: vi.fn(async () => true),
 	pingDatabase: vi.fn(),
 	getCronJobRun: vi.fn(),
 }));

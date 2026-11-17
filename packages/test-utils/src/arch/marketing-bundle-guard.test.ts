@@ -3,17 +3,20 @@ import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Guard test: apps/marketing must stay bundle-clean (AGENTS.md §6).
- * Server-only packages must never be imported into the public marketing
- * bundle — not even type-only — because they leak server code/types into
- * a public app and pull in DB/auth/env dependencies.
+ * Guard test: apps/marketing and apps/docs must stay bundle-clean
+ * (AGENTS.md §7). Server-only packages must never be imported into these
+ * public apps — not even type-only — because they leak server code/types
+ * and pull in DB/auth/env dependencies.
  *
- * Banned import sources in apps/marketing source files:
+ * Banned import sources in apps/marketing and apps/docs source files:
  *   - "better-auth"          (auth server + client internals)
  *   - "@prisma/client"       (DB client — all access via @fuutu/db in saas)
  *   - "@fuutu/api"           (oRPC server bundle)
  *   - "@fuutu/env/saas"      (server env schema — marketing uses
  *                             @fuutu/env/marketing only)
+ *   - "@fuutu/db", "@fuutu/auth", "@fuutu/mail", "@fuutu/storage"
+ *   - "@fuutu/payments" except the public catalog subpaths
+ *     "/config", "/plans" and "/features"
  *
  * This is a static analysis test — no build needed.
  * Residual limits: heuristic regex scan — false-positives on the literal
@@ -23,6 +26,8 @@ import { describe, expect, it } from "vitest";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../../");
 const MARKETING_DIR = join(REPO_ROOT, "apps", "marketing");
+const DOCS_DIR = join(REPO_ROOT, "apps", "docs");
+const PUBLIC_APP_DIRS = [MARKETING_DIR, DOCS_DIR];
 
 // One regex per banned source. `(?:from|import|require)\s*\(?\s*["']`
 // covers `… from "x"`, `import "x"` (side-effect), `import("x")`, and
@@ -37,12 +42,26 @@ const FUUTU_API_RE =
 const ENV_SAAS_RE =
 	/(?:from|import|require)\s*\(?\s*["']@fuutu\/env\/saas(?:\/[^"']*)?["']/;
 
+const SERVER_PACKAGES_RE =
+	/(?:from|import|require)\s*\(?\s*["']@fuutu\/(?:db|auth|mail|storage)(?:\/[^"']*)?["']/;
+// Root and every subpath except the public plan catalog.
+const PAYMENTS_SERVER_RE =
+	/(?:from|import|require)\s*\(?\s*["']@fuutu\/payments(?!\/(?:config|plans|features)["'])(?:\/[^"']*)?["']/;
+
 const BANNED_SOURCES: ReadonlyArray<{ label: string; re: RegExp }> = [
 	{ label: "better-auth", re: BETTER_AUTH_RE },
 	{ label: "@prisma/client", re: PRISMA_CLIENT_RE },
 	{ label: "@fuutu/api", re: FUUTU_API_RE },
 	{ label: "@fuutu/env/saas", re: ENV_SAAS_RE },
+	{ label: "@fuutu/db|auth|mail|storage", re: SERVER_PACKAGES_RE },
+	{
+		label: "@fuutu/payments (server part)",
+		re: PAYMENTS_SERVER_RE,
+	},
 ];
+
+const isBanned = (content: string) =>
+	BANNED_SOURCES.some(({ re }) => re.test(content));
 
 // Directories never scanned: dependencies, build outputs, generated code,
 // and tool reports.
@@ -63,24 +82,26 @@ const SKIP_DIRS = new Set([
 ]);
 
 describe("marketing bundle guard", () => {
-	it("apps/marketing exists (fail loud on missing/unreadable dir)", () => {
-		expect(existsSync(MARKETING_DIR)).toBe(true);
+	it("apps/marketing and apps/docs exist (fail loud on missing/unreadable dir)", () => {
+		for (const dir of PUBLIC_APP_DIRS) expect(existsSync(dir)).toBe(true);
 	});
 
-	it("should not import server-only packages into apps/marketing", () => {
+	it("should not import server-only packages into apps/marketing or apps/docs", () => {
 		const violations: string[] = [];
 
-		scanTsFiles(MARKETING_DIR, (filePath, content) => {
-			for (const { label, re } of BANNED_SOURCES) {
-				if (re.test(content)) {
-					violations.push(`${filePath}: imports banned source "${label}"`);
+		for (const dir of PUBLIC_APP_DIRS) {
+			scanTsFiles(dir, (filePath, content) => {
+				for (const { label, re } of BANNED_SOURCES) {
+					if (re.test(content)) {
+						violations.push(`${filePath}: imports banned source "${label}"`);
+					}
 				}
-			}
-		});
+			});
+		}
 
 		if (violations.length > 0) {
 			throw new Error(
-				`Marketing bundle guard violations:\n${violations.map((v) => `  - ${v}`).join("\n")}\n\napps/marketing must stay server-clean (AGENTS.md §6): no better-auth, @prisma/client, @fuutu/api, or @fuutu/env/saas — not even type-only.`,
+				`Marketing bundle guard violations:\n${violations.map((v) => `  - ${v}`).join("\n")}\n\napps/marketing and apps/docs must stay server-clean (AGENTS.md §7): no better-auth, @prisma/client, @fuutu/api, @fuutu/env/saas, @fuutu/db, @fuutu/auth, @fuutu/mail, @fuutu/storage or server-side @fuutu/payments — not even type-only.`,
 			);
 		}
 	});
@@ -150,13 +171,37 @@ describe("marketing bundle guard", () => {
 			);
 		});
 
+		it("detects server-only kit packages and their subpaths", () => {
+			for (const source of [
+				"@fuutu/db",
+				"@fuutu/db/queries",
+				"@fuutu/auth",
+				"@fuutu/auth/client",
+				"@fuutu/mail",
+				"@fuutu/storage/config",
+				"@fuutu/payments",
+				"@fuutu/payments/config.server",
+				"@fuutu/payments/plan-resolver",
+			]) {
+				expect(isBanned(`import { x } from "${source}";`)).toBe(true);
+			}
+		});
+
+		it("allows the public payments catalog (config, plans, features)", () => {
+			for (const source of [
+				"@fuutu/payments/config",
+				"@fuutu/payments/plans",
+				"@fuutu/payments/features",
+				"@fuutu/database-docs",
+			]) {
+				expect(isBanned(`import { x } from "${source}";`)).toBe(false);
+			}
+		});
+
 		it("ignores unrelated better-auth mentions in strings", () => {
-			expect(
-				BANNED_SOURCES.every(
-					({ re }) =>
-						!re.test('logo: "/logo/better-auth.svg", id: "better-auth"'),
-				),
-			).toBe(true);
+			expect(isBanned('logo: "/logo/better-auth.svg", id: "better-auth"')).toBe(
+				false,
+			);
 		});
 	});
 });

@@ -5,6 +5,8 @@
  *  - every mutation (any method but GET) is rate-limited;
  *  - mutations under a sensitive prefix (money, credentials, org
  *    structure) reject impersonation sessions and API keys;
+ *  - every procedure under a system-admin prefix — reads included — is a
+ *    `systemAdminProcedure`;
  *  - every exception names a real procedure and a guard it really lacks.
  *
  * Guards are read from the markers their middlewares carry
@@ -17,6 +19,7 @@ import {
 	PROCEDURE_POLICY_EXCEPTIONS,
 	type ProcedureGuard,
 	SENSITIVE_PROCEDURE_PREFIXES,
+	SYSTEM_ADMIN_PROCEDURE_PREFIXES,
 } from "../api-policy";
 import { type PolicyMarker, readPolicy } from "../orpc/policy-markers";
 
@@ -50,6 +53,8 @@ const leaves = collectLeaves(appRouter);
 const mutations = leaves.filter((leaf) => leaf.method !== "GET");
 const isSensitive = (path: string) =>
 	SENSITIVE_PROCEDURE_PREFIXES.some((prefix) => path.startsWith(prefix));
+const isSystemAdmin = (path: string) =>
+	SYSTEM_ADMIN_PROCEDURE_PREFIXES.some((prefix) => path.startsWith(prefix));
 
 const POLICY_FILE = "packages/api/src/app-api-policy.ts";
 
@@ -60,6 +65,8 @@ const FIX: Record<ProcedureGuard, string> = {
 		"add `denyImpersonation: true` to authProcedure(...) or `.use(denyImpersonation)`",
 	sessionOnly:
 		"add `sessionOnly: true` to authProcedure(...) or `.use(sessionOnly)`",
+	systemAdmin:
+		"build it on `systemAdminProcedure(permission)` (orpc/procedures.ts)",
 };
 
 function missingGuard(leaf: Leaf, guard: ProcedureGuard): string | null {
@@ -103,6 +110,25 @@ describe("router policy (appRouter)", () => {
 			])
 			.filter((problem) => problem !== null);
 		expect(problems).toEqual([]);
+	});
+
+	it("builds every procedure under a system-admin prefix (reads too) on systemAdminProcedure", () => {
+		const admin = leaves.filter((leaf) => isSystemAdmin(leaf.path));
+		expect(admin.map((leaf) => leaf.path)).toContain("admin.users.list");
+		const problems = admin
+			.map((leaf) => missingGuard(leaf, "systemAdmin"))
+			.filter((problem) => problem !== null);
+		expect(problems).toEqual([]);
+	});
+
+	it("marks systemAdminProcedure reads and nothing outside the admin prefixes", () => {
+		const list = leaves.find((leaf) => leaf.path === "admin.users.list");
+		expect(list?.method).toBe("GET");
+		expect(list?.policy.systemAdmin).toBe(true);
+		const outside = leaves
+			.filter((leaf) => leaf.policy.systemAdmin && !isSystemAdmin(leaf.path))
+			.map((leaf) => leaf.path);
+		expect(outside).toEqual([]);
 	});
 
 	it("lists only exceptions that are still needed", () => {

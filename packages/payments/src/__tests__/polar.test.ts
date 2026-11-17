@@ -77,14 +77,14 @@ vi.mock("@fuutu/logs", () => ({ createLogger: () => mockLog }));
 const { polarPaymentProvider } = await import("../providers/polar");
 
 /** Feed a synthetic Polar payload through the mocked validateEvent. */
-async function parsePayload(payload: unknown) {
+async function parsePayload(payload: unknown, timestamp = "123") {
 	const { validateEvent } = await import("@polar-sh/sdk/webhooks");
 	vi.mocked(validateEvent).mockReturnValueOnce(payload as never);
 	const request = new Request("https://app.test/api/webhooks/payments", {
 		method: "POST",
 		headers: {
 			"webhook-id": "wh_test",
-			"webhook-timestamp": "123",
+			"webhook-timestamp": timestamp,
 			"webhook-signature": "test",
 		},
 		body: "{}",
@@ -101,6 +101,21 @@ describe("polar provider — SDK integration", () => {
 		});
 		expect(result.url).toBe("https://checkout.test/url");
 		expect(checkoutsCreate).toHaveBeenCalledOnce();
+	});
+
+	it("createCheckoutLink also returns the Polar checkout id", async () => {
+		checkoutsCreate.mockResolvedValueOnce({
+			id: "chk_123",
+			url: "https://checkout.test/url",
+		} as never);
+		const result = await polarPaymentProvider.createCheckoutLink({
+			priceId: "price_abc",
+			userId: "user_123",
+		});
+		expect(result).toEqual({
+			url: "https://checkout.test/url",
+			checkoutId: "chk_123",
+		});
 	});
 
 	it("createCheckoutLink keeps owner metadata authoritative over input.metadata", async () => {
@@ -1071,5 +1086,140 @@ describe("polar provider — typed API failures", () => {
 		await expect(polarPaymentProvider.cancelSubscription("sub_1")).rejects.toBe(
 			own,
 		);
+	});
+});
+
+describe("polar provider — refunds", () => {
+	it("keeps the checkout id as the payment reference of a one-time checkout", async () => {
+		const events = await parsePayload({
+			type: "checkout.updated",
+			data: {
+				id: "chk_1",
+				status: "succeeded",
+				productId: "prod_topup",
+				metadata: { user_id: "user_1" },
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "checkout.completed",
+			paymentRef: "chk_1",
+		});
+	});
+
+	it("keeps the order id as the payment reference of an order without checkout", async () => {
+		const events = await parsePayload({
+			type: "order.paid",
+			data: {
+				id: "ord_1",
+				billingReason: "purchase",
+				productId: "prod_topup",
+				metadata: { user_id: "user_1" },
+			},
+		});
+		expect(events[0]).toMatchObject({
+			type: "one_time.purchased",
+			paymentRef: "ord_1",
+		});
+	});
+
+	it("maps a fully refunded subscription order to payment.reversed of the subscription", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_2",
+				status: "refunded",
+				subscriptionId: "sub_1",
+				checkoutId: null,
+				metadata: {},
+				createdAt: new Date("2026-11-01T10:00:00Z"),
+				modifiedAt: new Date("2026-11-02T10:00:00Z"),
+			},
+		});
+		expect(events).toEqual([
+			{
+				type: "payment.reversed",
+				eventId: "wh_test",
+				subscriptionId: "sub_1",
+				occurredAt: new Date("2026-11-02T10:00:00Z"),
+			},
+		]);
+	});
+
+	it("maps a fully refunded one-time order to payment.reversed by checkout id", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_3",
+				status: "refunded",
+				subscriptionId: null,
+				checkoutId: "chk_1",
+				createdAt: new Date("2026-11-01T10:00:00Z"),
+				modifiedAt: new Date("2026-11-02T10:00:00Z"),
+			},
+		});
+		expect(events).toEqual([
+			{
+				type: "payment.reversed",
+				eventId: "wh_test",
+				paymentRef: "chk_1",
+				occurredAt: new Date("2026-11-02T10:00:00Z"),
+			},
+		]);
+	});
+
+	it("dates a reversal by the signed refund time, not the delivery time", async () => {
+		// `webhook-timestamp` is the time of each delivery attempt (and must be
+		// within 5 minutes of now to verify): it would never age past the
+		// early-reversal retry window.
+		const refundedAt = new Date("2026-11-15T08:00:00Z");
+		const payload = {
+			type: "order.refunded",
+			data: {
+				id: "ord_6",
+				status: "refunded",
+				subscriptionId: "sub_1",
+				createdAt: new Date("2026-11-14T08:00:00Z"),
+				modifiedAt: refundedAt,
+			},
+		};
+		const firstAttempt = await parsePayload(payload, "1794729600");
+		const laterAttempt = await parsePayload(payload, "1794816000");
+		expect(firstAttempt[0]?.occurredAt).toEqual(refundedAt);
+		expect(laterAttempt[0]?.occurredAt).toEqual(refundedAt);
+	});
+
+	it("falls back to the order creation time when the order was never modified", async () => {
+		const createdAt = new Date("2026-11-14T08:00:00Z");
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_7",
+				status: "refunded",
+				subscriptionId: "sub_1",
+				createdAt,
+				modifiedAt: null,
+			},
+		});
+		expect(events[0]?.occurredAt).toEqual(createdAt);
+	});
+
+	it("falls back to the order id when the order had no checkout", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: { id: "ord_4", status: "refunded", subscriptionId: null },
+		});
+		expect(events[0]).toMatchObject({ paymentRef: "ord_4" });
+	});
+
+	it("ignores a partial refund", async () => {
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_5",
+				status: "partially_refunded",
+				subscriptionId: "sub_1",
+			},
+		});
+		expect(events).toEqual([]);
 	});
 });

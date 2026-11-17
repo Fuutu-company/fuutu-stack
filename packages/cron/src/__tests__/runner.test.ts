@@ -446,7 +446,7 @@ describe("in-flight guard", () => {
 describe("listJobs", () => {
 	it("returns all registered jobs", () => {
 		const jobs = listJobs();
-		expect(jobs.length).toBe(6);
+		expect(jobs.length).toBe(7);
 		expect(jobs.map((j) => j.name)).toEqual(
 			expect.arrayContaining([
 				"webhook-retry",
@@ -455,6 +455,7 @@ describe("listJobs", () => {
 				"telemetry-ping",
 				"oauth-client-cleanup",
 				"auth-retention-cleanup",
+				"seat-reconcile",
 			]),
 		);
 	});

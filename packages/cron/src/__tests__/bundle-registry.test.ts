@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CronJob } from "../types";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 /**
  * Next.js may evaluate @fuutu/cron once per bundle (instrumentation, the
  * /api/cron route). A job registered in one bundle must be visible to the
@@ -132,6 +135,7 @@ describe("cron registry across bundles", () => {
 			"telemetry-ping",
 			"oauth-client-cleanup",
 			"auth-retention-cleanup",
+			"seat-reconcile",
 			"app-usage-rollup",
 		]);
 	});

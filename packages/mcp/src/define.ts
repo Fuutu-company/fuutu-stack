@@ -4,6 +4,7 @@ import type {
 	McpPrincipal,
 	McpPromptDefinition,
 	McpToolDefinition,
+	McpUserPrincipal,
 } from "./types";
 
 /** Typed identity helper — infers handler input + principal from the definition. */
@@ -26,4 +27,18 @@ export function canAccess(access: McpAccess, principal: McpPrincipal): boolean {
 	if (principal.kind !== "user") return false;
 	if (access === "authenticated") return true;
 	return access(principal);
+}
+
+/**
+ * Access rule: a verified credential granted every one of `scopes`.
+ * `"authenticated"` ignores scopes — a token consented to only `openid`
+ * reaches it; use this for tools that need a specific grant.
+ */
+export function requireScopes(
+	scope: string,
+	...more: string[]
+): (principal: McpUserPrincipal) => boolean {
+	const required = [scope, ...more];
+	return (principal) =>
+		required.every((name) => principal.scopes.includes(name));
 }

@@ -235,7 +235,7 @@ test.describe("MCP OAuth — authorization code flow", () => {
 			response_type: "code",
 			client_id,
 			redirect_uri: REDIRECT_URI,
-			scope: "openid profile",
+			scope: "openid profile email",
 			state: "e2e-state",
 			code_challenge: challenge,
 			code_challenge_method: "S256",
@@ -308,7 +308,7 @@ test.describe("MCP OAuth — authorization code flow", () => {
 		expect(me.body.result?.structuredContent).toMatchObject({
 			user: { email: "admin@fuutu.local" },
 			organization: { slug: "acme" },
-			scopes: ["openid", "profile"],
+			scopes: ["openid", "profile", "email"],
 		});
 		await request.dispose();
 	});

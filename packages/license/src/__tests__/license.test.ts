@@ -462,3 +462,82 @@ describe("checkLicense()", () => {
 		expect(status.mode).toBe("mcp");
 	});
 });
+
+// A validator outage (rate limit, 5xx, network) must not downgrade a paid
+// key that validated before — only a definitive answer (401/403, invalid
+// body) does.
+describe("checkLicense() during a validator outage", () => {
+	const valid = () =>
+		new Response(JSON.stringify({ mode: "enterprise", valid: true }), {
+			status: 200,
+			headers: { "Content-Type": "application/json" },
+		});
+
+	it.each([
+		["429", () => new Response("slow down", { status: 429 })],
+		["503", () => new Response("down", { status: 503 })],
+	])("keeps the last valid status on %s", async (_label, outage) => {
+		globalThis.fetch = vi
+			.fn()
+			.mockResolvedValueOnce(valid())
+			.mockResolvedValueOnce(outage());
+		await checkLicense({ licenseKey: "ent-key", force: true });
+		const status = await checkLicense({ licenseKey: "ent-key", force: true });
+		expect(status).toMatchObject({ mode: "enterprise", valid: true });
+		expect(getLicenseMode()).toBe("enterprise");
+	});
+
+	it("keeps it on a network error", async () => {
+		globalThis.fetch = vi
+			.fn()
+			.mockResolvedValueOnce(valid())
+			.mockRejectedValueOnce(new Error("ECONNRESET"));
+		await checkLicense({ licenseKey: "ent-key", force: true });
+		const status = await checkLicense({ licenseKey: "ent-key", force: true });
+		expect(status.mode).toBe("enterprise");
+	});
+
+	it("still downgrades on a definitive 401", async () => {
+		globalThis.fetch = vi
+			.fn()
+			.mockResolvedValueOnce(valid())
+			.mockResolvedValueOnce(new Response("revoked", { status: 401 }));
+		await checkLicense({ licenseKey: "ent-key", force: true });
+		const status = await checkLicense({ licenseKey: "ent-key", force: true });
+		expect(status).toMatchObject({ mode: "oss", valid: false });
+	});
+
+	it("never keeps the status of another key", async () => {
+		globalThis.fetch = vi
+			.fn()
+			.mockResolvedValueOnce(valid())
+			.mockResolvedValueOnce(new Response("down", { status: 503 }));
+		await checkLicense({ licenseKey: "ent-key", force: true });
+		const status = await checkLicense({ licenseKey: "other-key", force: true });
+		expect(status).toMatchObject({ mode: "oss", valid: false });
+	});
+
+	it("re-checks after Retry-After instead of the default failure TTL", async () => {
+		const mockFetch = vi
+			.fn()
+			.mockResolvedValueOnce(valid())
+			.mockResolvedValueOnce(
+				new Response("slow down", {
+					status: 429,
+					headers: { "Retry-After": "900" },
+				}),
+			)
+			.mockResolvedValue(valid());
+		globalThis.fetch = mockFetch;
+		let now = 1_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		await checkLicense({ licenseKey: "ent-key", force: true });
+		await checkLicense({ licenseKey: "ent-key", force: true });
+		now += 10 * 60 * 1_000; // past the 5 min failure TTL, before Retry-After
+		await checkLicense({ licenseKey: "ent-key" });
+		expect(mockFetch).toHaveBeenCalledTimes(2);
+		now += 6 * 60 * 1_000; // past Retry-After (15 min)
+		await checkLicense({ licenseKey: "ent-key" });
+		expect(mockFetch).toHaveBeenCalledTimes(3);
+	});
+});

@@ -48,4 +48,76 @@ describe("deploy env guard", () => {
 			expect(runner).not.toMatch(/SKIP_ENV_VALIDATION/);
 		});
 	}
+
+	// The migrator image ships the full source, seed scripts included: they
+	// refuse to run under NODE_ENV=production.
+	it("apps/saas/Dockerfile migrator stage runs with NODE_ENV=production", () => {
+		const source = readFileSync(
+			join(REPO_ROOT, "apps/saas/Dockerfile"),
+			"utf8",
+		);
+		const migrator = source
+			.split(/^FROM .* AS migrator$/m)[1]
+			?.split(/^FROM /m)[0];
+		expect(migrator).toBeDefined();
+		expect(migrator).toMatch(/^ENV NODE_ENV=production$/m);
+	});
+});
+
+/**
+ * Published container ports bypass host firewalls (ufw/iptables INPUT), so
+ * a port on all interfaces lets callers skip the reverse proxy — and forge
+ * the forwarding headers its rate limits rely on. Compose files publish on
+ * loopback only; the proxy on the host reaches them there.
+ */
+describe("compose port bindings", () => {
+	for (const file of [
+		"docker-compose.deploy.yml",
+		"docker-compose.deploy.local.yml",
+	]) {
+		it(`${file} publishes ports on 127.0.0.1 only`, () => {
+			const source = readFileSync(join(REPO_ROOT, file), "utf8");
+			const ports = [...source.matchAll(/^\s+- "([^"]*:\d+)"$/gm)].map(
+				(m) => m[1],
+			);
+			expect(ports.length).toBeGreaterThan(0);
+			for (const port of ports) expect(port).toMatch(/^127\.0\.0\.1:\d+:\d+$/);
+		});
+	}
+});
+
+/**
+ * `TRUST_PROXY_HEADERS` is required in production (`@fuutu/env/saas`):
+ * unset, every client would share one auth rate-limit bucket. The deploy
+ * compose file demands a value; CI's production builds and `next start`
+ * set one so they still boot.
+ */
+describe("TRUST_PROXY_HEADERS in production", () => {
+	it("docker-compose.deploy.yml requires it explicitly (no default)", () => {
+		const source = readFileSync(
+			join(REPO_ROOT, "docker-compose.deploy.yml"),
+			"utf8",
+		);
+		expect(source).toMatch(/TRUST_PROXY_HEADERS: \$\{TRUST_PROXY_HEADERS:\?/);
+	});
+
+	it("the CI build and e2e jobs set it", () => {
+		const ci = readFileSync(
+			join(REPO_ROOT, ".github/workflows/ci.yml"),
+			"utf8",
+		);
+		const job = (name: string) =>
+			ci.split(new RegExp(`^  ${name}:$`, "m"))[1]?.split(/^ {2}\S/m)[0] ?? "";
+		for (const name of ["build", "e2e"]) {
+			expect(job(name)).toMatch(/TRUST_PROXY_HEADERS: "[01]"/);
+		}
+	});
+
+	it("local production-mode E2E servers set it", () => {
+		const next = readFileSync(
+			join(REPO_ROOT, "tooling/scripts/next.mjs"),
+			"utf8",
+		);
+		expect(next).toMatch(/TRUST_PROXY_HEADERS:/);
+	});
 });

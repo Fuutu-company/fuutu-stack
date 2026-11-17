@@ -9,9 +9,10 @@ vi.mock("@fuutu/ai", () => ({
 
 vi.mock("@fuutu/db", () => ({
 	getUserAccessState: vi.fn(),
+	isUserSessionLive: vi.fn(),
 }));
 
-const { getUserAccessState } = await import("@fuutu/db");
+const { getUserAccessState, isUserSessionLive } = await import("@fuutu/db");
 const { adminProcedure, protectedProcedure, systemAdminProcedure } =
 	await import("../orpc/procedures");
 const { runAuthorize } = await import("../orpc/middleware/authorize");
@@ -58,6 +59,7 @@ function dbState(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
 	vi.clearAllMocks();
 	vi.mocked(getUserAccessState).mockResolvedValue(dbState() as never);
+	vi.mocked(isUserSessionLive).mockResolvedValue(true);
 });
 
 describe("systemAdminProcedure", () => {
@@ -134,6 +136,17 @@ describe("systemAdminProcedure", () => {
 		await expect(
 			call(whoami, undefined, { context: adminContext }),
 		).resolves.toEqual({ id: "admin-1", role: "admin" });
+	});
+
+	it("rejects a revoked admin session (row gone, cookie cache still valid)", async () => {
+		vi.mocked(isUserSessionLive).mockResolvedValue(false);
+		await expect(
+			call(whoami, undefined, { context: adminContext }),
+		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+		expect(isUserSessionLive).toHaveBeenCalledWith({
+			userId: "admin-1",
+			sessionId: adminContext.session?.session.id,
+		});
 	});
 
 	it("rejects when the user row is gone", async () => {

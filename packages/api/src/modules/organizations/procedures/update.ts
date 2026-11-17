@@ -1,20 +1,32 @@
 import { auth } from "@fuutu/auth";
+import { isOwnOrganizationLogo } from "@fuutu/auth/hooks/profile-input";
 import { createLogger } from "@fuutu/logs";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { dispatchEvent } from "@fuutu/webhooks";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
+import { withOrganizationAuthErrors } from "../auth-errors";
 import { slugSchema } from "../shared";
 
 const log = createLogger({ scope: "api:organizations" });
 
-const updateOrgSchema = z.object({
-	organizationId: z.string().min(1),
-	name: z.string().min(1).max(100).optional(),
-	slug: slugSchema.optional(),
-	logo: z.string().max(2048).nullable().optional(),
-});
+const updateOrgSchema = z
+	.object({
+		organizationId: z.string().min(1),
+		name: z.string().min(1).max(100).optional(),
+		slug: slugSchema.optional(),
+		logo: z.string().max(2048).nullable().optional(),
+	})
+	.refine(
+		(input) =>
+			input.logo == null ||
+			isOwnOrganizationLogo(input.logo, input.organizationId),
+		{
+			path: ["logo"],
+			message: "Logo must be one of the organization's uploads",
+		},
+	);
 
 export const updateOrganization = authProcedure({
 	org: { permission: PERMISSIONS.ORGANIZATION.UPDATE },
@@ -32,17 +44,19 @@ export const updateOrganization = authProcedure({
 	})
 	.input(updateOrgSchema)
 	.handler(async ({ input, context }) => {
-		const org = await auth.api.updateOrganization({
-			body: {
-				organizationId: input.organizationId,
-				data: {
-					...(input.name ? { name: input.name } : {}),
-					...(input.slug ? { slug: input.slug } : {}),
-					...(input.logo !== undefined ? { logo: input.logo } : {}),
+		const org = await withOrganizationAuthErrors(() =>
+			auth.api.updateOrganization({
+				body: {
+					organizationId: input.organizationId,
+					data: {
+						...(input.name ? { name: input.name } : {}),
+						...(input.slug ? { slug: input.slug } : {}),
+						...(input.logo !== undefined ? { logo: input.logo } : {}),
+					},
 				},
-			},
-			headers: context.headers,
-		});
+				headers: context.headers,
+			}),
+		);
 		try {
 			await dispatchEvent({
 				event: "organization.updated",

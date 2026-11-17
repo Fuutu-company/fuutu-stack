@@ -2,6 +2,13 @@
 
 import { createLogger } from "@fuutu/logs";
 import {
+	hasOrgPermission,
+	ORG_POLICY,
+	OrgAccessControl,
+	PERMISSIONS,
+	toOrgRole,
+} from "@fuutu/rbac";
+import {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
@@ -25,6 +32,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { planGateMessage } from "@/lib/api-error";
 import { useFullOrganization } from "@/modules/app/organizations/use-full-organization";
+import { useOrgRole } from "@/modules/app/organizations/use-org-role";
 import { orpc } from "@/utils/orpc";
 import { WebhookCreateDialog } from "./webhook-create-dialog";
 import { WebhookDeliveries } from "./webhook-deliveries";
@@ -47,12 +55,24 @@ type CreatedWebhook = {
 
 const log = createLogger({ scope: "webhooks" });
 
+const ac = new OrgAccessControl(ORG_POLICY);
+
 export function WebhookList({ slug }: { slug: string }) {
 	const t = useTranslations("webhooks");
 	const tRoot = useTranslations();
 	const tCommon = useTranslations("common");
 	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
 	const org = (useFullOrganization(slug).data ?? null) as FullOrg | null;
+	const role = useOrgRole(slug);
+	const canCreate = role
+		? hasOrgPermission(ac, toOrgRole(role), PERMISSIONS.WEBHOOK.CREATE)
+		: false;
+	const canUpdate = role
+		? hasOrgPermission(ac, toOrgRole(role), PERMISSIONS.WEBHOOK.UPDATE)
+		: false;
+	const canDelete = role
+		? hasOrgPermission(ac, toOrgRole(role), PERMISSIONS.WEBHOOK.DELETE)
+		: false;
 	const [secretWebhook, setSecretWebhook] = useState<CreatedWebhook | null>(
 		null,
 	);
@@ -92,7 +112,8 @@ export function WebhookList({ slug }: { slug: string }) {
 				variant="compact"
 				title={t("title")}
 				actions={
-					org && (
+					org &&
+					canCreate && (
 						<WebhookCreateDialog
 							organizationId={org.id}
 							onCreated={(webhook) => {
@@ -118,7 +139,7 @@ export function WebhookList({ slug }: { slug: string }) {
 						<p className="text-muted-foreground text-sm">
 							{t("emptyDescription")}
 						</p>
-						{org && (
+						{org && canCreate && (
 							<WebhookCreateDialog
 								organizationId={org.id}
 								onCreated={(webhook) => {
@@ -153,19 +174,23 @@ export function WebhookList({ slug }: { slug: string }) {
 										</p>
 									</div>
 									<div className="flex items-center gap-1">
-										<WebhookEditDialog
-											webhook={webhook}
-											organizationId={org.id}
-											onUpdated={() => void query.refetch()}
-										/>
-										<Button
-											variant="ghost"
-											size="sm"
-											aria-label={t("deleteAria")}
-											onClick={() => setDeleteId(webhook.id)}
-										>
-											<Trash2 className="size-4" />
-										</Button>
+										{canUpdate && (
+											<WebhookEditDialog
+												webhook={webhook}
+												organizationId={org.id}
+												onUpdated={() => void query.refetch()}
+											/>
+										)}
+										{canDelete && (
+											<Button
+												variant="ghost"
+												size="sm"
+												aria-label={t("deleteAria")}
+												onClick={() => setDeleteId(webhook.id)}
+											>
+												<Trash2 className="size-4" />
+											</Button>
+										)}
 									</div>
 								</div>
 								<WebhookDeliveries

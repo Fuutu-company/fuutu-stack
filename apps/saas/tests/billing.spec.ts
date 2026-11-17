@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { planCtaLabel, upgradePlanId } from "./kit-catalog";
+import { createThrowawayOrg } from "./throwaway-org";
 
 // The upgrade target and its CTA come from PLANS + translations, not the
 // kit demo literals ("pro" / "Upgrade to Pro").
@@ -122,18 +123,20 @@ test.describe("billing & checkout flows", () => {
 
 	test("org billing explains a misconfigured payment provider", async ({
 		page,
+		browser,
 		baseURL,
 	}) => {
 		// Acme is seeded with an active subscription (no upgrade CTA), so use a
 		// fresh organization without one.
-		const origin = new URL(baseURL ?? page.url()).origin;
 		const slug = `e2e-billing-${Date.now()}`;
-		const created = await page.request.post("/api/auth/organization/create", {
-			data: { name: "E2E Billing", slug },
-			headers: { origin },
+		const org = await createThrowawayOrg({
+			browser,
+			baseURL: baseURL ?? new URL(page.url()).origin,
+			admin: page.request,
+			name: "E2E Billing",
+			slug,
+			joinAsOwner: true,
 		});
-		expect(created.ok()).toBe(true);
-		const { id: orgId } = (await created.json()) as { id: string };
 
 		try {
 			// Replay the API's typed answer for a missing provider key
@@ -160,10 +163,7 @@ test.describe("billing & checkout flows", () => {
 				page.getByText(/payments are not configured for this environment/i),
 			).toBeVisible({ timeout: 10_000 });
 		} finally {
-			await page.request.post("/api/auth/organization/delete", {
-				data: { organizationId: orgId },
-				headers: { origin },
-			});
+			await org.cleanup();
 		}
 	});
 

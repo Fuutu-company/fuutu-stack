@@ -62,6 +62,8 @@ RUN pnpm --filter @fuutu/saas build
 #   docker build --target migrator -f apps/saas/Dockerfile -t app-migrate .
 #   docker run --rm -e DATABASE_URL=postgresql://… app-migrate
 FROM base AS migrator
+# Production: the seed scripts refuse to run from this image.
+ENV NODE_ENV=production
 COPY --from=installer /app/ .
 COPY --from=pruner /app/out/full/ .
 WORKDIR /app/packages/db

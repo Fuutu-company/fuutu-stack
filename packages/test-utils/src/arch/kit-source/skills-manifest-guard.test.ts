@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
  * - `.agents/skills` mirrors `.claude/skills` for non-Claude agents.
  */
 
-const REPO_ROOT = join(import.meta.dirname, "../../../../");
+const REPO_ROOT = join(import.meta.dirname, "../../../../../");
 const SKILLS_DIR = join(REPO_ROOT, ".claude", "skills");
 
 type Entry = { name: string; source: "repo" | "mcp"; category: string };

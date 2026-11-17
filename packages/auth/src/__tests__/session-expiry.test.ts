@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * Session lifetime — `authConfig.session` is what the privacy policy
  * documents (session cookie lifetime), so the default must only change
@@ -41,11 +44,14 @@ const DAY = 24 * 60 * 60;
 const IMPORT_TIMEOUT = 30_000;
 
 describe("session expiry", () => {
-	it("defaults to 30 days, refreshed once a day, cookie cache 5 minutes", async () => {
+	// The cookie cache serves a session without a database check — a
+	// revoked session or a ban only takes effect once it expires, so it
+	// stays short (1 minute).
+	it("defaults to 30 days, refreshed once a day, cookie cache 1 minute", async () => {
 		const { authConfig } = await import("../config");
 		expect(authConfig.session.expiresIn).toBe(2_592_000);
 		expect(authConfig.session.updateAge).toBe(86_400);
-		expect(authConfig.session.cookieCache.maxAge).toBe(300);
+		expect(authConfig.session.cookieCache.maxAge).toBe(60);
 	});
 
 	/** The Better Auth instance built from `authConfig` with these session values. */

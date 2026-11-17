@@ -61,6 +61,7 @@ function getGoogleProvider(): AIProvider {
 			apiKey,
 			model: aiConfig.defaultModelFor("google"),
 			devtools: env.NODE_ENV === "development",
+			maxOutputTokens: aiConfig.maxOutputTokens,
 		});
 	}
 	return googleProvider;
@@ -82,6 +83,7 @@ function getOpenRouterProvider(): AIProvider {
 			baseURL: env.AI_BASE_URL,
 			model: aiConfig.defaultModelFor("openrouter"),
 			devtools: env.NODE_ENV === "development",
+			maxOutputTokens: aiConfig.maxOutputTokens,
 		});
 	}
 	return openrouterProvider;

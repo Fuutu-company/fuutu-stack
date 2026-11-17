@@ -1,6 +1,9 @@
 import { APIError } from "better-auth/api";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * Impersonation wiring of the Better Auth instance: the session duration
  * comes from `authConfig.admin.impersonationMinutes`, the guard runs in

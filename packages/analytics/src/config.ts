@@ -42,6 +42,12 @@ export interface AnalyticsConfig {
 	consentCookieMaxAge: number;
 	/** Window event name dispatched when the consent decision changes. */
 	consentEventName: string;
+	/**
+	 * Query params stripped (case-insensitive) from every page and
+	 * referrer URL before it is sent — auth links carry tokens, emails
+	 * and ids there. Remove a name only if no page puts a secret in it.
+	 */
+	redactedQueryParams: readonly string[];
 }
 
 export const analyticsConfig: AnalyticsConfig = {
@@ -54,4 +60,5 @@ export const analyticsConfig: AnalyticsConfig = {
 	consentCookieName: "fuutu.consent.v1",
 	consentCookieMaxAge: 31_536_000,
 	consentEventName: "fuutu:consent",
+	redactedQueryParams: ["token", "email", "id", "code", "sig", "state"],
 };

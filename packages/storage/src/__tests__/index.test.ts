@@ -21,6 +21,7 @@ const {
 	resolveAllowedContentTypes,
 	resolveBucket,
 	resolveBucketAlias,
+	resolveBucketReadAccess,
 	resolveMaxUploadBytes,
 	resolveStorageProvider,
 	StorageBucketError,
@@ -50,6 +51,22 @@ describe("resolveBucketAlias", () => {
 
 	it("throws StorageBucketError for an unknown alias", () => {
 		expect(() => resolveBucketAlias("secret-backups")).toThrow(
+			StorageBucketError,
+		);
+	});
+});
+
+describe("resolveBucketReadAccess", () => {
+	it("keeps organization logos owner-only by default", () => {
+		expect(resolveBucketReadAccess("organization-logos")).toBe("owner");
+	});
+
+	it("opts avatars in to any signed-in viewer explicitly", () => {
+		expect(resolveBucketReadAccess("avatars")).toBe("signed-in");
+	});
+
+	it("throws StorageBucketError for an unknown alias", () => {
+		expect(() => resolveBucketReadAccess("secrets")).toThrow(
 			StorageBucketError,
 		);
 	});

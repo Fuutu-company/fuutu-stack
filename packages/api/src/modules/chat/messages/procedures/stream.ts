@@ -1,4 +1,5 @@
 import { resolveAIProvider } from "@fuutu/ai";
+import { aiConfig } from "@fuutu/ai/config";
 import { addMessage, getConversation } from "@fuutu/db";
 import { createLogger } from "@fuutu/logs";
 import { PERMISSIONS } from "@fuutu/rbac";
@@ -60,10 +61,17 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 			context,
 		);
 
-		// getConversation returned the newest 50 messages descending —
-		// reverse back to chronological order for the provider.
-		const history = conversation.messages
-			.slice()
+		// getConversation returned the newest 50 messages descending. Keep
+		// the newest ones that fit the prompt cap next to the new message,
+		// then reverse back to chronological order for the provider.
+		let historyBudget = aiConfig.maxPromptChars - input.content.length;
+		const newestFirst = [];
+		for (const m of conversation.messages) {
+			historyBudget -= m.content.length;
+			if (historyBudget < 0) break;
+			newestFirst.push(m);
+		}
+		const history = newestFirst
 			.reverse()
 			.filter((m) => {
 				if (!VALID_ROLES.includes(m.role as ValidRole)) {
@@ -90,7 +98,7 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 		const promptTokens = estimateTokens(
 			messages.map((m) => m.content).join(""),
 		);
-		await assertAiCredits(owner, promptTokens);
+		const spend = await assertAiCredits(owner, promptTokens);
 
 		const userMessage = await addMessage(
 			input.conversationId,
@@ -137,6 +145,7 @@ export const streamMessageProcedure = permissionProcedure(PERMISSIONS.USE_AI)
 					reply: fullResponse,
 					idempotencyKey: `chat-reply:${userMessageId}`,
 					reason: "chat.messages.stream",
+					spend,
 				});
 			}
 		}

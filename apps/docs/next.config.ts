@@ -15,6 +15,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withMDX = createMDX();
 
 const isProd = env.NODE_ENV === "production";
+// Only for an https deployment: on a production build served over plain
+// http (local `next start`, E2E/visual containers) WebKit would upgrade —
+// and so drop — every CSS/JS request.
+const servedOverHttps =
+	isProd && Boolean(env.NEXT_PUBLIC_DOCS_URL?.startsWith("https://"));
 
 // Analytics CSP origins come from the active provider — switching
 // providers via NEXT_PUBLIC_ANALYTICS_PROVIDER needs no edits here.
@@ -26,9 +31,9 @@ const securityHeaders = [
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 	{
 		key: "Permissions-Policy",
-		value: "camera=(), microphone=(), geolocation=()",
+		value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
 	},
-	{ key: "X-DNS-Prefetch-Control", value: "on" },
+	{ key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 	{
 		key: "Content-Security-Policy",
 		value: [
@@ -42,6 +47,7 @@ const securityHeaders = [
 			"base-uri 'self'",
 			"form-action 'self'",
 			"object-src 'none'",
+			...(servedOverHttps ? ["upgrade-insecure-requests"] : []),
 		].join("; "),
 	},
 	...(isProd

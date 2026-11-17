@@ -3,7 +3,8 @@
  *
  * The cap is the org entitlement's `seatsTotal` (`null` = unlimited) —
  * by default derived from `LIMITS[planId].membersPerOrg`, or whatever a
- * registered entitlement resolver returns. Wired into `organizationHooks`
+ * registered entitlement resolver returns — unless an app seat gate
+ * (`registerSeatGate`) returns another cap for the change. Wired into `organizationHooks`
  * so every membership mutation (direct add, invitation create,
  * invitation accept) is gated regardless of which endpoint triggers it.
  *
@@ -16,7 +17,7 @@ import {
 	countPendingInvitations,
 	getOrganizationById,
 } from "@fuutu/db";
-import { getOrgEntitlement } from "@fuutu/payments";
+import { getOrgEntitlement, getSeatGate } from "@fuutu/payments";
 import { getSeatUpgradeUrl } from "@fuutu/payments/config";
 import { APIError } from "better-auth/api";
 
@@ -30,13 +31,21 @@ const SEAT_LIMIT_MESSAGE = "Organization seat limit reached";
 async function assertWithinSeatLimit(
 	organizationId: string,
 	usedSeats: number,
+	purpose: "member" | "invitation",
 ): Promise<void> {
 	const { seatsTotal } = await getOrgEntitlement(organizationId);
-	if (seatsTotal === null || usedSeats < seatsTotal) return;
+	const gate = getSeatGate();
+	const cap = gate
+		? await gate(
+				{ organizationId, usedSeats, seatsTotal, purpose },
+				() => seatsTotal,
+			)
+		: seatsTotal;
+	if (cap === null || usedSeats < cap) return;
 	const org = await getOrganizationById(organizationId);
 	throw new APIError("PAYMENT_REQUIRED", {
 		message: SEAT_LIMIT_MESSAGE,
-		seatsTotal,
+		seatsTotal: cap,
 		upgradeUrl: getSeatUpgradeUrl(org?.slug ?? organizationId),
 	});
 }
@@ -46,7 +55,7 @@ export const assertSeatAvailable = async (
 	organizationId: string,
 ): Promise<void> => {
 	const members = await countOrganizationMembers(organizationId);
-	await assertWithinSeatLimit(organizationId, members);
+	await assertWithinSeatLimit(organizationId, members, "member");
 };
 
 /**
@@ -60,5 +69,5 @@ export const assertInviteSeatAvailable = async (
 		countOrganizationMembers(organizationId),
 		countPendingInvitations(organizationId),
 	]);
-	await assertWithinSeatLimit(organizationId, members + pending);
+	await assertWithinSeatLimit(organizationId, members + pending, "invitation");
 };

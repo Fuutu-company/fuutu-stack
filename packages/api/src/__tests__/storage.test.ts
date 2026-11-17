@@ -432,3 +432,98 @@ describe("storage.file.list", () => {
 		expect(result).toEqual({ items: [] });
 	});
 });
+
+describe("organization-logos bucket — writes need ORGANIZATION.UPDATE", () => {
+	const withRole = (role: string) =>
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			members: [{ userId: "user-1", role, id: "member-1" }],
+		} as never);
+
+	const presignLogo = (organizationId?: string) =>
+		call(
+			storageRouter.upload.createPresigned,
+			{
+				bucket: "organization-logos",
+				key: "logo.png",
+				contentType: "image/png",
+				contentLength: 2048,
+				...(organizationId ? { organizationId } : {}),
+			},
+			{ context: authenticatedContext },
+		);
+
+	const deleteLogo = (organizationId?: string) =>
+		call(
+			storageRouter.file.delete,
+			{
+				bucket: "organization-logos",
+				key: "logo.png",
+				...(organizationId ? { organizationId } : {}),
+			},
+			{ context: authenticatedContext },
+		);
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(resolveStorageProvider).mockReturnValue(mockProvider as never);
+		mockProvider.getSignedUploadUrl.mockResolvedValue({
+			url: "https://s3.example.com/upload",
+			headers: {},
+			expiresAt: Date.now() + 600000,
+		});
+		mockProvider.deleteObject.mockResolvedValue(undefined);
+	});
+
+	it("rejects a plain member's logo upload", async () => {
+		withRole("member");
+		await expect(presignLogo("org-1")).rejects.toMatchObject({
+			code: "FORBIDDEN",
+		});
+		expect(mockProvider.getSignedUploadUrl).not.toHaveBeenCalled();
+	});
+
+	it("rejects a plain member's logo delete", async () => {
+		withRole("member");
+		await expect(deleteLogo("org-1")).rejects.toMatchObject({
+			code: "FORBIDDEN",
+		});
+		expect(mockProvider.deleteObject).not.toHaveBeenCalled();
+	});
+
+	it("rejects logo writes outside an organization", async () => {
+		await expect(presignLogo()).rejects.toMatchObject({ code: "FORBIDDEN" });
+		await expect(deleteLogo()).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expect(mockProvider.getSignedUploadUrl).not.toHaveBeenCalled();
+		expect(mockProvider.deleteObject).not.toHaveBeenCalled();
+	});
+
+	it("lets an org admin upload and delete the logo", async () => {
+		withRole("admin");
+		await presignLogo("org-1");
+		await deleteLogo("org-1");
+		expect(mockProvider.getSignedUploadUrl).toHaveBeenCalledWith(
+			expect.objectContaining({ key: "org-1/logo.png" }),
+		);
+		expect(mockProvider.deleteObject).toHaveBeenCalledWith(
+			"organization-logos",
+			"org-1/logo.png",
+		);
+	});
+
+	it("still lets a plain member write other buckets in the org", async () => {
+		withRole("member");
+		await call(
+			storageRouter.upload.createPresigned,
+			{
+				bucket: "avatars",
+				key: "a.png",
+				contentType: "image/png",
+				contentLength: 10,
+				organizationId: "org-1",
+			},
+			{ context: authenticatedContext },
+		);
+		expect(mockProvider.getSignedUploadUrl).toHaveBeenCalled();
+	});
+});

@@ -161,22 +161,32 @@ export const countOrgApiKeys = (
 		where: { organizationId, revokedAt: null, ...scopeFilter(opts.scope) },
 	});
 
+/** `lastUsedAt` is written at most this often per key — not on every request. */
+const LAST_USED_WRITE_INTERVAL_MS = 60 * 1000;
+
 /**
  * Verify a plaintext API key. Hashes the key internally with sha256 (matching
  * `createApiKey`) before looking it up. Returns the record when valid (not
- * revoked, not expired) and updates `lastUsedAt`. Returns `null` otherwise.
+ * revoked, not expired) and updates `lastUsedAt` (at most once a minute).
+ * Returns `null` otherwise.
  */
 export const verifyApiKey = async (plaintextKey: string) => {
 	const hashedKey = await sha256(plaintextKey);
 	const record = await db.apiKey.findUnique({ where: { key: hashedKey } });
 	if (!record) return null;
 	if (record.revokedAt) return null;
-	if (record.expiresAt && record.expiresAt < new Date()) return null;
+	const now = new Date();
+	if (record.expiresAt && record.expiresAt < now) return null;
 
-	await db.apiKey.update({
-		where: { id: record.id },
-		data: { lastUsedAt: new Date() },
-	});
+	if (
+		!record.lastUsedAt ||
+		now.getTime() - record.lastUsedAt.getTime() >= LAST_USED_WRITE_INTERVAL_MS
+	) {
+		await db.apiKey.update({
+			where: { id: record.id },
+			data: { lastUsedAt: now },
+		});
+	}
 	return record;
 };
 
@@ -224,6 +234,20 @@ export const revokeOrgApiKeysForUser = async (
 ) => {
 	const { count } = await db.apiKey.updateMany({
 		where: { organizationId, userId, revokedAt: null },
+		data: { revokedAt: new Date() },
+	});
+	return count;
+};
+
+/**
+ * Revoke every live key a user holds, personal and org — run on account
+ * recovery (password reset, the mailbox owner taking over an unverified
+ * account), so a key minted with a stolen or squatted session dies too.
+ * Returns the number of keys revoked.
+ */
+export const revokeApiKeysForUser = async (userId: string) => {
+	const { count } = await db.apiKey.updateMany({
+		where: { userId, revokedAt: null },
 		data: { revokedAt: new Date() },
 	});
 	return count;

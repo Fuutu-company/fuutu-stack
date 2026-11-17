@@ -54,3 +54,13 @@ export function getTwoFactorErrorKey(
 			return "failed";
 	}
 }
+
+/**
+ * `auth.error.hints.*` key for an error code on the auth error page, or
+ * null for the generic text. `TWO_FACTOR_REQUIRED`: a magic link or social
+ * sign-in was refused because the account has 2FA
+ * (hooks/second-factor-session.ts — same code, client-safe copy here).
+ */
+export function getAuthErrorHintKey(code: string): "twoFactorRequired" | null {
+	return code === "TWO_FACTOR_REQUIRED" ? "twoFactorRequired" : null;
+}

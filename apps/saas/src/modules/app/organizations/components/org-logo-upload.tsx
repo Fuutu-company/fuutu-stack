@@ -11,13 +11,13 @@ import {
 } from "@fuutu/rbac";
 import type { StorageBucketAlias } from "@fuutu/storage";
 import { Button, Card, CardContent } from "@fuutu/ui";
-import { slugify } from "@fuutu/utils";
 import { Building2, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { planGateMessage } from "@/lib/api-error";
 import { orpc } from "@/utils/orpc";
+import { orgLogoKey } from "../org-logo-key";
 import {
 	useFullOrganization,
 	useInvalidateOrganization,
@@ -70,7 +70,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 
 	async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
-		if (!file || !org || uploading) return;
+		if (!canEdit || !file || !org || uploading) return;
 		if (file.size > MAX_LOGO_SIZE) {
 			setStatus(t("settings.logo.tooLarge"));
 			return;
@@ -78,7 +78,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 		setUploading(true);
 		setStatus(null);
 		try {
-			const key = slugify(file.name);
+			const key = orgLogoKey(file.name);
 			const bucket: StorageBucketAlias = "organization-logos";
 			const presigned = await orpc.storage.upload.createPresigned.call({
 				bucket,
@@ -117,7 +117,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 	}
 
 	async function handleRemove() {
-		if (!org?.logo) return;
+		if (!canEdit || !org?.logo) return;
 		setRemoving(true);
 		setStatus(null);
 		try {
@@ -199,14 +199,16 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 					</div>
 				</div>
 				{status && <p className="text-muted-foreground text-sm">{status}</p>}
-				<input
-					id="org-logo-input"
-					ref={fileInputRef}
-					type="file"
-					accept="image/png,image/jpeg,image/webp"
-					className="sr-only"
-					onChange={handleUpload}
-				/>
+				{canEdit && (
+					<input
+						id="org-logo-input"
+						ref={fileInputRef}
+						type="file"
+						accept="image/png,image/jpeg,image/webp"
+						className="sr-only"
+						onChange={handleUpload}
+					/>
+				)}
 			</CardContent>
 		</Card>
 	);

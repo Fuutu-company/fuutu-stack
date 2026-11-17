@@ -1,7 +1,15 @@
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { APIError } from "better-auth/api";
 import { organization } from "better-auth/plugins";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@fuutu/db", () => ({
+	listOAuthConnectedApps: vi.fn(),
+	revokeOAuthClientAccess: vi.fn(),
+}));
+
 import { assertNotImpersonating } from "../hooks/impersonation-guard";
+import { mcpConnectedApps } from "../plugins/mcp-connected-apps";
 
 const impersonated = async () => ({
 	session: { impersonatedBy: "admin-1" },
@@ -37,6 +45,12 @@ const GUARDED_PATHS = [
 	"/account-info",
 	"/oauth2/client/rotate-secret",
 	"/oauth2/update-client",
+	// Removing the user's OAuth clients, keys and grants (connected apps).
+	"/oauth2/delete-client",
+	"/oauth2/delete-consent",
+	"/oauth2/client/rotate-keys",
+	"/oauth2/register",
+	"/mcp-oauth/connected-apps/revoke",
 	// Switching to (or revoking into) another device session would leave
 	// impersonation without the audited stop.
 	"/multi-session/set-active",
@@ -154,6 +168,62 @@ describe("organization plugin coverage", () => {
 
 	it("finds the organization mutations", () => {
 		expect(mutations).toContain("/organization/remove-member");
+	});
+
+	it.each(mutations)("guards %s", async (path) => {
+		await expect(
+			assertNotImpersonating({ path, getSession: impersonated }),
+		).rejects.toMatchObject({ body: { code: "IMPERSONATION_FORBIDDEN" } });
+	});
+});
+
+type EndpointLike = {
+	path?: string;
+	options: { method?: string | string[]; metadata?: { SERVER_ONLY?: boolean } };
+};
+
+/** HTTP-reachable non-GET endpoints of a plugin. */
+function httpMutations(endpoints: Record<string, EndpointLike>): string[] {
+	return Object.values(endpoints)
+		.filter((endpoint) => !endpoint.options.metadata?.SERVER_ONLY)
+		.filter((endpoint) =>
+			[endpoint.options.method ?? "POST"].flat().some((m) => m !== "GET"),
+		)
+		.map((endpoint) => endpoint.path)
+		.filter((path): path is string => typeof path === "string");
+}
+
+/**
+ * OAuth provider (MCP OAuth) and connected-apps mutations are guarded
+ * unless listed here: client-authenticated protocol endpoints that never
+ * act on the browser session's account, and sign-out.
+ */
+const OAUTH_MUTATIONS_ALLOWED_WHILE_IMPERSONATING = new Set([
+	"/oauth2/token",
+	"/oauth2/introspect",
+	"/oauth2/revoke",
+	"/oauth2/userinfo",
+	"/oauth2/end-session",
+	"/oauth2/end-session/confirm",
+	"/oauth2/public-client-prelogin",
+]);
+
+describe("OAuth provider and connected-apps coverage", () => {
+	const mutations = [
+		...httpMutations(
+			oauthProvider({
+				loginPage: "/auth/sign-in",
+				consentPage: "/auth/consent",
+			}).endpoints as unknown as Record<string, EndpointLike>,
+		),
+		...httpMutations(
+			mcpConnectedApps().endpoints as unknown as Record<string, EndpointLike>,
+		),
+	].filter((path) => !OAUTH_MUTATIONS_ALLOWED_WHILE_IMPERSONATING.has(path));
+
+	it("finds the OAuth mutations", () => {
+		expect(mutations).toContain("/oauth2/delete-consent");
+		expect(mutations).toContain("/mcp-oauth/connected-apps/revoke");
 	});
 
 	it.each(mutations)("guards %s", async (path) => {

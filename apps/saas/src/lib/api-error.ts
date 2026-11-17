@@ -42,6 +42,21 @@ export function isImpersonationForbidden(err: unknown): boolean {
 }
 
 /**
+ * The stable refusal code of an API error — oRPC `data.code` or Better
+ * Auth's `code` (`res.error`, or a thrown error carrying it).
+ */
+function refusalCode(err: unknown): unknown {
+	if (typeof err !== "object" || err === null) return undefined;
+	if (err instanceof ORPCError) {
+		const data: unknown = err.data;
+		return typeof data === "object" && data !== null
+			? (data as Record<string, unknown>).code
+			: undefined;
+	}
+	return (err as Record<string, unknown>).code;
+}
+
+/**
  * Map an API error to a localized message. The API's authorize middleware
  * reports plan gates with stable English messages ("Limit exceeded (n/m)",
  * "not available on your plan") — those must be translated client-side,
@@ -55,6 +70,15 @@ export function planGateMessage(
 ): string {
 	if (isImpersonationForbidden(err)) {
 		return t("common.errors.impersonationForbidden");
+	}
+	// Passkeys, 2FA and API keys need a verified email (they outlive a
+	// password reset).
+	if (refusalCode(err) === "EMAIL_NOT_VERIFIED") {
+		return t("common.errors.verifyEmailFirst");
+	}
+	// API keys need a recent sign-in.
+	if (refusalCode(err) === "SESSION_NOT_FRESH") {
+		return t("common.errors.reauthRequired");
 	}
 	const message = err instanceof Error ? err.message : "";
 	if (message.includes("Limit exceeded")) {
@@ -92,6 +116,36 @@ function providerFailure(err: unknown): ProviderFailureKind | null {
 		: null;
 }
 
+/** Checkout refusals that mean "you already have this plan". */
+const CHECKOUT_REFUSAL_KEY = {
+	already_subscribed: "errors.alreadySubscribed",
+	resume_instead: "errors.resumeInstead",
+} as const;
+
+function checkoutRefusalKey(
+	err: unknown,
+): (typeof CHECKOUT_REFUSAL_KEY)[keyof typeof CHECKOUT_REFUSAL_KEY] | null {
+	if (!(err instanceof ORPCError)) return null;
+	const data: unknown = err.data;
+	if (typeof data !== "object" || data === null) return null;
+	const { reason } = data as Record<string, unknown>;
+	return typeof reason === "string" &&
+		Object.hasOwn(CHECKOUT_REFUSAL_KEY, reason)
+		? CHECKOUT_REFUSAL_KEY[reason as keyof typeof CHECKOUT_REFUSAL_KEY]
+		: null;
+}
+
+/** The org's billing portal is open to the member who pays only. */
+function isPortalPayerOnly(err: unknown): boolean {
+	if (!(err instanceof ORPCError)) return false;
+	const data: unknown = err.data;
+	return (
+		typeof data === "object" &&
+		data !== null &&
+		(data as Record<string, unknown>).reason === "portal_payer_only"
+	);
+}
+
 /**
  * True when a payments call failed because the deployment cannot take
  * payments — provider off (`NOT_IMPLEMENTED`) or misconfigured, e.g. a
@@ -121,8 +175,13 @@ export function paymentsErrorKey(
 	| (typeof PROVIDER_FAILURE_KEY)[ProviderFailureKind]
 	| "choosePlan.unavailable"
 	| "errors.impersonationForbidden"
+	| "errors.portalPayerOnly"
+	| (typeof CHECKOUT_REFUSAL_KEY)[keyof typeof CHECKOUT_REFUSAL_KEY]
 	| null {
 	if (isImpersonationForbidden(err)) return "errors.impersonationForbidden";
+	if (isPortalPayerOnly(err)) return "errors.portalPayerOnly";
+	const refusal = checkoutRefusalKey(err);
+	if (refusal) return refusal;
 	const failure = providerFailure(err);
 	if (failure) return PROVIDER_FAILURE_KEY[failure];
 	return isPaymentsUnavailable(err) ? "choosePlan.unavailable" : null;
