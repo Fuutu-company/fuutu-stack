@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 const UPLOAD = readFileSync(
 	join(
 		import.meta.dirname,
-		"../../../../apps/saas/src/modules/app/organizations/components/org-logo-upload.tsx",
+		"../../../../../apps/saas/src/modules/app/organizations/components/org-logo-upload.tsx",
 	),
 	"utf8",
 );

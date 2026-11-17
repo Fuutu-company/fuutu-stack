@@ -117,6 +117,12 @@ jobs:
       - run: pnpm check-types
       - run: pnpm check-translations
       - run: pnpm test
+      # Guards on the kit's own demo source (packages/test-utils/src/arch/
+      # kit-source/): they break once an app rewrites its UI, so only the
+      # kit repository runs them; `pnpm test` above runs the invariants.
+      - name: Kit-source guards (kit repository only)
+        if: github.repository == 'Fuutu-company/fuutu-stack'
+        run: pnpm -F @fuutu/test-utils test:kit-source
       - run: pnpm -F @fuutu/db test:integration
 
   build:

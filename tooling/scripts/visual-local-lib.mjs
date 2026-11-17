@@ -1,5 +1,5 @@
 // Pure helpers for visual-local.mjs — no I/O, unit-tested in
-// packages/test-utils/src/arch/visual-local.test.ts.
+// packages/test-utils/src/arch/kit-source/visual-local.test.ts.
 import path from "node:path";
 
 export const APPS = ["saas", "marketing"];
@@ -147,7 +147,7 @@ export function orphanReason(file, { locales, specSource }) {
 /**
  * The CI baselines safe to delete. A name that cannot be classified stays —
  * it may belong to a browser this list does not know; the guard test
- * (packages/test-utils/src/arch/visual-baselines.test.ts) reports it.
+ * (packages/test-utils/src/arch/kit-source/visual-baselines.test.ts) reports it.
  *
  * @param {string[]} files
  * @param {{ locales: string[]; specSource: string }} ctx

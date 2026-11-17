@@ -2,7 +2,7 @@
 // Delete the committed visual baselines of one app that are orphaned by
 // their name alone: a disabled locale, a page no visual spec names, a
 // viewport on the wrong project class — the rules the guard test
-// packages/test-utils/src/arch/visual-baselines.test.ts enforces.
+// packages/test-utils/src/arch/kit-source/visual-baselines.test.ts enforces.
 //
 // It never looks at what an update run rewrote: Playwright leaves a
 // byte-identical render untouched, and a run covers only some apps and

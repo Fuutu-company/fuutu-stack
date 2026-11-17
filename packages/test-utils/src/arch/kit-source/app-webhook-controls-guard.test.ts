@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 const LIST = readFileSync(
 	join(
 		import.meta.dirname,
-		"../../../../apps/saas/src/modules/app/webhooks/components/webhook-list.tsx",
+		"../../../../../apps/saas/src/modules/app/webhooks/components/webhook-list.tsx",
 	),
 	"utf8",
 );

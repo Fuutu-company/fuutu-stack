@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
  * `discord.gg/` invite link.
  */
 
-const ROOT = join(import.meta.dirname, "../../../..");
+const ROOT = join(import.meta.dirname, "../../../../..");
 const PUBLIC_PATHS = [
 	"README.md",
 	"CONTRIBUTING.md",
