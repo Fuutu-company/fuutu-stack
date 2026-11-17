@@ -137,11 +137,13 @@ async function main() {
 
 	console.log("Seeding development data…");
 
-	const adminId = randomUUID();
-	const memberId = randomUUID();
-	const twoFactorId = randomUUID();
-	const inviteeId = randomUUID();
-	const orgId = randomUUID();
+	// Fixed ids: the UI renders them (admin audit log targets, admin links),
+	// so a fresh seed always looks the same — visual baselines included.
+	const adminId = "7c4f2a9e-3b1d-4e8a-9f60-2d5b8c1e4a73";
+	const memberId = "b2e8d415-6a9c-4f37-8e21-c5a7f903d6b8";
+	const twoFactorId = "4d91c6f2-8e5a-4b03-a7d4-1f6e2b9c8a50";
+	const inviteeId = "e6a3b7d0-2c48-4f9e-b1a5-8d7c3e0f6b29";
+	const orgId = "9a1e5c3b-7f2d-4a86-8c4e-0b6d9f2a7e15";
 	const password = await hashPassword("DevPassword!2345");
 	// Every seeded list gets distinct `createdAt` values (1 s apart) so list
 	// order never depends on insert order or random ids — screenshots and
@@ -261,9 +263,9 @@ async function main() {
 	});
 
 	// Resolve actual DB records (upserts above are keyed by email/slug, so the
-	// generated UUIDs only match on first run). Lookups keep re-runs idempotent —
-	// every FK reference below must use these resolved ids, never the UUIDs
-	// generated at the top of main().
+	// fixed ids only match on first run; older dev DBs keep theirs). Lookups
+	// keep re-runs idempotent — every FK reference below must use these
+	// resolved ids, never the ids declared at the top of main().
 	const admin = await db.user.findUnique({
 		where: { email: "admin@fuutu.local" },
 		select: { id: true },
