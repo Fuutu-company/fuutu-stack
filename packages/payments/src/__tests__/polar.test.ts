@@ -77,14 +77,14 @@ vi.mock("@fuutu/logs", () => ({ createLogger: () => mockLog }));
 const { polarPaymentProvider } = await import("../providers/polar");
 
 /** Feed a synthetic Polar payload through the mocked validateEvent. */
-async function parsePayload(payload: unknown) {
+async function parsePayload(payload: unknown, timestamp = "123") {
 	const { validateEvent } = await import("@polar-sh/sdk/webhooks");
 	vi.mocked(validateEvent).mockReturnValueOnce(payload as never);
 	const request = new Request("https://app.test/api/webhooks/payments", {
 		method: "POST",
 		headers: {
 			"webhook-id": "wh_test",
-			"webhook-timestamp": "123",
+			"webhook-timestamp": timestamp,
 			"webhook-signature": "test",
 		},
 		body: "{}",
@@ -1119,7 +1119,12 @@ describe("polar provider — refunds", () => {
 			},
 		});
 		expect(events).toEqual([
-			{ type: "payment.reversed", eventId: "wh_test", subscriptionId: "sub_1" },
+			{
+				type: "payment.reversed",
+				eventId: "wh_test",
+				subscriptionId: "sub_1",
+				occurredAt: new Date(123_000),
+			},
 		]);
 	});
 
@@ -1134,8 +1139,24 @@ describe("polar provider — refunds", () => {
 			},
 		});
 		expect(events).toEqual([
-			{ type: "payment.reversed", eventId: "wh_test", paymentRef: "chk_1" },
+			{
+				type: "payment.reversed",
+				eventId: "wh_test",
+				paymentRef: "chk_1",
+				occurredAt: new Date(123_000),
+			},
 		]);
+	});
+
+	it("carries the delivery time (webhook-timestamp), so an early reversal can be retried", async () => {
+		const events = await parsePayload(
+			{
+				type: "order.refunded",
+				data: { id: "ord_6", status: "refunded", subscriptionId: "sub_1" },
+			},
+			"1763380800",
+		);
+		expect(events[0]?.occurredAt).toEqual(new Date(1_763_380_800_000));
 	});
 
 	it("falls back to the order id when the order had no checkout", async () => {

@@ -1120,6 +1120,11 @@ describe("creem provider — refunds and disputes", () => {
 		expect(events).toEqual([]);
 	});
 
+	it("carries the event time (created_at, ms), so an early reversal can be retried", async () => {
+		const events = await parse({ ...refund(), created_at: 1_763_380_800_000 });
+		expect(events[0]?.occurredAt).toEqual(new Date(1_763_380_800_000));
+	});
+
 	it("maps a dispute to payment.reversed", async () => {
 		const events = await parse({
 			id: "evt_dispute",

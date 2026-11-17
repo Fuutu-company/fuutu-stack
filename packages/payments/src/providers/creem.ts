@@ -158,6 +158,8 @@ function mapCreemEvent(eventType: string): ProviderEventType | null {
 const creemWebhookSchema = z.object({
 	id: z.string().optional(),
 	eventType: z.string(),
+	// Event time, Unix milliseconds.
+	created_at: z.number().optional(),
 	object: z.object({
 		id: z.string().optional(),
 		customer: z
@@ -538,13 +540,19 @@ export const creemPaymentProvider: SeatAwarePaymentProvider = {
 				return [];
 			}
 			const eventId = payload.id ?? object.id;
+			const occurredAt =
+				payload.created_at === undefined
+					? undefined
+					: new Date(payload.created_at);
 			const subscriptionId = refId(object.subscription);
 			if (subscriptionId) {
-				return [{ type: "payment.reversed", eventId, subscriptionId }];
+				return [
+					{ type: "payment.reversed", eventId, subscriptionId, occurredAt },
+				];
 			}
 			const paymentRef = refId(object.checkout);
 			return paymentRef
-				? [{ type: "payment.reversed", eventId, paymentRef }]
+				? [{ type: "payment.reversed", eventId, paymentRef, occurredAt }]
 				: [];
 		}
 

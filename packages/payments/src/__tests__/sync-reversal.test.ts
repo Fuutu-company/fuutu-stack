@@ -250,6 +250,39 @@ describe("payment.reversed on a one-time purchase", () => {
 		expect(mockRevokeTopUpCredits).not.toHaveBeenCalled();
 	});
 
+	// Providers do not order events: a fast refund can arrive before the
+	// checkout that creates the purchase. A recent one is retried (non-2xx).
+	it.each([
+		[
+			"payment reference",
+			{ subscriptionId: undefined, paymentRef: "pi_early" },
+		],
+		["subscription", { subscriptionId: "sub_early" }],
+	])(
+		"fails a recent reversal for an unknown %s so the provider retries",
+		async (_label, ids) => {
+			mockGetPurchaseByProviderSubscriptionId.mockResolvedValue(null);
+			await expect(
+				processWebhookEvents("stripe", [
+					reversal({ ...ids, occurredAt: new Date(Date.now() - 60 * 60_000) }),
+				]),
+			).rejects.toBeInstanceOf(AggregateError);
+		},
+	);
+
+	it("acknowledges an unknown reversal older than a day", async () => {
+		mockGetPurchaseByProviderSubscriptionId.mockResolvedValue(null);
+		await expect(
+			processWebhookEvents("stripe", [
+				reversal({
+					subscriptionId: "sub_gone",
+					occurredAt: new Date(Date.now() - 25 * 60 * 60_000),
+				}),
+			]),
+		).resolves.toBeUndefined();
+		expect(mockUpdatePurchase).not.toHaveBeenCalled();
+	});
+
 	it("stores the payment reference on the purchase it creates", async () => {
 		mockCreatePurchase.mockResolvedValue({ id: "purchase_new" });
 		await processWebhookEvents("stripe", [

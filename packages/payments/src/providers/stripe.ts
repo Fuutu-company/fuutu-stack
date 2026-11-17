@@ -367,12 +367,20 @@ async function parseStripeEvent(event: Stripe.Event): Promise<ProviderEvent[]> {
 		case "charge.refunded": {
 			const charge = event.data.object as Stripe.Charge;
 			if (!charge.refunded) return [];
-			return reversalEvent(event.id, idOf(charge.payment_intent));
+			return reversalEvent(
+				event.id,
+				idOf(charge.payment_intent),
+				eventTime(event.created),
+			);
 		}
 
 		case "charge.dispute.created": {
 			const dispute = event.data.object as Stripe.Dispute;
-			return reversalEvent(event.id, idOf(dispute.payment_intent));
+			return reversalEvent(
+				event.id,
+				idOf(dispute.payment_intent),
+				eventTime(event.created),
+			);
 		}
 
 		default:
@@ -395,6 +403,7 @@ function idOf(
 async function reversalEvent(
 	eventId: string,
 	paymentIntent: string | null,
+	occurredAt: Date | undefined,
 ): Promise<ProviderEvent[]> {
 	if (!paymentIntent) return [];
 	const client = getClient();
@@ -415,10 +424,24 @@ async function reversalEvent(
 				? idOf(invoice.parent.subscription_details?.subscription)
 				: null;
 		if (subscriptionId) {
-			return [{ type: "payment.reversed", eventId, subscriptionId }];
+			return [
+				{ type: "payment.reversed", eventId, subscriptionId, occurredAt },
+			];
 		}
 	}
-	return [{ type: "payment.reversed", eventId, paymentRef: paymentIntent }];
+	return [
+		{
+			type: "payment.reversed",
+			eventId,
+			paymentRef: paymentIntent,
+			occurredAt,
+		},
+	];
+}
+
+/** Stripe `event.created` (Unix seconds) as a Date. */
+function eventTime(created: number | undefined): Date | undefined {
+	return typeof created === "number" ? new Date(created * 1000) : undefined;
 }
 
 /**

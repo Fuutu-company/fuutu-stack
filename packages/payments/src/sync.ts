@@ -877,6 +877,24 @@ const PAYMENT_REVERSED = "payment_reversed";
  * CANCELED — a lifetime plan stops granting — and the unused rest of its
  * top-up package revoked. Unknown references are logged and acked.
  */
+/**
+ * How long a reversal for a purchase not stored yet is retried: providers
+ * do not order events, so a fast refund or dispute can arrive before the
+ * checkout that creates the purchase. Older ones are acknowledged.
+ */
+const EARLY_REVERSAL_RETRY_MS = 24 * 60 * 60 * 1000;
+
+/** Throws (→ non-2xx → redelivery) while an unmatched reversal is recent. */
+function retryEarlyReversal(event: ProviderEvent): void {
+	if (!event.occurredAt) return;
+	if (Date.now() - event.occurredAt.getTime() >= EARLY_REVERSAL_RETRY_MS) {
+		return;
+	}
+	throw new Error(
+		"payment reversed before its purchase was stored — retry later",
+	);
+}
+
 async function handlePaymentReversed(
 	providerId: string,
 	event: ProviderEvent,
@@ -887,6 +905,7 @@ async function handlePaymentReversed(
 			event.subscriptionId,
 		);
 		if (!row) {
+			retryEarlyReversal(event);
 			log.warn("payment reversed for an unknown subscription, skipping", {
 				provider: providerId,
 				subscriptionId: event.subscriptionId,
@@ -945,6 +964,7 @@ async function handlePaymentReversed(
 			event.paymentRef,
 		);
 		if (!row) {
+			retryEarlyReversal(event);
 			log.warn("payment reversed for an unknown one-time purchase, skipping", {
 				provider: providerId,
 				paymentRef: event.paymentRef,

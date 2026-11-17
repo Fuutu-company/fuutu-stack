@@ -64,6 +64,12 @@ export interface ProviderEvent {
 	 * `payment.reversed` without `subscriptionId` is matched by it.
 	 */
 	paymentRef?: string;
+	/**
+	 * When the provider created the event (Stripe `created`, Creem
+	 * `created_at`, Polar `webhook-timestamp`). A recent `payment.reversed`
+	 * for a purchase not stored yet fails so the provider redelivers it.
+	 */
+	occurredAt?: Date;
 	/** Normalized status to write directly to the Purchase row. */
 	status?: PurchaseStatusLiteral;
 	currentPeriodEnd?: Date;

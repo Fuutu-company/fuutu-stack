@@ -1244,6 +1244,19 @@ describe("stripe provider — refunds and disputes", () => {
 		]);
 	});
 
+	it("carries the event time, so an early reversal can be retried", async () => {
+		invoicePaymentsList.mockResolvedValueOnce({ data: [] });
+		const events = await parseEvent({
+			type: "charge.dispute.created",
+			id: "evt_dispute_t",
+			created: 1_763_380_800,
+			data: {
+				object: { id: "dp_2", charge: "ch_1", payment_intent: "pi_9" },
+			},
+		});
+		expect(events[0]?.occurredAt).toEqual(new Date(1_763_380_800_000));
+	});
+
 	it("ignores a refund without a payment intent", async () => {
 		const events = await parseEvent({
 			type: "charge.refunded",

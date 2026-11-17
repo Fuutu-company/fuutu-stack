@@ -456,13 +456,19 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		// A refunded order names its subscription, else the one-time
 		// purchase by the checkout (or, without one, the order) it paid.
 		if (eventType === "payment.reversed") {
+			// Standard-webhooks delivery time (Unix seconds, signed).
+			const timestamp = Number(headers["webhook-timestamp"]);
+			const occurredAt = Number.isFinite(timestamp)
+				? new Date(timestamp * 1000)
+				: undefined;
 			return [
 				subscriptionId
-					? { type: eventType, eventId, subscriptionId }
+					? { type: eventType, eventId, subscriptionId, occurredAt }
 					: {
 							type: eventType,
 							eventId,
 							paymentRef: data?.checkoutId ?? data?.id,
+							occurredAt,
 						},
 			];
 		}
