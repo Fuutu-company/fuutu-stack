@@ -304,8 +304,11 @@ test.describe("org membership guard (unauthenticated)", () => {
 // Anyone can sign up with an invited address. Until that address is
 // verified, the invitation is neither listed nor accepted — the pages ask
 // to verify the email instead.
+/** Seeded, verified, in no organization (packages/db/prisma/seed.ts). */
+const VERIFIED_INVITEE = "invitee@fuutu.local";
+
 test.describe("invitations need a verified email", () => {
-	test("an unverified sign-up with the invited address cannot see or accept it; once verified it can", async ({
+	test("an unverified sign-up with the invited address cannot see or accept it; a verified one can", async ({
 		browser,
 		baseURL,
 		request,
@@ -338,6 +341,7 @@ test.describe("invitations need a verified email", () => {
 			{ name: "fuutu.consent.v1", value: "granted", url: baseURL },
 		]);
 		let userId: string | undefined;
+		let verifiedInvitationId: string | undefined;
 		try {
 			const signUp = await context.request.post("/api/auth/sign-up/email", {
 				data: { email, password, name: "Unverified Invitee" },
@@ -378,31 +382,46 @@ test.describe("invitations need a verified email", () => {
 				page.getByRole("link", { name: /accept invitation/i }),
 			).toHaveCount(0);
 
-			// Verified (here by a system admin), the invitation opens up —
-			// a fresh sign-in carries the verified flag in the session.
-			const verified = await request.patch(`/api/admin/users/${userId}`, {
-				data: { emailVerified: true },
+			// A verified address sees and accepts its invitation. An admin
+			// cannot mark an address verified (that needs mailbox proof), so
+			// this half uses the seeded, verified invitee@fuutu.local. The
+			// first invitation goes first, so the seat cap stays out of it.
+			await request.delete(`/api/organizations/invitations/${invitation.id}`, {
 				headers,
 			});
-			expect(verified.ok()).toBe(true);
+			await request.delete(
+				`/api/organizations/${org.id}/members/${encodeURIComponent(VERIFIED_INVITEE)}`,
+				{ headers },
+			);
+			const invitedVerified = await request.post(
+				`/api/organizations/${org.id}/members/invite`,
+				{ data: { email: VERIFIED_INVITEE, role: "admin" }, headers },
+			);
+			expect(invitedVerified.ok(), await invitedVerified.text()).toBe(true);
+			verifiedInvitationId = ((await invitedVerified.json()) as { id: string })
+				.id;
 			await context.clearCookies();
 			await context.addCookies([
 				{ name: "fuutu.consent.v1", value: "granted", url: baseURL },
 			]);
 			const signIn = await context.request.post("/api/auth/sign-in/email", {
-				data: { email, password },
+				data: { email: VERIFIED_INVITEE, password: "DevPassword!2345" },
 				headers,
 			});
 			expect(signIn.ok()).toBe(true);
 
-			// The reload resumes at the org step.
+			// Its onboarding org step lists the invitation.
 			await page.goto("/onboarding");
+			await expect(page.getByLabel(/full name/i)).toBeVisible({
+				timeout: 10_000,
+			});
+			await page.getByRole("button", { name: /continue/i }).click();
 			await expect(
 				page.getByRole("link", { name: /acme.*accept invitation/i }),
 			).toBeVisible({ timeout: 10_000 });
 			await expect(page.getByText("Verify your email first")).toHaveCount(0);
 
-			await page.goto(`/auth/accept-invitation?id=${invitation.id}`);
+			await page.goto(`/auth/accept-invitation?id=${verifiedInvitationId}`);
 			await page.getByRole("button", { name: "Accept invitation" }).click();
 			await expect(page).not.toHaveURL(/\/auth\/accept-invitation/, {
 				timeout: 15_000,
@@ -416,6 +435,16 @@ test.describe("invitations need a verified email", () => {
 			await request.delete(`/api/organizations/invitations/${invitation.id}`, {
 				headers,
 			});
+			if (verifiedInvitationId) {
+				await request.delete(
+					`/api/organizations/invitations/${verifiedInvitationId}`,
+					{ headers },
+				);
+			}
+			await request.delete(
+				`/api/organizations/${org.id}/members/${encodeURIComponent(VERIFIED_INVITEE)}`,
+				{ headers },
+			);
 			if (userId) {
 				await request.delete(
 					`/api/organizations/${org.id}/members/${encodeURIComponent(email)}`,

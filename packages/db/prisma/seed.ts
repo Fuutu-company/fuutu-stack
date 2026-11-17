@@ -11,6 +11,8 @@
  *   - member@fuutu.local / DevPassword!2345  (role: member)
  *   - two-factor@fuutu.local / DevPassword!2345  (role: member, no org —
  *     the two-factor E2E turns 2FA on for it; 2FA needs a verified email)
+ *   - invitee@fuutu.local / DevPassword!2345  (role: member, verified, no
+ *     org, onboarding open — the invitation E2E invites and removes it)
  *
  * Data
  *   - 1 Organization "Acme" with both users as members
@@ -138,6 +140,7 @@ async function main() {
 	const adminId = randomUUID();
 	const memberId = randomUUID();
 	const twoFactorId = randomUUID();
+	const inviteeId = randomUUID();
 	const orgId = randomUUID();
 	const password = await hashPassword("DevPassword!2345");
 	// Every seeded list gets distinct `createdAt` values (1 s apart) so list
@@ -202,6 +205,27 @@ async function main() {
 				create: {
 					id: randomUUID(),
 					accountId: twoFactorId,
+					providerId: "credential",
+					password,
+				},
+			},
+		},
+	});
+
+	await db.user.upsert({
+		where: { email: "invitee@fuutu.local" },
+		update: {},
+		create: {
+			id: inviteeId,
+			email: "invitee@fuutu.local",
+			name: "Invited Teammate",
+			emailVerified: true,
+			role: "member",
+			onboardingComplete: false,
+			accounts: {
+				create: {
+					id: randomUUID(),
+					accountId: inviteeId,
 					providerId: "credential",
 					password,
 				},
