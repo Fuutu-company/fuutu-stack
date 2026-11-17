@@ -9,6 +9,10 @@ const CREDENTIAL_PATHS = [
 	"/passkey/generate-register-options",
 	"/passkey/verify-registration",
 	"/two-factor/enable",
+	// MCP OAuth: consent stores the grant; continue re-runs authorize,
+	// which issues a code for a skip-consent client or a stored consent.
+	"/oauth2/consent",
+	"/oauth2/continue",
 ];
 
 describe("assertVerifiedEmailForCredential", () => {

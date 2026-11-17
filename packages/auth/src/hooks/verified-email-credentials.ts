@@ -4,8 +4,10 @@
  * address; when the owner later proves the mailbox (magic link), Better
  * Auth removes the squatter's password and sessions — but a passkey or a
  * TOTP secret registered before would keep signing the squatter in (and
- * a squatter's 2FA would lock the owner out). `hooks.before` guard:
- * verify the email first.
+ * a squatter's 2FA would lock the owner out). MCP OAuth grants
+ * (consent, and continue, which re-runs authorize and can issue a code
+ * without a consent step) would leave a rotating refresh token whose
+ * cleanup can lose a race. `hooks.before` guard: verify the email first.
  */
 import { APIError } from "better-auth/api";
 
@@ -13,6 +15,8 @@ const CREDENTIAL_PATHS: ReadonlySet<string> = new Set([
 	"/passkey/generate-register-options",
 	"/passkey/verify-registration",
 	"/two-factor/enable",
+	"/oauth2/consent",
+	"/oauth2/continue",
 ]);
 
 type SessionLookup = () => Promise<{
