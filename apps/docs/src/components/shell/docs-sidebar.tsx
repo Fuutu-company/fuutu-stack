@@ -230,7 +230,7 @@ export function DocsSidebar({
 				{({ ref, collapsed: isCollapsed }) => (
 					<div
 						data-sidebar-placeholder
-						className="pointer-events-none sticky top-(--fd-docs-row-1) z-20 flex h-[calc(var(--fd-docs-height)-var(--fd-docs-row-1))] justify-end [grid-area:sidebar] *:pointer-events-auto max-md:hidden md:layout:[--fd-sidebar-width:272px]"
+						className="pointer-events-none flex justify-end [grid-area:sidebar] *:pointer-events-auto max-md:hidden md:layout:[--fd-sidebar-width:272px]"
 					>
 						<aside
 							id="nd-sidebar"
@@ -238,10 +238,14 @@ export function DocsSidebar({
 							data-collapsed={isCollapsed}
 							inert={isCollapsed}
 							className={cn(
+								// Fixed to the viewport (as the app's sidebar), not sticky: a
+								// sticky box ends with the grid, so the consent banner's spacer
+								// below the grid would scroll it up. The placeholder keeps the
+								// column; `fixed` without offsets stays in that column.
 								// Transparent: the floating card sits on the page background,
 								// as in the app. `!`: the fumadocs `#nd-sidebar` rule paints
 								// it with the card color and an id selector beats a class.
-								"h-full w-(--fd-sidebar-width) bg-transparent! p-2 transition-transform duration-200 motion-reduce:transition-none",
+								"fixed top-(--fd-docs-row-1) z-20 h-[calc(var(--fd-docs-height)-var(--fd-docs-row-1))] w-(--fd-sidebar-width) bg-transparent! p-2 transition-transform duration-200 motion-reduce:transition-none",
 								isCollapsed && "-translate-x-full",
 								className,
 							)}
