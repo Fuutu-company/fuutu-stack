@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { config } from "@fuutu/config";
 import { expect, test } from "./fixtures";
 
 test.describe("two-factor authentication", () => {
@@ -171,6 +172,34 @@ test.describe("two-factor end to end", () => {
 			expect(reset.ok()).toBe(true);
 		} finally {
 			await admin.dispose();
+		}
+
+		// Forced organizations send a user without one to /organizations
+		// instead of the dashboard and settings — the seeded user has none.
+		if (config.features.organizationsMode === "forced") {
+			const user = await playwright.request.newContext({
+				baseURL,
+				storageState: { cookies: [], origins: [] },
+			});
+			try {
+				const headers = { origin: new URL(baseURL ?? "").origin };
+				const signIn = await user.post("/api/auth/sign-in/email", {
+					data: { email, password },
+					headers,
+				});
+				expect(signIn.ok(), await signIn.text()).toBe(true);
+				const orgs = await user.get("/api/organizations");
+				expect(orgs.ok(), await orgs.text()).toBe(true);
+				if (((await orgs.json()) as { total: number }).total === 0) {
+					const created = await user.post("/api/organizations", {
+						data: { name: "Two-Factor Demo", slug: "two-factor-demo" },
+						headers,
+					});
+					expect(created.ok(), await created.text()).toBe(true);
+				}
+			} finally {
+				await user.dispose();
+			}
 		}
 
 		await signInWithPassword();
