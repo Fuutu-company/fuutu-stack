@@ -87,6 +87,28 @@ describe("paymentsErrorKey", () => {
 		).toBe("errors.portalPayerOnly");
 	});
 
+	it("says an active same-plan checkout is already subscribed", () => {
+		expect(
+			apiError.paymentsErrorKey(
+				new ORPCError("PRECONDITION_FAILED", {
+					message: "This plan can't be purchased right now",
+					data: { reason: "already_subscribed" },
+				}),
+			),
+		).toBe("errors.alreadySubscribed");
+	});
+
+	it("points a cancel-scheduled same-plan checkout to resuming it", () => {
+		expect(
+			apiError.paymentsErrorKey(
+				new ORPCError("PRECONDITION_FAILED", {
+					message: "This plan can't be purchased right now",
+					data: { reason: "resume_instead" },
+				}),
+			),
+		).toBe("errors.resumeInstead");
+	});
+
 	it("still falls back to the caller's key for other failures", () => {
 		expect(
 			apiError.paymentsErrorKey(new ORPCError("INTERNAL_SERVER_ERROR")),

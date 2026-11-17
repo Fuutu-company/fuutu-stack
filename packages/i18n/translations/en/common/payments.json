@@ -32,6 +32,8 @@
 			"providerUnavailable": "The payment provider can't be reached right now. Try again in a moment.",
 			"portal": "The billing portal couldn't be opened.",
 			"portalPayerOnly": "Only the member who pays for this plan can open the billing portal. Ask them to manage billing.",
+			"alreadySubscribed": "You already have this plan. Manage it in billing.",
+			"resumeInstead": "This plan is set to cancel at the end of the period. Resume it in billing instead.",
 			"impersonationForbidden": "Not available while you're signed in as this user (impersonation). Stop impersonating to do this."
 		},
 		"features": {

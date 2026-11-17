@@ -40,6 +40,13 @@ export const ADDON_REQUIRES_BASE = "addon_requires_base";
  */
 export const ALREADY_SUBSCRIBED = "already_subscribed";
 
+/**
+ * Rejection reason when the owner's subscription of this plan and interval
+ * is still in its period but set to cancel at period end — resuming it is
+ * the right move, not a second checkout.
+ */
+export const RESUME_INSTEAD = "resume_instead";
+
 export function isAddonPlan(planId: PlanId | null | undefined): boolean {
 	return planId ? plans[planId]?.addonOf !== undefined : false;
 }
@@ -146,8 +153,9 @@ async function decideTrial(ctx: TrialEligibilityContext): Promise<boolean> {
  * - `addon_requires_base`: the plan is an add-on (`Plan.addonOf`) and the
  *   owner holds no access-granting purchase of its base plan.
  * - `already_subscribed`: the owner already pays for this plan at this
- *   interval (ACTIVE, or SCHEDULED_CANCEL in its period — resume it
- *   instead). A trial of it may be converted; add-ons may stack.
+ *   interval (ACTIVE). A trial of it may be converted; add-ons may stack.
+ * - `resume_instead`: the same, but the subscription is SCHEDULED_CANCEL
+ *   in its period — resume it in billing.
  */
 export async function assertCheckoutAllowed(
 	request: CheckoutRequest,
@@ -173,18 +181,22 @@ export async function assertCheckoutAllowed(
 		throw new CheckoutRejectedError(ADDON_REQUIRES_BASE);
 	}
 
-	if (
-		!baseOf &&
-		existingPurchases.some(
+	if (!baseOf) {
+		const samePlan = existingPurchases.filter(
 			(p) =>
 				p.planId === request.planId &&
 				p.grantsAccess &&
 				p.status !== "TRIALING" &&
 				getPlanForProductId(p.productId ?? p.priceId)?.interval ===
 					request.interval,
-		)
-	) {
-		throw new CheckoutRejectedError(ALREADY_SUBSCRIBED);
+		);
+		if (samePlan.length > 0) {
+			throw new CheckoutRejectedError(
+				samePlan.every((p) => p.status === "SCHEDULED_CANCEL")
+					? RESUME_INSTEAD
+					: ALREADY_SUBSCRIBED,
+			);
+		}
 	}
 
 	const checkoutUserPurchases: OwnerPurchase[] = (

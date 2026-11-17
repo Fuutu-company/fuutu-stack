@@ -17,6 +17,7 @@ export {
 	type CheckoutRequest,
 	getPlanSubscription,
 	isAddonPlan,
+	RESUME_INSTEAD,
 } from "./billing-policy";
 export {
 	type AudienceId,

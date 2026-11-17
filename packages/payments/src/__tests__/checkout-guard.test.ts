@@ -76,8 +76,12 @@ vi.mock("@fuutu/db", () => ({
 	getActiveSubscriptionsForOwner: vi.fn(),
 }));
 
-const { assertCheckoutAllowed, ADDON_REQUIRES_BASE, ALREADY_SUBSCRIBED } =
-	await import("../billing-policy");
+const {
+	assertCheckoutAllowed,
+	ADDON_REQUIRES_BASE,
+	ALREADY_SUBSCRIBED,
+	RESUME_INSTEAD,
+} = await import("../billing-policy");
 const { registerCheckoutGuard, registerTrialEligibilityPolicy } = await import(
 	"../extensions"
 );
@@ -177,23 +181,27 @@ describe("assertCheckoutAllowed — add-on needs its base", () => {
 });
 
 describe("assertCheckoutAllowed — no second paid subscription of the same plan", () => {
-	it.each([
-		["ACTIVE", null],
-		["SCHEDULED_CANCEL", new Date(Date.now() + DAY)],
-	])(
-		"rejects a checkout of the plan the owner pays for (%s)",
-		async (status, end) => {
-			mockGetPurchasesByOrganizationId.mockResolvedValue([
-				purchase("price_pro", status, end),
-			]);
-			const result = assertCheckoutAllowed(orgCheckout("pro"));
-			await expect(result).rejects.toBeInstanceOf(CheckoutRejectedError);
-			await expect(result).rejects.toMatchObject({
-				reason: ALREADY_SUBSCRIBED,
-			});
-			expect(ALREADY_SUBSCRIBED).toBe("already_subscribed");
-		},
-	);
+	it("rejects a checkout of the plan the owner actively pays for", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "ACTIVE"),
+		]);
+		const result = assertCheckoutAllowed(orgCheckout("pro"));
+		await expect(result).rejects.toBeInstanceOf(CheckoutRejectedError);
+		await expect(result).rejects.toMatchObject({
+			reason: ALREADY_SUBSCRIBED,
+		});
+		expect(ALREADY_SUBSCRIBED).toBe("already_subscribed");
+	});
+
+	it("tells the owner to resume a subscription set to cancel at period end", async () => {
+		mockGetPurchasesByOrganizationId.mockResolvedValue([
+			purchase("price_pro", "SCHEDULED_CANCEL", new Date(Date.now() + DAY)),
+		]);
+		const result = assertCheckoutAllowed(orgCheckout("pro"));
+		await expect(result).rejects.toBeInstanceOf(CheckoutRejectedError);
+		await expect(result).rejects.toMatchObject({ reason: RESUME_INSTEAD });
+		expect(RESUME_INSTEAD).toBe("resume_instead");
+	});
 
 	it("allows the other billing interval of the plan (switch to yearly)", async () => {
 		mockGetPurchasesByOrganizationId.mockResolvedValue([

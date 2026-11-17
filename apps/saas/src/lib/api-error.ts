@@ -116,6 +116,25 @@ function providerFailure(err: unknown): ProviderFailureKind | null {
 		: null;
 }
 
+/** Checkout refusals that mean "you already have this plan". */
+const CHECKOUT_REFUSAL_KEY = {
+	already_subscribed: "errors.alreadySubscribed",
+	resume_instead: "errors.resumeInstead",
+} as const;
+
+function checkoutRefusalKey(
+	err: unknown,
+): (typeof CHECKOUT_REFUSAL_KEY)[keyof typeof CHECKOUT_REFUSAL_KEY] | null {
+	if (!(err instanceof ORPCError)) return null;
+	const data: unknown = err.data;
+	if (typeof data !== "object" || data === null) return null;
+	const { reason } = data as Record<string, unknown>;
+	return typeof reason === "string" &&
+		Object.hasOwn(CHECKOUT_REFUSAL_KEY, reason)
+		? CHECKOUT_REFUSAL_KEY[reason as keyof typeof CHECKOUT_REFUSAL_KEY]
+		: null;
+}
+
 /** The org's billing portal is open to the member who pays only. */
 function isPortalPayerOnly(err: unknown): boolean {
 	if (!(err instanceof ORPCError)) return false;
@@ -157,9 +176,12 @@ export function paymentsErrorKey(
 	| "choosePlan.unavailable"
 	| "errors.impersonationForbidden"
 	| "errors.portalPayerOnly"
+	| (typeof CHECKOUT_REFUSAL_KEY)[keyof typeof CHECKOUT_REFUSAL_KEY]
 	| null {
 	if (isImpersonationForbidden(err)) return "errors.impersonationForbidden";
 	if (isPortalPayerOnly(err)) return "errors.portalPayerOnly";
+	const refusal = checkoutRefusalKey(err);
+	if (refusal) return refusal;
 	const failure = providerFailure(err);
 	if (failure) return PROVIDER_FAILURE_KEY[failure];
 	return isPaymentsUnavailable(err) ? "choosePlan.unavailable" : null;
