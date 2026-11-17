@@ -16,7 +16,13 @@ const CACHE_TTL_MS = 60 * 60 * 1_000;
  *  `mode: "oss"` for the full hour, while still damping a dead validator. */
 const FAILURE_TTL_MS = 5 * 60 * 1_000;
 
-let cached: { at: number; status: LicenseStatus } | null = null;
+let cached: { at: number; status: LicenseStatus; ttlMs: number } | null = null;
+/**
+ * Last paid status the endpoint confirmed. A validator outage (429, 5xx,
+ * network) keeps it for the same key instead of downgrading to `oss`;
+ * only a definitive answer (401/403, invalid body) ends it.
+ */
+let lastValidated: LicenseStatus | null = null;
 
 /**
  * Validate the configured Fuutu license key against the Fuutu license
@@ -25,7 +31,9 @@ let cached: { at: number; status: LicenseStatus } | null = null;
  * **Placeholder behaviour (v1):** the validation endpoint is not yet
  * publicly hosted by Fuutu. This function is therefore designed to fail
  * **soft** — any network error, 4xx, 5xx, malformed payload or missing
- * configuration falls back to `mode: "oss"` and never throws. The kit
+ * configuration falls back to `mode: "oss"` and never throws. Once a key
+ * validated, a 429, 5xx or network error keeps that status (re-checked
+ * after `Retry-After`, else the short failure TTL). The kit
  * stays fully functional in OSS mode while the production validation
  * service is being built.
  *
@@ -45,11 +53,7 @@ export async function checkLicense(
 	options: CheckLicenseOptions = {},
 ): Promise<LicenseStatus> {
 	const now = Date.now();
-	if (
-		!options.force &&
-		cached &&
-		now - cached.at < (cached.status.valid ? CACHE_TTL_MS : FAILURE_TTL_MS)
-	) {
+	if (!options.force && cached && now - cached.at < cached.ttlMs) {
 		return cached.status;
 	}
 
@@ -70,7 +74,7 @@ export async function checkLicense(
 			checkedAt: new Date(now).toISOString(),
 			licenseKeyHash,
 		};
-		cached = { at: now, status };
+		cached = { at: now, status, ttlMs: CACHE_TTL_MS };
 		return status;
 	}
 
@@ -96,6 +100,14 @@ export async function checkLicense(
 			redirect: "error",
 		});
 
+		if (res.status === 429 || res.status >= 500) {
+			return unavailable(
+				licenseKeyHash,
+				now,
+				`HTTP ${res.status}`,
+				retryAfterMs(res.headers.get("retry-after"), now),
+			);
+		}
 		if (!res.ok) {
 			return fallback(licenseKeyHash, now, `HTTP ${res.status}`);
 		}
@@ -125,20 +137,58 @@ export async function checkLicense(
 			checkedAt: new Date(now).toISOString(),
 			licenseKeyHash,
 		};
-		cached = { at: now, status };
+		cached = { at: now, status, ttlMs: CACHE_TTL_MS };
+		lastValidated = status;
 		return status;
 	} catch (err) {
 		const reason = err instanceof Error ? err.message : "network error";
-		return fallback(licenseKeyHash, now, reason);
+		return unavailable(licenseKeyHash, now, reason, undefined);
 	}
+}
+
+/** `Retry-After` (seconds or HTTP date) in ms, capped at the success TTL. */
+function retryAfterMs(header: string | null, now: number): number | undefined {
+	if (!header) return undefined;
+	const seconds = Number(header);
+	const ms = Number.isFinite(seconds)
+		? seconds * 1_000
+		: Date.parse(header) - now;
+	if (!Number.isFinite(ms) || ms <= 0) return undefined;
+	return Math.min(ms, CACHE_TTL_MS);
+}
+
+/**
+ * The validator could not answer (429, 5xx, network): keep the last
+ * validated status of this key, else fall back to oss.
+ */
+function unavailable(
+	licenseKeyHash: string,
+	now: number,
+	reason: string,
+	retryAfter: number | undefined,
+): LicenseStatus {
+	const ttlMs = retryAfter ?? FAILURE_TTL_MS;
+	if (lastValidated?.licenseKeyHash === licenseKeyHash) {
+		log.warn(
+			"license validator unavailable — keeping the last validated mode",
+			{
+				reason,
+			},
+		);
+		cached = { at: now, status: lastValidated, ttlMs };
+		return lastValidated;
+	}
+	return fallback(licenseKeyHash, now, reason, ttlMs);
 }
 
 function fallback(
 	licenseKeyHash: string,
 	now: number,
 	reason: string,
+	ttlMs: number = FAILURE_TTL_MS,
 ): LicenseStatus {
 	log.warn("license check failed — falling back to oss mode", { reason });
+	if (lastValidated?.licenseKeyHash === licenseKeyHash) lastValidated = null;
 	const status: LicenseStatus = {
 		mode: "oss",
 		valid: false,
@@ -146,7 +196,7 @@ function fallback(
 		licenseKeyHash,
 		reason,
 	};
-	cached = { at: now, status };
+	cached = { at: now, status, ttlMs };
 	return status;
 }
 
@@ -162,4 +212,5 @@ export function getLicenseMode(): LicenseMode {
 /** For tests. */
 export function __resetLicenseCache(): void {
 	cached = null;
+	lastValidated = null;
 }
