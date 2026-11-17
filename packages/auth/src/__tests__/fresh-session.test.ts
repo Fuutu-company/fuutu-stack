@@ -54,4 +54,18 @@ describe("assertFreshSession", () => {
 		});
 		expect(getSession).not.toHaveBeenCalled();
 	});
+
+	it.each([
+		"/passkey/generate-register-options",
+		"/passkey/verify-registration",
+	])("rejects passkey registration (%s) from an old session", async (path) => {
+		await expect(
+			assertFreshSession({
+				path,
+				getSession: signedInMinutesAgo(16),
+				maxAgeSeconds: 15 * 60,
+				now: NOW,
+			}),
+		).rejects.toMatchObject({ body: { code: "SESSION_NOT_FRESH" } });
+	});
 });

@@ -8,7 +8,12 @@
 import { APIError } from "better-auth/api";
 import { authConfig } from "../config";
 
-const FRESH_SESSION_PATHS: ReadonlySet<string> = new Set(["/change-email"]);
+const FRESH_SESSION_PATHS: ReadonlySet<string> = new Set([
+	"/change-email",
+	// A new passkey signs in later without password or 2FA code.
+	"/passkey/generate-register-options",
+	"/passkey/verify-registration",
+]);
 
 type SessionLookup = () => Promise<{
 	session: { createdAt: Date | string };

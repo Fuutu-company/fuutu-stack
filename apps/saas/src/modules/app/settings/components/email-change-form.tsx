@@ -3,6 +3,7 @@
 import { authClient } from "@fuutu/auth/client";
 import { createLogger } from "@fuutu/logs";
 import { Button, Field, FieldGroup, FieldLabel, Input } from "@fuutu/ui";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { planGateMessage } from "@/lib/api-error";
@@ -16,11 +17,38 @@ export function EmailChangeForm() {
 	const [newEmail, setNewEmail] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
+	// Email changes need a verified current address (confirmation goes there).
+	const [needsVerification, setNeedsVerification] = useState(false);
+	const pathname = usePathname();
+
+	async function sendVerification() {
+		const email = session?.user?.email;
+		if (!email) return;
+		setSaving(true);
+		try {
+			const res = await authClient.sendVerificationEmail({
+				email,
+				callbackURL: pathname,
+			});
+			if (res.error) {
+				setStatus(t("emailChange.failed"));
+			} else {
+				setNeedsVerification(false);
+				setStatus(t("emailChange.verificationSent"));
+			}
+		} catch (e) {
+			log.error("verification email request failed", { err: e });
+			setStatus(t("emailChange.failed"));
+		} finally {
+			setSaving(false);
+		}
+	}
 
 	async function submit(e: React.FormEvent) {
 		e.preventDefault();
 		setSaving(true);
 		setStatus(null);
+		setNeedsVerification(false);
 		try {
 			const res = await authClient.changeEmail({
 				newEmail,
@@ -30,6 +58,9 @@ export function EmailChangeForm() {
 			});
 			if (res.error?.code === "SESSION_NOT_FRESH") {
 				setStatus(t("emailChange.reauthRequired"));
+			} else if (res.error?.code === "EMAIL_NOT_VERIFIED") {
+				setNeedsVerification(true);
+				setStatus(t("emailChange.verifyCurrentFirst"));
 			} else if (res.error) {
 				setStatus(
 					planGateMessage(res.error, tRoot, "settings.emailChange.failed"),
@@ -86,6 +117,16 @@ export function EmailChangeForm() {
 				<Button type="submit" disabled={saving || !newEmail.trim()}>
 					{saving ? t("emailChange.sending") : t("emailChange.submit")}
 				</Button>
+				{needsVerification && (
+					<Button
+						type="button"
+						variant="outline"
+						onClick={sendVerification}
+						disabled={saving}
+					>
+						{t("emailChange.sendVerification")}
+					</Button>
+				)}
 				{status && (
 					<span className="text-muted-foreground text-sm">{status}</span>
 				)}

@@ -74,6 +74,7 @@ import {
 import { assertSecondFactorForNewSession } from "./hooks/second-factor-session";
 import { assertSignupPolicy } from "./hooks/signup-policy";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
+import { assertVerifiedEmailForChange } from "./hooks/verified-email-change";
 import { sendEmail } from "./lib/email";
 import { sendOrganizationInvitationEmail } from "./lib/invitation-email";
 import { saasBaseUrl } from "./lib/saas-url";
@@ -286,6 +287,10 @@ const authOptions = {
 				getSession: () => getSessionFromCtx(ctx),
 			});
 			await assertFreshSession({
+				path: ctx.path,
+				getSession: () => getSessionFromCtx(ctx),
+			});
+			await assertVerifiedEmailForChange({
 				path: ctx.path,
 				getSession: () => getSessionFromCtx(ctx),
 			});

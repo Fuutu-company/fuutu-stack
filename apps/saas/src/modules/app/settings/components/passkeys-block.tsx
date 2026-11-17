@@ -40,7 +40,13 @@ export function PasskeysBlock() {
 		setError(null);
 		try {
 			const res = await authClient.passkey.addPasskey();
-			if (res?.error) {
+			if (
+				res?.error &&
+				"code" in res.error &&
+				res.error.code === "SESSION_NOT_FRESH"
+			) {
+				setError(t("settings.passkeys.reauthRequired"));
+			} else if (res?.error) {
 				setError(planGateMessage(res.error, t, "settings.passkeys.failed"));
 			}
 			await load();

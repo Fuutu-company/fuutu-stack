@@ -1,8 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Magic link with 2FA on, through the real `auth` instance on an
- * in-memory database. The session must never be created — a session that
+ * Auth flows through the real `auth` instance on an in-memory database.
+ *
+ * Magic link with 2FA on: The session must never be created — a session that
  * is created and then ended in an after-hook leaves a window (and a cookie
  * a raw client may keep). Checked on the raw Set-Cookie list.
  */
@@ -81,13 +82,14 @@ beforeEach(() => {
 	logSessionCreated.mockReset();
 });
 
-const seedUser = (twoFactorEnabled: boolean) => {
+const seedUser = (twoFactorEnabled: boolean, emailVerified = true) => {
+	// emailVerified: false — magic-link verify promotes it on sign-in.
 	const now = new Date();
 	store.user?.push({
 		id: "user-1",
 		email: "ada@fuutu.dev",
 		name: "Ada",
-		emailVerified: true,
+		emailVerified,
 		twoFactorEnabled,
 		createdAt: now,
 		updatedAt: now,
@@ -164,5 +166,70 @@ describe("social sign-in with 2FA", () => {
 		).rejects.toMatchObject({
 			url: expect.stringContaining("error=TWO_FACTOR_REQUIRED"),
 		});
+	});
+});
+
+const cookieHeader = (res: Response) =>
+	res.headers
+		.getSetCookie()
+		.map((c) => c.split(";")[0])
+		.join("; ");
+
+/** Signs up by password (email stays unverified) — session cookie header. */
+async function signUp(): Promise<string> {
+	const res = await auth.handler(
+		new Request("http://localhost:3000/api/auth/sign-up/email", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				origin: "http://localhost:3000",
+			},
+			body: JSON.stringify({
+				email: "ada@fuutu.dev",
+				password: "ValidPassw0rd!",
+				name: "Ada",
+			}),
+		}),
+	);
+	expect(res.status).toBe(200);
+	return cookieHeader(res);
+}
+
+describe("email change for an unverified account", () => {
+	const changeEmail = (cookie: string) =>
+		auth.handler(
+			new Request("http://localhost:3000/api/auth/change-email", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					origin: "http://localhost:3000",
+					cookie,
+				},
+				body: JSON.stringify({ newEmail: "attacker@evil.dev" }),
+			}),
+		);
+
+	it("is refused, and no change link goes out", async () => {
+		const cookie = await signUp();
+		sendEmail.mockClear();
+		const res = await changeEmail(cookie);
+		expect(res.status).toBe(403);
+		expect(await res.json()).toMatchObject({ code: "EMAIL_NOT_VERIFIED" });
+		expect(sendEmail).not.toHaveBeenCalled();
+	});
+
+	it("sends the confirmation to the current address once verified", async () => {
+		// Magic-link sign-in proves the mailbox: the email is verified.
+		seedUser(false, false);
+		const cookie = cookieHeader(await openMagicLink());
+		sendEmail.mockClear();
+		const res = await changeEmail(cookie);
+		expect(res.status).toBe(200);
+		expect(sendEmail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				to: "ada@fuutu.dev",
+				template: "email-change-verification",
+			}),
+		);
 	});
 });

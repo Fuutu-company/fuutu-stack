@@ -80,7 +80,8 @@
 			"removeSr": "Remove passkey",
 			"defaultName": "Passkey",
 			"addedOn": "Added {date}",
-			"failed": "Could not change passkey."
+			"failed": "Could not change passkey.",
+			"reauthRequired": "For your security, sign out and sign in again, then add the passkey."
 		},
 		"sessions": {
 			"title": "Active sessions",
@@ -129,7 +130,10 @@
 			"sending": "Sending…",
 			"sent": "Confirmation sent to your current email address. Open the link in it to continue.",
 			"reauthRequired": "For your security, sign out and sign in again, then change your email.",
-			"failed": "Could not request email change."
+			"failed": "Could not request email change.",
+			"verifyCurrentFirst": "Verify your current email address first — we send the change confirmation there.",
+			"sendVerification": "Send verification email",
+			"verificationSent": "Verification email sent. Open the link in it, then change your email."
 		}
 	}
 }

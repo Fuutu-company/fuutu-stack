@@ -80,7 +80,8 @@
 			"removeSr": "Passkey entfernen",
 			"defaultName": "Passkey",
 			"addedOn": "Hinzugefügt am {date}",
-			"failed": "Passkey konnte nicht geändert werden."
+			"failed": "Passkey konnte nicht geändert werden.",
+			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und füge dann den Passkey hinzu."
 		},
 		"sessions": {
 			"title": "Aktive Sitzungen",
@@ -129,7 +130,10 @@
 			"sending": "Sendet…",
 			"sent": "Bestätigung an deine aktuelle E-Mail-Adresse gesendet. Öffne den Link darin, um fortzufahren.",
 			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und ändere dann deine E-Mail.",
-			"failed": "E-Mail-Änderung konnte nicht beantragt werden."
+			"failed": "E-Mail-Änderung konnte nicht beantragt werden.",
+			"verifyCurrentFirst": "Bestätige zuerst deine aktuelle E-Mail-Adresse — dorthin senden wir die Bestätigung der Änderung.",
+			"sendVerification": "Bestätigungs-E-Mail senden",
+			"verificationSent": "Bestätigungs-E-Mail gesendet. Öffne den Link darin und ändere dann deine E-Mail."
 		}
 	}
 }
