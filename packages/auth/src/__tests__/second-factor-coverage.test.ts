@@ -1,5 +1,10 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { createRequire } from "node:module";
+import {
+	existsSync,
+	readdirSync,
+	readFileSync,
+	realpathSync,
+	statSync,
+} from "node:fs";
 import path from "node:path";
 import type { BetterAuthOptions } from "better-auth";
 import { describe, expect, it, vi } from "vitest";
@@ -8,16 +13,19 @@ import { assertSecondFactorForNewSession } from "../hooks/second-factor-session"
 /**
  * The 2FA guard (hooks/second-factor-session.ts) refuses sessions on a
  * fixed list of paths — so it would fail open for an endpoint it does not
- * know. This test scans the installed Better Auth sources (core and every
- * plugin, incl. the ones the kit leaves off: a buyer may add oneTap,
- * emailOTP, genericOAuth, …) for endpoints that can mint a session and
- * fails on any path not classified below. A Better Auth upgrade that adds
- * one fails here until it is classified.
+ * know. This test scans the installed Better Auth sources (better-auth
+ * with every plugin, incl. the ones the kit leaves off: a buyer may add
+ * oneTap, emailOTP, genericOAuth, …, plus every `@better-auth/*` package
+ * installed for @fuutu/auth, e.g. a buyer's `@better-auth/sso`) for
+ * endpoints that can mint a session and fails on any path not classified
+ * below. A Better Auth upgrade or a new plugin package that adds one
+ * fails here until it is classified.
  *
- * "Mints a session": the endpoint body calls `createSession(` or a helper
- * whose module calls it outside an endpoint (handleOAuthUserInfo,
- * verifyTwoFactor, …) — an over-approximation, so some entries only
- * refresh or re-issue the caller's own session.
+ * "Mints a session": the endpoint body calls `createSession(` or a
+ * module-level function that does, transitively and wherever it sits in
+ * its file (handleOAuthUserInfo, verifyTwoFactor, …) — an
+ * over-approximation, so some entries only refresh or re-issue the
+ * caller's own session.
  */
 
 /** Refused for a 2FA user (the guard must reject them). */
@@ -62,75 +70,177 @@ const ALLOWED: Record<string, string> = {
 		"signs in only with autoSignInAfterVerification (off, asserted below)",
 };
 
-const require = createRequire(import.meta.url);
-const distOf = (pkg: string) => {
-	let dir = require.resolve(pkg);
-	while (path.basename(dir) !== "dist") dir = path.dirname(dir);
-	return dir;
-};
+/**
+ * better-auth plus every `@better-auth/*` package installed for this
+ * package (a buyer's `@better-auth/sso` included) — listed, not hard-coded.
+ */
+const nodeModules = path.join(import.meta.dirname, "../../node_modules");
+const packageDirs = [
+	path.join(nodeModules, "better-auth"),
+	...readdirSync(path.join(nodeModules, "@better-auth")).map((name) =>
+		path.join(nodeModules, "@better-auth", name),
+	),
+].map((dir) => realpathSync(dir));
+
 const walk = (dir: string): string[] =>
 	readdirSync(dir).flatMap((name) => {
 		const full = path.join(dir, name);
-		if (statSync(full).isDirectory()) return walk(full);
+		if (statSync(full).isDirectory()) {
+			return name === "node_modules" ? [] : walk(full);
+		}
 		return full.endsWith(".mjs") ? [full] : [];
 	});
 
-const sources = [
-	"better-auth",
-	"@better-auth/passkey",
-	"@better-auth/mcp",
-	"@better-auth/oauth-provider",
-]
-	.flatMap((pkg) => walk(distOf(pkg)))
+type Source = { file: string; text: string };
+
+const sources: Source[] = packageDirs
+	.flatMap((dir) => {
+		const dist = path.join(dir, "dist");
+		return walk(existsSync(dist) ? dist : dir);
+	})
 	.filter((file) => !file.includes(`${path.sep}test-utils${path.sep}`))
 	.map((file) => ({ file, text: readFileSync(file, "utf8") }));
 
-/** Code before the first endpoint, and one block per endpoint. */
-const split = (text: string) => {
-	const starts = [...text.matchAll(/createAuthEndpoint\(/g)].map(
-		(m) => m.index ?? 0,
+/**
+ * Module-level statements of a bundled file: each starts in column 0
+ * with a keyword or a comment (a template literal's lines may start in
+ * column 0 too, so any other line continues the statement).
+ */
+const topLevel = (text: string) =>
+	text.split(
+		/\n(?=(?:export|import|const|let|var|async|function|class)\b|\/[/*])/,
 	);
-	return {
-		rest: text.slice(0, starts[0] ?? text.length),
-		blocks: starts.map((s, i) => text.slice(s, starts[i + 1] ?? text.length)),
-	};
+
+const DECLARATION =
+	/^(?:export\s+)?(?:async\s+)?function\s*\*?\s*([\w$]+)|^(?:export\s+)?(?:const|let|var)\s+([\w$]+)\s*=/;
+const ENDPOINT = /\bcreate\w*Endpoint\(/g;
+
+/**
+ * A statement's own code, without the endpoints it creates (those are
+ * checked as endpoints): an endpoint factory (`signInSocial()`) or a
+ * plugin builds endpoints, it does not mint a session when called.
+ */
+const outsideEndpoints = (statement: string) => {
+	const first = statement.search(/\bcreate\w*Endpoint\(/);
+	return first < 0 ? statement : statement.slice(0, first);
 };
 
-const escapeName = (name: string) => name.replace(/[$]/g, "\\$");
+/** One block per endpoint, ending at the next one or its statement's end. */
+const endpointBlocks = (text: string) =>
+	topLevel(text).flatMap((statement) => {
+		const starts = [...statement.matchAll(ENDPOINT)].map((m) => m.index ?? 0);
+		return starts.map((s, i) => statement.slice(s, starts[i + 1]));
+	});
 
-/** Session-minting functions: createSession and the helpers around it. */
-function sessionMinters(): Set<string> {
-	const minters = new Set(["createSession"]);
-	const calls = (code: string) =>
-		[...minters].some((m) => new RegExp(`\\b${escapeName(m)}\\(`).test(code));
-	for (let grew = true; grew; ) {
-		grew = false;
-		for (const { text } of sources) {
-			if (!calls(split(text).rest)) continue;
-			for (const m of text.matchAll(/export \{([^}]*)\}/g)) {
-				for (const part of (m[1] ?? "").split(",")) {
-					for (const name of part.trim().split(/\s+as\s+/)) {
-						if (name && !minters.has(name)) {
-							minters.add(name);
-							grew = true;
-						}
-					}
-				}
-			}
+const escapeName = (name: string) => name.replace(/[$]/g, "\\$");
+const callsAny = (names: Set<string>) => {
+	const pattern = new RegExp(
+		`(?<![\\w$])(?:${[...names].map(escapeName).join("|")})\\(`,
+	);
+	return (code: string) => pattern.test(code);
+};
+
+/** `a as b, c` → [["a", "b"], ["c", "c"]]. */
+const bindings = (clause: string) =>
+	clause
+		.split(",")
+		.map((part) => part.trim().split(/\s+as\s+/))
+		.filter((pair) => pair[0])
+		.map(([from, to]) => [from, to ?? from] as [string, string]);
+
+/** Relative specifiers resolve to a scanned file; bare ones stay null. */
+const resolveFrom = (file: string, spec: string) =>
+	spec.startsWith(".") ? path.resolve(path.dirname(file), spec) : null;
+
+type Link = { name: string; from: string | null; as: string };
+
+function parseModule({ file, text }: Source) {
+	const declarations = topLevel(text).flatMap((statement) => {
+		const m = statement.match(DECLARATION);
+		const name = m?.[1] ?? m?.[2];
+		return name
+			? [{ name, statement, exported: statement.startsWith("export ") }]
+			: [];
+	});
+	const imports: Link[] = [];
+	for (const m of text.matchAll(/\bimport\s*\{([^}]*)\}\s*from\s*"([^"]+)"/g)) {
+		for (const [name, as] of bindings(m[1] ?? "")) {
+			imports.push({ name, from: resolveFrom(file, m[2] ?? ""), as });
 		}
 	}
-	return minters;
+	const exports: Link[] = [];
+	for (const m of text.matchAll(
+		/\bexport\s*\{([^}]*)\}(?:\s*from\s*"([^"]+)")?/g,
+	)) {
+		for (const [name, as] of bindings(m[1] ?? "")) {
+			exports.push({ name, from: m[2] ? resolveFrom(file, m[2]) : null, as });
+		}
+	}
+	return { file, text, declarations, imports, exports };
 }
 
-function sessionMintingPaths(): string[] {
-	const minters = sessionMinters();
-	const calls = (code: string) =>
-		[...minters].some((m) => new RegExp(`\\b${escapeName(m)}\\(`).test(code));
+/**
+ * Session-minting function names per file: createSession and every
+ * module-level function that calls one — transitively, wherever it sits
+ * in its file, exported or not — followed through imports and exports
+ * (bundles rename across chunks: `export { handleOAuthUserInfo as n }`).
+ * A bare import (`better-auth/oauth2`) matches by its public name.
+ */
+function sessionMinters(sources: Source[]): Map<string, Set<string>> {
+	const modules = sources.map(parseModule);
+	const local = new Map(
+		modules.map((m) => [m.file, new Set(["createSession"])] as const),
+	);
+	const exported = new Map<string, Set<string>>();
+	const isExported = (link: Link) =>
+		link.from === null
+			? [...exported.values()].some((names) => names.has(link.name))
+			: Boolean(exported.get(link.from)?.has(link.name));
+	for (let grew = true; grew; ) {
+		grew = false;
+		for (const m of modules) {
+			const names = local.get(m.file) ?? new Set<string>();
+			const calls = callsAny(names);
+			for (const { name, statement } of m.declarations) {
+				if (!names.has(name) && calls(outsideEndpoints(statement))) {
+					names.add(name);
+					grew = true;
+				}
+			}
+			for (const link of m.imports) {
+				if (!names.has(link.as) && isExported(link)) {
+					names.add(link.as);
+					grew = true;
+				}
+			}
+			const out = exported.get(m.file) ?? new Set<string>();
+			const publish = (name: string) => {
+				if (out.has(name)) return;
+				out.add(name);
+				grew = true;
+			};
+			for (const d of m.declarations) {
+				if (d.exported && names.has(d.name)) publish(d.name);
+			}
+			for (const link of m.exports) {
+				const minting =
+					link.from === null ? names.has(link.name) : isExported(link);
+				if (minting) publish(link.as);
+			}
+			exported.set(m.file, out);
+		}
+	}
+	return local;
+}
+
+function sessionMintingPaths(sources: Source[]): string[] {
+	const minters = sessionMinters(sources);
 	const paths = new Set<string>();
 	for (const { file, text } of sources) {
-		for (const block of split(text).blocks) {
+		const calls = callsAny(minters.get(file) ?? new Set(["createSession"]));
+		for (const block of endpointBlocks(text)) {
 			if (!calls(block)) continue;
-			const literal = block.match(/^createAuthEndpoint\(\s*"([^"]+)"/);
+			const literal = block.match(/^create\w*Endpoint\(\s*"([^"]+)"/);
 			paths.add(literal?.[1] ?? `<non-literal path in ${path.basename(file)}>`);
 		}
 	}
@@ -146,8 +256,53 @@ const guard = (p: string) =>
 		redirect: (url) => Object.assign(new Error("redirect"), { url }),
 	});
 
+describe("session-minter scan", () => {
+	it("follows module-level helpers anywhere in a file, exported or not", () => {
+		const fixture: Source[] = [
+			{
+				file: "/fixture/a.mjs",
+				text: [
+					'import { x as viaImport } from "./b.mjs";',
+					'const first = createAuthEndpoint("/first", {}, async (ctx) => {',
+					"\treturn mintLater(ctx);",
+					"});",
+					'const plain = createAuthEndpoint("/plain", {}, async (ctx) => {',
+					"\treturn ctx.json({});",
+					"});",
+					"async function mintLater(ctx) {",
+					"\treturn deeper(ctx);",
+					"}",
+					'const deeper = (ctx) => ctx.context.internalAdapter.createSession("u");',
+					'const third = createAuthEndpoint("/third", {',
+					"\tdescription: `Two lines,",
+					"in column 0`,",
+					"}, async (ctx) => {",
+					"\treturn viaImport(ctx);",
+					"});",
+					"function makeEndpoint() {",
+					'\treturn createAuthEndpoint("/made", {}, async (ctx) => ctx.context.internalAdapter.createSession("u"));',
+					"}",
+					'const listing = createAuthEndpoint("/listing", {}, async () => [makeEndpoint()]);',
+					"export { first, plain, third, listing };",
+				].join("\n"),
+			},
+			{
+				file: "/fixture/b.mjs",
+				text: [
+					"function helper(ctx) {",
+					'\treturn ctx.context.internalAdapter.createSession("u");',
+					"}",
+					"export { helper as x };",
+				].join("\n"),
+			},
+		];
+		// "/listing" only builds an endpoint ("/made"), it mints nothing.
+		expect(sessionMintingPaths(fixture)).toEqual(["/first", "/made", "/third"]);
+	});
+});
+
 describe("2FA guard coverage of Better Auth's session-minting endpoints", () => {
-	const found = sessionMintingPaths();
+	const found = sessionMintingPaths(sources);
 
 	it("finds the known ones (the scan works)", () => {
 		expect(found).toEqual(
