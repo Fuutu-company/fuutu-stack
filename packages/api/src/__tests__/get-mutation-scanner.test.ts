@@ -92,12 +92,25 @@ function findTsFiles(dir: string): string[] {
 	return results;
 }
 
+/** Packages whose exports never write application data. */
+const NON_WRITER_PACKAGES: ReadonlySet<string> = new Set(["@fuutu/logs"]);
+
+/**
+ * True when the file declares an oRPC procedure with `method: "GET"` in a
+ * `.route({ ... })` call — not an outbound request's `method: "GET"`.
+ */
+function isGetProcedure(source: string): boolean {
+	return /\.route\(\s*\{(?:[^{}]|\{[^{}]*\})*?\bmethod:\s*"GET"/.test(source);
+}
+
 /** Names imported (values, not types) from `@fuutu/*` packages. */
 function fuutuImports(source: string): string[] {
 	const names: string[] = [];
-	const re = /import\s*\{([^}]*)\}\s*from\s*"@fuutu\/[^"]+"/g;
+	const re = /import\s*\{([^}]*)\}\s*from\s*"(@fuutu\/[^"]+)"/g;
 	for (const match of source.matchAll(re)) {
 		if (/^\s*import\s+type\b/.test(match[0])) continue;
+		// Logger factories (`createLogger`) are not data writers.
+		if (NON_WRITER_PACKAGES.has(match[2] ?? "")) continue;
 		for (const raw of (match[1] ?? "").split(",")) {
 			const name = raw.trim();
 			if (!name || name.startsWith("type ")) continue;
@@ -148,6 +161,20 @@ describe("mutating-name detection", () => {
 		expect(isMutatingName(name)).toBe(false);
 	});
 
+	it("ignores the logger factory imported from @fuutu/logs", () => {
+		const source = [
+			'import { createLogger } from "@fuutu/logs";',
+			'import { listX } from "@fuutu/db";',
+		].join("\n");
+		expect(writesIn(source)).toEqual([]);
+	});
+
+	it("still flags createLogger-like names from a data package", () => {
+		expect(writesIn('import { createThing } from "@fuutu/db";')).toEqual([
+			"createThing",
+		]);
+	});
+
 	it("reads value imports and auth.api calls, not type imports", () => {
 		const source = [
 			'import { listX, createX as make } from "@fuutu/db";',
@@ -163,9 +190,44 @@ describe("mutating-name detection", () => {
 	});
 });
 
+describe("GET procedure detection", () => {
+	it("recognises a GET oRPC route", () => {
+		const source = [
+			"export const p = authProcedure()",
+			"\t.route({",
+			'\t\tmethod: "GET",',
+			'\t\tpath: "/x",',
+			"\t})",
+		].join("\n");
+		expect(isGetProcedure(source)).toBe(true);
+	});
+
+	it("recognises a GET route with nested objects before the method", () => {
+		const source =
+			'.route({ spec: { tags: ["a"] }, method: "GET", path: "/x" })';
+		expect(isGetProcedure(source)).toBe(true);
+	});
+
+	it("ignores method: GET in an outbound request's options", () => {
+		const source = [
+			'import { request } from "node:https";',
+			'const req = request({ host: "example.com", method: "GET" });',
+		].join("\n");
+		expect(isGetProcedure(source)).toBe(false);
+	});
+
+	it("ignores a POST route that sits next to an outbound GET", () => {
+		const source = [
+			'.route({ method: "POST", path: "/x" })',
+			'await fetch(url, { method: "GET" });',
+		].join("\n");
+		expect(isGetProcedure(source)).toBe(false);
+	});
+});
+
 describe("GET procedures never write", () => {
 	const getFiles = findTsFiles(API_MODULES_DIR).filter((file) =>
-		/method:\s*"GET"/.test(readFileSync(file, "utf8")),
+		isGetProcedure(readFileSync(file, "utf8")),
 	);
 
 	it("finds the GET procedures", () => {
