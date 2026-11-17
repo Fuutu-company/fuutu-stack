@@ -3,8 +3,8 @@
 # Usage: ci-visual-baselines.sh <app> <branch> <mode>   mode = pr | push
 # Writes pushed=1 to $GITHUB_OUTPUT when the push succeeds.
 set -euo pipefail
-# The token comes in GIT_PUSH_TOKEN (step env): the checkout keeps no
-# credentials, so dependency code in earlier steps never saw it.
+# The token comes in GIT_PUSH_TOKEN (step env) of the CI visual-baselines
+# job, which runs no dependency code; its checkout keeps no credentials.
 app="$1"; branch="$2"; mode="${3:-push}"
 dir=".fuutu/visual-baselines/${app}"
 

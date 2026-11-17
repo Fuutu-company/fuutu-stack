@@ -77,16 +77,28 @@ describe("dco workflow guard", () => {
 
 /**
  * Credentials stay out of reach of dependency code: the E2E job runs
- * `pnpm install`, `next build` and Playwright, so no token may sit in
- * `.git/config` or the job env. The bot token reaches only the baseline
- * push script, through step env.
+ * `pnpm install`, `next build` and Playwright — code from node_modules can
+ * plant hooks, `$GITHUB_ENV` entries or edit scripts for later steps of the
+ * same job. So the E2E job holds no push token at all and only reads the
+ * repo; it uploads the regenerated baselines as an artifact, and the
+ * `visual-baselines` job — which runs no dependency code — pushes them from
+ * a fresh checkout.
  */
 describe("workflow credential guard", () => {
 	const e2e = job(ci, "e2e");
+	const push = job(ci, "visual-baselines");
 	const jobEnv = e2e.slice(
 		e2e.indexOf("\n    env:\n"),
 		e2e.indexOf("\n    steps:\n"),
 	);
+	/** A job's `permissions:` block. */
+	const permissions = (block: string) => {
+		const start = block.indexOf("\n    permissions:\n");
+		if (start === -1) return "";
+		const rest = block.slice(start + 1);
+		const end = rest.slice(1).search(/\n {4}[\w-]+:/);
+		return end === -1 ? rest : rest.slice(0, end + 1);
+	};
 
 	it("the E2E checkout keeps no credentials in .git/config", () => {
 		const checkout = e2e.slice(e2e.indexOf("- uses: actions/checkout@"));
@@ -100,12 +112,48 @@ describe("workflow credential guard", () => {
 		expect(jobEnv).not.toContain("secrets.");
 	});
 
+	it("the E2E job gets no push token and cannot write the repo", () => {
+		expect(e2e).not.toContain("secrets.");
+		expect(e2e).not.toContain("github.token");
+		expect(e2e).not.toContain("ci-visual-baselines.sh");
+		expect(permissions(e2e)).toMatch(/^ {6}contents: read( +#.*)?$/m);
+		expect(permissions(e2e)).not.toMatch(/contents: write/);
+	});
+
+	it("the E2E job hands the baselines over as an artifact", () => {
+		expect(e2e).toMatch(
+			/uses: actions\/upload-artifact@v\d+\n {8}with:\n {10}name: visual-baselines-\$\{\{ matrix\.app \}\}\n {10}path: \.fuutu\/visual-baselines\/\$\{\{ matrix\.app \}\}\n/,
+		);
+	});
+
+	it("the push job runs no dependency code", () => {
+		expect(push).not.toBe("");
+		expect(push).toContain("needs: e2e");
+		expect(push).not.toContain("./.github/actions/setup");
+		expect(push).not.toMatch(/\b(pnpm|npm|npx|yarn|node|bun)\b/);
+		expect(push).not.toMatch(/^ {4}container:/m);
+	});
+
+	it("the push job copies only PNG files into the baseline dir", () => {
+		expect(push).toMatch(/-name '\*\.png'/);
+		expect(push).toMatch(/-type f/);
+	});
+
+	it("the push job checks out fresh, without stored credentials, and may write", () => {
+		const checkout = push.slice(push.indexOf("- uses: actions/checkout@"));
+		const withBlock = checkout.slice(0, checkout.indexOf("\n      - "));
+		expect(withBlock).toMatch(/^ {10}persist-credentials: false$/m);
+		expect(permissions(push)).toMatch(/^ {6}contents: write( +#.*)?$/m);
+	});
+
 	it("only the baseline push steps get the push token", () => {
-		const steps = e2e.split("\n      - ").filter((s) => s.includes("secrets."));
+		const steps = push
+			.split("\n      - ")
+			.filter((s) => s.includes("secrets.") || s.includes("github.token"));
 		expect(steps.length).toBeGreaterThan(0);
 		for (const step of steps) {
 			expect(step).toContain("tooling/scripts/ci-visual-baselines.sh");
-			expect(step).toMatch(/^ {10}GIT_PUSH_TOKEN: \$\{\{ secrets\./m);
+			expect(step).toMatch(/^ {10}GIT_PUSH_TOKEN: \$\{\{ /m);
 		}
 	});
 
