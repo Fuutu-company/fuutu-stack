@@ -37,6 +37,7 @@ import {
 	restoreActiveOrganization,
 } from "./hooks/active-organization";
 import { logSessionCreated, logSignUp } from "./hooks/audit";
+import { assertDeleteUserReauth } from "./hooks/delete-user-reauth";
 import { notifyPreviousEmailAfterChange } from "./hooks/email-change-notice";
 import { assertFreshSession } from "./hooks/fresh-session";
 import { assertNotImpersonating } from "./hooks/impersonation-guard";
@@ -301,6 +302,16 @@ const authOptions = {
 			await assertVerifiedEmailForChange({
 				path: ctx.path,
 				getSession: () => getSessionFromCtx(ctx),
+			});
+			await assertDeleteUserReauth({
+				path: ctx.path,
+				body: ctx.body,
+				getSession: () => getSessionFromCtx(ctx),
+				hasPassword: async (userId) =>
+					Boolean(
+						(await ctx.context.internalAdapter.findCredentialAccount(userId))
+							?.password,
+					),
 			});
 			await assertImpersonationActive({
 				path: ctx.path,

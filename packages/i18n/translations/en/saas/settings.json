@@ -113,7 +113,9 @@
 			"confirmCta": "Yes, delete",
 			"soleOwner": "You're the only owner of an organization. Transfer ownership or delete the organization first.",
 			"subscriptionNotCancelled": "Your subscription could not be cancelled, so nothing was deleted. Try again in a moment.",
-			"failed": "Could not delete account."
+			"failed": "Could not delete account.",
+			"passwordlessHint": "Your account has no password. Deleting it needs a recent sign-in.",
+			"reauthRequired": "For your security, sign out and sign in again, then delete your account."
 		},
 		"billing": {
 			"title": "Billing",

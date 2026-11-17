@@ -287,3 +287,43 @@ describe("organization invitations", () => {
 		expect(org.invitations).toHaveLength(1);
 	});
 });
+
+describe("account deletion re-authentication", () => {
+	const deleteUser = (cookie: string, body: unknown) =>
+		auth.handler(
+			new Request("http://localhost:3000/api/auth/delete-user", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					origin: "http://localhost:3000",
+					cookie,
+				},
+				body: JSON.stringify(body),
+			}),
+		);
+	/** Drops the cookie cache so the session row (and its age) is read. */
+	const withoutCookieCache = (cookie: string) =>
+		cookie
+			.split("; ")
+			.filter((c) => !c.includes("session_data"))
+			.join("; ");
+
+	it("needs the password for an account that has one", async () => {
+		const cookie = await signUp();
+		const res = await deleteUser(cookie, {});
+		expect(res.status).toBe(400);
+		expect(await res.json()).toMatchObject({ code: "PASSWORD_REQUIRED" });
+		expect(store.user).toHaveLength(1);
+	});
+
+	it("needs a fresh session for a passwordless account", async () => {
+		seedUser(false);
+		const cookie = withoutCookieCache(cookieHeader(await openMagicLink()));
+		const [row] = store.session ?? [];
+		if (row) row.createdAt = new Date(Date.now() - 60 * 60_000);
+		const res = await deleteUser(cookie, {});
+		expect(res.status).toBe(403);
+		expect(await res.json()).toMatchObject({ code: "SESSION_NOT_FRESH" });
+		expect(store.user).toHaveLength(1);
+	});
+});

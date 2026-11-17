@@ -33,10 +33,18 @@ export async function assertFreshSession(input: {
 	if (!input.path || !FRESH_SESSION_PATHS.has(input.path)) return;
 	const session = await input.getSession();
 	if (!session) return;
+	assertSessionSignedInRecently(session.session.createdAt, input);
+}
+
+/** Throws `SESSION_NOT_FRESH` unless the session was created recently. */
+export function assertSessionSignedInRecently(
+	createdAt: Date | string,
+	options: { maxAgeSeconds?: number; now?: number } = {},
+): void {
 	const maxAge =
-		(input.maxAgeSeconds ?? authConfig.session.freshSessionMaxAge) * 1000;
-	const signedInAt = new Date(session.session.createdAt).getTime();
-	if ((input.now ?? Date.now()) - signedInAt < maxAge) return;
+		(options.maxAgeSeconds ?? authConfig.session.freshSessionMaxAge) * 1000;
+	const signedInAt = new Date(createdAt).getTime();
+	if ((options.now ?? Date.now()) - signedInAt < maxAge) return;
 	throw new APIError("FORBIDDEN", {
 		message: "Sign in again to continue",
 		code: "SESSION_NOT_FRESH",

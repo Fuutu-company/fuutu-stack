@@ -113,7 +113,9 @@
 			"confirmCta": "Ja, löschen",
 			"soleOwner": "Du bist der einzige Owner einer Organisation. Übertrage die Inhaberschaft oder lösche die Organisation zuerst.",
 			"subscriptionNotCancelled": "Dein Abonnement konnte nicht gekündigt werden, daher wurde nichts gelöscht. Versuche es gleich noch einmal.",
-			"failed": "Konto konnte nicht gelöscht werden."
+			"failed": "Konto konnte nicht gelöscht werden.",
+			"passwordlessHint": "Dein Konto hat kein Passwort. Zum Löschen brauchst du eine frische Anmeldung.",
+			"reauthRequired": "Melde dich zu deiner Sicherheit ab und wieder an und lösche dann dein Konto."
 		},
 		"billing": {
 			"title": "Abrechnung",
