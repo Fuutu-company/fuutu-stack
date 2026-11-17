@@ -58,7 +58,7 @@ function registeredRoutes(): RegisteredRoute[] {
 			hasBodyLimit: false,
 		};
 		if (!entry.methods.includes(route.method)) entry.methods.push(route.method);
-		// hono/body-limit returns a function named `bodyLimit`.
+		// The kit's body-limit.ts returns a function named `bodyLimit`.
 		if (route.handler.name === "bodyLimit") entry.hasBodyLimit = true;
 		byPath.set(route.path, entry);
 	}
@@ -154,7 +154,7 @@ describe("Hono route registry (api-policy.ts)", () => {
 			if (route && route.hasBodyLimit !== listedLimit) {
 				problems.push(
 					listedLimit
-						? `${policy.path} is listed with a ${policy.bodyLimit}-byte body limit but has no bodyLimit middleware — add \`bodyLimit({ maxSize })\` (hono/body-limit) before its handler.`
+						? `${policy.path} is listed with a ${policy.bodyLimit}-byte body limit but has no bodyLimit middleware — add \`bodyLimit({ maxSize })\` (./body-limit) before its handler.`
 						: `${policy.path} has a bodyLimit middleware — list its maxSize as bodyLimit in the registry.`,
 				);
 			}
