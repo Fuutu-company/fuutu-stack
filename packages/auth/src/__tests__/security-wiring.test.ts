@@ -204,6 +204,19 @@ describe("organization endpoints (orgs M1)", () => {
 		}
 	});
 
+	it("closes /organization/list-invitations (invitee emails; the UI uses the oRPC list)", async () => {
+		expect(auth.options.disabledPaths).toContain(
+			"/organization/list-invitations",
+		);
+		const res = await auth.handler(
+			new Request(
+				"http://localhost:3000/api/auth/organization/list-invitations?organizationId=org-1",
+			),
+		);
+		expect(res.status).toBe(404);
+		expect(auth.api.listInvitations).toBeTypeOf("function");
+	});
+
 	it("keeps server-side auth.api calls (oRPC procedures) working", () => {
 		expect(auth.api.createOrganization).toBeTypeOf("function");
 		expect(auth.api.updateMemberRole).toBeTypeOf("function");

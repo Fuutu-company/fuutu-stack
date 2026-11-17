@@ -233,3 +233,57 @@ describe("email change for an unverified account", () => {
 		);
 	});
 });
+
+describe("organization invitations", () => {
+	const seedOrg = (role: "owner" | "member") => {
+		const now = new Date();
+		store.organization?.push({
+			id: "org-1",
+			name: "Acme",
+			slug: "acme",
+			createdAt: now,
+		});
+		store.member?.push({
+			id: "mem-1",
+			organizationId: "org-1",
+			userId: "user-1",
+			role,
+			createdAt: now,
+		});
+		store.invitation?.push({
+			id: "inv-1",
+			organizationId: "org-1",
+			email: "invitee@acme.dev",
+			role: "member",
+			status: "pending",
+			inviterId: "user-1",
+			expiresAt: new Date(Date.now() + 86_400_000),
+			createdAt: now,
+		});
+	};
+
+	const fullOrganization = async (cookie: string) => {
+		const res = await auth.handler(
+			new Request(
+				"http://localhost:3000/api/auth/organization/get-full-organization?organizationId=org-1",
+				{ headers: { cookie } },
+			),
+		);
+		expect(res.status).toBe(200);
+		return (await res.json()) as { invitations: unknown[] };
+	};
+
+	it("are hidden from a plain member", async () => {
+		seedUser(false);
+		seedOrg("member");
+		const org = await fullOrganization(cookieHeader(await openMagicLink()));
+		expect(org.invitations).toEqual([]);
+	});
+
+	it("stay visible to an owner", async () => {
+		seedUser(false);
+		seedOrg("owner");
+		const org = await fullOrganization(cookieHeader(await openMagicLink()));
+		expect(org.invitations).toHaveLength(1);
+	});
+});

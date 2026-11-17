@@ -3,7 +3,10 @@ import { getOrganizationBySlug } from "@fuutu/db";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { requireOrgPermissionAccess } from "../../../orpc/org-access";
+import {
+	memberHasOrgPermission,
+	requireOrgPermissionAccess,
+} from "../../../orpc/org-access";
 import { permissionProcedure } from "../../../orpc/procedures";
 import { slugSchema } from "../shared";
 
@@ -15,7 +18,8 @@ export const getOrganization = permissionProcedure(
 		path: "/organizations/{slug}",
 		tags: ["Organizations"],
 		summary: "Get organization by slug",
-		description: "Returns a single organization with members and invitations.",
+		description:
+			"Returns a single organization with members and invitations (invitations only for members who may invite).",
 	})
 	.input(z.object({ slug: slugSchema }))
 	.handler(async ({ input, context }) => {
@@ -35,6 +39,11 @@ export const getOrganization = permissionProcedure(
 		});
 		if (!fullOrg) {
 			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
+		}
+		// Invitee emails — only for members who may invite.
+		const member = fullOrg.members.find((m) => m.userId === context.user.id);
+		if (!member || !memberHasOrgPermission(member, PERMISSIONS.INVITE_MEMBER)) {
+			return { ...fullOrg, invitations: [] };
 		}
 		return fullOrg;
 	});

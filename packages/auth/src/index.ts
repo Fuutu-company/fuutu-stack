@@ -64,6 +64,7 @@ import {
 	revokeApiKeysAfterLeave,
 	revokeApiKeysOfRemovedMember,
 } from "./hooks/member-api-keys";
+import { hideInvitationsFromNonInviters } from "./hooks/organization-invitations";
 import { assertPasswordPolicy } from "./hooks/password-policy";
 import { syncSeatsForOrganization } from "./hooks/payments-sync";
 import { assertProfileInput } from "./hooks/profile-input";
@@ -156,6 +157,13 @@ const organizationMutationPaths = [
 	"/organization/cancel-invitation",
 ];
 
+/**
+ * Organization reads with invitee emails for any member — the kit UI lists
+ * invitations through the oRPC `organizations.invitations.list`
+ * (INVITE_MEMBER). Closed with the mutations above.
+ */
+const organizationInvitationReadPaths = ["/organization/list-invitations"];
+
 const authOptions = {
 	database: prismaAdapter(db, {
 		provider: "postgresql",
@@ -185,7 +193,7 @@ const authOptions = {
 		...(authConfig.admin.exposeAuthEndpoints ? [] : adminEndpointPaths),
 		...(authConfig.organizations.exposeAuthEndpoints
 			? []
-			: organizationMutationPaths),
+			: [...organizationMutationPaths, ...organizationInvitationReadPaths]),
 	],
 
 	// Rate limiting: Prevent brute-force attacks and email spam.
@@ -330,6 +338,12 @@ const authOptions = {
 			}
 		}),
 		after: createAuthMiddleware(async (ctx) => {
+			const withoutInvitations = hideInvitationsFromNonInviters({
+				path: ctx.path,
+				returned: ctx.context.returned,
+				userId: ctx.context.session?.user.id,
+			});
+			if (withoutInvitations) return ctx.json(withoutInvitations);
 			await notifyPreviousEmailAfterChange({
 				path: ctx.path,
 				token: ctx.query?.token,

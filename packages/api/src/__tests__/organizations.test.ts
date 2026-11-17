@@ -126,6 +126,31 @@ describe("organizations.get", () => {
 		expect(result).toEqual(orgFixture);
 	});
 
+	it("returns no invitations (invitee emails) to a member who may not invite", async () => {
+		vi.mocked(getOrganizationBySlug).mockResolvedValue({
+			id: "org-1",
+			slug: "acme",
+		} as never);
+		vi.mocked(auth.api.getFullOrganization).mockResolvedValue({
+			...orgFixture,
+			invitations: [{ id: "inv-1", email: "invitee@acme.dev" }],
+		} as never);
+
+		const asMember = await call(
+			organizationsRouter.get,
+			{ slug: "acme" },
+			{ context: makeSession<Context>(makeUser({ id: "user-2" })) },
+		);
+		expect(asMember.invitations).toEqual([]);
+
+		const asOwner = await call(
+			organizationsRouter.get,
+			{ slug: "acme" },
+			{ context: authenticatedContext },
+		);
+		expect(asOwner.invitations).toHaveLength(1);
+	});
+
 	it("throws NOT_FOUND when org does not exist", async () => {
 		vi.mocked(getOrganizationBySlug).mockResolvedValue(null as never);
 
