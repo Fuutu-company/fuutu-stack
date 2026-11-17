@@ -16,8 +16,10 @@ export const authConfig = {
 	 * extends it, at most once a day. `cookieCache.maxAge`: the signed
 	 * `better-auth.session_data` cookie caches the session for 1 minute —
 	 * a revoked session or a ban takes effect within that window.
-	 * `freshSessionMaxAge`: an email change needs a sign-in at most this
-	 * long ago (hooks/fresh-session.ts).
+	 * `freshSessionMaxAge`: an email change, a passkey registration, API key
+	 * creation and a passwordless `/delete-user` need a sign-in at most this
+	 * long ago (hooks/fresh-session.ts, hooks/delete-user-reauth.ts,
+	 * `@fuutu/api` api-keys/credential-session.ts).
 	 */
 	session: {
 		expiresIn: 60 * 60 * 24 * 30, // 30 days
