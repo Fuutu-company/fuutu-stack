@@ -6,6 +6,8 @@ import ChangelogV100 from "./changelog/v1-0-0";
 import ChangelogV100De from "./changelog/v1-0-0.de";
 import ChangelogV110 from "./changelog/v1-1-0";
 import ChangelogV110De from "./changelog/v1-1-0.de";
+import ChangelogV111 from "./changelog/v1-1-1";
+import ChangelogV111De from "./changelog/v1-1-1.de";
 import {
 	type ChangelogFrontmatter,
 	changelogDraftMeta,
@@ -127,6 +129,7 @@ export const posts: readonly PostEntry[] = applyAppContent(
 
 /** Changelog bodies per slug — frontmatter lives in `changelog/<slug>.meta.ts`. */
 const CHANGELOG_BODIES: Record<string, Record<string, ComponentType>> = {
+	"v1-1-1": { en: ChangelogV111, de: ChangelogV111De },
 	"v1-1-0": { en: ChangelogV110, de: ChangelogV110De },
 	"v1-0-0": { en: ChangelogV100, de: ChangelogV100De },
 	"v0-1-0": { en: ChangelogV010, de: ChangelogV010De },
