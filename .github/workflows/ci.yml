@@ -194,6 +194,8 @@ jobs:
       # Required by `next build` / `next start` (NODE_ENV=production); no
       # proxy in CI.
       TRUST_PROXY_HEADERS: "0"
+      # The seed refuses the compose host `postgres` without it.
+      FUUTU_ALLOW_SEED: "1"
     steps:
       - name: Generate CI auth secret
         run: |

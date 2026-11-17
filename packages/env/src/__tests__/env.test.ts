@@ -350,6 +350,18 @@ describe("@fuutu/env/saas", () => {
 		delete process.env.TRUSTED_CLIENT_IP_HEADER;
 	});
 
+	it("FUUTU_ALLOW_SEED accepts only 0 or 1", async () => {
+		setRequiredSaasEnv();
+		process.env.FUUTU_ALLOW_SEED = "1";
+		expect((await import("../saas")).env.FUUTU_ALLOW_SEED).toBe("1");
+
+		vi.resetModules();
+		setRequiredSaasEnv();
+		process.env.FUUTU_ALLOW_SEED = "yes";
+		await expect(import("../saas")).rejects.toThrow();
+		delete process.env.FUUTU_ALLOW_SEED;
+	});
+
 	it("accepts noop and custom PAYMENTS_PROVIDER values", async () => {
 		for (const provider of ["polar", "stripe", "creem", "noop", "custom"]) {
 			vi.resetModules();

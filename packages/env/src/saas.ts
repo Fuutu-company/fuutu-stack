@@ -204,6 +204,10 @@ const kitServerEnv = {
 	// private/loopback targets). Needed for local receivers in dev —
 	// must NEVER be set in production.
 	WEBHOOK_ALLOW_PRIVATE_URLS: strictFlag().optional(),
+	// Seed scripts (`db:seed`): "1" lets them seed the compose database host
+	// `postgres` (CI service container, a local compose rehearsal). Unset
+	// everywhere else — inside a deployed stack that host is production.
+	FUUTU_ALLOW_SEED: z.enum(["0", "1"]).optional(),
 };
 
 const kitClientEnv = {
@@ -315,6 +319,7 @@ export const env = createEnv({
 		TRUSTED_CLIENT_IP_HEADER: process.env.TRUSTED_CLIENT_IP_HEADER,
 		FUUTU_AUTH_COOKIE_PREFIX: process.env.FUUTU_AUTH_COOKIE_PREFIX,
 		WEBHOOK_ALLOW_PRIVATE_URLS: process.env.WEBHOOK_ALLOW_PRIVATE_URLS,
+		FUUTU_ALLOW_SEED: process.env.FUUTU_ALLOW_SEED,
 	},
 	emptyStringAsUndefined: true,
 	// Escape hatch for builds/CI that intentionally run without a full env

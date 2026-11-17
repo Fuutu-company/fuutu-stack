@@ -467,6 +467,8 @@ describe("visual-local: container never receives host secrets", () => {
 			"FUUTU_TELEMETRY_DISABLED",
 			// Required by the production build / server, like in CI.
 			"TRUST_PROXY_HEADERS",
+			// The seed refuses the compose host `postgres` without it.
+			"FUUTU_ALLOW_SEED",
 		]);
 		// The only interpolated host value is the throwaway container DB.
 		expect(body?.match(/\$\{?\w+/g)).toEqual(["${DATABASE_URL"]);
