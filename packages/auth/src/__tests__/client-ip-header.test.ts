@@ -39,16 +39,18 @@ describe("withClientIp", () => {
 	it("works for a request from another runtime (Next.js wraps the request)", async () => {
 		// Next hands Hono a wrapper whose private Request state is not
 		// readable: `new Request(wrapper, init)` throws "Cannot read private
-		// member #state". A Proxy over a real Request fails the same way.
+		// member #state". A Proxy that hides the Request prototype makes the
+		// constructor refuse it on every Node version the same way.
 		const inner = request({ [CLIENT_IP_HEADER]: "6.6.6.6" });
 		const wrapper = new Proxy(inner, {
+			getPrototypeOf: () => Object.prototype,
 			get(target, prop) {
 				const value = Reflect.get(target, prop, target);
 				return typeof value === "function" ? value.bind(target) : value;
 			},
 		});
 		expect(() => new Request(wrapper, { headers: wrapper.headers })).toThrow(
-			/private member/,
+			TypeError,
 		);
 
 		const forwarded = withClientIp(wrapper, "203.0.113.7");

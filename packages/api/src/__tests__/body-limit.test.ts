@@ -10,11 +10,12 @@ import { bodyLimit } from "../body-limit";
  * state the constructor cannot read: `new Request(wrapper, init)` — what
  * hono/body-limit does for a body without Content-Length — throws
  * "Cannot read private member #state" (500 on a body-less DELETE, a
- * body-less sign-out, any chunked POST). A Proxy over a real Request fails
- * the same way.
+ * body-less sign-out, any chunked POST). A Proxy that hides the Request
+ * prototype makes the constructor refuse it on every Node version the same way.
  */
 const nextLike = (request: Request): Request =>
 	new Proxy(request, {
+		getPrototypeOf: () => Object.prototype,
 		get(target, prop) {
 			const value = Reflect.get(target, prop, target);
 			return typeof value === "function" ? value.bind(target) : value;
