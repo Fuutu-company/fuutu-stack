@@ -6,8 +6,9 @@ import type { Context, MiddlewareHandler } from "hono";
  * constructor cannot read (`TypeError: Cannot read private member
  * #state`), so every body without Content-Length (a body-less DELETE or
  * sign-out, a chunked POST) answered 500. A Content-Length is checked
- * without reading; otherwise the body is read up to `maxSize` and the
- * request rebuilt from its parts (like `withClientIp`).
+ * without reading (one that is not plain digits answers 400); otherwise
+ * the body is read up to `maxSize` and the request rebuilt from its parts
+ * (like `withClientIp`).
  */
 export function bodyLimit(options: {
 	maxSize: number;
@@ -22,6 +23,11 @@ export function bodyLimit(options: {
 			return next();
 		}
 		const length = raw.headers.get("content-length");
+		// Plain digits only: `parseInt` would read "1e3" as 1 and "abc" as
+		// NaN (both under the cap) on a runtime whose parser lets them in.
+		if (length !== null && !/^\d+$/.test(length)) {
+			return c.text("Bad Request", 400);
+		}
 		if (length !== null && !raw.headers.has("transfer-encoding")) {
 			return Number.parseInt(length, 10) > maxSize ? onError(c) : next();
 		}

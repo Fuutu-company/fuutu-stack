@@ -92,6 +92,24 @@ describe("kit bodyLimit under a Next-like request wrapper", () => {
 		expect(res.status).toBe(413);
 	});
 
+	// Node's parser refuses these; another runtime may pass them through,
+	// and `parseInt("1e3")` is 1, `parseInt("abc")` NaN — both under the cap.
+	it.each(["1e3", "abc", "-1", "5, 5", "0x10"])(
+		"refuses a Content-Length that is not plain digits (%s)",
+		async (length) => {
+			const res = await appWith(bodyLimit).fetch(
+				nextLike(
+					new Request("http://localhost:3000/api/x", {
+						method: "POST",
+						headers: { "content-length": length },
+						body: "x".repeat(20),
+					}),
+				),
+			);
+			expect(res.status).toBe(400);
+		},
+	);
+
 	it("passes a body within its Content-Length", async () => {
 		const res = await appWith(bodyLimit).fetch(
 			nextLike(
