@@ -20,6 +20,7 @@ afterEach(async () => {
 	const last = await freshInstance();
 	last.registerEntitlementResolver(null);
 	last.registerSupersedePolicy(null);
+	last.registerSeatGate(null);
 });
 
 describe("extension registries across module instances", () => {
@@ -52,6 +53,17 @@ describe("extension registries across module instances", () => {
 		unsubscribe();
 		await other.notifyPurchaseChanged("user_1", null);
 		expect(handler).not.toHaveBeenCalled();
+	});
+
+	it("shares the seat gate, and null restores the default", async () => {
+		const instrumentation = await freshInstance();
+		const gate = vi.fn(() => 3);
+		instrumentation.registerSeatGate(gate);
+
+		const authHook = await freshInstance();
+		expect(authHook.getSeatGate()).toBe(gate);
+		authHook.registerSeatGate(null);
+		expect((await freshInstance()).getSeatGate()).toBeNull();
 	});
 
 	it("shares the supersede policy", async () => {
