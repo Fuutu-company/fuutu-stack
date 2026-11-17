@@ -6,6 +6,11 @@ import type { PropsWithChildren } from "react";
 import { appDocs } from "@/app-docs";
 import { LanguageSelect } from "@/components/language-select";
 import { LegalLinks } from "@/components/legal-links";
+import {
+	DocsContainer,
+	DocsHeader,
+	docsSidebarSlot,
+} from "@/components/shell/slots";
 import { baseOptions, PRIVACY_LINK_CLASS } from "@/lib/layout.shared";
 import { source } from "@/lib/source";
 
@@ -34,6 +39,10 @@ export default async function Layout({ children, params }: DocsLayoutProps) {
 			}}
 			slots={{
 				languageSelect: { root: LanguageSelect, text: LanguageSelectText },
+				// Kit shell (floating sidebar card, header, grid) — app slots win.
+				container: DocsContainer,
+				header: DocsHeader,
+				sidebar: docsSidebarSlot,
 				...layoutSlots,
 			}}
 		>

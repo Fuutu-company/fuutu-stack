@@ -5,12 +5,12 @@ import { LanguageSelectText } from "fumadocs-ui/layouts/shared/slots/language-se
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { appDocs } from "@/app-docs";
+import { DocsHome } from "@/components/home/docs-home";
 import { LanguageSelect } from "@/components/language-select";
 import { LegalLinks } from "@/components/legal-links";
 import { locales } from "@/i18n/config";
 import { baseOptions, PRIVACY_LINK_CLASS } from "@/lib/layout.shared";
 import { docsHomeMetadata } from "@/lib/page-metadata";
-import { Link } from "@/navigation";
 
 interface HomePageProps {
 	params: Promise<{ locale: string }>;
@@ -52,33 +52,7 @@ export default async function HomePage({ params }: HomePageProps) {
 			{appDocs.Home ? (
 				<appDocs.Home locale={locale} />
 			) : (
-				<div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-					<h1 className="mb-4 font-extrabold font-heading text-5xl leading-[0.98] tracking-display sm:text-6xl">
-						{t("title", { appName: config.app.name })}
-					</h1>
-					<p className="mb-2 text-fd-muted-foreground text-lg">
-						{t("subtitle")}
-					</p>
-					<p className="mb-8 max-w-2xl text-fd-muted-foreground">
-						{t("description")}
-					</p>
-					<div className="flex flex-wrap items-center justify-center gap-4">
-						<Link
-							href="/docs"
-							className="inline-flex h-11 items-center justify-center rounded-full bg-fd-primary px-6 font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
-						>
-							{t("exploreDocs")}
-						</Link>
-						<a
-							href="https://github.com/Fuutu-company/fuutu-stack"
-							target="_blank"
-							rel="noreferrer noopener"
-							className="inline-flex h-11 items-center justify-center rounded-full border border-fd-border px-6 font-medium transition-colors hover:bg-fd-accent"
-						>
-							{t("viewOnGithub")}
-						</a>
-					</div>
-				</div>
+				<DocsHome locale={locale} />
 			)}
 			<footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pb-8">
 				<LegalLinks locale={locale} className={PRIVACY_LINK_CLASS} />

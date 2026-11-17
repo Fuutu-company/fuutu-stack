@@ -37,4 +37,13 @@ describe("appDocs.layoutSlots", () => {
 	it("spreads nothing else into the slots (unset = kit slots only)", () => {
 		expect(slotsBlock.match(/\.\.\.\w+/g)).toEqual(["...layoutSlots"]);
 	});
+
+	it("sets the kit shell slots before the spread, so app slots still win", () => {
+		const spread = slotsBlock.indexOf("...layoutSlots");
+		for (const slot of ["container:", "header:", "sidebar:"]) {
+			const at = slotsBlock.indexOf(slot);
+			expect(at, slot).toBeGreaterThanOrEqual(0);
+			expect(at, slot).toBeLessThan(spread);
+		}
+	});
 });

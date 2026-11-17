@@ -2,5 +2,6 @@
 	"docs": "Docs",
 	"home": "Home",
 	"switchLanguage": "Switch language",
-	"getStarted": "Get Started"
+	"getStarted": "Get Started",
+	"toggleTheme": "Toggle theme"
 }
