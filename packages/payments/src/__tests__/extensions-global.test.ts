@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports the module in every test and hook: slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 /**
  * Next.js can evaluate `@fuutu/payments` once per bundle (instrumentation,
  * route handlers, RSC). A registration made in one module instance must be

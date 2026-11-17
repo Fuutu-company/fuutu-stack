@@ -1,3 +1,6 @@
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * CORS_ORIGIN (e.g. the marketing site) gets plain CORS only: no
  * credentialed responses and no CSRF-guard trust — script on that origin

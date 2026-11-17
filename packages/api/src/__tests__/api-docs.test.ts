@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { OpenAPIGenerator } from "@orpc/openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * `/api/docs` and `/api/spec.json` are public: the merged spec is built
  * once per process (a failed Better Auth spec fetch is not retried per

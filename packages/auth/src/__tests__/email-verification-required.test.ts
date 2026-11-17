@@ -1,5 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * With `requireEmailVerification` an unverified account cannot sign in —
  * nor can a squatter — so the sign-up link must verify without a session

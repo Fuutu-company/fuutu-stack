@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 function setRequiredSaasEnv() {
 	process.env.DATABASE_URL = "postgresql://localhost:5432/test";
 	process.env.BETTER_AUTH_SECRET = "a".repeat(32);

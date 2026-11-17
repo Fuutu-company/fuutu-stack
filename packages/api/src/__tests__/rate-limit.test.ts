@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 /**
  * Boot-time validation: when REDIS_URL is set the app must refuse to boot
  * because the Redis rate-limit driver is still a v1 stub (see

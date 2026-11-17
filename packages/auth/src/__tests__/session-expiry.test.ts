@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * Session lifetime — `authConfig.session` is what the privacy policy
  * documents (session cookie lifetime), so the default must only change

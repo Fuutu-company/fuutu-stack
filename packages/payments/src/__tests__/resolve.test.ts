@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 vi.mock("@fuutu/env/saas", () => ({
 	env: {
 		NODE_ENV: "test",

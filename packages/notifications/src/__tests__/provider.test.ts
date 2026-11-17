@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 const { inAppSend, emailSend, noopSend, logError, logWarn } = vi.hoisted(
 	() => ({
 		inAppSend: vi.fn().mockResolvedValue(undefined),

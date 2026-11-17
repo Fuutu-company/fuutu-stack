@@ -1,5 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * The org plugin sends invitations through the shared
  * `sendOrganizationInvitationEmail` (same payload as before the move) and

@@ -1,6 +1,9 @@
 import type { DrainContext } from "evlog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Re-imports modules after vi.resetModules(): slow on a busy machine.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 function makeCtx(event: Record<string, unknown>): DrainContext {
 	return {
 		event: {

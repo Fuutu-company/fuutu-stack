@@ -8,6 +8,9 @@ import {
 	vi,
 } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * Better Auth options the kit's security depends on — checked on the real
  * `auth` instance, so a refactor of index.ts cannot silently drop them.

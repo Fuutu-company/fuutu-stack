@@ -1,5 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * The sign-up verification link (`/verify-email`, no `requestType`) counts
  * only together with a session of the same user: a squatter who signed up

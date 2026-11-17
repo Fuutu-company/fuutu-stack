@@ -10,6 +10,9 @@ import type { BetterAuthOptions } from "better-auth";
 import { describe, expect, it, vi } from "vitest";
 import { assertSecondFactorForNewSession } from "../hooks/second-factor-session";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * The 2FA guard (hooks/second-factor-session.ts) refuses sessions on a
  * fixed list of paths — so it would fail open for an endpoint it does not

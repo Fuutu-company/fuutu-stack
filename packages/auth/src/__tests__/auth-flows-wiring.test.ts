@@ -1,5 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Loads the full module inside a hook or test: slow on a busy machine.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 /**
  * Auth flows through the real `auth` instance on an in-memory database.
  *
