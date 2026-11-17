@@ -167,6 +167,40 @@ export default function ChangelogV110() {
 					h) and <code>authConfig.admin.exposeAuthEndpoints</code> (default{" "}
 					<code>false</code>).
 				</li>
+				<li>
+					Security hardening from a full review of auth, admin, API, payments,
+					storage, headers and CI: closed Better Auth organization and admin
+					endpoints, verified-email and fresh-session gates for API keys,
+					passkeys, 2FA, MCP consent and email change, a reversed refund and
+					dispute path, pinned webhook delivery, per-object image-proxy checks,
+					a request body limit and hardened response headers. All auth security
+					policies are wired through one module,{" "}
+					<code>packages/auth/src/security/index.ts</code>, which lists each
+					policy, its paths and its config knob.
+				</li>
+				<li>
+					Payments: the billing portal opens for the payer only, Stripe
+					activates only on paid checkouts, full refunds and disputes are
+					reversed on every provider (early ones are retried), trials run once
+					per user and organization, organization checkouts bill at least the
+					member count (daily <code>seat-reconcile</code> job), and the same
+					plan cannot be bought twice. New extension point{" "}
+					<code>registerSeatGate</code>; <code>createCheckoutLink</code> also
+					returns the provider's <code>checkoutId</code>.
+				</li>
+				<li>
+					<code>apiConfig.apiKeyMaxLifetimeDays</code> caps the lifetime of API
+					keys (unset: no cap); <code>requireScopes()</code> in{" "}
+					<code>@fuutu/mcp</code> restricts MCP tools to OAuth scopes.
+				</li>
+				<li>
+					Architecture guards are split: <code>arch/*</code> in{" "}
+					<code>@fuutu/test-utils</code> are kit invariants and run in every{" "}
+					<code>pnpm test</code>; <code>arch/kit-source/*</code> guard the kit's
+					own demo files and CI layout and run only in the kit repository (
+					<code>pnpm -F @fuutu/test-utils test:kit-source</code>), so you can
+					change your UI and CI without red tests.
+				</li>
 			</ul>
 			<h3>Changes</h3>
 			<ul>
@@ -400,6 +434,77 @@ export default function ChangelogV110() {
 					The admin sidebar group lists Users, Organizations, Audit logs and
 					System, in that order. An app item with{" "}
 					<code>after: "adminUsers"</code> now sits before Organizations.
+				</li>
+				<li>
+					<strong>Deployment:</strong> <code>TRUST_PROXY_HEADERS</code> is
+					required in production (<code>0</code> or <code>1</code>). Behind a
+					proxy that writes <code>X-Forwarded-For</code> (Coolify, Traefik) set{" "}
+					<code>1</code>; behind a CDN also set{" "}
+					<code>TRUSTED_CLIENT_IP_HEADER</code> (e.g.{" "}
+					<code>cf-connecting-ip</code>). The compose files require it
+					explicitly.
+				</li>
+				<li>
+					<strong>Deployment:</strong> production refuses the{" "}
+					<code>BETTER_AUTH_SECRET</code> value that used to be in{" "}
+					<code>.env.example</code> (public git history), any secret shorter
+					than 32 characters and a non-https <code>BETTER_AUTH_URL</code>.
+					Rotate the secret if a deployment ever used the old value.
+				</li>
+				<li>
+					<strong>Deployment:</strong> credentialed CORS is opt-in (
+					<code>CORS_CREDENTIALS=1</code>; <code>CORS_ORIGIN</code> is trusted
+					only with it), and the compose files publish their ports on{" "}
+					<code>127.0.0.1</code> only. Seeding the docker host{" "}
+					<code>postgres</code> needs <code>FUUTU_ALLOW_SEED=1</code>.
+				</li>
+				<li>
+					Better Auth organization mutations (
+					<code>authClient.organization.create</code>, <code>update</code>,{" "}
+					<code>delete</code>, <code>inviteMember</code>,{" "}
+					<code>updateMemberRole</code>, <code>removeMember</code>,{" "}
+					<code>cancelInvitation</code>, <code>listInvitations</code>) are
+					closed over HTTP; use the oRPC procedures. To keep them, set{" "}
+					<code>authConfig.organizations.exposeAuthEndpoints: true</code>.
+					Listing invitations needs <code>INVITE_MEMBER</code>.
+				</li>
+				<li>
+					The admin "Mark email verified" action is replaced by an audited "Send
+					verification email" (<code>admin.users.sendVerificationEmail</code>
+					); <code>admin.users.update</code> accepts only{" "}
+					<code>emailVerified: false</code>.
+				</li>
+				<li>
+					API-key creation, passkey registration, 2FA enablement, MCP OAuth
+					consent and an email change need a verified email. API keys, passkeys,
+					an email change and the deletion of a passwordless account also need a
+					fresh session (<code>authConfig.session.freshSessionMaxAge</code>, 15
+					minutes).
+				</li>
+				<li>
+					<code>/delete-user</code> needs the password, or a fresh session for
+					accounts without one; it refuses sole owners and aborts when a
+					subscription cancel fails.
+				</li>
+				<li>
+					An email change is confirmed on the current address and the old
+					address gets a notice. A password reset revokes sessions, OAuth tokens
+					and API keys (audit-logged).
+				</li>
+				<li>
+					MCP <code>whoami</code> needs the <code>profile</code> and{" "}
+					<code>email</code> scopes on OAuth tokens; API-key principals are
+					unaffected.
+				</li>
+				<li>
+					Webhook create, update and delete are admin-tier and session-only;
+					stored receiver response bodies are never returned.
+				</li>
+				<li>
+					<code>createCheckoutLink</code> returns{" "}
+					<code>{"{ url, checkoutId? }"}</code> instead of a string; a same-plan
+					checkout on a subscription scheduled to cancel answers{" "}
+					<code>resume_instead</code>.
 				</li>
 			</ul>
 		</>
