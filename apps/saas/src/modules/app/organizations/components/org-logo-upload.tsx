@@ -70,7 +70,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 
 	async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
-		if (!file || !org || uploading) return;
+		if (!canEdit || !file || !org || uploading) return;
 		if (file.size > MAX_LOGO_SIZE) {
 			setStatus(t("settings.logo.tooLarge"));
 			return;
@@ -117,7 +117,7 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 	}
 
 	async function handleRemove() {
-		if (!org?.logo) return;
+		if (!canEdit || !org?.logo) return;
 		setRemoving(true);
 		setStatus(null);
 		try {
@@ -199,14 +199,16 @@ export function OrgLogoUpload({ slug }: { slug: string }) {
 					</div>
 				</div>
 				{status && <p className="text-muted-foreground text-sm">{status}</p>}
-				<input
-					id="org-logo-input"
-					ref={fileInputRef}
-					type="file"
-					accept="image/png,image/jpeg,image/webp"
-					className="sr-only"
-					onChange={handleUpload}
-				/>
+				{canEdit && (
+					<input
+						id="org-logo-input"
+						ref={fileInputRef}
+						type="file"
+						accept="image/png,image/jpeg,image/webp"
+						className="sr-only"
+						onChange={handleUpload}
+					/>
+				)}
 			</CardContent>
 		</Card>
 	);
