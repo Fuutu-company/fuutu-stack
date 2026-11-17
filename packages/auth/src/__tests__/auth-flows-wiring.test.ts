@@ -32,6 +32,7 @@ vi.mock("@fuutu/db", () => ({
 	getUserById: vi.fn(async () => null),
 	prismaAuditSink: vi.fn(),
 	revokeOAuthTokensForUser: vi.fn(),
+	revokeApiKeysForUser: vi.fn(),
 	claimUserCreatedEvent: vi.fn(),
 	resetUserCreatedEvent: vi.fn(),
 	countOrganizationMembers: vi.fn(),
@@ -175,6 +176,13 @@ const cookieHeader = (res: Response) =>
 		.map((c) => c.split(";")[0])
 		.join("; ");
 
+/** Drops the cookie cache so the session row (and its age) is read. */
+const withoutCookieCache = (cookie: string) =>
+	cookie
+		.split("; ")
+		.filter((c) => !c.includes("session_data"))
+		.join("; ");
+
 /** Signs up by password (email stays unverified) — session cookie header. */
 async function signUp(): Promise<string> {
 	const res = await auth.handler(
@@ -301,12 +309,6 @@ describe("account deletion re-authentication", () => {
 				body: JSON.stringify(body),
 			}),
 		);
-	/** Drops the cookie cache so the session row (and its age) is read. */
-	const withoutCookieCache = (cookie: string) =>
-		cookie
-			.split("; ")
-			.filter((c) => !c.includes("session_data"))
-			.join("; ");
 
 	it("needs the password for an account that has one", async () => {
 		const cookie = await signUp();
@@ -325,5 +327,90 @@ describe("account deletion re-authentication", () => {
 		expect(res.status).toBe(403);
 		expect(await res.json()).toMatchObject({ code: "SESSION_NOT_FRESH" });
 		expect(store.user).toHaveLength(1);
+	});
+});
+
+describe("credentials for an unverified account", () => {
+	const call = (path: string, cookie: string, body?: unknown) =>
+		auth.handler(
+			new Request(`http://localhost:3000/api/auth${path}`, {
+				method: body === undefined ? "GET" : "POST",
+				headers: {
+					"content-type": "application/json",
+					origin: "http://localhost:3000",
+					cookie,
+				},
+				...(body === undefined ? {} : { body: JSON.stringify(body) }),
+			}),
+		);
+
+	it("refuses enabling 2FA until the email is verified", async () => {
+		const cookie = await signUp();
+		const res = await call("/two-factor/enable", cookie, {
+			password: "ValidPassw0rd!",
+		});
+		expect(res.status).toBe(403);
+		expect(await res.json()).toMatchObject({ code: "EMAIL_NOT_VERIFIED" });
+		expect(store.twoFactor).toEqual([]);
+	});
+
+	it("refuses registering a passkey until the email is verified", async () => {
+		const cookie = await signUp();
+		const res = await call("/passkey/generate-register-options", cookie);
+		expect(res.status).toBe(403);
+		expect(await res.json()).toMatchObject({ code: "EMAIL_NOT_VERIFIED" });
+	});
+
+	it("allows enabling 2FA once the mailbox is proven", async () => {
+		const cookie = await signUp();
+		const [user] = store.user ?? [];
+		if (user) user.emailVerified = true;
+		const fresh = withoutCookieCache(cookie);
+		const res = await call("/two-factor/enable", fresh, {
+			password: "ValidPassw0rd!",
+		});
+		expect(res.status).toBe(200);
+	});
+});
+
+describe("an unverified account the mailbox owner takes over (magic link)", () => {
+	it("loses the squatter's passkeys, 2FA and API keys, and signs the owner in", async () => {
+		const { revokeApiKeysForUser } = await import("@fuutu/db");
+		seedUser(true, false);
+		store.twoFactor?.push({
+			id: "tf-1",
+			userId: "user-1",
+			secret: "squatter-secret",
+			backupCodes: "[]",
+			verified: true,
+		});
+		store.passkey?.push({
+			id: "pk-1",
+			userId: "user-1",
+			publicKey: "squatter-key",
+			credentialID: "cred-1",
+			counter: 0,
+			deviceType: "singleDevice",
+			backedUp: false,
+		});
+
+		const res = await openMagicLink();
+
+		expect(res.headers.get("location")).not.toContain("TWO_FACTOR_REQUIRED");
+		expect(liveSessionCookies(res).length).toBeGreaterThan(0);
+		expect(store.passkey).toEqual([]);
+		expect(store.twoFactor).toEqual([]);
+		expect(store.user?.[0]).toMatchObject({
+			emailVerified: true,
+			twoFactorEnabled: false,
+		});
+		expect(revokeApiKeysForUser).toHaveBeenCalledWith("user-1");
+	});
+
+	it("keeps the passkeys of a verified account signing in by magic link", async () => {
+		seedUser(false);
+		store.passkey?.push({ id: "pk-1", userId: "user-1", publicKey: "k" });
+		await openMagicLink();
+		expect(store.passkey).toHaveLength(1);
 	});
 });

@@ -42,6 +42,21 @@ export function isImpersonationForbidden(err: unknown): boolean {
 }
 
 /**
+ * The stable refusal code of an API error — oRPC `data.code` or Better
+ * Auth's `code` (`res.error`, or a thrown error carrying it).
+ */
+function refusalCode(err: unknown): unknown {
+	if (typeof err !== "object" || err === null) return undefined;
+	if (err instanceof ORPCError) {
+		const data: unknown = err.data;
+		return typeof data === "object" && data !== null
+			? (data as Record<string, unknown>).code
+			: undefined;
+	}
+	return (err as Record<string, unknown>).code;
+}
+
+/**
  * Map an API error to a localized message. The API's authorize middleware
  * reports plan gates with stable English messages ("Limit exceeded (n/m)",
  * "not available on your plan") — those must be translated client-side,
@@ -55,6 +70,11 @@ export function planGateMessage(
 ): string {
 	if (isImpersonationForbidden(err)) {
 		return t("common.errors.impersonationForbidden");
+	}
+	// Passkeys, 2FA and API keys need a verified email (they outlive a
+	// password reset).
+	if (refusalCode(err) === "EMAIL_NOT_VERIFIED") {
+		return t("common.errors.verifyEmailFirst");
 	}
 	const message = err instanceof Error ? err.message : "";
 	if (message.includes("Limit exceeded")) {

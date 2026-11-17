@@ -5,6 +5,7 @@ import { config } from "@fuutu/config";
 import {
 	getUserByEmail,
 	prismaAuditSink,
+	revokeApiKeysForUser,
 	revokeOAuthTokensForUser,
 } from "@fuutu/db";
 import { db } from "@fuutu/db/internal/client";
@@ -75,8 +76,13 @@ import {
 } from "./hooks/seat-limit";
 import { assertSecondFactorForNewSession } from "./hooks/second-factor-session";
 import { assertSignupPolicy } from "./hooks/signup-policy";
+import {
+	markMailboxProof,
+	revokeUnprovenCredentials,
+} from "./hooks/unproven-credentials";
 import { emitUserCreatedOnFirstMembership } from "./hooks/user-created";
 import { assertVerifiedEmailForChange } from "./hooks/verified-email-change";
+import { assertVerifiedEmailForCredential } from "./hooks/verified-email-credentials";
 import { sendEmail } from "./lib/email";
 import { sendOrganizationInvitationEmail } from "./lib/invitation-email";
 import { saasBaseUrl } from "./lib/saas-url";
@@ -300,6 +306,10 @@ const authOptions = {
 				getSession: () => getSessionFromCtx(ctx),
 			});
 			await assertVerifiedEmailForChange({
+				path: ctx.path,
+				getSession: () => getSessionFromCtx(ctx),
+			});
+			await assertVerifiedEmailForCredential({
 				path: ctx.path,
 				getSession: () => getSessionFromCtx(ctx),
 			});
@@ -560,6 +570,38 @@ const authOptions = {
 					// Sole owners are refused; subscriptions are cancelled before
 					// the user row is deleted — a failed cancel aborts.
 					await beforeUserDelete(user.id);
+				},
+			},
+			// Magic link / email OTP proving the mailbox of an unverified
+			// account: the squatter's passkeys, 2FA, API keys and OAuth tokens
+			// go with its password (hooks/unproven-credentials.ts).
+			update: {
+				before: async (data, ctx) =>
+					markMailboxProof(data, ctx, {
+						twoFactor: authConfig.features.twoFactor,
+					}),
+				after: async (user, ctx) => {
+					const adapter = ctx?.context.adapter;
+					const deleteRows = async (model: string, userId: string) => {
+						await adapter?.deleteMany({
+							model,
+							where: [{ field: "userId", value: userId }],
+						});
+					};
+					await revokeUnprovenCredentials(user, ctx, {
+						deletePasskeys: async (id) => {
+							if (authConfig.features.passkeys) await deleteRows("passkey", id);
+						},
+						deleteTwoFactor: async (id) => {
+							if (authConfig.features.twoFactor) {
+								await deleteRows("twoFactor", id);
+							}
+						},
+						revokeApiKeys: revokeApiKeysForUser,
+						revokeOAuthTokens: async (id) => {
+							if (mcpOAuth.active) await revokeOAuthTokensForUser(id);
+						},
+					});
 				},
 			},
 		},

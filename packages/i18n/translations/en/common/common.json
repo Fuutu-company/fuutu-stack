@@ -18,7 +18,8 @@
 			"retry": "Retry",
 			"planLimitReached": "Plan limit reached. Upgrade to do more.",
 			"planFeatureRequired": "This feature is not available on your plan.",
-			"impersonationForbidden": "Not available while you're signed in as this user (impersonation). Stop impersonating to do this."
+			"impersonationForbidden": "Not available while you're signed in as this user (impersonation). Stop impersonating to do this.",
+			"verifyEmailFirst": "Verify your email address first: open the verification link we sent you. Passkeys, two-factor authentication and API keys need a confirmed address."
 		}
 	}
 }

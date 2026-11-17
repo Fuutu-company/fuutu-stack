@@ -272,6 +272,17 @@ describe("DB query functions - smoke tests", () => {
 				data: { revokedAt: expect.any(Date) },
 			});
 		});
+
+		it("revokeApiKeysForUser revokes every live key the user holds (personal and org)", async () => {
+			vi.mocked(db.apiKey.updateMany).mockResolvedValue({ count: 3 });
+			await expect(apiKeyQueries.revokeApiKeysForUser("user-1")).resolves.toBe(
+				3,
+			);
+			expect(db.apiKey.updateMany).toHaveBeenCalledWith({
+				where: { userId: "user-1", revokedAt: null },
+				data: { revokedAt: expect.any(Date) },
+			});
+		});
 	});
 
 	describe("notification queries", () => {

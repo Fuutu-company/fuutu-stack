@@ -238,3 +238,17 @@ export const revokeOrgApiKeysForUser = async (
 	});
 	return count;
 };
+
+/**
+ * Revoke every live key a user holds, personal and org — run on account
+ * recovery (password reset, the mailbox owner taking over an unverified
+ * account), so a key minted with a stolen or squatted session dies too.
+ * Returns the number of keys revoked.
+ */
+export const revokeApiKeysForUser = async (userId: string) => {
+	const { count } = await db.apiKey.updateMany({
+		where: { userId, revokedAt: null },
+		data: { revokedAt: new Date() },
+	});
+	return count;
+};

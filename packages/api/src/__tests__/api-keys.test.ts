@@ -112,6 +112,20 @@ describe("apiKeys.create", () => {
 		});
 	});
 
+	it.each([false, null])(
+		"refuses a key while the email is unverified (%s)",
+		async (emailVerified) => {
+			const unverified = makeSession<Context>(makeUser({ emailVerified }));
+			await expect(
+				call(apiKeysRouter.create, { name: "K" }, { context: unverified }),
+			).rejects.toMatchObject({
+				code: "FORBIDDEN",
+				data: { code: "EMAIL_NOT_VERIFIED" },
+			});
+			expect(createApiKeyWithinLimit).not.toHaveBeenCalled();
+		},
+	);
+
 	it("passes organizationId and expiresAt when provided", async () => {
 		const expiry = new Date("2025-12-31");
 		await call(

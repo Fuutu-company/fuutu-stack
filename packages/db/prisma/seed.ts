@@ -9,6 +9,8 @@
  * Users
  *   - admin@fuutu.local  / DevPassword!2345  (role: admin)
  *   - member@fuutu.local / DevPassword!2345  (role: member)
+ *   - two-factor@fuutu.local / DevPassword!2345  (role: member, no org —
+ *     the two-factor E2E turns 2FA on for it; 2FA needs a verified email)
  *
  * Data
  *   - 1 Organization "Acme" with both users as members
@@ -135,6 +137,7 @@ async function main() {
 
 	const adminId = randomUUID();
 	const memberId = randomUUID();
+	const twoFactorId = randomUUID();
 	const orgId = randomUUID();
 	const password = await hashPassword("DevPassword!2345");
 	// Every seeded list gets distinct `createdAt` values (1 s apart) so list
@@ -178,6 +181,27 @@ async function main() {
 				create: {
 					id: randomUUID(),
 					accountId: memberId,
+					providerId: "credential",
+					password,
+				},
+			},
+		},
+	});
+
+	await db.user.upsert({
+		where: { email: "two-factor@fuutu.local" },
+		update: {},
+		create: {
+			id: twoFactorId,
+			email: "two-factor@fuutu.local",
+			name: "Two-Factor Demo",
+			emailVerified: true,
+			role: "member",
+			onboardingComplete: true,
+			accounts: {
+				create: {
+					id: randomUUID(),
+					accountId: twoFactorId,
 					providerId: "credential",
 					password,
 				},
