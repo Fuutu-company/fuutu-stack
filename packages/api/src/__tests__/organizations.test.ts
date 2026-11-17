@@ -186,6 +186,27 @@ describe("organizations.get", () => {
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
 	});
 
+	it("maps the Better Auth non-member 403 to FORBIDDEN, never a 500", async () => {
+		vi.mocked(getOrganizationBySlug).mockResolvedValue({
+			id: "org-1",
+			slug: "acme",
+		} as never);
+		vi.mocked(auth.api.getFullOrganization).mockRejectedValue(
+			Object.assign(new Error("User is not a member of the organization"), {
+				name: "APIError",
+				statusCode: 403,
+			}),
+		);
+
+		await expect(
+			call(
+				organizationsRouter.get,
+				{ slug: "acme" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+	});
+
 	it("rejects invalid slug format", async () => {
 		await expect(
 			call(
@@ -384,6 +405,30 @@ describe("organizations.update", () => {
 				},
 			),
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
+	});
+});
+
+describe("organizations.update as a non-member", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("maps the Better Auth non-member 403 to FORBIDDEN", async () => {
+		vi.mocked(auth.api.getFullOrganization).mockRejectedValue(
+			Object.assign(new Error("User is not a member of the organization"), {
+				name: "APIError",
+				statusCode: 403,
+			}),
+		);
+
+		await expect(
+			call(
+				organizationsRouter.update,
+				{ organizationId: "org-1", name: "New Name" },
+				{ context: authenticatedContext },
+			),
+		).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+		expect(auth.api.updateOrganization).not.toHaveBeenCalled();
 	});
 });
 
