@@ -341,7 +341,15 @@ describe("@fuutu/env/saas", () => {
 		mod = await import("../saas");
 		expect(mod.env.TRUSTED_CLIENT_IP_HEADER).toBe("cf-connecting-ip");
 
-		for (const value of ["x forwarded", "x-ip:1", "a".repeat(65)]) {
+		for (const value of [
+			"x forwarded",
+			"x-ip:1",
+			"a".repeat(65),
+			// Client-writable, or a list — never a trusted single client IP.
+			"X-Forwarded-For",
+			"x-real-ip",
+			"X-Fuutu-Client-IP",
+		]) {
 			vi.resetModules();
 			setRequiredSaasEnv();
 			process.env.TRUSTED_CLIENT_IP_HEADER = value;

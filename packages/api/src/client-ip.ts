@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { apiConfig } from "./config";
 
 /**
@@ -17,8 +18,10 @@ export function getClientIp(
 	clientIpHeader: string | undefined = apiConfig.rateLimit.clientIpHeader,
 ): string | null {
 	if (!trustProxyHeaders) return null;
+	// One IP address only: anything else (a list, a client-chosen string
+	// when the origin is reachable without the CDN) falls back below.
 	const fromEdge = clientIpHeader && headers.get(clientIpHeader)?.trim();
-	if (fromEdge) return fromEdge;
+	if (fromEdge && isIP(fromEdge) !== 0) return fromEdge;
 	const forwarded = headers
 		.get("x-forwarded-for")
 		?.split(",")

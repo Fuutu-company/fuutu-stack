@@ -188,11 +188,20 @@ const kitServerEnv = {
 		.transform((v) => v ?? false),
 	// With TRUST_PROXY_HEADERS=1: the header that carries the client IP set
 	// by the edge in front of the proxy (e.g. CF-Connecting-IP behind
-	// Cloudflare). Unset: the right-most X-Forwarded-For entry.
+	// Cloudflare). Unset: the right-most X-Forwarded-For entry. Never a
+	// header the client writes or a list (X-Forwarded-For, X-Real-IP, the
+	// kit's own X-Fuutu-Client-IP).
 	TRUSTED_CLIENT_IP_HEADER: z
 		.string()
 		.regex(/^[A-Za-z0-9-]{1,64}$/)
 		.transform((v) => v.toLowerCase())
+		.refine(
+			(v) => !["x-forwarded-for", "x-real-ip", "x-fuutu-client-ip"].includes(v),
+			{
+				message:
+					"TRUSTED_CLIENT_IP_HEADER must name the header your CDN sets with the client IP (e.g. CF-Connecting-IP), not X-Forwarded-For, X-Real-IP or X-Fuutu-Client-IP",
+			},
+		)
 		.optional(),
 	// Auth cookie prefix — set per project by the port slot (local dev),
 	// so several projects on localhost don't share one login cookie.

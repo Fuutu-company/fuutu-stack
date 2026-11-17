@@ -36,4 +36,27 @@ describe("getClientIp with a trusted client-IP header", () => {
 	it("is never read without trusted proxy headers", () => {
 		expect(getClientIp(headers, false, "cf-connecting-ip")).toBeNull();
 	});
+
+	it("accepts an IPv6 client address", () => {
+		const v6 = new Headers({ "cf-connecting-ip": "2001:db8::7" });
+		expect(getClientIp(v6, true, "cf-connecting-ip")).toBe("2001:db8::7");
+	});
+
+	it.each([
+		"198.51.100.4, 6.6.6.6", // a list, as X-Forwarded-For would carry
+		"bucket-of-my-choice",
+		"6.6.6.6:443",
+	])(
+		"ignores a value that is not one IP (%s) and falls back to X-Forwarded-For",
+		(value) => {
+			// A client-chosen string would get a rate-limit bucket of its own
+			// (bypass, unbounded growth) when the origin is reachable without
+			// the CDN.
+			const forged = new Headers({
+				"cf-connecting-ip": value,
+				"x-forwarded-for": "6.6.6.6, 2.2.2.2",
+			});
+			expect(getClientIp(forged, true, "cf-connecting-ip")).toBe("2.2.2.2");
+		},
+	);
 });
