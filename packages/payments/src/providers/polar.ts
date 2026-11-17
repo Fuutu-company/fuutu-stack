@@ -77,6 +77,10 @@ const PolarEventDataSchema = z
 		// for non-seat products.
 		seats: z.number().nullish(),
 		metadata: z.record(z.string(), z.unknown()).optional(),
+		// Order times — part of the signed payload, the same on every
+		// redelivery (unlike `webhook-timestamp`).
+		createdAt: z.union([z.date(), z.string()]).nullish(),
+		modifiedAt: z.union([z.date(), z.string()]).nullish(),
 	})
 	.optional();
 
@@ -456,11 +460,12 @@ export const polarPaymentProvider: SeatAwarePaymentProvider = {
 		// A refunded order names its subscription, else the one-time
 		// purchase by the checkout (or, without one, the order) it paid.
 		if (eventType === "payment.reversed") {
-			// Standard-webhooks delivery time (Unix seconds, signed).
-			const timestamp = Number(headers["webhook-timestamp"]);
-			const occurredAt = Number.isFinite(timestamp)
-				? new Date(timestamp * 1000)
-				: undefined;
+			// When the order was refunded (last modified, else created) —
+			// not `webhook-timestamp`: that is each delivery attempt's time,
+			// always within minutes of now, so the early-reversal retry
+			// window would never run out.
+			const refundedAt = data?.modifiedAt ?? data?.createdAt;
+			const occurredAt = refundedAt ? toDate(refundedAt) : undefined;
 			return [
 				subscriptionId
 					? { type: eventType, eventId, subscriptionId, occurredAt }

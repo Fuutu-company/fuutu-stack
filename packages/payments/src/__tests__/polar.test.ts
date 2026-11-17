@@ -1131,6 +1131,8 @@ describe("polar provider — refunds", () => {
 				subscriptionId: "sub_1",
 				checkoutId: null,
 				metadata: {},
+				createdAt: new Date("2026-11-01T10:00:00Z"),
+				modifiedAt: new Date("2026-11-02T10:00:00Z"),
 			},
 		});
 		expect(events).toEqual([
@@ -1138,7 +1140,7 @@ describe("polar provider — refunds", () => {
 				type: "payment.reversed",
 				eventId: "wh_test",
 				subscriptionId: "sub_1",
-				occurredAt: new Date(123_000),
+				occurredAt: new Date("2026-11-02T10:00:00Z"),
 			},
 		]);
 	});
@@ -1151,6 +1153,8 @@ describe("polar provider — refunds", () => {
 				status: "refunded",
 				subscriptionId: null,
 				checkoutId: "chk_1",
+				createdAt: new Date("2026-11-01T10:00:00Z"),
+				modifiedAt: new Date("2026-11-02T10:00:00Z"),
 			},
 		});
 		expect(events).toEqual([
@@ -1158,20 +1162,45 @@ describe("polar provider — refunds", () => {
 				type: "payment.reversed",
 				eventId: "wh_test",
 				paymentRef: "chk_1",
-				occurredAt: new Date(123_000),
+				occurredAt: new Date("2026-11-02T10:00:00Z"),
 			},
 		]);
 	});
 
-	it("carries the delivery time (webhook-timestamp), so an early reversal can be retried", async () => {
-		const events = await parsePayload(
-			{
-				type: "order.refunded",
-				data: { id: "ord_6", status: "refunded", subscriptionId: "sub_1" },
+	it("dates a reversal by the signed refund time, not the delivery time", async () => {
+		// `webhook-timestamp` is the time of each delivery attempt (and must be
+		// within 5 minutes of now to verify): it would never age past the
+		// early-reversal retry window.
+		const refundedAt = new Date("2026-11-15T08:00:00Z");
+		const payload = {
+			type: "order.refunded",
+			data: {
+				id: "ord_6",
+				status: "refunded",
+				subscriptionId: "sub_1",
+				createdAt: new Date("2026-11-14T08:00:00Z"),
+				modifiedAt: refundedAt,
 			},
-			"1763380800",
-		);
-		expect(events[0]?.occurredAt).toEqual(new Date(1_763_380_800_000));
+		};
+		const firstAttempt = await parsePayload(payload, "1794729600");
+		const laterAttempt = await parsePayload(payload, "1794816000");
+		expect(firstAttempt[0]?.occurredAt).toEqual(refundedAt);
+		expect(laterAttempt[0]?.occurredAt).toEqual(refundedAt);
+	});
+
+	it("falls back to the order creation time when the order was never modified", async () => {
+		const createdAt = new Date("2026-11-14T08:00:00Z");
+		const events = await parsePayload({
+			type: "order.refunded",
+			data: {
+				id: "ord_7",
+				status: "refunded",
+				subscriptionId: "sub_1",
+				createdAt,
+				modifiedAt: null,
+			},
+		});
+		expect(events[0]?.occurredAt).toEqual(createdAt);
 	});
 
 	it("falls back to the order id when the order had no checkout", async () => {

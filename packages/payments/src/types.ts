@@ -66,7 +66,8 @@ export interface ProviderEvent {
 	paymentRef?: string;
 	/**
 	 * When the provider created the event (Stripe `created`, Creem
-	 * `created_at`, Polar `webhook-timestamp`). A recent `payment.reversed`
+	 * `created_at`, Polar order `modifiedAt` / `createdAt` — never a
+	 * per-delivery time). A recent `payment.reversed`
 	 * for a purchase not stored yet fails so the provider redelivers it.
 	 */
 	occurredAt?: Date;
