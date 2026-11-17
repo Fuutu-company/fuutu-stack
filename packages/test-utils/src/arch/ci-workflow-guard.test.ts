@@ -1,4 +1,13 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -180,5 +189,75 @@ describe("maintenance workflow guard", () => {
 			/^ +pnpm audit --prod --audit-level=high \|\| true$/m,
 		);
 		expect(audit).toContain('>> "$GITHUB_STEP_SUMMARY"');
+	});
+});
+
+/**
+ * The artifact comes from the E2E job, whose dependency code controls it:
+ * an empty or gutted artifact must not become a commit that deletes the
+ * baselines. Runs the push job's replace step as GitHub would (bash -e,
+ * pipefail). Small drops (orphans pruned by visual-prune.mjs) still pass;
+ * a large deliberate prune is committed by hand.
+ */
+describe("visual-baselines replace step", () => {
+	const step = (() => {
+		const push = job(ci, "visual-baselines");
+		const start = push.indexOf("- name: Replace baselines with the artifact");
+		const rest = push.slice(start);
+		const block = rest.slice(rest.indexOf("run: |\n") + "run: |\n".length);
+		const lines: string[] = [];
+		for (const line of block.split("\n")) {
+			if (line.trim() !== "" && !line.startsWith(" ".repeat(10))) break;
+			lines.push(line.slice(10));
+		}
+		return lines.join("\n");
+	})();
+
+	const run = (checkout: string[], artifact: string[]) => {
+		const root = mkdtempSync(join(tmpdir(), "visual-replace-"));
+		const dir = join(root, "repo", ".fuutu", "visual-baselines", "saas");
+		const temp = join(root, "temp");
+		mkdirSync(dir, { recursive: true });
+		mkdirSync(join(temp, "baselines"), { recursive: true });
+		for (const f of checkout) writeFileSync(join(dir, f), "old");
+		for (const f of artifact) writeFileSync(join(temp, "baselines", f), "new");
+		const result = spawnSync("bash", ["-e", "-o", "pipefail", "-c", step], {
+			cwd: join(root, "repo"),
+			env: { ...process.env, APP: "saas", RUNNER_TEMP: temp },
+			encoding: "utf8",
+		});
+		const after = readdirSync(dir).sort();
+		rmSync(root, { recursive: true, force: true });
+		return { status: result.status, after, output: result.stdout };
+	};
+	const pngs = (n: number) =>
+		Array.from({ length: n }, (_, i) => `page-${i}-chromium-linux.png`);
+
+	it("is found in the workflow", () => {
+		expect(step).toContain("-name '*.png'");
+	});
+
+	it("aborts when the artifact holds no PNG, keeping the baselines", () => {
+		const { status, after } = run(pngs(10), ["notes.txt"]);
+		expect(status).not.toBe(0);
+		expect(after).toEqual(pngs(10).sort());
+	});
+
+	it("aborts when more than a fifth of the baselines would go", () => {
+		const { status, after } = run(pngs(10), pngs(7));
+		expect(status).not.toBe(0);
+		expect(after).toEqual(pngs(10).sort());
+	});
+
+	it("replaces the baselines when a few orphans were pruned", () => {
+		const { status, after } = run(pngs(10), pngs(9));
+		expect(status).toBe(0);
+		expect(after).toEqual(pngs(9).sort());
+	});
+
+	it("takes new baselines into an app that had none", () => {
+		const { status, after } = run([], pngs(3));
+		expect(status).toBe(0);
+		expect(after).toEqual(pngs(3).sort());
 	});
 });
