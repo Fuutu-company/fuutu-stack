@@ -170,6 +170,34 @@ describe("social sign-in with 2FA", () => {
 	});
 });
 
+describe("social account link with 2FA", () => {
+	it("refuses linking a new provider account on the OAuth callback for a 2FA user", async () => {
+		const before = auth.options.databaseHooks?.account?.create?.before;
+		const ctx = {
+			path: "/callback/:id",
+			context: {
+				...(await auth.$context),
+				internalAdapter: {
+					findUserById: async () => ({ twoFactorEnabled: true }),
+				},
+			},
+			redirect: (url: string) => Object.assign(new Error("redirect"), { url }),
+		};
+		await expect(
+			before?.(
+				{
+					userId: "user-1",
+					providerId: "github",
+					accountId: "gh-1",
+				} as Parameters<NonNullable<typeof before>>[0],
+				ctx as unknown as Parameters<NonNullable<typeof before>>[1],
+			),
+		).rejects.toMatchObject({
+			url: expect.stringContaining("error=TWO_FACTOR_REQUIRED"),
+		});
+	});
+});
+
 const cookieHeader = (res: Response) =>
 	res.headers
 		.getSetCookie()

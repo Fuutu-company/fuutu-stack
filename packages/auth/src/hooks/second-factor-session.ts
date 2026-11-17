@@ -47,3 +47,25 @@ export async function assertSecondFactorForNewSession(input: {
 	url.searchParams.set("error", TWO_FACTOR_REQUIRED);
 	throw input.redirect(url.toString());
 }
+
+/**
+ * `databaseHooks.account.create.before`: Better Auth links the provider
+ * account (`handleOAuthUserInfo`) BEFORE the session is refused above, so
+ * a refused social sign-in would still leave a mailbox holder's provider
+ * account linked to the 2FA user — signing in with it once 2FA is off.
+ * New links for a 2FA user only come from the authenticated `/link-social`
+ * flow (`isLinkFlow`: the callback's OAuth state carries `link`).
+ */
+export async function assertSecondFactorForNewAccountLink(input: {
+	path: string | undefined;
+	userId: string;
+	isLinkFlow: () => Promise<boolean>;
+	findUser: (userId: string) => Promise<Record<string, unknown> | null>;
+	errorPageUrl: () => string;
+	redirect: (url: string) => Error;
+}): Promise<void> {
+	const { path } = input;
+	if (!path || !(REDIRECT_PATHS.has(path) || JSON_PATHS.has(path))) return;
+	if (await input.isLinkFlow()) return;
+	await assertSecondFactorForNewSession(input);
+}

@@ -15,7 +15,11 @@ import { createCustomerForUser } from "@fuutu/payments";
 import type { BetterAuthOptions, Auth as ServerAuth } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import {
+	createAuthMiddleware,
+	getOAuthState,
+	getSessionFromCtx,
+} from "better-auth/api";
 import {
 	admin,
 	jwt,
@@ -74,7 +78,10 @@ import {
 	assertInviteSeatAvailable,
 	assertSeatAvailable,
 } from "./hooks/seat-limit";
-import { assertSecondFactorForNewSession } from "./hooks/second-factor-session";
+import {
+	assertSecondFactorForNewAccountLink,
+	assertSecondFactorForNewSession,
+} from "./hooks/second-factor-session";
 import { assertSignupPolicy } from "./hooks/signup-policy";
 import {
 	markMailboxProof,
@@ -603,6 +610,24 @@ const authOptions = {
 						revokeOAuthTokens: async (id) => {
 							if (mcpOAuth.active) await revokeOAuthTokensForUser(id);
 						},
+					});
+				},
+			},
+		},
+		account: {
+			create: {
+				// A refused social sign-in must not leave the provider account
+				// linked to a 2FA user (hooks/second-factor-session.ts).
+				before: async (account, ctx) => {
+					if (!authConfig.features.twoFactor || !ctx) return;
+					await assertSecondFactorForNewAccountLink({
+						path: ctx.path,
+						userId: account.userId,
+						isLinkFlow: async () =>
+							Boolean((await getOAuthState().catch(() => null))?.link),
+						findUser: (id) => ctx.context.internalAdapter.findUserById(id),
+						errorPageUrl: () => getErrorPageUrl(ctx.context),
+						redirect: (url) => ctx.redirect(url),
 					});
 				},
 			},

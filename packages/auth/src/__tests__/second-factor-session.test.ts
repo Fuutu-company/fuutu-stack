@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	assertSecondFactorForNewAccountLink,
 	assertSecondFactorForNewSession,
 	TWO_FACTOR_REQUIRED,
 } from "../hooks/second-factor-session";
@@ -60,6 +61,56 @@ describe("assertSecondFactorForNewSession", () => {
 		undefined, // server-side createSession without an endpoint
 	])("leaves %s alone without a user lookup", async (path) => {
 		const { promise, findUser } = run(path, true);
+		await expect(promise).resolves.toBeUndefined();
+		expect(findUser).not.toHaveBeenCalled();
+	});
+});
+
+describe("assertSecondFactorForNewAccountLink", () => {
+	const link = (
+		path: string | undefined,
+		twoFactorEnabled: boolean,
+		isLinkFlow = false,
+	) => {
+		const findUser = vi.fn(async () => ({ twoFactorEnabled }));
+		const promise = assertSecondFactorForNewAccountLink({
+			path,
+			userId: "user-1",
+			isLinkFlow: async () => isLinkFlow,
+			findUser,
+			errorPageUrl: () => ERROR_PAGE,
+			redirect: (url) => new Redirect(url),
+		});
+		return { promise, findUser };
+	};
+
+	it("refuses linking a new provider account to a 2FA user on the OAuth callback", async () => {
+		// The refused session alone would leave the attacker's provider
+		// account linked — usable once the victim turns 2FA off.
+		await expect(link("/callback/:id", true).promise).rejects.toMatchObject({
+			url: `${ERROR_PAGE}?error=${TWO_FACTOR_REQUIRED}`,
+		});
+	});
+
+	it("refuses it on /sign-in/social (id token) with an API error", async () => {
+		await expect(link("/sign-in/social", true).promise).rejects.toMatchObject({
+			statusCode: 403,
+			body: { code: TWO_FACTOR_REQUIRED },
+		});
+	});
+
+	it("allows the authenticated link flow (/link-social → callback)", async () => {
+		const { promise, findUser } = link("/callback/:id", true, true);
+		await expect(promise).resolves.toBeUndefined();
+		expect(findUser).not.toHaveBeenCalled();
+	});
+
+	it("allows a link for a user without 2FA (accountLinking rules apply)", async () => {
+		await expect(link("/callback/:id", false).promise).resolves.toBeUndefined();
+	});
+
+	it("leaves /link-social (id token, signed in) alone", async () => {
+		const { promise, findUser } = link("/link-social", true);
 		await expect(promise).resolves.toBeUndefined();
 		expect(findUser).not.toHaveBeenCalled();
 	});
