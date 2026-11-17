@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { workflowJob as job } from "../workflow-job";
+import { workflowJob as job } from "./workflow-job";
 
 /**
  * Guard test: the kit repository's CI layout the E2E and DCO jobs depend on.
@@ -31,6 +31,20 @@ describe("ci workflow guard", () => {
 		);
 		expect(env).toMatch(
 			/^ {6}NEXT_PUBLIC_MARKETING_URL: http:\/\/localhost:3001$/m,
+		);
+	});
+
+	it("the kit-source guards run in the kit repository only", () => {
+		const verify = ci.slice(
+			ci.indexOf("\n  verify:\n"),
+			ci.indexOf("\n  build:\n"),
+		);
+		expect(verify).toContain(
+			[
+				"      - name: Kit-source guards (kit repository only)",
+				"        if: github.repository == 'Fuutu-company/fuutu-stack'",
+				"        run: pnpm -F @fuutu/test-utils test:kit-source",
+			].join("\n"),
 		);
 	});
 

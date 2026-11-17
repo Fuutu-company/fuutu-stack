@@ -5,12 +5,13 @@ import { describe, expect, it } from "vitest";
 /**
  * `/image-proxy` must authorize every object, not just the session: the
  * route asks `canReadStorageObject` (`@fuutu/api`, unit-tested there)
- * and answers 404 before it streams anything from storage.
+ * and answers 404 before it streams anything from storage. The behaviour
+ * is tested on the route itself in `../image-proxy-access.test.ts`.
  */
 
 const ROUTE = join(
 	import.meta.dirname,
-	"../../../../apps/saas/src/app/image-proxy/[...path]/route.ts",
+	"../../../../../apps/saas/src/app/image-proxy/[...path]/route.ts",
 );
 const source = readFileSync(ROUTE, "utf8");
 

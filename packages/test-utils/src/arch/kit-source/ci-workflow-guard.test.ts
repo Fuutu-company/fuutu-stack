@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import { workflowJob as job } from "./workflow-job";
 
-const REPO_ROOT = join(import.meta.dirname, "../../../../");
+const REPO_ROOT = join(import.meta.dirname, "../../../../../");
 const read = (path: string) => readFileSync(join(REPO_ROOT, path), "utf-8");
 
 const ci = read(".github/workflows/ci.yml");

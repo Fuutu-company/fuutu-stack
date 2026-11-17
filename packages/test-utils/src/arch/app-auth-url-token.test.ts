@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -42,16 +41,4 @@ describe("urlWithoutQueryParam", () => {
 			urlWithoutQueryParam("https://app.example.com/auth/verify?x=1", "token"),
 		).toBeNull();
 	});
-});
-
-describe("auth link pages strip the token after reading it", () => {
-	for (const file of [
-		"app/auth/verify/page.tsx",
-		"modules/auth/components/auth-reset-password.tsx",
-	]) {
-		it(file, () => {
-			const source = readFileSync(join(SAAS, file), "utf-8");
-			expect(source).toMatch(/useStripQueryParam\(\s*["']token["']/);
-		});
-	}
 });

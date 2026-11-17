@@ -15,7 +15,6 @@ import { describe, expect, it } from "vitest";
  */
 
 const PKG = join(import.meta.dirname, "../..");
-const ROOT = join(PKG, "../..");
 const KIT_SOURCE_DIR = "src/arch/kit-source/";
 const VITEST_BIN = join(
 	dirname(
@@ -70,20 +69,5 @@ describe("kit-source guards switch", () => {
 			"utf8",
 		);
 		expect(config).toMatch(/passWithNoTests: false/);
-	});
-
-	it("the kit's CI runs them in the kit repository only", () => {
-		const ci = readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8");
-		const verify = ci.slice(
-			ci.indexOf("\n  verify:\n"),
-			ci.indexOf("\n  build:\n"),
-		);
-		expect(verify).toContain(
-			[
-				"      - name: Kit-source guards (kit repository only)",
-				"        if: github.repository == 'Fuutu-company/fuutu-stack'",
-				"        run: pnpm -F @fuutu/test-utils test:kit-source",
-			].join("\n"),
-		);
 	});
 });
