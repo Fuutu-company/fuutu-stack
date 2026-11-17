@@ -3,11 +3,12 @@ import { type APIRequestContext, type Browser, expect } from "@playwright/test";
 /**
  * A fresh organization for a test, created through the oRPC API like the
  * app does — Better Auth's own `/api/auth/organization/*` mutations are
- * closed over HTTP. The seeded admin's personal plan allows one
- * organization (Acme), so a throwaway user creates it; with `joinAsOwner`
- * the seeded admin (`admin`, the test's signed-in request context) is
- * invited as owner and accepts, so the test's page can open it.
- * `cleanup` deletes the organization, then the throwaway user.
+ * closed over HTTP. A throwaway user creates it; with `joinAsOwner` the
+ * seeded admin (`admin`, the test's signed-in request context) must own it
+ * so the test's page can open it: the admin creates it itself when its
+ * plan allows another organization, otherwise (the kit's free plan allows
+ * one, Acme) the throwaway user's org invites it as owner — which needs a
+ * second seat. `cleanup` deletes the organization, then the throwaway user.
  */
 export async function createThrowawayOrg(input: {
 	browser: Browser;
@@ -28,10 +29,14 @@ export async function createThrowawayOrg(input: {
 
 	let userId: string | undefined;
 	let orgId: string | undefined;
+	let adminOwned = false;
 	const cleanup = async () => {
 		try {
 			if (orgId) {
-				await owner.delete(`/api/organizations/${orgId}`, { headers });
+				await (adminOwned ? input.admin : owner).delete(
+					`/api/organizations/${orgId}`,
+					{ headers },
+				);
 			}
 			if (userId) {
 				await input.admin.delete(`/api/admin/users/${userId}`, {
@@ -45,6 +50,20 @@ export async function createThrowawayOrg(input: {
 	};
 
 	try {
+		if (input.joinAsOwner) {
+			const created = await input.admin.post("/api/organizations", {
+				data: { name: input.name, slug: input.slug },
+				headers,
+			});
+			// 403 = the admin's organization limit; anything else is a failure.
+			if (created.status() !== 403) {
+				expect(created.ok(), await created.text()).toBe(true);
+				orgId = ((await created.json()) as { id: string }).id;
+				adminOwned = true;
+				return { id: orgId, cleanup };
+			}
+		}
+
 		const signUp = await owner.post("/api/auth/sign-up/email", {
 			data: { email, password: "OwnerPassword!2345", name: "E2E Owner" },
 			headers,
