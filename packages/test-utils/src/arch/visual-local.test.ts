@@ -465,6 +465,8 @@ describe("visual-local: container never receives host secrets", () => {
 			"NEXT_PUBLIC_MARKETING_URL",
 			"PAYMENTS_PRO_PRICE_ID",
 			"FUUTU_TELEMETRY_DISABLED",
+			// Required by the production build / server, like in CI.
+			"TRUST_PROXY_HEADERS",
 		]);
 		// The only interpolated host value is the throwaway container DB.
 		expect(body?.match(/\$\{?\w+/g)).toEqual(["${DATABASE_URL"]);
