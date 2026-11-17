@@ -2,6 +2,7 @@ import { z } from "zod";
 import { frontmatter as v010 } from "./changelog/v0-1-0.meta";
 import { frontmatter as v100 } from "./changelog/v1-0-0.meta";
 import { frontmatter as v110 } from "./changelog/v1-1-0.meta";
+import { frontmatter as v111 } from "./changelog/v1-1-1.meta";
 import { isoDate } from "./iso-date";
 
 /**
@@ -45,6 +46,7 @@ export const changelogFrontmatterSchema = z.object({
 /** Every entry, drafts included — newest first; frontmatter Zod-validated at load. */
 const allChangelogMeta: readonly ChangelogMeta[] = Object.freeze(
 	[
+		{ slug: "v1-1-1", frontmatter: v111 },
 		{ slug: "v1-1-0", frontmatter: v110 },
 		{ slug: "v1-0-0", frontmatter: v100 },
 		{ slug: "v0-1-0", frontmatter: v010 },

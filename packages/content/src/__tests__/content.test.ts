@@ -189,11 +189,17 @@ describe("Content collections - changelog", () => {
 		expect(new Set(versions).size).toBe(versions.length);
 	});
 
-	it("lists the kit 1.1.0 release first and keeps 1.0.0 dated like its tag, in en + de", () => {
-		const latest = getChangelogEntry("v1-1-0");
-		expect(latest?.frontmatter.version).toBe("1.1.0");
-		expect(latest?.frontmatter.publishedAt).toBe("2026-11-17");
-		expect(changelog[0]?.slug).toBe("v1-1-0");
+	it("lists the kit 1.1.1 release first and keeps 1.1.0 and 1.0.0 dated like their tags, in en + de", () => {
+		const latest = getChangelogEntry("v1-1-1");
+		expect(latest?.frontmatter.version).toBe("1.1.1");
+		expect(latest?.frontmatter.publishedAt).toBe("2026-11-18");
+		expect(changelog[0]?.slug).toBe("v1-1-1");
+		expect(latest && getChangelogBody(latest, "de")).not.toBe(
+			latest?.bodies.en,
+		);
+		const minor = getChangelogEntry("v1-1-0");
+		expect(minor?.frontmatter.version).toBe("1.1.0");
+		expect(minor?.frontmatter.publishedAt).toBe("2026-11-17");
 		const entry = getChangelogEntry("v1-0-0");
 		expect(entry?.frontmatter.version).toBe("1.0.0");
 		expect(entry?.frontmatter.publishedAt).toBe("2026-11-14");
