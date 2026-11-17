@@ -48,6 +48,20 @@ describe("deploy env guard", () => {
 			expect(runner).not.toMatch(/SKIP_ENV_VALIDATION/);
 		});
 	}
+
+	// The migrator image ships the full source, seed scripts included: they
+	// refuse to run under NODE_ENV=production.
+	it("apps/saas/Dockerfile migrator stage runs with NODE_ENV=production", () => {
+		const source = readFileSync(
+			join(REPO_ROOT, "apps/saas/Dockerfile"),
+			"utf8",
+		);
+		const migrator = source
+			.split(/^FROM .* AS migrator$/m)[1]
+			?.split(/^FROM /m)[0];
+		expect(migrator).toBeDefined();
+		expect(migrator).toMatch(/^ENV NODE_ENV=production$/m);
+	});
 });
 
 /**
