@@ -159,7 +159,10 @@ const {
 const { auth } = await import("@fuutu/auth");
 
 // Kit suite: the credits module on — an app may ship config.features.credits off.
-(await import("@fuutu/payments/config")).paymentsConfig.creditsEnabled = true;
+const { paymentsConfig } = await import("@fuutu/payments/config");
+paymentsConfig.creditsEnabled = true;
+// Seat-based checkouts and seat sync assume the kit default.
+paymentsConfig.seatSync = "members";
 
 const authenticatedContext = makeSession<Context>(makeUser());
 const unauthenticatedContext = makeSession<Context>(null);
