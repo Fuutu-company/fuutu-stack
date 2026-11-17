@@ -94,7 +94,8 @@ export type FullOrganization = NonNullable<
  * Better-Auth's `getFullOrganization` throws an `APIError` with
  * `code: "ORGANIZATION_NOT_FOUND"` (HTTP 400) instead of returning null.
  * This helper normalizes that to `null` so callers can use a simple
- * null-check and throw a clean `ORPCError("NOT_FOUND")`.
+ * null-check and throw a clean `ORPCError("NOT_FOUND")`. A signed-in
+ * non-member (HTTP 403) throws `ORPCError("FORBIDDEN")`.
  */
 export async function getOrgOrNull(
 	organizationId: string,
@@ -114,6 +115,15 @@ export async function getOrgOrNull(
 			(e as { statusCode: number }).statusCode === 400
 		) {
 			return null;
+		}
+		// Better-Auth answers a signed-in non-member with 403 (USER_IS_NOT_A_MEMBER_OF_THE_ORGANIZATION).
+		if (
+			e instanceof Error &&
+			e.name === "APIError" &&
+			"statusCode" in e &&
+			(e as { statusCode: number }).statusCode === 403
+		) {
+			throw new ORPCError("FORBIDDEN", { message: "Not a member" });
 		}
 		throw e;
 	}
