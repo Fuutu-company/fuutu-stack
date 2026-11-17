@@ -20,13 +20,19 @@ export function getClientIp(
 	if (!trustProxyHeaders) return null;
 	// One IP address only: anything else (a list, a client-chosen string
 	// when the origin is reachable without the CDN) falls back below.
-	const fromEdge = clientIpHeader && headers.get(clientIpHeader)?.trim();
-	if (fromEdge && isIP(fromEdge) !== 0) return fromEdge;
+	const fromEdge = oneIp(clientIpHeader && headers.get(clientIpHeader));
+	if (fromEdge) return fromEdge;
 	const forwarded = headers
 		.get("x-forwarded-for")
 		?.split(",")
 		.map((entry) => entry.trim())
 		.filter(Boolean)
 		.at(-1);
-	return forwarded || headers.get("x-real-ip")?.trim() || null;
+	return oneIp(forwarded) ?? oneIp(headers.get("x-real-ip"));
+}
+
+/** The trimmed value when it is one IP address, otherwise `null`. */
+function oneIp(value: string | null | undefined): string | null {
+	const trimmed = value?.trim();
+	return trimmed && isIP(trimmed) !== 0 ? trimmed : null;
 }

@@ -60,3 +60,37 @@ describe("getClientIp with a trusted client-IP header", () => {
 		},
 	);
 });
+
+describe("getClientIp behind a reverse proxy", () => {
+	it("reads the right-most X-Forwarded-For entry", () => {
+		const viaProxy = new Headers({ "x-forwarded-for": "6.6.6.6, 2001:db8::9" });
+		expect(getClientIp(viaProxy, true)).toBe("2001:db8::9");
+	});
+
+	it.each(["bucket-of-my-choice", "2.2.2.2:443", "unknown"])(
+		"ignores a right-most X-Forwarded-For entry that is not one IP (%s)",
+		(value) => {
+			const forged = new Headers({ "x-forwarded-for": `6.6.6.6, ${value}` });
+			expect(getClientIp(forged, true)).toBeNull();
+		},
+	);
+
+	it("falls back to a valid X-Real-IP when X-Forwarded-For is not one IP", () => {
+		const forged = new Headers({
+			"x-forwarded-for": "bucket-of-my-choice",
+			"x-real-ip": " 2.2.2.2 ",
+		});
+		expect(getClientIp(forged, true)).toBe("2.2.2.2");
+	});
+
+	it("reads X-Real-IP when there is no X-Forwarded-For", () => {
+		expect(getClientIp(new Headers({ "x-real-ip": "2.2.2.2" }), true)).toBe(
+			"2.2.2.2",
+		);
+	});
+
+	it("ignores an X-Real-IP that is not one IP", () => {
+		const forged = new Headers({ "x-real-ip": "bucket-of-my-choice" });
+		expect(getClientIp(forged, true)).toBeNull();
+	});
+});
