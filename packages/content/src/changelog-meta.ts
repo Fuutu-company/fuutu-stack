@@ -1,8 +1,5 @@
 import { z } from "zod";
-import { frontmatter as v010 } from "./changelog/v0-1-0.meta";
-import { frontmatter as v100 } from "./changelog/v1-0-0.meta";
-import { frontmatter as v110 } from "./changelog/v1-1-0.meta";
-import { frontmatter as v111 } from "./changelog/v1-1-1.meta";
+import { appChangelog } from "./app-changelog";
 import { isoDate } from "./iso-date";
 
 /**
@@ -11,9 +8,8 @@ import { isoDate } from "./iso-date";
  * but must not import TSX. The single source of changelog frontmatter: the
  * TSX collection (`changelog` in `./index.tsx`) is built from this list.
  *
- * Add an entry: `changelog/<slug>.meta.ts` (frontmatter) + `<slug>.tsx`
- * (body, plus `<slug>.<locale>.tsx`), then register the meta below and
- * the bodies in `./index.tsx`.
+ * The entries are app-owned: `./app-changelog.ts` lists them (frontmatter)
+ * and `./app-changelog-bodies.tsx` holds their bodies.
  *
  * `draft: true` marks an unreleased entry: it is validated and listed in
  * `changelogDraftMeta`, but stays out of `changelogMeta` and the
@@ -45,12 +41,7 @@ export const changelogFrontmatterSchema = z.object({
 
 /** Every entry, drafts included — newest first; frontmatter Zod-validated at load. */
 const allChangelogMeta: readonly ChangelogMeta[] = Object.freeze(
-	[
-		{ slug: "v1-1-1", frontmatter: v111 },
-		{ slug: "v1-1-0", frontmatter: v110 },
-		{ slug: "v1-0-0", frontmatter: v100 },
-		{ slug: "v0-1-0", frontmatter: v010 },
-	]
+	[...appChangelog]
 		.map(({ slug, frontmatter }) => ({
 			slug,
 			frontmatter: changelogFrontmatterSchema.parse(frontmatter),

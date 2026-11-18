@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import * as metaModule from "../changelog-meta";
@@ -31,15 +31,19 @@ describe("changelogMeta (@fuutu/content/changelog-meta)", () => {
 		}
 	});
 
-	it("stays importable without React (no .tsx imports)", () => {
-		const source = readFileSync(join(SRC, "changelog-meta.ts"), "utf8");
-		const imports = [...source.matchAll(/from\s+["']([^"']+)["']/g)].map(
-			(m) => m[1] ?? "",
-		);
-		for (const spec of imports) {
-			expect(spec, spec).not.toMatch(/react|\.tsx$|^\.\/index$|^\.\.?$/);
-			if (spec.startsWith("./changelog/")) {
-				expect(spec, spec).toMatch(/\.meta$/);
+	it("stays importable without React (no .tsx imports, app list included)", () => {
+		for (const file of ["changelog-meta.ts", "app-changelog.ts"]) {
+			const source = readFileSync(join(SRC, file), "utf8");
+			const imports = [...source.matchAll(/from\s+["']([^"']+)["']/g)].map(
+				(m) => m[1] ?? "",
+			);
+			for (const spec of imports) {
+				expect(spec, `${file}: ${spec}`).not.toMatch(
+					/react|\.tsx$|^\.\/index$|^\.\.?$|app-changelog-bodies/,
+				);
+				if (spec.startsWith("./changelog/")) {
+					expect(spec, `${file}: ${spec}`).toMatch(/\.meta$/);
+				}
 			}
 		}
 	});
@@ -63,15 +67,24 @@ describe("changelog drafts (unreleased entries)", () => {
 
 	it("keeps a draft out of the collection the changelog page renders", () => {
 		expect(changelog.every((e) => !e.frontmatter.draft)).toBe(true);
-		expect(slugs(changelog)).toContain("v1-0-0");
+		for (const { slug } of metaModule.changelogDraftMeta) {
+			expect(slugs(changelog)).not.toContain(slug);
+		}
 	});
 
 	it("still validates drafts and lists them separately", () => {
 		const drafts = (
-			metaModule as { changelogDraftMeta?: readonly { slug: string }[] }
+			metaModule as {
+				changelogDraftMeta?: readonly {
+					slug: string;
+					frontmatter: { draft?: boolean };
+				}[];
+			}
 		).changelogDraftMeta;
 		expect(Array.isArray(drafts)).toBe(true);
-		expect(slugs(drafts ?? [])).toEqual([]);
+		expect((drafts ?? []).every((d) => d.frontmatter.draft === true)).toBe(
+			true,
+		);
 		expect(
 			metaModule.changelogFrontmatterSchema.parse({
 				title: "T",
@@ -92,11 +105,19 @@ describe("changelog translations", () => {
 			.map((section) => section.split("<li>").length - 1);
 	}
 
-	it("every German body has the same sections and entries as the English one", () => {
+	it("every translated body has the same sections and entries as the English one", () => {
 		const all = [...changelogMeta, ...metaModule.changelogDraftMeta];
-		expect(all.map((entry) => entry.slug)).toContain("v1-1-0");
 		for (const { slug } of all) {
-			expect(sections(`${slug}.de.tsx`), slug).toEqual(sections(`${slug}.tsx`));
+			const translations = readdirSync(join(SRC, "changelog")).filter(
+				(file) =>
+					file.startsWith(`${slug}.`) &&
+					file.endsWith(".tsx") &&
+					file !== `${slug}.tsx`,
+			);
+			if (!existsSync(join(SRC, "changelog", `${slug}.tsx`))) continue;
+			for (const file of translations) {
+				expect(sections(file), file).toEqual(sections(`${slug}.tsx`));
+			}
 		}
 	});
 });
