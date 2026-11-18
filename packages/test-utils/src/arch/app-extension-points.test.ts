@@ -130,6 +130,26 @@ const EXTENSION_POINTS: {
 		],
 	},
 	{
+		file: "packages/content/src/app-changelog.ts",
+		exports: ["appChangelog"],
+		wiredInto: [
+			{
+				file: "packages/content/src/changelog-meta.ts",
+				import: /\{ appChangelog \} from "\.\/app-changelog"/,
+			},
+		],
+	},
+	{
+		file: "packages/content/src/app-changelog-bodies.tsx",
+		exports: ["appChangelogBodies"],
+		wiredInto: [
+			{
+				file: "packages/content/src/index.tsx",
+				import: /\{ appChangelogBodies \} from "\.\/app-changelog-bodies"/,
+			},
+		],
+	},
+	{
 		file: "packages/api/src/app-api-policy.ts",
 		exports: [
 			"appSensitiveProcedurePrefixes",
