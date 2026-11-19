@@ -116,7 +116,10 @@ export const appFooter: AppFooter = {};
  * a disabled page are dropped too. `pricing` is also off while
  * `config.features.payments` is `false`. Legal pages and the home page
  * stay — control those through their own config and `appMarketing`.
- * Kit E2E specs for a switched-off page: list them in `tests/app-excluded.ts`.
+ * The kit E2E specs read this too (`isKitRouteEnabled` in
+ * `lib/kit-routes.ts`): they skip a switched-off page and assert it is gone,
+ * so nothing needs excluding in `tests/app-excluded.ts`. Keep this file
+ * importable from Node (Playwright imports it).
  *
  * ```ts
  * export const appKitRoutes: Partial<Record<KitRoute, false>> = {
