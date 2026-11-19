@@ -1,4 +1,5 @@
 import { contrastRatio, type Vec3, WCAG_AA } from "@fuutu/ui/color";
+import { isKitRouteEnabled } from "../src/lib/kit-routes";
 import { expect, scrollThroughPage, test } from "./fixtures";
 import { DEFAULT_LOCALE, OTHER_LOCALES, readHomeMessages } from "./locales";
 
@@ -445,6 +446,10 @@ test.describe("FAQ", { tag: "@kit-demo" }, () => {
 	test("sits between pricing and the closing call to action", async ({
 		page,
 	}) => {
+		test.skip(
+			!isKitRouteEnabled("pricing"),
+			"pricing switched off in appKitRoutes",
+		);
 		await page.goto(`/${DEFAULT_LOCALE}`);
 		const order = await page.evaluate(() => {
 			const top = (selector: string) =>

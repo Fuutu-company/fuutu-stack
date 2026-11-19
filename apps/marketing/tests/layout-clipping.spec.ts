@@ -1,3 +1,4 @@
+import { isKitPathEnabled } from "../src/lib/kit-routes";
 import { expect, test } from "./fixtures";
 
 /**
@@ -6,7 +7,7 @@ import { expect, test } from "./fixtures";
  * ring and focus ring of the last changelog entry or blog card). Horizontal
  * overflow must be clipped without making `main` clip vertically.
  */
-for (const path of ["/changelog", "/blog"]) {
+for (const path of ["/changelog", "/blog"].filter(isKitPathEnabled)) {
 	test(`${path}: the last entry is not clipped at the bottom`, async ({
 		page,
 	}) => {
