@@ -4,15 +4,18 @@ import { NotFoundView } from "@shared/components/not-found-view";
 import { ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { appMarketing } from "@/app-marketing";
+import { isKitPathEnabled } from "@/lib/kit-routes";
 import { Link } from "@/navigation";
 
 export default async function NotFound() {
 	const t = await getTranslations("notFound");
 	const tAll = await getTranslations();
-	const links = (appMarketing.notFoundLinks ?? []).map((link) => ({
-		...link,
-		label: tAll(link.labelKey),
-	}));
+	const links = (appMarketing.notFoundLinks ?? [])
+		.filter((link) => link.external || isKitPathEnabled(link.href))
+		.map((link) => ({
+			...link,
+			label: tAll(link.labelKey),
+		}));
 	return (
 		<NotFoundView
 			className="min-h-[calc(100svh-4.5rem)]"

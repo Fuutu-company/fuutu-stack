@@ -1,3 +1,4 @@
+import { i18nConfig } from "@fuutu/i18n/config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockLog = vi.hoisted(() => ({
@@ -439,7 +440,7 @@ describe("subscriptionReminderJob", () => {
 		expect(getMessagesForLocale).toHaveBeenCalledWith("en");
 	});
 
-	it("falls back to en when user locale is null", async () => {
+	it("falls back to the default locale when user locale is null", async () => {
 		vi.mocked(getTrialingSubscriptions).mockResolvedValue([
 			{
 				id: "p1",
@@ -451,7 +452,7 @@ describe("subscriptionReminderJob", () => {
 
 		await subscriptionReminderJob.run();
 
-		expect(getMessagesForLocale).toHaveBeenCalledWith("en");
+		expect(getMessagesForLocale).toHaveBeenCalledWith(i18nConfig.defaultLocale);
 	});
 });
 

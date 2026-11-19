@@ -17,6 +17,12 @@ const read = (file: string) => readFileSync(join(ROOT, file), "utf8");
 
 const app = vi.hoisted(() => ({
 	appMarketing: {} as Record<string, unknown>,
+	appKitRoutes: {} as Record<string, unknown>,
+}));
+vi.mock("../../../../apps/marketing/src/app-site-links", () => ({
+	get appKitRoutes() {
+		return app.appKitRoutes;
+	},
 }));
 vi.mock("@/app-marketing", () => ({
 	get appMarketing() {
@@ -60,8 +66,17 @@ vi.mock(
 	() => ({ PricingCardsHome: () => null, PricingCardsPage: () => null }),
 );
 
-const { withAppMetadata } = await import(
+const { withAppMetadata, pageMetadata } = await import(
 	"../../../../apps/marketing/src/lib/page-metadata"
+);
+const { languageAlternates, localeUrl } = await import(
+	"../../../../apps/marketing/src/lib/locale-url"
+);
+const { marketingBaseUrl } = await import(
+	"../../../../apps/marketing/src/lib/marketing-base-url"
+);
+const { serializeJsonLd } = await import(
+	"../../../../apps/marketing/src/lib/json-ld"
 );
 type SitemapEntry = {
 	url: string;
@@ -81,12 +96,186 @@ const sitemap = (
 
 beforeEach(() => {
 	app.appMarketing = {};
+	app.appKitRoutes = {};
 	i18n.i18nConfig.enabled = true;
 	vi.useFakeTimers();
 	vi.setSystemTime(new Date("2026-11-14T00:00:00.000Z"));
 });
 afterEach(() => {
 	vi.useRealTimers();
+});
+
+describe("marketing base URL", () => {
+	it("is NEXT_PUBLIC_MARKETING_URL, and the root layout uses it", () => {
+		expect(marketingBaseUrl()).toBe("https://site.test");
+		const layout = read("apps/marketing/src/app/layout.tsx");
+		expect(layout).toMatch(/metadataBase: new URL\(marketingBaseUrl\(\)\)/);
+		expect(layout).not.toMatch(/getBaseUrl/);
+	});
+});
+
+describe("hreflang alternates", () => {
+	it("lists every routable locale plus x-default, as relative URLs", () => {
+		expect(languageAlternates("/pricing")).toEqual({
+			en: "/pricing",
+			de: "/de/pricing",
+			"x-default": "/pricing",
+		});
+		expect(languageAlternates("")).toEqual({
+			en: "/",
+			de: "/de",
+			"x-default": "/",
+		});
+	});
+
+	it("names only the default locale while i18n is disabled", () => {
+		i18n.i18nConfig.enabled = false;
+		expect(languageAlternates("/blog")).toEqual({
+			en: "/blog",
+			"x-default": "/blog",
+		});
+	});
+
+	it("prefixes every locale but the default", () => {
+		expect(localeUrl("https://site.test", "en", "/blog")).toBe(
+			"https://site.test/blog",
+		);
+		expect(localeUrl("https://site.test", "de", "/blog")).toBe(
+			"https://site.test/de/blog",
+		);
+	});
+});
+
+describe("kit page SEO metadata (pageMetadata)", () => {
+	const page = {
+		locale: "en",
+		path: "/pricing",
+		title: "Pricing",
+		description: "Plans",
+	};
+
+	it("sets title, description, canonical, hreflang and OpenGraph", () => {
+		expect(pageMetadata(page)).toEqual({
+			title: "Pricing",
+			description: "Plans",
+			alternates: {
+				canonical: "/pricing",
+				languages: {
+					en: "/pricing",
+					de: "/de/pricing",
+					"x-default": "/pricing",
+				},
+			},
+			openGraph: {
+				url: "/pricing",
+				title: "Pricing",
+				description: "Plans",
+				locale: "en",
+				images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+			},
+		});
+	});
+
+	it("points the canonical at the locale's own URL", () => {
+		const meta = pageMetadata({ ...page, locale: "de" });
+		expect(meta.alternates?.canonical).toBe("/de/pricing");
+		expect(meta.openGraph).toMatchObject({ url: "/de/pricing", locale: "de" });
+		expect(
+			pageMetadata({ ...page, locale: "de", path: "" }).alternates,
+		).toMatchObject({ canonical: "/de" });
+		expect(pageMetadata({ ...page, path: "" }).alternates).toMatchObject({
+			canonical: "/",
+		});
+	});
+
+	it("emits no hreflang languages while i18n is disabled, but keeps the canonical", () => {
+		i18n.i18nConfig.enabled = false;
+		expect(pageMetadata(page).alternates).toEqual({ canonical: "/pricing" });
+	});
+
+	it("leaves the description out when there is none", () => {
+		const meta = pageMetadata({ ...page, description: undefined });
+		expect(meta).not.toHaveProperty("description");
+		expect(meta.openGraph).not.toHaveProperty("description");
+	});
+
+	it("lets the app override win, field by field", async () => {
+		const meta = await withAppMetadata(
+			pageMetadata(page),
+			{
+				title: "Acme pricing",
+				alternates: { canonical: "https://acme.test/plans" },
+				openGraph: { title: "OG" },
+			},
+			"en",
+		);
+		expect(meta.title).toBe("Acme pricing");
+		expect(meta.description).toBe("Plans");
+		expect(meta.alternates).toEqual({
+			canonical: "https://acme.test/plans",
+			languages: { en: "/pricing", de: "/de/pricing", "x-default": "/pricing" },
+		});
+		expect(meta.openGraph).toMatchObject({
+			title: "OG",
+			url: "/pricing",
+			locale: "en",
+		});
+	});
+
+	it("every kit page builds its metadata with the right path", () => {
+		const dir = "apps/marketing/src/app/(marketing)/[locale]";
+		const paths: [string, RegExp][] = [
+			["page.tsx", /path: "",/],
+			["pricing/page.tsx", /path: "\/pricing",/],
+			["blog/page.tsx", /path: "\/blog",/],
+			["changelog/page.tsx", /path: "\/changelog",/],
+			["contact/page.tsx", /path: "\/contact",/],
+			["blog/[slug]/page.tsx", /path: `\/blog\/\$\{slug\}`,/],
+			["legal/[slug]/page.tsx", /path: `\/legal\/\$\{slug\}`,/],
+		];
+		for (const [file, path] of paths) {
+			expect(read(`${dir}/${file}`), file).toMatch(path);
+		}
+	});
+
+	it("takes an absolute title and keeps the OpenGraph title plain", () => {
+		const meta = pageMetadata({ ...page, title: { absolute: "Home | Acme" } });
+		expect(meta.title).toEqual({ absolute: "Home | Acme" });
+		expect(meta.openGraph).toMatchObject({ title: "Home | Acme" });
+	});
+
+	it("the root layout appends the app name to every page title", () => {
+		expect(read("apps/marketing/src/app/layout.tsx")).toMatch(
+			/title: \{ template: `%s \| \$\{config\.app\.name\}`, default: config\.app\.name \}/,
+		);
+	});
+});
+
+describe("JSON-LD serialization", () => {
+	it("keeps the data equal when parsed", () => {
+		const data = { "@type": "Question", name: "a & b <c>", n: [1, true, null] };
+		expect(JSON.parse(serializeJsonLd(data))).toEqual(data);
+	});
+
+	it("escapes the characters that could end the script tag or the line", () => {
+		const out = serializeJsonLd({
+			q: `</script><img src=x onerror=alert(1)> & ${String.fromCharCode(0x2028)}${String.fromCharCode(0x2029)}`,
+		});
+		expect(out).not.toMatch(/[<>&]/);
+		expect(out).not.toContain(String.fromCharCode(0x2028));
+		expect(out).not.toContain(String.fromCharCode(0x2029));
+		expect(out).toContain("\\u003c/script\\u003e");
+		expect(out).toContain("\\u0026");
+		expect(out).toContain("\\u2028\\u2029");
+	});
+
+	it("the FAQ emits its structured data through it", () => {
+		const faq = read(
+			"apps/marketing/src/modules/marketing/home/components/faq.tsx",
+		);
+		expect(faq).toMatch(/__html: serializeJsonLd\(jsonLd\)/);
+		expect(faq).not.toMatch(/JSON\.stringify/);
+	});
 });
 
 describe("page metadata", () => {
@@ -189,14 +378,14 @@ describe("page metadata", () => {
 				key,
 			).toMatch(
 				new RegExp(
-					`withAppMetadata\\(\\s*\\{[\\s\\S]*?\\},\\s*appMarketing\\.metadata\\?\\.${key},\\s*locale,?\\s*\\)`,
+					`withAppMetadata\\(\\s*pageMetadata\\(\\{[\\s\\S]*?\\}\\),\\s*appMarketing\\.metadata\\?\\.${key},\\s*locale,?\\s*\\)`,
 				),
 			);
 		}
 		expect(
 			read("apps/marketing/src/app/(marketing)/[locale]/legal/[slug]/page.tsx"),
 		).toMatch(
-			/withAppMetadata\(\s*\{[\s\S]*?\},\s*appMarketing\.metadata\?\.legal,\s*locale,\s*\{ slug \},?\s*\)/,
+			/withAppMetadata\(\s*pageMetadata\(\{[\s\S]*?\}\),\s*appMarketing\.metadata\?\.legal,\s*locale,\s*\{ slug \},?\s*\)/,
 		);
 	});
 
@@ -204,7 +393,7 @@ describe("page metadata", () => {
 		expect(
 			read("apps/marketing/src/app/(marketing)/[locale]/blog/[slug]/page.tsx"),
 		).toMatch(
-			/withAppMetadata\(\s*\{[\s\S]*?\},\s*appMarketing\.metadata\?\.blogPost,\s*locale,\s*\{ slug \},?\s*\)/,
+			/withAppMetadata\(\s*pageMetadata\(\{[\s\S]*?\}\),\s*appMarketing\.metadata\?\.blogPost,\s*locale,\s*\{ slug \},?\s*\)/,
 		);
 	});
 
@@ -212,12 +401,12 @@ describe("page metadata", () => {
 		expect(
 			read("apps/marketing/src/app/(marketing)/[locale]/page.tsx"),
 		).toMatch(
-			/withAppMetadata\(\s*\{[\s\S]*?\},\s*appMarketing\.metadata\?\.home,\s*locale,?\s*\)/,
+			/withAppMetadata\(\s*pageMetadata\(\{[\s\S]*?\}\),\s*appMarketing\.metadata\?\.home,\s*locale,?\s*\)/,
 		);
 		expect(
 			read("apps/marketing/src/app/(marketing)/[locale]/pricing/page.tsx"),
 		).toMatch(
-			/withAppMetadata\(\s*\{[\s\S]*?\},\s*appMarketing\.metadata\?\.pricing,\s*locale,?\s*\)/,
+			/withAppMetadata\(\s*pageMetadata\(\{[\s\S]*?\}\),\s*appMarketing\.metadata\?\.pricing,\s*locale,?\s*\)/,
 		);
 	});
 });
@@ -498,5 +687,41 @@ describe("sitemap", () => {
 		expect(hook).toHaveBeenCalledWith(
 			expect.objectContaining({ path: "", kind: "page", locale: "en" }),
 		);
+	});
+
+	it("omits switched-off kit pages and, with the blog off, its posts", () => {
+		app.appKitRoutes = { blog: false, contact: false };
+		expect(sitemap().map((e) => new URL(e.url).pathname)).toEqual([
+			"/",
+			"/de",
+			"/pricing",
+			"/de/pricing",
+			"/changelog",
+			"/de/changelog",
+			"/legal/privacy",
+			"/de/legal/privacy",
+		]);
+	});
+
+	it("drops app sitemap routes that point at a switched-off kit page", () => {
+		app.appKitRoutes = { blog: false };
+		app.appMarketing = {
+			sitemapRoutes: [{ path: "/blog" }, { path: "/about" }],
+		};
+		const paths = sitemap().map((e) => new URL(e.url).pathname);
+		expect(paths).toContain("/about");
+		expect(paths.some((p) => p.endsWith("/blog"))).toBe(false);
+	});
+
+	it("omits /pricing while payments are off", async () => {
+		const { config } = await import("../../../config/index");
+		(config.features as { payments: boolean }).payments = false;
+		try {
+			expect(
+				sitemap().some((e) => new URL(e.url).pathname.endsWith("/pricing")),
+			).toBe(false);
+		} finally {
+			(config.features as { payments: boolean }).payments = true;
+		}
 	});
 });

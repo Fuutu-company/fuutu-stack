@@ -13,6 +13,7 @@ import {
 	appNavRemove,
 } from "../app-site-links";
 import { PrivacySettingsAction } from "../modules/marketing/components/privacy-settings-action";
+import { isKitPathEnabled } from "./kit-routes";
 import { urls } from "./urls";
 
 /**
@@ -267,6 +268,28 @@ if (appNavRemove.length > 0) {
 	keep(NAV_DROPDOWNS);
 	keep(NAV_ORDER);
 }
+// Links to switched-off kit pages (`appKitRoutes`, payments off) go away;
+// a dropdown left without items goes with them.
+const navLinkEnabled = (link: { href: string; external?: boolean }) =>
+	link.external || isKitPathEnabled(link.href);
+NAV_ITEMS.splice(0, NAV_ITEMS.length, ...NAV_ITEMS.filter(navLinkEnabled));
+for (const group of NAV_DROPDOWNS) {
+	group.items = group.items.filter(navLinkEnabled);
+}
+NAV_DROPDOWNS.splice(
+	0,
+	NAV_DROPDOWNS.length,
+	...NAV_DROPDOWNS.filter((group) => group.items.length > 0),
+);
+NAV_ORDER.splice(
+	0,
+	NAV_ORDER.length,
+	...NAV_ORDER.filter((entry) =>
+		(entry.kind === "item" ? NAV_ITEMS : NAV_DROPDOWNS).some(
+			(candidate) => candidate.key === entry.key,
+		),
+	),
+);
 for (const column of appFooterColumns) {
 	if (FOOTER_COLUMNS.some((c) => c.titleKey === column.titleKey)) {
 		throw new Error(
@@ -304,3 +327,18 @@ for (const action of appFooter.actions ?? []) {
 	}
 	FOOTER_ACTIONS.push(action);
 }
+
+// Footer links to switched-off kit pages go away; so do columns left empty
+// (unless a footer action sits in them).
+for (const column of FOOTER_COLUMNS) {
+	column.links = column.links.filter(navLinkEnabled);
+}
+FOOTER_COLUMNS.splice(
+	0,
+	FOOTER_COLUMNS.length,
+	...FOOTER_COLUMNS.filter(
+		(column) =>
+			column.links.length > 0 ||
+			FOOTER_ACTIONS.some((action) => action.column === column.titleKey),
+	),
+);

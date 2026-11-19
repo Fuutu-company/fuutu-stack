@@ -2,6 +2,7 @@ import { config } from "@fuutu/config";
 import { getPost } from "@fuutu/content";
 import { ImageResponse } from "next/og";
 import { getTranslations } from "next-intl/server";
+import { isKitRouteEnabled } from "@/lib/kit-routes";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -14,7 +15,7 @@ export async function generateImageMetadata({ params }: OgImageProps) {
 	const { locale, slug } = await params;
 	// Build-time collection calls this once with empty params; the real
 	// per-post call happens at request time.
-	if (!slug) return [];
+	if (!slug || !isKitRouteEnabled("blog")) return [];
 	const t = await getTranslations({ locale, namespace: "blog" });
 	return [{ id: slug, alt: `${config.app.name} — ${t("title")}` }];
 }
@@ -22,6 +23,8 @@ export async function generateImageMetadata({ params }: OgImageProps) {
 // Colors mirror the light tokens in packages/config/brand.css (OG images need
 // literal values): background, foreground, muted-foreground, area-users.
 export default async function BlogOgImage({ params }: OgImageProps) {
+	// Metadata routes sit outside the blog layout's gate: 404 here too.
+	if (!isKitRouteEnabled("blog")) return new Response(null, { status: 404 });
 	const { locale, slug } = await params;
 	const t = await getTranslations({ locale, namespace: "blog" });
 	const post = getPost(slug);

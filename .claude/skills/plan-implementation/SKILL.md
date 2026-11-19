@@ -43,7 +43,7 @@ Kit checklist — include the tasks that apply:
 - DB: model in `packages/db/prisma/schema/`, migration generated with `pnpm --filter @fuutu/db db:migrate --name <change>` (never hand-written), query functions in `packages/db/prisma/queries/`
 - API: Zod input, `authProcedure` permission, rate limit on mutations, router registration
 - UI: module in `apps/saas/src/modules/`, no literal strings, follow `build-ui` (DESIGN.md roles, PageHeader)
-- i18n: keys in **every** locale under `packages/i18n/translations/<locale>/`
+- i18n: keys in **every** locale under `packages/i18n/translations/<locale>/`. App-owned strings and kit-string overrides go in `translations/<locale>/app/index.ts` (merged last), never in kit files.
 - Env: Zod schema in `packages/env/src/` + `.env.example`
 - Tests: unit (Vitest) for logic, IDOR case for org data, E2E for user flows
 

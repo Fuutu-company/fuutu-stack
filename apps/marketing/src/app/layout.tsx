@@ -1,14 +1,18 @@
 import "./globals.css";
-import { KIT_GENERATOR_META } from "@fuutu/config";
+import { config, KIT_GENERATOR_META } from "@fuutu/config";
 import type { Locale } from "@fuutu/i18n";
 import { getDirection } from "@fuutu/i18n";
-import { getBaseUrl } from "@fuutu/utils";
 import { getLocale } from "next-intl/server";
 import type { PropsWithChildren } from "react";
+import { marketingBaseUrl } from "@/lib/marketing-base-url";
 import { fontVariables } from "./fonts";
 
 export const metadata = {
-	metadataBase: new URL(getBaseUrl({ defaultPort: 3001 })),
+	// Every page title gets the app name appended (`Pricing | Acme`); a
+	// page that sets its own `title.absolute` opts out. Lives in the root
+	// layout because a template skips the segment that defines it.
+	title: { template: `%s | ${config.app.name}`, default: config.app.name },
+	metadataBase: new URL(marketingBaseUrl()),
 	// `<meta name="generator">` — second-line fingerprint signal. See
 	// `apps/saas/src/app/layout.tsx` for the rationale and the license
 	// reference.

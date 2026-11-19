@@ -236,11 +236,16 @@ const EXTENSION_POINTS: {
 			"appNavDropdownItems",
 			"appFooterColumns",
 			"appHeaderBrand",
+			"appKitRoutes",
 		],
 		wiredInto: [
 			{
 				file: "apps/marketing/src/lib/site-links.ts",
 				import: /from "\.\.\/app-site-links"/,
+			},
+			{
+				file: "apps/marketing/src/lib/kit-routes.ts",
+				import: /\{ appKitRoutes \} from "\.\.\/app-site-links"/,
 			},
 		],
 	},

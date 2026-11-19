@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { appMarketing } from "@/app-marketing";
-import { withAppMetadata } from "@/lib/page-metadata";
+import { pageMetadata, withAppMetadata } from "@/lib/page-metadata";
 import { Link } from "@/navigation";
 
 interface BlogPostPageProps {
@@ -32,10 +32,12 @@ export async function generateMetadata({
 		return { title: t("title") };
 	}
 	return withAppMetadata(
-		{
+		pageMetadata({
+			locale,
+			path: `/blog/${slug}`,
 			title: post.frontmatter.title,
 			description: post.frontmatter.description,
-		},
+		}),
 		appMarketing.metadata?.blogPost,
 		locale,
 		{ slug },

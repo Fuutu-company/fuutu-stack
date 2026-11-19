@@ -6,7 +6,7 @@ import { DEFAULT_LOCALE } from "./locales";
  * ancestor (the matrix sits in an `overflow-x-auto` wrapper) must leave room
  * for it on every side, or the ring and the "Most popular" badge get cut.
  */
-test.describe("pricing highlight ring", () => {
+test.describe("pricing highlight ring", { tag: "@kit-demo" }, () => {
 	for (const width of [1280, 375]) {
 		test(`highlighted tier ring is fully visible on /pricing (${width}px)`, async ({
 			page,

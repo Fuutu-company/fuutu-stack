@@ -21,15 +21,13 @@ export interface LayoutOptions {
 export function renderLayout(body: string, opts: LayoutOptions = {}): string {
 	// getDirection only knows configured locales — dormant/unknown tags
 	// (which sendEmail payloads may legitimately carry) default to ltr.
-	const direction =
-		opts.locale && isValidLocale(opts.locale)
-			? getDirection(opts.locale)
-			: "ltr";
+	const locale = opts.locale ?? i18nConfig.defaultLocale;
+	const direction = isValidLocale(locale) ? getDirection(locale) : "ltr";
 	const preview = opts.previewText
 		? `<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">${escapeHtml(opts.previewText)}</div>`
 		: "";
 	return `<!doctype html>
-<html lang="${opts.locale ?? "en"}" dir="${direction}" style="color-scheme:light;supported-color-schemes:light;">
+<html lang="${escapeAttr(locale)}" dir="${direction}" style="color-scheme:light;supported-color-schemes:light;">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
