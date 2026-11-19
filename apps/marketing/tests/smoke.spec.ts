@@ -1,3 +1,9 @@
+import {
+	isKitPathEnabled,
+	isKitRouteEnabled,
+	KIT_ROUTES,
+	type KitRoute,
+} from "../src/lib/kit-routes";
 import { expect, test } from "./fixtures";
 import {
 	DEFAULT_LOCALE,
@@ -15,7 +21,7 @@ import { FIRST_POST_SLUG } from "./posts";
  * so downstream kit users don't get false failures after customizing content.
  */
 
-const PAGES = [
+const KIT_PAGES = [
 	{ path: "", name: "home" },
 	{ path: "/pricing", name: "pricing" },
 	{ path: "/blog", name: "blog" },
@@ -25,6 +31,20 @@ const PAGES = [
 	{ path: "/legal/terms", name: "terms" },
 	{ path: "/legal/imprint", name: "imprint" },
 ] as const;
+
+/** Kit pages an app switched off (`appKitRoutes`) are asserted as gone below. */
+const PAGES = KIT_PAGES.filter(({ path }) => isKitPathEnabled(path));
+
+const SKIP_OFF = (route: KitRoute): [boolean, string] => [
+	!isKitRouteEnabled(route),
+	`${route} switched off in appKitRoutes`,
+];
+
+/** The first published post's path — only when the blog is served. */
+const POST_PATHS =
+	FIRST_POST_SLUG && isKitRouteEnabled("blog")
+		? [`/blog/${FIRST_POST_SLUG}`]
+		: [];
 
 // ── Page load: both locales ─────────────────────────────────────────────
 
@@ -45,11 +65,27 @@ test.describe("page loads — all pages, every enabled locale", () => {
 // ── Default locale (en) — no prefix ─────────────────────────────────────
 
 test.describe("default locale routing", () => {
+	// next-intl detects the locale from Accept-Language; speak the default one.
+	test.use({ locale: DEFAULT_LOCALE });
+
 	test("/ serves the default locale without prefix", async ({ page }) => {
 		const res = await page.goto("/");
 		expect(res?.status()).toBeLessThan(400);
 		await expect(page).toHaveURL(/\/$/);
 	});
+
+	for (const locale of OTHER_LOCALES) {
+		test(`a ${locale} browser is sent to /${locale}`, async ({ browser }) => {
+			const context = await browser.newContext({ locale });
+			try {
+				const page = await context.newPage();
+				await page.goto("/");
+				await expect(page).toHaveURL(new RegExp(`/${locale}/?$`));
+			} finally {
+				await context.close();
+			}
+		});
+	}
 
 	for (const locale of OTHER_LOCALES) {
 		test(`/${locale} keeps the locale prefix`, async ({ page }) => {
@@ -65,6 +101,7 @@ test.describe("default locale routing", () => {
 test.describe("key content visible", () => {
 	for (const locale of LOCALES) {
 		test(`/${locale}/pricing renders pricing tiers`, async ({ page }) => {
+			test.skip(...SKIP_OFF("pricing"));
 			await page.goto(`/${locale}/pricing`);
 			await expect(
 				page.getByRole("heading", { name: /free|pro|enterprise/i }).first(),
@@ -75,17 +112,20 @@ test.describe("key content visible", () => {
 	test(`/${DEFAULT_LOCALE}/blog renders post list or empty state`, async ({
 		page,
 	}) => {
+		test.skip(...SKIP_OFF("blog"));
 		await page.goto(`/${DEFAULT_LOCALE}/blog`);
 		const headings = page.getByRole("heading", { level: 1 });
 		await expect(headings.first()).toBeVisible();
 	});
 
 	test(`/${DEFAULT_LOCALE}/changelog renders`, async ({ page }) => {
+		test.skip(...SKIP_OFF("changelog"));
 		await page.goto(`/${DEFAULT_LOCALE}/changelog`);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 	});
 
 	test(`/${DEFAULT_LOCALE}/contact renders contact info`, async ({ page }) => {
+		test.skip(...SKIP_OFF("contact"));
 		await page.goto(`/${DEFAULT_LOCALE}/contact`);
 		await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 		await expect(page.locator("a[href^='mailto:']").first()).toBeVisible();
@@ -127,6 +167,7 @@ test.describe("navigation", () => {
 	});
 
 	test("clicking nav pricing link navigates to /pricing", async ({ page }) => {
+		test.skip(...SKIP_OFF("pricing"));
 		await page.goto("/");
 		const nav = page.locator("nav").first();
 		const pricingLink = nav
@@ -244,6 +285,7 @@ test.describe("responsive — mobile viewport", () => {
 	test("pricing page renders on mobile without horizontal scroll", async ({
 		page,
 	}) => {
+		test.skip(...SKIP_OFF("pricing"));
 		await page.setViewportSize({ width: 375, height: 812 });
 		await page.goto(`/${DEFAULT_LOCALE}/pricing`);
 		await page.waitForLoadState("domcontentloaded");
@@ -379,10 +421,7 @@ test.describe("page metadata", () => {
 // ── SEO defaults: no app sitemap exclusions, no robots meta ─────────────
 
 test.describe("SEO defaults", () => {
-	const paths = [
-		...PAGES.map(({ path }) => path),
-		...(FIRST_POST_SLUG ? [`/blog/${FIRST_POST_SLUG}`] : []),
-	];
+	const paths = [...PAGES.map(({ path }) => path), ...POST_PATHS];
 
 	test("/sitemap.xml lists every kit page, legal page and post per locale", async ({
 		request,
@@ -410,10 +449,7 @@ test.describe("SEO defaults", () => {
 test.describe("canonical and hreflang", () => {
 	const pages = [
 		"",
-		...[
-			...PAGES.map(({ path }) => path),
-			...(FIRST_POST_SLUG ? [`/blog/${FIRST_POST_SLUG}`] : []),
-		].filter(Boolean),
+		...[...PAGES.map(({ path }) => path), ...POST_PATHS].filter(Boolean),
 	];
 
 	for (const path of pages) {
@@ -446,6 +482,7 @@ test.describe("canonical and hreflang", () => {
 
 test.describe("audit regressions", () => {
 	test("pricing pages render no dead video demo buttons", async ({ page }) => {
+		test.skip(...SKIP_OFF("pricing"));
 		for (const path of LOCALES.map((l) => `${localePrefix(l)}/pricing`)) {
 			await page.goto(path);
 			await expect(page.locator("svg.lucide-play")).toHaveCount(0);
@@ -471,6 +508,39 @@ test.describe("security headers + kit fingerprint", () => {
 			const h = res.headers();
 			expect(h["x-frame-options"]).toBe("DENY");
 			expect(h["x-content-type-options"]).toBe("nosniff");
+		});
+	}
+});
+
+// ── Kit pages switched off in `appKitRoutes` ────────────────────────────
+// Run only for a route the app switched off; in the kit's default config
+// every route is on and these are skipped.
+
+test.describe("switched-off kit pages", () => {
+	for (const route of KIT_ROUTES) {
+		test(`/${route} answers 404 and is absent from nav and sitemap`, async ({
+			page,
+			request,
+		}) => {
+			test.skip(isKitRouteEnabled(route), `${route} is switched on`);
+
+			for (const locale of LOCALES) {
+				const res = await request.get(`${localePrefix(locale)}/${route}`);
+				expect(res.status(), `${locale} /${route}`).toBe(404);
+			}
+
+			for (const locale of LOCALES) {
+				await page.goto(localePrefix(locale) || "/");
+				await expect(page.locator(`a[href$="/${route}"]`)).toHaveCount(0);
+			}
+
+			const xml = await (await request.get("/sitemap.xml")).text();
+			const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+				([, loc]) => new URL(loc ?? "").pathname,
+			);
+			expect(
+				locs.filter((loc) => new RegExp(`/${route}(/|$)`).test(loc)),
+			).toEqual([]);
 		});
 	}
 });

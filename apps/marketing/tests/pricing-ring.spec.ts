@@ -1,3 +1,4 @@
+import { isKitRouteEnabled } from "../src/lib/kit-routes";
 import { expect, test } from "./fixtures";
 import { DEFAULT_LOCALE } from "./locales";
 
@@ -11,6 +12,10 @@ test.describe("pricing highlight ring", { tag: "@kit-demo" }, () => {
 		test(`highlighted tier ring is fully visible on /pricing (${width}px)`, async ({
 			page,
 		}) => {
+			test.skip(
+				!isKitRouteEnabled("pricing"),
+				"pricing switched off in appKitRoutes",
+			);
 			await page.setViewportSize({ width, height: 900 });
 			await page.goto(`/${DEFAULT_LOCALE}/pricing`);
 			const card = page
