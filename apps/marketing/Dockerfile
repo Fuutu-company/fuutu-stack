@@ -31,6 +31,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 FROM base AS builder
 COPY --from=installer /app/ .
 COPY --from=pruner /app/out/full/ .
+# playwright.config.ts imports this helper and `next build` type-checks
+# the config; `turbo prune` keeps only workspace packages.
+COPY --from=pruner /app/tooling/scripts/playwright-excluded.* ./tooling/scripts/
 # NOTE: @fuutu/db may ride along transitively but must never be
 # imported by marketing (bundle-clean rule) — no prisma generate here.
 # NEXT_PUBLIC_* is inlined into the client bundle — real values come
