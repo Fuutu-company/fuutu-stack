@@ -202,6 +202,10 @@ jobs:
       TRUST_PROXY_HEADERS: "0"
       # The seed refuses the compose host `postgres` without it.
       FUUTU_ALLOW_SEED: "1"
+      # E2E specs tagged `@kit-demo` assert the kit's own demo (landing,
+      # visual baselines); they break once an app replaces it, so only the
+      # kit repository runs them. Marketing's Playwright config reads this.
+      FUUTU_KIT_SOURCE: ${{ github.repository == 'Fuutu-company/fuutu-stack' && '1' || '' }}
     steps:
       - name: Generate CI auth secret
         run: |
@@ -274,10 +278,10 @@ jobs:
           case "$head_msg" in
             chore\(visual\)*)
               echo "mode=compare" >> "$GITHUB_OUTPUT"
-              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --project=chromium --project=mobile-safari
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --pass-with-no-tests --project=chromium --project=mobile-safari
               ;;
             *)
-              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=changed --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
+              pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --pass-with-no-tests --update-snapshots=changed --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
               if [ -n "$(git status --porcelain -- .fuutu/visual-baselines/${{ matrix.app }})" ]; then
                 echo "changed=1" >> $GITHUB_OUTPUT
               fi
@@ -297,14 +301,14 @@ jobs:
       - name: Update baselines (merge to develop — chromium + mobile-safari only)
         if: github.event_name == 'push' && github.ref_name == 'develop'
         run: |
-          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=changed --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
+          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --pass-with-no-tests --update-snapshots=changed --project=chromium --project=mobile-safari && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
         env:
           PLAYWRIGHT_USE_PROD: "1"
 
       - name: Update baselines (merge to main — all browsers)
         if: github.event_name == 'push' && github.ref_name == 'main'
         run: |
-          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --update-snapshots=changed && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
+          pnpm -F @fuutu/${{ matrix.app }} exec playwright test --grep "visual regression" --pass-with-no-tests --update-snapshots=changed && node tooling/scripts/visual-prune.mjs --app "${{ matrix.app }}"
         env:
           PLAYWRIGHT_USE_PROD: "1"
 

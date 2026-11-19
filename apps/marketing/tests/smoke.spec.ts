@@ -64,7 +64,9 @@ test.describe("default locale routing", () => {
 
 test.describe("key content visible", () => {
 	for (const locale of LOCALES) {
-		test(`/${locale}/pricing renders pricing tiers`, async ({ page }) => {
+		test(`/${locale}/pricing renders pricing tiers`, {
+			tag: "@kit-demo",
+		}, async ({ page }) => {
 			await page.goto(`/${locale}/pricing`);
 			await expect(
 				page.getByRole("heading", { name: /free|pro|enterprise/i }).first(),
@@ -267,7 +269,7 @@ test.describe("responsive — mobile viewport", () => {
 
 // ── Landing hero ────────────────────────────────────────────────────────
 
-test.describe("landing hero", () => {
+test.describe("landing hero", { tag: "@kit-demo" }, () => {
 	for (const locale of LOCALES) {
 		test(`${locale}: hero headline renders the highlight mark`, async ({
 			page,
@@ -403,6 +405,41 @@ test.describe("SEO defaults", () => {
 			const res = await request.get(`/${DEFAULT_LOCALE}${path}`);
 			expect(res.status()).toBeLessThan(400);
 			expect(await res.text()).not.toMatch(/<meta\s+name="robots"/i);
+		});
+	}
+});
+
+test.describe("canonical and hreflang", () => {
+	const pages = [
+		"",
+		...[
+			...PAGES.map(({ path }) => path),
+			...(FIRST_POST_SLUG ? [`/blog/${FIRST_POST_SLUG}`] : []),
+		].filter(Boolean),
+	];
+
+	for (const path of pages) {
+		test(`${path || "/"} declares its canonical URL`, async ({ request }) => {
+			const res = await request.get(`/${DEFAULT_LOCALE}${path}`);
+			expect(res.status()).toBeLessThan(400);
+			const html = await res.text();
+			const canonical = html.match(/<link rel="canonical" href="([^"]+)"/i);
+			expect(canonical?.[1]).toBeTruthy();
+			expect(new URL(canonical?.[1] ?? "").pathname).toBe(path || "/");
+		});
+
+		test(`${path || "/"} lists hreflang alternates for every locale`, async ({
+			request,
+		}) => {
+			test.skip(LOCALES.length < 2, "a single locale emits no alternates");
+			const html = await (
+				await request.get(`/${DEFAULT_LOCALE}${path}`)
+			).text();
+			for (const locale of [...LOCALES, "x-default"]) {
+				expect(html).toMatch(
+					new RegExp(`<link rel="alternate" hrefLang="${locale}"`, "i"),
+				);
+			}
 		});
 	}
 });

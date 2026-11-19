@@ -12,7 +12,7 @@ import { DEFAULT_LOCALE, OTHER_LOCALES, readHomeMessages } from "./locales";
 const THEMES = ["light", "dark"] as const;
 
 for (const theme of THEMES) {
-	test.describe(`landing hero — ${theme}`, () => {
+	test.describe(`landing hero — ${theme}`, { tag: "@kit-demo" }, () => {
 		test.beforeEach(async ({ page }) => {
 			await page.addInitScript((value) => {
 				try {
@@ -65,9 +65,9 @@ for (const theme of THEMES) {
 	});
 }
 
-test("headline highlight is the area marker, not the browser's yellow mark", async ({
-	page,
-}) => {
+test("headline highlight is the area marker, not the browser's yellow mark", {
+	tag: "@kit-demo",
+}, async ({ page }) => {
 	await page.goto(`/${DEFAULT_LOCALE}`);
 	const style = await page
 		.locator('[data-slot="hero"] h1 mark')
@@ -105,9 +105,9 @@ test("headline highlight is the area marker, not the browser's yellow mark", asy
 for (const theme of THEMES) {
 	for (const locale of [DEFAULT_LOCALE, ...OTHER_LOCALES]) {
 		for (const width of [1280, 375]) {
-			test(`headline marker covers caps to descenders (${locale}, ${width}px, ${theme})`, async ({
-				page,
-			}) => {
+			test(`headline marker covers caps to descenders (${locale}, ${width}px, ${theme})`, {
+				tag: "@kit-demo",
+			}, async ({ page }) => {
 				await page.emulateMedia({ reducedMotion: "reduce" });
 				await page.addInitScript((value) => {
 					try {
@@ -275,14 +275,18 @@ for (const theme of THEMES) {
 	}
 }
 
-test("hero has no announcement badge above the headline", async ({ page }) => {
+test("hero has no announcement badge above the headline", {
+	tag: "@kit-demo",
+}, async ({ page }) => {
 	await page.goto(`/${DEFAULT_LOCALE}`);
 	const hero = page.locator('[data-slot="hero"]');
 	await expect(hero.locator("h1")).toBeVisible();
 	await expect(hero.locator('[data-slot="area-badge"]')).toHaveCount(0);
 });
 
-test("mobile: exactly one floating card stays visible", async ({ page }) => {
+test("mobile: exactly one floating card stays visible", {
+	tag: "@kit-demo",
+}, async ({ page }) => {
 	await page.setViewportSize({ width: 375, height: 812 });
 	await page.goto(`/${DEFAULT_LOCALE}`);
 	const floats = page.locator('[data-slot="hero-float"]');
@@ -290,9 +294,9 @@ test("mobile: exactly one floating card stays visible", async ({ page }) => {
 	await expect(floats.filter({ visible: true })).toHaveCount(1);
 });
 
-test("section headings stand alone, without a kicker chip above them", async ({
-	page,
-}) => {
+test("section headings stand alone, without a kicker chip above them", {
+	tag: "@kit-demo",
+}, async ({ page }) => {
 	await page.goto(`/${DEFAULT_LOCALE}`);
 	const headings = page.locator("main h2");
 	expect(await headings.count()).toBeGreaterThan(3);
@@ -305,9 +309,9 @@ test("section headings stand alone, without a kicker chip above them", async ({
 	expect(kickers).toBe(0);
 });
 
-test("navbar stays visible as a floating pill while scrolling", async ({
-	page,
-}) => {
+test("navbar stays visible as a floating pill while scrolling", {
+	tag: "@kit-demo",
+}, async ({ page }) => {
 	await page.goto(`/${DEFAULT_LOCALE}`);
 	await page.evaluate(() => window.scrollTo(0, 2400));
 	const nav = page.locator("header nav").first();
@@ -317,7 +321,7 @@ test("navbar stays visible as a floating pill while scrolling", async ({
 	expect(box?.y ?? 999).toBeLessThan(40);
 });
 
-test.describe("product tour", () => {
+test.describe("product tour", { tag: "@kit-demo" }, () => {
 	test("tabs follow the ARIA tabs pattern and switch the screenshot", async ({
 		page,
 	}) => {
@@ -359,9 +363,9 @@ test.describe("product tour", () => {
 	});
 });
 
-test("every visible landing screenshot loads and has alt text", async ({
-	page,
-}) => {
+test("every visible landing screenshot loads and has alt text", {
+	tag: "@kit-demo",
+}, async ({ page }) => {
 	await page.goto(`/${DEFAULT_LOCALE}`);
 	await scrollThroughPage(page);
 	const shots = page
@@ -379,10 +383,9 @@ test("every visible landing screenshot loads and has alt text", async ({
 });
 
 for (const width of [1280, 375]) {
-	test(`screenshots are crisp on a 2x display (${width}px)`, async ({
-		browser,
-		baseURL,
-	}) => {
+	test(`screenshots are crisp on a 2x display (${width}px)`, {
+		tag: "@kit-demo",
+	}, async ({ browser, baseURL }) => {
 		const context = await browser.newContext({
 			baseURL,
 			viewport: { width, height: 900 },
@@ -417,9 +420,9 @@ for (const width of [1280, 375]) {
 }
 
 for (const locale of OTHER_LOCALES) {
-	test(`${locale}: hero screenshot carries localized alt text`, async ({
-		page,
-	}) => {
+	test(`${locale}: hero screenshot carries localized alt text`, {
+		tag: "@kit-demo",
+	}, async ({ page }) => {
 		const template = readHomeMessages(locale).home.hero.screenshotAlt;
 		expect(template).not.toBe(
 			readHomeMessages(DEFAULT_LOCALE).home.hero.screenshotAlt,
@@ -438,7 +441,7 @@ for (const locale of OTHER_LOCALES) {
 	});
 }
 
-test.describe("FAQ", () => {
+test.describe("FAQ", { tag: "@kit-demo" }, () => {
 	test("sits between pricing and the closing call to action", async ({
 		page,
 	}) => {

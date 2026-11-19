@@ -23,6 +23,7 @@ const app = vi.hoisted(() => ({
 	appNavDropdowns: [] as unknown[],
 	appNavRemove: [] as string[],
 	appFooter: {} as Record<string, unknown>,
+	appKitRoutes: {} as Record<string, unknown>,
 	appMarketing: {} as Record<string, unknown>,
 	consentBannerVisible: true,
 }));
@@ -48,6 +49,9 @@ vi.mock("../../../../apps/marketing/src/app-site-links", () => ({
 	},
 	get appFooter() {
 		return app.appFooter;
+	},
+	get appKitRoutes() {
+		return app.appKitRoutes;
 	},
 }));
 vi.mock("@/app-marketing", () => ({
@@ -94,6 +98,7 @@ beforeEach(() => {
 	app.appNavDropdowns = [];
 	app.appNavRemove = [];
 	app.appFooter = {};
+	app.appKitRoutes = {};
 	app.appMarketing = {};
 	app.consentBannerVisible = true;
 	vi.resetModules();
@@ -147,7 +152,7 @@ type SiteLinksModule = {
 	NAV_ITEMS: { key: string }[];
 	NAV_DROPDOWNS: { key: string; items: { key: string }[] }[];
 	NAV_ORDER: { kind: string; key: string }[];
-	FOOTER_COLUMNS: { titleKey: string }[];
+	FOOTER_COLUMNS: { titleKey: string; links: { href: string }[] }[];
 	FOOTER_ACTIONS: { key: string; column: string }[];
 	FOOTER_TAGLINE_KEY: string;
 	FOOTER_AREA_LINE: { textKey: string; Mark: unknown } | null;
@@ -440,6 +445,129 @@ describe("site links", () => {
 		const Brand = () => null;
 		app.appHeaderBrand = { Brand };
 		expect((await load()).HEADER_BRAND.Brand).toBe(Brand);
+	});
+});
+
+describe("kit routes (appKitRoutes)", () => {
+	type KitRoutes = {
+		isKitRouteEnabled: (route: string) => boolean;
+		isKitPathEnabled: (path: string) => boolean;
+	};
+	const kitRoutes = () =>
+		import(
+			/* @vite-ignore */ join(ROOT, "apps/marketing/src/lib/kit-routes.ts")
+		) as Promise<KitRoutes>;
+	const loadLinks = () =>
+		import(
+			/* @vite-ignore */ join(ROOT, "apps/marketing/src/lib/site-links.ts")
+		) as Promise<SiteLinksModule>;
+	const hrefs = (links: SiteLinksModule) => ({
+		nav: links.NAV_ITEMS.map((i: { key: string }) => i.key),
+		dropdowns: links.NAV_DROPDOWNS.map((g) => [
+			g.key,
+			g.items.map((i) => i.key),
+		]),
+		footer: links.FOOTER_COLUMNS.flatMap((c) => c.links.map((l) => l.href)),
+	});
+
+	it("serves every kit page by default", async () => {
+		const { isKitRouteEnabled } = await kitRoutes();
+		for (const route of ["pricing", "blog", "changelog", "contact"]) {
+			expect(isKitRouteEnabled(route), route).toBe(true);
+		}
+	});
+
+	it("switches a page off with false, and only that page", async () => {
+		app.appKitRoutes = { blog: false };
+		const { isKitRouteEnabled } = await kitRoutes();
+		expect(isKitRouteEnabled("blog")).toBe(false);
+		expect(isKitRouteEnabled("changelog")).toBe(true);
+	});
+
+	it("turns pricing off while payments are off", async () => {
+		const { config } = await import("../../../config/index");
+		(config.features as { payments: boolean }).payments = false;
+		try {
+			const { isKitRouteEnabled } = await kitRoutes();
+			expect(isKitRouteEnabled("pricing")).toBe(false);
+			expect(isKitRouteEnabled("blog")).toBe(true);
+		} finally {
+			(config.features as { payments: boolean }).payments = true;
+		}
+	});
+
+	it("matches paths of a disabled page, ignoring hash, query and locale-free subpaths", async () => {
+		app.appKitRoutes = { blog: false, pricing: false };
+		const { isKitPathEnabled } = await kitRoutes();
+		expect(isKitPathEnabled("/blog")).toBe(false);
+		expect(isKitPathEnabled("/blog/hello")).toBe(false);
+		expect(isKitPathEnabled("/pricing#faq")).toBe(false);
+		expect(isKitPathEnabled("/pricing?x=1")).toBe(false);
+		expect(isKitPathEnabled("/blogger")).toBe(true);
+		expect(isKitPathEnabled("/")).toBe(true);
+		expect(isKitPathEnabled("/#features")).toBe(true);
+		expect(isKitPathEnabled("/contact")).toBe(true);
+		expect(isKitPathEnabled("/legal/privacy")).toBe(true);
+	});
+
+	it("lists every kit link while nothing is switched off", async () => {
+		expect(hrefs(await loadLinks())).toEqual({
+			nav: ["home", "features", "pricing"],
+			dropdowns: [["resources", ["blog", "changelog", "docs"]]],
+			footer: [
+				"/#features",
+				"/pricing",
+				"/changelog",
+				"https://docs.example.test",
+				"/blog",
+				"/contact",
+				"/legal/privacy",
+				"/legal/terms",
+				"/legal/imprint",
+			],
+		});
+	});
+
+	it("drops navbar and footer links to switched-off pages", async () => {
+		app.appKitRoutes = { pricing: false, blog: false, contact: false };
+		const links = await loadLinks();
+		expect(hrefs(links)).toEqual({
+			nav: ["home", "features"],
+			dropdowns: [["resources", ["changelog", "docs"]]],
+			footer: [
+				"/#features",
+				"/changelog",
+				"https://docs.example.test",
+				"/legal/privacy",
+				"/legal/terms",
+				"/legal/imprint",
+			],
+		});
+		expect(links.NAV_ORDER.map((e: { key: string }) => e.key)).toEqual([
+			"home",
+			"features",
+			"resources",
+		]);
+	});
+
+	it("drops a dropdown left without items", async () => {
+		app.appKitRoutes = { blog: false, changelog: false, pricing: false };
+		app.appNavRemove = ["docs"];
+		const links = await loadLinks();
+		expect(links.NAV_DROPDOWNS).toEqual([]);
+		expect(links.NAV_ORDER.map((e: { key: string }) => e.key)).toEqual([
+			"home",
+			"features",
+		]);
+		expect(
+			links.FOOTER_COLUMNS.map((c: { titleKey: string }) => c.titleKey),
+		).toEqual(["product", "resources", "companyAndLegal"]);
+	});
+
+	it("does not throw when appNavRemove names a page that is switched off", async () => {
+		app.appKitRoutes = { blog: false };
+		app.appNavRemove = ["blog"];
+		await expect(loadLinks()).resolves.toBeDefined();
 	});
 });
 
