@@ -33,12 +33,18 @@ export function getMcpOAuthUrls(baseUrl: string) {
 	};
 }
 
-const urls = getMcpOAuthUrls(env.BETTER_AUTH_URL);
+// `SKIP_ENV_VALIDATION` image builds load this module without the env; the
+// running server always has BETTER_AUTH_URL (required by the env schema).
+const baseUrl: string | undefined = env.BETTER_AUTH_URL;
+
+const urls = getMcpOAuthUrls(baseUrl ?? "http://localhost");
 
 const active =
-	authConfig.mcpOAuth.enabled && canServeMcpOAuth(env.BETTER_AUTH_URL);
+	authConfig.mcpOAuth.enabled &&
+	baseUrl !== undefined &&
+	canServeMcpOAuth(baseUrl);
 
-if (authConfig.mcpOAuth.enabled && !active) {
+if (authConfig.mcpOAuth.enabled && baseUrl !== undefined && !active) {
 	// Don't take the app down (e.g. a plain-http rehearsal on a server IP):
 	// MCP keeps working with API keys, OAuth stays off until https.
 	createLogger({ scope: "auth" }).warn(
