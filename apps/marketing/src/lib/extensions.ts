@@ -60,7 +60,9 @@ export type AppPageMetadataFields = Pick<
  * app fields win, `undefined` keeps the kit value, `alternates`,
  * `openGraph` and `twitter` merge one level deep. A page-level `openGraph`
  * / `twitter` replaces the layout's (Next merges metadata per top-level
- * key) — repeat `images` if you set it. A function gets the request locale
+ * key) — repeat `images` if you set it; `openGraph: { images: [] }` drops
+ * the kit share image so an `opengraph-image` file you add to that route
+ * folder applies. A function gets the request locale
  * (translate with `getTranslations({ locale, namespace })`) and, per page,
  * more context (legal and blog post pages: `slug`).
  */
