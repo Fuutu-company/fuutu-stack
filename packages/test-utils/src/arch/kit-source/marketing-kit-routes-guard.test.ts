@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  * 404, with the page, its `loading.tsx` and sub-routes behind it.
  */
 
-const ROOT = join(import.meta.dirname, "../../../..");
+const ROOT = join(import.meta.dirname, "../../../../..");
 const LOCALE_DIR = join(ROOT, "apps/marketing/src/app/(marketing)/[locale]");
 const ROUTES = ["pricing", "blog", "changelog", "contact"];
 
@@ -38,6 +38,17 @@ describe("switchable kit routes", () => {
 			expect(layout).toMatch(/return children;/);
 		});
 	}
+
+	it("the blog OG image route 404s while the blog is switched off", () => {
+		const og = readFileSync(
+			join(LOCALE_DIR, "blog/[slug]/opengraph-image.tsx"),
+			"utf8",
+		);
+		expect(og).toMatch(
+			/if \(!isKitRouteEnabled\("blog"\)\) return new Response\(null, \{ status: 404 \}\);/,
+		);
+		expect(og).toMatch(/!slug \|\| !isKitRouteEnabled\("blog"\)/);
+	});
 
 	it("no loading.tsx or Suspense boundary sits above the gating layouts", () => {
 		expect(existsSync(join(LOCALE_DIR, "loading.tsx"))).toBe(false);

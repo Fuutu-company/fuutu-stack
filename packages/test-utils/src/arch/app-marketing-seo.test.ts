@@ -703,6 +703,16 @@ describe("sitemap", () => {
 		]);
 	});
 
+	it("drops app sitemap routes that point at a switched-off kit page", () => {
+		app.appKitRoutes = { blog: false };
+		app.appMarketing = {
+			sitemapRoutes: [{ path: "/blog" }, { path: "/about" }],
+		};
+		const paths = sitemap().map((e) => new URL(e.url).pathname);
+		expect(paths).toContain("/about");
+		expect(paths.some((p) => p.endsWith("/blog"))).toBe(false);
+	});
+
 	it("omits /pricing while payments are off", async () => {
 		const { config } = await import("../../../config/index");
 		(config.features as { payments: boolean }).payments = false;

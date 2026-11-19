@@ -64,9 +64,7 @@ test.describe("default locale routing", () => {
 
 test.describe("key content visible", () => {
 	for (const locale of LOCALES) {
-		test(`/${locale}/pricing renders pricing tiers`, {
-			tag: "@kit-demo",
-		}, async ({ page }) => {
+		test(`/${locale}/pricing renders pricing tiers`, async ({ page }) => {
 			await page.goto(`/${locale}/pricing`);
 			await expect(
 				page.getByRole("heading", { name: /free|pro|enterprise/i }).first(),

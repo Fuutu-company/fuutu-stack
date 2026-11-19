@@ -107,6 +107,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
 		...visiblePosts.map((post) => `/blog/${post.slug}`),
 	]);
 	for (const route of appRoutes ?? []) {
+		// A switched-off kit path answers 404 — never list it.
+		if (!isKitPathEnabled(route.path)) continue;
 		if (listed.has(route.path)) {
 			throw new Error(
 				`appMarketing.sitemapRoutes: duplicate sitemap path "${route.path}"`,
