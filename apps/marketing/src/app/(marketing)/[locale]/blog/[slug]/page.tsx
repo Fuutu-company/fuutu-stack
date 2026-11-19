@@ -37,6 +37,8 @@ export async function generateMetadata({
 			path: `/blog/${slug}`,
 			title: post.frontmatter.title,
 			description: post.frontmatter.description,
+			// The post's own OG card (`opengraph-image.tsx`) applies.
+			ogImage: false,
 		}),
 		appMarketing.metadata?.blogPost,
 		locale,
