@@ -193,6 +193,25 @@ describe("kit page SEO metadata (pageMetadata)", () => {
 		expect(pageMetadata(page).alternates).toEqual({ canonical: "/pricing" });
 	});
 
+	it("leaves the share image out with ogImage: false (the route's opengraph-image file applies)", () => {
+		const meta = pageMetadata({ ...page, ogImage: false });
+		expect(meta.openGraph).not.toHaveProperty("images");
+		expect(meta.openGraph).toMatchObject({ url: "/pricing" });
+	});
+
+	it("drops the kit share image when the app sets openGraph.images: []", async () => {
+		const merged = await withAppMetadata(
+			pageMetadata(page),
+			{ openGraph: { images: [] } },
+			"en",
+		);
+		expect(merged.openGraph).not.toHaveProperty("images");
+		expect(merged.openGraph).toMatchObject({
+			url: "/pricing",
+			title: "Pricing",
+		});
+	});
+
 	it("leaves the description out when there is none", () => {
 		const meta = pageMetadata({ ...page, description: undefined });
 		expect(meta).not.toHaveProperty("description");

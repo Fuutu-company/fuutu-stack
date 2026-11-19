@@ -544,3 +544,24 @@ test.describe("switched-off kit pages", () => {
 		});
 	}
 });
+
+// ── Share images ────────────────────────────────────────────────────────
+
+test.describe("share images", () => {
+	for (const { path, name } of PAGES) {
+		test(`/${name} declares an og:image`, async ({ page }) => {
+			await page.goto(path || "/");
+			await expect(page.locator('meta[property="og:image"]')).toHaveCount(1);
+		});
+	}
+
+	for (const path of POST_PATHS) {
+		test(`${path} uses its own opengraph-image route`, async ({ page }) => {
+			await page.goto(path);
+			await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+				"content",
+				/\/opengraph-image/,
+			);
+		});
+	}
+});
