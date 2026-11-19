@@ -36,6 +36,8 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
 const SCRIPTS = path.join(ROOT, "tooling", "scripts");
 const PG_IMAGE = "postgres:16-alpine"; // same as the CI service
 const STORE_VOLUME = "fuutu-visual-pnpm-store";
+// Specs tagged `@kit-demo` (the kit's own demo) run only with this flag set.
+const KIT_SOURCE = process.env.FUUTU_KIT_SOURCE === "1";
 
 let opts;
 try {
@@ -145,6 +147,7 @@ async function dockerApp(app, image) {
 		`APP=${app}`,
 		`HOST_UID=${process.getuid?.() ?? 0}`,
 		`HOST_GID=${process.getgid?.() ?? 0}`,
+		...(KIT_SOURCE ? ["FUUTU_KIT_SOURCE=1"] : []),
 	];
 	if (app === "saas") {
 		const pg = `${id}-pg`;

@@ -1,6 +1,7 @@
 import { AREA_CLASSES, type Area, Button } from "@fuutu/ui";
 import { cn } from "@fuutu/utils/cn";
 import { useTranslations } from "next-intl";
+import { isKitRouteEnabled } from "@/lib/kit-routes";
 import { Link } from "@/navigation";
 import { PILL_BUTTON } from "./landing-styles";
 import { Blob } from "./section-heading";
@@ -27,16 +28,18 @@ export function SecurityBand() {
 					<p className="mt-4 max-w-xl text-lg text-primary-foreground leading-8">
 						{t("description")}
 					</p>
-					<Button
-						size="lg"
-						className={cn(
-							PILL_BUTTON,
-							"mt-7 bg-primary-foreground text-primary hover:bg-primary-foreground",
-						)}
-						asChild
-					>
-						<Link href="/contact">{t("cta")}</Link>
-					</Button>
+					{isKitRouteEnabled("contact") && (
+						<Button
+							size="lg"
+							className={cn(
+								PILL_BUTTON,
+								"mt-7 bg-primary-foreground text-primary hover:bg-primary-foreground",
+							)}
+							asChild
+						>
+							<Link href="/contact">{t("cta")}</Link>
+						</Button>
+					)}
 				</div>
 				<ul className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
 					{FACTS.map(({ key, area }) => (

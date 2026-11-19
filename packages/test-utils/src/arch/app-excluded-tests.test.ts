@@ -66,7 +66,9 @@ describe("playwright configs", () => {
 			expect(config).toMatch(
 				/from "\.\.\/\.\.\/tooling\/scripts\/playwright-excluded\.mjs"/,
 			);
-			expect(config).toMatch(/\.\.\.excludedTestsConfig\(appExcludedTests\)/);
+			expect(config).toMatch(
+				/\.\.\.(?:withKitDemoFilter\()?excludedTestsConfig\(appExcludedTests\)/,
+			);
 		});
 	}
 });

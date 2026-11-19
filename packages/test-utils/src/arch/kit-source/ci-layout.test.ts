@@ -34,6 +34,22 @@ describe("ci workflow guard", () => {
 		);
 	});
 
+	it("the E2E job runs the @kit-demo specs in the kit repository only", () => {
+		const e2e = job(ci, "e2e");
+		expect(e2e).toContain(
+			[
+				"FUUTU_KIT_SOURCE: $",
+				"{{ github.repository == 'Fuutu-company/fuutu-stack' && '1' || '' }}",
+			].join(""),
+		);
+		// With the kit demo specs skipped, an app's visual run can be empty.
+		for (const command of e2e.match(
+			/playwright test --grep "visual regression"[^\n]*/g,
+		) ?? []) {
+			expect(command).toContain("--pass-with-no-tests");
+		}
+	});
+
 	it("the kit-source guards run in the kit repository only", () => {
 		const verify = ci.slice(
 			ci.indexOf("\n  verify:\n"),

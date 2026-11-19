@@ -46,7 +46,9 @@ export interface AppHomeSections {
 /**
  * Metadata fields an app may set for a kit page. Kit pages set no
  * `robots`, so the app value is the page's whole robots meta (e.g.
- * `{ index: false, follow: true }`).
+ * `{ index: false, follow: true }`). They do set `alternates` (canonical +
+ * hreflang, from `pageMetadata` in `lib/page-metadata.ts`, which app pages
+ * can call too) and `openGraph` (url, title, description, locale, image).
  */
 export type AppPageMetadataFields = Pick<
 	Metadata,

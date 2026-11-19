@@ -4,25 +4,16 @@ import { getRoutableLocales } from "@fuutu/i18n";
 import { i18nConfig } from "@fuutu/i18n/config";
 import type { MetadataRoute } from "next";
 import { appMarketing } from "@/app-marketing";
-import { defaultLocale } from "@/i18n/config";
 import type { SitemapRoute } from "@/lib/extensions";
+import { isKitPathEnabled } from "../lib/kit-routes";
+import { localeUrl } from "../lib/locale-url";
 import { definedFields } from "../lib/page-metadata";
 
-const STATIC_ROUTES = ["", "/pricing", "/blog", "/changelog", "/contact"];
+const KIT_STATIC_ROUTES = ["", "/pricing", "/blog", "/changelog", "/contact"];
 
 const LEGAL_ROUTES = [...new Set(legal.map((doc) => doc.slug))].map(
 	(slug) => `/legal/${slug}`,
 );
-
-/**
- * Build a locale-prefixed URL. The marketing app uses
- * `localePrefix: "as-needed"` — i.e. the default locale is served
- * without prefix and every other locale lives under `/<locale>/...`.
- */
-function localeUrl(base: string, locale: string, path: string): string {
-	if (locale === defaultLocale) return `${base}${path}`;
-	return `${base}/${locale}${path}`;
-}
 
 /**
  * One entry per (path, routable locale): every enabled locale with hreflang
@@ -58,12 +49,14 @@ function entriesFor(
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
+	// Pages the app switched off (`appKitRoutes`) are not listed.
+	const staticRoutes = KIT_STATIC_ROUTES.filter(isKitPathEnabled);
 	const base = env.NEXT_PUBLIC_MARKETING_URL ?? "https://fuutustack.com";
 	const now = new Date();
 
 	const entries: MetadataRoute.Sitemap = [];
 
-	for (const path of STATIC_ROUTES) {
+	for (const path of staticRoutes) {
 		entries.push(
 			...entriesFor(base, {
 				path,
@@ -86,7 +79,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
 		);
 	}
 
-	const visiblePosts = posts.filter((p) => !p.frontmatter.draft);
+	const visiblePosts = posts.filter(
+		(p) => !p.frontmatter.draft && isKitPathEnabled(`/blog/${p.slug}`),
+	);
 	for (const post of visiblePosts) {
 		entries.push(
 			...entriesFor(base, {
@@ -100,18 +95,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
 	}
 
 	// Changelog: no per-version entries — hash-fragment URLs are ignored by
-	// crawlers. The /changelog index is already covered by STATIC_ROUTES.
+	// crawlers. The /changelog index is already covered by the static routes.
 
 	// App pages (`appMarketing.sitemapRoutes`), after the kit routes.
 	const { sitemapRoutes } = appMarketing;
 	const appRoutes =
 		typeof sitemapRoutes === "function" ? sitemapRoutes() : sitemapRoutes;
 	const listed = new Set([
-		...STATIC_ROUTES,
+		...staticRoutes,
 		...LEGAL_ROUTES,
 		...visiblePosts.map((post) => `/blog/${post.slug}`),
 	]);
 	for (const route of appRoutes ?? []) {
+		// A switched-off kit path answers 404 — never list it.
+		if (!isKitPathEnabled(route.path)) continue;
 		if (listed.has(route.path)) {
 			throw new Error(
 				`appMarketing.sitemapRoutes: duplicate sitemap path "${route.path}"`,

@@ -1,21 +1,23 @@
 import deepmerge from "deepmerge";
 import { i18nConfig } from "../config";
-import type { Locale, Messages } from "../types";
+import type { AppTranslations, Locale, Messages } from "../types";
 
 export type AppName = "marketing" | "saas" | "docs";
 type Namespace = "common" | AppName;
 type NamespaceLoader = () => Promise<Record<string, unknown>>;
+type LocaleLoaders = Record<Namespace, NamespaceLoader> & {
+	// App-owned overlay (`translations/<locale>/app/index.ts`), merged last.
+	// Optional: locales wired in without an overlay (dormant) keep working.
+	app?: () => Promise<AppTranslations>;
+};
 
 // Keyed by `Locale` — adding a locale to i18nConfig.locales without a
 // matching entry here fails type-checking. The `Partial<Record<string, …>>`
 // arm additionally permits "dormant" locales: bundles wired into the loader
 // map without being a configured (routable) locale. Dormant locales resolve
 // via `isKnownLocale` / `importLocale` but stay invalid for routing.
-export const namespaceLoaders: Record<
-	Locale,
-	Record<Namespace, NamespaceLoader>
-> &
-	Partial<Record<string, Record<Namespace, NamespaceLoader>>> = {
+export const namespaceLoaders: Record<Locale, LocaleLoaders> &
+	Partial<Record<string, LocaleLoaders>> = {
 	en: {
 		common: async () =>
 			(await import("../translations/en/common/index")).default,
@@ -23,6 +25,8 @@ export const namespaceLoaders: Record<
 			(await import("../translations/en/marketing/index")).default,
 		saas: async () => (await import("../translations/en/saas/index")).default,
 		docs: async () => (await import("../translations/en/docs/index")).default,
+		app: async () =>
+			(await import("../translations/en/app/index")).appTranslations,
 	},
 	de: {
 		common: async () =>
@@ -31,6 +35,8 @@ export const namespaceLoaders: Record<
 			(await import("../translations/de/marketing/index")).default,
 		saas: async () => (await import("../translations/de/saas/index")).default,
 		docs: async () => (await import("../translations/de/docs/index")).default,
+		app: async () =>
+			(await import("../translations/de/app/index")).appTranslations,
 	},
 };
 
@@ -54,6 +60,20 @@ const loadNamespace = async (
 	return loader();
 };
 
+const mergeMessages = (
+	base: Record<string, unknown>,
+	overlay: Record<string, unknown> | undefined,
+): Record<string, unknown> =>
+	overlay
+		? deepmerge(base, overlay, { arrayMerge: (_target, source) => source })
+		: base;
+
+const loadAppOverlay = async (locale: string): Promise<AppTranslations> => {
+	const loaders =
+		namespaceLoaders[locale] ?? namespaceLoaders[i18nConfig.defaultLocale];
+	return (await loaders?.app?.()) ?? {};
+};
+
 export const importLocale = async (
 	locale: string,
 	app?: AppName,
@@ -64,16 +84,32 @@ export const importLocale = async (
 		? locale
 		: i18nConfig.defaultLocale;
 
-	const common = await loadNamespace(effectiveLocale, "common");
+	const overlay = await loadAppOverlay(effectiveLocale);
+	const common = mergeMessages(
+		await loadNamespace(effectiveLocale, "common"),
+		overlay.common,
+	);
 	if (!app) {
-		const marketing = await loadNamespace(effectiveLocale, "marketing");
-		const saas = await loadNamespace(effectiveLocale, "saas");
-		const docs = await loadNamespace(effectiveLocale, "docs");
+		const marketing = mergeMessages(
+			await loadNamespace(effectiveLocale, "marketing"),
+			overlay.marketing,
+		);
+		const saas = mergeMessages(
+			await loadNamespace(effectiveLocale, "saas"),
+			overlay.saas,
+		);
+		const docs = mergeMessages(
+			await loadNamespace(effectiveLocale, "docs"),
+			overlay.docs,
+		);
 		// `docs` stays nested — its `nav`/`home` namespaces would shadow
 		// marketing's if shallow-spread (mirrors `translations/*/index.ts`).
 		return { ...common, ...marketing, ...saas, docs } as Messages;
 	}
-	const appMessages = await loadNamespace(effectiveLocale, app);
+	const appMessages = mergeMessages(
+		await loadNamespace(effectiveLocale, app),
+		overlay[app],
+	);
 	return { ...common, ...appMessages } as Messages;
 };
 

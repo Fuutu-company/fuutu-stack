@@ -50,7 +50,9 @@ const VIEWPORTS = [
 	{ width: 375, height: 812, label: "mobile" },
 ] as const;
 
-test.describe("visual regression — marketing pages", () => {
+test.describe("visual regression — marketing pages", {
+	tag: "@kit-demo",
+}, () => {
 	// ── Desktop: every enabled locale ─────────────────────────────────
 
 	for (const locale of LOCALES) {
@@ -112,7 +114,7 @@ test.describe("visual regression — marketing pages", () => {
 	}
 });
 
-test.describe("visual regression — components", () => {
+test.describe("visual regression — components", { tag: "@kit-demo" }, () => {
 	test("locale switcher dropdown matches baseline", async ({
 		page,
 		isMobile,

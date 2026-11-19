@@ -45,9 +45,7 @@ export default async function MarketingLayout({
 			<Providers>
 				<div className="flex min-h-screen flex-col">
 					<MarketingNavbar />
-					<main className="flex-1 overflow-x-clip pt-[5.25rem]">
-						{children}
-					</main>
+					<main className="flex-1 overflow-x-clip">{children}</main>
 					<MarketingFooter />
 				</div>
 				<ConsentBanner privacyHref={privacyHref ?? undefined} />

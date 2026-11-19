@@ -311,7 +311,7 @@ function ThemeToggle() {
 	);
 }
 
-export function MarketingNavbar() {
+function NavbarHeader() {
 	const t = useTranslations();
 	const pathname = usePathname();
 	const [scrolled, setScrolled] = useState(false);
@@ -476,5 +476,15 @@ export function MarketingNavbar() {
 				</div>
 			</div>
 		</header>
+	);
+}
+
+/** The fixed navbar plus a spacer of its height, so page content starts below it. */
+export function MarketingNavbar() {
+	return (
+		<>
+			<NavbarHeader />
+			<div aria-hidden="true" className="h-[5.25rem] shrink-0" />
+		</>
 	);
 }

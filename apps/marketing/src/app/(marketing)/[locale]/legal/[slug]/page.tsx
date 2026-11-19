@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { appMarketing } from "@/app-marketing";
-import { withAppMetadata } from "@/lib/page-metadata";
+import { pageMetadata, withAppMetadata } from "@/lib/page-metadata";
 
 interface LegalPageProps {
 	params: Promise<{ locale: string; slug: string }>;
@@ -29,10 +29,12 @@ export async function generateMetadata({
 		return { title: t("title") };
 	}
 	return withAppMetadata(
-		{
+		pageMetadata({
+			locale,
+			path: `/legal/${slug}`,
 			title: doc.frontmatter.title,
 			description: `${doc.frontmatter.title} — ${doc.frontmatter.updatedAt}`,
-		},
+		}),
 		appMarketing.metadata?.legal,
 		locale,
 		{ slug },
