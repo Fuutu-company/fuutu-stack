@@ -144,6 +144,30 @@ jobs:
         run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm build
 
+  # Real image build per app (the Dockerfiles Coolify/Railpack/Docker
+  # deploys use) — catches files the build needs that `.dockerignore` or
+  # `turbo prune` leave out, and module-level env use at build time.
+  docker:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && vars.FUUTU_CI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [saas, marketing, docs]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: false
+          cache-from: type=gha,scope=docker-${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=docker-${{ matrix.app }}
+
   # E2E + visual regression for both apps — one definition, matrix-per-app.
   # The Playwright image ships browsers AND system deps: no install step,
   # no cache, no apt. Baselines are committed PNGs in
