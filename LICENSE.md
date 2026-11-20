@@ -240,7 +240,7 @@ Derivative Work created under this section 3.
    `licenseMode = "enterprise"` once a valid Enterprise key is verified.
    Enterprise Licenses and Pro subscriptions are identified by separate
    keys. Where only a valid Pro key is verified, the Kit reports
-   `licenseMode = "mcp"`; this technical value stands for Pro.
+   `licenseMode = "pro"`.
 
 5. **End of an Enterprise License.** If an Enterprise License ends or is
    paused for any reason other than a termination for the Licensee's
@@ -290,7 +290,7 @@ subject to fair-use rate limits. They are provided as-is and Fuutu may
 change, limit or discontinue them at any time.
 
 A valid Pro subscription is identified by an API key issued by Fuutu; the
-Kit reports `licenseMode = "mcp"` once a valid Pro key is verified.
+Kit reports `licenseMode = "pro"` once a valid Pro key is verified.
 
 A Fuutu Enterprise License (section 4) includes Pro for five persons
 (five Seats) for as long as the Enterprise License is active. Additional
