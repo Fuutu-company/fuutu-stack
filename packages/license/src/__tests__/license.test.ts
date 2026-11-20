@@ -85,13 +85,13 @@ describe("getLicenseMode()", () => {
 
 	it("returns cached mode after checkLicense resolves", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
 		);
 		await checkLicense({ licenseKey: "valid-key", force: true });
-		expect(getLicenseMode()).toBe("mcp");
+		expect(getLicenseMode()).toBe("pro");
 	});
 
 	it("returns 'oss' after a failed check", async () => {
@@ -119,7 +119,7 @@ describe("checkLicense()", () => {
 	it("falls back to the env key when options.licenseKey is an empty string", async () => {
 		envStub.FUUTU_LICENSE_KEY = "env-license-key";
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -138,12 +138,12 @@ describe("checkLicense()", () => {
 		expect(body.key).toBe("env-license-key");
 		expect(body.kitName).toBe("Fuutu-Stack");
 		expect(body.kitVersion).toBeTruthy();
-		expect(status.mode).toBe("mcp");
+		expect(status.mode).toBe("pro");
 	});
 
-	it("returns pro/mcp mode when fetch returns valid license", async () => {
+	it("returns pro mode when fetch returns valid license", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -152,7 +152,7 @@ describe("checkLicense()", () => {
 			licenseKey: "valid-pro-key",
 			force: true,
 		});
-		expect(status.mode).toBe("mcp");
+		expect(status.mode).toBe("pro");
 		expect(status.valid).toBe(true);
 	});
 
@@ -221,6 +221,18 @@ describe("checkLicense()", () => {
 		expect(status.valid).toBe(false);
 	});
 
+	it('rejects the retired mode value "mcp" (renamed to "pro")', async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		const status = await checkLicense({ licenseKey: "old-key", force: true });
+		expect(status.mode).toBe("oss");
+		expect(status.valid).toBe(false);
+	});
+
 	it("soft-falls back to oss when valid is false in response", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue(
 			new Response(JSON.stringify({ valid: false, reason: "expired" }), {
@@ -266,7 +278,7 @@ describe("checkLicense()", () => {
 
 	it("includes licenseKeyHash in the status", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -283,7 +295,7 @@ describe("checkLicense()", () => {
 
 	it("uses cache on subsequent calls without force", async () => {
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -296,7 +308,7 @@ describe("checkLicense()", () => {
 
 	it("force=true bypasses cache", async () => {
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -309,7 +321,7 @@ describe("checkLicense()", () => {
 
 	it("verifies no real network calls are made (fetch is mocked)", async () => {
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -328,7 +340,7 @@ describe("checkLicense()", () => {
 	it("uses env.FUUTU_LICENSE_ENDPOINT when options.endpoint is absent", async () => {
 		envStub.FUUTU_LICENSE_ENDPOINT = "https://env-endpoint.test/validate";
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -343,7 +355,7 @@ describe("checkLicense()", () => {
 
 	it("defaults to the contract endpoint when no endpoint is configured", async () => {
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -406,7 +418,7 @@ describe("checkLicense()", () => {
 
 	it("re-fetches after the success cache TTL expires", async () => {
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -448,7 +460,7 @@ describe("checkLicense()", () => {
 	it("falls back to the env key when options.licenseKey is whitespace-only", async () => {
 		envStub.FUUTU_LICENSE_KEY = "env-license-key";
 		const mockFetch = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ mode: "mcp", valid: true }), {
+			new Response(JSON.stringify({ mode: "pro", valid: true }), {
 				status: 200,
 				headers: { "Content-Type": "application/json" },
 			}),
@@ -459,7 +471,7 @@ describe("checkLicense()", () => {
 		const opts = mockFetch.mock.calls[0]?.[1] as RequestInit | undefined;
 		const body = JSON.parse(String(opts?.body)) as { key: string };
 		expect(body.key).toBe("env-license-key");
-		expect(status.mode).toBe("mcp");
+		expect(status.mode).toBe("pro");
 	});
 });
 

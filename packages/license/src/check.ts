@@ -42,7 +42,7 @@ let lastValidated: LicenseStatus | null = null;
  *   POST {endpoint}
  *   { "key": "<raw license key>", "kitName": "Fuutu-Stack", "kitVersion": "..." }
  *
- *   200 OK  → { "mode": "mcp" | "enterprise", "valid": true }
+ *   200 OK  → { "mode": "pro" | "enterprise", "valid": true }
  *   401 / 403 → { "valid": false, "reason": "..." }
  *
  * The result cache is global — not keyed on key or endpoint. Intended
@@ -118,11 +118,11 @@ export async function checkLicense(
 			reason?: string;
 		} | null;
 
-		// Contract: 200 → { valid: true, mode: "mcp" | "enterprise" }.
+		// Contract: 200 → { valid: true, mode: "pro" | "enterprise" }.
 		// Anything else — including a contradictory "oss" — is invalid.
 		if (
 			body?.valid !== true ||
-			(body.mode !== "mcp" && body.mode !== "enterprise")
+			(body.mode !== "pro" && body.mode !== "enterprise")
 		) {
 			return fallback(
 				licenseKeyHash,
