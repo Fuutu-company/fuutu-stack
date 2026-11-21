@@ -1,0 +1,17 @@
+{
+	"nav": {
+		"home": "Start",
+		"settings": "Einstellungen",
+		"account": "Konto"
+	},
+	"home": {
+		"title": "Willkommen",
+		"description": "Deine Desktop-App läuft.",
+		"openSecondWindow": "Über-Fenster öffnen"
+	},
+	"error": {
+		"title": "Etwas ist schiefgelaufen",
+		"description": "Die App hatte einen unerwarteten Fehler. Er wurde in die Logdatei geschrieben.",
+		"retry": "Erneut versuchen"
+	}
+}

@@ -1,0 +1,42 @@
+# cargo-deny — licence + advisory gate for the desktop app's Rust crates
+# (desktop CI job; `cargo deny check` locally). Only licences that allow
+# closed-source commercial distribution (Licence safety, ADR-002 #13).
+
+[graph]
+all-features = true
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "MPL-2.0",
+    "CC0-1.0",
+    "Unlicense",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+]
+confidence-threshold = 0.9
+# The list is the policy, not an inventory: unused entries are fine.
+unused-allowed-license = "allow"
+# The app crate itself is under the Fuutu Business License.
+private = { ignore = true }
+
+[advisories]
+# Unmaintained-crate notices of transitive GTK/Wry dependencies are tracked
+# upstream (Tauri); real vulnerabilities still fail.
+unmaintained = "none"
+yanked = "deny"
+
+[bans]
+multiple-versions = "allow"
+wildcards = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

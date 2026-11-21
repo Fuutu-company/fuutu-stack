@@ -120,6 +120,14 @@ catalog:
   "undici-types": ^8.11.2
   # Logging
   evlog: 2.29.0
+  # Desktop app (apps/desktop, off unless config.features.desktop). Pinned
+  # exactly: the JS packages must match the Rust crates in
+  # apps/desktop/src-tauri/Cargo.toml (same major.minor).
+  "@tauri-apps/api": 2.12.4
+  "@tauri-apps/cli": 2.12.4
+  # Agent automation (dev only) — same version as the vendored
+  # src-tauri/vendor/tauri-plugin-mcp-bridge crate.
+  "@hypothesi/tauri-mcp-server": 0.13.2
 overrides:
   # @better-auth/mcp depends on oauth-provider with a caret range; keep the
   # whole Better Auth family on the catalog version.

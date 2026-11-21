@@ -1,0 +1,17 @@
+{
+	"title": "Einstellungen",
+	"description": "Darstellung, Sprache und Start.",
+	"appearance": {
+		"title": "Darstellung",
+		"theme": "Design",
+		"themes": {
+			"light": "Hell",
+			"dark": "Dunkel",
+			"system": "System"
+		}
+	},
+	"language": {
+		"title": "Sprache",
+		"label": "Sprache der App"
+	}
+}

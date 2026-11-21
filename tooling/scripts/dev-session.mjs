@@ -296,6 +296,21 @@ async function status() {
 	log(
 		`Browser   CDP :${CDP_PORT}  ${(await portOpen(CDP_PORT)) ? "up" : "down"}`,
 	);
+	await desktopStatus();
+}
+
+/**
+ * Desktop app (config.features.desktop): reported, never started here — a
+ * native window plus a Rust build does not belong in every session start.
+ * Start it with `pnpm dev:desktop` (skill check-in-desktop).
+ */
+async function desktopStatus() {
+	const { isDesktopEnabled } = await import("./desktop.mjs");
+	if (!(await isDesktopEnabled(ROOT))) return;
+	const bridge = PROJECT.ports.desktopBridge;
+	log(
+		`Desktop   bridge :${bridge}  ${(await portOpen(bridge)) ? "up" : "down — start with `pnpm dev:desktop`"}`,
+	);
 }
 
 async function stop() {

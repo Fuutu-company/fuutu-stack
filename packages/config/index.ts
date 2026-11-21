@@ -131,6 +131,15 @@ export const config = {
 		 * page). Off: no links. Also hidden without NEXT_PUBLIC_MARKETING_URL.
 		 */
 		legalPages: true,
+		/**
+		 * Desktop app (`apps/desktop`, Tauri): `pnpm dev:desktop` /
+		 * `build:desktop`, the desktop CI job, saas `/api/desktop/*` and the
+		 * `desktop.*` API, the desktop OAuth client, the "Desktop app" settings
+		 * section, the marketing `/download` page and the desktop docs pages.
+		 * Off: none of it exists and no Rust toolchain is needed. Behaviour:
+		 * `desktopConfig` (`@fuutu/desktop/config`).
+		 */
+		desktop: false,
 	},
 	theme: {
 		modes: ["light", "dark"] as const,

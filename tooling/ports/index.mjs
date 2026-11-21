@@ -34,7 +34,7 @@ import { basename, dirname, join, resolve } from "node:path";
 export const PROJECT_FILE = ".fuutu/project.json";
 
 /** Offsets inside a slot's apps range (+0 … +49 reserved for apps). */
-export const APP_OFFSETS = { saas: 0, marketing: 1 };
+export const APP_OFFSETS = { saas: 0, marketing: 1, desktop: 2 };
 /** Offsets inside a slot's docs/tools range. */
 export const TOOL_OFFSETS = {
 	docs: 0,
@@ -43,6 +43,8 @@ export const TOOL_OFFSETS = {
 	e2eMarketing: 51,
 	e2eDocs: 52,
 	browser: 99,
+	/** Desktop app automation bridge (debug builds, `check-in-desktop`). */
+	desktopBridge: 4,
 };
 
 /** Slots 0–9 use 3000/4000 + 100·slot; from slot 10 on, 200-port blocks from 10000. */
@@ -82,6 +84,8 @@ export function slotPorts(slot) {
 		e2eMarketing: tools + TOOL_OFFSETS.e2eMarketing,
 		e2eDocs: tools + TOOL_OFFSETS.e2eDocs,
 		browser: tools + TOOL_OFFSETS.browser,
+		desktop: apps + APP_OFFSETS.desktop,
+		desktopBridge: tools + TOOL_OFFSETS.desktopBridge,
 	};
 }
 

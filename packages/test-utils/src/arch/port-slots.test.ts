@@ -52,6 +52,8 @@ describe("slot layout", () => {
 			e2eMarketing: 4051,
 			e2eDocs: 4052,
 			browser: 4099,
+			desktop: 3002,
+			desktopBridge: 4004,
 		});
 		expect(lib.slotPorts(1).saas).toBe(3100);
 		expect(lib.slotPorts(1).docs).toBe(4100);

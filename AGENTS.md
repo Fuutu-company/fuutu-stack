@@ -112,7 +112,7 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 | New feature / behavior change | `brainstorm-feature` → `plan-implementation` → `execute-plan` |
 | Implementing code or a fix | `write-tests-first` |
 | Bug, failing test, odd behavior | `debug-root-cause` |
-| About to claim done | `verify-before-done` (+ `check-in-browser` for UI) |
+| About to claim done | `verify-before-done` (+ `check-in-browser` for UI, `check-in-desktop` for the desktop app) |
 | Review comments received | `handle-review-feedback` |
 | Work verified, changes exist | `propose-commit` — conventional messages drive the app version; never commit/push without approval |
 | Building or changing UI: pages, components, styles, a single-token tweak | `build-ui` (+ `check-in-browser`) |

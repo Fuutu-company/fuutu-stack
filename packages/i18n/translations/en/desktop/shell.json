@@ -1,0 +1,17 @@
+{
+	"nav": {
+		"home": "Home",
+		"settings": "Settings",
+		"account": "Account"
+	},
+	"home": {
+		"title": "Welcome",
+		"description": "Your desktop app is running.",
+		"openSecondWindow": "Open About window"
+	},
+	"error": {
+		"title": "Something went wrong",
+		"description": "The app hit an unexpected error. It has been written to the log file.",
+		"retry": "Try again"
+	}
+}

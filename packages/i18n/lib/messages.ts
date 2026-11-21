@@ -2,10 +2,13 @@ import deepmerge from "deepmerge";
 import { i18nConfig } from "../config";
 import type { AppTranslations, Locale, Messages } from "../types";
 
-export type AppName = "marketing" | "saas" | "docs";
+export type AppName = "marketing" | "saas" | "docs" | "desktop";
 type Namespace = "common" | AppName;
 type NamespaceLoader = () => Promise<Record<string, unknown>>;
-type LocaleLoaders = Record<Namespace, NamespaceLoader> & {
+type LocaleLoaders = Record<Exclude<Namespace, "desktop">, NamespaceLoader> & {
+	// Desktop app bundle (`translations/<locale>/desktop/`) — optional so a
+	// locale wired in without it (or a repo without apps/desktop) still works.
+	desktop?: NamespaceLoader;
 	// App-owned overlay (`translations/<locale>/app/index.ts`), merged last.
 	// Optional: locales wired in without an overlay (dormant) keep working.
 	app?: () => Promise<AppTranslations>;
@@ -25,6 +28,8 @@ export const namespaceLoaders: Record<Locale, LocaleLoaders> &
 			(await import("../translations/en/marketing/index")).default,
 		saas: async () => (await import("../translations/en/saas/index")).default,
 		docs: async () => (await import("../translations/en/docs/index")).default,
+		desktop: async () =>
+			(await import("../translations/en/desktop/index")).default,
 		app: async () =>
 			(await import("../translations/en/app/index")).appTranslations,
 	},
@@ -35,6 +40,8 @@ export const namespaceLoaders: Record<Locale, LocaleLoaders> &
 			(await import("../translations/de/marketing/index")).default,
 		saas: async () => (await import("../translations/de/saas/index")).default,
 		docs: async () => (await import("../translations/de/docs/index")).default,
+		desktop: async () =>
+			(await import("../translations/de/desktop/index")).default,
 		app: async () =>
 			(await import("../translations/de/app/index")).appTranslations,
 	},
@@ -74,6 +81,19 @@ const loadAppOverlay = async (locale: string): Promise<AppTranslations> => {
 	return (await loaders?.app?.()) ?? {};
 };
 
+// The desktop namespace is nested under `desktop` in its bundle; the app
+// overlay's `desktop` section merges into that nested object.
+const loadDesktop = async (
+	locale: string,
+	overlay: AppTranslations,
+): Promise<Record<string, unknown>> => {
+	const bundle = await loadNamespace(locale, "desktop");
+	return mergeMessages(
+		(bundle.desktop as Record<string, unknown> | undefined) ?? {},
+		overlay.desktop,
+	);
+};
+
 export const importLocale = async (
 	locale: string,
 	app?: AppName,
@@ -104,7 +124,19 @@ export const importLocale = async (
 		);
 		// `docs` stays nested — its `nav`/`home` namespaces would shadow
 		// marketing's if shallow-spread (mirrors `translations/*/index.ts`).
-		return { ...common, ...marketing, ...saas, docs } as Messages;
+		return {
+			...common,
+			...marketing,
+			...saas,
+			docs,
+			desktop: await loadDesktop(effectiveLocale, overlay),
+		} as Messages;
+	}
+	if (app === "desktop") {
+		return {
+			...common,
+			desktop: await loadDesktop(effectiveLocale, overlay),
+		} as Messages;
 	}
 	const appMessages = mergeMessages(
 		await loadNamespace(effectiveLocale, app),

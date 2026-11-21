@@ -7,6 +7,10 @@ export type SlotPorts = {
 	e2eMarketing: number;
 	e2eDocs: number;
 	browser: number;
+	/** Desktop frontend dev server (`pnpm dev:desktop`). */
+	desktop: number;
+	/** Desktop automation bridge (debug builds only). */
+	desktopBridge: number;
 };
 
 export type Project = {

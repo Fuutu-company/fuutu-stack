@@ -8,7 +8,10 @@ import type messages from "./translations/en/index";
  * `docs` when loaded without an app (like the kit's own `docs` namespaces).
  */
 export type AppTranslations = Partial<
-	Record<"common" | "marketing" | "saas" | "docs", Record<string, unknown>>
+	Record<
+		"common" | "marketing" | "saas" | "docs" | "desktop",
+		Record<string, unknown>
+	>
 >;
 
 type IsObject<T> = T extends readonly unknown[]
@@ -47,6 +50,9 @@ export type Messages = DeepMerge<
 		Section<"saas"> &
 		([keyof Section<"docs">] extends [never]
 			? Record<never, never>
-			: { docs: Section<"docs"> })
+			: { docs: Section<"docs"> }) &
+		([keyof Section<"desktop">] extends [never]
+			? Record<never, never>
+			: { desktop: Section<"desktop"> })
 >;
 export type Locale = keyof (typeof i18nConfig)["locales"];

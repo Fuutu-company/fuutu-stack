@@ -1,0 +1,17 @@
+{
+	"title": "Settings",
+	"description": "Appearance, language and startup.",
+	"appearance": {
+		"title": "Appearance",
+		"theme": "Theme",
+		"themes": {
+			"light": "Light",
+			"dark": "Dark",
+			"system": "System"
+		}
+	},
+	"language": {
+		"title": "Language",
+		"label": "App language"
+	}
+}

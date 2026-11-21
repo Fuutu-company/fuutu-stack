@@ -6,7 +6,8 @@ import type { AppTranslations } from "../../../types";
  *
  * Your own messages and overrides of kit messages, merged LAST — your keys
  * win over the kit's, arrays are replaced (not concatenated). Sections map
- * to the kit namespaces: `common` (all apps), `marketing`, `saas`, `docs`.
+ * to the kit namespaces: `common` (all apps), `marketing`, `saas`, `docs`,
+ * `desktop`.
  * Keep the same keys in every locale folder (`pnpm check-translations`);
  * the `en` file also types `t("yourKey")`.
  *

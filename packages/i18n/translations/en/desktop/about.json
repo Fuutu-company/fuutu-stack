@@ -1,0 +1,5 @@
+{
+	"title": "About {appName}",
+	"version": "Version {version}",
+	"builtWith": "Built with {kitName}"
+}

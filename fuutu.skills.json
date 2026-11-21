@@ -42,6 +42,11 @@
 			"category": "workflow"
 		},
 		{
+			"name": "check-in-desktop",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
 			"name": "propose-commit",
 			"source": "repo",
 			"category": "workflow"

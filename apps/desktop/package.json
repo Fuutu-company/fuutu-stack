@@ -1,0 +1,46 @@
+{
+	"name": "@fuutu/desktop-app",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"//": "No `dev`/`build` scripts on purpose: `pnpm dev` / `pnpm build` (turbo) never touch the desktop app. Use the root `pnpm dev:desktop` / `pnpm build:desktop`, which respect `config.features.desktop`.",
+	"scripts": {
+		"web:dev": "next dev",
+		"web:build": "next build",
+		"tauri": "tauri",
+		"check-types": "next typegen && tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/desktop": "workspace:*",
+		"@fuutu/env": "workspace:*",
+		"@fuutu/i18n": "workspace:*",
+		"@fuutu/ui": "workspace:*",
+		"@fuutu/utils": "workspace:*",
+		"@tanstack/react-query": "catalog:",
+		"@tauri-apps/api": "catalog:",
+		"lucide-react": "catalog:",
+		"next": "catalog:",
+		"next-intl": "catalog:",
+		"next-themes": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"@hypothesi/tauri-mcp-server": "catalog:",
+		"@tailwindcss/postcss": "catalog:",
+		"@tauri-apps/cli": "catalog:",
+		"@types/node": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"postcss": "catalog:",
+		"tailwindcss": "catalog:",
+		"tsx": "catalog:",
+		"tw-animate-css": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

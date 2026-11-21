@@ -18,7 +18,15 @@ import { describe, expect, it } from "vitest";
  */
 
 const REPO_ROOT = join(import.meta.dirname, "../../../../");
-const APPS = ["saas", "marketing", "docs"] as const;
+// The desktop app (static export) loads the same fonts when it exists.
+const APPS = [
+	"saas",
+	"marketing",
+	"docs",
+	...(existsSync(join(REPO_ROOT, "apps/desktop/src/app/fonts.ts"))
+		? ["desktop"]
+		: []),
+] as const;
 const BRAND_CSS = join(REPO_ROOT, "packages/config/brand.css");
 const ROLES = ["font-sans", "font-heading", "font-mono"] as const;
 

@@ -1,0 +1,12 @@
+/**
+ * Desktop app styles — same kit theme as the web apps
+ * (packages/config/theme.css + brand.css).
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fuutu/config/theme.css";
+
+@source not "../../.next";
+@source not "../../out";
+@source not "../../src-tauri";
+@source not "../../.turbo";

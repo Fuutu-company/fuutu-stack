@@ -1,0 +1,40 @@
+# Desktop shell (Tauri 2). This crate is the app; `crates/*` is room for your
+# product crates (add them to `members` and depend on them from here).
+# The Rust toolchain is only needed when `config.features.desktop` is on.
+[workspace]
+members = [".", "crates/*", "vendor/*"]
+resolver = "2"
+
+[package]
+name = "desktop-app"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+license = "LicenseRef-Fuutu-Business-License"
+
+[lib]
+name = "desktop_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+# Agent automation bridge (MCP) — debug builds only. `pnpm dev:desktop`
+# enables it; the code is additionally behind `cfg(debug_assertions)`, so a
+# release build never contains it even with the feature on.
+devtools = ["dep:tauri-plugin-mcp-bridge"]
+
+[build-dependencies]
+tauri-build = { version = "=2.7.4", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.5", features = [] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tauri-plugin-mcp-bridge = { path = "vendor/tauri-plugin-mcp-bridge", optional = true }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

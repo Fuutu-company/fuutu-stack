@@ -1,0 +1,28 @@
+{
+	"name": "@fuutu/desktop",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./config": "./src/config.ts",
+		"./identity": "./src/identity.ts",
+		"./access": "./src/access.ts",
+		"./session": "./src/session.ts",
+		"./updates": "./src/updates.ts"
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@fuutu/config": "workspace:*",
+		"@fuutu/payments": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@fuutu/tsconfig": "workspace:*",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

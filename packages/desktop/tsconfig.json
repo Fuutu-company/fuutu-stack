@@ -1,0 +1,4 @@
+{
+	"extends": "@fuutu/tsconfig/base.json",
+	"include": ["src/**/*.ts"]
+}
