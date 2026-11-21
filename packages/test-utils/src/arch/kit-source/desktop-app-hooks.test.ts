@@ -62,6 +62,8 @@ const DEFAULTS: [string, RegExp[]][] = [
 		"src-tauri/src/app_plugins.rs",
 		[
 			/pub fn register<R: Runtime>\(\s*builder: Builder<R>,\s*_config: &RuntimeConfig,?\s*\) -> Builder<R> \{\s*builder\s*\}/,
+			/pub fn tray_items<R: Runtime>\([^)]*\) -> Vec<TrayItem> \{\s*Vec::new\(\)\s*\}/,
+			/pub fn on_tray_menu<R: Runtime>\([^)]*\) \{\}/,
 		],
 	],
 	["src-tauri/app_build.rs", [/pub fn run\(\) \{\s*\}/]],

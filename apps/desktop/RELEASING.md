@@ -242,7 +242,7 @@ The kit owns only home, settings and about.
 | File | What it adds |
 |---|---|
 | `src-tauri/app-ext/Cargo.toml`, `src-tauri/app-ext/src/lib.rs`, `src-tauri/app-ext/build.rs` | `app-ext`: your Rust dependencies and code. The kit crate depends on it, so you never edit the kit's `Cargo.toml`. Keep the package name, `links = "app-ext"` and the forwarding call in `build.rs`; more crates go in `crates/`. |
-| `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …). |
+| `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …). `tray_items(app, &RuntimeConfig)`: your tray menu entries (`TrayItem::new(id, label)`, `.disabled()`), shown between the kit's "Show" and "Quit" and rebuilt with the menu (start, UI language change). `on_tray_menu(app, id)`: clicks on them. The ids `show` and `quit` are the kit's; a reserved, empty or duplicate id is skipped and logged. |
 | `src-tauri/app_build.rs` | `run()`: build-script steps (e.g. `cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift`), called by the kit's `build.rs` |
 | `src-tauri/deny.app.toml` | cargo-deny exceptions (`[[licenses.exceptions]]`, `[[advisories.ignore]]`, `[[bans.skip]]`), appended to the kit policy by `node scripts/cargo-deny.mjs` (CI runs it). The policy itself stays the kit's. |
 

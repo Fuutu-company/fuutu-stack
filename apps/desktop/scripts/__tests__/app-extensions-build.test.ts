@@ -188,6 +188,17 @@ describe("UI hooks (app-owned files read by the kit shell)", () => {
 	}
 });
 
+describe("tray menu hooks (src-tauri/src/app_plugins.rs)", () => {
+	it("the kit tray adds the app's items and hands it unknown ids", () => {
+		expect(existsSync(join(APP, "src-tauri/src/app_plugins.rs"))).toBe(true);
+		const shell = read("src-tauri/src/shell.rs");
+		expect(shell).toMatch(/crate::app_plugins::tray_items\(app, /);
+		expect(shell).toMatch(
+			/other => crate::app_plugins::on_tray_menu\(app, other\)/,
+		);
+	});
+});
+
 describe("cargo-deny exceptions (src-tauri/deny.app.toml)", () => {
 	it("appends the app's exception tables to the kit policy", async () => {
 		const { denyConfig } = await import("../cargo-deny.mjs");

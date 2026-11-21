@@ -19,11 +19,38 @@
 //! (e.g. `app.plugin(...)` in `Builder::setup` of your plugin): it
 //! deadlocks the app at startup. Register every plugin here, on the
 //! builder.
+//!
+//! Tray menu (with `desktopConfig.shell.tray`): `tray_items` returns your
+//! entries, shown between the kit's "Show" and "Quit" and rebuilt with the
+//! menu (start, UI language change) — read your own state through `app`
+//! for labels in the user's language. A click on one calls
+//! `on_tray_menu` with its id; the kit ids `show` and `quit` are reserved.
+//!
+//! ```ignore
+//! pub fn tray_items<R: Runtime>(_app: &AppHandle<R>, _config: &RuntimeConfig) -> Vec<TrayItem> {
+//!     vec![TrayItem::new("new-note", "New note")]
+//! }
+//!
+//! pub fn on_tray_menu<R: Runtime>(app: &AppHandle<R>, id: &str) {
+//!     if id == "new-note" {
+//!         let _ = app.emit("notes://new", ());
+//!     }
+//! }
+//! ```
 
 use crate::config::RuntimeConfig;
-use tauri::{Builder, Runtime};
+use crate::shell::TrayItem;
+use tauri::{AppHandle, Builder, Runtime};
 
 /// Registers the app's own plugins. The kit ships it as identity.
 pub fn register<R: Runtime>(builder: Builder<R>, _config: &RuntimeConfig) -> Builder<R> {
     builder
 }
+
+/// Your tray menu entries. The kit ships none.
+pub fn tray_items<R: Runtime>(_app: &AppHandle<R>, _config: &RuntimeConfig) -> Vec<TrayItem> {
+    Vec::new()
+}
+
+/// Clicks on your tray entries (ids the kit does not handle).
+pub fn on_tray_menu<R: Runtime>(_app: &AppHandle<R>, _id: &str) {}
