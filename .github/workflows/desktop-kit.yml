@@ -1,0 +1,145 @@
+name: Desktop kit matrix
+
+# Kit repository only: builds and checks the desktop app on every OS while
+# the committed switch stays off (`config.features.desktop: false`). The
+# checkout of each job turns the module on and renames the app (release
+# builds refuse the kit name, LICENSE.md §8) — nothing is committed.
+#
+# Per OS: cargo test + cargo-deny, an unsigned release build (no secrets,
+# no updater key, no offline keys), the release-binary bridge scan, then
+# the MCP smoke against `pnpm dev:desktop` (Linux under xvfb).
+#
+# Buyers: inert outside Fuutu-company/fuutu-stack; delete it if you like.
+# Your releases run in desktop.yml.
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "apps/desktop/**"
+      - "packages/desktop/**"
+      - "tooling/scripts/desktop*"
+      - ".github/workflows/desktop-kit.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Kit CI is a non-production instance (LICENSE.md §7); desktop.yml, the
+  # buyer's release workflow, keeps telemetry on.
+  FUUTU_TELEMETRY_DISABLED: "1"
+  # No backend here: release builds without its offline keys (no grace).
+  DESKTOP_ALLOW_NO_OFFLINE_KEYS: "1"
+
+jobs:
+  desktop:
+    name: ${{ matrix.job }}
+    if: github.repository == 'Fuutu-company/fuutu-stack'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job: macos-arm64
+            os: macos-15
+            args: ""
+          - job: macos-x64
+            os: macos-15-intel
+            args: ""
+          - job: windows-x64
+            os: windows-latest
+            args: --bundles nsis
+          - job: linux-x64
+            os: ubuntu-22.04
+            args: --bundles appimage,deb
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Turn the desktop module on (this checkout only)
+        shell: bash
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const file = "packages/config/index.ts";
+            let s = fs.readFileSync(file, "utf8");
+            const on = s.replace(/^(\t\tdesktop: )false,$/m, "$1true,");
+            const named = on.replace(/^(\t\tname: )"[^"]*",$/m, "$1\"Desktop CI\",");
+            if (on === s && !/^\t\tdesktop: true,$/m.test(s)) throw new Error("desktop switch not found");
+            if (named === on) throw new Error("app name not found");
+            fs.writeFileSync(file, named);
+          '
+          grep -nE '^\s+(desktop|name):' packages/config/index.ts | head -3
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Linux webview deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xvfb
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: apps/desktop/src-tauri
+          key: ${{ matrix.job }}
+      - name: cargo test
+        working-directory: apps/desktop/src-tauri
+        run: cargo test --workspace
+      - uses: taiki-e/install-action@25f51f6b1bf4e18876107cece836f4f77ac17c8c # v2
+        with:
+          tool: cargo-deny
+      - name: cargo-deny
+        shell: bash
+        working-directory: apps/desktop/src-tauri
+        run: node ../scripts/cargo-deny.mjs
+      - name: Build (unsigned)
+        shell: bash
+        run: pnpm build:desktop ${{ matrix.args }}
+      - name: Kit Cargo.toml unchanged
+        shell: bash
+        run: git diff --exit-code -- apps/desktop/src-tauri/Cargo.toml
+      - name: Scan the release binary for the automation bridge
+        shell: bash
+        working-directory: apps/desktop
+        run: node scripts/check-release-clean.mjs "src-tauri/target/release/desktop-app${{ runner.os == 'Windows' && '.exe' || '' }}"
+      - name: Bundles
+        shell: bash
+        run: find apps/desktop/src-tauri/target/release/bundle -maxdepth 2 | head -40
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: desktop-kit-${{ matrix.job }}
+          path: apps/desktop/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 3
+      # MCP smoke against the debug app (the bridge exists in debug builds
+      # only). `CI=` makes the launcher and the smoke share a port slot.
+      - name: Smoke (MCP)
+        shell: bash
+        run: |
+          log="$RUNNER_TEMP/dev-desktop.log"
+          launch="pnpm dev:desktop"
+          if [ "$RUNNER_OS" = "Linux" ]; then launch="xvfb-run -a $launch"; fi
+          CI= $launch > "$log" 2>&1 &
+          for i in $(seq 1 180); do
+            grep -q "desktop app started" "$log" && break
+            sleep 5
+          done
+          tail -20 "$log"
+          grep -q "desktop app started" "$log" || { echo "::error::the dev app did not start"; exit 1; }
+          sleep 10
+          CI= pnpm -F @fuutu/desktop-app smoke
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: desktop-kit-smoke-${{ matrix.job }}
+          path: .fuutu/desktop-shots
+          if-no-files-found: ignore
+          retention-days: 3
