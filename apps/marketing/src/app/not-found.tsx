@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { appMarketing } from "@/app-marketing";
 import { defaultLocale } from "@/i18n/config";
+import { isKitPathEnabled } from "@/lib/kit-routes";
 import { NotFoundLinks } from "@/modules/shared/components/not-found-links";
 import { NotFoundView } from "@/modules/shared/components/not-found-view";
 import { Providers } from "@/modules/shared/providers";
@@ -20,10 +21,12 @@ export default async function RootNotFound() {
 	const t = await getTranslations({ locale, namespace: "notFound" });
 	const homeHref = locale === defaultLocale ? "/" : `/${locale}`;
 	const tAll = await getTranslations({ locale });
-	const links = (appMarketing.notFoundLinks ?? []).map((link) => ({
-		...link,
-		label: tAll(link.labelKey),
-	}));
+	const links = (appMarketing.notFoundLinks ?? [])
+		.filter((link) => link.external || isKitPathEnabled(link.href))
+		.map((link) => ({
+			...link,
+			label: tAll(link.labelKey),
+		}));
 	// Outside the intl provider: plain anchors with the locale prefix.
 	const hrefFor = (href: string) =>
 		locale === defaultLocale ? href : `/${locale}${href}`;

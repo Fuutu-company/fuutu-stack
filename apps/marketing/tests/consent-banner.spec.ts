@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { consentBannerMode, consentBannerVisible } from "@fuutu/analytics";
 import { expect, type Page, test } from "@playwright/test";
 import { PLAN_IDS, PLANS } from "../../../packages/payments/src/config";
+import { isKitRouteEnabled } from "../src/lib/kit-routes";
 import { LOCALES, localePrefix } from "./locales";
 
 /** English CTA label of every plan the marketing pricing page shows. */
@@ -50,6 +51,10 @@ test.describe("consent banner", () => {
 	test("never covers a focused plan CTA or the end of the page", async ({
 		page,
 	}) => {
+		test.skip(
+			!isKitRouteEnabled("pricing"),
+			"pricing switched off in appKitRoutes",
+		);
 		await page.goto("/en/pricing");
 		const banner = page.getByRole("dialog", { name: /analytics/i });
 		await expect(banner).toBeVisible({ timeout: 10_000 });

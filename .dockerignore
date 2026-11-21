@@ -31,8 +31,11 @@
 .claude
 CLAUDE.local.md
 
-# Tests are not needed to build or run the apps
+# Tests are not needed to build or run the apps — except the app-owned
+# exclusion list: playwright.config.ts imports it and `next build`
+# type-checks that config.
 apps/*/tests
+!apps/*/tests/app-excluded.ts
 
 # Repo-only assets / docs / deploy helpers
 # (/docs is anchored to the repo root — do NOT match apps/docs)

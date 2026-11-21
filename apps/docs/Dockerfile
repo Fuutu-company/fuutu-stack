@@ -34,6 +34,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 FROM base AS builder
 COPY --from=installer /app/ .
 COPY --from=pruner /app/out/full/ .
+# playwright.config.ts imports this helper and `next build` type-checks
+# the config; `turbo prune` keeps only workspace packages.
+COPY --from=pruner /app/tooling/scripts/playwright-excluded.* ./tooling/scripts/
 # Generate .source/ (gitignored fumadocs-mdx output, normally produced
 # by the postinstall hook we skipped during install).
 RUN pnpm --filter @fuutu/docs run postinstall

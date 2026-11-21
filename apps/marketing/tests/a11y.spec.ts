@@ -1,6 +1,7 @@
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
+import { isKitPathEnabled, isKitRouteEnabled } from "../src/lib/kit-routes";
 import { expect, scrollThroughPage, test } from "./fixtures";
 import { DEFAULT_LOCALE } from "./locales";
 import { FIRST_POST_SLUG, NO_PUBLISHED_POST } from "./posts";
@@ -18,7 +19,7 @@ const LEGAL_SLUG =
 		?.split(".")[0] ?? "privacy";
 
 /** `path: null` — the app serves no such page; the scan is skipped. */
-const ROUTES: readonly { path: string | null; name: string }[] = [
+const KIT_ROUTES_SCANNED: readonly { path: string | null; name: string }[] = [
 	{ path: "/", name: "landing" },
 	{ path: "/pricing", name: "pricing" },
 	{ path: "/blog", name: "blog" },
@@ -32,6 +33,11 @@ const ROUTES: readonly { path: string | null; name: string }[] = [
 	{ path: "/this-page-does-not-exist", name: "404" },
 	{ path: "/blog/this-post-does-not-exist", name: "unknown blog post (404)" },
 ];
+
+/** Pages of a kit route the app switched off (`appKitRoutes`) are not scanned. */
+const ROUTES = KIT_ROUTES_SCANNED.filter(
+	({ path }) => path === null || isKitPathEnabled(path),
+);
 
 const THEMES = ["light", "dark"] as const;
 
@@ -65,6 +71,7 @@ for (const theme of THEMES) {
 test("a blog post h2 has a top margin (prose styles apply)", async ({
 	page,
 }) => {
+	test.skip(!isKitRouteEnabled("blog"), "blog switched off in appKitRoutes");
 	test.skip(!FIRST_POST_SLUG, NO_PUBLISHED_POST);
 	await page.goto(`/${DEFAULT_LOCALE}/blog/${FIRST_POST_SLUG}`);
 	const marginTop = await page

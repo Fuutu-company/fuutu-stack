@@ -31,3 +31,28 @@ export function excludedTestsConfig(rawEntries) {
 			: {}),
 	};
 }
+
+/** Tag of the E2E specs that assert the kit's own demo (copy, look, layout). */
+export const KIT_DEMO_TAG = "@kit-demo";
+
+/**
+ * Kit demo specs (`{ tag: "@kit-demo" }`) check the demo's own shape — a
+ * buyer who replaces the landing page fails them. They run only when
+ * `FUUTU_KIT_SOURCE=1` (kit CI sets it in the kit repository; kit
+ * maintainers put it in `.env`); otherwise this adds the tag to
+ * `grepInvert`, next to the app's title exclusions.
+ *
+ * @param {{ testIgnore?: string[]; grepInvert?: RegExp }} config
+ * @param {Record<string, string | undefined>} [env]
+ * @returns {{ testIgnore?: string[]; grepInvert?: RegExp | RegExp[] }}
+ */
+export function withKitDemoFilter(config, env = process.env) {
+	if (env.FUUTU_KIT_SOURCE === "1") return config;
+	return {
+		...config,
+		grepInvert: [
+			...(config.grepInvert ? [config.grepInvert] : []),
+			new RegExp(escapeRegExp(KIT_DEMO_TAG)),
+		],
+	};
+}

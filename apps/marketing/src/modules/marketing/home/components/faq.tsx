@@ -1,6 +1,7 @@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@fuutu/ui";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { SectionHeading } from "./section-heading";
 
 interface FaqItem {
@@ -34,7 +35,7 @@ export function FAQ() {
 			<script
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{
-					__html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+					__html: serializeJsonLd(jsonLd),
 				}}
 			/>
 			<SectionHeading

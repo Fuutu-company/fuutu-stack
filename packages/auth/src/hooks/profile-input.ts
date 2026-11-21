@@ -58,6 +58,16 @@ export function isOwnOrganizationLogo(
 	return isOwnUpload(logo, "organization-logos", organizationId);
 }
 
+/**
+ * True when `image` is a path under the user's own
+ * `/image-proxy/avatars/<userId>/` uploads — the rule Better Auth's
+ * `/update-user` hook enforces, for API procedures that write
+ * `user.image` directly.
+ */
+export function isOwnUserImage(image: string, userId: string): boolean {
+	return isOwnUpload(image, "avatars", userId);
+}
+
 const asBody = (value: unknown): Body =>
 	typeof value === "object" && value !== null ? (value as Body) : {};
 

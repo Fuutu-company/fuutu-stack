@@ -1,8 +1,14 @@
 import { getAllLocales } from "@fuutu/i18n";
+import { i18nConfig } from "@fuutu/i18n/config";
 import { describe, expect, it } from "vitest";
 import { getMailStrings } from "../i18n";
 import { renderTemplate } from "../templates";
-import { escapeAttr, escapeHtml, renderButton } from "../templates/layout";
+import {
+	escapeAttr,
+	escapeHtml,
+	renderButton,
+	renderLayout,
+} from "../templates/layout";
 import type { TemplateName, TemplatePayloads } from "../types";
 
 const fixtures: { [K in TemplateName]: TemplatePayloads[K] } = {
@@ -189,9 +195,19 @@ describe("escapeAttr", () => {
 	});
 });
 
+describe("renderLayout", () => {
+	it("uses the default locale for lang when no locale is given", () => {
+		expect(renderLayout("<p>x</p>")).toContain(
+			`lang="${i18nConfig.defaultLocale}"`,
+		);
+	});
+});
+
 describe("getMailStrings", () => {
-	it("defaults to the en bundle when no locale is given", () => {
-		expect(getMailStrings().signature).toBe("— The Fuutu team");
+	it("defaults to the default-locale bundle when no locale is given", () => {
+		expect(getMailStrings().signature).toBe(
+			getMailStrings(i18nConfig.defaultLocale).signature,
+		);
 		expect(getMailStrings("en").signature).toBe("— The Fuutu team");
 	});
 

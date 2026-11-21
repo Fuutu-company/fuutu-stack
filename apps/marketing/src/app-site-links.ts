@@ -1,3 +1,4 @@
+import type { KitRoute } from "./lib/kit-routes";
 import type {
 	AppFooter,
 	AppHeaderBrand,
@@ -105,3 +106,26 @@ export const appNavRemove: readonly string[] = [];
  * ```
  */
 export const appFooter: AppFooter = {};
+
+/**
+ * Kit pages to switch off, by key: `pricing`, `blog`, `changelog`,
+ * `contact`. A page set to `false` answers 404 (every locale), and its
+ * navbar and footer links, sitemap entries and (for `pricing`) the home
+ * pricing section and (for `contact`) the home security-band button
+ * disappear; links you add yourself (`appNavItems`, `notFoundLinks`) to
+ * a disabled page are dropped too. `pricing` is also off while
+ * `config.features.payments` is `false`. Legal pages and the home page
+ * stay — control those through their own config and `appMarketing`.
+ * The kit E2E specs read this too (`isKitRouteEnabled` in
+ * `lib/kit-routes.ts`): they skip a switched-off page and assert it is gone,
+ * so nothing needs excluding in `tests/app-excluded.ts`. Keep this file
+ * importable from Node (Playwright imports it).
+ *
+ * ```ts
+ * export const appKitRoutes: Partial<Record<KitRoute, false>> = {
+ *   blog: false,
+ *   changelog: false,
+ * };
+ * ```
+ */
+export const appKitRoutes: Partial<Record<KitRoute, false>> = {};

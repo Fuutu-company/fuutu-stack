@@ -1,3 +1,4 @@
+import { isKitPathEnabled } from "../src/lib/kit-routes";
 import { DEFAULT_LOCALE, LOCALES, OTHER_LOCALES } from "./locales";
 import { FIRST_POST_SLUG, NO_PUBLISHED_POST } from "./posts";
 import {
@@ -29,7 +30,7 @@ import {
  */
 
 /** `path: null` — the app serves no such page; the shot is skipped. */
-const PAGES: readonly { path: string | null; name: string }[] = [
+const KIT_PAGES: readonly { path: string | null; name: string }[] = [
 	{ path: "", name: "marketing--landing" },
 	{ path: "/pricing", name: "marketing--pricing" },
 	{ path: "/blog", name: "marketing--blog" },
@@ -44,13 +45,20 @@ const PAGES: readonly { path: string | null; name: string }[] = [
 	{ path: "/legal/imprint", name: "legal--imprint" },
 ];
 
+/** Pages of a kit route the app switched off (`appKitRoutes`) have no baseline. */
+const PAGES = KIT_PAGES.filter(
+	({ path }) => path === null || isKitPathEnabled(path),
+);
+
 const VIEWPORTS = [
 	{ width: 1280, height: 720, label: "desktop" },
 	{ width: 768, height: 1024, label: "tablet" },
 	{ width: 375, height: 812, label: "mobile" },
 ] as const;
 
-test.describe("visual regression — marketing pages", () => {
+test.describe("visual regression — marketing pages", {
+	tag: "@kit-demo",
+}, () => {
 	// ── Desktop: every enabled locale ─────────────────────────────────
 
 	for (const locale of LOCALES) {
@@ -74,12 +82,13 @@ test.describe("visual regression — marketing pages", () => {
 	// ── Tablet + Mobile: key pages, default locale only ───────────────────────────
 	// (Reduces snapshot count; other locales share the layout.)
 
-	const KEY_PAGES = [
+	const ALL_KEY_PAGES = [
 		{ path: "", name: "marketing--landing" },
 		{ path: "/pricing", name: "marketing--pricing" },
 		{ path: "/blog", name: "marketing--blog" },
 		{ path: "/contact", name: "marketing--contact" },
 	] as const;
+	const KEY_PAGES = ALL_KEY_PAGES.filter(({ path }) => isKitPathEnabled(path));
 
 	for (const viewport of VIEWPORTS) {
 		if (viewport.label === "desktop") continue;
@@ -112,7 +121,7 @@ test.describe("visual regression — marketing pages", () => {
 	}
 });
 
-test.describe("visual regression — components", () => {
+test.describe("visual regression — components", { tag: "@kit-demo" }, () => {
 	test("locale switcher dropdown matches baseline", async ({
 		page,
 		isMobile,

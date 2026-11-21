@@ -26,7 +26,7 @@ export const setPaymentsCustomerId = (id: string, paymentsCustomerId: string) =>
 
 export const updateUserProfile = (
 	id: string,
-	data: { name?: string; image?: string },
+	data: { name?: string; image?: string | null },
 ) => db.user.update({ where: { id }, data });
 
 /**

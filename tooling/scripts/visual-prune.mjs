@@ -5,7 +5,7 @@
 // packages/test-utils/src/arch/kit-source/visual-baselines.test.ts enforces.
 //
 // It never looks at what an update run rewrote: Playwright leaves a
-// byte-identical render untouched, and a run covers only some apps and
+// render within tolerance untouched, and a run covers only some apps and
 // projects — "not rewritten" is not "orphaned".
 //
 //   node tooling/scripts/visual-prune.mjs --app <saas|marketing>

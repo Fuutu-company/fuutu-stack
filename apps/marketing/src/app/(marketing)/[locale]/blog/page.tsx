@@ -4,7 +4,7 @@ import { PageIntro } from "@shared/components/page-intro";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { appMarketing } from "@/app-marketing";
-import { withAppMetadata } from "@/lib/page-metadata";
+import { pageMetadata, withAppMetadata } from "@/lib/page-metadata";
 import { Link } from "@/navigation";
 
 interface BlogPageProps {
@@ -17,7 +17,12 @@ export async function generateMetadata({
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "blog" });
 	return withAppMetadata(
-		{ title: t("title"), description: t("description") },
+		pageMetadata({
+			locale,
+			path: "/blog",
+			title: t("title"),
+			description: t("description"),
+		}),
 		appMarketing.metadata?.blog,
 		locale,
 	);

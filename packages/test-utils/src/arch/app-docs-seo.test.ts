@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { config as kitConfig } from "../../../config/index";
 
 /**
  * Docs-app SEO extensions: page metadata (`appDocs.metadata` — title
@@ -108,7 +109,7 @@ describe("docs page metadata", () => {
 			},
 			openGraph: {
 				type: "website",
-				siteName: "Fuutu Stack Docs",
+				siteName: `${kitConfig.app.name} Docs`,
 				title: "Theming",
 				description: "Brand tokens",
 				locale: "de",
@@ -187,7 +188,7 @@ describe("docs home metadata", () => {
 		});
 		expect(meta.openGraph).toEqual({
 			type: "website",
-			siteName: "Fuutu Stack Docs",
+			siteName: `${kitConfig.app.name} Docs`,
 			title: "Docs",
 			description: "Start here",
 			locale: "de",

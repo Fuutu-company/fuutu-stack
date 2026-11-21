@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { appMarketing } from "@/app-marketing";
-import { withAppMetadata } from "@/lib/page-metadata";
+import { pageMetadata, withAppMetadata } from "@/lib/page-metadata";
 
 interface ContactPageProps {
 	params: Promise<{ locale: string }>;
@@ -18,7 +18,12 @@ export async function generateMetadata({
 	const { locale } = await params;
 	const t = await getTranslations({ locale, namespace: "contact" });
 	return withAppMetadata(
-		{ title: t("title"), description: t("description") },
+		pageMetadata({
+			locale,
+			path: "/contact",
+			title: t("title"),
+			description: t("description"),
+		}),
 		appMarketing.metadata?.contact,
 		locale,
 	);
