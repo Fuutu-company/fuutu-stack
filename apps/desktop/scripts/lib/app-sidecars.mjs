@@ -14,9 +14,18 @@
  *   (`scripts/licenses.mjs`, same allowlist as npm packages). Every entry
  *   needs `name`, `version`, `license` (SPDX) and `text` (the licence
  *   text); `repository` is optional.
+ * - `build({ target })` (optional — export it to use it): builds or
+ *   downloads the programs for one Rust target triple; the desktop
+ *   workflow calls it per build job before the app build
+ *   (`scripts/build-sidecars.mjs`, no secrets). Write each to
+ *   `src-tauri/<path>-<target>` (`binaries/` is git-ignored).
  *
  * ```js
  * export const APP_EXTERNAL_BIN = ["binaries/helper"];
+ * export async function build({ target }) {
+ *   execFileSync("cargo", ["build", "--release", "-p", "helper", "--target", target]);
+ *   copyFileSync(`…/helper`, `src-tauri/binaries/helper-${target}`);
+ * }
  * export function shippedSidecars() {
  *   return [{ name: "helper", version: "1.2.0", license: "MIT",
  *     text: readFileSync(new URL("../../src-tauri/binaries/LICENSE-helper", import.meta.url), "utf8") }];

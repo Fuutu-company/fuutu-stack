@@ -5,10 +5,11 @@ import { Button, Separator } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { appAboutSection } from "@/app-about";
 import { inDesktop } from "@/lib/desktop";
 
 type Notice = {
-	ecosystem: "npm" | "cargo";
+	ecosystem: "npm" | "cargo" | "sidecar";
 	name: string;
 	version: string;
 	license: string | null;
@@ -21,6 +22,9 @@ async function loadNotices(): Promise<Notice[]> {
 	if (!res.ok) return [];
 	return ((await res.json()) as { packages: Notice[] }).packages;
 }
+
+/** Your section (src/app-about.tsx), above the notices. */
+const AppAboutSection = appAboutSection;
 
 /** About window (second webview): version, kit attribution, notices. */
 export default function AboutPage() {
@@ -64,6 +68,12 @@ export default function AboutPage() {
 						{t("logs")}
 					</Button>
 				</div>
+			) : null}
+			{AppAboutSection ? (
+				<>
+					<Separator />
+					<AppAboutSection />
+				</>
 			) : null}
 			<Separator />
 			<section className="flex flex-col gap-2">

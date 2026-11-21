@@ -100,8 +100,9 @@ jobs:
       - uses: taiki-e/install-action@25f51f6b1bf4e18876107cece836f4f77ac17c8c # v2
         with:
           tool: cargo-deny
-      # Licences, bans, sources, advisories — rules in deny.toml.
-      - run: cargo deny check
+      # Licences, bans, sources, advisories — rules in deny.toml plus the
+      # app's exceptions (deny.app.toml).
+      - run: node ../scripts/cargo-deny.mjs
       # The agent automation bridge never reaches a release build.
       - run: node ../scripts/check-release-clean.mjs
 
@@ -115,16 +116,19 @@ jobs:
         include:
           - job: macos-universal
             os: macos-latest
+            target: universal-apple-darwin
             args: --target universal-apple-darwin
             bundle: target/universal-apple-darwin/release/bundle
             binary: target/universal-apple-darwin/release/desktop-app
           - job: windows-x86_64
             os: windows-latest
+            target: x86_64-pc-windows-msvc
             args: --bundles nsis
             bundle: target/release/bundle
             binary: target/release/desktop-app.exe
           - job: linux-x86_64
             os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
             args: --bundles appimage,deb
             bundle: target/release/bundle
             binary: target/release/desktop-app
@@ -158,6 +162,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      # Your sidecar programs (app-owned scripts/lib/app-sidecars.mjs
+      # `build()`); nothing without one. No secrets here.
+      - name: Build sidecars
+        shell: bash
+        working-directory: apps/desktop
+        run: node scripts/build-sidecars.mjs "${{ matrix.target }}"
       - name: Import Windows certificate
         if: runner.os == 'Windows' && env.RELEASE == 'true'
         shell: pwsh

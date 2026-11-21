@@ -6,6 +6,7 @@ import {
 	kitNameViolations,
 } from "@fuutu/desktop/identity";
 import { APP_CAPABILITIES, type AppCapability } from "./app-capabilities";
+import { APP_TAURI_CONFIG, type AppTauriConfig } from "./app-tauri-config";
 
 /** Mode the generated Tauri config is for. */
 export type TauriConfigMode = "dev" | "build";
@@ -33,6 +34,8 @@ export type TauriConfigInput = DesktopBuildInputs & {
 	 * (`APP_EXTERNAL_BIN`, app-sidecars.mjs — run.ts passes it).
 	 */
 	externalBin?: readonly string[];
+	/** Your Tauri config keys (default: `APP_TAURI_CONFIG`, app-tauri-config.ts). */
+	appTauriConfig?: AppTauriConfig;
 };
 
 /** Capability that lets the debug-only automation bridge talk to the webviews. */
@@ -150,7 +153,9 @@ export function buildTauriConfig(input: TauriConfigInput) {
 		);
 	}
 	const updater = updaterPluginConfig(input, dev);
-	return {
+	const appCapabilities = input.appCapabilities ?? APP_CAPABILITIES;
+	assertNoDevtools(appCapabilities);
+	const config = {
 		productName: id.productName,
 		version: input.appVersion,
 		identifier: id.bundleId,
@@ -174,7 +179,7 @@ export function buildTauriConfig(input: TauriConfigInput) {
 				csp: dev ? null : releaseCsp(),
 				capabilities: [
 					"default",
-					...(input.appCapabilities ?? APP_CAPABILITIES),
+					...appCapabilities,
 					...(dev ? [DEVTOOLS_CAPABILITY] : []),
 				],
 			},
@@ -187,6 +192,96 @@ export function buildTauriConfig(input: TauriConfigInput) {
 			...(updater && { updater }),
 		},
 	};
+	const merged = mergeAppTauriConfig(
+		config,
+		input.appTauriConfig ?? APP_TAURI_CONFIG,
+	);
+	if (!merged.app.windows.some((w: { label?: string }) => w.label === "main")) {
+		throw new Error(
+			'app-tauri-config.ts: app.windows must keep the "main" window (the shell, sign-in and tray use it).',
+		);
+	}
+	return merged;
+}
+
+/** The devtools capability / automation bridge is the kit's, debug-only. */
+function assertNoDevtools(capabilities: readonly AppCapability[]) {
+	for (const capability of capabilities) {
+		const id =
+			typeof capability === "string" ? capability : capability.identifier;
+		const bridge =
+			typeof capability !== "string" &&
+			JSON.stringify(capability.permissions).includes("mcp-bridge");
+		if (id === DEVTOOLS_CAPABILITY.identifier || bridge) {
+			throw new Error(
+				"app-capabilities.ts: the devtools capability and the automation bridge (mcp-bridge) are debug-only kit capabilities — remove them.",
+			);
+		}
+	}
+}
+
+/**
+ * Config paths `app-tauri-config.ts` may not set: identity, build
+ * commands (they run with the signing secrets), security, updater, deep
+ * link, sidecars (app-sidecars.mjs) and signing.
+ */
+export const PROTECTED_TAURI_KEYS = [
+	"identifier",
+	"productName",
+	"version",
+	"mainBinaryName",
+	"build",
+	"app.security",
+	"app.withGlobalTauri",
+	"plugins.updater",
+	"plugins.deep-link",
+	"bundle.createUpdaterArtifacts",
+	"bundle.externalBin",
+	"bundle.windows.certificateThumbprint",
+	"bundle.windows.signCommand",
+	"bundle.macOS.signingIdentity",
+] as const;
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+function leafPaths(value: unknown, prefix = ""): string[] {
+	if (!isObject(value) || Object.keys(value).length === 0) return [prefix];
+	return Object.entries(value).flatMap(([key, child]) =>
+		leafPaths(child, prefix ? `${prefix}.${key}` : key),
+	);
+}
+
+/**
+ * Deep-merges the app's Tauri keys into the generated config: objects key
+ * by key, arrays and values replace. Throws on a protected key.
+ */
+export function mergeAppTauriConfig<T extends object>(
+	config: T,
+	override: AppTauriConfig,
+): T {
+	const refused = leafPaths(override)
+		.filter(Boolean)
+		.filter((path) =>
+			PROTECTED_TAURI_KEYS.some(
+				(key) => path === key || path.startsWith(`${key}.`),
+			),
+		);
+	if (refused.length > 0) {
+		throw new Error(
+			`app-tauri-config.ts: ${refused.join(", ")} not overridable (security / identity — see the file's header).`,
+		);
+	}
+	return merge(config, override) as T;
+}
+
+function merge(base: unknown, override: unknown): unknown {
+	if (!isObject(base) || !isObject(override)) return override;
+	const out: Record<string, unknown> = { ...base };
+	for (const [key, value] of Object.entries(override)) {
+		out[key] = key in base ? merge(base[key], value) : value;
+	}
+	return out;
 }
 
 type BundleConfig = {

@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { APP_CAPABILITIES } from "../lib/app-capabilities";
-import { APP_EXTERNAL_BIN, shippedSidecars } from "../lib/app-sidecars.mjs";
+import type { AppCapability } from "../lib/app-capabilities";
 import { buildTauriConfig, DEVTOOLS_CAPABILITY } from "../lib/tauri-config";
 import { licenseViolations, sidecarPackages } from "../licenses.mjs";
 
@@ -19,8 +18,11 @@ vi.mock("@fuutu/config", async (importOriginal) => {
 });
 
 /**
- * Desktop extension points (app-owned, empty in the kit): Tauri
- * capabilities, bundled sidecar programs, a Rust plugin hook.
+ * Desktop extension points (app-owned): Tauri capabilities, bundled
+ * sidecar programs, a Rust plugin hook. These tests check the kit side
+ * only, never the content of the app-owned files (buyers fill them); their
+ * shipped defaults are kit-source guards
+ * (packages/test-utils/src/arch/kit-source/desktop-app-hooks.test.ts).
  */
 
 const APP_CAP = {
@@ -29,9 +31,22 @@ const APP_CAP = {
 	permissions: ["fs:allow-read-text-file"],
 };
 
-describe("APP_CAPABILITIES", () => {
-	it("ships empty", () => {
-		expect(APP_CAPABILITIES).toEqual([]);
+describe("APP_CAPABILITIES (app-capabilities.ts)", () => {
+	it("never smuggles the devtools capability or the bridge in", () => {
+		const cases: AppCapability[][] = [
+			[DEVTOOLS_CAPABILITY as unknown as AppCapability],
+			["devtools"],
+			[{ identifier: "x", permissions: ["mcp-bridge:default"] }],
+		];
+		for (const appCapabilities of cases) {
+			expect(() =>
+				buildTauriConfig({
+					mode: "build",
+					appVersion: "1.0.0",
+					appCapabilities,
+				}),
+			).toThrow(/devtools|automation bridge/);
+		}
 	});
 
 	it("is appended in release and dev, before the devtools capability", () => {
@@ -60,11 +75,6 @@ describe("APP_CAPABILITIES", () => {
 });
 
 describe("APP_EXTERNAL_BIN (sidecars)", () => {
-	it("ships empty", () => {
-		expect(APP_EXTERNAL_BIN).toEqual([]);
-		expect(shippedSidecars()).toEqual([]);
-	});
-
 	it("reaches bundle.externalBin in release builds only", () => {
 		const externalBin = ["binaries/ffmpeg"];
 		const release = buildTauriConfig({
@@ -123,13 +133,6 @@ describe("APP_EXTERNAL_BIN (sidecars)", () => {
 describe("app_plugins::register (Rust plugin hook)", () => {
 	const tauri = join(import.meta.dirname, "../../src-tauri/src");
 
-	it("ships as identity", () => {
-		const source = readFileSync(join(tauri, "app_plugins.rs"), "utf8");
-		expect(source).toMatch(
-			/pub fn register<R: Runtime>\(\s*builder: Builder<R>,\s*_config: &RuntimeConfig,?\s*\) -> Builder<R> \{\s*builder\s*\}/,
-		);
-	});
-
 	it("lib.rs calls it exactly once", () => {
 		const lib = readFileSync(join(tauri, "lib.rs"), "utf8");
 		expect(lib).toMatch(/^mod app_plugins;$/m);
@@ -137,27 +140,4 @@ describe("app_plugins::register (Rust plugin hook)", () => {
 		// With the resolved runtime config (saas_url, identity, …).
 		expect(lib).toContain("app_plugins::register(builder, &config)");
 	});
-});
-
-describe("app-owned files", () => {
-	const HEADER =
-		"App-owned — the kit never changes this file's content after release; fill it for your app.";
-	const fold = (source: string) =>
-		source
-			.replace(/^\s*(\*|\/\/!)\s?/gm, "")
-			.replace(/\s+/g, " ")
-			.trim();
-	for (const file of [
-		"scripts/lib/app-capabilities.ts",
-		"scripts/lib/app-sidecars.mjs",
-		"src-tauri/src/app_plugins.rs",
-	]) {
-		it(`${file} carries the app-owned header`, () => {
-			const source = readFileSync(
-				join(import.meta.dirname, "../..", file),
-				"utf8",
-			);
-			expect(fold(source)).toContain(HEADER);
-		});
-	}
 });

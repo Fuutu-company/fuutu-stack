@@ -12,3 +12,6 @@ next-env.d.ts
 /src-tauri/gen/
 /src-tauri/tauri.*.generated.json
 /public/third-party-notices.json
+
+# Sidecar programs (app-sidecars.mjs build()) — built per target, not committed
+binaries/

@@ -147,7 +147,12 @@ describe("buildTauriConfig", () => {
 	it("never gives a release build the automation bridge or the global Tauri object", () => {
 		const config = buildTauriConfig({ mode: "build", appVersion: "1.0.0" });
 		expect(config.app.withGlobalTauri).toBe(false);
-		expect(config.app.security.capabilities).toEqual(["default"]);
+		// The kit's capability first; the devtools one never (nor through
+		// the app's APP_CAPABILITIES — buyers fill that file).
+		expect(config.app.security.capabilities[0]).toBe("default");
+		expect(config.app.security.capabilities).not.toContainEqual(
+			DEVTOOLS_CAPABILITY,
+		);
 		expect(JSON.stringify(config)).not.toContain("mcp-bridge");
 	});
 

@@ -1,6 +1,9 @@
 # cargo-deny — licence + advisory gate for the desktop app's Rust crates
-# (desktop CI job; `cargo deny check` locally). Only licences that allow
+# (desktop CI job; `node ../scripts/cargo-deny.mjs` locally). Only licences that allow
 # closed-source commercial distribution (Licence safety, ADR-002 #13).
+# Run it through `node ../scripts/cargo-deny.mjs`: it appends your
+# exceptions from the app-owned deny.app.toml (exceptions here are tables,
+# `[[licenses.exceptions]]`, so the app's can follow them).
 
 [graph]
 all-features = true
@@ -19,12 +22,6 @@ allow = [
     "Unlicense",
     "Unicode-3.0",
     "Unicode-DFS-2016",
-]
-# Data licences, crate by crate (not a general allowance).
-exceptions = [
-    # Mozilla's CA root certificates (TLS via reqwest/rustls) — permissive,
-    # commercial redistribution allowed.
-    { crate = "webpki-root-certs", allow = ["CDLA-Permissive-2.0"] },
 ]
 confidence-threshold = 0.9
 # The list is the policy, not an inventory: unused entries are fine.
@@ -46,3 +43,10 @@ wildcards = "allow"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+# Data licences, crate by crate (not a general allowance).
+# Mozilla's CA root certificates (TLS via reqwest/rustls) — permissive,
+# commercial redistribution allowed.
+[[licenses.exceptions]]
+crate = "webpki-root-certs"
+allow = ["CDLA-Permissive-2.0"]

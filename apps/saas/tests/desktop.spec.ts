@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { config } from "@fuutu/config";
 import { desktopConfig } from "@fuutu/desktop/config";
 import { desktopIdentity } from "@fuutu/desktop/identity";
-import { featureOff } from "./features";
+import { featureOff, orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 
 /**
@@ -103,11 +103,15 @@ test.describe("desktop access token scope", () => {
 			resource,
 		}).toString();
 
-		const active = await page.request.post(
-			"/api/auth/organization/set-active",
-			{ headers: { origin }, data: { organizationSlug: "acme" } },
-		);
-		expect(active.ok()).toBe(true);
+		// The token pins the org active at sign-in; without organizations
+		// (organizationsMode "off") it is personal.
+		if (!orgsOff()[0]) {
+			const active = await page.request.post(
+				"/api/auth/organization/set-active",
+				{ headers: { origin }, data: { organizationSlug: "acme" } },
+			);
+			expect(active.ok()).toBe(true);
+		}
 		// The app's loopback listener — answered in the browser.
 		await page.route(`${REDIRECT_URI}**`, (route) =>
 			route.fulfill({ status: 200, body: "ok" }),

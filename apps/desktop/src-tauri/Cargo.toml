@@ -1,8 +1,9 @@
-# Desktop shell (Tauri 2). This crate is the app; `crates/*` is room for your
-# product crates (add them to `members` and depend on them from here).
+# Desktop shell (Tauri 2). This crate is the app. Your dependencies and code
+# go into the app-owned `app-ext` crate (`app-ext/Cargo.toml`), more product
+# crates under `crates/*` — never into this file.
 # The Rust toolchain is only needed when `config.features.desktop` is on.
 [workspace]
-members = [".", "crates/*", "vendor/*"]
+members = [".", "app-ext", "crates/*", "vendor/*"]
 resolver = "2"
 
 [package]
@@ -51,6 +52,8 @@ url = "2.5.8"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 tauri-plugin-mcp-bridge = { path = "vendor/tauri-plugin-mcp-bridge", optional = true }
+# Your dependencies and code (app-owned app-ext/Cargo.toml).
+app-ext = { path = "app-ext" }
 
 [profile.release]
 codegen-units = 1

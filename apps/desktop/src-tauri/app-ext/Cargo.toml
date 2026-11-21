@@ -1,0 +1,21 @@
+# App-owned — the kit never changes this file's content after release;
+# fill it for your app.
+#
+# Your Rust dependencies and code, without editing the kit's Cargo.toml:
+# the desktop crate depends on this one (`app-ext = { path = "app-ext" }`),
+# so everything here is linked into the app. Use it from
+# `src/app_plugins.rs` (`app_ext::…`). Keep the package name `app-ext`.
+# Bigger products: more crates under `crates/`, depended on from here.
+# Licences: cargo-deny gates these dependencies too (exceptions in
+# `../deny.app.toml`).
+
+[package]
+name = "app-ext"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]

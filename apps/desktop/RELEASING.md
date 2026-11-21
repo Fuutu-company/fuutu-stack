@@ -213,19 +213,41 @@ pnpm -F @fuutu/desktop-app exec tsx scripts/publish.ts --dir ./release --channel
 
 ## Extend without forking
 
-Add your own permissions, bundled programs and Rust plugins through the
-app-owned files below, never by editing kit files. A kit update leaves
-their content alone. Each one ships empty.
+Build your product through the app-owned files below, never by editing
+kit files. A kit update leaves their content alone. Each one ships empty
+(or as identity), and kit tests never check what you put in them.
+
+**UI** (`src/`). Your pages are new route files,
+`src/app/(main)/<route>/page.tsx`, inside the shell and the access gate.
+The kit owns only home, settings and about.
 
 | File | What it adds |
 |---|---|
-| `scripts/lib/app-capabilities.ts` | `APP_CAPABILITIES`: Tauri capabilities (inline, or the identifier of a file in `src-tauri/capabilities/`), added after the kit's `default` in dev and release builds |
-| `scripts/lib/app-sidecars.mjs` | `APP_EXTERNAL_BIN`: sidecar programs for `bundle.externalBin` (release builds only)<br>`shippedSidecars()`: their `name`, `version`, `license` and `text` for About → Licences and the licence gate (same allowlist as npm; a missing field fails the build) |
-| `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …) |
+| `src/app-nav.ts` | `appNavItems`: sidebar items (`titleKey` under `desktop.shell.nav`, `href`, `icon`, `after`). Labels go in the `desktop` section of `packages/i18n/translations/<locale>/app/index.ts`. |
+| `src/app-home.tsx` | `appHome`: the home page content |
+| `src/app-about.tsx` | `appAboutSection`: a section of the About window, above the notices |
+| `src/app-shell-slot.tsx` | `appShellSlots`: `sidebarTop`, `sidebarBottom`, `contentTop`, `global` (dialogs, listeners) |
+
+**Tauri and the build** (`scripts/lib/`):
+
+| File | What it adds |
+|---|---|
+| `scripts/lib/app-capabilities.ts` | `APP_CAPABILITIES`: Tauri capabilities (inline, or the identifier of a file in `src-tauri/capabilities/`), added after the kit's `default` in dev and release builds. It may not contain the devtools capability or the bridge. |
+| `scripts/lib/app-tauri-config.ts` | `APP_TAURI_CONFIG`: Tauri config keys deep-merged into the generated config (objects merge, arrays replace), e.g. `app.macOSPrivateApi`, `bundle.macOS.infoPlist` or `minimumSystemVersion`. Translated permission prompts go in `<locale>.lproj/InfoPlist.strings` files via `bundle.macOS.files`. The build **refuses** identity, `build`, `app.security` (CSP, capabilities), `app.withGlobalTauri`, updater and deep-link plugins, updater artifacts, `externalBin` and signing keys, and the `main` window must stay. |
+| `scripts/lib/app-sidecars.mjs` | `APP_EXTERNAL_BIN`: sidecar programs for `bundle.externalBin` (release builds only)<br>`shippedSidecars()`: their `name`, `version`, `license` and `text` for About → Licences and the licence gate (same allowlist as npm; a missing field fails the build)<br>Optional `build({ target })`: CI runs it per build job ("Build sidecars", no secrets). Output goes to `src-tauri/<path>-<target>`, and `binaries/` is git-ignored. |
+
+**Rust** (`src-tauri/`):
+
+| File | What it adds |
+|---|---|
+| `src-tauri/app-ext/Cargo.toml`, `src-tauri/app-ext/src/lib.rs` | `app-ext`: your Rust dependencies and code. The kit crate depends on it, so you never edit the kit's `Cargo.toml`. Keep the package name `app-ext`; more crates go in `crates/`. |
+| `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …). |
+| `src-tauri/app_build.rs` | `run()`: build-script steps (e.g. `cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift`), called by the kit's `build.rs` |
+| `src-tauri/deny.app.toml` | cargo-deny exceptions (`[[licenses.exceptions]]`, `[[advisories.ignore]]`, `[[bans.skip]]`), appended to the kit policy by `node scripts/cargo-deny.mjs` (CI runs it). The policy itself stays the kit's. |
 
 Register every plugin on the builder in `register`. Never register a
 plugin from inside another plugin's `setup`, because that deadlocks the
-app at startup. Put your own crates in `src-tauri/crates/`.
+app at startup.
 
 ## Before the first release
 
@@ -255,6 +277,6 @@ app at startup. Put your own crates in `src-tauri/crates/`.
 - [ ] One full round on a test channel: install `vX.Y.Z-beta.1`, publish
       `-beta.2`, the app offers it, installs it and restarts.
 - [ ] `/download` (marketing) and Settings → Desktop app list your installers.
-- [ ] Third-party notices (About → Licences) complete; `cargo deny check` green.
+- [ ] Third-party notices (About → Licences) complete; `node apps/desktop/scripts/cargo-deny.mjs` green.
 - [ ] Build telemetry stays on (LICENSE.md §7) — never set
       `FUUTU_TELEMETRY_DISABLED` in the release workflow.

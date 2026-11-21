@@ -1,0 +1,18 @@
+# App-owned — the kit never changes this file's content after release;
+# fill it for your app.
+#
+# Your cargo-deny exceptions, appended to the kit policy (deny.toml) by
+# `node scripts/cargo-deny.mjs` (CI, local checks). Only these tables:
+#
+#   [[licenses.exceptions]]        a licence for ONE crate
+#   crate = "my-codec"
+#   allow = ["LGPL-2.1-or-later"]
+#
+#   [[advisories.ignore]]          an advisory that does not affect you
+#   id = "RUSTSEC-0000-0000"
+#   reason = "not reachable: we never parse untrusted input with it"
+#
+#   [[bans.skip]]
+#   crate = "some-crate@1.0.0"
+#
+# The allowed licences, sources and advisory levels stay the kit's.

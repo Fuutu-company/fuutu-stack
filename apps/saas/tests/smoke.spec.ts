@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { featureOff } from "./features";
+import { featureOff, featureOn, orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 
 /**
@@ -158,6 +158,12 @@ test.describe("placeholder routes", () => {
 	});
 
 	test("/chat and /crm don't have console errors", async ({ page }) => {
+		// Only the modules the app ships (a switched-off one answers 404).
+		const routes = [
+			...(featureOn("aiChat") ? ["/chat"] : []),
+			...(featureOn("crm") ? ["/crm"] : []),
+		];
+		test.skip(routes.length === 0, "aiChat and crm are off");
 		const errors: string[] = [];
 		page.on("pageerror", (err) => {
 			errors.push(err.message);
@@ -168,8 +174,7 @@ test.describe("placeholder routes", () => {
 			}
 		});
 
-		await gotoStable(page, "/chat");
-		await gotoStable(page, "/crm");
+		for (const route of routes) await gotoStable(page, route);
 
 		expect(errors).toEqual([]);
 	});
@@ -188,8 +193,11 @@ test.describe("placeholder routes", () => {
 		});
 
 		await gotoStable(page, "/dashboard");
-		await gotoStable(page, "/organizations/acme/dashboard");
-		await gotoStable(page, "/organizations/acme/settings");
+		// Org routes only with organizations (B2C apps: "off" → 404).
+		if (!orgsOff()[0]) {
+			await gotoStable(page, "/organizations/acme/dashboard");
+			await gotoStable(page, "/organizations/acme/settings");
+		}
 		await gotoStable(page, "/settings");
 
 		expect(errors).toEqual([]);
