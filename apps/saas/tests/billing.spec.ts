@@ -1,3 +1,4 @@
+import { orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 import { planCtaLabel, upgradePlanId } from "./kit-catalog";
 import { createThrowawayOrg } from "./throwaway-org";
@@ -67,6 +68,7 @@ test.describe("billing & checkout flows", () => {
 		isMobile,
 	}) => {
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		test.skip(...orgsOff());
 		await page.goto("/organizations/acme/dashboard");
 
 		const settingsGroup = page.locator("[data-nav-group='org-settings']");
@@ -93,6 +95,7 @@ test.describe("billing & checkout flows", () => {
 		baseURL,
 	}) => {
 		// Kit default: organizationsMode "on" → billing attached to the org.
+		test.skip(...orgsOff());
 		const setActive = await page.request.post(
 			"/api/auth/organization/set-active",
 			{
@@ -126,6 +129,7 @@ test.describe("billing & checkout flows", () => {
 		browser,
 		baseURL,
 	}) => {
+		test.skip(...orgsOff());
 		// Acme is seeded with an active subscription (no upgrade CTA), so use a
 		// fresh organization without one.
 		const slug = `e2e-billing-${Date.now()}`;

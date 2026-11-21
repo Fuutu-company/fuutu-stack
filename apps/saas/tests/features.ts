@@ -22,6 +22,22 @@ const FEATURES = {
 
 export type GatedFeature = keyof typeof FEATURES;
 
+/**
+ * `test.skip` arguments for a test that needs organizations
+ * (`organizationsMode` "off" in a B2C app): `test.skip(...orgsOff())`.
+ */
+export function orgsOff(): [boolean, string] {
+	return [
+		config.features.organizationsMode === "off",
+		'config.features.organizationsMode is "off"',
+	];
+}
+
+/** True when a gated module is on (`config.features.<feature>`). */
+export function featureOn(feature: GatedFeature): boolean {
+	return FEATURES[feature].enabled;
+}
+
 /** `test.skip` arguments for a spec of one module: `test.skip(...featureOff("crm"))`. */
 export function featureOff(feature: GatedFeature): [boolean, string] {
 	return [!FEATURES[feature].enabled, `config.features.${feature} is off`];
