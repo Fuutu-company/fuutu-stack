@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../../../..");
 const LOCALE_DIR = join(ROOT, "apps/marketing/src/app/(marketing)/[locale]");
-const ROUTES = ["pricing", "blog", "changelog", "contact"];
+const ROUTES = ["pricing", "blog", "changelog", "contact", "download"];
 
 describe("switchable kit routes", () => {
 	it("names every route folder the resolver knows", () => {
@@ -20,9 +20,11 @@ describe("switchable kit routes", () => {
 			join(ROOT, "apps/marketing/src/lib/kit-routes.ts"),
 			"utf8",
 		);
-		expect(source).toMatch(
-			/KIT_ROUTES = \["pricing", "blog", "changelog", "contact"\] as const/,
-		);
+		const names = source
+			.match(/KIT_ROUTES = \[([^\]]*)\] as const/)?.[1]
+			?.match(/"[^"]+"/g)
+			?.map((name) => name.slice(1, -1));
+		expect(names).toEqual(ROUTES);
 	});
 
 	for (const route of ROUTES) {

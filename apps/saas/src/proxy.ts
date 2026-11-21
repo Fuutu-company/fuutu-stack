@@ -68,6 +68,11 @@ const PUBLIC_PREFIXES = [
 	// both verified by resolveMcpPrincipal; anonymous callers only reach
 	// `public` tools.
 	"/api/mcp",
+	// reason: desktop app releases (config.features.desktop, 404 while off).
+	// The updater endpoint authenticates the app's own bearer token, and
+	// downloads check the browser session when desktop auth is required.
+	"/api/desktop/updates",
+	"/api/desktop/download",
 	// reason: OAuth discovery documents (RFC 8414 authorization-server and
 	// RFC 9728 protected-resource metadata) are public by spec — MCP clients
 	// fetch them before they hold any credential. Read-only JSON, no secrets.

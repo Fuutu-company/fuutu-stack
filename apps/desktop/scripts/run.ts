@@ -6,9 +6,9 @@
  * dev:   Next dev server on the slot's `desktop` port + `tauri dev` with the
  *        automation bridge (`devtools` feature) on the slot's
  *        `desktopBridge` port, token in `.fuutu/desktop-bridge.json`.
- * build: build telemetry ping (fire-and-forget), licence check, third-party
- *        notices, static export, `tauri build` (signing via env, see
- *        apps/desktop/RELEASING.md).
+ * build: build telemetry ping (surface "desktop", fire-and-forget), static
+ *        export, licence check, third-party notices, `tauri build` (code
+ *        signing + updater signing via env, see apps/desktop/RELEASING.md).
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -32,6 +32,7 @@ import {
 } from "../../../tooling/ports/index.mjs";
 import {
 	buildTauriConfig,
+	type DesktopBuildInputs,
 	desktopRuntimeConfig,
 	ed25519Keys,
 	type TauriConfigMode,
@@ -98,27 +99,34 @@ function appVersion(): string {
 
 function writeTauriConfig(
 	mode: TauriConfigMode,
-	saasUrl: string | undefined,
-	devUrl?: string,
+	inputs: DesktopBuildInputs,
+	extra: {
+		devUrl?: string;
+		signUpdates?: boolean;
+		windowsCertificateThumbprint?: string;
+	} = {},
 ): string {
 	const file = join(tauriDir, `tauri.${mode}.generated.json`);
 	const config = buildTauriConfig({
 		mode,
 		appVersion: appVersion(),
-		devUrl,
-		saasUrl,
+		...inputs,
+		...extra,
 	});
 	writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
 	return file;
 }
 
-async function dev(project: Project, env: NodeJS.ProcessEnv, rest: string[]) {
+async function dev(
+	project: Project,
+	env: NodeJS.ProcessEnv,
+	inputs: DesktopBuildInputs,
+	rest: string[],
+) {
 	const port = project.ports.desktop;
-	const config = writeTauriConfig(
-		"dev",
-		env.NEXT_PUBLIC_SAAS_URL,
-		`http://localhost:${port}`,
-	);
+	const config = writeTauriConfig("dev", inputs, {
+		devUrl: `http://localhost:${port}`,
+	});
 	const web = run("pnpm", ["exec", "next", "dev", "--port", String(port)], env);
 	const tauri = run(
 		"pnpm",
@@ -145,9 +153,39 @@ async function dev(project: Project, env: NodeJS.ProcessEnv, rest: string[]) {
 	if (!stopping) shutdown(code);
 }
 
-async function build(env: NodeJS.ProcessEnv, rest: string[]) {
-	const config = writeTauriConfig("build", env.NEXT_PUBLIC_SAAS_URL);
+async function build(
+	env: NodeJS.ProcessEnv,
+	inputs: DesktopBuildInputs,
+	rest: string[],
+) {
+	const signUpdates = Boolean(env.TAURI_SIGNING_PRIVATE_KEY);
+	if (inputs.updaterPubkey && !signUpdates) {
+		process.stderr.write(
+			"DESKTOP_UPDATER_PUBLIC_KEY is set but TAURI_SIGNING_PRIVATE_KEY is not — updates would not verify. See apps/desktop/RELEASING.md\n",
+		);
+		shutdown(1);
+	}
+	if (!inputs.updaterPubkey) {
+		process.stderr.write(
+			"warning: no DESKTOP_UPDATER_PUBLIC_KEY — this build cannot update itself (apps/desktop/RELEASING.md)\n",
+		);
+	}
+	const config = writeTauriConfig("build", inputs, {
+		signUpdates,
+		windowsCertificateThumbprint:
+			env.WINDOWS_CERTIFICATE_THUMBPRINT || undefined,
+	});
 	const node = process.execPath;
+	// Build telemetry (LICENSE.md §7), surface "desktop" — fire-and-forget,
+	// never blocks or fails the build; the ping script itself decides
+	// whether to send (CI / production build, opt-out).
+	const ping = spawn(node, [join(root, "packages/telemetry/bin/ping.mjs")], {
+		env: { ...env, FUUTU_TELEMETRY_SURFACE: "desktop" },
+		stdio: "ignore",
+		detached: true,
+	});
+	ping.on("error", () => {});
+	ping.unref();
 	const steps: [string, string[]][] = [
 		["pnpm", ["exec", "next", "build"]],
 		// Licence gate + notices read the export's source maps …
@@ -198,14 +236,16 @@ async function main() {
 		: (readProject(root) ?? (await ensureSlot(root)));
 	const env: NodeJS.ProcessEnv = { ...readDotEnv(root), ...process.env };
 	Object.assign(env, slotEnv(project, env));
-	env.FUUTU_DESKTOP_CONFIG = JSON.stringify(
-		desktopRuntimeConfig(
-			env.NEXT_PUBLIC_SAAS_URL,
+	const inputs: DesktopBuildInputs = {
+		saasUrl: env.NEXT_PUBLIC_SAAS_URL,
+		offlineKeys:
 			mode === "build" ? await offlineKeys(env.NEXT_PUBLIC_SAAS_URL) : [],
-		),
-	);
-	if (mode === "dev") await dev(project, env, rest);
-	else await build(env, rest);
+		updaterPubkey: env.DESKTOP_UPDATER_PUBLIC_KEY || undefined,
+		staticUpdateUrl: env.NEXT_PUBLIC_DESKTOP_UPDATE_URL || undefined,
+	};
+	env.FUUTU_DESKTOP_CONFIG = JSON.stringify(desktopRuntimeConfig(inputs));
+	if (mode === "dev") await dev(project, env, inputs, rest);
+	else await build(env, inputs, rest);
 }
 
 await main();

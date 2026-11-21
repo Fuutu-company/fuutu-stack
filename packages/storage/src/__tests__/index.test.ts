@@ -295,6 +295,7 @@ describe("ambiguous physical bucket names", () => {
 			.mockReturnValue({
 				avatars: "shared-bucket",
 				organizationLogos: "shared-bucket",
+				desktopReleases: "desktop-releases",
 			});
 		try {
 			expect(() => resolveMaxUploadBytes("shared-bucket")).toThrow(

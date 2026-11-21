@@ -16,6 +16,12 @@ export type StorageProviderId = "s3" | "supabase" | "noop";
 export interface StorageBuckets {
 	avatars: string;
 	organizationLogos: string;
+	/**
+	 * Desktop app releases (`config.features.desktop`): private, written by
+	 * CI, read only by the saas update/download routes through short-lived
+	 * URLs — never a client-facing alias.
+	 */
+	desktopReleases: string;
 }
 
 /**
@@ -55,20 +61,26 @@ export const storageConfig: StorageConfig = {
 			avatars: env.S3_BUCKET_AVATARS ?? "avatars",
 			organizationLogos:
 				env.S3_BUCKET_ORGANIZATION_LOGOS ?? "organization-logos",
+			desktopReleases: env.S3_BUCKET_DESKTOP_RELEASES ?? "desktop-releases",
 		};
 	},
 	maxUploadBytes: {
 		avatars: 5 * 1024 * 1024, // 5 MB
 		organizationLogos: 5 * 1024 * 1024, // 5 MB
+		// CI uploads with bucket credentials, never through a presigned URL.
+		desktopReleases: 0,
 	},
 	allowedContentTypes: {
 		avatars: ["image/png", "image/jpeg", "image/webp"],
 		organizationLogos: ["image/png", "image/jpeg", "image/webp"],
+		desktopReleases: [],
 	},
 	readAccess: {
 		// Profile pictures render next to names for other users (member
 		// lists, admin tables) — readable by anyone signed in.
 		avatars: "signed-in",
 		organizationLogos: "owner",
+		// Not served by the image proxy (no alias); "owner" fails closed.
+		desktopReleases: "owner",
 	},
 };

@@ -1,6 +1,7 @@
 import blog from "./blog.json";
 import changelog from "./changelog.json";
 import contact from "./contact.json";
+import download from "./download.json";
 import footer from "./footer.json";
 import home from "./home.json";
 import nav from "./nav.json";
@@ -11,6 +12,7 @@ export default {
 	...blog,
 	...changelog,
 	...contact,
+	...download,
 	...footer,
 	...home,
 	...nav,

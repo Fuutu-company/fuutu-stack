@@ -34,6 +34,34 @@ pub struct IdentityConfig {
     pub keychain_service: String,
 }
 
+/// `desktopConfig.updates` + build inputs.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UpdatesConfig {
+    /// `backend` | `static`.
+    pub source: String,
+    /// Public manifest URL for `static` (`{channel}` placeholder).
+    pub static_url: Option<String>,
+    pub channels: Vec<String>,
+    pub default_channel: String,
+    /// Updater public key (`DESKTOP_UPDATER_PUBLIC_KEY`); none = no updater.
+    pub pubkey: Option<String>,
+    pub check_interval_hours: u32,
+}
+
+impl Default for UpdatesConfig {
+    fn default() -> Self {
+        Self {
+            source: "backend".into(),
+            static_url: None,
+            channels: vec!["stable".into()],
+            default_channel: "stable".into(),
+            pubkey: None,
+            check_interval_hours: 6,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase", default)]
 pub struct RuntimeConfig {
@@ -48,6 +76,7 @@ pub struct RuntimeConfig {
     /// only keys an offline claim may be signed with (empty: dev builds,
     /// trust the key stored at the last online session).
     pub offline_keys: Vec<String>,
+    pub updates: UpdatesConfig,
 }
 
 impl RuntimeConfig {

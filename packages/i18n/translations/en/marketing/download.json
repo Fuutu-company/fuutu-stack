@@ -1,0 +1,24 @@
+{
+	"download": {
+		"title": "Download",
+		"description": "Get the desktop app for your computer.",
+		"version": "Current version: {version}",
+		"unavailable": "The desktop app is not available for download yet.",
+		"cta": "Download",
+		"signInNote": "After installing, sign in with your account.",
+		"platforms": {
+			"macos": {
+				"name": "macOS",
+				"requirements": "Apple silicon and Intel"
+			},
+			"windows": {
+				"name": "Windows",
+				"requirements": "Windows 10 and later, 64-bit"
+			},
+			"linux": {
+				"name": "Linux",
+				"requirements": "64-bit AppImage"
+			}
+		}
+	}
+}

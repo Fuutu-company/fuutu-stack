@@ -20,6 +20,7 @@ import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useDesktopLocale } from "@/components/intl-provider";
 import { AutostartSetting } from "./autostart-setting";
+import { UpdateSettings } from "./update-settings";
 
 const THEMES = ["light", "dark", "system"] as const;
 
@@ -74,6 +75,7 @@ export default function SettingsPage() {
 				</CardContent>
 			</Card>
 			{desktopConfig.shell.autostart ? <AutostartSetting /> : null}
+			<UpdateSettings />
 		</>
 	);
 }

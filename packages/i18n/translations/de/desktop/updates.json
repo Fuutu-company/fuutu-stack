@@ -1,0 +1,26 @@
+{
+	"title": "Updates",
+	"unavailable": "Dieser Build aktualisiert sich nicht selbst.",
+	"channel": "Update-Kanal",
+	"channels": {
+		"stable": "Stabil",
+		"beta": "Beta (frühe Versionen)"
+	},
+	"checkNow": "Nach Updates suchen",
+	"checking": "Suche…",
+	"result": {
+		"none": "Du bist auf dem neuesten Stand.",
+		"found": "Ein Update ist verfügbar.",
+		"error": "Die Suche nach Updates ist fehlgeschlagen."
+	},
+	"available": {
+		"title": "Version {version} ist verfügbar",
+		"description": "Du nutzt Version {current}. Die App startet nach dem Update neu."
+	},
+	"downloading": "Wird heruntergeladen…",
+	"progress": "Wird heruntergeladen… {percent} %",
+	"install": "Aktualisieren und neu starten",
+	"later": "Später",
+	"failed": "Das Update ist fehlgeschlagen. Bitte versuche es später erneut.",
+	"debugVerified": "Debug-Build: Das Update wurde heruntergeladen und seine Signatur geprüft. Installiert wird es nur von Release-Builds."
+}

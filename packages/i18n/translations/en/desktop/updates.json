@@ -1,0 +1,26 @@
+{
+	"title": "Updates",
+	"unavailable": "This build does not update itself.",
+	"channel": "Update channel",
+	"channels": {
+		"stable": "Stable",
+		"beta": "Beta (early releases)"
+	},
+	"checkNow": "Check for updates",
+	"checking": "Checking…",
+	"result": {
+		"none": "You are up to date.",
+		"found": "An update is available.",
+		"error": "Could not check for updates."
+	},
+	"available": {
+		"title": "Version {version} is available",
+		"description": "You have version {current}. The app restarts after the update."
+	},
+	"downloading": "Downloading…",
+	"progress": "Downloading… {percent} %",
+	"install": "Update and restart",
+	"later": "Later",
+	"failed": "The update failed. Please try again later.",
+	"debugVerified": "Debug build: the update was downloaded and its signature verified. Only release builds install it."
+}

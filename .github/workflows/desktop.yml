@@ -1,0 +1,223 @@
+name: Desktop
+
+# Desktop app (apps/desktop) — checks on pull requests, signed release
+# bundles + publish on app release tags (`vX.Y.Z`) or by hand.
+#
+# Inert while `config.features.desktop` is false (packages/config/index.ts):
+# the `gate` job reads the switch and every other job is skipped.
+#
+# Secrets — store them on the protected `desktop-release` environment
+# (Settings → Environments), not as repository secrets; see
+# apps/desktop/RELEASING.md for how to create each one:
+#   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD  updater signing
+#   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#   APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID                         macOS sign + notarise
+#   WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD               Windows Authenticode (.pfx, base64)
+#   S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY  releases bucket
+# Variables:
+#   NEXT_PUBLIC_SAAS_URL, DESKTOP_UPDATER_PUBLIC_KEY, S3_BUCKET_DESKTOP_RELEASES,
+#   S3_FORCE_PATH_STYLE, DESKTOP_PUBLIC_BASE (static update source only)
+#
+# Build telemetry stays on (LICENSE.md §7): `pnpm build:desktop` sends one
+# ping per build with surface "desktop". Never set FUUTU_TELEMETRY_DISABLED here.
+
+on:
+  pull_request:
+    paths:
+      - "apps/desktop/**"
+      - "packages/desktop/**"
+      - ".github/workflows/desktop.yml"
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        type: choice
+        options: [stable, beta]
+        default: stable
+      publish:
+        description: Upload to the releases bucket
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.switch.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - id: switch
+        run: |
+          enabled=$(node --input-type=module -e "
+            import { isDesktopEnabled } from './tooling/scripts/desktop.mjs';
+            console.log(await isDesktopEnabled(process.cwd()));")
+          echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
+          if [ "$enabled" != "true" ]; then
+            echo "::notice::Desktop app is off (config.features.desktop = false) — nothing to do."
+          fi
+
+  rust:
+    name: Rust checks
+    needs: gate
+    if: needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v5
+      - name: Linux webview deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - uses: taiki-e/install-action@25f51f6b1bf4e18876107cece836f4f77ac17c8c # v2
+        with:
+          tool: cargo-deny
+      # Licences, bans, sources, advisories — rules in deny.toml.
+      - run: cargo deny check
+      # The agent automation bridge never reaches a release build.
+      - run: node ../scripts/check-release-clean.mjs
+
+  build:
+    name: Build ${{ matrix.job }}
+    needs: [gate, rust]
+    if: needs.gate.outputs.enabled == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job: macos-universal
+            os: macos-latest
+            args: --target universal-apple-darwin
+            bundle: target/universal-apple-darwin/release/bundle
+            binary: target/universal-apple-darwin/release/desktop-app
+          - job: windows-x86_64
+            os: windows-latest
+            args: --bundles nsis
+            bundle: target/release/bundle
+            binary: target/release/desktop-app.exe
+          - job: linux-x86_64
+            os: ubuntu-22.04
+            args: --bundles appimage,deb
+            bundle: target/release/bundle
+            binary: target/release/desktop-app
+    runs-on: ${{ matrix.os }}
+    # Releases sign inside the protected environment (required reviewers,
+    # deployment rules for `v*` tags / main — RELEASING.md); pull requests
+    # run without one and get no secrets.
+    environment: ${{ github.event_name != 'pull_request' && 'desktop-release' || '' }}
+    env:
+      # Pull requests build unsigned (no secrets on forks); releases sign.
+      RELEASE: ${{ github.event_name != 'pull_request' }}
+      NEXT_PUBLIC_SAAS_URL: ${{ vars.NEXT_PUBLIC_SAAS_URL }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          db-generate: "false"
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          targets: ${{ matrix.job == 'macos-universal' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - name: Linux webview deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Import Windows certificate
+        if: runner.os == 'Windows' && env.RELEASE == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE) { Write-Output "::warning::No WINDOWS_CERTIFICATE — the installer is unsigned."; exit 0 }
+          $pfx = Join-Path $env:RUNNER_TEMP "cert.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $pfx
+          "WINDOWS_CERTIFICATE_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_ENV
+      - name: Build
+        env:
+          DESKTOP_UPDATER_PUBLIC_KEY: ${{ env.RELEASE == 'true' && vars.DESKTOP_UPDATER_PUBLIC_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.RELEASE == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ env.RELEASE == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+          APPLE_CERTIFICATE: ${{ env.RELEASE == 'true' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ env.RELEASE == 'true' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ env.RELEASE == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_ID: ${{ env.RELEASE == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ env.RELEASE == 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ env.RELEASE == 'true' && secrets.APPLE_TEAM_ID || '' }}
+        run: pnpm build:desktop ${{ matrix.args }}
+      - name: Scan the release binary for the automation bridge
+        shell: bash
+        working-directory: apps/desktop
+        # Cargo package name (src-tauri/Cargo.toml), not the product name.
+        run: node scripts/check-release-clean.mjs "src-tauri/${{ matrix.binary }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.job }}
+          path: apps/desktop/src-tauri/${{ matrix.bundle }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish
+    needs: [gate, build]
+    if: >-
+      needs.gate.outputs.enabled == 'true' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.publish))
+    runs-on: ubuntu-latest
+    environment: desktop-release
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          db-generate: "false"
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-*
+          path: ${{ runner.temp }}/release
+      - name: Name artifact directories after their build job
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/release"
+          for d in desktop-*; do mv "$d" "${d#desktop-}"; done
+      - name: Upload + manifest
+        env:
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_FORCE_PATH_STYLE: ${{ vars.S3_FORCE_PATH_STYLE }}
+          S3_BUCKET_DESKTOP_RELEASES: ${{ vars.S3_BUCKET_DESKTOP_RELEASES }}
+          CHANNEL: ${{ inputs.channel || (contains(github.ref_name, '-') && 'beta' || 'stable') }}
+          PUBLIC_BASE: ${{ vars.DESKTOP_PUBLIC_BASE }}
+        run: |
+          args=(--dir "$RUNNER_TEMP/release" --channel "$CHANNEL")
+          if [ -n "$PUBLIC_BASE" ]; then args+=(--public-base "$PUBLIC_BASE"); fi
+          pnpm -F @fuutu/desktop-app exec tsx scripts/publish.ts "${args[@]}"

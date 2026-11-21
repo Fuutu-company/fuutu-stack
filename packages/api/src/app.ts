@@ -27,6 +27,7 @@ import { CORS_ALLOW_HEADERS } from "./cors";
 import { mountCustomRoutes } from "./custom-routes";
 import { errorInfo } from "./error-info";
 import { handleMcpRequest } from "./mcp";
+import { mountDesktopRoutes } from "./modules/desktop/routes";
 import { isOriginAllowed } from "./origin-guard";
 import { type ApiDocsPath, serveApiDocs } from "./orpc/api-docs";
 import { openApiHandler, rpcHandler } from "./orpc/handler";
@@ -210,6 +211,10 @@ const base = new Hono<{
 // App-owned routes (src/custom-routes.ts) — like the machine routes above,
 // mounted before createContext; they authenticate themselves.
 mountCustomRoutes(base);
+
+// Desktop app releases (`config.features.desktop`, 404 while off): the
+// updater endpoint and installer downloads — they authenticate themselves.
+mountDesktopRoutes(base);
 
 export const app = base
 	// oRPC decodes the body before any procedure middleware (auth, rate

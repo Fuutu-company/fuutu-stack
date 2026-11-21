@@ -1,12 +1,6 @@
 import { auth } from "@fuutu/auth";
 import { desktopOAuth } from "@fuutu/auth/desktop-oauth";
-import {
-	countDesktopDevices,
-	getOrganizationWithMembers,
-	getUserById,
-	listOrganizationsForUser,
-} from "@fuutu/db";
-import { evaluateDesktopAccess } from "@fuutu/desktop/access";
+import { getUserById, listOrganizationsForUser } from "@fuutu/db";
 import { desktopConfig } from "@fuutu/desktop/config";
 import {
 	type DesktopSession,
@@ -14,12 +8,16 @@ import {
 	offlineClaimAudience,
 } from "@fuutu/desktop/session";
 import { env } from "@fuutu/env/saas";
-import { getUserEntitlement } from "@fuutu/payments";
 import { paymentsConfig } from "@fuutu/payments/config";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
 import { authProcedure } from "../../../orpc/procedures";
+import {
+	type DesktopOrg,
+	resolveDesktopAccess,
+	resolveDesktopOrganization,
+} from "../access";
 import { assertDesktopCaller } from "../guards";
 
 const DAY_MS = 86_400_000;
@@ -31,33 +29,7 @@ const inputSchema = z
 	})
 	.optional();
 
-type Org = { id: string; name: string; slug: string };
-
-/** The org the session is for — a member's org or none (personal). */
-async function resolveOrganization(
-	userId: string,
-	requested: string | undefined,
-	fallback: string | null | undefined,
-): Promise<Org | null> {
-	for (const [orgId, explicit] of [
-		[requested, true],
-		[fallback, false],
-	] as const) {
-		if (!orgId) continue;
-		const org = await getOrganizationWithMembers(orgId);
-		if (org?.members.some((m) => m.userId === userId)) {
-			return { id: org.id, name: org.name, slug: org.slug };
-		}
-		// An explicit switch to a foreign org fails; a stale sign-in org
-		// (member since removed) silently falls back to personal.
-		if (explicit) {
-			throw new ORPCError("FORBIDDEN", { message: "Not a member" });
-		}
-	}
-	return null;
-}
-
-function browserLinks(org: Org | null) {
+function browserLinks(org: DesktopOrg | null) {
 	const saas = env.NEXT_PUBLIC_SAAS_URL ?? env.BETTER_AUTH_URL;
 	const billing =
 		org && paymentsConfig.billingAttachedTo === "organization"
@@ -96,28 +68,16 @@ export const desktopSessionProcedure = authProcedure()
 			listOrganizationsForUser(userId),
 		]);
 		if (!user) throw new ORPCError("UNAUTHORIZED");
-		const organization = await resolveOrganization(
+		const organization = await resolveDesktopOrganization(
 			userId,
 			input?.organizationId,
 			context.desktop?.organizationId,
 		);
-		const entitlement = await getUserEntitlement(userId, {
-			activeOrganizationId: organization?.id ?? null,
-		});
-		const deviceCount = await countDesktopDevices(
-			userId,
-			desktopOAuth.clientId,
-		);
 		const now = new Date();
-		const access = evaluateDesktopAccess({
-			requiredFeature: desktopConfig.access.requiredFeature,
-			perMajorVersion: desktopConfig.access.perMajorVersion,
-			majors: desktopConfig.access.majors,
-			trialDays: desktopConfig.trial.days,
-			deviceLimit: desktopConfig.devices.limit,
-			features: entitlement.features,
+		const { entitlement, deviceCount, access } = await resolveDesktopAccess({
+			userId,
 			userCreatedAt: user.createdAt,
-			deviceCount,
+			organizationId: organization?.id ?? null,
 			now,
 		});
 

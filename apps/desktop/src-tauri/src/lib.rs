@@ -7,6 +7,7 @@ compile_error!("the `devtools` feature is for debug builds only (pnpm dev:deskto
 mod auth;
 pub mod config;
 mod shell;
+mod updates;
 
 #[cfg(all(debug_assertions, feature = "devtools"))]
 mod devtools;
@@ -63,6 +64,11 @@ pub fn run() {
         ));
     }
 
+    // Signed updates — only in builds with an updater key.
+    if let Some(pubkey) = config.updates.pubkey.clone() {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(pubkey).build());
+    }
+
     #[cfg(all(debug_assertions, feature = "devtools"))]
     if let Some(bridge) = devtools::plugin() {
         builder = builder.plugin(bridge);
@@ -72,6 +78,7 @@ pub fn run() {
     let tooltip = config.identity.product_name.clone();
     builder
         .manage(config)
+        .manage(updates::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
             shell::shell_set_tray_labels,
             auth::auth_status,
@@ -80,6 +87,9 @@ pub fn run() {
             auth::auth_sign_out,
             auth::auth_api_fetch,
             auth::auth_session,
+            updates::updates_status,
+            updates::updates_check,
+            updates::updates_install,
         ])
         .setup(move |app| {
             let handle = app.handle().clone();

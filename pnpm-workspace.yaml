@@ -129,7 +129,6 @@ catalog:
   "@tauri-apps/plugin-log": 2.10.1
   "@tauri-apps/plugin-opener": 2.7.2
   "@tauri-apps/plugin-process": 2.4.0
-  "@tauri-apps/plugin-updater": 2.14.1
   # Agent automation (dev only) — same version as the vendored
   # src-tauri/vendor/tauri-plugin-mcp-bridge crate.
   "@hypothesi/tauri-mcp-server": 0.13.2

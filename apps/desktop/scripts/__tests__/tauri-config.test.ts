@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	buildTauriConfig,
 	DEVTOOLS_CAPABILITY,
+	desktopRuntimeConfig,
 	ed25519Keys,
 } from "../lib/tauri-config";
 
@@ -62,5 +63,75 @@ describe("buildTauriConfig", () => {
 			}),
 		).toEqual(["abc"]);
 		expect(ed25519Keys(null)).toEqual([]);
+	});
+
+	it("adds the updater only with a public key; signs bundles only in signed release builds", () => {
+		const none = buildTauriConfig({ mode: "build", appVersion: "1.0.0" });
+		expect("updater" in none.plugins).toBe(false);
+		expect("bundle" in none).toBe(false);
+
+		const signed = buildTauriConfig({
+			mode: "build",
+			appVersion: "1.0.0",
+			saasUrl: "https://app.example.com",
+			updaterPubkey: "pk",
+			signUpdates: true,
+		});
+		expect(signed.plugins.updater).toEqual({
+			pubkey: "pk",
+			endpoints: [
+				"https://app.example.com/api/desktop/updates/{{target}}/{{arch}}/{{current_version}}?channel=stable",
+			],
+		});
+		expect(signed.bundle).toEqual({ createUpdaterArtifacts: true });
+	});
+
+	it("signs Windows bundles with a store certificate when given one", () => {
+		const base = { mode: "build" as const, appVersion: "1.0.0" };
+		expect(buildTauriConfig(base)).not.toHaveProperty("bundle");
+		expect(
+			buildTauriConfig({ ...base, windowsCertificateThumbprint: "AB12" })
+				.bundle,
+		).toEqual({
+			windows: {
+				certificateThumbprint: "AB12",
+				digestAlgorithm: "sha256",
+				timestampUrl: "http://timestamp.digicert.com",
+			},
+		});
+		expect(
+			buildTauriConfig({
+				...base,
+				mode: "dev",
+				windowsCertificateThumbprint: "AB12",
+			}),
+		).not.toHaveProperty("bundle");
+	});
+
+	it("allows plain http update checks only in dev builds", () => {
+		const input = {
+			appVersion: "1.0.0",
+			saasUrl: "http://localhost:3000",
+			updaterPubkey: "pk",
+		};
+		expect(
+			buildTauriConfig({ ...input, mode: "dev" }).plugins.updater,
+		).toMatchObject({ dangerousInsecureTransportProtocol: true });
+		expect(
+			buildTauriConfig({ ...input, mode: "build" }).plugins.updater,
+		).not.toHaveProperty("dangerousInsecureTransportProtocol");
+	});
+
+	it("embeds the updates config for the Rust side", () => {
+		expect(
+			desktopRuntimeConfig({
+				updaterPubkey: "pk",
+				staticUpdateUrl: "https://cdn/{channel}.json",
+			}).updates,
+		).toMatchObject({
+			pubkey: "pk",
+			staticUrl: "https://cdn/{channel}.json",
+			defaultChannel: "stable",
+		});
 	});
 });

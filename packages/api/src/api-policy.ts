@@ -179,6 +179,40 @@ const KIT_ROUTE_POLICIES: readonly RoutePolicy[] = [
 		rateLimit: "per client IP (apiConfig.rateLimit.endpoints.apiDocs)",
 		proxyPublic: true,
 	},
+	// Desktop app releases (modules/desktop/routes.ts) — 404 while
+	// `config.features.desktop` is off.
+	{
+		path: "/api/desktop/updates/:target/:arch/:current_version",
+		methods: ["GET"],
+		auth: "public",
+		reason:
+			"Tauri updater endpoint — with desktopConfig.auth `required` (or a token sent) the desktop app's OAuth access token + desktop access; answers 204 or a 5-minute presigned URL, never a bucket key",
+		bodyLimit: { none: "GET, no body is read" },
+		rateLimit:
+			"pre-auth throttle before the token lookup (throttlePreAuth), then 30/min per user (anonymous: per trusted client IP)",
+		proxyPublic: true,
+	},
+	{
+		path: "/api/desktop/download",
+		methods: ["GET"],
+		auth: "public",
+		reason:
+			"current release version + which installers exist (download buttons, marketing /download) — no URLs, no user data",
+		bodyLimit: { none: "GET, no body is read" },
+		rateLimit: "none — manifest cached in memory for 60 s",
+		proxyPublic: true,
+	},
+	{
+		path: "/api/desktop/download/:platform",
+		methods: ["GET"],
+		auth: "session",
+		reason:
+			"installer redirect — with desktopConfig.auth `required` a browser session (else redirect to sign-in); 302 to a 5-minute presigned URL",
+		bodyLimit: { none: "GET, no body is read" },
+		rateLimit:
+			"30/min per user (anonymous: per trusted client IP); manifest cached in memory for 60 s",
+		proxyPublic: true,
+	},
 ];
 
 export const SENSITIVE_PROCEDURE_PREFIXES: readonly string[] = [

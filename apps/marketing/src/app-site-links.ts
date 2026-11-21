@@ -109,7 +109,7 @@ export const appFooter: AppFooter = {};
 
 /**
  * Kit pages to switch off, by key: `pricing`, `blog`, `changelog`,
- * `contact`. A page set to `false` answers 404 (every locale), and its
+ * `contact`, `download`. A page set to `false` answers 404 (every locale), and its
  * navbar and footer links, sitemap entries and (for `pricing`) the home
  * pricing section and (for `contact`) the home security-band button
  * disappear; links you add yourself (`appNavItems`, `notFoundLinks`) to

@@ -33,6 +33,7 @@ tauri-plugin-log = "=2.10.1"
 tauri-plugin-opener = "=2.7.2"
 tauri-plugin-process = "=2.4.0"
 tauri-plugin-deep-link = "=2.6.3"
+tauri-plugin-updater = "=2.14.1"
 tauri-plugin-single-instance = { version = "=2.5.5", features = ["deep-link"] }
 tauri-plugin-window-state = "=2.5.0"
 log = "0.4.35"

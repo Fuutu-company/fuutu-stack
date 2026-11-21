@@ -21,7 +21,7 @@ import {
 	Skeleton,
 } from "@fuutu/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Monitor } from "lucide-react";
+import { Download, Monitor } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -88,7 +88,59 @@ function RevokeDevice({
 	);
 }
 
-/** Account settings → Desktop app: the signed-in devices. */
+const PLATFORMS = ["macos", "windows", "linux"] as const;
+type Platform = (typeof PLATFORMS)[number];
+
+/** Installers of the current release (`GET /api/desktop/download`). */
+async function fetchRelease(): Promise<{
+	version: string | null;
+	platforms: Platform[];
+}> {
+	const res = await fetch("/api/desktop/download");
+	if (!res.ok) throw new Error(`release ${res.status}`);
+	return res.json();
+}
+
+function DownloadCard() {
+	const t = useTranslations("desktopApp.download");
+	const release = useQuery({
+		queryKey: ["desktop", "release"],
+		queryFn: fetchRelease,
+	});
+	const platforms = release.data?.platforms ?? [];
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>{t("title")}</CardTitle>
+				<CardDescription>
+					{release.data?.version
+						? t("version", { version: release.data.version })
+						: null}{" "}
+					{t("description")}
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="flex flex-wrap gap-3">
+				{release.isPending ? (
+					<Skeleton className="h-9 w-64" />
+				) : platforms.length === 0 ? (
+					<p className="text-muted-foreground text-sm">{t("unavailable")}</p>
+				) : (
+					platforms.map((platform) => (
+						<Button key={platform} variant="outline" asChild>
+							<a href={`/api/desktop/download/${platform}`}>
+								<Download aria-hidden />
+								{t(platform)}
+							</a>
+						</Button>
+					))
+				)}
+			</CardContent>
+		</Card>
+	);
+}
+
+/** Account settings → Desktop app: download + the signed-in devices. */
 export function DesktopAppSettings() {
 	const t = useTranslations("desktopApp");
 	const format = useFormatter();
@@ -100,6 +152,7 @@ export function DesktopAppSettings() {
 		<>
 			<PageHeader variant="compact" title={t("title")} />
 			<p className="text-muted-foreground text-sm">{t("description")}</p>
+			<DownloadCard />
 			<Card>
 				<CardHeader>
 					<CardTitle>{t("devices.title")}</CardTitle>

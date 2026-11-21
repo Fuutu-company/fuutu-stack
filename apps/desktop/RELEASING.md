@@ -1,0 +1,193 @@
+# Releasing the desktop app
+
+Signed installers for macOS (universal), Windows (x64) and Linux (x64),
+in-app updates, and the download pages — all from one pipeline,
+`.github/workflows/desktop.yml`. Nothing here runs while
+`config.features.desktop` is `false`.
+
+## Version
+
+The desktop app has **your app's version**: root `package.json#version`
+(`APP_VERSION`), released as tag `vX.Y.Z`. Pushing that tag builds, signs
+and publishes. A tag with a pre-release (`v2.0.0-beta.1`) publishes to the
+`beta` channel, every other tag to `stable`. A manual run (Actions →
+Desktop → Run workflow) picks the channel and whether to publish.
+
+With `desktopConfig.access.perMajorVersion` on, a new **major** is a new
+licence: the updater never offers `2.x` to an account licensed for `1.x`
+(it stays on the newest `1.x`). See `packages/desktop/src/config.ts`.
+
+## One-time setup
+
+All keys go into GitHub **secrets** / **variables** (and your local
+`.env` for builds by hand) — never into git.
+
+### 1. Updater signing key (required for updates)
+
+```bash
+pnpm -F @fuutu/desktop-app exec tauri signer generate -w ~/.tauri/app-updater.key
+```
+
+| Where | Name | Value |
+|---|---|---|
+| secret | `TAURI_SIGNING_PRIVATE_KEY` | content of `app-updater.key` |
+| secret | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | its password |
+| variable | `DESKTOP_UPDATER_PUBLIC_KEY` | content of `app-updater.key.pub` |
+
+Every build embeds the public key; the app installs only bundles signed
+with the private key. **Losing the private key means installed apps can
+never update again** — keep a backup outside GitHub. A build without
+`DESKTOP_UPDATER_PUBLIC_KEY` has no updater at all.
+
+### 2. macOS — Developer ID + notarisation
+
+Needs an Apple Developer Program membership.
+
+| Secret | Value |
+|---|---|
+| `APPLE_CERTIFICATE` | "Developer ID Application" certificate exported as `.p12`, base64 (`base64 -i cert.p12`) |
+| `APPLE_CERTIFICATE_PASSWORD` | the `.p12` password |
+| `APPLE_SIGNING_IDENTITY` | e.g. `Developer ID Application: Acme Inc (TEAMID)` |
+| `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` | notarisation: Apple ID, an app-specific password, team id |
+
+Tauri signs and notarises when these are set. Without them the build is
+unsigned and Gatekeeper blocks it on other Macs.
+
+### 3. Windows — Authenticode
+
+| Secret | Value |
+|---|---|
+| `WINDOWS_CERTIFICATE` | code-signing certificate as `.pfx`, base64 |
+| `WINDOWS_CERTIFICATE_PASSWORD` | its password |
+
+CI imports it and signs through its thumbprint
+(`WINDOWS_CERTIFICATE_THUMBPRINT`). An EV / cloud HSM certificate
+(Azure Trusted Signing, …) cannot be exported as a `.pfx`: replace the
+import step with your provider's signing action. Unsigned installers
+trigger SmartScreen warnings.
+
+### 4. Linux
+
+No code signing. AppImage updates are verified with the updater key; the
+`.deb` is offered as a download only.
+
+### 5. Releases bucket
+
+Private bucket `desktopReleases` (`packages/storage/src/config.ts`,
+physical name `S3_BUCKET_DESKTOP_RELEASES`, default `desktop-releases`).
+Create it in your storage — the app never uploads to it, only CI does.
+
+| Where | Name |
+|---|---|
+| secret | `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (write access to this bucket only) |
+| variable | `S3_BUCKET_DESKTOP_RELEASES`, `S3_FORCE_PATH_STYLE` |
+| variable | `NEXT_PUBLIC_SAAS_URL` — your production app URL (update endpoint + offline-claim keys) |
+
+`apps/saas` needs read access to the same bucket (its normal `S3_*` env).
+The publish script speaks S3 (AWS, R2, MinIO, …); with another storage
+provider, replace `scripts/publish.ts`'s upload calls.
+
+### 6. Protect the signing keys
+
+Create the environment `desktop-release` (Settings → Environments) and
+store every secret above **on it**, not as repository secrets:
+
+- Required reviewers: someone must approve each release run.
+- Deployment branches and tags: only tags `v*` (and `main` for manual runs).
+
+The build and publish jobs of a release run inside it; pull-request builds
+run outside it, unsigned, without any secret. Whoever can run code with
+the updater key can ship an update every installed app accepts.
+
+## Layout in the bucket
+
+```
+<channel>/<version>/<file>    installers + updater bundles
+<channel>/latest.json         manifest — written last
+```
+
+`latest.json` is Tauri's static updater format plus `key` (object per
+platform) and `downloads` (installer per download platform). See
+`packages/desktop/src/updates.ts`.
+
+## How updates reach the app
+
+`desktopConfig.updates.source`:
+
+- **`backend`** (default): the app asks
+  `GET /api/desktop/updates/<target>/<arch>/<version>?channel=` with its
+  access token. `apps/saas` checks sign-in, access and the licensed major,
+  and answers `204` or the update with a **5-minute** download URL. The
+  bucket stays private.
+- **`static`**: for apps without a backend. The app reads a public
+  manifest: set `NEXT_PUBLIC_DESKTOP_UPDATE_URL` at build time
+  (`https://cdn.example.com/{channel}/latest.json`, `{channel}` is
+  replaced) and the CI variable `DESKTOP_PUBLIC_BASE` (public URL of the
+  bucket — the bucket, or a CDN in front of it, must be publicly readable).
+  No licence check happens: anyone with the URL can download.
+
+With auth `optional`, an app that sends an invalid or expired token
+gets `401` (it refreshes and retries); without a token it gets updates
+within its own major.
+
+Channels: `desktopConfig.updates.channels`; users pick one in Settings →
+Updates.
+
+## Downloads
+
+- In the app: Settings → Desktop app (`/settings/desktop`) — buttons for
+  the installers of the current `stable` release.
+- Marketing: `/download` (only with the switch on). It reads
+  `GET <saas>/api/desktop/download` for the current version.
+- Downloads need a signed-in account (with auth `required`), not a plan:
+  the app itself checks access at sign-in and on every session refresh.
+- `GET /api/desktop/download/<macos|windows|linux>` redirects to a
+  5-minute installer URL; with `desktopConfig.auth: "required"` only for a
+  signed-in browser (others sign in first).
+
+## Building by hand
+
+```bash
+pnpm build:desktop                       # this machine's platform
+pnpm build:desktop --target universal-apple-darwin
+```
+
+It sends one build telemetry ping with surface `desktop`
+(LICENSE.md §7). Signing keys come from your `.env`. Fetches the
+offline-claim keys from `NEXT_PUBLIC_SAAS_URL/api/auth/jwks` — run it
+against your production app; without them the app trusts the key of its
+last online session.
+
+Publish build outputs (one directory per job — `macos-universal`,
+`windows-x86_64`, `linux-x86_64` — each holding a `bundle/` output):
+
+```bash
+pnpm -F @fuutu/desktop-app exec tsx scripts/publish.ts --dir ./release --channel stable --dry-run
+```
+
+`--dry-run` prints the plan and the manifest without uploading.
+
+## Before the first release
+
+- [ ] `config.features.desktop: true`, `desktopConfig` reviewed
+      (`packages/desktop/src/config.ts`): auth mode, `access`, device limit,
+      trial, update source and channels.
+- [ ] Identity: `config.app` name / `desktopConfig.identity` give your
+      own product name, bundle id and deep-link scheme — never "Fuutu"
+      (LICENSE.md §8). The bundle id can never change after the first release.
+- [ ] Icons replaced: `pnpm -F @fuutu/desktop-app exec tauri icon <1024px.png>`.
+- [ ] Updater key pair created, private key backed up outside GitHub (§1).
+- [ ] macOS Developer ID + notarisation secrets set (§2); a release build
+      opens on a second Mac without a Gatekeeper warning.
+- [ ] Windows certificate set (§3); the installer shows your publisher name.
+- [ ] Environment `desktop-release` protected with reviewers and tag rules (§6).
+- [ ] Releases bucket created, private; CI credentials write-only to it;
+      `apps/saas` can read it (§5).
+- [ ] `NEXT_PUBLIC_SAAS_URL` points at production; the build log shows no
+      "no offline-claim keys" warning.
+- [ ] One full round on a test channel: install `vX.Y.Z-beta.1`, publish
+      `-beta.2`, the app offers it, installs it and restarts.
+- [ ] `/download` (marketing) and Settings → Desktop app list your installers.
+- [ ] Third-party notices (About → Licences) complete; `cargo deny check` green.
+- [ ] Build telemetry stays on (LICENSE.md §7) — never set
+      `FUUTU_TELEMETRY_DISABLED` in the release workflow.

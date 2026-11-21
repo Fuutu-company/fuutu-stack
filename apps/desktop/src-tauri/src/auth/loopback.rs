@@ -72,6 +72,7 @@ impl CallbackPage {
     fn html(&self) -> String {
         format!(
             "<!doctype html><meta charset=utf-8><meta name=viewport content=\"width=device-width\">\
+             <link rel=icon href=\"data:,\">\
              <title>{t}</title><body style=\"font-family:system-ui;margin:4rem auto;max-width:32rem;padding:0 1rem\">\
              <h1 style=\"font-size:1.25rem\">{t}</h1><p>{b}</p></body>",
             t = escape(&self.title),

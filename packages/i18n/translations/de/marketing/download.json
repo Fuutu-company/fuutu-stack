@@ -1,0 +1,24 @@
+{
+	"download": {
+		"title": "Download",
+		"description": "Hol dir die Desktop-App für deinen Computer.",
+		"version": "Aktuelle Version: {version}",
+		"unavailable": "Die Desktop-App ist noch nicht zum Download verfügbar.",
+		"cta": "Herunterladen",
+		"signInNote": "Melde dich nach der Installation mit deinem Konto an.",
+		"platforms": {
+			"macos": {
+				"name": "macOS",
+				"requirements": "Apple Silicon und Intel"
+			},
+			"windows": {
+				"name": "Windows",
+				"requirements": "Windows 10 und neuer, 64 Bit"
+			},
+			"linux": {
+				"name": "Linux",
+				"requirements": "64 Bit, AppImage"
+			}
+		}
+	}
+}

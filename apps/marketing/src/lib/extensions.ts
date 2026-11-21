@@ -144,6 +144,7 @@ export interface AppMarketing {
 	/**
 	 * Page metadata over the kit's: `home` = `/`, `pricing` = `/pricing`,
 	 * `blog` = `/blog`, `changelog` = `/changelog`, `contact` = `/contact`,
+	 * `download` = `/download`,
 	 * `legal` = every `/legal/<slug>` page, `blogPost` = every
 	 * `/blog/<slug>` post (the function forms get `slug`).
 	 */
@@ -153,6 +154,7 @@ export interface AppMarketing {
 		blog?: AppPageMetadata;
 		changelog?: AppPageMetadata;
 		contact?: AppPageMetadata;
+		download?: AppPageMetadata;
 		legal?: AppPageMetadata<{ locale: string; slug: string }>;
 		blogPost?: AppPageMetadata<{ locale: string; slug: string }>;
 	};

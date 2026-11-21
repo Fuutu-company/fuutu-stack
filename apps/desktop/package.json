@@ -24,7 +24,6 @@
 		"@tauri-apps/plugin-log": "catalog:",
 		"@tauri-apps/plugin-opener": "catalog:",
 		"@tauri-apps/plugin-process": "catalog:",
-		"@tauri-apps/plugin-updater": "catalog:",
 		"lucide-react": "catalog:",
 		"next": "catalog:",
 		"next-intl": "catalog:",
@@ -34,6 +33,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@aws-sdk/client-s3": "catalog:",
 		"@fuutu/tsconfig": "workspace:*",
 		"@hypothesi/tauri-mcp-server": "catalog:",
 		"@tailwindcss/postcss": "catalog:",

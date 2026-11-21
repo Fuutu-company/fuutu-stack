@@ -168,6 +168,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
 			{ href: "/#features", labelKey: "nav.features" },
 			{ href: "/pricing", labelKey: "nav.pricing" },
 			{ href: "/changelog", labelKey: "nav.changelog" },
+			{ href: "/download", labelKey: "nav.download" },
 		],
 	},
 	{

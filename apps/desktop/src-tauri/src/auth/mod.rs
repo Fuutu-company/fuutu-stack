@@ -233,6 +233,15 @@ impl AuthState {
             .ok_or_else(|| AuthError::Unavailable("no backend URL in this build".into()))
     }
 
+    /// The access token for other Rust callers (updater) — `None` when
+    /// signed out or offline.
+    pub async fn bearer(&self, app: &AppHandle) -> Option<String> {
+        if self.saas().is_err() {
+            return None;
+        }
+        self.access_token(app, None).await.ok()
+    }
+
     fn offline_audience(&self) -> String {
         format!("{}:offline", self.client_id)
     }

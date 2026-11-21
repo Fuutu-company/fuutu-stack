@@ -7,7 +7,9 @@
 			"description": "Install the app, then sign in with this account.",
 			"macos": "macOS",
 			"windows": "Windows",
-			"linux": "Linux"
+			"linux": "Linux",
+			"version": "Version {version}.",
+			"unavailable": "No release is available yet."
 		},
 		"devices": {
 			"title": "Signed-in devices",

@@ -7,7 +7,9 @@
 			"description": "Installiere die App und melde dich mit diesem Konto an.",
 			"macos": "macOS",
 			"windows": "Windows",
-			"linux": "Linux"
+			"linux": "Linux",
+			"version": "Version {version}.",
+			"unavailable": "Noch ist keine Version verfügbar."
 		},
 		"devices": {
 			"title": "Angemeldete Geräte",

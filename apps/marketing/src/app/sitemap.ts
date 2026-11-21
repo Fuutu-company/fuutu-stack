@@ -9,7 +9,14 @@ import { isKitPathEnabled } from "../lib/kit-routes";
 import { localeUrl } from "../lib/locale-url";
 import { definedFields } from "../lib/page-metadata";
 
-const KIT_STATIC_ROUTES = ["", "/pricing", "/blog", "/changelog", "/contact"];
+const KIT_STATIC_ROUTES = [
+	"",
+	"/pricing",
+	"/blog",
+	"/changelog",
+	"/contact",
+	"/download",
+];
 
 const LEGAL_ROUTES = [...new Set(legal.map((doc) => doc.slug))].map(
 	(slug) => `/legal/${slug}`,
