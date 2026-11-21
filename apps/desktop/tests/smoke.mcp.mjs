@@ -112,6 +112,17 @@ try {
 			action: "start",
 			port: project.ports.desktopBridge,
 		});
+		// The bridge answers before the webview has loaded its page and the
+		// bridge's script helpers (slow runners: seconds); wait for both.
+		for (let attempt = 1; ; attempt++) {
+			try {
+				await evaluate("return document.readyState;");
+				break;
+			} catch (err) {
+				if (attempt >= 30) throw err;
+				await new Promise((r) => setTimeout(r, 2000));
+			}
+		}
 		return `connected on ${project.ports.desktopBridge}`;
 	});
 	if (!results[0].ok) throw new Error(results[0].detail);
