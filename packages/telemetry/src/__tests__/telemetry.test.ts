@@ -79,11 +79,16 @@ describe("buildTelemetryPayload()", () => {
 			"kitName",
 			"kitVersion",
 			"licenseKeyHash",
+			"surface",
 		]);
 	});
 
 	it("marks the ping as a runtime ping", () => {
 		expect(buildTelemetryPayload().kind).toBe("runtime");
+	});
+
+	it("reports runtime pings as the web surface (desktop installs never ping)", () => {
+		expect(buildTelemetryPayload().surface).toBe("web");
 	});
 
 	it("appUrl is the public app URL, or null", () => {

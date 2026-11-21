@@ -14,6 +14,12 @@ const DEFAULT_TIMEOUT_MS = 5_000;
 export type TelemetryKind = "build" | "runtime";
 
 /**
+ * Which app a ping is about: the web apps (every runtime ping) or the
+ * desktop app (`build:desktop` only — installed desktop apps never ping).
+ */
+export type TelemetrySurface = "web" | "desktop";
+
+/**
  * The complete telemetry payload — license-compliance data only, exactly
  * the fields LICENSE.md §7 lists (a test keeps them in sync).
  */
@@ -25,6 +31,7 @@ export type TelemetryPayload = {
 	/** Public app URL (`NEXT_PUBLIC_SAAS_URL`), or null. */
 	appUrl: string | null;
 	kind: TelemetryKind;
+	surface: TelemetrySurface;
 };
 
 export type PingResult =
@@ -45,6 +52,7 @@ export function buildTelemetryPayload(): TelemetryPayload {
 		licenseKeyHash: hashLicenseKey(env.FUUTU_LICENSE_KEY),
 		appUrl: env.NEXT_PUBLIC_SAAS_URL || null,
 		kind: "runtime",
+		surface: "web",
 	};
 }
 

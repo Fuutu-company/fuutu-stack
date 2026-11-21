@@ -12,6 +12,8 @@
  * (`NODE_ENV=production`) — never from a plain local build on a developer
  * machine.
  * Opt-out: `FUUTU_TELEMETRY_DISABLED=1`.
+ * Surface: `FUUTU_TELEMETRY_SURFACE=desktop` (set by `build:desktop`);
+ * anything else reports `"web"`.
  * Endpoint override: `FUUTU_TELEMETRY_ENDPOINT`.
  */
 import { createHash } from "node:crypto";
@@ -44,6 +46,8 @@ const payload = {
 	licenseKeyHash: hashKey(process.env.FUUTU_LICENSE_KEY),
 	appUrl: process.env.NEXT_PUBLIC_SAAS_URL || null,
 	kind: "build",
+	surface:
+		process.env.FUUTU_TELEMETRY_SURFACE === "desktop" ? "desktop" : "web",
 };
 
 const endpoint = process.env.FUUTU_TELEMETRY_ENDPOINT ?? DEFAULT_ENDPOINT;

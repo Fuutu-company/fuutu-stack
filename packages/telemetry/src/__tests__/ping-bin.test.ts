@@ -92,12 +92,23 @@ describe("bin/ping.mjs", () => {
 			"kitName",
 			"kitVersion",
 			"licenseKeyHash",
+			"surface",
 		]);
 		expect(body).toMatchObject({
 			kind: "build",
+			surface: "web",
 			licenseKeyHash: "oss",
 			appUrl: "https://app.example.com",
 		});
+	});
+
+	it("reports the desktop surface only for build:desktop", () => {
+		expect(capturePing({ FUUTU_TELEMETRY_SURFACE: "desktop" }).surface).toBe(
+			"desktop",
+		);
+		expect(capturePing({ FUUTU_TELEMETRY_SURFACE: "mobile" }).surface).toBe(
+			"web",
+		);
 	});
 
 	it("hashes the trimmed license key and sends appUrl null when unset", () => {

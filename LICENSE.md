@@ -428,11 +428,14 @@ The Kit emits two integrity signals that must remain functional:
      `"oss"` if none is configured,
    - `appUrl`: the configured public application URL, or `null` if none,
    - `kind`: `"build"` for the build-time ping, `"runtime"` for pings
-     from a running application.
+     from a running application,
+   - `surface`: `"desktop"` for the build-time ping of a desktop
+     application built with the Kit, `"web"` for every other ping.
 
    The ping contains no data of your application's end users; the
    license-key hash and application URL identify the Licensee's
-   installation.
+   installation. Desktop applications installed by end users send no
+   ping; only their build does.
 
 The ping has a 5-second timeout and fails silently on network error.
 
