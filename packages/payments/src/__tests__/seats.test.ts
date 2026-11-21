@@ -43,8 +43,15 @@ vi.mock("@fuutu/logs", () => ({
 	}),
 }));
 
-// Price → plan map, catalog-agnostic: "price-pro" is the first seat-based
-// plan in PLANS, "price-flat" the first paid plan without seat pricing.
+// Fixed kit plan catalog (@fuutu/test-utils), not the app's PLANS — an app
+// without a seat-based plan keeps this suite green.
+vi.mock("../config", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../config")>()),
+	...(await import("@fuutu/test-utils")).planCatalogFixture,
+}));
+
+// Price → plan map: "price-pro" is the fixture's seat-based plan,
+// "price-flat" its first paid plan without seat pricing.
 vi.mock("../config.server", async () => {
 	const { PLANS } = await import("../config");
 	const entries = Object.entries(PLANS) as [

@@ -28,8 +28,7 @@ vi.mock("@fuutu/logs", () => ({
 
 vi.mock("@fuutu/webhooks", () => ({ dispatchEvent: vi.fn() }));
 
-// Catalog-agnostic: every price/product env var a plan declares resolves to
-// `id_<VAR>`, so the test works with any PLANS catalog (kit or your own).
+// Every price/product env var a plan declares resolves to `id_<VAR>`.
 vi.mock("@fuutu/env/saas", () => {
 	const base: Record<string, string> = { NODE_ENV: "test" };
 	const isPriceVar = (key: PropertyKey) =>
@@ -47,13 +46,17 @@ vi.mock("@fuutu/env/saas", () => {
 	};
 });
 
-// The first paid plan of the catalog, flipped to one-time per test to model
-// a lifetime plan.
+// The fixture's paid subscription plan (fixed kit catalog from
+// @fuutu/test-utils, not the app's PLANS), flipped to one-time per test to
+// model a lifetime plan.
 const billingType = vi.hoisted(() => ({ current: "subscription" }));
 const paid = vi.hoisted(() => ({ id: "" }));
 
 vi.mock("../config", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("../config")>();
+	const actual = {
+		...(await importOriginal<typeof import("../config")>()),
+		...(await import("@fuutu/test-utils")).planCatalogFixture,
+	};
 	const entry = Object.entries(actual.PLANS).find(
 		([, plan]) =>
 			plan.billingType === "subscription" &&
