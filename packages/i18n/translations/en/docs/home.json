@@ -1,9 +1,23 @@
 {
 	"title": "{appName} Docs",
-	"subtitle": "Production-grade documentation powered by Fumadocs",
-	"description": "A ready-to-use documentation template that ships with the Fuutu Stack. Built with Fumadocs, Next.js, and Tailwind CSS. Every Fumadocs feature is showcased as a modifiable example.",
+	"subtitle": "Everything you need to get started",
+	"description": "Follow the first steps, browse the sections or search for a topic. Every page is also available as Markdown for your coding agent.",
 	"metaTitle": "{appName} Docs — Production-grade Documentation",
 	"metaDescription": "A ready-to-use documentation template with Fumadocs, Next.js, and Tailwind CSS. Full i18n, OpenAPI docs, search, and dark mode out of the box.",
-	"exploreDocs": "Explore Docs",
-	"viewOnGithub": "View on GitHub"
+	"exploreDocs": "Explore the docs",
+	"viewOnGithub": "View on GitHub",
+	"search": "Search the docs",
+	"sections": {
+		"title": "Browse by section",
+		"overview": "Overview",
+		"pages": "{count, plural, one {# page} other {# pages}}"
+	},
+	"start": {
+		"title": "Start here",
+		"description": "The first pages to read, in order."
+	},
+	"topics": {
+		"title": "Find a topic",
+		"more": "{count, plural, one {# more page} other {# more pages}}"
+	}
 }
