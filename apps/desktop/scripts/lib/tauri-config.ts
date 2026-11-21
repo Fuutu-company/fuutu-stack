@@ -8,6 +8,11 @@ import {
 import { APP_CAPABILITIES, type AppCapability } from "./app-capabilities";
 import { APP_TAURI_CONFIG, type AppTauriConfig } from "./app-tauri-config";
 
+export {
+	localizedInfoPlistFiles,
+	renderInfoPlistStrings,
+} from "./macos-info-plist";
+
 /** Mode the generated Tauri config is for. */
 export type TauriConfigMode = "dev" | "build";
 
@@ -272,7 +277,35 @@ export function mergeAppTauriConfig<T extends object>(
 			`app-tauri-config.ts: ${refused.join(", ")} not overridable (security / identity — see the file's header).`,
 		);
 	}
+	assertMacOSBundle(override);
 	return merge(config, override) as T;
+}
+
+/**
+ * Tauri 2.12 `bundle.macOS`: `infoPlist` is the PATH of a plist merged
+ * into the app's Info.plist (relative to src-tauri/), `files` maps bundle
+ * paths (relative to `Contents/`) to source files.
+ */
+function assertMacOSBundle(override: AppTauriConfig) {
+	const bundle = override.bundle;
+	const macOS = isObject(bundle) ? bundle.macOS : undefined;
+	if (!isObject(macOS)) return;
+	if ("infoPlist" in macOS && typeof macOS.infoPlist !== "string") {
+		throw new Error(
+			'app-tauri-config.ts: bundle.macOS.infoPlist is the path of a plist file (e.g. "Info.plist" in src-tauri/), not its entries.',
+		);
+	}
+	if (
+		"files" in macOS &&
+		!(
+			isObject(macOS.files) &&
+			Object.values(macOS.files).every((v) => typeof v === "string")
+		)
+	) {
+		throw new Error(
+			'app-tauri-config.ts: bundle.macOS.files maps bundle paths to source paths, e.g. { "Resources/de.lproj/InfoPlist.strings": "macos/de.lproj/InfoPlist.strings" }.',
+		);
+	}
 }
 
 function merge(base: unknown, override: unknown): unknown {

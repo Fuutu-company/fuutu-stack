@@ -80,19 +80,25 @@ describe("APP_EXTERNAL_BIN (sidecars)", () => {
 		const release = buildTauriConfig({
 			mode: "build",
 			appVersion: "1.0.0",
+			appTauriConfig: {},
 			externalBin,
 		});
 		expect(release.bundle?.externalBin).toEqual(externalBin);
 		const dev = buildTauriConfig({
 			mode: "dev",
 			appVersion: "1.0.0",
+			appTauriConfig: {},
 			devUrl: "http://localhost:3002",
 			externalBin,
 		});
 		expect(dev).not.toHaveProperty("bundle");
 		// None given → no bundle entry at all.
 		expect(
-			buildTauriConfig({ mode: "build", appVersion: "1.0.0" }),
+			buildTauriConfig({
+				mode: "build",
+				appVersion: "1.0.0",
+				appTauriConfig: {},
+			}),
 		).not.toHaveProperty("bundle");
 	});
 

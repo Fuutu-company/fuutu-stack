@@ -40,7 +40,7 @@ describe("APP_TAURI_CONFIG (scripts/lib/app-tauri-config.ts)", () => {
 			app: { macOSPrivateApi: true },
 			bundle: {
 				macOS: {
-					infoPlist: { NSMicrophoneUsageDescription: "Dictation" },
+					infoPlist: "Info.plist",
 					minimumSystemVersion: "13.0",
 				},
 			},
@@ -219,5 +219,34 @@ describe("cargo-deny exceptions (src-tauri/deny.app.toml)", () => {
 		const yaml = read("../../.github/workflows/desktop.yml");
 		expect(yaml).toContain("node ../scripts/cargo-deny.mjs");
 		expect(yaml).not.toMatch(/run: cargo deny check/);
+	});
+});
+
+describe("setup steps hook (src/app-setup-steps.tsx)", () => {
+	it("the access gate runs them: pre-auth in front of the sign-in card, the app only after", () => {
+		expect(existsSync(join(APP, "src/app-setup-steps.tsx"))).toBe(true);
+		const gate = read("src/components/access-gate.tsx");
+		expect(gate).toMatch(
+			/from "@\/components\/setup-steps"|from "\.\/setup-steps"/,
+		);
+		const signIn = gate.slice(gate.indexOf('case "sign_in":'));
+		expect(signIn.slice(0, 200)).toMatch(/<SetupSteps decision="sign_in">/);
+		// The sign-in branch never renders the app (children).
+		const branch = signIn.slice(0, signIn.indexOf("</SetupSteps>"));
+		expect(branch).not.toContain("{children}");
+	});
+});
+
+describe("Tauri plugins in app-ext (permission forwarding)", () => {
+	it("app-ext re-exports, the kit build.rs imports before tauri_build", () => {
+		const ext = read("src-tauri/app-ext/Cargo.toml");
+		expect(ext).toMatch(/^links = "app-ext"$/m);
+		expect(read("src-tauri/app-ext/build.rs")).toContain(
+			"build_forward::reexport_plugin_permissions()",
+		);
+		const build = read("src-tauri/build.rs");
+		expect(
+			build.indexOf("build_forward::import_app_ext_plugin_permissions()"),
+		).toBeLessThan(build.indexOf("tauri_build::build()"));
 	});
 });

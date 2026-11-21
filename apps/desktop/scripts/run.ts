@@ -36,6 +36,7 @@ import {
 	slotEnv,
 } from "../../../tooling/ports/index.mjs";
 import { APP_EXTERNAL_BIN } from "./lib/app-sidecars.mjs";
+import { kitManifestGuard } from "./lib/kit-manifest";
 import {
 	buildTauriConfig,
 	type DesktopBuildInputs,
@@ -51,6 +52,12 @@ const appDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const root = join(appDir, "../..");
 const tauriDir = join(appDir, "src-tauri");
 
+// The Tauri CLI rewrites the kit Cargo.toml's tauri features from the
+// config; put them back afterwards (scripts/lib/kit-manifest.ts).
+const kitManifest = kitManifestGuard(tauriDir);
+const guardKitManifest = () => kitManifest.guard();
+const restoreKitManifest = () => kitManifest.restore();
+
 const children = new Set<ChildProcess>();
 let stopping = false;
 
@@ -58,6 +65,7 @@ let stopping = false;
 function shutdown(code: number): never {
 	stopping = true;
 	for (const child of children) child.kill("SIGTERM");
+	restoreKitManifest();
 	process.exit(code);
 }
 
@@ -138,6 +146,7 @@ async function dev(
 		devUrl: `http://localhost:${port}`,
 	});
 	const web = run("pnpm", ["exec", "next", "dev", "--port", String(port)], env);
+	guardKitManifest();
 	const tauri = run(
 		"pnpm",
 		[
@@ -214,6 +223,7 @@ async function build(
 			{ ...base, ...signing },
 		],
 	];
+	guardKitManifest();
 	for (const [command, args, stepEnv] of steps) {
 		const code = await exited(
 			run(command, args, { ...stepEnv, NODE_ENV: "production" }),

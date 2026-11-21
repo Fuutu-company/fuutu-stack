@@ -5,6 +5,10 @@
 compile_error!("the `devtools` feature is for debug builds only (pnpm dev:desktop)");
 
 mod app_plugins;
+// Unit tests of the build scripts' plugin-permission forwarding.
+#[cfg(test)]
+#[path = "../build_forward.rs"]
+mod build_forward;
 mod auth;
 pub mod config;
 mod shell;

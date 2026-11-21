@@ -16,6 +16,7 @@ import type { PropsWithChildren, ReactNode } from "react";
 import { cancelSignIn, DesktopAuthError, signIn } from "@/lib/auth";
 import { logError, openExternal } from "@/lib/desktop";
 import { useAccount } from "./account-provider";
+import { SetupSteps } from "./setup-steps";
 
 const app = config.app.name;
 
@@ -138,22 +139,26 @@ export function AccessGate({ children }: PropsWithChildren) {
 	switch (decision.kind) {
 		case "open":
 		case "granted":
-			return children;
+			// Your first-run steps (src/app-setup-steps.tsx), then the app.
+			return <SetupSteps decision={decision.kind}>{children}</SetupSteps>;
 		case "sign_in":
+			// Pre-auth steps stand in front of the sign-in card — never the app.
 			return (
-				<div className="flex h-screen items-center justify-center bg-background p-8">
-					<Card className="w-full max-w-md">
-						<CardHeader>
-							<CardTitle>{t("signIn.title", { app })}</CardTitle>
-							<CardDescription>
-								{t("signIn.description", { app })}
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<SignInPanel />
-						</CardContent>
-					</Card>
-				</div>
+				<SetupSteps decision="sign_in">
+					<div className="flex h-screen items-center justify-center bg-background p-8">
+						<Card className="w-full max-w-md">
+							<CardHeader>
+								<CardTitle>{t("signIn.title", { app })}</CardTitle>
+								<CardDescription>
+									{t("signIn.description", { app })}
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<SignInPanel />
+							</CardContent>
+						</Card>
+					</div>
+				</SetupSteps>
 			);
 		case "missing":
 			return (

@@ -227,20 +227,21 @@ The kit owns only home, settings and about.
 | `src/app-home.tsx` | `appHome`: the home page content |
 | `src/app-about.tsx` | `appAboutSection`: a section of the About window, above the notices |
 | `src/app-shell-slot.tsx` | `appShellSlots`: `sidebarTop`, `sidebarBottom`, `contentTop`, `global` (dialogs, listeners) |
+| `src/app-setup-steps.tsx` | `appSetupSteps`: first-run steps, once per device. `pre-auth` steps (e.g. language) run in front of the sign-in card and never reach the app. `post-auth` steps run after sign-in (or when no sign-in is needed), before the shell. Each one calls `onDone()`. |
 
 **Tauri and the build** (`scripts/lib/`):
 
 | File | What it adds |
 |---|---|
 | `scripts/lib/app-capabilities.ts` | `APP_CAPABILITIES`: Tauri capabilities (inline, or the identifier of a file in `src-tauri/capabilities/`), added after the kit's `default` in dev and release builds. It may not contain the devtools capability or the bridge. |
-| `scripts/lib/app-tauri-config.ts` | `APP_TAURI_CONFIG`: Tauri config keys deep-merged into the generated config (objects merge, arrays replace), e.g. `app.macOSPrivateApi`, `bundle.macOS.infoPlist` or `minimumSystemVersion`. Translated permission prompts go in `<locale>.lproj/InfoPlist.strings` files via `bundle.macOS.files`. The build **refuses** identity, `build`, `app.security` (CSP, capabilities), `app.withGlobalTauri`, updater and deep-link plugins, updater artifacts, `externalBin` and signing keys, and the `main` window must stay. |
+| `scripts/lib/app-tauri-config.ts` | `APP_TAURI_CONFIG`: Tauri config keys deep-merged into the generated config (objects merge, arrays replace), e.g. `app.macOSPrivateApi` or `bundle.macOS.minimumSystemVersion`. `bundle.macOS.infoPlist` is the **path** of a plist merged into Info.plist (e.g. `src-tauri/Info.plist` with `NSMicrophoneUsageDescription`). Translated prompts go in `src-tauri/macos/<locale>.lproj/InfoPlist.strings`, listed with `files: localizedInfoPlistFiles([...])` (`renderInfoPlistStrings` writes one). The build **refuses** identity, `build`, `app.security` (CSP, capabilities), `app.withGlobalTauri`, updater and deep-link plugins, updater artifacts, `externalBin` and signing keys, and the `main` window must stay. |
 | `scripts/lib/app-sidecars.mjs` | `APP_EXTERNAL_BIN`: sidecar programs for `bundle.externalBin` (release builds only)<br>`shippedSidecars()`: their `name`, `version`, `license` and `text` for About → Licences and the licence gate (same allowlist as npm; a missing field fails the build)<br>Optional `build({ target })`: CI runs it per build job ("Build sidecars", no secrets). Output goes to `src-tauri/<path>-<target>`, and `binaries/` is git-ignored. |
 
 **Rust** (`src-tauri/`):
 
 | File | What it adds |
 |---|---|
-| `src-tauri/app-ext/Cargo.toml`, `src-tauri/app-ext/src/lib.rs` | `app-ext`: your Rust dependencies and code. The kit crate depends on it, so you never edit the kit's `Cargo.toml`. Keep the package name `app-ext`; more crates go in `crates/`. |
+| `src-tauri/app-ext/Cargo.toml`, `src-tauri/app-ext/src/lib.rs`, `src-tauri/app-ext/build.rs` | `app-ext`: your Rust dependencies and code. The kit crate depends on it, so you never edit the kit's `Cargo.toml`. Keep the package name, `links = "app-ext"` and the forwarding call in `build.rs`; more crates go in `crates/`. |
 | `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …). |
 | `src-tauri/app_build.rs` | `run()`: build-script steps (e.g. `cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift`), called by the kit's `build.rs` |
 | `src-tauri/deny.app.toml` | cargo-deny exceptions (`[[licenses.exceptions]]`, `[[advisories.ignore]]`, `[[bans.skip]]`), appended to the kit policy by `node scripts/cargo-deny.mjs` (CI runs it). The policy itself stays the kit's. |
@@ -248,6 +249,23 @@ The kit owns only home, settings and about.
 Register every plugin on the builder in `register`. Never register a
 plugin from inside another plugin's `setup`, because that deadlocks the
 app at startup.
+
+**Tauri plugins in app-ext.** Add the plugin to `app-ext/Cargo.toml`, register it in
+`app_plugins.rs` and list its permissions (`<plugin>:allow-…`) in
+`app-capabilities.ts`. tauri-build reads plugin permissions only from
+direct dependencies of the app crate. `app-ext/build.rs` re-exports them
+under `links = "app-ext"`, and the kit `build.rs` restores the original
+names (`src-tauri/build_forward.rs`).
+
+**Tauri features in the kit Cargo.toml.** `tauri dev` / `tauri build`
+rewrite the kit `Cargo.toml`'s `tauri` features to match the config
+(`app.macOSPrivateApi` → `macos-private-api`, also `protocol-asset`,
+`isolation`). `pnpm dev:desktop` / `pnpm build:desktop` put the file back
+when the CLI exits, and at the next start after a crash
+(`scripts/lib/kit-manifest.ts`). Only that rewrite is reverted. CI fails
+when a build leaves the file changed ("Kit Cargo.toml unchanged"). If your
+own code in app-ext calls such APIs, declare the feature on app-ext's
+`tauri` dependency; plain `cargo check` then compiles them too.
 
 ## Before the first release
 

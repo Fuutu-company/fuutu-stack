@@ -199,13 +199,19 @@ describe("buildTauriConfig", () => {
 	});
 
 	it("adds the updater only with a public key; signs bundles only in signed release builds", () => {
-		const none = buildTauriConfig({ mode: "build", appVersion: "1.0.0" });
+		// The kit's output only (a buyer's APP_TAURI_CONFIG may add bundle keys).
+		const none = buildTauriConfig({
+			mode: "build",
+			appVersion: "1.0.0",
+			appTauriConfig: {},
+		});
 		expect("updater" in none.plugins).toBe(false);
 		expect("bundle" in none).toBe(false);
 
 		const signed = buildTauriConfig({
 			mode: "build",
 			appVersion: "1.0.0",
+			appTauriConfig: {},
 			saasUrl: "https://app.example.com",
 			updaterPubkey: "pk",
 			signUpdates: true,
@@ -220,7 +226,12 @@ describe("buildTauriConfig", () => {
 	});
 
 	it("signs Windows bundles with a store certificate when given one", () => {
-		const base = { mode: "build" as const, appVersion: "1.0.0" };
+		// The kit's output only (a buyer's APP_TAURI_CONFIG may add bundle keys).
+		const base = {
+			mode: "build" as const,
+			appVersion: "1.0.0",
+			appTauriConfig: {},
+		};
 		expect(buildTauriConfig(base)).not.toHaveProperty("bundle");
 		expect(
 			buildTauriConfig({ ...base, windowsCertificateThumbprint: "AB12" })

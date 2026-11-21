@@ -51,6 +51,14 @@ const DEFAULTS: [string, RegExp[]][] = [
 		[/^export const appShellSlots: AppShellSlots = \{\};$/m],
 	],
 	[
+		"src/app-setup-steps.tsx",
+		[/^export const appSetupSteps: AppSetupStep\[\] = \[\];$/m],
+	],
+	[
+		"src-tauri/app-ext/build.rs",
+		[/fn main\(\) \{\s*build_forward::reexport_plugin_permissions\(\);\s*\}/],
+	],
+	[
 		"src-tauri/src/app_plugins.rs",
 		[
 			/pub fn register<R: Runtime>\(\s*builder: Builder<R>,\s*_config: &RuntimeConfig,?\s*\) -> Builder<R> \{\s*builder\s*\}/,

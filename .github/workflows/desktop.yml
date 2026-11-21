@@ -194,6 +194,11 @@ jobs:
           APPLE_PASSWORD: ${{ env.RELEASE == 'true' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ env.RELEASE == 'true' && secrets.APPLE_TEAM_ID || '' }}
         run: pnpm build:desktop ${{ matrix.args }}
+      # The Tauri CLI rewrites the kit Cargo.toml's tauri features from the
+      # config; pnpm build:desktop reverts it (scripts/lib/kit-manifest.ts).
+      - name: Kit Cargo.toml unchanged
+        shell: bash
+        run: git diff --exit-code -- apps/desktop/src-tauri/Cargo.toml
       - name: Scan the release binary for the automation bridge
         shell: bash
         working-directory: apps/desktop

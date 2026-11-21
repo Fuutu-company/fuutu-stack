@@ -7,13 +7,17 @@
 # `src/app_plugins.rs` (`app_ext::…`). Keep the package name `app-ext`.
 # Bigger products: more crates under `crates/`, depended on from here.
 # Licences: cargo-deny gates these dependencies too (exceptions in
-# `../deny.app.toml`).
+# `../deny.app.toml`). A Tauri plugin works here like in the app crate:
+# its permissions reach the app's capabilities (forwarded by `build.rs`).
 
 [package]
 name = "app-ext"
 version = "0.0.0"
 edition = "2021"
 publish = false
+# Forwards your Tauri plugins' permissions to the app (build.rs, keep both).
+links = "app-ext"
+build = "build.rs"
 
 [lib]
 path = "src/lib.rs"
