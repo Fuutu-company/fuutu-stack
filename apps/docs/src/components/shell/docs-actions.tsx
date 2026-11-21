@@ -33,7 +33,8 @@ export function ThemeToggle() {
 export function DocsActions({ className }: { className?: string }) {
 	const { menuItems } = useDocsLayout();
 	const iconLinks = menuItems.filter(
-		(item): item is IconItemType => item.type === "icon",
+		// A link without a label would have no accessible name.
+		(item): item is IconItemType => item.type === "icon" && Boolean(item.label),
 	);
 
 	return (

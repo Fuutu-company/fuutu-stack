@@ -5,7 +5,6 @@ import { cn } from "@fuutu/utils/cn";
 import {
 	SidebarCollapseTrigger,
 	SidebarTrigger,
-	useSidebar,
 } from "fumadocs-ui/components/sidebar/base";
 import { useDocsLayout } from "fumadocs-ui/layouts/docs";
 import { Menu, PanelLeft } from "lucide-react";
@@ -20,7 +19,7 @@ import { DocsActions } from "./docs-actions";
  */
 export function DocsHeader({ className, ...props }: ComponentProps<"header">) {
 	const { slots } = useDocsLayout();
-	const { collapsed } = useSidebar();
+	const { collapsed } = slots.sidebar.useSidebar();
 	const { navTitle: NavTitle, searchTrigger } = slots;
 
 	return (

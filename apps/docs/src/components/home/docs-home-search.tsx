@@ -16,9 +16,9 @@ export function DocsHomeSearch({ label }: { label: string }) {
 			<Search aria-hidden="true" className="size-4 shrink-0" />
 			<span className="flex-1">{label}</span>
 			<span aria-hidden="true" className="hidden gap-0.5 sm:inline-flex">
-				{hotKey.map((key, index) => (
+				{hotKey.map((key) => (
 					<kbd
-						key={index}
+						key={String(key.display)}
 						className="rounded-md border px-1.5 font-mono text-xs"
 					>
 						{key.display}

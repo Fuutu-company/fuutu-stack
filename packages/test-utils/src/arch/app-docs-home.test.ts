@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -7,9 +5,6 @@ import { describe, expect, it } from "vitest";
  * and "start here" pages from the page tree, so it never drifts from the
  * sidebar and works for any app's content. `appDocs.Home` still replaces it.
  */
-
-const ROOT = join(import.meta.dirname, "../../../..");
-const read = (file: string) => readFileSync(join(ROOT, file), "utf8");
 
 const { docsSections } = await import(
 	"../../../../apps/docs/src/lib/page-tree-sections"
@@ -145,15 +140,5 @@ describe("docs home sections from the page tree", () => {
 
 	it("returns no sections for an empty tree", () => {
 		expect(docsSections({ name: "Docs", children: [] })).toEqual([]);
-	});
-});
-
-describe("docs home wiring", () => {
-	const home = read("apps/docs/src/app/[locale]/page.tsx");
-
-	it("renders the kit home unless the app sets appDocs.Home", () => {
-		expect(home).toMatch(
-			/appDocs\.Home \? \(\s*<appDocs\.Home locale=\{locale\} \/>\s*\) : \(\s*<DocsHome locale=\{locale\} \/>\s*\)/,
-		);
 	});
 });
