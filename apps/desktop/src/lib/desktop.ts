@@ -49,12 +49,22 @@ export function captureGlobalErrors(): () => void {
 	};
 }
 
-/** Opens a URL in the system browser (never inside the app). */
-export async function openExternal(url: string) {
+/**
+ * Opens a URL in the system browser (never inside the app). The opener
+ * scope (`saas-links` capability) allows only the SaaS origin; a refused
+ * or failed open is logged and reported as `false`, never thrown.
+ */
+export async function openExternal(url: string): Promise<boolean> {
 	if (!inDesktop()) {
 		window.open(url, "_blank", "noopener,noreferrer");
-		return;
+		return true;
 	}
-	const { openUrl } = await import("@tauri-apps/plugin-opener");
-	await openUrl(url);
+	try {
+		const { openUrl } = await import("@tauri-apps/plugin-opener");
+		await openUrl(url);
+		return true;
+	} catch (err) {
+		await logError("open in browser failed", err);
+		return false;
+	}
 }

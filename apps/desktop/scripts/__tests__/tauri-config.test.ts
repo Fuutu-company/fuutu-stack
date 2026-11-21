@@ -279,3 +279,48 @@ describe("buildTauriConfig", () => {
 		});
 	});
 });
+
+describe("links to the SaaS app (opener scope)", () => {
+	const caps = (config: ReturnType<typeof buildTauriConfig>) =>
+		config.app.security.capabilities as unknown[];
+
+	it("lets the app open exactly the SaaS app's URLs, in dev and release", () => {
+		for (const mode of ["dev", "build"] as const) {
+			const config = buildTauriConfig({
+				mode,
+				appVersion: "1.0.0",
+				devUrl: "http://localhost:3002",
+				saasUrl: "https://app.example.com/",
+				appTauriConfig: {},
+			});
+			expect(caps(config)).toContainEqual({
+				identifier: "saas-links",
+				description: expect.any(String),
+				windows: ["main", "about"],
+				permissions: [
+					{
+						identifier: "opener:allow-open-url",
+						allow: [{ url: "https://app.example.com/*" }],
+					},
+				],
+			});
+		}
+	});
+
+	it("opens nothing without a SaaS URL, and the default capability grants no URL", () => {
+		const config = buildTauriConfig({
+			mode: "build",
+			appVersion: "1.0.0",
+			appTauriConfig: {},
+		});
+		expect(JSON.stringify(caps(config))).not.toContain("saas-links");
+		const defaults = JSON.parse(
+			readFileSync(
+				join(import.meta.dirname, "../../src-tauri/capabilities/default.json"),
+				"utf8",
+			),
+		) as { permissions: unknown[] };
+		expect(defaults.permissions).not.toContain("opener:allow-open-url");
+		expect(defaults.permissions).not.toContain("opener:allow-default-urls");
+	});
+});

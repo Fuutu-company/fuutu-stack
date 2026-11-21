@@ -9,7 +9,6 @@
 		"core:window:allow-set-focus",
 		"core:window:allow-set-title",
 		"log:default",
-		"opener:allow-open-url",
 		"opener:allow-open-path",
 		"process:allow-restart",
 		"autostart:allow-enable",

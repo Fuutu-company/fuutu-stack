@@ -175,7 +175,8 @@ export function buildTauriConfig(input: TauriConfigInput) {
 					title: id.productName,
 					width: 1100,
 					height: 720,
-					minWidth: 720,
+					// ≥ the sidebar breakpoint (768 px): the sidebar stays docked.
+					minWidth: 800,
 					minHeight: 480,
 				},
 			],
@@ -184,6 +185,7 @@ export function buildTauriConfig(input: TauriConfigInput) {
 				csp: dev ? null : releaseCsp(),
 				capabilities: [
 					"default",
+					...saasLinksCapability(input.saasUrl),
 					...appCapabilities,
 					...(dev ? [DEVTOOLS_CAPABILITY] : []),
 				],
@@ -207,6 +209,30 @@ export function buildTauriConfig(input: TauriConfigInput) {
 		);
 	}
 	return merged;
+}
+
+/**
+ * The app opens only its own SaaS app in the browser (account, billing,
+ * devices — everything beyond the desktop app lives there). The opener
+ * plugin refuses URLs outside this scope.
+ */
+function saasLinksCapability(saasUrl: string | undefined) {
+	if (!saasUrl) return [];
+	const origin = new URL(saasUrl).origin;
+	return [
+		{
+			identifier: "saas-links",
+			description:
+				"Open the SaaS app (account, billing, devices) in the browser.",
+			windows: ["main", "about"],
+			permissions: [
+				{
+					identifier: "opener:allow-open-url",
+					allow: [{ url: `${origin}/*` }],
+				},
+			],
+		},
+	];
 }
 
 /** The devtools capability / automation bridge is the kit's, debug-only. */
