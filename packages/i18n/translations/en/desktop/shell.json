@@ -3,13 +3,23 @@
 		"home": "Home",
 		"settings": "Settings",
 		"account": "Account",
-		"about": "About",
 		"primary": "Main navigation"
 	},
 	"home": {
 		"title": "Welcome",
 		"description": "Your desktop app is running. Build your product on this shell.",
-		"openSettings": "Open settings"
+		"openSettings": "Open settings",
+		"greeting": "Welcome, {name}",
+		"tiles": {
+			"account": {
+				"title": "Account",
+				"signedOut": "Not signed in",
+				"signInHint": "Sign in with your {app} account."
+			},
+			"plan": {
+				"title": "Plan"
+			}
+		}
 	},
 	"error": {
 		"title": "Something went wrong",
@@ -23,5 +33,25 @@
 	"tray": {
 		"show": "Show",
 		"quit": "Quit"
+	},
+	"sidebar": {
+		"title": "Navigation",
+		"description": "Main navigation of the app",
+		"toggle": "Toggle sidebar"
+	},
+	"header": {
+		"breadcrumb": "Breadcrumb",
+		"language": "Change language",
+		"toggleTheme": "Toggle theme"
+	},
+	"user": {
+		"loading": "Loading your account",
+		"about": "About {app}",
+		"signedOut": "Not signed in",
+		"signIn": "Sign in with the browser",
+		"account": "Account",
+		"billing": "Plans & billing",
+		"openWebApp": "Open {app} in the browser",
+		"signOut": "Sign out"
 	}
 }

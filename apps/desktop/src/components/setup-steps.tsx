@@ -8,6 +8,7 @@ import {
 	phasesFor,
 	readDoneSteps,
 } from "@/lib/setup-steps";
+import { GateScreen } from "./gate-screen";
 
 /**
  * Runs your first-run steps (src/app-setup-steps.tsx) for a gate
@@ -27,13 +28,13 @@ export function SetupSteps({
 	if (!step) return children;
 	const Step = step.Component;
 	return (
-		<div className="flex h-screen items-center justify-center bg-background p-8">
+		<GateScreen>
 			<Step
 				key={step.id}
 				onDone={() =>
 					setDone((current) => markStepDone(current ?? done, step.id))
 				}
 			/>
-		</div>
+		</GateScreen>
 	);
 }

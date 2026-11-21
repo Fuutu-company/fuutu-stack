@@ -3,13 +3,23 @@
 		"home": "Start",
 		"settings": "Einstellungen",
 		"account": "Konto",
-		"about": "Über",
 		"primary": "Hauptnavigation"
 	},
 	"home": {
 		"title": "Willkommen",
 		"description": "Deine Desktop-App läuft. Baue dein Produkt auf dieser Basis.",
-		"openSettings": "Einstellungen öffnen"
+		"openSettings": "Einstellungen öffnen",
+		"greeting": "Willkommen, {name}",
+		"tiles": {
+			"account": {
+				"title": "Konto",
+				"signedOut": "Nicht angemeldet",
+				"signInHint": "Melde dich mit deinem {app}-Konto an."
+			},
+			"plan": {
+				"title": "Paket"
+			}
+		}
 	},
 	"error": {
 		"title": "Etwas ist schiefgelaufen",
@@ -23,5 +33,25 @@
 	"tray": {
 		"show": "Anzeigen",
 		"quit": "Beenden"
+	},
+	"sidebar": {
+		"title": "Navigation",
+		"description": "Hauptnavigation der App",
+		"toggle": "Seitenleiste ein-/ausblenden"
+	},
+	"header": {
+		"breadcrumb": "Brotkrümelnavigation",
+		"language": "Sprache ändern",
+		"toggleTheme": "Design wechseln"
+	},
+	"user": {
+		"loading": "Konto wird geladen",
+		"about": "Über {app}",
+		"signedOut": "Nicht angemeldet",
+		"signIn": "Im Browser anmelden",
+		"account": "Konto",
+		"billing": "Pakete & Abrechnung",
+		"openWebApp": "{app} im Browser öffnen",
+		"signOut": "Abmelden"
 	}
 }

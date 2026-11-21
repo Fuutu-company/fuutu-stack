@@ -22,5 +22,6 @@
 	"install": "Aktualisieren und neu starten",
 	"later": "Später",
 	"failed": "Das Update ist fehlgeschlagen. Bitte versuche es später erneut.",
-	"debugVerified": "Debug-Build: Das Update wurde heruntergeladen und seine Signatur geprüft. Installiert wird es nur von Release-Builds."
+	"debugVerified": "Debug-Build: Das Update wurde heruntergeladen und seine Signatur geprüft. Installiert wird es nur von Release-Builds.",
+	"description": "Wähle einen Kanal und suche nach neuen Versionen."
 }

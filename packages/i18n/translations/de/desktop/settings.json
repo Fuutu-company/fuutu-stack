@@ -8,11 +8,13 @@
 			"light": "Hell",
 			"dark": "Dunkel",
 			"system": "System"
-		}
+		},
+		"description": "Hell, dunkel oder wie im System."
 	},
 	"language": {
 		"title": "Sprache",
-		"label": "Sprache der App"
+		"label": "Sprache der App",
+		"description": "Die Sprache der App-Oberfläche."
 	},
 	"startup": {
 		"title": "Start",

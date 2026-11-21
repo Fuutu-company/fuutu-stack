@@ -2,11 +2,6 @@
 
 import {
 	Button,
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
 	Label,
 	Select,
 	SelectContent,
@@ -17,6 +12,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { SettingsSection } from "@/components/settings-section";
 import {
 	checkForUpdate,
 	getUpdatesStatus,
@@ -57,13 +53,12 @@ export function UpdateSettings() {
 	}
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t("title")}</CardTitle>
-				{enabled ? null : <CardDescription>{t("unavailable")}</CardDescription>}
-			</CardHeader>
+		<SettingsSection
+			title={t("title")}
+			description={enabled ? t("description") : t("unavailable")}
+		>
 			{enabled ? (
-				<CardContent className="flex flex-col gap-3">
+				<div className="flex flex-col gap-4">
 					{channels.length > 1 ? (
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="update-channel">{t("channel")}</Label>
@@ -75,7 +70,7 @@ export function UpdateSettings() {
 									setResult(null);
 								}}
 							>
-								<SelectTrigger id="update-channel" className="w-60">
+								<SelectTrigger id="update-channel" className="w-full sm:w-64">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -109,8 +104,8 @@ export function UpdateSettings() {
 							</p>
 						) : null}
 					</div>
-				</CardContent>
+				</div>
 			) : null}
-		</Card>
+		</SettingsSection>
 	);
 }

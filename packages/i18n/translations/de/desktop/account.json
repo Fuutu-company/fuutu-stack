@@ -6,7 +6,10 @@
 		"title": "Nicht angemeldet",
 		"description": "Melde dich an, um dein {app}-Konto zu verbinden."
 	},
-	"profile": "Profil",
+	"profile": {
+		"title": "Profil",
+		"description": "Dein {app}-Konto. Name, E-Mail und Passwort änderst du in der Web-App."
+	},
 	"organization": {
 		"label": "Organisation",
 		"personal": "Persönliches Konto",
@@ -22,12 +25,25 @@
 			"device_limit": "Gerätelimit erreicht"
 		},
 		"devices": "Geräte: {count} von {limit}",
-		"devicesUnlimited": "Geräte: {count}"
+		"devicesUnlimited": "Geräte: {count}",
+		"description": "Pakete und Zahlungen verwaltest du in der Web-App."
 	},
 	"offline": "Offline — letzter bekannter Stand.",
 	"actions": {
 		"manageAccount": "Konto verwalten",
-		"billing": "Abrechnung",
-		"devices": "Geräte"
+		"billing": "Pakete & Abrechnung",
+		"devices": "Geräte verwalten"
+	},
+	"devices": {
+		"title": "Geräte",
+		"signedIn": "Angemeldet am {date}",
+		"lastActive": "Zuletzt aktiv am {date}",
+		"failed": "Deine Geräte konnten nicht geladen werden.",
+		"loading": "Geräte werden geladen…",
+		"manageHint": "Verwalte deine Geräte in {app}."
+	},
+	"signOut": {
+		"title": "Abmelden",
+		"description": "Meldet dieses Gerät von {app} ab. Deine Daten in der Web-App bleiben erhalten."
 	}
 }

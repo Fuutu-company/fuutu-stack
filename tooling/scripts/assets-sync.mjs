@@ -13,7 +13,7 @@
  *   - web-app-manifest-192x192.png
  *   - web-app-manifest-512x512.png
  *
- * Distributed to: apps/{saas,marketing,docs,mail-preview}/public/
+ * Distributed to: apps/{saas,marketing,docs,mail-preview}/public/ (logo.svg also to apps/desktop/public/)
  *
  * Usage:
  *   pnpm assets:sync                              # generate + sync everything
@@ -52,6 +52,12 @@ const GENERATED_PNGS = [
 const GENERATED_SVGS = ["favicon.svg"];
 
 const APPS = ["saas", "marketing", "docs", "mail-preview"];
+
+// The desktop app (when present) shows the logo in its shell; its window and
+// installer icons come from src-tauri/icons (`pnpm tauri icon`).
+const LOGO_ONLY_APPS = existsSync(join(root, "apps/desktop"))
+	? ["desktop"]
+	: [];
 
 // Per-file destination: which subfolder of public/ does it land in?
 // favicon/* PNGs + favicon.svg → public/favicon/
@@ -99,7 +105,8 @@ function copyToApps(file) {
 		return;
 	}
 	const sub = destDir(file);
-	for (const app of APPS) {
+	const apps = file === SOURCE_SVG ? [...APPS, ...LOGO_ONLY_APPS] : APPS;
+	for (const app of apps) {
 		const dest = join(root, "apps", app, "public", sub, file);
 		mkdirSync(dirname(dest), { recursive: true });
 		copyFileSync(src, dest);

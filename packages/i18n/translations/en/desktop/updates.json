@@ -22,5 +22,6 @@
 	"install": "Update and restart",
 	"later": "Later",
 	"failed": "The update failed. Please try again later.",
-	"debugVerified": "Debug build: the update was downloaded and its signature verified. Only release builds install it."
+	"debugVerified": "Debug build: the update was downloaded and its signature verified. Only release builds install it.",
+	"description": "Choose a channel and check for new versions."
 }

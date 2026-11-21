@@ -8,11 +8,13 @@
 			"light": "Light",
 			"dark": "Dark",
 			"system": "System"
-		}
+		},
+		"description": "Light, dark or the system setting."
 	},
 	"language": {
 		"title": "Language",
-		"label": "App language"
+		"label": "App language",
+		"description": "The language of the app's interface."
 	},
 	"startup": {
 		"title": "Startup",

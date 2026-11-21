@@ -1,21 +1,14 @@
 "use client";
 
 import { config } from "@fuutu/config";
-import {
-	Button,
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@fuutu/ui";
+import { AuthCard, Button } from "@fuutu/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
-import type { PropsWithChildren, ReactNode } from "react";
+import type { PropsWithChildren } from "react";
 import { cancelSignIn, DesktopAuthError, signIn } from "@/lib/auth";
 import { logError, openExternal } from "@/lib/desktop";
 import { useAccount } from "./account-provider";
+import { GateScreen } from "./gate-screen";
 import { SetupSteps } from "./setup-steps";
 
 const app = config.app.name;
@@ -24,17 +17,13 @@ function GateCard({
 	title,
 	description,
 	children,
-}: PropsWithChildren<{ title: string; description: ReactNode }>) {
+}: PropsWithChildren<{ title: string; description: string }>) {
 	return (
-		<div className="flex h-screen items-center justify-center bg-background p-8">
-			<Card className="w-full max-w-md">
-				<CardHeader>
-					<CardTitle>{title}</CardTitle>
-					<CardDescription>{description}</CardDescription>
-				</CardHeader>
-				<CardFooter className="flex flex-wrap gap-2">{children}</CardFooter>
-			</Card>
-		</div>
+		<GateScreen>
+			<AuthCard title={title} description={description}>
+				<div className="flex flex-wrap gap-2">{children}</div>
+			</AuthCard>
+		</GateScreen>
 	);
 }
 
@@ -85,7 +74,9 @@ export function SignInPanel() {
 					</Button>
 				</div>
 			) : (
-				<Button onClick={() => mutation.mutate()}>{t("button")}</Button>
+				<Button className="w-full" onClick={() => mutation.mutate()}>
+					{t("button")}
+				</Button>
 			)}
 			{message ? (
 				<p className="text-destructive text-sm" role="alert">
@@ -128,11 +119,14 @@ export function AccessGate({ children }: PropsWithChildren) {
 
 	if (!decision) {
 		return (
-			<div className="flex h-screen items-center justify-center bg-background">
-				<p className="text-muted-foreground text-sm" aria-live="polite">
+			<GateScreen>
+				<p
+					className="text-center text-muted-foreground text-sm"
+					aria-live="polite"
+				>
 					{t("loading")}
 				</p>
-			</div>
+			</GateScreen>
 		);
 	}
 
@@ -145,19 +139,14 @@ export function AccessGate({ children }: PropsWithChildren) {
 			// Pre-auth steps stand in front of the sign-in card — never the app.
 			return (
 				<SetupSteps decision="sign_in">
-					<div className="flex h-screen items-center justify-center bg-background p-8">
-						<Card className="w-full max-w-md">
-							<CardHeader>
-								<CardTitle>{t("signIn.title", { app })}</CardTitle>
-								<CardDescription>
-									{t("signIn.description", { app })}
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<SignInPanel />
-							</CardContent>
-						</Card>
-					</div>
+					<GateScreen>
+						<AuthCard
+							title={t("signIn.title", { app })}
+							description={t("signIn.description", { app })}
+						>
+							<SignInPanel />
+						</AuthCard>
+					</GateScreen>
 				</SetupSteps>
 			);
 		case "missing":
@@ -246,7 +235,7 @@ export function AccessNotice() {
 	return (
 		<p
 			role="status"
-			className="rounded-md border border-border bg-muted px-3 py-2 text-muted-foreground text-sm"
+			className="mx-auto w-full max-w-4xl rounded-xl bg-muted px-4 py-3 text-muted-foreground text-sm"
 		>
 			{text}
 		</p>

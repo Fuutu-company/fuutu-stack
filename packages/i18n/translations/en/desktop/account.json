@@ -6,7 +6,10 @@
 		"title": "Not signed in",
 		"description": "Sign in to sync with your {app} account."
 	},
-	"profile": "Profile",
+	"profile": {
+		"title": "Profile",
+		"description": "Your {app} account. Change your name, email or password in the web app."
+	},
 	"organization": {
 		"label": "Organization",
 		"personal": "Personal account",
@@ -22,12 +25,25 @@
 			"device_limit": "Device limit reached"
 		},
 		"devices": "Devices: {count} of {limit}",
-		"devicesUnlimited": "Devices: {count}"
+		"devicesUnlimited": "Devices: {count}",
+		"description": "Plans and payments are managed in the web app."
 	},
 	"offline": "Offline — showing the last known state.",
 	"actions": {
 		"manageAccount": "Manage account",
-		"billing": "Billing",
-		"devices": "Devices"
+		"billing": "Plans & billing",
+		"devices": "Manage devices"
+	},
+	"devices": {
+		"title": "Devices",
+		"signedIn": "Signed in on {date}",
+		"lastActive": "Last active {date}",
+		"failed": "Could not load your devices.",
+		"loading": "Loading devices…",
+		"manageHint": "Manage your devices in {app}."
+	},
+	"signOut": {
+		"title": "Sign out",
+		"description": "Signs this device out of {app}. Your data in the web app stays."
 	}
 }

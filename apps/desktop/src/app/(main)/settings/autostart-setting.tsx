@@ -1,16 +1,9 @@
 "use client";
 
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-	Label,
-	Switch,
-} from "@fuutu/ui";
+import { Label, Switch } from "@fuutu/ui";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { SettingsSection } from "@/components/settings-section";
 import { inDesktop, logError } from "@/lib/desktop";
 
 /** "Start at login" — the OS login item via tauri-plugin-autostart. */
@@ -37,12 +30,8 @@ export function AutostartSetting() {
 	}
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t("title")}</CardTitle>
-				<CardDescription>{t("autostartHint")}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex items-center gap-3">
+		<SettingsSection title={t("title")} description={t("autostartHint")}>
+			<div className="flex items-center gap-3">
 				<Switch
 					id="autostart"
 					checked={enabled ?? false}
@@ -50,7 +39,7 @@ export function AutostartSetting() {
 					onCheckedChange={(next) => void toggle(next)}
 				/>
 				<Label htmlFor="autostart">{t("autostart")}</Label>
-			</CardContent>
-		</Card>
+			</div>
+		</SettingsSection>
 	);
 }
