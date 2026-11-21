@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
 	output: "export",
 	trailingSlash: true,
 	images: { unoptimized: true },
+	// Read by scripts/licenses.mjs (licence gate + third-party notices: the
+	// exact npm packages in the bundle); build:desktop strips the maps
+	// before Tauri bundles `out/`.
+	productionBrowserSourceMaps: true,
 	reactStrictMode: true,
 	transpilePackages: ["@fuutu/ui", "@fuutu/i18n", "@fuutu/utils"],
 	devIndicators: false,

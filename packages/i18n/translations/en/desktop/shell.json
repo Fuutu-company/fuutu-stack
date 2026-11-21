@@ -2,16 +2,26 @@
 	"nav": {
 		"home": "Home",
 		"settings": "Settings",
-		"account": "Account"
+		"account": "Account",
+		"about": "About",
+		"primary": "Main navigation"
 	},
 	"home": {
 		"title": "Welcome",
-		"description": "Your desktop app is running.",
-		"openSecondWindow": "Open About window"
+		"description": "Your desktop app is running. Build your product on this shell.",
+		"openSettings": "Open settings"
 	},
 	"error": {
 		"title": "Something went wrong",
 		"description": "The app hit an unexpected error. It has been written to the log file.",
 		"retry": "Try again"
+	},
+	"notFound": {
+		"title": "Page not found",
+		"back": "Back to home"
+	},
+	"tray": {
+		"show": "Show",
+		"quit": "Quit"
 	}
 }

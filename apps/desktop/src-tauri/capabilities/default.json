@@ -1,7 +1,19 @@
 {
 	"$schema": "../gen/schemas/desktop-schema.json",
 	"identifier": "default",
-	"description": "Permissions of the app's own windows.",
+	"description": "Permissions of the app's own windows (main, about).",
 	"windows": ["main", "about"],
-	"permissions": ["core:default", "core:webview:allow-create-webview-window"]
+	"permissions": [
+		"core:default",
+		"core:webview:allow-create-webview-window",
+		"core:window:allow-set-focus",
+		"core:window:allow-set-title",
+		"log:default",
+		"opener:allow-open-url",
+		"opener:allow-open-path",
+		"process:allow-restart",
+		"autostart:allow-enable",
+		"autostart:allow-disable",
+		"autostart:allow-is-enabled"
+	]
 }

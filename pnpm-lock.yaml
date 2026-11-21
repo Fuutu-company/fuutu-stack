@@ -147,6 +147,24 @@ catalogs:
     '@tauri-apps/cli':
       specifier: 2.12.4
       version: 2.12.4
+    '@tauri-apps/plugin-autostart':
+      specifier: 2.7.0
+      version: 2.7.0
+    '@tauri-apps/plugin-deep-link':
+      specifier: 2.6.3
+      version: 2.6.3
+    '@tauri-apps/plugin-log':
+      specifier: 2.10.1
+      version: 2.10.1
+    '@tauri-apps/plugin-opener':
+      specifier: 2.7.2
+      version: 2.7.2
+    '@tauri-apps/plugin-process':
+      specifier: 2.4.0
+      version: 2.4.0
+    '@tauri-apps/plugin-updater':
+      specifier: 2.14.1
+      version: 2.14.1
     '@types/mdx':
       specifier: ^2.0.14
       version: 2.0.14
@@ -377,6 +395,24 @@ importers:
       '@tauri-apps/api':
         specifier: 'catalog:'
         version: 2.12.4
+      '@tauri-apps/plugin-autostart':
+        specifier: 'catalog:'
+        version: 2.7.0
+      '@tauri-apps/plugin-deep-link':
+        specifier: 'catalog:'
+        version: 2.6.3
+      '@tauri-apps/plugin-log':
+        specifier: 'catalog:'
+        version: 2.10.1
+      '@tauri-apps/plugin-opener':
+        specifier: 'catalog:'
+        version: 2.7.2
+      '@tauri-apps/plugin-process':
+        specifier: 'catalog:'
+        version: 2.4.0
+      '@tauri-apps/plugin-updater':
+        specifier: 'catalog:'
+        version: 2.14.1
       lucide-react:
         specifier: 'catalog:'
         version: 1.55.0(@types/react@19.3.0)(react@19.3.0)
@@ -1233,13 +1269,13 @@ importers:
       '@fuutu/config':
         specifier: workspace:*
         version: link:../config
-      '@fuutu/payments':
-        specifier: workspace:*
-        version: link:../payments
       zod:
         specifier: 'catalog:'
         version: 4.6.7
     devDependencies:
+      '@fuutu/payments':
+        specifier: workspace:*
+        version: link:../payments
       '@fuutu/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
@@ -4713,6 +4749,24 @@ packages:
     resolution: {integrity: sha512-JI9bHfudSRJikGOrjbXEm6RjzzvmKuLc+JixB1NE8hNzQkNlCCIC3pTES3uypkR9lxHrsbxzcnSwhI2IxBQphw==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@tauri-apps/plugin-autostart@2.7.0':
+    resolution: {integrity: sha512-4uRq+rqKSAh6MWAxgk6FnUPigc8VMG8eDVYTLk3A7OfKs9sLVwfeM8kbUvzjpabRQvyl4zd9tfzXBTrrtuprsA==}
+
+  '@tauri-apps/plugin-deep-link@2.6.3':
+    resolution: {integrity: sha512-L+fjyGe5RPBtfh3VUSl1HslC0/xW7frDvdsZk37d9UdqOpKwD9P0PmblSk7Q/WCiAEHZ9J9Pn7VyiecBBdiy/A==}
+
+  '@tauri-apps/plugin-log@2.10.1':
+    resolution: {integrity: sha512-QYgxDunUZP+Cd3ev+8ItOc3Q6uUFkEhRHdTolxUtlC/8SGsc5IyVjGgFclprkAx736HUCUYfh2vqUr3qwNfTTw==}
+
+  '@tauri-apps/plugin-opener@2.7.2':
+    resolution: {integrity: sha512-LyybP1VSzTMQiaFYcsbAse47KpivlyXdLZMQzGLEnkgQacGESnpjAfFoQ6h5sqWgAdZDH9szYjPzHMpv0Sz+TQ==}
+
+  '@tauri-apps/plugin-process@2.4.0':
+    resolution: {integrity: sha512-GddrmsSLAYrLa/yTXlXK/YRDzUgYeeOnUXTbiyvJWkmI424RmDPD3FVLeqcon7rv6O6ZfhBilcrHWnSo7o6hIQ==}
+
+  '@tauri-apps/plugin-updater@2.14.1':
+    resolution: {integrity: sha512-Hr7nlBm1wT6xbwzjZ/S36YULazu8MNlj5vvOwMl47fXI7HTa5Bjl1PbDEwVHaZTAKzE1VZsUy35UqnbrQxmYQw==}
 
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
@@ -11717,6 +11771,30 @@ snapshots:
       '@tauri-apps/cli-win32-arm64-msvc': 2.12.4
       '@tauri-apps/cli-win32-ia32-msvc': 2.12.4
       '@tauri-apps/cli-win32-x64-msvc': 2.12.4
+
+  '@tauri-apps/plugin-autostart@2.7.0':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
+
+  '@tauri-apps/plugin-deep-link@2.6.3':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
+
+  '@tauri-apps/plugin-log@2.10.1':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
+
+  '@tauri-apps/plugin-opener@2.7.2':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
+
+  '@tauri-apps/plugin-process@2.4.0':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
+
+  '@tauri-apps/plugin-updater@2.14.1':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
 
   '@ts-morph/common@0.27.0':
     dependencies:

@@ -22,16 +22,35 @@ export function readBridgeToken(
 	}
 }
 
+/**
+ * Only the slot's own bridge gets the token — never another host or port the
+ * server may probe (session `host`/`port` arguments, port discovery).
+ */
+export function isBridgeAddress(address, port = process.env.MCP_BRIDGE_PORT) {
+	try {
+		const url = new URL(String(address));
+		return (
+			["127.0.0.1", "localhost"].includes(url.hostname) &&
+			Boolean(port) &&
+			url.port === String(port)
+		);
+	} catch {
+		return false;
+	}
+}
+
 class TokenWebSocket extends RealWebSocket {
 	constructor(address, protocols, options) {
 		// ws accepts (address, options) as well as (address, protocols, options).
 		const optionsFirst =
 			protocols && typeof protocols === "object" && !Array.isArray(protocols);
 		const opts = (optionsFirst ? protocols : options) ?? {};
-		const withToken = {
-			...opts,
-			headers: { ...opts.headers, [TOKEN_HEADER]: readBridgeToken() },
-		};
+		const withToken = isBridgeAddress(address)
+			? {
+					...opts,
+					headers: { ...opts.headers, [TOKEN_HEADER]: readBridgeToken() },
+				}
+			: opts;
 		if (optionsFirst) super(address, withToken);
 		else super(address, protocols, withToken);
 	}

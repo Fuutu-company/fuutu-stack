@@ -1,5 +1,11 @@
 {
 	"title": "About {appName}",
 	"version": "Version {version}",
-	"builtWith": "Built with {kitName}"
+	"builtWith": "Built with {kitName}",
+	"notices": {
+		"title": "Third-party software",
+		"description": "{appName} includes open-source software under these licences.",
+		"empty": "No notices bundled in this build."
+	},
+	"logs": "Open log folder"
 }

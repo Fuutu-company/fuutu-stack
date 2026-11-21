@@ -13,5 +13,10 @@
 	"language": {
 		"title": "Language",
 		"label": "App language"
+	},
+	"startup": {
+		"title": "Startup",
+		"autostart": "Start at login",
+		"autostartHint": "Open the app automatically when you sign in to your computer."
 	}
 }

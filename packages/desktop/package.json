@@ -16,10 +16,10 @@
 	},
 	"dependencies": {
 		"@fuutu/config": "workspace:*",
-		"@fuutu/payments": "workspace:*",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@fuutu/payments": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",

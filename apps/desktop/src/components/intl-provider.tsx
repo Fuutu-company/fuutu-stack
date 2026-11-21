@@ -12,6 +12,7 @@ import {
 	useEffect,
 	useState,
 } from "react";
+import { DesktopEffects } from "./desktop-effects";
 
 const STORAGE_KEY = "desktop.locale";
 
@@ -83,6 +84,7 @@ export function DesktopIntlProvider({ children }: PropsWithChildren) {
 				messages={messages}
 				timeZone={Intl.DateTimeFormat().resolvedOptions().timeZone}
 			>
+				<DesktopEffects />
 				{children}
 			</NextIntlClientProvider>
 		</LocaleContext.Provider>

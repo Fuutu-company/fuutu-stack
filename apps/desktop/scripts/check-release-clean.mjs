@@ -13,7 +13,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const tauriDir = join(dirname(fileURLToPath(import.meta.url)), "../src-tauri");
 export const BRIDGE_CRATE = "tauri-plugin-mcp-bridge";
@@ -40,7 +40,7 @@ export function binaryMarkers(file) {
 	return BINARY_MARKERS.filter((marker) => bytes.includes(Buffer.from(marker)));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 	let failed = false;
 	if (releaseTreeHasBridge()) {
 		console.error(`✗ ${BRIDGE_CRATE} is in the release dependency graph`);

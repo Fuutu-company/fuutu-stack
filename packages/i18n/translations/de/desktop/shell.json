@@ -2,16 +2,26 @@
 	"nav": {
 		"home": "Start",
 		"settings": "Einstellungen",
-		"account": "Konto"
+		"account": "Konto",
+		"about": "Über",
+		"primary": "Hauptnavigation"
 	},
 	"home": {
 		"title": "Willkommen",
-		"description": "Deine Desktop-App läuft.",
-		"openSecondWindow": "Über-Fenster öffnen"
+		"description": "Deine Desktop-App läuft. Baue dein Produkt auf dieser Basis.",
+		"openSettings": "Einstellungen öffnen"
 	},
 	"error": {
 		"title": "Etwas ist schiefgelaufen",
 		"description": "Die App hatte einen unerwarteten Fehler. Er wurde in die Logdatei geschrieben.",
 		"retry": "Erneut versuchen"
+	},
+	"notFound": {
+		"title": "Seite nicht gefunden",
+		"back": "Zur Startseite"
+	},
+	"tray": {
+		"show": "Anzeigen",
+		"quit": "Beenden"
 	}
 }

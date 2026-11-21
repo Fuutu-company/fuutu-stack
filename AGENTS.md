@@ -112,10 +112,11 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 | New feature / behavior change | `brainstorm-feature` → `plan-implementation` → `execute-plan` |
 | Implementing code or a fix | `write-tests-first` |
 | Bug, failing test, odd behavior | `debug-root-cause` |
-| About to claim done | `verify-before-done` (+ `check-in-browser` for UI, `check-in-desktop` for the desktop app) |
+| About to claim done | `verify-before-done` (+ `check-in-browser` for UI) |
 | Review comments received | `handle-review-feedback` |
 | Work verified, changes exist | `propose-commit` — conventional messages drive the app version; never commit/push without approval |
 | Building or changing UI: pages, components, styles, a single-token tweak | `build-ui` (+ `check-in-browser`) |
+| Desktop app changed (`apps/desktop`, `config.features.desktop` on) | `check-in-desktop` |
 | Rebrand: colors, fonts, radius, density | `setup-brand` (full version via Fuutu MCP) |
 | New entity / API endpoint / provider swap / payments / code review | `add-entity` · `add-api-endpoint` · `swap-provider` · `connect-payments` · `review-code` (full versions via Fuutu MCP) |
 

@@ -30,28 +30,34 @@ const serverBin = join(
 	"apps/desktop/node_modules/@hypothesi/tauri-mcp-server/dist/index.js",
 );
 if (!existsSync(serverBin)) {
-	process.stderr.write(
-		"desktop-mcp: @hypothesi/tauri-mcp-server is not installed (run pnpm install)\n",
-	);
-	process.exit(1);
+	// apps/desktop removed or not installed yet: the `.mcp.json` entry must
+	// not show up as a failed server — serve an empty tool list instead.
+	await import("./desktop-mcp/stub.mjs");
+} else {
+	start();
 }
 
-const hook = pathToFileURL(
-	join(import.meta.dirname, "desktop-mcp/ws-token-hook.mjs"),
-).href;
-const child = spawn(
-	process.execPath,
-	["--import", hook, serverBin, ...process.argv.slice(2)],
-	{
-		cwd: root,
-		stdio: "inherit",
-		env: {
-			...process.env,
-			MCP_BRIDGE_HOST: "127.0.0.1",
-			MCP_BRIDGE_PORT: String(project.ports.desktopBridge),
-			MCP_BRIDGE_CWD: join(root, "apps/desktop"),
-			FUUTU_DESKTOP_BRIDGE_TOKEN_FILE: join(root, ".fuutu/desktop-bridge.json"),
+function start() {
+	const hook = pathToFileURL(
+		join(import.meta.dirname, "desktop-mcp/ws-token-hook.mjs"),
+	).href;
+	const child = spawn(
+		process.execPath,
+		["--import", hook, serverBin, ...process.argv.slice(2)],
+		{
+			cwd: root,
+			stdio: "inherit",
+			env: {
+				...process.env,
+				MCP_BRIDGE_HOST: "127.0.0.1",
+				MCP_BRIDGE_PORT: String(project.ports.desktopBridge),
+				MCP_BRIDGE_CWD: join(root, "apps/desktop"),
+				FUUTU_DESKTOP_BRIDGE_TOKEN_FILE: join(
+					root,
+					".fuutu/desktop-bridge.json",
+				),
+			},
 		},
-	},
-);
-child.on("exit", (code) => process.exit(code ?? 0));
+	);
+	child.on("exit", (code) => process.exit(code ?? 0));
+}

@@ -7,6 +7,7 @@
 		"./saas": "./src/saas.ts",
 		"./marketing": "./src/marketing.ts",
 		"./docs": "./src/docs.ts",
+		"./desktop": "./src/desktop.ts",
 		"./public": "./src/public.ts"
 	},
 	"scripts": {

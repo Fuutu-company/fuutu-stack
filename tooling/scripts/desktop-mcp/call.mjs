@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { pathToFileURL } from "node:url";
 import { findRoot } from "../../ports/index.mjs";
 
 export async function connectDesktopMcp({ root = findRoot() } = {}) {
@@ -112,6 +113,6 @@ async function main() {
 	process.exit(failed ? 1 : 0);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 	await main();
 }

@@ -305,8 +305,12 @@ async function status() {
  * Start it with `pnpm dev:desktop` (skill check-in-desktop).
  */
 async function desktopStatus() {
-	const { isDesktopEnabled } = await import("./desktop.mjs");
-	if (!(await isDesktopEnabled(ROOT))) return;
+	try {
+		const { isDesktopEnabled } = await import("./desktop.mjs");
+		if (!(await isDesktopEnabled(ROOT))) return;
+	} catch {
+		return; // desktop launcher missing or Node without type stripping
+	}
 	const bridge = PROJECT.ports.desktopBridge;
 	log(
 		`Desktop   bridge :${bridge}  ${(await portOpen(bridge)) ? "up" : "down — start with `pnpm dev:desktop`"}`,

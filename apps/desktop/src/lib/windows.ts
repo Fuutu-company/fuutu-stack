@@ -1,3 +1,4 @@
+import { config } from "@fuutu/config";
 import { isTauri } from "@tauri-apps/api/core";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
@@ -16,8 +17,9 @@ export async function openAboutWindow(): Promise<void> {
 	}
 	new WebviewWindow(ABOUT_LABEL, {
 		url: "/about/",
-		width: 420,
-		height: 520,
+		title: config.app.name,
+		width: 480,
+		height: 600,
 		resizable: false,
 		center: true,
 	});
