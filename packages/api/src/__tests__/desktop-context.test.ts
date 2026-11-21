@@ -1,5 +1,5 @@
 import type { Context as HonoContext } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Desktop access tokens on `/api/rpc` (config.features.desktop, C1/C6):
@@ -31,10 +31,12 @@ vi.mock("@fuutu/db", () => ({
 	})),
 	getUserById: vi.fn(),
 }));
+vi.mock("@fuutu/payments", () => ({ getOrgEntitlement: vi.fn() }));
 
 const { auth } = await import("@fuutu/auth");
 const { verifyDesktopAccessToken } = await import("@fuutu/auth/desktop-oauth");
 const { getUserById } = await import("@fuutu/db");
+const { apiConfig } = await import("../config");
 const { createContext } = await import("../context");
 const { authProcedure } = await import("../orpc/procedures");
 const { call } = await import("@orpc/server");
@@ -46,8 +48,18 @@ const ctxFor = (headers: Headers) =>
 const bearer = (token: string) =>
 	new Headers({ authorization: `Bearer ${token}` });
 
+// No desktop plan gate here, whatever the buyer's apiConfig sets
+// (the gate itself: desktop-token-scope.test.ts).
+const buyerScopeFeatures = { ...apiConfig.apiKeyScopeFeatures };
+afterEach(() => {
+	const features = apiConfig.apiKeyScopeFeatures;
+	for (const key of Object.keys(features)) delete features[key];
+	Object.assign(features, buyerScopeFeatures);
+});
+
 beforeEach(() => {
 	vi.clearAllMocks();
+	delete apiConfig.apiKeyScopeFeatures.desktop;
 	vi.mocked(auth.api.getSession).mockResolvedValue(null);
 	vi.mocked(verifyDesktopAccessToken).mockResolvedValue({
 		sub: "user-1",

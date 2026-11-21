@@ -25,6 +25,27 @@ vi.mock("@fuutu/config", async (importOriginal) => {
 		},
 	};
 });
+// A fixed desktop config — the buyer's own desktopConfig (auth mode,
+// requiredFeature, trial, device limit) never changes these expectations.
+vi.mock("@fuutu/desktop/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/desktop/config")>();
+	return {
+		...actual,
+		desktopConfig: {
+			...actual.desktopConfig,
+			auth: "required",
+			offlineGraceDays: 7,
+			access: {
+				...actual.desktopConfig.access,
+				requiredFeature: null,
+				perMajorVersion: false,
+				majors: {},
+			},
+			devices: { ...actual.desktopConfig.devices, limit: 3 },
+			trial: { ...actual.desktopConfig.trial, days: null },
+		},
+	};
+});
 vi.mock("@fuutu/auth", () => ({ auth: { api: { signJWT: vi.fn() } } }));
 vi.mock("@fuutu/auth/desktop-oauth", () => ({
 	desktopOAuth: {
@@ -46,7 +67,6 @@ vi.mock("@fuutu/ai", () => ({ resolveAIProvider: vi.fn() }));
 const { auth } = await import("@fuutu/auth");
 const db = await import("@fuutu/db");
 const { getUserEntitlement } = await import("@fuutu/payments");
-const { desktopConfig } = await import("@fuutu/desktop/config");
 const { desktopSessionProcedure } = await import(
 	"../modules/desktop/procedures/session"
 );
@@ -143,9 +163,7 @@ describe("desktop.session", () => {
 			access: "granted",
 			cnf: { jwk: { kty: "OKP", crv: "Ed25519", x: INSTALL_KEY } },
 		});
-		expect(Number(payload.exp) - Number(payload.iat)).toBe(
-			desktopConfig.offlineGraceDays * 86_400,
-		);
+		expect(Number(payload.exp) - Number(payload.iat)).toBe(7 * 86_400);
 
 		vi.mocked(auth.api.signJWT).mockClear();
 		const browser = await call(
@@ -178,14 +196,10 @@ describe("desktop.session", () => {
 		vi.mocked(db.countDesktopDevices).mockResolvedValue(99);
 		const result = await call(
 			desktopSessionProcedure,
-			{},
+			{ installKey: INSTALL_KEY },
 			{ context: desktop() },
 		);
-		if (desktopConfig.devices.limit === null) {
-			expect(result.access.status).toBe("granted");
-		} else {
-			expect(result.access.status).toBe("device_limit");
-			expect(result.offline).toBeNull();
-		}
+		expect(result.access.status).toBe("device_limit");
+		expect(result.offline).toBeNull();
 	});
 });

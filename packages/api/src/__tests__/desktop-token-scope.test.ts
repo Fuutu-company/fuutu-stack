@@ -70,6 +70,7 @@ const orgInput = z.object({ organizationId: z.string() });
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	delete apiConfig.apiKeyScopeFeatures.desktop;
 	vi.mocked(auth.api.getSession).mockResolvedValue(null);
 	claim(ORG);
 	vi.mocked(db.getUserById).mockResolvedValue({
@@ -94,8 +95,12 @@ beforeEach(() => {
 	vi.mocked(getOrgEntitlement).mockResolvedValue({ features: [] } as never);
 });
 
+// Each test sets the plan gate itself, whatever the buyer's apiConfig sets.
+const buyerScopeFeatures = { ...apiConfig.apiKeyScopeFeatures };
 afterEach(() => {
-	delete apiConfig.apiKeyScopeFeatures.desktop;
+	const features = apiConfig.apiKeyScopeFeatures;
+	for (const key of Object.keys(features)) delete features[key];
+	Object.assign(features, buyerScopeFeatures);
 });
 
 describe("(a) org pin", () => {
