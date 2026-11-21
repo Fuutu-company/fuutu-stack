@@ -5,6 +5,16 @@ in-app updates, and the download pages — all from one pipeline,
 `.github/workflows/desktop.yml`. Nothing here runs while
 `config.features.desktop` is `false`.
 
+> [!IMPORTANT]
+> **Your own name, or no release (LICENSE.md §8).** `pnpm build:desktop`
+> and the generated Tauri config **refuse a release build** when
+> "fuutu" (any case) appears in the product name, bundle id, deep-link
+> scheme, OAuth client id, keychain service or user agent. Dev builds
+> (`pnpm dev:desktop`) only warn, because the kit itself is named
+> "Fuutu Stack". Set `config.app.name` (`packages/config/index.ts`), or
+> `desktopConfig.identity` (`packages/desktop/src/config.ts`), to your
+> product before your first release build. There is no opt-out.
+
 ## Version
 
 The desktop app has **your app's version**: root `package.json#version`
@@ -128,7 +138,11 @@ platform) and `downloads` (installer per download platform). See
 
 With auth `optional`, an app that sends an invalid or expired token
 gets `401` (it refreshes and retries); without a token it gets updates
-within its own major.
+only up to the **lowest licensed major** (`desktopConfig.access.majors`;
+the version in the URL does not raise that cap). Any newer major needs a
+token. Only `desktopConfig.auth: "required"` actually protects the
+binaries: with `optional` or `off`, anyone can download the installers of
+the majors that need no licence.
 
 Channels: `desktopConfig.updates.channels`; users pick one in Settings →
 Updates.
@@ -153,10 +167,40 @@ pnpm build:desktop --target universal-apple-darwin
 ```
 
 It sends one build telemetry ping with surface `desktop`
-(LICENSE.md §7). Signing keys come from your `.env`. Fetches the
-offline-claim keys from `NEXT_PUBLIC_SAAS_URL/api/auth/jwks` — run it
-against your production app; without them the app trusts the key of its
-last online session.
+(LICENSE.md §7). Signing keys come from your `.env`.
+
+### Signing secrets
+
+`TAURI_SIGNING_*`, `APPLE_*` and `WINDOWS_CERTIFICATE*` reach **only**
+`tauri build`. `pnpm build:desktop` strips them from the telemetry ping,
+`next build` and the licence scripts (`splitSigningEnv`,
+`scripts/lib/tauri-config.ts`). In CI only the Build step gets them, and
+every action in the workflow is pinned by commit SHA. Bump a SHA together
+with its `# vX` comment.
+
+### Offline keys (release builds)
+
+With sign-in on (`auth` not `off`) and offline grace
+(`desktopConfig.offlineGraceDays` > 0), a release build fetches the
+backend's Ed25519 keys from `NEXT_PUBLIC_SAAS_URL/api/auth/jwks` and
+embeds them. A release build **fails** when it gets no key, so run it
+against your running production app. The app trusts only these embedded
+keys, never a key stored next to the claim. Debug builds also accept the
+key of the last online session.
+
+To ship without offline grace on purpose, set
+`DESKTOP_ALLOW_NO_OFFLINE_KEYS=1`. The build then sets `graceDays` to 0,
+so the app needs the backend at every start.
+
+Offline claims are bound to the device and the account:
+
+- **Device:** each install generates an Ed25519 key pair in the OS
+  keychain. The backend signs its public key into the claim (`cnf`), so a
+  claim copied to another install grants nothing.
+- **Account:** offline mode needs a stored refresh token, and the claim's
+  `sub` must match the cached account.
+- **Clock:** the rollback marker (last seen time) is stored separately
+  from the claim.
 
 Publish build outputs (one directory per job — `macos-universal`,
 `windows-x86_64`, `linux-x86_64` — each holding a `bundle/` output):
@@ -183,8 +227,15 @@ pnpm -F @fuutu/desktop-app exec tsx scripts/publish.ts --dir ./release --channel
 - [ ] Environment `desktop-release` protected with reviewers and tag rules (§6).
 - [ ] Releases bucket created, private; CI credentials write-only to it;
       `apps/saas` can read it (§5).
-- [ ] `NEXT_PUBLIC_SAAS_URL` points at production; the build log shows no
-      "no offline-claim keys" warning.
+- [ ] `NEXT_PUBLIC_SAAS_URL` points at production. The build embeds its
+      offline keys; it fails without them unless you set
+      `DESKTOP_ALLOW_NO_OFFLINE_KEYS=1`, which ships with no offline grace.
+- [ ] API: desktop tokens reach only procedures marked `desktopAllowed`
+      (`.use(desktopAllowed)` or `authProcedure({ desktopAllowed: true })`).
+      Mark the procedures your desktop pages call. A token stays pinned to
+      the org that was active at sign-in. Other org-scoped calls only work
+      in that org, so to work in another org, sign in again with it active. To gate API use by plan,
+      set `apiConfig.apiKeyScopeFeatures.desktop`.
 - [ ] One full round on a test channel: install `vX.Y.Z-beta.1`, publish
       `-beta.2`, the app offers it, installs it and restarts.
 - [ ] `/download` (marketing) and Settings → Desktop app list your installers.

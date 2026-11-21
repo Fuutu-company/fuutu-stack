@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Desktop access tokens on `/api/rpc` (config.features.desktop, C1/C6):
  * off → a non-API-key bearer is ignored exactly as before; on → a valid
- * desktop token authenticates like an unscoped API key, and session-only
- * procedures refuse it.
+ * desktop token authenticates as its user, pinned to its (member) org;
+ * unmarked and session-only procedures refuse it (desktop-token-scope.test.ts).
  */
 
 const desktop = vi.hoisted(() => ({ active: false }));
@@ -25,6 +25,10 @@ vi.mock("@fuutu/db", () => ({
 	API_KEY_PREFIX: "futu_sk_",
 	verifyApiKeyWithOwner: vi.fn(),
 	getOrganizationMemberRole: vi.fn(),
+	getOrganizationWithMembers: vi.fn(async (id: string) => ({
+		id,
+		members: [{ userId: "user-1" }],
+	})),
 	getUserById: vi.fn(),
 }));
 
@@ -74,11 +78,15 @@ describe("desktop bearer — switch on", () => {
 		desktop.active = true;
 	});
 
-	it("authenticates as the user, like an unscoped API key", async () => {
+	it("authenticates as the user, pinned to its member org", async () => {
 		const ctx = await ctxFor(bearer("eyJ.desktop.token"));
 		expect(verifyDesktopAccessToken).toHaveBeenCalledWith("eyJ.desktop.token");
 		expect(ctx.session?.user.id).toBe("user-1");
-		expect(ctx.apiKey).toEqual({ id: "oauth:tok-1", organizationId: null });
+		expect(ctx.apiKey).toEqual({
+			id: "oauth:tok-1",
+			organizationId: "org-1",
+			desktop: true,
+		});
 		expect(ctx.desktop).toEqual({
 			clientId: "acme-desktop",
 			tokenId: "tok-1",
@@ -118,7 +126,11 @@ describe("desktop bearer — switch on", () => {
 		).rejects.toMatchObject({
 			code: "FORBIDDEN",
 		});
-		const open = authProcedure().handler(() => "ok");
+		const unmarked = authProcedure().handler(() => "ok");
+		await expect(
+			call(unmarked, undefined, { context: ctx }),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		const open = authProcedure({ desktopAllowed: true }).handler(() => "ok");
 		await expect(call(open, undefined, { context: ctx })).resolves.toBe("ok");
 	});
 });

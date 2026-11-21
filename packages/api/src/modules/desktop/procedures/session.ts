@@ -12,7 +12,7 @@ import { paymentsConfig } from "@fuutu/payments/config";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { createRateLimitMiddleware } from "../../../orpc/middleware/rate-limit";
-import { authProcedure } from "../../../orpc/procedures";
+import { authProcedure, desktopAccessFlow } from "../../../orpc/procedures";
 import {
 	type DesktopOrg,
 	resolveDesktopAccess,
@@ -26,6 +26,15 @@ const inputSchema = z
 	.object({
 		/** Switch the app's organization; default: the token's sign-in org. */
 		organizationId: z.string().min(1).optional(),
+		/**
+		 * The install's Ed25519 public key (base64url) — the offline claim is
+		 * bound to it (`cnf`), so it is worthless on another install. No key,
+		 * no offline claim.
+		 */
+		installKey: z
+			.string()
+			.regex(/^[A-Za-z0-9_-]{43}$/)
+			.optional(),
 	})
 	.optional();
 
@@ -49,6 +58,7 @@ function browserLinks(org: DesktopOrg | null) {
  * Works with a desktop access token and with a browser session.
  */
 export const desktopSessionProcedure = authProcedure()
+	.use(desktopAccessFlow)
 	.use(createRateLimitMiddleware({ maxRequests: 60, windowMs: 60_000 }))
 	.route({
 		method: "POST",
@@ -85,6 +95,7 @@ export const desktopSessionProcedure = authProcedure()
 		// Only the app needs the claim (a browser session never goes offline).
 		if (
 			context.desktop &&
+			input?.installKey &&
 			(access.status === "granted" || access.status === "trial")
 		) {
 			const graceEnd = now.getTime() + desktopConfig.offlineGraceDays * DAY_MS;
@@ -105,6 +116,10 @@ export const desktopSessionProcedure = authProcedure()
 						maxMajor: access.maxLicensedMajor,
 						iat: Math.floor(now.getTime() / 1000),
 						exp: Math.floor(expiresAt.getTime() / 1000),
+						// Proof-of-possession key (RFC 7800): this install only.
+						cnf: {
+							jwk: { kty: "OKP", crv: "Ed25519", x: input.installKey },
+						},
 					},
 				},
 			});

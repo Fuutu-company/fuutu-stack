@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { evaluateDesktopAccess, maxLicensedMajor } from "../access";
+import {
+	anonymousMaxMajor,
+	evaluateDesktopAccess,
+	maxLicensedMajor,
+} from "../access";
 import type { DesktopFeatureId } from "../config";
 
 const DAY = 86_400_000;
@@ -102,5 +106,29 @@ describe("maxLicensedMajor", () => {
 		expect(maxLicensedMajor(config, [])).toBe(1);
 		expect(maxLicensedMajor(config, ["api_webhooks"])).toBe(2);
 		expect(maxLicensedMajor(config, ["api_webhooks", "auth_sso"])).toBe(null);
+	});
+});
+
+describe("anonymousMaxMajor", () => {
+	it("is the highest major no listed feature guards", () => {
+		expect(
+			anonymousMaxMajor({
+				perMajorVersion: true,
+				majors: { 2: "api_webhooks" },
+			}),
+		).toBe(1);
+		expect(
+			anonymousMaxMajor({
+				perMajorVersion: true,
+				majors: { 1: "api_webhooks" },
+			}),
+		).toBe(0);
+		expect(anonymousMaxMajor({ perMajorVersion: true, majors: {} })).toBeNull();
+		expect(
+			anonymousMaxMajor({
+				perMajorVersion: false,
+				majors: { 2: "api_webhooks" },
+			}),
+		).toBeNull();
 	});
 });

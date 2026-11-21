@@ -39,3 +39,10 @@ export const API_KEY_DEFAULT_SCOPES: readonly ApiKeyScope[] = ["api"];
 
 /** Scope that admits a scoped key on the oRPC/REST API. */
 export const API_SCOPE: ApiKeyScope = "api";
+
+/**
+ * Pseudo-scope of desktop access tokens (not an API-key scope — no key can
+ * carry it). `apiConfig.apiKeyScopeFeatures.desktop` plan-gates what a
+ * desktop token may call beyond the app's access flow.
+ */
+export const DESKTOP_SCOPE = "desktop";

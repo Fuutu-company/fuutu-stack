@@ -15,6 +15,17 @@ export type PolicyMarker = {
 	sessionOnly?: true;
 	/** A system-admin procedure (`systemAdminProcedure`): role, ban and session re-read. */
 	systemAdmin?: true;
+	/**
+	 * Desktop access tokens are accepted (`desktopAllowed` middleware or
+	 * `authProcedure({ desktopAllowed: true })`). Unmarked procedures refuse
+	 * them — enforced in `publicProcedure`, not just recorded.
+	 */
+	desktopAllowed?: true;
+	/**
+	 * Part of the desktop app's access flow (`desktopAccessFlow`): reachable
+	 * without the `desktop` scope feature, so the app can show "upgrade".
+	 */
+	desktopAccessFlow?: true;
 };
 
 const markers = new WeakMap<object, PolicyMarker>();

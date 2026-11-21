@@ -144,6 +144,10 @@ export const apiConfig = {
 	 * feature. `api` is gated on oRPC/REST too: unscoped and `api`-scoped
 	 * org keys get 402 PAYMENT_REQUIRED without the feature, personal keys
 	 * always do (no org entitlement). MCP keys/tokens follow `mcp`.
+	 * Desktop access tokens follow the pseudo-scope `desktop`
+	 * (`DESKTOP_SCOPE`): without its feature in the token's org they get
+	 * 402 on every `desktopAllowed` procedure except the app's access flow
+	 * (`desktopAccessFlow`: `desktop.session`, `desktop.devices.list`).
 	 * Empty = no feature gates.
 	 */
 	apiKeyScopeFeatures: {} as Record<string, string>,

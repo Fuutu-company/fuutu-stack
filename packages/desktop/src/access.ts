@@ -52,6 +52,17 @@ export function maxLicensedMajor(
 	return null;
 }
 
+/**
+ * The highest major a caller WITHOUT an account may update to — what an
+ * account with no features is licensed for (`null` = every major). The
+ * version a caller reports proves nothing, so it never raises this.
+ */
+export function anonymousMaxMajor(
+	policy: Pick<DesktopAccessPolicy, "perMajorVersion" | "majors">,
+): number | null {
+	return maxLicensedMajor(policy, []);
+}
+
 /** Access decision for one account — pure, shared by API and tests. */
 export function evaluateDesktopAccess(
 	input: DesktopAccessPolicy & {

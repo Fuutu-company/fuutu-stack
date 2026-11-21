@@ -2,7 +2,7 @@ import { desktopOAuth } from "@fuutu/auth/desktop-oauth";
 import { listDesktopDevices } from "@fuutu/db";
 import { desktopConfig } from "@fuutu/desktop/config";
 import { z } from "zod";
-import { authProcedure } from "../../../orpc/procedures";
+import { authProcedure, desktopAccessFlow } from "../../../orpc/procedures";
 import { assertDesktopCaller } from "../guards";
 
 const deviceSchema = z.object({
@@ -14,6 +14,7 @@ const deviceSchema = z.object({
 
 /** The caller's signed-in desktop installs. */
 export const listDesktopDevicesProcedure = authProcedure()
+	.use(desktopAccessFlow)
 	.route({
 		method: "GET",
 		path: "/desktop/devices",

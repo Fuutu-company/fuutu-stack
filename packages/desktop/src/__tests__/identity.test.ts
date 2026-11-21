@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveDesktopIdentity, slugify } from "../identity";
+import { deriveDesktopIdentity, kitNameViolations, slugify } from "../identity";
 
 describe("deriveDesktopIdentity", () => {
 	it("derives every name from the app name", () => {
@@ -40,5 +40,36 @@ describe("deriveDesktopIdentity", () => {
 	it("slugifies accents and symbols", () => {
 		expect(slugify("Café Ölmühle!")).toBe("cafe-olmuhle");
 		expect(slugify("!!!")).toBe("app");
+	});
+});
+
+describe("kitNameViolations (LICENSE.md §8)", () => {
+	const none = { bundleId: undefined, scheme: undefined };
+
+	it("names every field that carries the kit name", () => {
+		const kit = deriveDesktopIdentity("Fuutu Stack", none);
+		expect(kitNameViolations(kit).map((v) => v.field)).toEqual([
+			"productName",
+			"bundleId",
+			"scheme",
+			"oauthClientId",
+			"keychainService",
+			"userAgent",
+		]);
+	});
+
+	it("is case-insensitive and catches overrides", () => {
+		const id = deriveDesktopIdentity("Acme", {
+			bundleId: "com.FUUTU.acme",
+			scheme: undefined,
+		});
+		expect(kitNameViolations(id).map((v) => v.field)).toEqual([
+			"bundleId",
+			"keychainService",
+		]);
+	});
+
+	it("passes a buyer identity", () => {
+		expect(kitNameViolations(deriveDesktopIdentity("Noor", none))).toEqual([]);
 	});
 });

@@ -157,15 +157,36 @@ export async function resolveOrgForAccess(
 }
 
 /**
- * Org-scoped API keys may only act on the org they were created for —
+ * Whether a key-authenticated caller may act on `organizationId`
+ * (`undefined` = a user-level action):
+ * - unscoped API key: any org (membership + RBAC checked per request);
+ * - org-scoped API key: only its org, never user-level;
+ * - desktop token (`desktop: true`): user-level, and only its pinned org
+ *   (the token's org claim, membership-checked) — none when unpinned.
+ */
+export function isOrgInApiKeyScope(
+	apiKey: Pick<ApiKeyAuth, "organizationId" | "desktop">,
+	organizationId: string | undefined,
+): boolean {
+	if (apiKey.desktop) {
+		return (
+			organizationId === undefined || organizationId === apiKey.organizationId
+		);
+	}
+	if (!apiKey.organizationId) return true;
+	return apiKey.organizationId === organizationId;
+}
+
+/**
+ * Org-scoped API keys (and desktop tokens) may only act on their org —
  * anything else is a scope violation and fails closed.
  */
 export function assertApiKeyOrgScope(
-	apiKey: Pick<ApiKeyAuth, "organizationId"> | null,
+	apiKey: Pick<ApiKeyAuth, "organizationId" | "desktop"> | null,
 	organizationId: string | undefined,
 ): void {
-	if (!apiKey?.organizationId) return;
-	if (apiKey.organizationId !== organizationId) {
+	if (!apiKey) return;
+	if (!isOrgInApiKeyScope(apiKey, organizationId)) {
 		throw new ORPCError("FORBIDDEN", {
 			message: "API key is scoped to a different organization",
 		});
@@ -211,6 +232,11 @@ export type AuthorizeOptions = {
 	 * reach (a leaked key must not open a portal, cancel a plan or mint keys).
 	 */
 	sessionOnly?: boolean;
+	/**
+	 * Accept desktop access tokens (`desktopAllowed` policy marker). Off by
+	 * default: a desktop token reaches only procedures that opt in.
+	 */
+	desktopAllowed?: boolean;
 	/** Resolve org from input, verify membership, check org-level permission. */
 	org?: {
 		/** Permission to check against ORG_POLICY. Mutually exclusive with minRole. */
@@ -340,11 +366,9 @@ export async function runAuthorize(
 	const isOrgScoped = orgId !== undefined;
 
 	// Org-scoped API keys are pinned to their org — they can never reach
-	// user-scoped paths or a different org's resources.
-	if (
-		context.apiKey?.organizationId &&
-		context.apiKey.organizationId !== orgId
-	) {
+	// user-scoped paths or a different org's resources. Desktop tokens keep
+	// user-level paths but only their pinned org (isOrgInApiKeyScope).
+	if (context.apiKey && !isOrgInApiKeyScope(context.apiKey, orgId)) {
 		throw new ORPCError("FORBIDDEN", {
 			message: "API key is scoped to a different organization",
 		});

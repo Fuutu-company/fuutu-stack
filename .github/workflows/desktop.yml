@@ -18,6 +18,13 @@ name: Desktop
 #   NEXT_PUBLIC_SAAS_URL, DESKTOP_UPDATER_PUBLIC_KEY, S3_BUCKET_DESKTOP_RELEASES,
 #   S3_FORCE_PATH_STYLE, DESKTOP_PUBLIC_BASE (static update source only)
 #
+# Every action is pinned by commit SHA (first-party included) — bump the SHA
+# and its `# vX` comment together.
+#
+# Signing secrets go to the Build step only, and `pnpm build:desktop`
+# (scripts/run.ts) hands them to `tauri build` alone — never to the build
+# telemetry ping, `next build` or the licence scripts.
+#
 # Build telemetry stays on (LICENSE.md §7): `pnpm build:desktop` sends one
 # ping per build with surface "desktop". Never set FUUTU_TELEMETRY_DISABLED here.
 
@@ -54,8 +61,8 @@ jobs:
     outputs:
       enabled: ${{ steps.switch.outputs.enabled }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "22"
       - id: switch
@@ -77,7 +84,7 @@ jobs:
       run:
         working-directory: apps/desktop/src-tauri
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Linux webview deps
         run: |
           sudo apt-get update
@@ -131,10 +138,15 @@ jobs:
       RELEASE: ${{ github.event_name != 'pull_request' }}
       NEXT_PUBLIC_SAAS_URL: ${{ vars.NEXT_PUBLIC_SAAS_URL }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      # Toolchain inlined from .github/actions/setup so every action here is
+      # pinned by commit SHA (pnpm version from package.json#packageManager).
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          db-generate: "false"
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           targets: ${{ matrix.job == 'macos-universal' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
@@ -177,7 +189,7 @@ jobs:
         working-directory: apps/desktop
         # Cargo package name (src-tauri/Cargo.toml), not the product name.
         run: node scripts/check-release-clean.mjs "src-tauri/${{ matrix.binary }}"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: desktop-${{ matrix.job }}
           path: apps/desktop/src-tauri/${{ matrix.bundle }}
@@ -194,11 +206,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: desktop-release
     steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      # Toolchain inlined from .github/actions/setup so every action here is
+      # pinned by commit SHA (pnpm version from package.json#packageManager).
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          db-generate: "false"
-      - uses: actions/download-artifact@v8
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: desktop-*
           path: ${{ runner.temp }}/release

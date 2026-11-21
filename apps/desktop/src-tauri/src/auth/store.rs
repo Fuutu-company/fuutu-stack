@@ -18,6 +18,12 @@ use keyring::{Entry, Error};
 
 pub const REFRESH_TOKEN: &str = "refresh-token";
 pub const OFFLINE_PROOF: &str = "offline-proof";
+/// Highest Unix time an offline proof was verified at — apart from the
+/// proof, so restoring an older proof does not reset the rollback check.
+pub const OFFLINE_SEEN: &str = "offline-seen";
+/// This install's Ed25519 seed (base64url) — offline claims are bound to
+/// its public key (`cnf`). Survives sign-out; never leaves the device.
+pub const INSTALL_KEY: &str = "install-key";
 
 enum Backend {
     Keychain { service: String },

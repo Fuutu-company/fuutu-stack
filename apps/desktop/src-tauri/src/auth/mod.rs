@@ -20,6 +20,8 @@ use std::path::PathBuf;
 use std::sync::Mutex as StdMutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -33,7 +35,7 @@ pub use loopback::CallbackPage;
 use loopback::{Callback, Listener};
 pub use offline::OfflineClaim;
 use offline::OfflineProof;
-use store::{Keychain, OFFLINE_PROOF, REFRESH_TOKEN};
+use store::{Keychain, INSTALL_KEY, OFFLINE_PROOF, OFFLINE_SEEN, REFRESH_TOKEN};
 
 /// Emitted with `true` / `false` when the sign-in state changes.
 pub const AUTH_CHANGED_EVENT: &str = "desktop://auth-changed";
@@ -246,7 +248,45 @@ impl AuthState {
         format!("{}:offline", self.client_id)
     }
 
+    /// This install's public key (base64url), created on first use. The
+    /// seed stays in the keychain; only the public key is sent.
+    fn install_public_key(&self) -> std::result::Result<String, String> {
+        let seed = match self.keychain.get(INSTALL_KEY)? {
+            Some(raw) => URL_SAFE_NO_PAD
+                .decode(raw)
+                .ok()
+                .and_then(|raw| <[u8; 32]>::try_from(raw).ok()),
+            None => None,
+        };
+        let seed = match seed {
+            Some(seed) => seed,
+            None => {
+                let seed: [u8; 32] = rand::random();
+                self.keychain.set(INSTALL_KEY, &URL_SAFE_NO_PAD.encode(seed))?;
+                seed
+            }
+        };
+        let key = ed25519_dalek::SigningKey::from_bytes(&seed);
+        Ok(URL_SAFE_NO_PAD.encode(key.verifying_key().as_bytes()))
+    }
+
+    /// Highest time an offline proof was verified at (0 = never).
+    fn offline_seen(&self) -> u64 {
+        match self.keychain.get(OFFLINE_SEEN) {
+            Ok(Some(raw)) => raw.parse().unwrap_or(0),
+            _ => 0,
+        }
+    }
+
+    fn mark_offline_seen(&self, time: u64) {
+        let seen = self.offline_seen().max(time);
+        if let Err(err) = self.keychain.set(OFFLINE_SEEN, &seen.to_string()) {
+            log::warn!("offline marker not updated: {err}");
+        }
+    }
+
     fn verify_offline(&self, proof: &OfflineProof) -> std::result::Result<OfflineClaim, &'static str> {
+        let install_key = self.install_public_key().map_err(|_| "no install key")?;
         let issuer = self
             .saas
             .as_ref()
@@ -258,8 +298,11 @@ impl AuthState {
             issuer: &issuer,
             max_lifetime: u64::from(self.offline_grace_days) * 86_400 + 3_600,
             trusted_keys: &self.offline_keys,
+            // Release builds trust build-time keys only (RELEASING.md).
+            allow_stored_key: cfg!(debug_assertions),
+            install_key: &install_key,
         };
-        offline::verify(proof, &policy, now())
+        offline::verify(proof, &policy, now(), self.offline_seen())
     }
 
     fn store_proof(&self, proof: &OfflineProof) -> std::result::Result<(), String> {
@@ -415,9 +458,11 @@ impl AuthState {
             let jwks = self.http.get(url).send().await.map_err(|e| e.to_string())?.text().await.map_err(|e| e.to_string())?;
             let kid = offline::token_kid(token);
             let key = offline::key_from_jwks(&jwks, kid.as_deref()).ok_or("signing key not in JWKS")?;
-            let proof = OfflineProof { token: token.to_owned(), key, last_seen: now() };
+            let proof = OfflineProof { token: token.to_owned(), key };
             self.verify_offline(&proof)?;
-            self.store_proof(&proof)
+            self.store_proof(&proof)?;
+            self.mark_offline_seen(now());
+            Ok(())
         }
         .await;
         if let Err(err) = result {
@@ -447,19 +492,19 @@ impl AuthState {
         let Some(proof) = proof else {
             return SessionResult::Unreachable { reason: "no offline grace".into() };
         };
-        match self.verify_offline(&proof) {
-            Ok(claim) => {
-                let seen = OfflineProof { last_seen: proof.last_seen.max(now()), ..proof };
-                if let Err(err) = self.store_proof(&seen) {
-                    log::warn!("offline proof not updated: {err}");
-                }
-                let session = self
-                    .session_file
-                    .as_ref()
-                    .and_then(|file| std::fs::read_to_string(file).ok())
-                    .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
-                    .filter(|s| s.pointer("/user/id").and_then(Value::as_str) == Some(claim.sub.as_str()));
-                SessionResult::Offline { session, claim }
+        let refresh_stored = matches!(self.keychain.get(REFRESH_TOKEN), Ok(Some(_)));
+        let cached = self
+            .session_file
+            .as_ref()
+            .and_then(|file| std::fs::read_to_string(file).ok())
+            .and_then(|raw| serde_json::from_str::<Value>(&raw).ok());
+        let granted = self
+            .verify_offline(&proof)
+            .and_then(|claim| offline_account(refresh_stored, cached, &claim.sub).map(|session| (session, claim)));
+        match granted {
+            Ok((session, claim)) => {
+                self.mark_offline_seen(now());
+                SessionResult::Offline { session: Some(session), claim }
             }
             Err(reason) => SessionResult::Unreachable { reason: reason.into() },
         }
@@ -660,10 +705,15 @@ pub async fn auth_session(
     state: State<'_, AuthState>,
     organization_id: Option<String>,
 ) -> Result<SessionResult> {
-    let body = match organization_id {
-        Some(id) => serde_json::json!({ "organizationId": id }),
-        None => serde_json::json!({}),
-    };
+    // The install's public key binds the offline claim to this device.
+    let mut body = serde_json::json!({});
+    if let Some(id) = organization_id {
+        body["organizationId"] = id.into();
+    }
+    match state.install_public_key() {
+        Ok(key) => body["installKey"] = key.into(),
+        Err(err) => log::warn!("no install key — no offline grace: {err}"),
+    }
     let request = ApiRequest {
         path: "/api/desktop/session".into(),
         method: Some("POST".into()),
@@ -700,6 +750,22 @@ pub async fn auth_session(
     Ok(SessionResult::Online { session })
 }
 
+/// Offline only for the signed-in account of this install: a stored refresh
+/// token, and the claim's user = the last online session's user. Returns
+/// that cached session (display data).
+fn offline_account(
+    refresh_stored: bool,
+    cached: Option<Value>,
+    sub: &str,
+) -> std::result::Result<Value, &'static str> {
+    if !refresh_stored {
+        return Err("signed out");
+    }
+    cached
+        .filter(|s| s.pointer("/user/id").and_then(Value::as_str) == Some(sub))
+        .ok_or("claim is for another account")
+}
+
 /// Installs the process-wide TLS provider (ring — as the updater plugin).
 pub fn init_tls() {
     let _ = rustls::crypto::ring::default_provider().install_default();
@@ -713,6 +779,15 @@ pub fn data_dir(app: &AppHandle) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn offline_only_for_the_signed_in_account() {
+        let cached = || Some(serde_json::json!({ "user": { "id": "u1" } }));
+        assert!(offline_account(true, cached(), "u1").is_ok());
+        assert_eq!(offline_account(false, cached(), "u1"), Err("signed out"));
+        assert_eq!(offline_account(true, cached(), "u2"), Err("claim is for another account"));
+        assert_eq!(offline_account(true, None, "u1"), Err("claim is for another account"));
+    }
 
     fn saas() -> Url {
         Url::parse("https://app.example.com").unwrap()

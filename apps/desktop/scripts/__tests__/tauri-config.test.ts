@@ -1,11 +1,139 @@
-import { desktopIdentity } from "@fuutu/desktop/identity";
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+	deriveDesktopIdentity,
+	desktopIdentity,
+} from "@fuutu/desktop/identity";
+import { describe, expect, it, vi } from "vitest";
 import {
 	buildTauriConfig,
 	DEVTOOLS_CAPABILITY,
 	desktopRuntimeConfig,
 	ed25519Keys,
+	offlineKeyCheck,
+	splitSigningEnv,
 } from "../lib/tauri-config";
+
+// A buyer's app — the kit's own name ("Fuutu Stack") refuses release builds.
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			app: { ...actual.config.app, name: "Acme Notes" },
+		},
+	};
+});
+
+const KIT_IDENTITY = deriveDesktopIdentity("Fuutu Stack", {
+	bundleId: undefined,
+	scheme: undefined,
+});
+
+describe("splitSigningEnv (signing secrets reach only `tauri build`)", () => {
+	it("moves every signing secret out of the shared env", () => {
+		const { base, signing } = splitSigningEnv({
+			NODE_ENV: "production",
+			PATH: "/bin",
+			NEXT_PUBLIC_SAAS_URL: "https://app.example.com",
+			DESKTOP_UPDATER_PUBLIC_KEY: "pub",
+			TAURI_SIGNING_PRIVATE_KEY: "secret",
+			TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "pw",
+			APPLE_CERTIFICATE: "cert",
+			APPLE_CERTIFICATE_PASSWORD: "pw",
+			APPLE_SIGNING_IDENTITY: "id",
+			APPLE_ID: "me@example.com",
+			APPLE_PASSWORD: "pw",
+			APPLE_TEAM_ID: "team",
+			APPLE_API_KEY: "k",
+			WINDOWS_CERTIFICATE: "pfx",
+			WINDOWS_CERTIFICATE_PASSWORD: "pw",
+		});
+		expect(base).toEqual({
+			NODE_ENV: "production",
+			PATH: "/bin",
+			NEXT_PUBLIC_SAAS_URL: "https://app.example.com",
+			DESKTOP_UPDATER_PUBLIC_KEY: "pub",
+		});
+		expect(Object.keys(signing).sort()).toEqual([
+			"APPLE_API_KEY",
+			"APPLE_CERTIFICATE",
+			"APPLE_CERTIFICATE_PASSWORD",
+			"APPLE_ID",
+			"APPLE_PASSWORD",
+			"APPLE_SIGNING_IDENTITY",
+			"APPLE_TEAM_ID",
+			"TAURI_SIGNING_PRIVATE_KEY",
+			"TAURI_SIGNING_PRIVATE_KEY_PASSWORD",
+			"WINDOWS_CERTIFICATE",
+			"WINDOWS_CERTIFICATE_PASSWORD",
+		]);
+	});
+
+	it("pnpm build:desktop hands them to `tauri build` alone", () => {
+		const run = readFileSync(join(import.meta.dirname, "../run.ts"), "utf8");
+		const build = run.slice(run.indexOf("async function build("));
+		expect(build).toContain("splitSigningEnv(env)");
+		expect(build).toContain("env: { ...base, FUUTU_TELEMETRY_SURFACE");
+		// Every step but `tauri build` runs on `base`; `{ ...env` never reaches a child.
+		expect(build.match(/\], base\]/g)).toHaveLength(4);
+		expect(build).toContain("{ ...base, ...signing }");
+		expect(build).not.toMatch(/run\([^)]*\{ \.\.\.env/);
+	});
+});
+
+describe("kit name in a release (LICENSE.md §8)", () => {
+	it("refuses a release build whose identity carries the kit name", () => {
+		expect(() =>
+			buildTauriConfig({
+				mode: "build",
+				appVersion: "1.0.0",
+				identity: KIT_IDENTITY,
+			}),
+		).toThrow(/LICENSE\.md §8[\s\S]*productName: Fuutu Stack/);
+	});
+
+	it("lets dev builds run with it (the kit itself is named Fuutu Stack)", () => {
+		const config = buildTauriConfig({
+			mode: "dev",
+			appVersion: "1.0.0",
+			devUrl: "http://localhost:3002",
+			identity: KIT_IDENTITY,
+		});
+		expect(config.productName).toBe("Fuutu Stack");
+	});
+});
+
+describe("offlineKeyCheck (release builds)", () => {
+	const base = { auth: "required" as const, graceDays: 7, optOut: false };
+
+	it("needs at least one backend Ed25519 key", () => {
+		expect(offlineKeyCheck({ ...base, keys: ["x"] })).toEqual({
+			error: null,
+			graceDays: 7,
+		});
+		expect(offlineKeyCheck({ ...base, keys: [] }).error).toMatch(
+			/DESKTOP_ALLOW_NO_OFFLINE_KEYS/,
+		);
+	});
+
+	it("lets an explicit opt-out build without offline grace", () => {
+		expect(offlineKeyCheck({ ...base, keys: [], optOut: true })).toEqual({
+			error: null,
+			graceDays: 0,
+		});
+	});
+
+	it("needs no keys without sign-in or without a grace period", () => {
+		expect(
+			offlineKeyCheck({ ...base, auth: "off", keys: [] }).error,
+		).toBeNull();
+		expect(
+			offlineKeyCheck({ ...base, graceDays: 0, keys: [] }).error,
+		).toBeNull();
+	});
+});
 
 describe("buildTauriConfig", () => {
 	it("names the app from config.app (identity), versions it with APP_VERSION", () => {

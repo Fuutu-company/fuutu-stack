@@ -26,7 +26,7 @@ const orgAC = new OrgAccessControl(ORG_POLICY);
  */
 export type OrgAccessContext = {
 	headers?: Headers;
-	apiKey?: { organizationId: string | null } | null;
+	apiKey?: { organizationId: string | null; desktop?: true } | null;
 };
 
 /** Whether the member's org role grants `permission` (no throw). */

@@ -53,6 +53,8 @@ const { desktopSessionProcedure } = await import(
 
 const USER = makeUser({ id: "u1" });
 const ORG = { id: "org-1", name: "Acme", slug: "acme" };
+/** An Ed25519 public key, base64url (43 chars). */
+const INSTALL_KEY = "aW5zdGFsbC1rZXktb2YtdGhpcy1tYWNoaW5lLTAwMDA";
 
 function ctx(extra: Partial<Context> = {}): Context {
 	return { ...makeSession<Context>(USER), ...extra };
@@ -125,10 +127,10 @@ describe("desktop.session", () => {
 		).rejects.toMatchObject({ code: "FORBIDDEN" });
 	});
 
-	it("signs an offline claim for the desktop app only", async () => {
+	it("signs an offline claim for the desktop app only, bound to its install key", async () => {
 		const result = await call(
 			desktopSessionProcedure,
-			{},
+			{ installKey: INSTALL_KEY },
 			{ context: desktop() },
 		);
 		expect(result.offline?.token).toBe("signed");
@@ -139,15 +141,37 @@ describe("desktop.session", () => {
 			aud: "acme-desktop:offline",
 			iss: "https://app.example.com",
 			access: "granted",
+			cnf: { jwk: { kty: "OKP", crv: "Ed25519", x: INSTALL_KEY } },
 		});
 		expect(Number(payload.exp) - Number(payload.iat)).toBe(
 			desktopConfig.offlineGraceDays * 86_400,
 		);
 
 		vi.mocked(auth.api.signJWT).mockClear();
-		const browser = await call(desktopSessionProcedure, {}, { context: ctx() });
+		const browser = await call(
+			desktopSessionProcedure,
+			{ installKey: INSTALL_KEY },
+			{ context: ctx() },
+		);
 		expect(browser.offline).toBeNull();
 		expect(auth.api.signJWT).not.toHaveBeenCalled();
+	});
+
+	it("issues no offline claim without an install key, and refuses a malformed one", async () => {
+		const unbound = await call(
+			desktopSessionProcedure,
+			{},
+			{ context: desktop() },
+		);
+		expect(unbound.offline).toBeNull();
+		expect(auth.api.signJWT).not.toHaveBeenCalled();
+		await expect(
+			call(
+				desktopSessionProcedure,
+				{ installKey: "not a key" },
+				{ context: desktop() },
+			),
+		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
 
 	it("reports the device limit", async () => {

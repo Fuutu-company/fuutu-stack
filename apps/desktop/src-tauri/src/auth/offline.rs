@@ -4,28 +4,35 @@
 //! grants access only on a claim that verifies and has not expired — an
 //! edited session file grants nothing.
 //!
-//! Hardening against a local user editing the keychain entry: release
-//! builds embed the backend's public keys at build time (`offlineKeys`,
-//! fetched by `build:desktop`) and accept no other key; the claim's issuer
-//! and lifetime (≤ the grace period) are checked; the highest time seen is
-//! kept, so turning the clock back ends the grace instead of extending it.
-//! Offline licensing stays client-side in the end — see PRODUCTION_CHECKLIST.
+//! Hardening against a local user editing the keychain entry:
+//! - release builds verify only against the backend keys embedded at build
+//!   time (`offlineKeys`, fetched by `build:desktop`) — never against the
+//!   key stored next to the claim; without embedded keys they grant no
+//!   offline grace at all (debug builds fall back to the stored key);
+//! - the claim is bound to this install (`cnf`: the install's Ed25519
+//!   public key, sent with `desktop.session`) — a proof copied from another
+//!   install grants nothing;
+//! - issuer and lifetime (≤ the grace period) are checked;
+//! - the highest time seen is kept in its own keychain item, so turning the
+//!   clock back (or restoring an older proof) ends the grace.
+//!
+//! Offline licensing stays client-side in the end — see RELEASING.md.
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use ed25519_dalek::{Signature, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
-/// What the keychain keeps for offline use.
+/// What the keychain keeps for offline use (the highest time seen lives in
+/// its own item — `store::OFFLINE_SEEN`).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OfflineProof {
     /// Compact JWS from `desktop.session` (`offline.token`).
     pub token: String,
-    /// Ed25519 public key (JWK `x`, base64url) the token was signed with.
+    /// Ed25519 public key (JWK `x`, base64url) from the backend's JWKS at
+    /// storage time. Debug builds without embedded keys only — release
+    /// builds never trust it.
     pub key: String,
-    /// Highest Unix time this proof was verified at (clock-rollback check).
-    #[serde(default, rename = "lastSeen")]
-    pub last_seen: u64,
 }
 
 /// What a claim must satisfy besides its signature.
@@ -35,8 +42,13 @@ pub struct Policy<'a> {
     pub issuer: &'a str,
     /// Longest accepted `exp - iat` (the grace period).
     pub max_lifetime: u64,
-    /// Build-time trusted keys (JWK `x`); empty = trust the stored key.
+    /// Build-time trusted keys (JWK `x`). Empty: no offline grace, unless
+    /// `allow_stored_key`.
     pub trusted_keys: &'a [String],
+    /// Debug builds only: without build-time keys, trust the stored key.
+    pub allow_stored_key: bool,
+    /// This install's public key (base64url) — the claim's `cnf` must name it.
+    pub install_key: &'a str,
 }
 
 /// Tolerated clock drift.
@@ -58,6 +70,21 @@ pub struct OfflineClaim {
     pub iat: u64,
     #[serde(default)]
     pub iss: Option<String>,
+    /// Proof-of-possession key (RFC 7800): the install the claim was issued to.
+    #[serde(default)]
+    pub cnf: Option<Confirmation>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Confirmation {
+    pub jwk: ConfirmationKey,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ConfirmationKey {
+    pub kty: String,
+    pub crv: String,
+    pub x: String,
 }
 
 #[derive(Deserialize)]
@@ -101,12 +128,23 @@ pub fn key_from_jwks(jwks: &str, kid: Option<&str>) -> Option<String> {
 }
 
 /// Verifies key trust, signature (EdDSA only), audience, issuer, lifetime,
-/// expiry and the clock.
-pub fn verify(proof: &OfflineProof, policy: &Policy, now: u64) -> Result<OfflineClaim, &'static str> {
-    if !policy.trusted_keys.is_empty() && !policy.trusted_keys.iter().any(|k| k == &proof.key) {
-        return Err("untrusted key");
-    }
-    if now + SKEW_SECS < proof.last_seen {
+/// expiry, the install binding and the clock (`last_seen`: highest time
+/// seen, kept apart from the proof).
+pub fn verify(
+    proof: &OfflineProof,
+    policy: &Policy,
+    now: u64,
+    last_seen: u64,
+) -> Result<OfflineClaim, &'static str> {
+    let stored = [proof.key.clone()];
+    let keys: &[String] = if !policy.trusted_keys.is_empty() {
+        policy.trusted_keys
+    } else if policy.allow_stored_key {
+        &stored
+    } else {
+        return Err("no trusted keys");
+    };
+    if now + SKEW_SECS < last_seen {
         return Err("clock turned back");
     }
     let audience = policy.audience;
@@ -124,20 +162,23 @@ pub fn verify(proof: &OfflineProof, policy: &Policy, now: u64) -> Result<Offline
     if header.alg != "EdDSA" {
         return Err("unexpected algorithm");
     }
-    let key: [u8; 32] = URL_SAFE_NO_PAD
-        .decode(&proof.key)
-        .ok()
-        .and_then(|raw| raw.try_into().ok())
-        .ok_or("malformed key")?;
-    let key = VerifyingKey::from_bytes(&key).map_err(|_| "malformed key")?;
     let signature = URL_SAFE_NO_PAD
         .decode(signature)
         .ok()
         .and_then(|raw| Signature::from_slice(&raw).ok())
         .ok_or("malformed signature")?;
     let signed = &proof.token[..header_and_payload_len(&proof.token)];
-    key.verify_strict(signed.as_bytes(), &signature)
-        .map_err(|_| "bad signature")?;
+    let verified = keys.iter().any(|key| {
+        URL_SAFE_NO_PAD
+            .decode(key)
+            .ok()
+            .and_then(|raw| <[u8; 32]>::try_from(raw).ok())
+            .and_then(|raw| VerifyingKey::from_bytes(&raw).ok())
+            .is_some_and(|key| key.verify_strict(signed.as_bytes(), &signature).is_ok())
+    });
+    if !verified {
+        return Err("bad signature");
+    }
 
     let raw = URL_SAFE_NO_PAD.decode(payload).map_err(|_| "malformed payload")?;
     let value: serde_json::Value = serde_json::from_slice(&raw).map_err(|_| "malformed payload")?;
@@ -162,6 +203,12 @@ pub fn verify(proof: &OfflineProof, policy: &Policy, now: u64) -> Result<Offline
     if claim.access != "granted" && claim.access != "trial" {
         return Err("no access");
     }
+    let bound = claim.cnf.as_ref().is_some_and(|cnf| {
+        cnf.jwk.kty == "OKP" && cnf.jwk.crv == "Ed25519" && cnf.jwk.x == policy.install_key
+    });
+    if !bound {
+        return Err("bound to another install");
+    }
     Ok(claim)
 }
 
@@ -177,17 +224,22 @@ mod tests {
     const AUD: &str = "acme-desktop:offline";
     const ISS: &str = "https://app.example.com";
 
+    /// This install's public key in the tests.
+    const INSTALL: &str = "aW5zdGFsbC1rZXktb2YtdGhpcy1tYWNoaW5lLTAwMDA";
+
     fn policy(trusted: &[String]) -> Policy<'_> {
         Policy {
             audience: AUD,
             issuer: ISS,
             max_lifetime: 7 * 86_400,
             trusted_keys: trusted,
+            allow_stored_key: true,
+            install_key: INSTALL,
         }
     }
 
     fn check(proof: &OfflineProof, now: u64) -> Result<OfflineClaim, &'static str> {
-        verify(proof, &policy(&[]), now)
+        verify(proof, &policy(&[]), now, 0)
     }
 
     fn key() -> SigningKey {
@@ -210,12 +262,11 @@ mod tests {
         OfflineProof {
             token,
             key: b64(key().verifying_key().as_bytes()),
-            last_seen: 0,
         }
     }
 
     fn claim(aud: &str, exp: u64) -> serde_json::Value {
-        serde_json::json!({ "sub": "u1", "org": null, "access": "granted", "maxMajor": 2, "aud": aud, "iss": ISS, "iat": exp.saturating_sub(100).max(1), "exp": exp })
+        serde_json::json!({ "sub": "u1", "org": null, "access": "granted", "maxMajor": 2, "aud": aud, "iss": ISS, "iat": exp.saturating_sub(100).max(1), "exp": exp, "cnf": { "jwk": { "kty": "OKP", "crv": "Ed25519", "x": INSTALL } } })
     }
 
     #[test]
@@ -267,17 +318,46 @@ mod tests {
     fn only_build_time_keys_when_embedded() {
         let token = sign("EdDSA", claim(AUD, 2000), &key());
         let other = b64(SigningKey::from_bytes(&[9u8; 32]).verifying_key().as_bytes());
-        assert_eq!(verify(&proof(token.clone()), &policy(&[other]), 1000), Err("untrusted key"));
+        assert_eq!(verify(&proof(token.clone()), &policy(&[other]), 1000, 0), Err("bad signature"));
         let own = b64(key().verifying_key().as_bytes());
-        assert!(verify(&proof(token), &policy(&[own]), 1000).is_ok());
+        assert!(verify(&proof(token), &policy(&[own]), 1000, 0).is_ok());
+    }
+
+    #[test]
+    fn never_trusts_the_stored_key_next_to_a_forged_claim() {
+        // A local user signs their own claim and stores their own key
+        // with it: with build-time keys the stored key is never consulted.
+        let attacker = SigningKey::from_bytes(&[9u8; 32]);
+        let forged = OfflineProof {
+            token: sign("EdDSA", claim(AUD, 2000), &attacker),
+            key: b64(attacker.verifying_key().as_bytes()),
+        };
+        let backend = b64(key().verifying_key().as_bytes());
+        assert_eq!(verify(&forged, &policy(&[backend]), 1000, 0), Err("bad signature"));
+    }
+
+    #[test]
+    fn release_builds_without_embedded_keys_grant_nothing() {
+        let p = proof(sign("EdDSA", claim(AUD, 2000), &key()));
+        let release = Policy { allow_stored_key: false, ..policy(&[]) };
+        assert_eq!(verify(&p, &release, 1000, 0), Err("no trusted keys"));
+    }
+
+    #[test]
+    fn a_claim_for_another_install_grants_nothing() {
+        let mut payload = claim(AUD, 2000);
+        payload["cnf"]["jwk"]["x"] = "b3RoZXItaW5zdGFsbC1rZXktMDAwMDAwMDAwMDAwMDA".into();
+        assert_eq!(check(&proof(sign("EdDSA", payload, &key())), 1000), Err("bound to another install"));
+        let mut payload = claim(AUD, 2000);
+        payload.as_object_mut().unwrap().remove("cnf");
+        assert_eq!(check(&proof(sign("EdDSA", payload, &key())), 1000), Err("bound to another install"));
     }
 
     #[test]
     fn a_clock_turned_back_ends_the_grace() {
-        let mut p = proof(sign("EdDSA", claim(AUD, 900_000), &key()));
-        p.last_seen = 500_000;
-        assert_eq!(check(&p, 1000), Err("clock turned back"));
-        assert!(check(&p, 499_000).is_ok());
+        let p = proof(sign("EdDSA", claim(AUD, 900_000), &key()));
+        assert_eq!(verify(&p, &policy(&[]), 1000, 500_000), Err("clock turned back"));
+        assert!(verify(&p, &policy(&[]), 499_000, 500_000).is_ok());
     }
 
     #[test]

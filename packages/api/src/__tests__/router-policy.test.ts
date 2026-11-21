@@ -91,7 +91,39 @@ describe("router policy (appRouter)", () => {
 			sessionOnly: true,
 		});
 		const me = leaves.find((leaf) => leaf.path === "users.me");
-		expect(me?.policy).toEqual({});
+		expect(me?.policy).toEqual({ desktopAllowed: true });
+		const orgs = leaves.find((leaf) => leaf.path === "organizations.list");
+		expect(orgs?.policy).toEqual({});
+	});
+
+	it("opens the kit's desktop default set to desktop tokens — and nothing session-only", () => {
+		const allowed = leaves.filter((leaf) => leaf.policy.desktopAllowed);
+		const paths = allowed.map((leaf) => leaf.path);
+		for (const path of [
+			"desktop.session",
+			"desktop.devices.list",
+			"users.me",
+		]) {
+			expect(paths).toContain(path);
+		}
+		expect(
+			leaves
+				.filter((leaf) => leaf.policy.desktopAccessFlow)
+				.map((leaf) => leaf.path)
+				.sort(),
+		).toEqual(["desktop.devices.list", "desktop.session"]);
+		// A desktop token must never be the way into money, credentials,
+		// org structure or admin.
+		const contradictions = allowed
+			.filter(
+				(leaf) =>
+					leaf.policy.sessionOnly ||
+					leaf.policy.systemAdmin ||
+					isSystemAdmin(leaf.path) ||
+					isSensitive(leaf.path),
+			)
+			.map((leaf) => leaf.path);
+		expect(contradictions).toEqual([]);
 	});
 
 	it("rate-limits every mutation", () => {

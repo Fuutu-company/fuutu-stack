@@ -1,5 +1,6 @@
 import { auth } from "@fuutu/auth";
 import { config } from "@fuutu/config";
+import { anonymousMaxMajor } from "@fuutu/desktop/access";
 import {
 	DESKTOP_CHANNELS,
 	type DesktopChannel,
@@ -11,7 +12,6 @@ import {
 	type DesktopReleaseManifest,
 	decideDownload,
 	decideUpdate,
-	majorOf,
 	manifestKey,
 	parseManifest,
 	updaterTarget,
@@ -138,11 +138,12 @@ export function mountDesktopRoutes(app: ApiApp): void {
 			return c.json({ error: "invalid_request" }, 400);
 		}
 
-		// Without an account the app stays within its own major (a newer
-		// major is a new licence, `access.perMajorVersion`).
-		let maxLicensedMajor: number | null = desktopConfig.access.perMajorVersion
-			? majorOf(currentVersion)
-			: null;
+		// Without an account: only majors no licence guards. The version in
+		// the URL proves nothing — a higher major needs a token. Binaries stay
+		// downloadable for anyone who knows a URL unless auth is `required`.
+		let maxLicensedMajor: number | null = anonymousMaxMajor(
+			desktopConfig.access,
+		);
 		let caller = ipCaller(c.req.raw.headers);
 		const token = bearerOf(c.req.raw.headers);
 		if (desktopConfig.auth === "required" || token) {

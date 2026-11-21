@@ -1,5 +1,10 @@
-import { desktopConfig } from "@fuutu/desktop/config";
-import { desktopIdentity } from "@fuutu/desktop/identity";
+import { type DesktopAuthMode, desktopConfig } from "@fuutu/desktop/config";
+import {
+	type DesktopIdentity,
+	describeKitNameViolations,
+	desktopIdentity,
+	kitNameViolations,
+} from "@fuutu/desktop/identity";
 
 /** Mode the generated Tauri config is for. */
 export type TauriConfigMode = "dev" | "build";
@@ -18,6 +23,8 @@ export type TauriConfigInput = DesktopBuildInputs & {
 	 * and notarisation need no config — Tauri reads `APPLE_*` from env.
 	 */
 	windowsCertificateThumbprint?: string;
+	/** Identity to build (default: `desktopIdentity` from `config.app`). */
+	identity?: DesktopIdentity;
 };
 
 /** Capability that lets the debug-only automation bridge talk to the webviews. */
@@ -56,6 +63,8 @@ export type DesktopBuildInputs = {
 	saasUrl?: string;
 	/** Backend Ed25519 keys (JWK `x`) trusted for offline claims. */
 	offlineKeys?: string[];
+	/** Offline grace embedded in the app (default `desktopConfig.offlineGraceDays`; `offlineKeyCheck`). */
+	offlineGraceDays?: number;
 	/** Updater public key (`DESKTOP_UPDATER_PUBLIC_KEY`); none = no updater. */
 	updaterPubkey?: string;
 	/** Public manifest URL for `updates.source: "static"` (`{channel}`). */
@@ -78,7 +87,7 @@ export function desktopRuntimeConfig(inputs: DesktopBuildInputs = {}) {
 			keychainService: desktopIdentity.keychainService,
 		},
 		auth: desktopConfig.auth,
-		offlineGraceDays: desktopConfig.offlineGraceDays,
+		offlineGraceDays: inputs.offlineGraceDays ?? desktopConfig.offlineGraceDays,
 		saasUrl: inputs.saasUrl ?? null,
 		updates: {
 			source: updates.source,
@@ -122,8 +131,16 @@ export function updaterPluginConfig(inputs: DesktopBuildInputs, dev: boolean) {
  * capability or the global Tauri object, and always get a strict CSP.
  */
 export function buildTauriConfig(input: TauriConfigInput) {
-	const id = desktopIdentity;
+	const id = input.identity ?? desktopIdentity;
 	const dev = input.mode === "dev";
+	// LICENSE.md §8: a shipped app never carries the kit's name. Dev builds
+	// run with it (the kit is "Fuutu Stack"); `run.ts` warns there.
+	const violations = kitNameViolations(id, input.appVersion);
+	if (!dev && violations.length > 0) {
+		throw new Error(
+			`Release build refused (LICENSE.md §8): the app identity still carries the kit name.\n${describeKitNameViolations(violations)}\nSet config.app.name (packages/config/index.ts) or desktopConfig.identity — see apps/desktop/RELEASING.md.`,
+		);
+	}
 	const updater = updaterPluginConfig(input, dev);
 	return {
 		productName: id.productName,
@@ -190,4 +207,49 @@ export function ed25519Keys(jwks: unknown): string[] {
 		const k = key as { kty?: string; crv?: string; x?: string };
 		return k.kty === "OKP" && k.crv === "Ed25519" && k.x ? [k.x] : [];
 	});
+}
+
+/** Opt-out env of the offline key requirement (RELEASING.md). */
+export const NO_OFFLINE_KEYS_ENV = "DESKTOP_ALLOW_NO_OFFLINE_KEYS";
+
+/**
+ * Release builds pin offline claims to the backend's Ed25519 keys
+ * (`/api/auth/jwks`, embedded at build time — src-tauri/src/auth/offline.rs
+ * trusts no other key). Without a key a build with sign-in and offline
+ * grace fails, unless `DESKTOP_ALLOW_NO_OFFLINE_KEYS=1` explicitly ships
+ * it without offline grace (`graceDays: 0`).
+ */
+export function offlineKeyCheck(input: {
+	auth: DesktopAuthMode;
+	graceDays: number;
+	keys: readonly string[];
+	optOut: boolean;
+}): { error: string | null; graceDays: number } {
+	if (input.auth === "off" || input.graceDays === 0 || input.keys.length > 0) {
+		return { error: null, graceDays: input.graceDays };
+	}
+	if (input.optOut) return { error: null, graceDays: 0 };
+	return {
+		error: `No Ed25519 key from NEXT_PUBLIC_SAAS_URL/api/auth/jwks — a release build pins offline claims to it. Build against your running production app, or set ${NO_OFFLINE_KEYS_ENV}=1 to ship without offline grace (apps/desktop/RELEASING.md).`,
+		graceDays: input.graceDays,
+	};
+}
+
+/**
+ * Signing secrets (updater key, Apple notarisation, Windows certificate).
+ * `pnpm build:desktop` passes them only to `tauri build` — never to the
+ * telemetry ping, `next build` or the licence scripts (RELEASING.md).
+ */
+const SIGNING_ENV = /^(TAURI_SIGNING_|APPLE_|WINDOWS_CERTIFICATE)/;
+
+export function splitSigningEnv(env: NodeJS.ProcessEnv): {
+	base: NodeJS.ProcessEnv;
+	signing: NodeJS.ProcessEnv;
+} {
+	const base = {} as NodeJS.ProcessEnv;
+	const signing = {} as NodeJS.ProcessEnv;
+	for (const [key, value] of Object.entries(env)) {
+		(SIGNING_ENV.test(key) ? signing : base)[key] = value;
+	}
+	return { base, signing };
 }

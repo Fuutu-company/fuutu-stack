@@ -3,9 +3,9 @@ import { desktopOAuth } from "@fuutu/auth/desktop-oauth";
 import { isImpersonationExpired } from "@fuutu/auth/impersonation";
 import { endImpersonationIfAccessLost } from "@fuutu/auth/impersonation-access";
 import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
-import { API_KEY_PREFIX } from "@fuutu/db";
+import { API_KEY_PREFIX, getOrganizationWithMembers } from "@fuutu/db";
 import type { Context as HonoContext } from "hono";
-import { API_SCOPE } from "./api-key-scopes";
+import { API_SCOPE, DESKTOP_SCOPE } from "./api-key-scopes";
 import {
 	findMissingScopeFeature,
 	type MissingScopeFeature,
@@ -31,6 +31,12 @@ export const API_KEY_HEADER = "x-api-key";
 export type ApiKeyAuth = {
 	id: string;
 	organizationId: string | null;
+	/**
+	 * A desktop access token, not an API key: user-level procedures stay
+	 * allowed, org access only to `organizationId` (null = no org), and
+	 * only on `desktopAllowed` procedures (orpc/procedures.ts).
+	 */
+	desktop?: true;
 };
 
 type SessionResult = Awaited<ReturnType<typeof auth.api.getSession>>;
@@ -124,10 +130,15 @@ export async function createContext({ context }: CreateContextOptions) {
 		}
 	}
 	// Desktop app access token (config.features.desktop, own audience — C1).
-	// It authenticates as its user like an unscoped API key: org access is
-	// resolved from the DB with RBAC per request, `sessionOnly` procedures
-	// (money, credentials, org structure) and admin procedures refuse it.
+	// It authenticates as its user, but narrower than any API key:
+	// - pinned to the token's org claim after a membership check (a stale
+	//   or missing claim pins to no org) — isOrgInApiKeyScope;
+	// - only `desktopAllowed` procedures accept it (orpc/procedures.ts);
+	// - the `desktop` scope feature gates it beyond the access flow (402);
+	// - `sessionOnly` (money, credentials, org structure) and admin
+	//   procedures refuse it.
 	let desktop: DesktopAuth | null = null;
+	let desktopUpgradeRequired: MissingScopeFeature | null = null;
 	if (!session && !apiKey && !preAuthRateLimited && desktopOAuth.active) {
 		const bearer = extractBearer(headers);
 		if (bearer && !bearer.startsWith(API_KEY_PREFIX)) {
@@ -141,12 +152,21 @@ export async function createContext({ context }: CreateContextOptions) {
 					resolveDesktopBearer(bearer),
 				);
 				if (resolved) {
+					const pinnedOrg = await memberOrgOrNull(
+						resolved.desktop.organizationId,
+						resolved.user.id,
+					);
 					session = toApiKeySession(asSessionUser(resolved.user));
 					apiKey = {
 						id: `oauth:${resolved.desktop.tokenId}`,
-						organizationId: null,
+						organizationId: pinnedOrg,
+						desktop: true,
 					};
 					desktop = resolved.desktop;
+					desktopUpgradeRequired = await findMissingScopeFeature(
+						pinnedOrg,
+						DESKTOP_SCOPE,
+					);
 				}
 			}
 		}
@@ -158,7 +178,18 @@ export async function createContext({ context }: CreateContextOptions) {
 		apiKeyUpgradeRequired,
 		preAuthRateLimited,
 		desktop,
+		desktopUpgradeRequired,
 	};
+}
+
+/** `organizationId` when `userId` is (still) a member, else null — as mcp/principal.ts. */
+async function memberOrgOrNull(
+	organizationId: string | null,
+	userId: string,
+): Promise<string | null> {
+	if (!organizationId) return null;
+	const org = await getOrganizationWithMembers(organizationId);
+	return org?.members.some((m) => m.userId === userId) ? organizationId : null;
 }
 
 const extractBearer = (headers: Headers): string | null => {
@@ -180,6 +211,8 @@ export type Context = {
 	preAuthRateLimited?: PreAuthRateLimited | null;
 	/** Set when the caller is the desktop app (desktop access token). */
 	desktop?: DesktopAuth | null;
+	/** Set when a desktop token lacks the `desktop` scope feature (402 beyond the access flow). */
+	desktopUpgradeRequired?: MissingScopeFeature | null;
 	/**
 	 * Response headers of the current call, injected by oRPC's
 	 * `ResponseHeadersPlugin` (orpc/handler.ts) — e.g. Better Auth

@@ -23,6 +23,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { desktopConfig } from "@fuutu/desktop/config";
 import {
+	describeKitNameViolations,
+	desktopIdentity,
+	kitNameViolations,
+} from "@fuutu/desktop/identity";
+import {
 	describeProject,
 	ensureSlot,
 	type Project,
@@ -35,6 +40,9 @@ import {
 	type DesktopBuildInputs,
 	desktopRuntimeConfig,
 	ed25519Keys,
+	NO_OFFLINE_KEYS_ENV,
+	offlineKeyCheck,
+	splitSigningEnv,
 	type TauriConfigMode,
 } from "./lib/tauri-config";
 
@@ -179,25 +187,32 @@ async function build(
 	// Build telemetry (LICENSE.md §7), surface "desktop" — fire-and-forget,
 	// never blocks or fails the build; the ping script itself decides
 	// whether to send (CI / production build, opt-out).
+	// Signing secrets reach only `tauri build` — not the ping, `next build`
+	// or the licence scripts (RELEASING.md → "Signing secrets").
+	const { base, signing } = splitSigningEnv(env);
 	const ping = spawn(node, [join(root, "packages/telemetry/bin/ping.mjs")], {
-		env: { ...env, FUUTU_TELEMETRY_SURFACE: "desktop" },
+		env: { ...base, FUUTU_TELEMETRY_SURFACE: "desktop" },
 		stdio: "ignore",
 		detached: true,
 	});
 	ping.on("error", () => {});
 	ping.unref();
-	const steps: [string, string[]][] = [
-		["pnpm", ["exec", "next", "build"]],
+	const steps: [string, string[], NodeJS.ProcessEnv][] = [
+		["pnpm", ["exec", "next", "build"], base],
 		// Licence gate + notices read the export's source maps …
-		[node, ["scripts/licenses.mjs", "check"]],
-		[node, ["scripts/licenses.mjs", "notices"]],
+		[node, ["scripts/licenses.mjs", "check"], base],
+		[node, ["scripts/licenses.mjs", "notices"], base],
 		// … which never ship.
-		[node, ["scripts/strip-source-maps.mjs"]],
-		["pnpm", ["exec", "tauri", "build", "--config", config, ...rest]],
+		[node, ["scripts/strip-source-maps.mjs"], base],
+		[
+			"pnpm",
+			["exec", "tauri", "build", "--config", config, ...rest],
+			{ ...base, ...signing },
+		],
 	];
-	for (const [command, args] of steps) {
+	for (const [command, args, stepEnv] of steps) {
 		const code = await exited(
-			run(command, args, { ...env, NODE_ENV: "production" }),
+			run(command, args, { ...stepEnv, NODE_ENV: "production" }),
 		);
 		if (code !== 0) shutdown(code);
 	}
@@ -205,9 +220,9 @@ async function build(
 }
 
 /**
- * The backend's offline-claim keys, embedded into release builds so a
- * claim signed with any other key is refused (src-tauri/src/auth/offline.rs).
- * Without them the app trusts the key stored at its last online session.
+ * The backend's offline-claim keys, embedded into release builds — the
+ * app trusts no other key (src-tauri/src/auth/offline.rs). None found
+ * fails the build (`offlineKeyCheck`).
  */
 async function offlineKeys(saasUrl: string | undefined): Promise<string[]> {
 	if (desktopConfig.auth === "off" || !saasUrl) return [];
@@ -215,15 +230,26 @@ async function offlineKeys(saasUrl: string | undefined): Promise<string[]> {
 		const res = await fetch(new URL("/api/auth/jwks", saasUrl), {
 			signal: AbortSignal.timeout(10_000),
 		});
-		const keys = ed25519Keys(await res.json());
-		if (keys.length > 0) return keys;
+		return ed25519Keys(await res.json());
 	} catch {
-		// reported below
+		return [];
+	}
+}
+
+/** LICENSE.md §8 — release builds refuse the kit name, dev builds warn. */
+function checkIdentity(mode: TauriConfigMode) {
+	const violations = kitNameViolations(desktopIdentity, appVersion());
+	if (violations.length === 0) return;
+	const list = describeKitNameViolations(violations);
+	if (mode === "build") {
+		process.stderr.write(
+			`\nRelease build refused (LICENSE.md §8): the app identity still carries the kit name.\n${list}\nSet config.app.name (packages/config/index.ts) or desktopConfig.identity — see apps/desktop/RELEASING.md.\n\n`,
+		);
+		process.exit(1);
 	}
 	process.stderr.write(
-		`warning: no offline-claim keys from ${saasUrl}/api/auth/jwks — this build trusts the key of its last online session (see apps/desktop/RELEASING.md)\n`,
+		`warning: the app identity still carries the kit name — fine for development, refused for release builds (LICENSE.md §8):\n${list}\n`,
 	);
-	return [];
 }
 
 async function main() {
@@ -234,6 +260,7 @@ async function main() {
 	const project: Project = process.env.CI
 		? describeProject(root, 0)
 		: (readProject(root) ?? (await ensureSlot(root)));
+	checkIdentity(mode);
 	const env: NodeJS.ProcessEnv = { ...readDotEnv(root), ...process.env };
 	Object.assign(env, slotEnv(project, env));
 	const inputs: DesktopBuildInputs = {
@@ -243,6 +270,24 @@ async function main() {
 		updaterPubkey: env.DESKTOP_UPDATER_PUBLIC_KEY || undefined,
 		staticUpdateUrl: env.NEXT_PUBLIC_DESKTOP_UPDATE_URL || undefined,
 	};
+	if (mode === "build") {
+		const check = offlineKeyCheck({
+			auth: desktopConfig.auth,
+			graceDays: desktopConfig.offlineGraceDays,
+			keys: inputs.offlineKeys ?? [],
+			optOut: env[NO_OFFLINE_KEYS_ENV] === "1",
+		});
+		if (check.error) {
+			process.stderr.write(`\nRelease build refused: ${check.error}\n\n`);
+			process.exit(1);
+		}
+		if (check.graceDays !== desktopConfig.offlineGraceDays) {
+			process.stderr.write(
+				`warning: ${NO_OFFLINE_KEYS_ENV}=1 — this build has no offline grace\n`,
+			);
+		}
+		inputs.offlineGraceDays = check.graceDays;
+	}
 	env.FUUTU_DESKTOP_CONFIG = JSON.stringify(desktopRuntimeConfig(inputs));
 	if (mode === "dev") await dev(project, env, inputs, rest);
 	else await build(env, inputs, rest);

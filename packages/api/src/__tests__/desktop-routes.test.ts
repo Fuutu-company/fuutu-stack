@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Desktop release routes: 404 while the module is off, the Tauri updater
@@ -185,11 +185,45 @@ describe("update route — org, major and rate limit", () => {
 		});
 	});
 
-	it("keeps an anonymous caller within its major", async () => {
-		if (desktopConfig.auth === "required") return;
-		if (!desktopConfig.access.perMajorVersion) return;
-		serveManifest({ ...MANIFEST, version: "3.0.0" });
-		expect((await update("2.0.0", {})).status).toBe(204);
+	describe("anonymous callers (auth optional)", () => {
+		// The config is `as const`; the test flips it per case.
+		const cfg = desktopConfig as unknown as {
+			auth: string;
+			access: {
+				perMajorVersion: boolean;
+				majors: Partial<Record<number, string>>;
+			};
+		};
+		const saved = {
+			auth: desktopConfig.auth,
+			perMajorVersion: desktopConfig.access.perMajorVersion,
+			majors: desktopConfig.access.majors,
+		};
+		beforeEach(() => {
+			cfg.auth = "optional";
+			cfg.access.perMajorVersion = true;
+			cfg.access.majors = { 2: "api_webhooks" };
+		});
+		afterEach(() => {
+			cfg.auth = saved.auth;
+			cfg.access.perMajorVersion = saved.perMajorVersion;
+			cfg.access.majors = saved.majors;
+		});
+
+		it("get no major above the lowest licensed one, whatever the URL says", async () => {
+			// The URL claims major 2 — without a token that proves nothing.
+			serveManifest({ ...MANIFEST, version: "2.1.0" });
+			expect((await update("2.0.0", {})).status).toBe(204);
+			clearDesktopManifestCache();
+			serveManifest({ ...MANIFEST, version: "1.5.0" });
+			expect((await update("1.0.0", {})).status).toBe(200);
+		});
+
+		it("get every major when no major needs its own licence", async () => {
+			cfg.access.majors = {};
+			serveManifest({ ...MANIFEST, version: "3.0.0" });
+			expect((await update("2.0.0", {})).status).toBe(200);
+		});
 	});
 
 	it("429s a caller over the release limit", async () => {

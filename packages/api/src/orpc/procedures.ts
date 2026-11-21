@@ -18,9 +18,10 @@ import {
 	type AuthorizeOptions,
 	assertNotImpersonating,
 	assertSessionCaller,
+	isOrgInApiKeyScope,
 	runAuthorize,
 } from "./middleware/authorize";
-import { markPolicy } from "./policy-markers";
+import { markPolicy, readPolicy } from "./policy-markers";
 
 // System AC — checks the user's SYSTEM role (Better-Auth admin plugin: "admin"/"user")
 const systemAC = new SystemAccessControl(SYSTEM_POLICY);
@@ -56,7 +57,50 @@ export const publicProcedure = os
 			});
 		}
 		return next();
+	})
+	.use(({ context, next, procedure }) => {
+		// Desktop access tokens reach only procedures that opt in
+		// (`desktopAllowed`), and — without the `desktop` scope feature —
+		// only the app's access flow (`desktopAccessFlow`).
+		if (context.desktop) {
+			const policy = readPolicy(procedure["~orpc"].middlewares);
+			if (!policy.desktopAllowed) {
+				throw new ORPCError("FORBIDDEN", {
+					message: "Not available to the desktop app",
+				});
+			}
+			if (context.desktopUpgradeRequired && !policy.desktopAccessFlow) {
+				throw new ORPCError("PAYMENT_REQUIRED", {
+					status: 402,
+					message: "Upgrade required",
+					data: context.desktopUpgradeRequired,
+				});
+			}
+		}
+		return next();
 	});
+
+/**
+ * Opts a procedure in for desktop access tokens (default: refused). Add
+ * it to your own procedures the desktop app calls — `.use(desktopAllowed)`
+ * or `authProcedure({ desktopAllowed: true })`. The token still acts only
+ * as its user, in its pinned org (`isOrgInApiKeyScope`), and never on
+ * `sessionOnly` or system-admin procedures.
+ */
+export const desktopAllowed = markPolicy(
+	os.middleware(({ next }) => next()),
+	{ desktopAllowed: true },
+);
+
+/**
+ * `desktopAllowed` for the desktop app's access flow (`desktop.session`,
+ * `desktop.devices.list`): stays reachable without the `desktop` scope
+ * feature, so the app can tell the user what is missing.
+ */
+export const desktopAccessFlow = markPolicy(
+	os.middleware(({ next }) => next()),
+	{ desktopAllowed: true, desktopAccessFlow: true },
+);
 
 export const protectedProcedure = publicProcedure.use(
 	async ({ context, next }, input) => {
@@ -75,11 +119,12 @@ export const protectedProcedure = publicProcedure.use(
 		// then enforces membership + permission via requireOrgPermissionAccess
 		// (assertApiKeyOrgScope). User-level inputs (no organizationId) and
 		// foreign orgs are always out of scope.
-		const pinnedOrg = context.apiKey?.organizationId;
-		if (pinnedOrg) {
+		// Desktop tokens keep user-level inputs but only their pinned org
+		// (isOrgInApiKeyScope).
+		if (context.apiKey) {
 			const inputOrg = (input as { organizationId?: string } | undefined)
 				?.organizationId;
-			if (inputOrg !== pinnedOrg) {
+			if (!isOrgInApiKeyScope(context.apiKey, inputOrg)) {
 				throw new ORPCError("FORBIDDEN", {
 					message:
 						"Organization-scoped API keys can only access their own organization",
@@ -262,6 +307,7 @@ export function authProcedure(options: AuthorizeOptions = {}) {
 		markPolicy(authorize, {
 			...(options.denyImpersonation && { denyImpersonation: true }),
 			...(options.sessionOnly && { sessionOnly: true }),
+			...(options.desktopAllowed && { desktopAllowed: true }),
 		}),
 	);
 }
