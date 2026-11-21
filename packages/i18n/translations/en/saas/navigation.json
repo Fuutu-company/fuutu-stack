@@ -74,10 +74,12 @@
 			"design": "Design system",
 			"userDetail": "User details",
 			"system": "System",
-			"orgDetail": "Organization details"
+			"orgDetail": "Organization details",
+			"desktopApp": "Desktop app"
 		},
 		"groupAccount": "Account",
 		"accountSettings": "Account settings",
-		"credits": "Credits"
+		"credits": "Credits",
+		"desktopApp": "Desktop app"
 	}
 }

@@ -1,0 +1,28 @@
+{
+	"desktopApp": {
+		"title": "Desktop-App",
+		"description": "Lade die Desktop-App herunter und verwalte die Geräte, die mit deinem Konto angemeldet sind.",
+		"download": {
+			"title": "Download",
+			"description": "Installiere die App und melde dich mit diesem Konto an.",
+			"macos": "macOS",
+			"windows": "Windows",
+			"linux": "Linux"
+		},
+		"devices": {
+			"title": "Angemeldete Geräte",
+			"description": "Jede Installation, die mit deinem Konto angemeldet ist. Entfernen meldet sie ab.",
+			"count": "{count, plural, =0 {Keine Geräte} one {# Gerät} other {# Geräte}}",
+			"limit": "{count} von {limit} Geräten",
+			"empty": "Noch ist kein Gerät angemeldet.",
+			"signedInAt": "Angemeldet am {date}",
+			"lastActiveAt": "Zuletzt aktiv am {date}",
+			"revoke": "Abmelden",
+			"revokeTitle": "Dieses Gerät abmelden?",
+			"revokeDescription": "Die App auf diesem Gerät verlangt eine neue Anmeldung. Bis sie es bemerkt, kann bis zu eine Stunde vergehen.",
+			"revoking": "Wird abgemeldet…",
+			"revokeError": "Das Gerät konnte nicht abgemeldet werden."
+		},
+		"loadError": "Die Geräte konnten nicht geladen werden."
+	}
+}

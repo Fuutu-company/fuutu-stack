@@ -1,4 +1,5 @@
 import { auth } from "@fuutu/auth";
+import { desktopOAuth } from "@fuutu/auth/desktop-oauth";
 import { isImpersonationExpired } from "@fuutu/auth/impersonation";
 import { endImpersonationIfAccessLost } from "@fuutu/auth/impersonation-access";
 import { endExpiredImpersonation } from "@fuutu/auth/impersonation-expiry";
@@ -10,6 +11,10 @@ import {
 	type MissingScopeFeature,
 } from "./modules/api-keys/scope-feature";
 import { verifyApiKeyCredential } from "./modules/api-keys/verify-credential";
+import {
+	type DesktopAuth,
+	resolveDesktopBearer,
+} from "./modules/desktop/bearer";
 import { throttlePreAuth } from "./pre-auth-throttle";
 
 export type CreateContextOptions = {
@@ -118,14 +123,49 @@ export async function createContext({ context }: CreateContextOptions) {
 			}
 		}
 	}
+	// Desktop app access token (config.features.desktop, own audience — C1).
+	// It authenticates as its user like an unscoped API key: org access is
+	// resolved from the DB with RBAC per request, `sessionOnly` procedures
+	// (money, credentials, org structure) and admin procedures refuse it.
+	let desktop: DesktopAuth | null = null;
+	if (!session && !apiKey && !preAuthRateLimited && desktopOAuth.active) {
+		const bearer = extractBearer(headers);
+		if (bearer && !bearer.startsWith(API_KEY_PREFIX)) {
+			const attempt = await throttlePreAuth(headers, "desktop");
+			if (attempt.limited) {
+				preAuthRateLimited = {
+					retryAfter: Number(attempt.limited.headers.get("retry-after") ?? "1"),
+				};
+			} else {
+				const resolved = await attempt.verify(() =>
+					resolveDesktopBearer(bearer),
+				);
+				if (resolved) {
+					session = toApiKeySession(asSessionUser(resolved.user));
+					apiKey = {
+						id: `oauth:${resolved.desktop.tokenId}`,
+						organizationId: null,
+					};
+					desktop = resolved.desktop;
+				}
+			}
+		}
+	}
 	return {
 		session,
 		headers,
 		apiKey,
 		apiKeyUpgradeRequired,
 		preAuthRateLimited,
+		desktop,
 	};
 }
+
+const extractBearer = (headers: Headers): string | null => {
+	const authorization = headers.get("authorization");
+	if (!authorization?.toLowerCase().startsWith(BEARER_PREFIX)) return null;
+	return authorization.slice(BEARER_PREFIX.length).trim() || null;
+};
 
 /** Set when a presented key came from an IP over its failed-check budget (seconds until retry). */
 export type PreAuthRateLimited = { retryAfter: number };
@@ -138,6 +178,8 @@ export type Context = {
 	apiKeyUpgradeRequired?: MissingScopeFeature | null;
 	/** Set when a presented API key was refused by the pre-auth throttle. */
 	preAuthRateLimited?: PreAuthRateLimited | null;
+	/** Set when the caller is the desktop app (desktop access token). */
+	desktop?: DesktopAuth | null;
 	/**
 	 * Response headers of the current call, injected by oRPC's
 	 * `ResponseHeadersPlugin` (orpc/handler.ts) — e.g. Better Auth

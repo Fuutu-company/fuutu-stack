@@ -62,8 +62,16 @@ export function OAuthConsent({
 
 	return (
 		<AuthCard
-			title={t("title", { client })}
-			description={t("description", { client, appName })}
+			title={
+				request.desktopApp
+					? t("desktopTitle", { appName })
+					: t("title", { client })
+			}
+			description={
+				request.desktopApp
+					? t("desktopDescription", { appName })
+					: t("description", { client, appName })
+			}
 		>
 			<div className="space-y-6">
 				<AreaIcon area="api">
@@ -106,13 +114,15 @@ export function OAuthConsent({
 
 				<div className="space-y-1 text-sm">
 					<p className="font-medium">
-						{request.organizationName
-							? t("statementOrg", {
-									client,
-									appName,
-									organization: request.organizationName,
-								})
-							: t("statement", { client, appName })}
+						{request.desktopApp
+							? t("desktopStatement", { appName })
+							: request.organizationName
+								? t("statementOrg", {
+										client,
+										appName,
+										organization: request.organizationName,
+									})
+								: t("statement", { client, appName })}
 					</p>
 					{request.scopes.includes("offline_access") && (
 						<p className="text-muted-foreground">{t("offlineAccess")}</p>

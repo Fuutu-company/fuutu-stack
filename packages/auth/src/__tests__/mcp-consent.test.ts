@@ -82,6 +82,7 @@ describe("resolveMcpConsentRequest", () => {
 			clientHost: "claude.ai",
 			redirectHost: "127.0.0.1:33418",
 			unverified: true,
+			desktopApp: false,
 			organizationName: "Acme",
 			scopes: ["openid", "profile", "offline_access"],
 		});
@@ -151,6 +152,26 @@ describe("resolveMcpConsentRequest", () => {
 			}),
 		).toMatchObject({ unverified: false, organizationName: null });
 		expect(getOrganizationById).not.toHaveBeenCalled();
+	});
+
+	it("shows the app's own desktop client as first-party, only while it is on", async () => {
+		vi.mocked(getOAuthClientSummary).mockResolvedValue(CLIENT);
+		const query = await signedQuery(BASE);
+		const clientId = BASE.client_id;
+		expect(
+			await resolveMcpConsentRequest(query, {
+				activeOrganizationId: null,
+				secret: SECRET,
+				desktopClientId: clientId,
+			}),
+		).toMatchObject({ desktopApp: true, unverified: false });
+		expect(
+			await resolveMcpConsentRequest(query, {
+				activeOrganizationId: null,
+				secret: SECRET,
+				desktopClientId: null,
+			}),
+		).toMatchObject({ desktopApp: false, unverified: true });
 	});
 
 	it("never shows a non-http client_uri (javascript:, data:)", async () => {

@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { PropsWithChildren } from "react";
 import { openAboutWindow } from "@/lib/windows";
+import { AccessNotice } from "./access-gate";
 
 const NAV = [
 	{ href: "/", key: "home", icon: House },
@@ -62,6 +63,7 @@ export function AppShell({ children }: PropsWithChildren) {
 			</aside>
 			<main className="min-w-0 flex-1 overflow-y-auto">
 				<div className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
+					<AccessNotice />
 					{children}
 				</div>
 			</main>

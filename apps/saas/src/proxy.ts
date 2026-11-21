@@ -1,8 +1,10 @@
 import {
 	hasApiKeyCredential,
+	hasDesktopBearer,
 	hasSessionCookie,
 } from "@fuutu/auth/session-cookie";
 import {
+	config as appConfig,
 	KIT_FINGERPRINT_HEADER_NAME,
 	KIT_FINGERPRINT_HEADER_VALUE,
 } from "@fuutu/config";
@@ -103,7 +105,10 @@ export async function proxy(req: NextRequest) {
 	// API-key requests carry no session cookie — they authenticate in the oRPC
 	// context via `x-api-key` or `Authorization: Bearer futu_sk_…` (verifyApiKey → owner session, org pinning
 	// fail-closed). The optimistic cookie check must not bounce them.
-	const hasApiKey = hasApiKeyCredential(req.headers);
+	const hasApiKey =
+		hasApiKeyCredential(req.headers) ||
+		// Desktop app access token (`config.features.desktop`), verified in the API.
+		hasDesktopBearer(req.headers, pathname, appConfig.features.desktop);
 
 	// OPTIMISTIC check only — real auth happens in layout via requireAuth().
 	if (!hasSession && !hasApiKey) {

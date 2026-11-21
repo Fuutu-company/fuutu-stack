@@ -13,7 +13,12 @@ import type { Context } from "../context";
  * for the anonymous caller used here).
  */
 
-const flags = vi.hoisted(() => ({ aiChat: true, crm: true, webhooks: true }));
+const flags = vi.hoisted(() => ({
+	aiChat: true,
+	crm: true,
+	webhooks: true,
+	desktop: true,
+}));
 
 vi.mock("@fuutu/config", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@fuutu/config")>();
@@ -56,6 +61,7 @@ afterEach(() => {
 	flags.aiChat = true;
 	flags.crm = true;
 	flags.webhooks = true;
+	flags.desktop = true;
 	paymentsConfig.creditsEnabled = creditsEnabled;
 });
 
@@ -259,4 +265,41 @@ describe("config.features.webhooks = false", () => {
 			),
 		).rejects.toMatchObject({ code: "UNAUTHORIZED" });
 	});
+});
+
+const DESKTOP: Case[] = [
+	[
+		"desktop.session",
+		(c) => call(appRouter.desktop.session, {}, { context: c }),
+	],
+	[
+		"desktop.devices.list",
+		(c) => call(appRouter.desktop.devices.list, undefined, { context: c }),
+	],
+	[
+		"desktop.devices.revoke",
+		(c) =>
+			call(
+				appRouter.desktop.devices.revoke,
+				{ deviceId: "d1" },
+				{ context: c },
+			),
+	],
+];
+
+describe("config.features.desktop = false", () => {
+	it.each(DESKTOP)("%s answers NOT_FOUND", async (_name, run) => {
+		flags.desktop = false;
+		await expect(run(signedIn)).rejects.toMatchObject(GATED);
+		await expect(run(anonymous)).rejects.toMatchObject(GATED);
+	});
+
+	it.each(DESKTOP)(
+		"%s is reachable when the flag is on",
+		async (_name, run) => {
+			await expect(run(anonymous)).rejects.toMatchObject({
+				code: "UNAUTHORIZED",
+			});
+		},
+	);
 });

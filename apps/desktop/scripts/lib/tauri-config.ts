@@ -24,18 +24,19 @@ export const DEVTOOLS_CAPABILITY = {
 } as const;
 
 /**
- * Release CSP: only the app bundle, Tauri IPC and the saas backend. Tauri
- * adds hashes for the export's inline scripts at build time.
+ * Release CSP: only the app bundle and Tauri IPC — the webview reaches the
+ * backend solely through the Rust side (`auth_api_fetch`), never with a
+ * token of its own. Tauri adds hashes for the export's inline scripts at
+ * build time.
  */
-export function releaseCsp(saasUrl?: string): string {
-	const backend = saasUrl ? ` ${new URL(saasUrl).origin}` : "";
+export function releaseCsp(): string {
 	return [
 		"default-src 'self'",
 		"script-src 'self'",
 		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' data: blob: https:",
 		"font-src 'self' data:",
-		`connect-src 'self' ipc: http://ipc.localhost${backend}`,
+		"connect-src 'self' ipc: http://ipc.localhost",
 		"object-src 'none'",
 		"base-uri 'self'",
 		"form-action 'none'",
@@ -47,8 +48,13 @@ export function releaseCsp(saasUrl?: string): string {
  * Desktop behaviour the Rust side needs at startup — embedded at compile
  * time via `FUUTU_DESKTOP_CONFIG` (src-tauri/src/config.rs).
  */
-export function desktopRuntimeConfig(saasUrl?: string) {
+export function desktopRuntimeConfig(
+	saasUrl?: string,
+	/** Backend Ed25519 keys (JWK `x`) trusted for offline claims. */
+	offlineKeys: string[] = [],
+) {
 	return {
+		offlineKeys,
 		shell: desktopConfig.shell,
 		identity: {
 			productName: desktopIdentity.productName,
@@ -92,9 +98,23 @@ export function buildTauriConfig(input: TauriConfigInput) {
 			],
 			security: {
 				// The dev server needs HMR websockets + eval; release is locked down.
-				csp: dev ? null : releaseCsp(input.saasUrl),
+				csp: dev ? null : releaseCsp(),
 				capabilities: dev ? ["default", DEVTOOLS_CAPABILITY] : ["default"],
 			},
 		},
+		plugins: {
+			// `<scheme>://auth/callback` (sign-in fallback) and
+			// `<scheme>://auth/return` (back from the browser).
+			"deep-link": { desktop: { schemes: [id.scheme] } },
+		},
 	};
+}
+
+/** Ed25519 public keys (`x`) of a JWKS document. */
+export function ed25519Keys(jwks: unknown): string[] {
+	const keys = (jwks as { keys?: unknown[] } | null)?.keys ?? [];
+	return keys.flatMap((key) => {
+		const k = key as { kty?: string; crv?: string; x?: string };
+		return k.kty === "OKP" && k.crv === "Ed25519" && k.x ? [k.x] : [];
+	});
 }

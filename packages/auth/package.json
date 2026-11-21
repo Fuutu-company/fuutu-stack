@@ -22,6 +22,7 @@
 		"@better-auth/passkey": "catalog:",
 		"@fuutu/config": "workspace:*",
 		"@fuutu/db": "workspace:*",
+		"@fuutu/desktop": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
 		"@fuutu/mail": "workspace:*",

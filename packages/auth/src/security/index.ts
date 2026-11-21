@@ -15,12 +15,14 @@
  * - impersonation-session: ends an impersonation past `authConfig.admin.impersonationMinutes` or after the admin lost access.
  * - mcp-oauth-guards (MCP OAuth on): `/oauth2/register` size caps; `/oauth2/authorize` never redirects to an unverified client without interaction.
  * - mcp-oauth-revocation (MCP OAuth on): `/oauth2/delete-consent` revokes the consent's tokens.
+ * - desktop-oauth: `/oauth2/authorize` and `/oauth2/token` register the desktop client first (desktop on), refuse it while off and require `offline_access`.
  *
  * `hooks.after`, in this order:
  * - organization-invitations: `/organization/get-full-organization` lists invitations only to members who may invite.
  * - email-change-notice: tells the previous address once an email change is verified.
  * - impersonation-session: an ended impersonation's `/get-session` answers signed out.
  * - member-api-keys: `/organization/leave` revokes the user's org API keys.
+ * - desktop-oauth (desktop on): `/oauth2/token` clears the desktop client's consents after a sign-in, so the next one asks again.
  * - mcp-oauth-guards (MCP OAuth on): authorize errors land on the app's error page.
  * - mcp-oauth-revocation (MCP OAuth on): password change and session revocation end OAuth tokens.
  *
@@ -48,6 +50,11 @@ import {
 } from "better-auth/api";
 import type { OrganizationOptions } from "better-auth/plugins";
 import { authConfig } from "../config";
+import {
+	assertDesktopClientRequest,
+	clearDesktopConsentAfterSignIn,
+	ensureDesktopClient,
+} from "../desktop-oauth";
 import { beforeUserDelete } from "../hooks/account-deletion";
 import { logApiKeysRevoked } from "../hooks/audit";
 import { assertDeleteUserReauth } from "../hooks/delete-user-reauth";
@@ -159,6 +166,15 @@ export const securityHooks = {
 		});
 		if (!mcpOAuth.active) return;
 
+		// Desktop app client (config.features.desktop): registered on first use.
+		if (ctx.path === "/oauth2/authorize" || ctx.path === "/oauth2/token") {
+			assertDesktopClientRequest(
+				ctx.path,
+				getAuthorizeParams(ctx.query, ctx.body),
+			);
+			await ensureDesktopClient();
+		}
+
 		// MCP OAuth guards — see hooks/mcp-oauth-guards.ts.
 		if (ctx.path === "/oauth2/register") {
 			assertRegistrationWithinLimits(
@@ -216,6 +232,7 @@ export const securityHooks = {
 			userId: ctx.context.session?.user.id,
 		});
 		if (!mcpOAuth.active) return;
+		await clearDesktopConsentAfterSignIn({ path: ctx.path, body: ctx.body });
 		if (ctx.path === "/oauth2/authorize") {
 			const replacement = await getUnverifiedErrorRedirect({
 				returned: ctx.context.returned,

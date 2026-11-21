@@ -23,6 +23,7 @@ const flags = vi.hoisted(() => ({
 	crm: true,
 	designSystem: true,
 	webhooks: true,
+	desktop: true,
 }));
 
 vi.mock("@fuutu/config", async (importOriginal) => {
@@ -63,6 +64,7 @@ afterEach(() => {
 	flags.crm = true;
 	flags.designSystem = true;
 	flags.webhooks = true;
+	flags.desktop = true;
 	paymentsConfig.creditsEnabled = creditsEnabled;
 	paymentsConfig.billingAttachedTo = billingAttachedTo;
 });
@@ -73,6 +75,7 @@ const off = (
 		| "crm"
 		| "designSystem"
 		| "webhooks"
+		| "desktop"
 		| "credits"
 		| "personalBilling",
 ) => {
@@ -92,6 +95,7 @@ const ROUTES = {
 		"/organizations/acme/settings/webhooks/x",
 	],
 	personalBilling: ["/settings/billing"],
+	desktop: ["/settings/desktop", "/settings/desktop/x"],
 } as const;
 
 describe("disabledFeatureForPath", () => {
@@ -128,6 +132,8 @@ describe("disabledFeatureForPath", () => {
 			"/organizations/acme/settings/webhooks-archive",
 			"/organizations/acme/settings/credits-report",
 			"/organizations/chat",
+			"/organizations/acme/settings/desktop",
+			"/settings/desktop-export",
 			"/notifications",
 		]) {
 			expect(disabledFeatureForPath(path), path).toBeNull();
@@ -184,6 +190,8 @@ describe("route guards in the pages", () => {
 			/if \(!config\.features\.webhooks\) notFound\(\);/,
 		"app/(app)/settings/billing/page.tsx":
 			/if \(paymentsConfig\.billingAttachedTo !== "user"\) notFound\(\);/,
+		"app/(app)/settings/desktop/page.tsx":
+			/if \(!config\.features\.desktop\) notFound\(\);/,
 	};
 
 	for (const [page, guard] of Object.entries(PAGES)) {

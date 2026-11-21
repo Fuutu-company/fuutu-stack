@@ -613,6 +613,7 @@ describe("the shipped app lists (apps/saas/src/app-navigation.ts, app-main-nav.t
 			"credits",
 			"apiKeys",
 			"danger",
+			"desktopApp",
 		],
 		appAdminNavItems: [
 			"adminUsers",

@@ -22,6 +22,7 @@ import {
 	username,
 } from "better-auth/plugins";
 import { authConfig } from "./config";
+import { DESKTOP_SCOPES, desktopOAuth } from "./desktop-oauth";
 import { beforeOrganizationDelete } from "./hooks/account-deletion";
 import {
 	persistActiveOrganizationChange,
@@ -537,6 +538,17 @@ const authOptions = {
 								name: `${config.app.name} MCP`,
 								allowedScopes: [...DEFAULT_OAUTH_SCOPES],
 							},
+							// Desktop app audience (`config.features.desktop`) — linked
+							// to the pre-registered desktop client only (desktop-oauth.ts).
+							...(desktopOAuth.active
+								? [
+										{
+											identifier: desktopOAuth.resource,
+											name: `${config.app.name} desktop`,
+											allowedScopes: [...DESKTOP_SCOPES],
+										},
+									]
+								: []),
 						],
 						// Open RFC 7591 registration for public clients (Claude Code,
 						// Cursor, VS Code register themselves on first connect).

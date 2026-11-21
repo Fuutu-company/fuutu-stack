@@ -9,7 +9,12 @@ import type { Context } from "../../context";
  * pages 404 and every procedure of the module's router answers
  * NOT_FOUND — the sidebar link is not the only gate.
  */
-export type GatedFeature = "aiChat" | "crm" | "credits" | "webhooks";
+export type GatedFeature =
+	| "aiChat"
+	| "crm"
+	| "credits"
+	| "webhooks"
+	| "desktop";
 
 /** Read at call time, so a flag flip in tests or config applies per request. */
 export function isFeatureEnabled(feature: GatedFeature): boolean {
@@ -23,6 +28,8 @@ export function isFeatureEnabled(feature: GatedFeature): boolean {
 		case "credits":
 			// Derived from `config.features.credits`; apps may override it.
 			return paymentsConfig.creditsEnabled;
+		case "desktop":
+			return config.features.desktop;
 	}
 }
 

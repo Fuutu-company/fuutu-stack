@@ -1,4 +1,6 @@
 import about from "./about.json";
+import account from "./account.json";
+import auth from "./auth.json";
 import settings from "./settings.json";
 import shell from "./shell.json";
 
@@ -11,5 +13,7 @@ export default {
 		shell,
 		settings,
 		about,
+		auth,
+		account,
 	},
 } as const;

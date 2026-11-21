@@ -27,6 +27,7 @@ beforeAll(async () => {
 	vi.doMock(resolveFromApp("@fuutu/auth/session-cookie"), () => ({
 		hasSessionCookie: () => false,
 		hasApiKeyCredential: () => false,
+		hasDesktopBearer: () => false,
 	}));
 	({ NextRequest } = (await import(
 		/* @vite-ignore */ resolveFromApp("next/server")

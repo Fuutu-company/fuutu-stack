@@ -44,6 +44,10 @@ pub struct RuntimeConfig {
     pub offline_grace_days: u32,
     /// Base URL of the saas backend (`NEXT_PUBLIC_SAAS_URL`), if any.
     pub saas_url: Option<String>,
+    /// Ed25519 keys (JWK `x`) of the backend's JWKS at build time — the
+    /// only keys an offline claim may be signed with (empty: dev builds,
+    /// trust the key stored at the last online session).
+    pub offline_keys: Vec<String>,
 }
 
 impl RuntimeConfig {

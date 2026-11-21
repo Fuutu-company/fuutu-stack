@@ -32,6 +32,11 @@ const FEATURE_ROUTES = {
 		routes: ["/settings/billing"],
 		personalOnly: true,
 	},
+	desktop: {
+		enabled: () => config.features.desktop,
+		routes: ["/settings/desktop"],
+		personalOnly: true,
+	},
 } satisfies Record<
 	string,
 	{ enabled: () => boolean; routes: string[]; personalOnly?: boolean }

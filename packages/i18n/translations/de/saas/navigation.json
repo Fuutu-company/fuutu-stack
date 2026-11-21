@@ -74,10 +74,12 @@
 			"design": "Designsystem",
 			"userDetail": "Benutzerdetails",
 			"system": "System",
-			"orgDetail": "Organisationsdetails"
+			"orgDetail": "Organisationsdetails",
+			"desktopApp": "Desktop-App"
 		},
 		"groupAccount": "Konto",
 		"accountSettings": "Kontoeinstellungen",
-		"credits": "Guthaben"
+		"credits": "Guthaben",
+		"desktopApp": "Desktop-App"
 	}
 }

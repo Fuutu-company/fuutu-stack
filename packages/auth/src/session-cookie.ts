@@ -38,3 +38,20 @@ export function hasApiKeyCredential(headers: Headers): boolean {
 			.startsWith(API_KEY_BEARER_PREFIX) ?? false
 	);
 }
+
+/**
+ * Optimistic "is there a desktop-app access token?" check for `proxy.ts`
+ * — any other `Authorization: Bearer …` on `/api/*` while
+ * `config.features.desktop` is on (the desktop app holds no cookie). Not
+ * a security boundary: `createContext` verifies it (desktop audience,
+ * client, user) or the request stays anonymous.
+ */
+export function hasDesktopBearer(
+	headers: Headers,
+	pathname: string,
+	desktopEnabled: boolean,
+): boolean {
+	if (!desktopEnabled || !pathname.startsWith("/api/")) return false;
+	const value = headers.get("authorization")?.toLowerCase() ?? "";
+	return value.startsWith("bearer ") && value.length > "bearer ".length;
+}

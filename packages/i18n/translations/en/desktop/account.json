@@ -1,0 +1,33 @@
+{
+	"title": "Account",
+	"description": "Your account, organization and plan.",
+	"off": "This build works without an account.",
+	"signedOut": {
+		"title": "Not signed in",
+		"description": "Sign in to sync with your {app} account."
+	},
+	"profile": "Profile",
+	"organization": {
+		"label": "Organization",
+		"personal": "Personal account",
+		"switchFailed": "Could not switch the organization."
+	},
+	"plan": {
+		"title": "Plan",
+		"tier": "Plan: {tier}",
+		"access": {
+			"granted": "Access to {app} included",
+			"trial": "Trial until {date}",
+			"missing": "{app} not included",
+			"device_limit": "Device limit reached"
+		},
+		"devices": "Devices: {count} of {limit}",
+		"devicesUnlimited": "Devices: {count}"
+	},
+	"offline": "Offline — showing the last known state.",
+	"actions": {
+		"manageAccount": "Manage account",
+		"billing": "Billing",
+		"devices": "Devices"
+	}
+}

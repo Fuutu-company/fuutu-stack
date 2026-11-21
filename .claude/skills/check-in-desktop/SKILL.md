@@ -39,6 +39,10 @@ No `desktop` MCP tools in your session (server not loaded)? Use the same server 
 `node tooling/scripts/desktop-mcp/call.mjs driver_session '{"action":"start","port":<desktopBridge>}' webview_screenshot '{}'`
 (arguments are tool/JSON pairs; one process = one session, so put the whole sequence in one call).
 
+## Signing in (auth `required` / `optional`)
+
+The app signs in through the **system browser** — an agent cannot drive that. Start the session with `FUUTU_DESKTOP_SIGNIN_NO_BROWSER=1 pnpm dev:desktop` instead: debug builds then skip the system browser and write the authorization URL to `.fuutu/desktop-signin-url`. Click "Sign in" in the app, open that URL in your own `[qa] …` tab of the session browser (already signed in as `admin@fuutu.local`), click **Allow** on the consent page — the browser lands on the app's loopback page and the app is signed in. Debug builds keep tokens in `<app data dir>/dev-secrets.json` (0600) instead of the keychain, so rebuilds never raise keychain dialogs; `FUUTU_DESKTOP_KEYCHAIN=1` tests the real keychain. Signed out again: Account → Sign out.
+
 ## Steps
 
 1. **List what to check** from the diff and the task's acceptance criteria: routes, windows (main, about), every locale in `i18nConfig.locales` (Settings → Language switches at runtime), light and dark theme, signed in / signed out per `desktopConfig.auth`.

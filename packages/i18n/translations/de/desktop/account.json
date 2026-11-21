@@ -1,0 +1,33 @@
+{
+	"title": "Konto",
+	"description": "Dein Konto, deine Organisation und dein Plan.",
+	"off": "Dieser Build funktioniert ohne Konto.",
+	"signedOut": {
+		"title": "Nicht angemeldet",
+		"description": "Melde dich an, um dein {app}-Konto zu verbinden."
+	},
+	"profile": "Profil",
+	"organization": {
+		"label": "Organisation",
+		"personal": "Persönliches Konto",
+		"switchFailed": "Die Organisation konnte nicht gewechselt werden."
+	},
+	"plan": {
+		"title": "Plan",
+		"tier": "Plan: {tier}",
+		"access": {
+			"granted": "Zugang zu {app} enthalten",
+			"trial": "Testphase bis {date}",
+			"missing": "{app} nicht enthalten",
+			"device_limit": "Gerätelimit erreicht"
+		},
+		"devices": "Geräte: {count} von {limit}",
+		"devicesUnlimited": "Geräte: {count}"
+	},
+	"offline": "Offline — letzter bekannter Stand.",
+	"actions": {
+		"manageAccount": "Konto verwalten",
+		"billing": "Abrechnung",
+		"devices": "Geräte"
+	}
+}

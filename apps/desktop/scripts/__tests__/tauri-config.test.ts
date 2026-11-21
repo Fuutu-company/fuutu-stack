@@ -1,6 +1,10 @@
 import { desktopIdentity } from "@fuutu/desktop/identity";
 import { describe, expect, it } from "vitest";
-import { buildTauriConfig, DEVTOOLS_CAPABILITY } from "../lib/tauri-config";
+import {
+	buildTauriConfig,
+	DEVTOOLS_CAPABILITY,
+	ed25519Keys,
+} from "../lib/tauri-config";
 
 describe("buildTauriConfig", () => {
 	it("names the app from config.app (identity), versions it with APP_VERSION", () => {
@@ -28,5 +32,35 @@ describe("buildTauriConfig", () => {
 		expect(config.app.security.capabilities).toContainEqual(
 			DEVTOOLS_CAPABILITY,
 		);
+	});
+
+	it("registers the deep-link scheme from the identity", () => {
+		const config = buildTauriConfig({ mode: "build", appVersion: "1.0.0" });
+		expect(config.plugins["deep-link"].desktop.schemes).toEqual([
+			desktopIdentity.scheme,
+		]);
+	});
+
+	it("keeps the release CSP free of remote origins", () => {
+		const config = buildTauriConfig({
+			mode: "build",
+			appVersion: "1.0.0",
+			saasUrl: "https://app.example.com",
+		});
+		expect(config.app.security.csp).not.toContain("example.com");
+		expect(config.app.security.csp).toContain("connect-src 'self' ipc:");
+	});
+
+	it("extracts only Ed25519 keys from a JWKS", () => {
+		expect(
+			ed25519Keys({
+				keys: [
+					{ kty: "OKP", crv: "Ed25519", x: "abc" },
+					{ kty: "RSA", n: "x" },
+					{ kty: "OKP", crv: "X25519", x: "no" },
+				],
+			}),
+		).toEqual(["abc"]);
+		expect(ed25519Keys(null)).toEqual([]);
 	});
 });

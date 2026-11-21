@@ -53,6 +53,7 @@ const settingsSubRoutes: Record<string, string> = {
 	"api-keys": "breadcrumb.apiKeys",
 	billing: "breadcrumb.billing",
 	credits: "breadcrumb.credits",
+	desktop: "breadcrumb.desktopApp",
 };
 
 const orgSettingsSubRoutes: Record<string, string> = {

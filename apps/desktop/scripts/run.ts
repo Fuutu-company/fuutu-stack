@@ -21,6 +21,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { desktopConfig } from "@fuutu/desktop/config";
 import {
 	describeProject,
 	ensureSlot,
@@ -32,6 +33,7 @@ import {
 import {
 	buildTauriConfig,
 	desktopRuntimeConfig,
+	ed25519Keys,
 	type TauriConfigMode,
 } from "./lib/tauri-config";
 
@@ -134,6 +136,8 @@ async function dev(project: Project, env: NodeJS.ProcessEnv, rest: string[]) {
 			...env,
 			FUUTU_DESKTOP_BRIDGE_PORT: String(project.ports.desktopBridge),
 			FUUTU_DESKTOP_BRIDGE_TOKEN: bridgeToken(),
+			// Debug builds write the sign-in URL here (check-in-desktop skill).
+			FUUTU_DESKTOP_SIGNIN_URL_FILE: join(root, ".fuutu/desktop-signin-url"),
 		},
 	);
 	// Whichever dies first (port taken, window closed) ends the session.
@@ -162,6 +166,28 @@ async function build(env: NodeJS.ProcessEnv, rest: string[]) {
 	shutdown(0);
 }
 
+/**
+ * The backend's offline-claim keys, embedded into release builds so a
+ * claim signed with any other key is refused (src-tauri/src/auth/offline.rs).
+ * Without them the app trusts the key stored at its last online session.
+ */
+async function offlineKeys(saasUrl: string | undefined): Promise<string[]> {
+	if (desktopConfig.auth === "off" || !saasUrl) return [];
+	try {
+		const res = await fetch(new URL("/api/auth/jwks", saasUrl), {
+			signal: AbortSignal.timeout(10_000),
+		});
+		const keys = ed25519Keys(await res.json());
+		if (keys.length > 0) return keys;
+	} catch {
+		// reported below
+	}
+	process.stderr.write(
+		`warning: no offline-claim keys from ${saasUrl}/api/auth/jwks — this build trusts the key of its last online session (see apps/desktop/RELEASING.md)\n`,
+	);
+	return [];
+}
+
 async function main() {
 	const [mode, ...rest] = process.argv.slice(2) as [
 		TauriConfigMode,
@@ -173,7 +199,10 @@ async function main() {
 	const env: NodeJS.ProcessEnv = { ...readDotEnv(root), ...process.env };
 	Object.assign(env, slotEnv(project, env));
 	env.FUUTU_DESKTOP_CONFIG = JSON.stringify(
-		desktopRuntimeConfig(env.NEXT_PUBLIC_SAAS_URL),
+		desktopRuntimeConfig(
+			env.NEXT_PUBLIC_SAAS_URL,
+			mode === "build" ? await offlineKeys(env.NEXT_PUBLIC_SAAS_URL) : [],
+		),
 	);
 	if (mode === "dev") await dev(project, env, rest);
 	else await build(env, rest);

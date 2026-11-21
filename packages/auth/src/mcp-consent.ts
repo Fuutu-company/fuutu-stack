@@ -14,6 +14,8 @@ export type McpConsentRequest = {
 	/** Host of the signed `redirect_uri` the authorization code goes to. */
 	redirectHost: string;
 	unverified: boolean;
+	/** The app's own desktop client (`config.features.desktop`). */
+	desktopApp: boolean;
 	organizationName: string | null;
 	scopes: string[];
 };
@@ -60,7 +62,12 @@ function httpHost(uri: string | null): string | null {
  */
 export async function resolveMcpConsentRequest(
 	params: SearchParams,
-	input: { activeOrganizationId: string | null | undefined; secret: string },
+	input: {
+		activeOrganizationId: string | null | undefined;
+		secret: string;
+		/** The desktop client's id while `config.features.desktop` is on. */
+		desktopClientId?: string | null;
+	},
 ): Promise<McpConsentRequest | null> {
 	const query = toSignedQuery(params);
 	if (!(await verifyOAuthQueryParams(query.toString(), input.secret))) {
@@ -84,11 +91,16 @@ export async function resolveMcpConsentRequest(
 		? await getOrganizationById(input.activeOrganizationId)
 		: null;
 
+	const desktopApp =
+		!!input.desktopClientId && clientId === input.desktopClientId;
 	return {
 		clientName: client.name,
 		clientHost: httpHost(client.uri),
 		redirectHost: redirect.host || redirect.protocol,
-		unverified: isUnverifiedOAuthClient(client),
+		// The desktop client is pre-registered by this backend, not
+		// self-registered — its name is ours.
+		unverified: !desktopApp && isUnverifiedOAuthClient(client),
+		desktopApp,
 		organizationName: organization?.name ?? null,
 		scopes: (query.get("scope") ?? "").split(" ").filter(Boolean),
 	};
@@ -100,6 +112,11 @@ export async function getMcpConsentRequest(
 	activeOrganizationId: string | null | undefined,
 ): Promise<McpConsentRequest | null> {
 	const { auth } = await import("./index");
+	const { desktopOAuth } = await import("./desktop-oauth");
 	const { secret } = await auth.$context;
-	return resolveMcpConsentRequest(params, { activeOrganizationId, secret });
+	return resolveMcpConsentRequest(params, {
+		activeOrganizationId,
+		secret,
+		desktopClientId: desktopOAuth.active ? desktopOAuth.clientId : null,
+	});
 }

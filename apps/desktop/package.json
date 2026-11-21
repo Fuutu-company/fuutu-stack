@@ -21,7 +21,6 @@
 		"@tanstack/react-query": "catalog:",
 		"@tauri-apps/api": "catalog:",
 		"@tauri-apps/plugin-autostart": "catalog:",
-		"@tauri-apps/plugin-deep-link": "catalog:",
 		"@tauri-apps/plugin-log": "catalog:",
 		"@tauri-apps/plugin-opener": "catalog:",
 		"@tauri-apps/plugin-process": "catalog:",

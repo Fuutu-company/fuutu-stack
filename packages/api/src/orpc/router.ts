@@ -7,6 +7,7 @@ import { chatRouter } from "../modules/chat/router";
 import { creditsRouter } from "../modules/credits/router";
 import { crmRouter } from "../modules/crm/router";
 import { dashboardRouter } from "../modules/dashboard/router";
+import { desktopRouter } from "../modules/desktop/router";
 import { notificationsRouter } from "../modules/notifications/router";
 import { organizationsRouter } from "../modules/organizations/router";
 import { paymentsRouter } from "../modules/payments/router";
@@ -32,6 +33,7 @@ export const router = publicProcedure.router({
 	crm: crmRouter,
 	credits: creditsRouter,
 	search: searchRouter,
+	desktop: desktopRouter,
 });
 
 export const appRouter = router;

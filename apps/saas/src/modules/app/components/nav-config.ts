@@ -57,7 +57,8 @@ export type AccountNavKey =
 	| "billing"
 	| "credits"
 	| "apiKeys"
-	| "danger";
+	| "danger"
+	| "desktopApp";
 
 /**
  * Kit admin item keys — anchors for `AppAdminNavItem.after`.
@@ -383,6 +384,13 @@ export function getAccountItems(): NavSubItem[] {
 		{ titleKey: "apiKeys", href: `${ACCOUNT_SETTINGS_PATH}/api-keys` },
 		{ titleKey: "danger", href: `${ACCOUNT_SETTINGS_PATH}?tab=danger` },
 	);
+	if (config.features.desktop) {
+		// Before "danger", which stays last.
+		items.splice(items.length - 1, 0, {
+			titleKey: "desktopApp",
+			href: `${ACCOUNT_SETTINGS_PATH}/desktop`,
+		});
+	}
 	return mergeAppItems(items, appAccountNavItems, (item) => item.href);
 }
 

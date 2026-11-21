@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { hasApiKeyCredential, hasSessionCookie } from "../session-cookie";
+import {
+	hasApiKeyCredential,
+	hasDesktopBearer,
+	hasSessionCookie,
+} from "../session-cookie";
 
 const withCookie = (cookie?: string) => new Headers(cookie ? { cookie } : {});
 
@@ -55,5 +59,28 @@ describe("hasApiKeyCredential", () => {
 			false,
 		);
 		expect(hasApiKeyCredential(h({}))).toBe(false);
+	});
+});
+
+describe("hasDesktopBearer", () => {
+	const bearer = new Headers({ authorization: "Bearer eyJhbGciOi.x.y" });
+
+	it("lets a bearer through to /api only while the desktop switch is on", () => {
+		expect(hasDesktopBearer(bearer, "/api/desktop/session", true)).toBe(true);
+		expect(hasDesktopBearer(bearer, "/api/rpc/x", true)).toBe(true);
+		expect(hasDesktopBearer(bearer, "/api/desktop/session", false)).toBe(false);
+	});
+
+	it("never bypasses page routes or an empty bearer", () => {
+		expect(hasDesktopBearer(bearer, "/dashboard", true)).toBe(false);
+		expect(hasDesktopBearer(bearer, "/apix", true)).toBe(false);
+		expect(
+			hasDesktopBearer(
+				new Headers({ authorization: "Bearer " }),
+				"/api/x",
+				true,
+			),
+		).toBe(false);
+		expect(hasDesktopBearer(new Headers(), "/api/x", true)).toBe(false);
 	});
 });

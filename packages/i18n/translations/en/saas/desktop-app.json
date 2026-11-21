@@ -1,0 +1,28 @@
+{
+	"desktopApp": {
+		"title": "Desktop app",
+		"description": "Download the desktop app and manage the devices signed in to your account.",
+		"download": {
+			"title": "Download",
+			"description": "Install the app, then sign in with this account.",
+			"macos": "macOS",
+			"windows": "Windows",
+			"linux": "Linux"
+		},
+		"devices": {
+			"title": "Signed-in devices",
+			"description": "Each install signed in to your account. Removing one signs it out.",
+			"count": "{count, plural, =0 {No devices} one {# device} other {# devices}}",
+			"limit": "{count} of {limit} devices",
+			"empty": "No device is signed in yet.",
+			"signedInAt": "Signed in {date}",
+			"lastActiveAt": "Last active {date}",
+			"revoke": "Sign out",
+			"revokeTitle": "Sign this device out?",
+			"revokeDescription": "The app on this device asks for a new sign-in. It can take up to an hour until it notices.",
+			"revoking": "Signing out…",
+			"revokeError": "The device could not be signed out."
+		},
+		"loadError": "Devices could not be loaded."
+	}
+}

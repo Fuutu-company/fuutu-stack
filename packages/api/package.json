@@ -26,6 +26,7 @@
 		"@fuutu/credits": "workspace:*",
 		"@fuutu/cron": "workspace:*",
 		"@fuutu/db": "workspace:*",
+		"@fuutu/desktop": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/license": "workspace:*",
 		"@fuutu/logs": "workspace:*",

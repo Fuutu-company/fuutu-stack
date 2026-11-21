@@ -4,6 +4,7 @@
 #[cfg(all(not(debug_assertions), feature = "devtools"))]
 compile_error!("the `devtools` feature is for debug builds only (pnpm dev:desktop)");
 
+mod auth;
 pub mod config;
 mod shell;
 
@@ -11,6 +12,8 @@ mod shell;
 mod devtools;
 
 use config::RuntimeConfig;
+use tauri::Manager;
+use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 /// 5 MB per log file, the last few kept (`<app log dir>/<bundle id>.log`).
@@ -19,6 +22,7 @@ const LOG_FILE_MAX_BYTES: u128 = 5 * 1024 * 1024;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let config = RuntimeConfig::embedded();
+    auth::init_tls();
     let mut builder = tauri::Builder::default();
 
     // Must be the first plugin: a second launch hands over and exits.
@@ -45,6 +49,10 @@ pub fn run() {
                 .with_denylist(&["about"])
                 .build(),
         )
+        // `<scheme>://` links: sign-in fallback + "back to the app" after a
+        // purchase in the browser (src/auth). With single-instance on, a
+        // link that starts a second process is forwarded here.
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init());
 
@@ -64,8 +72,25 @@ pub fn run() {
     let tooltip = config.identity.product_name.clone();
     builder
         .manage(config)
-        .invoke_handler(tauri::generate_handler![shell::shell_set_tray_labels])
+        .invoke_handler(tauri::generate_handler![
+            shell::shell_set_tray_labels,
+            auth::auth_status,
+            auth::auth_sign_in,
+            auth::auth_cancel_sign_in,
+            auth::auth_sign_out,
+            auth::auth_api_fetch,
+            auth::auth_session,
+        ])
         .setup(move |app| {
+            let handle = app.handle().clone();
+            let user_agent = format!("{}/{}", tooltip, app.package_info().version);
+            let auth = auth::AuthState::new(
+                app.state::<RuntimeConfig>().inner(),
+                &user_agent,
+                auth::data_dir(&handle),
+            );
+            app.manage(auth);
+            setup_deep_links(&handle);
             if shell_config.tray {
                 shell::setup_tray(app.handle(), &tooltip)?;
             }
@@ -79,4 +104,19 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running the desktop app");
+}
+
+fn setup_deep_links(app: &tauri::AppHandle) {
+    // macOS registers the scheme from the bundle (Info.plist); Linux and
+    // Windows dev runs register it at runtime.
+    #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+    if let Err(err) = app.deep_link().register_all() {
+        log::warn!("deep link registration failed: {err}");
+    }
+    let handle = app.clone();
+    app.deep_link().on_open_url(move |event| {
+        for url in event.urls() {
+            auth::handle_deep_link(&handle, &url);
+        }
+    });
 }

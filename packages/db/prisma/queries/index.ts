@@ -9,6 +9,7 @@ export * from "./credit-balance";
 export * from "./credit-event";
 export * from "./credit-package";
 export * from "./cron-job-run";
+export * from "./desktop-oauth";
 export * from "./health";
 export * from "./invoice";
 export * from "./notification";
