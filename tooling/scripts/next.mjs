@@ -66,6 +66,10 @@ const env = {
 		TRUST_PROXY_HEADERS: process.env.TRUST_PROXY_HEADERS ?? "0",
 		EMAIL_PROVIDER: "console",
 		FUUTU_TELEMETRY_DISABLED: "1",
+		// Like CI: any non-empty id puts the seeded Acme on Pro (and the app
+		// maps it back to Pro). Without it Acme is Free, and plan-gated or
+		// limit-bound specs (webhooks, API keys) fail locally only.
+		PAYMENTS_PRO_PRICE_ID: process.env.PAYMENTS_PRO_PRICE_ID || "ci_pro_month",
 		// Own build output: `next build` must not overwrite the dev server's `.next`.
 		NEXT_DIST_DIR: ".next-e2e",
 	}),
