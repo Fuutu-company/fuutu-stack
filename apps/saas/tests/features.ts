@@ -18,6 +18,10 @@ const FEATURES = {
 		enabled: config.features.webhooks,
 		routes: ["/settings/webhooks"],
 	},
+	desktop: {
+		enabled: config.features.desktop,
+		routes: ["/settings/desktop"],
+	},
 } as const;
 
 export type GatedFeature = keyof typeof FEATURES;

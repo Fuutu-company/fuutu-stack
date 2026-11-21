@@ -60,4 +60,9 @@ function start() {
 		},
 	);
 	child.on("exit", (code) => process.exit(code ?? 0));
+	// A client closing this wrapper (`call.mjs`, the smoke test) must not
+	// leave the server running — it would hold the client's output open.
+	for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+		process.on(signal, () => child.kill(signal));
+	}
 }

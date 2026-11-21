@@ -47,10 +47,15 @@ The app signs in through the **system browser** — an agent cannot drive that. 
 
 1. **List what to check** from the diff and the task's acceptance criteria: routes, windows (main, about), every locale in `i18nConfig.locales` (Settings → Language switches at runtime), light and dark theme, signed in / signed out per `desktopConfig.auth`.
 2. **Make sure the app runs** (`pnpm dev:session status`); start `pnpm dev:desktop` in the background if the bridge is down.
+   Then `pnpm -F @fuutu/desktop-app smoke` — bridge, Rust commands, shell, Settings, Account, page errors, screenshots `.fuutu/desktop-shots/smoke-*.png`. Green smoke first, then the task's own checks.
 3. **Exercise each criterion** in the app: navigate, click the new control, submit, reload on a nested route (`location.reload()` via `webview_execute_js` — the static export must survive it).
 4. **Read the console** after each step: zero errors **and** zero warnings. Each one gets a root-cause fix (`debug-root-cause`) — never filter it.
 5. **Screenshot** every visual change and look at it.
 6. Release-relevant changes (Cargo features, capabilities, the bridge): run `node apps/desktop/scripts/check-release-clean.mjs`.
+
+## Updates
+
+`DESKTOP_UPDATER_PUBLIC_KEY=<pub> pnpm dev:desktop` enables the updater in a debug build. Publish a higher version to the slot's MinIO bucket with `scripts/publish.ts` (signed with the matching test key, `tauri signer generate`/`sign`, keys in your scratchpad, never in git); the app offers it in the update dialog. Debug builds download and verify the update but never install it (they would replace `target/debug`). A window the OS reports as hidden pauses CSS animations: finish them (`document.getAnimations().forEach(a => a.finish())`) before a screenshot of an opening dialog.
 
 ## Report
 

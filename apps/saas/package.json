@@ -57,6 +57,7 @@
 	"devDependencies": {
 		"@axe-core/playwright": "catalog:",
 		"@fuutu/config": "workspace:*",
+		"@fuutu/desktop": "workspace:*",
 		"@fuutu/tsconfig": "workspace:*",
 		"@playwright/test": "catalog:",
 		"@tailwindcss/postcss": "catalog:",

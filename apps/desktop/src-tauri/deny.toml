@@ -25,7 +25,6 @@ exceptions = [
     # Mozilla's CA root certificates (TLS via reqwest/rustls) — permissive,
     # commercial redistribution allowed.
     { crate = "webpki-root-certs", allow = ["CDLA-Permissive-2.0"] },
-    { crate = "webpki-roots", allow = ["CDLA-Permissive-2.0"] },
 ]
 confidence-threshold = 0.9
 # The list is the policy, not an inventory: unused entries are fine.

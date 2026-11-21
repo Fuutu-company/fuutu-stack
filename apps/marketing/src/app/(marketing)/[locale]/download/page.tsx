@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { appMarketing } from "@/app-marketing";
+import { isKitRouteEnabled } from "@/lib/kit-routes";
 import { pageMetadata, withAppMetadata } from "@/lib/page-metadata";
 import { urls } from "@/lib/urls";
 
@@ -29,6 +30,8 @@ async function loadRelease(): Promise<{
 	version: string | null;
 	platforms: Platform[];
 } | null> {
+	// Switched off: the layout 404s — no request to the app at build time.
+	if (!isKitRouteEnabled("download")) return null;
 	try {
 		const res = await fetch(`${urls.app}/api/desktop/download`, {
 			next: { revalidate },
