@@ -1316,10 +1316,19 @@ export async function getActivePlanId(
 	const subscription = await getPlanSubscription(owner);
 	if (subscription) return subscription.productId ?? subscription.priceId;
 
+	const lifetime = await getLifetimePurchase(owner);
+	return lifetime ? (lifetime.productId ?? lifetime.priceId) : null;
+}
+
+/**
+ * The owner's ACTIVE one-time purchase of a `billingType: "one_time"` plan
+ * (lifetime access), newest first — null without one or without one-time
+ * plans. Credit top-ups are one-time purchases too and never count.
+ */
+export async function getLifetimePurchase(owner: PurchaseOwner) {
 	const oneTimePriceIds = getOneTimePlanPriceIds();
 	if (oneTimePriceIds.length === 0) return null;
-	const lifetime = await getActiveOneTimePlanPurchase(owner, oneTimePriceIds);
-	return lifetime ? (lifetime.productId ?? lifetime.priceId) : null;
+	return getActiveOneTimePlanPurchase(owner, oneTimePriceIds);
 }
 
 /**

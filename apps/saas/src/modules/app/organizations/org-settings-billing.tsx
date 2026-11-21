@@ -25,7 +25,7 @@ import {
 	SeatSelector,
 } from "@fuutu/ui";
 import { CreditCard, ExternalLink } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { paymentsErrorKey } from "@/lib/api-error";
@@ -76,7 +76,15 @@ export function OrgSettingsBilling({
 	// Better Auth's getFullOrganization() returns a superset of FullOrg — narrowing is safe.
 	const org = (orgQuery.data ?? null) as FullOrg | null;
 	const orgId = org?.id;
+	const format = useFormatter();
 	const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
+	// An active one-time plan purchase (lifetime access).
+	const [lifetime, setLifetime] = useState<{
+		planId: PlanId | null;
+		purchasedAt: Date;
+		/** The provider portal holds its receipts. */
+		receipts: boolean;
+	} | null>(null);
 	const [subLoading, setSubLoading] = useState(paymentsEnabled);
 	const loading = orgQuery.isPending || subLoading;
 	const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
@@ -98,9 +106,19 @@ export function OrgSettingsBilling({
 		setSubLoading(true);
 		try {
 			// Active subscription for this org from the Purchase table
-			const sub = await orpc.payments.subscription.active.call({
-				organizationId: orgId,
-			});
+			const [sub, oneTime] = await Promise.all([
+				orpc.payments.subscription.active.call({ organizationId: orgId }),
+				orpc.payments.subscription.lifetime.call({ organizationId: orgId }),
+			]);
+			setLifetime(
+				oneTime
+					? {
+							planId: oneTime.planId,
+							purchasedAt: new Date(oneTime.purchasedAt),
+							receipts: oneTime.receipts,
+						}
+					: null,
+			);
 			if (sub) {
 				setActiveSub({
 					id: sub.id,
@@ -148,8 +166,15 @@ export function OrgSettingsBilling({
 				}
 			}
 		}
+		// Lifetime access (one-time plan purchase) when no subscription.
+		if (lifetime?.planId) {
+			return { activePlanId: lifetime.planId, activeInterval: "month" };
+		}
 		return { activePlanId: freePlanId, activeInterval: "month" };
 	})();
+	// Only a lifetime purchase stands for the plan when no subscription does.
+	const lifetimePlan = !activeSub && lifetime?.planId ? lifetime : null;
+	const hasPlan = Boolean(activeSub || lifetimePlan);
 
 	async function checkout(planId: PlanId, interval?: BillingInterval) {
 		if (!org) return;
@@ -236,7 +261,7 @@ export function OrgSettingsBilling({
 		disabled:
 			tier.disabled ||
 			(activePlanId === tier.id && tier.id !== freePlanId) ||
-			(tier.id === freePlanId && (!activeSub || activePlanId === freePlanId)),
+			(tier.id === freePlanId && (!hasPlan || activePlanId === freePlanId)),
 		onCtaClick: activePlanId === tier.id ? undefined : tier.onCtaClick,
 	}));
 
@@ -276,11 +301,24 @@ export function OrgSettingsBilling({
 														: "choosePlan.monthly",
 												),
 											})
-										: t("organizations.settings.billingNoPlan")}
+										: lifetimePlan && activePlanId
+											? tp("lifetime.label", {
+													plan: tp(`plans.${activePlanId}.name`),
+												})
+											: t("organizations.settings.billingNoPlan")}
 								</p>
+								{lifetimePlan ? (
+									<p className="text-muted-foreground text-xs">
+										{tp("lifetime.purchased", {
+											date: format.dateTime(lifetimePlan.purchasedAt, {
+												dateStyle: "medium",
+											}),
+										})}
+									</p>
+								) : null}
 							</div>
 						</div>
-						{activeSub ? (
+						{hasPlan ? (
 							<Badge variant="secondary" className="gap-1.5">
 								{t("organizations.settings.billingCurrentPlan")}
 							</Badge>
@@ -293,14 +331,18 @@ export function OrgSettingsBilling({
 						)}
 					</div>
 
-					{activeSub && (
+					{(activeSub || lifetimePlan?.receipts) && (
 						<div className="flex flex-col gap-3 rounded-xl bg-muted/60 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
 								<p className="font-medium text-sm">
-									{t("organizations.settings.billingManagePortal")}
+									{activeSub
+										? t("organizations.settings.billingManagePortal")
+										: tp("lifetime.receipts")}
 								</p>
 								<p className="text-muted-foreground text-xs">
-									{t("organizations.settings.billingPortalHint")}
+									{activeSub
+										? t("organizations.settings.billingPortalHint")
+										: tp("lifetime.receiptsHint")}
 								</p>
 							</div>
 							<Button
@@ -310,7 +352,9 @@ export function OrgSettingsBilling({
 								disabled={impersonating}
 							>
 								<ExternalLink className="size-4" />
-								{t("organizations.settings.billingManagePortal")}
+								{activeSub
+									? t("organizations.settings.billingManagePortal")
+									: tp("lifetime.receipts")}
 							</Button>
 						</div>
 					)}

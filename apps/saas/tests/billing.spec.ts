@@ -1,6 +1,11 @@
-import { orgsOff } from "./features";
+import { orgsOff, paymentsUnconfigured } from "./features";
 import { expect, test } from "./fixtures";
-import { planCtaLabel, upgradePlanId } from "./kit-catalog";
+import {
+	orgSettingsCopy,
+	paymentsCopy,
+	planCtaLabel,
+	upgradePlanId,
+} from "./kit-catalog";
 import { createThrowawayOrg } from "./throwaway-org";
 
 // The upgrade target and its CTA come from PLANS + translations, not the
@@ -122,6 +127,67 @@ test.describe("billing & checkout flows", () => {
 			planId: upgradePlanId,
 			organizationId: activeOrgId,
 		});
+	});
+
+	test("org billing shows a one-time (lifetime) purchase and hides its Buy", async ({
+		page,
+		browser,
+		baseURL,
+	}) => {
+		test.skip(...orgsOff());
+		test.skip(...paymentsUnconfigured());
+		// The kit PLANS ship no one_time plan, so the purchase is the API's
+		// answer for one (packages/api billing-lifetime.test.ts pins the
+		// mapping from a ONE_TIME purchase row) on an org without a plan.
+		// Runs where the payment provider is configured (not in kit CI).
+		const slug = `e2e-lifetime-${Date.now()}`;
+		const org = await createThrowawayOrg({
+			browser,
+			baseURL: baseURL ?? new URL(page.url()).origin,
+			admin: page.request,
+			name: "E2E Lifetime",
+			slug,
+			joinAsOwner: true,
+		});
+
+		try {
+			await page.route("**/api/rpc/payments/subscription/lifetime", (route) =>
+				route.fulfill({
+					contentType: "application/json",
+					body: JSON.stringify({
+						json: {
+							id: "purchase_e2e_lifetime",
+							planId: upgradePlanId,
+							purchasedAt: "2026-10-03T12:00:00.000Z",
+							receipts: true,
+						},
+					}),
+				}),
+			);
+
+			await page.goto(`/organizations/${slug}/settings/billing`);
+
+			const plan = paymentsCopy(`plans.${upgradePlanId}.name`);
+			await expect(
+				page.getByText(paymentsCopy("lifetime.label", { plan })),
+			).toBeVisible({ timeout: 10_000 });
+			await expect(page.getByText(/Purchased on .*2026/)).toBeVisible();
+			// Receipts through the provider portal, not "manage or cancel".
+			await expect(
+				page.getByRole("button", { name: paymentsCopy("lifetime.receipts") }),
+			).toBeVisible();
+			// Entitled already: no Buy for that plan, its card is the current one.
+			await expect(page.getByRole("button", { name: upgradeCta })).toHaveCount(
+				0,
+			);
+			await expect(
+				page
+					.getByRole("button", { name: orgSettingsCopy("billingCurrent") })
+					.first(),
+			).toBeDisabled();
+		} finally {
+			await org.cleanup();
+		}
 	});
 
 	test("org billing explains a misconfigured payment provider", async ({

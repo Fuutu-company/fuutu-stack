@@ -3,7 +3,11 @@ import {
 	getPurchasesByOrganizationId,
 	getUserById,
 } from "@fuutu/db";
-import { getPlanSubscription, resolvePaymentProvider } from "@fuutu/payments";
+import {
+	getLifetimePurchase,
+	getPlanSubscription,
+	resolvePaymentProvider,
+} from "@fuutu/payments";
 import { PERMISSIONS } from "@fuutu/rbac";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
@@ -88,15 +92,18 @@ export const createBillingPortal = authProcedure({
 			}
 			await assertPortalPayer(input.organizationId, customerId, context.user);
 		} else {
-			const subscription = await getPlanSubscription({
-				userId: context.user.id,
-			});
-			if (!subscription?.customerId) {
+			const owner = { userId: context.user.id };
+			// A lifetime buyer (one-time plan purchase) has no subscription but
+			// a provider customer — the portal holds their receipts.
+			const purchase =
+				(await getPlanSubscription(owner)) ??
+				(await getLifetimePurchase(owner));
+			if (!purchase?.customerId) {
 				throw new ORPCError("NOT_FOUND", {
 					message: "No active subscription found for this user",
 				});
 			}
-			customerId = subscription.customerId;
+			customerId = purchase.customerId;
 		}
 		try {
 			const provider = resolvePaymentProvider();

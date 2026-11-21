@@ -74,6 +74,8 @@ vi.mock("@fuutu/payments", async () => {
 			"organizationId" in owner
 				? db.getActiveSubscriptionForOrganization(owner.organizationId)
 				: db.getActiveSubscriptionForUser(owner.userId),
+		// The kit catalog has no one-time plan: no lifetime purchase.
+		getLifetimePurchase: vi.fn().mockResolvedValue(null),
 		// The kit default for a plan with a trial.
 		assertCheckoutAllowed: vi.fn().mockResolvedValue({ trial: true }),
 		CheckoutRejectedError: class CheckoutRejectedError extends Error {},

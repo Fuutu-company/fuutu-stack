@@ -25,6 +25,12 @@
 			"description": "You'll be billed for the number of seats you select. Seats auto-adjust when team members join or leave."
 		},
 		"planInterval": "{plan} · {interval}",
+		"lifetime": {
+			"label": "{plan} · Lifetime",
+			"purchased": "Purchased on {date}",
+			"receipts": "Receipts",
+			"receiptsHint": "Download the receipt for your purchase."
+		},
 		"errors": {
 			"providerNotFound": "The payment provider doesn't know this subscription or customer. It may belong to another account or to test mode.",
 			"providerStateConflict": "This subscription changed at the payment provider. Reload the page and try again.",

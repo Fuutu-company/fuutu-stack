@@ -19,7 +19,7 @@ import {
 	PricingCompact,
 } from "@fuutu/ui";
 import { CreditCard, ExternalLink } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { paymentsErrorKey } from "@/lib/api-error";
@@ -39,6 +39,14 @@ type ActiveSubscription = {
 	currentPeriodEnd?: Date | null;
 };
 
+/** An active one-time plan purchase (lifetime access). */
+type LifetimePurchase = {
+	planId: PlanId | null;
+	purchasedAt: Date;
+	/** The provider portal holds its receipts. */
+	receipts: boolean;
+};
+
 /** Provider-side price IDs per plan, keyed by billing interval. */
 type PlanPriceIds = { monthly?: string; yearly?: string };
 
@@ -49,7 +57,9 @@ export function UserSettingsBilling({
 }) {
 	const t = useTranslations();
 	const tp = useTranslations("payments");
+	const format = useFormatter();
 	const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
+	const [lifetime, setLifetime] = useState<LifetimePurchase | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -59,7 +69,19 @@ export function UserSettingsBilling({
 	const load = useCallback(async () => {
 		setLoading(true);
 		try {
-			const sub = await orpc.payments.subscription.active.call({});
+			const [sub, oneTime] = await Promise.all([
+				orpc.payments.subscription.active.call({}),
+				orpc.payments.subscription.lifetime.call({}),
+			]);
+			setLifetime(
+				oneTime
+					? {
+							planId: oneTime.planId,
+							purchasedAt: new Date(oneTime.purchasedAt),
+							receipts: oneTime.receipts,
+						}
+					: null,
+			);
 			if (sub) {
 				setActiveSub({
 					id: sub.id,
@@ -104,8 +126,15 @@ export function UserSettingsBilling({
 				}
 			}
 		}
+		// Lifetime access (one-time plan purchase) when no subscription.
+		if (lifetime?.planId) {
+			return { activePlanId: lifetime.planId, activeInterval: "month" };
+		}
 		return { activePlanId: "free", activeInterval: "month" };
 	})();
+	// Only a lifetime purchase stands for the plan when no subscription does.
+	const lifetimePlan = !activeSub && lifetime?.planId ? lifetime : null;
+	const hasPlan = Boolean(activeSub || lifetimePlan);
 
 	async function checkout(planId: PlanId, interval?: BillingInterval) {
 		setCheckoutLoading(planId);
@@ -179,7 +208,7 @@ export function UserSettingsBilling({
 		disabled:
 			tier.disabled ||
 			(activePlanId === tier.id && tier.id !== "free") ||
-			(tier.id === "free" && (!activeSub || activePlanId === "free")),
+			(tier.id === "free" && (!hasPlan || activePlanId === "free")),
 		onCtaClick: activePlanId === tier.id ? undefined : tier.onCtaClick,
 	}));
 
@@ -203,11 +232,24 @@ export function UserSettingsBilling({
 														: "choosePlan.monthly",
 												),
 											})
-										: t("organizations.settings.billingNoPlan")}
+										: lifetimePlan
+											? tp("lifetime.label", {
+													plan: tp(`plans.${activePlanId}.name`),
+												})
+											: t("organizations.settings.billingNoPlan")}
 								</p>
+								{lifetimePlan ? (
+									<p className="text-muted-foreground text-xs">
+										{tp("lifetime.purchased", {
+											date: format.dateTime(lifetimePlan.purchasedAt, {
+												dateStyle: "medium",
+											}),
+										})}
+									</p>
+								) : null}
 							</div>
 						</div>
-						{activeSub ? (
+						{hasPlan ? (
 							<Badge variant="secondary" className="gap-1.5">
 								{t("organizations.settings.billingCurrentPlan")}
 							</Badge>
@@ -216,14 +258,18 @@ export function UserSettingsBilling({
 						)}
 					</div>
 
-					{activeSub && (
+					{(activeSub || lifetimePlan?.receipts) && (
 						<div className="flex flex-col gap-3 rounded-xl bg-muted/60 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
 								<p className="font-medium text-sm">
-									{t("organizations.settings.billingManagePortal")}
+									{activeSub
+										? t("organizations.settings.billingManagePortal")
+										: tp("lifetime.receipts")}
 								</p>
 								<p className="text-muted-foreground text-xs">
-									{t("organizations.settings.billingPortalHint")}
+									{activeSub
+										? t("organizations.settings.billingPortalHint")
+										: tp("lifetime.receiptsHint")}
 								</p>
 							</div>
 							<Button
@@ -233,7 +279,9 @@ export function UserSettingsBilling({
 								disabled={impersonating}
 							>
 								<ExternalLink className="size-4" />
-								{t("organizations.settings.billingManagePortal")}
+								{activeSub
+									? t("organizations.settings.billingManagePortal")
+									: tp("lifetime.receipts")}
 							</Button>
 						</div>
 					)}
