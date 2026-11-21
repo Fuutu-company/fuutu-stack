@@ -82,6 +82,37 @@ test.describe("docs layout", () => {
 		await page.goto("/docs");
 		await openNestedPageFromSidebar(page, isMobile);
 	});
+
+	test("the header button and Ctrl/Cmd+B collapse the desktop sidebar", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "phones open the sidebar as a sheet");
+		await page.goto("/docs");
+		const sidebar = page.locator("#nd-sidebar");
+		const toggle = page.locator('header button[aria-controls="nd-sidebar"]');
+		await expect(sidebar).toHaveAttribute("data-collapsed", "false");
+
+		await toggle.click();
+		await expect(sidebar).toHaveAttribute("data-collapsed", "true");
+		await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+		await page.keyboard.press("ControlOrMeta+b");
+		await expect(sidebar).toHaveAttribute("data-collapsed", "false");
+	});
+});
+
+test.describe("docs home", () => {
+	test("lists the sidebar's sections and the first pages to read", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		for (const block of ["sections", "start"]) {
+			await expect(
+				page.locator(`[data-docs-home="${block}"] a[href*="/docs/"]`).first(),
+			).toBeVisible();
+		}
+	});
 });
 
 test.describe("not found", () => {

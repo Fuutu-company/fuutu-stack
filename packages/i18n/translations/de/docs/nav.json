@@ -2,5 +2,6 @@
 	"docs": "Dokumentation",
 	"home": "Startseite",
 	"switchLanguage": "Sprache wechseln",
-	"getStarted": "Loslegen"
+	"getStarted": "Loslegen",
+	"toggleTheme": "Farbschema wechseln"
 }
