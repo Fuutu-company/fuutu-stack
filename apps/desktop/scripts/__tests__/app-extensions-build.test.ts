@@ -210,6 +210,17 @@ describe("cargo-deny exceptions (src-tauri/deny.app.toml)", () => {
 		expect(merged).toContain('[[licenses.exceptions]]\ncrate = "x"');
 	});
 
+	it("reads a CRLF file (Windows checkout) like an LF one", async () => {
+		const { denyConfig } = await import("../cargo-deny.mjs");
+		const crlf =
+			'# App-owned header\r\n# more comment\r\n\r\n[[bans.skip]]\r\ncrate = "y"\r\n';
+		expect(() => denyConfig("", crlf)).not.toThrow();
+		expect(() => denyConfig("", "# only comments\r\n")).not.toThrow();
+		expect(() => denyConfig("", 'allow = ["x"]\r\n')).toThrow(
+			/deny\.app\.toml/,
+		);
+	});
+
 	it("refuses anything but exception tables (the policy stays the kit's)", async () => {
 		const { denyConfig } = await import("../cargo-deny.mjs");
 		for (const extra of [

@@ -27,7 +27,8 @@ const APP_TABLES = new Set([
 /** The kit policy with the app's exception tables appended; throws on anything else. */
 export function denyConfig(kit, app) {
 	let inTable = false;
-	app.split("\n").forEach((raw, index) => {
+	// CRLF too: Windows checkouts (core.autocrlf) end lines with \r\n.
+	app.split(/\r?\n/).forEach((raw, index) => {
 		const line = raw.replace(/#.*$/, "").trim();
 		if (!line) return;
 		if (line.startsWith("[")) {
