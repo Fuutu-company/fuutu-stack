@@ -15,6 +15,13 @@
  *
  * Distributed to: apps/{saas,marketing,docs,mail-preview}/public/ (logo.svg also to apps/desktop/public/)
  *
+ * Desktop app (when apps/desktop exists):
+ *   - app-icon.png  (1024×1024: logo.svg on the sign-in backdrop — light area
+ *                    colors from packages/config/brand.css, so a dark logo stays
+ *                    visible on dark docks, taskbars and menu bars)
+ *   → every platform size in apps/desktop/src-tauri/icons via `tauri icon`
+ *     (own artwork instead: --skip=app-icon.png, then `tauri icon <png>`)
+ *
  * Usage:
  *   pnpm assets:sync                              # generate + sync everything
  *   pnpm assets:sync --skip=favicon.svg           # leave favicon.svg untouched (generate + sync the rest)
@@ -24,9 +31,22 @@
  * packages/config/assets/). Skipped files are neither generated nor distributed.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+	brandIconColors,
+	ICON_SIZE,
+	iconBackdropSvg,
+	LOGO_SIZE,
+} from "./lib/app-icon.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "../..");
@@ -183,6 +203,55 @@ function sync() {
 }
 
 // ---------------------------------------------------------------------------
+// Step 3 — desktop app icon (logo on the brand backdrop)
+// ---------------------------------------------------------------------------
+
+const APP_ICON = "app-icon.png";
+
+async function desktopIcon() {
+	if (LOGO_ONLY_APPS.length === 0) return;
+	console.log("\n\u{1F5A5}\uFE0F  Desktop app icon\n");
+	if (isSkipped(APP_ICON)) {
+		log("SKIP", `${APP_ICON} (--skip)`);
+		return;
+	}
+	const logoSrc = join(assets, SOURCE_SVG);
+	if (!existsSync(logoSrc)) {
+		log("WARN", `${SOURCE_SVG} not found — skipping the app icon`);
+		return;
+	}
+	const sharp = (await import("sharp")).default;
+	const colors = brandIconColors(
+		readFileSync(join(root, "packages/config/brand.css"), "utf8"),
+	);
+	const logo = await sharp(readFileSync(logoSrc), { density: 384 })
+		.resize(LOGO_SIZE, LOGO_SIZE, {
+			fit: "contain",
+			background: { r: 0, g: 0, b: 0, alpha: 0 },
+		})
+		.png()
+		.toBuffer();
+	const offset = Math.round((ICON_SIZE - LOGO_SIZE) / 2);
+	const dest = join(assets, APP_ICON);
+	await sharp(Buffer.from(iconBackdropSvg(colors)))
+		.composite([{ input: logo, top: offset, left: offset }])
+		.png()
+		.toFile(dest);
+	log("GEN", `${APP_ICON}  (${ICON_SIZE}×${ICON_SIZE})`);
+	// Desktop only: drop the mobile sets `tauri icon` always writes.
+	const icons = join(root, "apps/desktop/src-tauri/icons");
+	execFileSync(
+		"pnpm",
+		["-F", "@fuutu/desktop-app", "exec", "tauri", "icon", dest, "-o", icons],
+		{ cwd: root, stdio: "ignore" },
+	);
+	for (const mobile of ["android", "ios"]) {
+		rmSync(join(icons, mobile), { recursive: true, force: true });
+	}
+	log("ICONS", "desktop/src-tauri/icons (tauri icon)");
+}
+
+// ---------------------------------------------------------------------------
 // Run
 // ---------------------------------------------------------------------------
 
@@ -195,5 +264,6 @@ console.log(
 
 await generate();
 sync();
+await desktopIcon();
 
 console.log("\nDone.\n");

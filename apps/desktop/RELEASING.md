@@ -275,7 +275,10 @@ own code in app-ext calls such APIs, declare the feature on app-ext's
 - [ ] Identity: `config.app` name / `desktopConfig.identity` give your
       own product name, bundle id and deep-link scheme — never "Fuutu"
       (LICENSE.md §8). The bundle id can never change after the first release.
-- [ ] Icons replaced: `pnpm -F @fuutu/desktop-app exec tauri icon <1024px.png>`.
+- [ ] Icons made from your logo: `pnpm assets:sync` renders `logo.svg` on
+      the sign-in backdrop (light area colors from `brand.css`) into
+      `src-tauri/icons`. Own artwork: `pnpm assets:sync --skip=app-icon.png`,
+      then `pnpm -F @fuutu/desktop-app exec tauri icon <1024px.png>`.
 - [ ] Updater key pair created, private key backed up outside GitHub (§1).
 - [ ] macOS Developer ID + notarisation secrets set (§2); a release build
       opens on a second Mac without a Gatekeeper warning.
