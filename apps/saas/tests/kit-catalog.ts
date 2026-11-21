@@ -113,3 +113,14 @@ export function orgSettingsCopy(
 		values,
 	);
 }
+
+/** English copy under `payments.*`, formatted with `values`. */
+export function paymentsCopy(
+	key: string,
+	values: Record<string, string | number> = {},
+): string {
+	return formatMessage(
+		messageAt(enMessages("common/payments.json"), `payments.${key}`),
+		values,
+	);
+}

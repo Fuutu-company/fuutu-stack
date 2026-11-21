@@ -25,6 +25,12 @@
 			"description": "Du wirst für die Anzahl der ausgewählten Sitze abgerechnet. Sitze passen sich automatisch an, wenn Teammitglieder beitreten oder verlassen."
 		},
 		"planInterval": "{plan} · {interval}",
+		"lifetime": {
+			"label": "{plan} · Lebenslang",
+			"purchased": "Gekauft am {date}",
+			"receipts": "Belege",
+			"receiptsHint": "Lade den Beleg für deinen Kauf herunter."
+		},
 		"errors": {
 			"providerNotFound": "Der Zahlungsanbieter kennt dieses Abonnement oder diesen Kunden nicht. Es gehört eventuell zu einem anderen Konto oder zum Testmodus.",
 			"providerStateConflict": "Dieses Abonnement hat sich beim Zahlungsanbieter geändert. Lade die Seite neu und versuche es noch einmal.",

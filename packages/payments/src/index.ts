@@ -118,7 +118,11 @@ export {
 	type SeatReconcileResult,
 	updateSeatsInOrganizationSubscription,
 } from "./seats";
-export { getActivePlanId, processWebhookEvents } from "./sync";
+export {
+	getActivePlanId,
+	getLifetimePurchase,
+	processWebhookEvents,
+} from "./sync";
 export type {
 	CancelMode,
 	CancelSubscriptionOptions,

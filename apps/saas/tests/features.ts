@@ -63,3 +63,23 @@ export function routeOff(route: string): [boolean, string] {
 	}
 	return [false, ""];
 }
+
+/** Provider credential the billing pages need before they load purchases. */
+const PAYMENT_CREDENTIAL: Record<string, string | undefined> = {
+	creem: "CREEM_API_KEY",
+	stripe: "STRIPE_SECRET_KEY",
+	polar: "POLAR_ACCESS_TOKEN",
+};
+
+/**
+ * `test.skip` arguments for a test that needs the billing pages to load
+ * subscriptions and purchases: they pass `paymentsEnabled=false` without
+ * the active provider's credential, which kit CI does not set.
+ */
+export function paymentsUnconfigured(): [boolean, string] {
+	const key = PAYMENT_CREDENTIAL[paymentsConfig.provider];
+	return [
+		key ? !process.env[key] : paymentsConfig.provider === "noop",
+		`no ${key ?? paymentsConfig.provider} credential for the payment provider`,
+	];
+}
