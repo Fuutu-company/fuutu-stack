@@ -498,6 +498,10 @@ describe("layout slot", () => {
 	});
 });
 
+// `/download` is a kit page only with the desktop module on.
+const { config: kitConfig } = await import("../../../config/index");
+const desktop = () => kitConfig.features.desktop;
+
 describe("sitemap", () => {
 	const NOW = new Date("2026-11-14T00:00:00.000Z");
 	const both = (path: string) => ({
@@ -522,6 +526,7 @@ describe("sitemap", () => {
 			...page("/blog", 0.7),
 			...page("/changelog", 0.7),
 			...page("/contact", 0.7),
+			...(desktop() ? page("/download", 0.7) : []),
 			...page("/legal/privacy", 0.7),
 			...["en", "de"].map((locale) => ({
 				url: `https://site.test${locale === "en" ? "" : "/de"}/blog/hello`,
@@ -542,6 +547,7 @@ describe("sitemap", () => {
 			"https://site.test/blog",
 			"https://site.test/changelog",
 			"https://site.test/contact",
+			...(desktop() ? ["https://site.test/download"] : []),
 			"https://site.test/legal/privacy",
 			"https://site.test/blog/hello",
 		]);
@@ -623,6 +629,7 @@ describe("sitemap", () => {
 			...page("/pricing", 0.7),
 			...page("/blog", 0.7),
 			...page("/contact", 0.7),
+			...(desktop() ? page("/download", 0.7) : []),
 			...page("/support", 0.7),
 		]);
 		expect(exclude).toHaveBeenCalledWith({
@@ -717,6 +724,7 @@ describe("sitemap", () => {
 			"/de/pricing",
 			"/changelog",
 			"/de/changelog",
+			...(desktop() ? ["/download", "/de/download"] : []),
 			"/legal/privacy",
 			"/de/legal/privacy",
 		]);
@@ -730,6 +738,22 @@ describe("sitemap", () => {
 		const paths = sitemap().map((e) => new URL(e.url).pathname);
 		expect(paths).toContain("/about");
 		expect(paths.some((p) => p.endsWith("/blog"))).toBe(false);
+	});
+
+	it("lists /download only with the desktop module on", () => {
+		const config = kitConfig;
+		const was = config.features.desktop;
+		const paths = () => sitemap().map((e) => new URL(e.url).pathname);
+		try {
+			(config.features as { desktop: boolean }).desktop = true;
+			expect(paths()).toEqual(
+				expect.arrayContaining(["/download", "/de/download"]),
+			);
+			(config.features as { desktop: boolean }).desktop = false;
+			expect(paths().some((p) => p.endsWith("/download"))).toBe(false);
+		} finally {
+			(config.features as { desktop: boolean }).desktop = was;
+		}
 	});
 
 	it("omits /pricing while payments are off", async () => {

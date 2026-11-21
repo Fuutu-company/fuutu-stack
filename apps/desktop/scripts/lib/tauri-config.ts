@@ -5,6 +5,7 @@ import {
 	desktopIdentity,
 	kitNameViolations,
 } from "@fuutu/desktop/identity";
+import { APP_CAPABILITIES, type AppCapability } from "./app-capabilities";
 
 /** Mode the generated Tauri config is for. */
 export type TauriConfigMode = "dev" | "build";
@@ -25,6 +26,13 @@ export type TauriConfigInput = DesktopBuildInputs & {
 	windowsCertificateThumbprint?: string;
 	/** Identity to build (default: `desktopIdentity` from `config.app`). */
 	identity?: DesktopIdentity;
+	/** Your capabilities (default: `APP_CAPABILITIES`, app-capabilities.ts). */
+	appCapabilities?: readonly AppCapability[];
+	/**
+	 * Bundled sidecar programs → `bundle.externalBin`, release builds only
+	 * (`APP_EXTERNAL_BIN`, app-sidecars.mjs — run.ts passes it).
+	 */
+	externalBin?: readonly string[];
 };
 
 /** Capability that lets the debug-only automation bridge talk to the webviews. */
@@ -164,7 +172,11 @@ export function buildTauriConfig(input: TauriConfigInput) {
 			security: {
 				// The dev server needs HMR websockets + eval; release is locked down.
 				csp: dev ? null : releaseCsp(),
-				capabilities: dev ? ["default", DEVTOOLS_CAPABILITY] : ["default"],
+				capabilities: [
+					"default",
+					...(input.appCapabilities ?? APP_CAPABILITIES),
+					...(dev ? [DEVTOOLS_CAPABILITY] : []),
+				],
 			},
 		},
 		...(!dev && bundleConfig(input)),
@@ -179,6 +191,7 @@ export function buildTauriConfig(input: TauriConfigInput) {
 
 type BundleConfig = {
 	createUpdaterArtifacts?: boolean;
+	externalBin?: string[];
 	windows?: {
 		certificateThumbprint: string;
 		digestAlgorithm: string;
@@ -189,6 +202,7 @@ type BundleConfig = {
 function bundleConfig(input: TauriConfigInput): { bundle?: BundleConfig } {
 	const bundle: BundleConfig = {
 		...(input.signUpdates && { createUpdaterArtifacts: true }),
+		...(input.externalBin?.length && { externalBin: [...input.externalBin] }),
 		...(input.windowsCertificateThumbprint && {
 			windows: {
 				certificateThumbprint: input.windowsCertificateThumbprint,

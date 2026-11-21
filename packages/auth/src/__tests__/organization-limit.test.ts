@@ -13,6 +13,18 @@ const state = vi.hoisted(() => ({
 	override: null as { organizationLimit: number | undefined } | null,
 }));
 
+// The organization plugin's wiring is under test: organizations on,
+// whatever the app's organizationsMode (a B2C app sets "off").
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			features: { ...actual.config.features, organizationsMode: "on" },
+		},
+	};
+});
 vi.mock("../config", async (importOriginal) => {
 	const { authConfig } = await importOriginal<typeof import("../config")>();
 	return {

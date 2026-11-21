@@ -15,6 +15,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../../..");
 
+/** `/download` is a kit link only with the desktop module on (`config.features.desktop`). */
+const desktopDownload = async () =>
+	(await import("../../../config/index")).config.features.desktop
+		? ["/download"]
+		: [];
+
 const app = vi.hoisted(() => ({
 	appNavItems: [] as unknown[],
 	appFooterColumns: [] as unknown[],
@@ -511,6 +517,7 @@ describe("kit routes (appKitRoutes)", () => {
 	});
 
 	it("lists every kit link while nothing is switched off", async () => {
+		const download = await desktopDownload();
 		expect(hrefs(await loadLinks())).toEqual({
 			nav: ["home", "features", "pricing"],
 			dropdowns: [["resources", ["blog", "changelog", "docs"]]],
@@ -518,6 +525,7 @@ describe("kit routes (appKitRoutes)", () => {
 				"/#features",
 				"/pricing",
 				"/changelog",
+				...download,
 				"https://docs.example.test",
 				"/blog",
 				"/contact",
@@ -530,6 +538,7 @@ describe("kit routes (appKitRoutes)", () => {
 
 	it("drops navbar and footer links to switched-off pages", async () => {
 		app.appKitRoutes = { pricing: false, blog: false, contact: false };
+		const download = await desktopDownload();
 		const links = await loadLinks();
 		expect(hrefs(links)).toEqual({
 			nav: ["home", "features"],
@@ -537,6 +546,7 @@ describe("kit routes (appKitRoutes)", () => {
 			footer: [
 				"/#features",
 				"/changelog",
+				...download,
 				"https://docs.example.test",
 				"/legal/privacy",
 				"/legal/terms",

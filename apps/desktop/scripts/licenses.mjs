@@ -12,6 +12,9 @@
  * build tools such as Next's sharp never reach the app). Rust: the normal
  * (non-dev, non-build) dependency graph of the release build with default
  * features (`cargo metadata`); cargo-deny gates the same graph in CI.
+ * Sidecars: the programs your app bundles (`shippedSidecars()` in the
+ * app-owned scripts/lib/app-sidecars.mjs) — notices and the same allowlist
+ * as npm.
  */
 import { spawnSync } from "node:child_process";
 import {
@@ -24,6 +27,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { shippedSidecars } from "./lib/app-sidecars.mjs";
 
 const appDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = join(appDir, "../..");
@@ -208,19 +212,52 @@ export function shippedCrates() {
 		}));
 }
 
+/**
+ * Notice entries for bundled sidecar programs. Every entry needs `name`,
+ * `version`, `license` and `text` — a sidecar without its licence text
+ * cannot ship.
+ */
+export function sidecarPackages(entries) {
+	return entries.map((entry, index) => {
+		for (const field of ["name", "version", "license", "text"]) {
+			if (typeof entry?.[field] !== "string" || !entry[field].trim()) {
+				throw new Error(
+					`app-sidecars.mjs: shippedSidecars()[${index}] (${entry?.name ?? "unnamed"}) needs a "${field}"`,
+				);
+			}
+		}
+		return {
+			ecosystem: "sidecar",
+			name: entry.name,
+			version: entry.version,
+			license: entry.license,
+			repository: entry.repository ?? null,
+			text: entry.text,
+		};
+	});
+}
+
+/** Packages whose licence is outside the allowlist. */
+export function licenseViolations(packages) {
+	return packages.filter((p) => !isAllowedExpression(p.license));
+}
+
 function main() {
 	const [command] = process.argv.slice(2);
 	const npm = shippedNpmPackages();
-	const all = [...npm, ...shippedCrates()].sort((a, b) =>
+	const sidecars = sidecarPackages(shippedSidecars());
+	const all = [...npm, ...sidecars, ...shippedCrates()].sort((a, b) =>
 		`${a.ecosystem}:${a.name}`.localeCompare(`${b.ecosystem}:${b.name}`),
 	);
 	if (command === "check") {
-		// cargo-deny gates Rust (deny.toml) — this gate covers npm.
-		const bad = npm.filter((p) => !isAllowedExpression(p.license));
+		// cargo-deny gates Rust (deny.toml) — this gate covers npm + sidecars.
+		const bad = licenseViolations([...npm, ...sidecars]);
 		for (const p of bad)
-			console.error(`✗ ${p.name}@${p.version}: ${p.license ?? "no licence"}`);
+			console.error(
+				`✗ ${p.ecosystem} ${p.name}@${p.version}: ${p.license ?? "no licence"}`,
+			);
 		console.log(
-			`${npm.length} shipped npm packages checked, ${bad.length} not allowed`,
+			`${npm.length} shipped npm packages and ${sidecars.length} sidecars checked, ${bad.length} not allowed`,
 		);
 		process.exit(bad.length ? 1 : 0);
 	}

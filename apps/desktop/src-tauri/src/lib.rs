@@ -4,6 +4,7 @@
 #[cfg(all(not(debug_assertions), feature = "devtools"))]
 compile_error!("the `devtools` feature is for debug builds only (pnpm dev:desktop)");
 
+mod app_plugins;
 mod auth;
 pub mod config;
 mod shell;
@@ -68,6 +69,9 @@ pub fn run() {
     if let Some(pubkey) = config.updates.pubkey.clone() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(pubkey).build());
     }
+
+    // Your plugins (app-owned src/app_plugins.rs), with the runtime config.
+    builder = app_plugins::register(builder, &config);
 
     #[cfg(all(debug_assertions, feature = "devtools"))]
     if let Some(bridge) = devtools::plugin() {

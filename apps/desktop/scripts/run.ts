@@ -35,6 +35,7 @@ import {
 	readProject,
 	slotEnv,
 } from "../../../tooling/ports/index.mjs";
+import { APP_EXTERNAL_BIN } from "./lib/app-sidecars.mjs";
 import {
 	buildTauriConfig,
 	type DesktopBuildInputs,
@@ -110,6 +111,7 @@ function writeTauriConfig(
 	inputs: DesktopBuildInputs,
 	extra: {
 		devUrl?: string;
+		externalBin?: readonly string[];
 		signUpdates?: boolean;
 		windowsCertificateThumbprint?: string;
 	} = {},
@@ -179,6 +181,8 @@ async function build(
 		);
 	}
 	const config = writeTauriConfig("build", inputs, {
+		// Your bundled programs (app-owned scripts/lib/app-sidecars.mjs).
+		externalBin: APP_EXTERNAL_BIN,
 		signUpdates,
 		windowsCertificateThumbprint:
 			env.WINDOWS_CERTIFICATE_THUMBPRINT || undefined,

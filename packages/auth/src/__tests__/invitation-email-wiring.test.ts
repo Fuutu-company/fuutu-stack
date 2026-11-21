@@ -9,6 +9,18 @@ vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
  * takes the invitation lifetime from authConfig.
  */
 
+// The organization plugin's wiring is under test: organizations on,
+// whatever the app's organizationsMode (a B2C app sets "off").
+vi.mock("@fuutu/config", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@fuutu/config")>();
+	return {
+		...actual,
+		config: {
+			...actual.config,
+			features: { ...actual.config.features, organizationsMode: "on" },
+		},
+	};
+});
 vi.mock("@fuutu/env/saas", () => ({
 	env: {
 		BETTER_AUTH_URL: "http://localhost:3000",

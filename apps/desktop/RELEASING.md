@@ -211,6 +211,22 @@ pnpm -F @fuutu/desktop-app exec tsx scripts/publish.ts --dir ./release --channel
 
 `--dry-run` prints the plan and the manifest without uploading.
 
+## Extend without forking
+
+Add your own permissions, bundled programs and Rust plugins through the
+app-owned files below, never by editing kit files. A kit update leaves
+their content alone. Each one ships empty.
+
+| File | What it adds |
+|---|---|
+| `scripts/lib/app-capabilities.ts` | `APP_CAPABILITIES`: Tauri capabilities (inline, or the identifier of a file in `src-tauri/capabilities/`), added after the kit's `default` in dev and release builds |
+| `scripts/lib/app-sidecars.mjs` | `APP_EXTERNAL_BIN`: sidecar programs for `bundle.externalBin` (release builds only)<br>`shippedSidecars()`: their `name`, `version`, `license` and `text` for About → Licences and the licence gate (same allowlist as npm; a missing field fails the build) |
+| `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …) |
+
+Register every plugin on the builder in `register`. Never register a
+plugin from inside another plugin's `setup`, because that deadlocks the
+app at startup. Put your own crates in `src-tauri/crates/`.
+
 ## Before the first release
 
 - [ ] `config.features.desktop: true`, `desktopConfig` reviewed
