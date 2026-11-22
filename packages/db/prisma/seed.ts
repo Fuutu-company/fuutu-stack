@@ -43,7 +43,7 @@ import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
 import { appSeed, appSeedConfig } from "./app-seed";
 import { db } from "./client";
-import { seedInvoiceCurrency } from "./seed-context";
+import { seedInvoiceCurrency, seedsDemoPurchase } from "./seed-context";
 import { assertLocalHost } from "./seed-guards";
 
 // Dashboard demo data. Marked rows (`metadata.seed`) are inserted only while
@@ -396,26 +396,34 @@ async function main() {
 		config.features.organizationsMode === "off"
 			? { userId: admin.id, organizationId: null }
 			: { userId: null, organizationId: acme.id };
-	await db.purchase.upsert({
-		where: {
-			provider_subscriptionId: {
-				provider: "creem",
-				subscriptionId: "seed_sub_pro_org",
+	// Opt-out (`appSeedConfig.demoPurchase: false`): apps whose PLANS have no
+	// "pro" plan; a re-seed removes an earlier demo purchase.
+	if (!seedsDemoPurchase(appSeedConfig)) {
+		await db.purchase.deleteMany({
+			where: { provider: "creem", subscriptionId: "seed_sub_pro_org" },
+		});
+	} else {
+		await db.purchase.upsert({
+			where: {
+				provider_subscriptionId: {
+					provider: "creem",
+					subscriptionId: "seed_sub_pro_org",
+				},
 			},
-		},
-		update: { priceId: proPriceId, productId: proPriceId, ...purchaseOwner },
-		create: {
-			type: "SUBSCRIPTION",
-			status: "ACTIVE",
-			provider: "creem",
-			priceId: proPriceId,
-			productId: proPriceId,
-			subscriptionId: "seed_sub_pro_org",
-			customerId: "seed_customer_acme",
-			quantity: 2,
-			...purchaseOwner,
-		},
-	});
+			update: { priceId: proPriceId, productId: proPriceId, ...purchaseOwner },
+			create: {
+				type: "SUBSCRIPTION",
+				status: "ACTIVE",
+				provider: "creem",
+				priceId: proPriceId,
+				productId: proPriceId,
+				subscriptionId: "seed_sub_pro_org",
+				customerId: "seed_customer_acme",
+				quantity: 2,
+				...purchaseOwner,
+			},
+		});
+	}
 
 	// Demo API keys — one org-scoped, one user-scoped, one expired.
 	const existingKeys = await db.apiKey.count({
