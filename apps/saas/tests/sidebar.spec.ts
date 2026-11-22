@@ -44,6 +44,18 @@ test.describe("sidebar navigation", () => {
 		expect(crm.status()).toBe(404);
 	});
 
+	test("without organizations every /organizations… page answers 404", async ({
+		page,
+	}) => {
+		// No org pages, and none that calls the unloaded organization plugin
+		// (organizations.list answered 500 before).
+		test.skip(!orgsOff()[0], "organizations are on");
+		for (const path of ["/organizations", "/organizations/acme/dashboard"]) {
+			const res = await page.goto(path);
+			expect(res?.status(), path).toBe(404);
+		}
+	});
+
 	test("sidebar trigger toggles sidebar", async ({ page, isMobile }) => {
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/dashboard");

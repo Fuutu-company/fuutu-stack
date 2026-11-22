@@ -37,6 +37,12 @@ const FEATURE_ROUTES = {
 		routes: ["/settings/billing"],
 		personalOnly: true,
 	},
+	// `organizationsMode: "off"`: every `/organizations…` route (checked
+	// before the org prefix is stripped, see `disabledFeatureForPath`).
+	organizations: {
+		enabled: () => config.features.organizationsMode !== "off",
+		routes: ["/organizations"],
+	},
 } satisfies Record<
 	string,
 	{ enabled: () => boolean; routes: string[]; personalOnly?: boolean }
@@ -54,6 +60,12 @@ function within(pathname: string, prefix: string): boolean {
 export function disabledFeatureForPath(
 	pathname: string,
 ): GatedRouteFeature | null {
+	if (
+		!FEATURE_ROUTES.organizations.enabled() &&
+		within(pathname, "/organizations")
+	) {
+		return "organizations";
+	}
 	const orgPath = pathname.replace(ORG_PREFIX, "");
 	const inOrg = orgPath !== pathname;
 	for (const [feature, entry] of Object.entries(FEATURE_ROUTES) as [
