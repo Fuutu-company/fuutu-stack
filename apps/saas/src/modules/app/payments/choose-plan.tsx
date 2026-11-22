@@ -26,6 +26,21 @@ import { orpc } from "@/utils/orpc";
 
 const log = createLogger({ scope: "choose-plan" });
 
+/**
+ * The organization a checkout belongs to. Personal billing (always the
+ * case with `organizationsMode: "off"`) never asks: without the
+ * organization client plugin Better Auth's proxy would turn
+ * `useActiveOrganization()` into a request to a missing route (404).
+ * Fixed per build, so the hook order never changes.
+ */
+const useCheckoutOrganization: () => {
+	data: { id: string } | null | undefined;
+	isPending: boolean;
+} =
+	paymentsConfig.billingAttachedTo === "organization"
+		? () => authClient.useActiveOrganization()
+		: () => ({ data: null, isPending: false });
+
 export function ChoosePlan() {
 	const t = useTranslations("payments");
 	const locale = useLocale();
@@ -35,7 +50,7 @@ export function ChoosePlan() {
 	// Checkout refuses impersonation sessions (denyImpersonation).
 	const impersonating = useImpersonating();
 	const { data: activeOrg, isPending: activeOrgPending } =
-		authClient.useActiveOrganization();
+		useCheckoutOrganization();
 
 	// Seat-based billing only makes sense on organization level.
 	// When billing is attached to "user", seat-based plans are billed as
