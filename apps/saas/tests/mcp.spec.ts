@@ -1,6 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
+import { orgsOff } from "./features";
 import { expect, test } from "./fixtures";
+
+/** Without organizations (`organizationsMode` "off") credentials are personal. */
+const [personal] = orgsOff();
 
 const MCP_HEADERS = {
 	"content-type": "application/json",
@@ -68,6 +72,9 @@ test.describe("MCP endpoint — anonymous", () => {
 
 test.describe("MCP endpoint — org API key with mcp scope", () => {
 	test("unlocks authenticated tools for the key owner", async ({ request }) => {
+		// An org key; without organizations the seeded admin is on Free with
+		// its personal key cap reached (the OAuth flow below covers that mode).
+		test.skip(...orgsOff());
 		const org = await request.get("/api/organizations/acme");
 		expect(org.ok()).toBe(true);
 		const { id: organizationId } = (await org.json()) as { id: string };
@@ -242,15 +249,18 @@ test.describe("MCP OAuth — authorization code flow", () => {
 			resource: prm.resource,
 		}).toString();
 
-		// Consent is bound to the session's active organization → org claim.
-		const active = await page.request.post(
-			"/api/auth/organization/set-active",
-			{
-				headers: { origin: baseURL ?? "" },
-				data: { organizationSlug: "acme" },
-			},
-		);
-		expect(active.ok()).toBe(true);
+		// Consent is bound to the session's active organization → org claim
+		// (none without organizations).
+		if (!personal) {
+			const active = await page.request.post(
+				"/api/auth/organization/set-active",
+				{
+					headers: { origin: baseURL ?? "" },
+					data: { organizationSlug: "acme" },
+				},
+			);
+			expect(active.ok()).toBe(true);
+		}
 
 		// The loopback callback has no server — answer it in the browser.
 		await page.route(`${REDIRECT_URI}**`, (route) =>
@@ -272,7 +282,9 @@ test.describe("MCP OAuth — authorization code flow", () => {
 		);
 		await expect(
 			page.getByText(
-				/E2E MCP Client will be able to use .+ tools as you in Acme\./,
+				personal
+					? /E2E MCP Client will be able to use .+ tools as you/
+					: /E2E MCP Client will be able to use .+ tools as you in Acme\./,
 			),
 		).toBeVisible();
 		await page.getByRole("button", { name: "Allow" }).click();
@@ -307,7 +319,7 @@ test.describe("MCP OAuth — authorization code flow", () => {
 		expect(me.status).toBe(200);
 		expect(me.body.result?.structuredContent).toMatchObject({
 			user: { email: "admin@fuutu.local" },
-			organization: { slug: "acme" },
+			...(personal ? {} : { organization: { slug: "acme" } }),
 			scopes: ["openid", "profile", "email"],
 		});
 		await request.dispose();
@@ -428,14 +440,16 @@ test.describe("MCP OAuth — connected apps", () => {
 			code_challenge_method: "S256",
 		}).toString();
 
-		const active = await page.request.post(
-			"/api/auth/organization/set-active",
-			{
-				headers: { origin: baseURL ?? "" },
-				data: { organizationSlug: "acme" },
-			},
-		);
-		expect(active.ok()).toBe(true);
+		if (!personal) {
+			const active = await page.request.post(
+				"/api/auth/organization/set-active",
+				{
+					headers: { origin: baseURL ?? "" },
+					data: { organizationSlug: "acme" },
+				},
+			);
+			expect(active.ok()).toBe(true);
+		}
 
 		await page.route(`${REDIRECT_URI}**`, (route) =>
 			route.fulfill({ status: 200, body: "ok" }),
@@ -480,7 +494,7 @@ test.describe("MCP OAuth — connected apps", () => {
 			.filter({ hasText: clientName });
 		await expect(row).toBeVisible();
 		await expect(row).toContainText("Unverified");
-		await expect(row).toContainText("Acme");
+		if (!personal) await expect(row).toContainText("Acme");
 		await expect(row).toContainText("offline_access");
 		await row.getByRole("button", { name: "Revoke" }).click();
 		await expect(row).toHaveCount(0);

@@ -1,7 +1,11 @@
 import { config } from "@fuutu/config";
+import { orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 import { orgSettingsCopy } from "./kit-catalog";
 import { createThrowawayOrg } from "./throwaway-org";
+
+// The whole spec is about organizations.
+test.skip(...orgsOff());
 
 test.describe("organization flows", () => {
 	test("organizations page renders for authenticated user", async ({
