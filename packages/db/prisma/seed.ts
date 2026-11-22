@@ -43,7 +43,12 @@ import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
 import { appSeed, appSeedConfig } from "./app-seed";
 import { db } from "./client";
-import { seedInvoiceCurrency, seedsDemoPurchase } from "./seed-context";
+import {
+	DEMO_API_KEY_NAMES,
+	seedDemoApiKeys,
+	seedInvoiceCurrency,
+	seedsDemoPurchase,
+} from "./seed-context";
 import { assertLocalHost } from "./seed-guards";
 
 // Dashboard demo data. Marked rows (`metadata.seed`) are inserted only while
@@ -425,32 +430,41 @@ async function main() {
 		});
 	}
 
-	// Demo API keys — one org-scoped, one user-scoped, one expired.
+	// Demo API keys — one org-scoped, one user-scoped, one expired; only
+	// where the priced demo plan lies (they count against its key cap). A
+	// re-seed removes earlier demo keys the rule no longer allows.
+	const demoKeys = seedDemoApiKeys(appSeedConfig, {
+		demoPlanPriced: acmeOnPro,
+		demoPlanOwner: purchaseOwner.userId ? "admin" : "acme",
+	});
+	await db.apiKey.deleteMany({
+		where: {
+			userId: admin.id,
+			name: {
+				in: DEMO_API_KEY_NAMES.filter(
+					(name) => !demoKeys.some((k) => k.name === name),
+				),
+			},
+		},
+	});
 	const existingKeys = await db.apiKey.count({
 		where: { userId: admin.id },
 	});
-	if (existingKeys === 0) {
+	if (existingKeys === 0 && demoKeys.length > 0) {
 		const makeKey = () => `futu_sk_${randomBytes(24).toString("base64url")}`;
-		const keys = [
-			{ name: "Acme CI/CD", org: acme.id, expires: null as Date | null },
-			{ name: "Personal CLI", org: null, expires: null as Date | null },
-			{
-				name: "Expired Webhook Listener",
-				org: null,
-				expires: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
-			},
-		];
 		await db.apiKey.createMany({
 			data: await Promise.all(
-				keys.map(async (k, index) => {
+				demoKeys.map(async (k, index) => {
 					const plain = makeKey();
 					return {
 						key: await sha256(plain),
 						prefix: `${plain.slice(0, 12)}...`,
 						name: k.name,
 						userId: admin.id,
-						organizationId: k.org,
-						expiresAt: k.expires,
+						organizationId: k.org ? acme.id : null,
+						expiresAt: k.expired
+							? new Date(Date.now() - 1000 * 60 * 60 * 24 * 7)
+							: null,
 						createdAt: at(20 + index),
 					};
 				}),
