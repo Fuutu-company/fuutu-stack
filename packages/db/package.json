@@ -28,6 +28,7 @@
 	},
 	"dependencies": {
 		"@better-auth/utils": "catalog:",
+		"@fuutu/config": "workspace:*",
 		"@fuutu/env": "workspace:*",
 		"@fuutu/logs": "workspace:*",
 		"@fuutu/utils": "workspace:*",

@@ -111,15 +111,8 @@ test.describe("API keys — org key from user settings", () => {
 });
 
 const ORG_KEYS_PATH = "/organizations/acme/settings/api-keys";
-/**
- * The dialog specs below create org keys. Without organizations the keys
- * are personal, and the seeded admin is on Free with its key cap already
- * reached, so they skip; the same dialog is covered with organizations on.
- */
-const NO_ORG_KEYS: [boolean, string] = [
-	orgsOff()[0],
-	"no org keys without organizations (personal key cap reached by the seed)",
-];
+/** Without organizations (`organizationsMode` "off") keys are personal. */
+const [personalKeys] = orgsOff();
 
 /**
  * The revealed key starts with `futu_sk_`. Polls a boolean so a failure
@@ -136,9 +129,12 @@ async function expectKeyShown(dialog: Locator) {
 		.toBe(true);
 }
 
-/** Creates an org key from the org settings page; leaves the reveal open. */
+/**
+ * Creates an org key from the org settings page (a personal key from
+ * account settings without organizations); leaves the reveal open.
+ */
 async function createOrgKey(page: Page, name: string) {
-	await page.goto(ORG_KEYS_PATH);
+	await page.goto(personalKeys ? "/settings/api-keys" : ORG_KEYS_PATH);
 	await page
 		.getByRole("button", {
 			name: /^(create api key|api-schlüssel erstellen)$/i,
@@ -154,11 +150,13 @@ async function createOrgKey(page: Page, name: string) {
 
 /** The plan caps API keys per org — leave none behind. */
 async function deleteKeysNamed(request: APIRequestContext, name: string) {
-	const org = await request.get("/api/organizations/acme");
-	const { id } = (await org.json()) as { id: string };
-	const list = await request.get(
-		`/api/api-keys?organizationId=${id}&limit=100`,
-	);
+	let scope = "";
+	if (!personalKeys) {
+		const org = await request.get("/api/organizations/acme");
+		const { id } = (await org.json()) as { id: string };
+		scope = `organizationId=${id}&`;
+	}
+	const list = await request.get(`/api/api-keys?${scope}limit=100`);
 	const items = ((await list.json()) as { items: ApiKeyItem[] }).items;
 	for (const item of items.filter((i) => i.name === name)) {
 		const deleted = await request.delete(`/api/api-keys/${item.id}`);
@@ -167,7 +165,6 @@ async function deleteKeysNamed(request: APIRequestContext, name: string) {
 }
 
 test.describe("API keys — created-key dialog", () => {
-	test.skip(...NO_ORG_KEYS);
 	for (const locale of ["en", "de"] as const) {
 		test(`keeps the key and buttons inside at 375px and 1280px (${locale})`, async ({
 			page,
@@ -196,7 +193,6 @@ test.describe("API keys — created-key dialog", () => {
 });
 
 test.describe("API keys — shown-once dialog behaviour", () => {
-	test.skip(...NO_ORG_KEYS);
 	test("copy failure shows a hint, selects the key and raises no page error", async ({
 		page,
 		request,

@@ -48,6 +48,20 @@ test.describe("billing & checkout flows", () => {
 		expect(orgCalls).toEqual([]);
 	});
 
+	test("without organizations the seeded admin holds the demo Pro subscription", async ({
+		request,
+	}) => {
+		// Billing is per user there, so the seed's demo purchase is the
+		// admin's (with organizations it is Acme's).
+		test.skip(!orgsOff()[0], "organizations are on (Acme holds it)");
+		const res = await request.get("/api/payments/subscription/active");
+		expect(res.ok()).toBe(true);
+		expect(await res.json()).toMatchObject({
+			planId: upgradePlanId,
+			status: "ACTIVE",
+		});
+	});
+
 	for (const width of [1280, 375]) {
 		test(`choose-plan: highlighted tier ring and badge are not clipped (${width}px)`, async ({
 			page,
