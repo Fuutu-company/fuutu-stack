@@ -116,7 +116,7 @@ try {
 		// bridge's script helpers (slow runners: seconds); wait for both.
 		for (let attempt = 1; ; attempt++) {
 			try {
-				await evaluate("return document.readyState;");
+				await evaluate("return { ready: document.readyState };");
 				break;
 			} catch (err) {
 				if (attempt >= 30) throw err;

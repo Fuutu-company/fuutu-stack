@@ -35,6 +35,10 @@ import {
 	readProject,
 	slotEnv,
 } from "../../../tooling/ports/index.mjs";
+import {
+	shellArgs,
+	shellOption,
+} from "../../../tooling/scripts/lib/spawn-shell.mjs";
 import { APP_EXTERNAL_BIN } from "./lib/app-sidecars.mjs";
 import { kitManifestGuard } from "./lib/kit-manifest";
 import {
@@ -78,7 +82,12 @@ function run(
 	args: string[],
 	env: NodeJS.ProcessEnv,
 ): ChildProcess {
-	const child = spawn(command, args, { cwd: appDir, env, stdio: "inherit" });
+	const child = spawn(command, shellArgs(command, args), {
+		cwd: appDir,
+		env,
+		stdio: "inherit",
+		...shellOption(command),
+	});
 	children.add(child);
 	child.on("exit", () => children.delete(child));
 	return child;

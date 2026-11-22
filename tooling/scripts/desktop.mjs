@@ -15,6 +15,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { findRoot } from "../ports/index.mjs";
+import { shellArgs, shellOption } from "./lib/spawn-shell.mjs";
 
 const MODES = new Set(["dev", "build"]);
 
@@ -53,7 +54,7 @@ async function main() {
 	}
 	const child = spawn(
 		"pnpm",
-		[
+		shellArgs("pnpm", [
 			"-F",
 			"@fuutu/desktop-app",
 			"exec",
@@ -61,8 +62,8 @@ async function main() {
 			"scripts/run.ts",
 			mode,
 			...rest,
-		],
-		{ cwd: root, stdio: "inherit" },
+		]),
+		{ cwd: root, stdio: "inherit", ...shellOption("pnpm") },
 	);
 	child.on("exit", (code, signal) => {
 		if (signal) process.kill(process.pid, signal);
