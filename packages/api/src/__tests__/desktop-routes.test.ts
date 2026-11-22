@@ -240,15 +240,35 @@ describe("GET /api/desktop/download", () => {
 		expect(await res.json()).toEqual({
 			version: "2.1.0",
 			platforms: ["macos"],
+			linuxFormat: null,
 		});
 		clearDesktopManifestCache();
 		serveManifest(null);
 		expect(await (await app.request("/api/desktop/download")).json()).toEqual({
 			version: null,
 			platforms: [],
+			linuxFormat: null,
 		});
 		flags.desktop = false;
 		expect((await app.request("/api/desktop/download")).status).toBe(404);
+	});
+
+	it("names the Linux package of a release without an AppImage, which never updates in-app", async () => {
+		clearDesktopManifestCache();
+		serveManifest({
+			...MANIFEST,
+			downloads: { ...MANIFEST.downloads, linux: "stable/2.1.0/A_amd64.deb" },
+		});
+		expect(await (await app.request("/api/desktop/download")).json()).toEqual({
+			version: "2.1.0",
+			platforms: ["macos", "linux"],
+			linuxFormat: "deb",
+		});
+		// No `linux-x86_64` updater entry: the package manager updates it.
+		const res = await app.request("/api/desktop/updates/linux/x86_64/2.0.0", {
+			headers: { authorization: "Bearer tok" },
+		});
+		expect(res.status).toBe(204);
 	});
 });
 

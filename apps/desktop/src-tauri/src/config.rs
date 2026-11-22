@@ -47,6 +47,9 @@ pub struct UpdatesConfig {
     /// Updater public key (`DESKTOP_UPDATER_PUBLIC_KEY`); none = no updater.
     pub pubkey: Option<String>,
     pub check_interval_hours: u32,
+    /// Linux build without an AppImage (`desktopConfig.release.linuxFormats`):
+    /// updates come through the package manager, never in-app.
+    pub via_package: bool,
 }
 
 impl Default for UpdatesConfig {
@@ -58,6 +61,7 @@ impl Default for UpdatesConfig {
             default_channel: "stable".into(),
             pubkey: None,
             check_interval_hours: 6,
+            via_package: false,
         }
     }
 }
@@ -120,6 +124,14 @@ mod tests {
         assert_eq!(config.saas_url.as_deref(), Some("https://app.acme.test"));
         // close-to-tray without a tray is switched off
         assert!(!config.shell.close_to_tray);
+    }
+
+    #[test]
+    fn updates_via_package_is_off_unless_the_build_says_so() {
+        assert!(!RuntimeConfig::parse(Some(r#"{"updates":{"pubkey":"pk"}}"#)).updates.via_package);
+        let linux = RuntimeConfig::parse(Some(r#"{"updates":{"viaPackage":true}}"#));
+        assert!(linux.updates.via_package);
+        assert!(linux.updates.pubkey.is_none());
     }
 
     #[test]

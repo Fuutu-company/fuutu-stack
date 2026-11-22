@@ -12,6 +12,7 @@ import {
 	type DesktopReleaseManifest,
 	decideDownload,
 	decideUpdate,
+	linuxDownloadFormat,
 	manifestKey,
 	parseManifest,
 	updaterTarget,
@@ -122,8 +123,9 @@ function bearerOf(headers: Headers): string | null {
  *   5-minute download URL from the private releases bucket. With
  *   `desktopConfig.auth: "required"` it needs the app's access token and
  *   access to the app; a licence for a lower major never gets a newer one.
- * - `GET /api/desktop/download` — `{ version, platforms }` of the current
- *   release (which installers exist), for the download buttons.
+ * - `GET /api/desktop/download` — `{ version, platforms, linuxFormat }` of
+ *   the current release (which installers exist, the Linux download's
+ *   format), for the download buttons.
  * - `GET /api/desktop/download/:platform` — 302 to the current installer.
  *   With auth `required` only for a signed-in browser (others are sent to
  *   the sign-in page and come back to the settings page).
@@ -203,6 +205,7 @@ export function mountDesktopRoutes(app: ApiApp): void {
 			platforms: manifest
 				? DESKTOP_PLATFORMS.filter((p) => decideDownload(manifest, p))
 				: [],
+			linuxFormat: manifest ? linuxDownloadFormat(manifest) : null,
 		});
 	});
 

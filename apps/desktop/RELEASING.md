@@ -78,8 +78,16 @@ trigger SmartScreen warnings.
 
 ### 4. Linux
 
-No code signing. AppImage updates are verified with the updater key; the
-`.deb` is offered as a download only.
+No code signing. The formats come from `desktopConfig.release.linuxFormats`
+(`packages/desktop/src/config.ts`, default `["appimage", "deb"]`):
+
+- With `appimage`, the AppImage is the Linux download and updates itself,
+  verified with the updater key.
+- Without it (e.g. `["deb", "rpm"]`, when a bundled library's licence rules
+  out an AppImage), every listed package is published as a download (the
+  first one on the download page). Linux installs then update through the
+  package manager: the build has no in-app updater, Settings → Updates says
+  so, and the release has no Linux updater entry.
 
 ### 5. Releases bucket
 
@@ -236,6 +244,7 @@ The kit owns only home, settings and about.
 | `scripts/lib/app-capabilities.ts` | `APP_CAPABILITIES`: Tauri capabilities (inline, or the identifier of a file in `src-tauri/capabilities/`), added after the kit's `default` in dev and release builds. It may not contain the devtools capability or the bridge. |
 | `scripts/lib/app-tauri-config.ts` | `APP_TAURI_CONFIG`: Tauri config keys deep-merged into the generated config (objects merge, arrays replace), e.g. `app.macOSPrivateApi` or `bundle.macOS.minimumSystemVersion`. `bundle.macOS.infoPlist` is the **path** of a plist merged into Info.plist (e.g. `src-tauri/Info.plist` with `NSMicrophoneUsageDescription`). Translated prompts go in `src-tauri/macos/<locale>.lproj/InfoPlist.strings`, listed with `files: localizedInfoPlistFiles([...])` (`renderInfoPlistStrings` writes one). The build **refuses** identity, `build`, `app.security` (CSP, capabilities), `app.withGlobalTauri`, updater and deep-link plugins, updater artifacts, `externalBin` and signing keys, and the `main` window must stay. |
 | `scripts/lib/app-sidecars.mjs` | `APP_EXTERNAL_BIN`: sidecar programs for `bundle.externalBin` (release builds only)<br>`shippedSidecars()`: their `name`, `version`, `license` and `text` for About → Licences and the licence gate (same allowlist as npm; a missing field fails the build)<br>Optional `build({ target })`: CI runs it per build job ("Build sidecars", no secrets). Output goes to `src-tauri/<path>-<target>`, and `binaries/` is git-ignored. |
+| `scripts/lib/app-ci.mjs` | Inputs of `.github/workflows/desktop.yml`, so you never edit the workflow: `LINUX_RUNNER` (runner image of the Rust checks and the Linux build, default `ubuntu-22.04`) and `LINUX_APT_PACKAGES` (extra apt packages for both Linux jobs). Read and validated by `scripts/ci-inputs.mjs` in the gate job. |
 
 **Rust** (`src-tauri/`):
 

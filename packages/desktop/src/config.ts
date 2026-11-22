@@ -29,6 +29,13 @@ export type DesktopAuthMode = "required" | "optional" | "off";
 export const DESKTOP_CHANNELS = ["stable", "beta"] as const;
 export type DesktopChannel = (typeof DESKTOP_CHANNELS)[number];
 
+/**
+ * Linux bundles a release can ship. Only `appimage` updates itself; `deb`
+ * and `rpm` installs update through the system package manager.
+ */
+export const DESKTOP_LINUX_FORMATS = ["appimage", "deb", "rpm"] as const;
+export type DesktopLinuxFormat = (typeof DESKTOP_LINUX_FORMATS)[number];
+
 export const desktopConfig = {
 	auth: "required" as DesktopAuthMode,
 	/** Days a signed-in app keeps working without reaching the backend. */
@@ -71,6 +78,18 @@ export const desktopConfig = {
 		defaultChannel: "stable" as DesktopChannel,
 		/** Background check interval while the app runs. */
 		checkIntervalHours: 6,
+	},
+	release: {
+		/**
+		 * Linux bundles `pnpm build:desktop` builds and a release publishes.
+		 * With `appimage` the AppImage is the download and updates itself
+		 * (the other formats are built but not published). Without it
+		 * (e.g. `["deb", "rpm"]`, when a bundled library's licence rules out
+		 * an AppImage) every listed package is a download, the first one on
+		 * the download page, and Linux installs update through the package
+		 * manager — the release has no Linux updater entry.
+		 */
+		linuxFormats: ["appimage", "deb"] as DesktopLinuxFormat[],
 	},
 	shell: {
 		/** Tray icon with show / quit. */

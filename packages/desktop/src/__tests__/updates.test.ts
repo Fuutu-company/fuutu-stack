@@ -4,6 +4,7 @@ import {
 	type DesktopReleaseManifest,
 	decideDownload,
 	decideUpdate,
+	linuxDownloadFormat,
 	manifestKey,
 	parseManifest,
 	updaterTarget,
@@ -94,6 +95,23 @@ describe("decideDownload", () => {
 			"stable/2.1.0/Acme_2.1.0_universal.dmg",
 		);
 		expect(decideDownload(MANIFEST, "linux")).toBeNull();
+	});
+});
+
+describe("linuxDownloadFormat", () => {
+	it("names the Linux download's format (desktopConfig.release.linuxFormats)", () => {
+		const linux = (key: string) => ({ ...MANIFEST, downloads: { linux: key } });
+		expect(
+			linuxDownloadFormat(linux("stable/2.1.0/Acme_2.1.0_amd64.AppImage")),
+		).toBe("appimage");
+		expect(
+			linuxDownloadFormat(linux("stable/2.1.0/Acme_2.1.0_amd64.deb")),
+		).toBe("deb");
+		expect(
+			linuxDownloadFormat(linux("stable/2.1.0/Acme-2.1.0-1.x86_64.rpm")),
+		).toBe("rpm");
+		expect(linuxDownloadFormat(linux("stable/2.1.0/Acme.tar.gz"))).toBeNull();
+		expect(linuxDownloadFormat(MANIFEST)).toBeNull();
 	});
 });
 

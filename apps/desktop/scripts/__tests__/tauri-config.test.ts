@@ -276,7 +276,12 @@ describe("buildTauriConfig", () => {
 			pubkey: "pk",
 			staticUrl: "https://cdn/{channel}.json",
 			defaultChannel: "stable",
+			viaPackage: false,
 		});
+		// Linux without an AppImage: updates come through the package.
+		expect(
+			desktopRuntimeConfig({ updatesViaPackage: true }).updates,
+		).toMatchObject({ pubkey: null, viaPackage: true });
 	});
 });
 

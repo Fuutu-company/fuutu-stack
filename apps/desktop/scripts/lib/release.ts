@@ -1,9 +1,11 @@
+import { type DesktopLinuxFormat, desktopConfig } from "@fuutu/desktop/config";
 import {
 	type DesktopPlatform,
 	type DesktopReleaseManifest,
 	type DesktopTarget,
 	desktopReleaseManifestSchema,
 } from "@fuutu/desktop/updates";
+import { assertLinuxFormats, linuxSelfUpdates } from "./linux-release";
 
 /**
  * Turns `tauri build` outputs into the bucket layout read by the update
@@ -14,6 +16,9 @@ import {
  *
  * CI hands one directory per build job, named after what it covers:
  * `macos-universal` (both darwin targets), `windows-x86_64`, `linux-x86_64`.
+ *
+ * Linux follows `desktopConfig.release.linuxFormats`: with `appimage` the
+ * AppImage updates itself; without it the packages are downloads only.
  */
 
 export type BuildJob = "macos-universal" | "windows-x86_64" | "linux-x86_64";
@@ -68,6 +73,11 @@ function pick(job: BuildJob, files: string[], pattern: RegExp, what: string) {
 
 const baseName = (file: string) => file.split("/").pop()!;
 
+const LINUX_PACKAGE: Record<Exclude<DesktopLinuxFormat, "appimage">, RegExp> = {
+	deb: /\.deb$/,
+	rpm: /\.rpm$/,
+};
+
 /**
  * Upload list + manifest of one release. Throws on a missing or ambiguous
  * artifact or signature — a release is published whole or not at all.
@@ -78,14 +88,34 @@ export function planRelease(input: {
 	notes?: string;
 	pubDate: string;
 	jobs: JobFiles[];
+	/** Default `desktopConfig.release.linuxFormats`. */
+	linuxFormats?: readonly DesktopLinuxFormat[];
 }): ReleasePlan {
 	if (input.jobs.length === 0) throw new Error("no build artifacts");
+	const linuxFormats = input.linuxFormats ?? desktopConfig.release.linuxFormats;
+	assertLinuxFormats(linuxFormats);
 	const prefix = `${input.channel}/${input.version}`;
 	const uploads: ReleaseUpload[] = [];
 	const platforms: DesktopReleaseManifest["platforms"] = {};
 	const downloads: NonNullable<DesktopReleaseManifest["downloads"]> = {};
 
 	for (const { job, files, signatures } of input.jobs) {
+		if (job === "linux-x86_64" && !linuxSelfUpdates(linuxFormats)) {
+			// Download-only: installs update through the package manager.
+			const keys = linuxFormats.map((format) => {
+				const file = pick(
+					job,
+					files,
+					LINUX_PACKAGE[format as keyof typeof LINUX_PACKAGE],
+					format,
+				);
+				const key = `${prefix}/${baseName(file)}`;
+				uploads.push({ file, job, key });
+				return key;
+			});
+			downloads.linux = keys[0];
+			continue;
+		}
 		const { updater, installer } = PATTERNS[job];
 		const updaterFile = pick(job, files, updater, "updater bundle");
 		const installerFile = pick(job, files, installer, "installer");

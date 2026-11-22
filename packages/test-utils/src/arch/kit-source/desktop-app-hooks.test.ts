@@ -37,6 +37,13 @@ const DEFAULTS: [string, RegExp[]][] = [
 		"scripts/lib/app-tauri-config.ts",
 		[/^export const APP_TAURI_CONFIG: AppTauriConfig = \{\};$/m],
 	],
+	[
+		"scripts/lib/app-ci.mjs",
+		[
+			/^export const LINUX_RUNNER = "ubuntu-22\.04";$/m,
+			/^export const LINUX_APT_PACKAGES = \[\];$/m,
+		],
+	],
 	["src/app-nav.ts", [/^export const appNavItems: AppNavItem\[\] = \[\];$/m]],
 	[
 		"src/app-home.tsx",

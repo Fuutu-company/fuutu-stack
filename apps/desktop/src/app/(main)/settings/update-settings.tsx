@@ -34,7 +34,7 @@ export function UpdateSettings() {
 	const [checking, setChecking] = useState(false);
 
 	if (!status.data) return null;
-	const { enabled, channels, defaultChannel } = status.data;
+	const { enabled, channels, defaultChannel, viaPackage } = status.data;
 	const current = channel ?? defaultChannel;
 
 	async function checkNow() {
@@ -55,7 +55,13 @@ export function UpdateSettings() {
 	return (
 		<SettingsSection
 			title={t("title")}
-			description={enabled ? t("description") : t("unavailable")}
+			description={
+				enabled
+					? t("description")
+					: viaPackage
+						? t("viaPackage")
+						: t("unavailable")
+			}
 		>
 			{enabled ? (
 				<div className="flex flex-col gap-4">

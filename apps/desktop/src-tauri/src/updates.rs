@@ -75,6 +75,8 @@ pub struct UpdatesStatus {
     pub channels: Vec<String>,
     pub default_channel: String,
     pub check_interval_hours: u32,
+    /// No in-app updates: the system package manager updates this install.
+    pub via_package: bool,
 }
 
 #[tauri::command]
@@ -85,6 +87,7 @@ pub fn updates_status(config: State<'_, RuntimeConfig>) -> UpdatesStatus {
         channels: updates.channels.clone(),
         default_channel: updates.default_channel.clone(),
         check_interval_hours: updates.check_interval_hours,
+        via_package: updates.via_package,
     }
 }
 
@@ -187,6 +190,7 @@ mod tests {
                 default_channel: "stable".into(),
                 pubkey: Some("pk".into()),
                 check_interval_hours: 6,
+                via_package: false,
             },
             ..RuntimeConfig::default()
         }

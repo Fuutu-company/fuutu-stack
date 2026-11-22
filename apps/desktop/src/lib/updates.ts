@@ -7,6 +7,8 @@ export type UpdatesStatus = {
 	channels: string[];
 	defaultChannel: string;
 	checkIntervalHours: number;
+	/** Linux package install: updates come through the package manager. */
+	viaPackage: boolean;
 };
 
 export type UpdateInfo = {
@@ -36,6 +38,7 @@ const OFF: UpdatesStatus = {
 	channels: [],
 	defaultChannel: "stable",
 	checkIntervalHours: 0,
+	viaPackage: false,
 };
 
 export const getUpdatesStatus = (): Promise<UpdatesStatus> =>

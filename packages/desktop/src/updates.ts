@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DesktopChannel } from "./config";
+import type { DesktopChannel, DesktopLinuxFormat } from "./config";
 
 /**
  * Desktop releases in storage (bucket `desktopReleases`), written by
@@ -169,4 +169,22 @@ export function decideDownload(
 	platform: DesktopPlatform,
 ): string | null {
 	return manifest.downloads?.[platform] ?? null;
+}
+
+const LINUX_FORMAT_SUFFIX: [RegExp, DesktopLinuxFormat][] = [
+	[/\.AppImage$/, "appimage"],
+	[/\.deb$/, "deb"],
+	[/\.rpm$/, "rpm"],
+];
+
+/**
+ * Format of the Linux download (`desktopConfig.release.linuxFormats`), for
+ * the download page's requirements line; `null` without one.
+ */
+export function linuxDownloadFormat(
+	manifest: DesktopReleaseManifest,
+): DesktopLinuxFormat | null {
+	const key = manifest.downloads?.linux;
+	if (!key) return null;
+	return LINUX_FORMAT_SUFFIX.find(([suffix]) => suffix.test(key))?.[1] ?? null;
 }

@@ -60,6 +60,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       enabled: ${{ steps.switch.outputs.enabled }}
+      linux_runner: ${{ steps.app.outputs.linux_runner }}
+      linux_packages: ${{ steps.app.outputs.linux_packages }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
@@ -74,21 +76,28 @@ jobs:
           if [ "$enabled" != "true" ]; then
             echo "::notice::Desktop app is off (config.features.desktop = false) — nothing to do."
           fi
+      # Linux runner and extra apt packages from the app-owned
+      # apps/desktop/scripts/lib/app-ci.mjs (validated there).
+      - id: app
+        if: steps.switch.outputs.enabled == 'true'
+        run: node apps/desktop/scripts/ci-inputs.mjs >> "$GITHUB_OUTPUT"
 
   rust:
     name: Rust checks
     needs: gate
     if: needs.gate.outputs.enabled == 'true'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ needs.gate.outputs.linux_runner }}
     defaults:
       run:
         working-directory: apps/desktop/src-tauri
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Linux webview deps
+        env:
+          LINUX_APT_PACKAGES: ${{ needs.gate.outputs.linux_packages }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf $LINUX_APT_PACKAGES
       - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           components: clippy
@@ -127,9 +136,10 @@ jobs:
             bundle: target/release/bundle
             binary: target/release/desktop-app.exe
           - job: linux-x86_64
-            os: ubuntu-22.04
+            os: ${{ needs.gate.outputs.linux_runner }}
             target: x86_64-unknown-linux-gnu
-            args: --bundles appimage,deb
+            # Bundles from desktopConfig.release.linuxFormats (scripts/run.ts).
+            args: ""
             bundle: target/release/bundle
             binary: target/release/desktop-app
     runs-on: ${{ matrix.os }}
@@ -159,9 +169,11 @@ jobs:
           workspaces: apps/desktop/src-tauri
       - name: Linux webview deps
         if: runner.os == 'Linux'
+        env:
+          LINUX_APT_PACKAGES: ${{ needs.gate.outputs.linux_packages }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf $LINUX_APT_PACKAGES
       # Your sidecar programs (app-owned scripts/lib/app-sidecars.mjs
       # `build()`); nothing without one. No secrets here.
       - name: Build sidecars

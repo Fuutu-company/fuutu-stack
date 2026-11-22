@@ -43,9 +43,15 @@ test.describe("desktop app settings", () => {
 		const body = (await res.json()) as {
 			version: unknown;
 			platforms: unknown;
+			linuxFormat: unknown;
 		};
-		expect(Object.keys(body).sort()).toEqual(["platforms", "version"]);
+		expect(Object.keys(body).sort()).toEqual([
+			"linuxFormat",
+			"platforms",
+			"version",
+		]);
 		expect(Array.isArray(body.platforms)).toBe(true);
+		expect([null, "appimage", "deb", "rpm"]).toContain(body.linuxFormat);
 	});
 
 	test("the update endpoint needs the app's token", async ({ playwright }) => {

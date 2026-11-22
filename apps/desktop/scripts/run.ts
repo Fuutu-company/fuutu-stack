@@ -41,6 +41,7 @@ import {
 } from "../../../tooling/scripts/lib/spawn-shell.mjs";
 import { APP_EXTERNAL_BIN } from "./lib/app-sidecars.mjs";
 import { kitManifestGuard } from "./lib/kit-manifest";
+import { linuxBundleArgs, linuxSelfUpdates } from "./lib/linux-release";
 import {
 	buildTauriConfig,
 	type DesktopBuildInputs,
@@ -186,14 +187,25 @@ async function build(
 	inputs: DesktopBuildInputs,
 	rest: string[],
 ) {
-	const signUpdates = Boolean(env.TAURI_SIGNING_PRIVATE_KEY);
-	if (inputs.updaterPubkey && !signUpdates) {
+	const linux = process.platform === "linux";
+	// Linux without an AppImage (desktopConfig.release.linuxFormats): the
+	// packages update through the package manager, so no in-app updater.
+	const signUpdates =
+		Boolean(env.TAURI_SIGNING_PRIVATE_KEY) && !inputs.updatesViaPackage;
+	const bundleArgs = linux
+		? linuxBundleArgs(desktopConfig.release.linuxFormats, rest)
+		: [];
+	if (inputs.updatesViaPackage) {
+		process.stderr.write(
+			"note: no AppImage in desktopConfig.release.linuxFormats — Linux updates come through the package (no in-app updater)\n",
+		);
+	} else if (inputs.updaterPubkey && !signUpdates) {
 		process.stderr.write(
 			"DESKTOP_UPDATER_PUBLIC_KEY is set but TAURI_SIGNING_PRIVATE_KEY is not — updates would not verify. See apps/desktop/RELEASING.md\n",
 		);
 		shutdown(1);
 	}
-	if (!inputs.updaterPubkey) {
+	if (!inputs.updaterPubkey && !inputs.updatesViaPackage) {
 		process.stderr.write(
 			"warning: no DESKTOP_UPDATER_PUBLIC_KEY — this build cannot update itself (apps/desktop/RELEASING.md)\n",
 		);
@@ -228,7 +240,7 @@ async function build(
 		[node, ["scripts/strip-source-maps.mjs"], base],
 		[
 			"pnpm",
-			["exec", "tauri", "build", "--config", config, ...rest],
+			["exec", "tauri", "build", "--config", config, ...bundleArgs, ...rest],
 			{ ...base, ...signing },
 		],
 	];
@@ -292,6 +304,10 @@ async function main() {
 			mode === "build" ? await offlineKeys(env.NEXT_PUBLIC_SAAS_URL) : [],
 		updaterPubkey: env.DESKTOP_UPDATER_PUBLIC_KEY || undefined,
 		staticUpdateUrl: env.NEXT_PUBLIC_DESKTOP_UPDATE_URL || undefined,
+		updatesViaPackage:
+			mode === "build" &&
+			process.platform === "linux" &&
+			!linuxSelfUpdates(desktopConfig.release.linuxFormats),
 	};
 	if (mode === "build") {
 		const check = offlineKeyCheck({

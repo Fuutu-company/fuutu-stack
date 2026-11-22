@@ -14,6 +14,10 @@ const log = createLogger({ scope: "marketing-download" });
 const PLATFORMS = ["macos", "windows", "linux"] as const;
 type Platform = (typeof PLATFORMS)[number];
 
+/** Linux download formats (`desktopConfig.release.linuxFormats`). */
+const LINUX_FORMATS = ["appimage", "deb", "rpm"] as const;
+type LinuxFormat = (typeof LINUX_FORMATS)[number];
+
 /** Re-read the current release at most every five minutes. */
 export const revalidate = 300;
 
@@ -29,6 +33,7 @@ interface DownloadPageProps {
 async function loadRelease(): Promise<{
 	version: string | null;
 	platforms: Platform[];
+	linuxFormat: LinuxFormat | null;
 } | null> {
 	// Switched off: the layout 404s — no request to the app at build time.
 	if (!isKitRouteEnabled("download")) return null;
@@ -40,12 +45,15 @@ async function loadRelease(): Promise<{
 		const body = (await res.json()) as {
 			version?: unknown;
 			platforms?: unknown;
+			linuxFormat?: unknown;
 		};
 		return {
 			version: typeof body.version === "string" ? body.version : null,
 			platforms: Array.isArray(body.platforms)
 				? PLATFORMS.filter((p) => (body.platforms as unknown[]).includes(p))
 				: [],
+			linuxFormat:
+				LINUX_FORMATS.find((format) => format === body.linuxFormat) ?? null,
 		};
 	} catch (err) {
 		log.warn("desktop release unavailable", { err: String(err) });
@@ -96,7 +104,13 @@ export default async function DownloadPage({ params }: DownloadPageProps) {
 									{t(`platforms.${platform}.name`)}
 								</h2>
 								<p className="text-muted-foreground text-sm">
-									{t(`platforms.${platform}.requirements`)}
+									{platform === "linux" &&
+									release?.linuxFormat &&
+									release.linuxFormat !== "appimage"
+										? t("platforms.linux.requirementsPackage", {
+												format: `.${release.linuxFormat}`,
+											})
+										: t(`platforms.${platform}.requirements`)}
 								</p>
 								<Button asChild className="mt-auto">
 									<a href={`${urls.app}/api/desktop/download/${platform}`}>

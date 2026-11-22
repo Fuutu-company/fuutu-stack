@@ -17,7 +17,8 @@
 			},
 			"linux": {
 				"name": "Linux",
-				"requirements": "64 Bit, AppImage"
+				"requirements": "64 Bit, AppImage",
+				"requirementsPackage": "64 Bit, {format}-Paket"
 			}
 		}
 	}

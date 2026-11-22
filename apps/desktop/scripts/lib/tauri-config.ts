@@ -85,6 +85,8 @@ export type DesktopBuildInputs = {
 	updaterPubkey?: string;
 	/** Public manifest URL for `updates.source: "static"` (`{channel}`). */
 	staticUpdateUrl?: string;
+	/** Linux build without an AppImage: updates come through the package. */
+	updatesViaPackage?: boolean;
 };
 
 /**
@@ -110,8 +112,9 @@ export function desktopRuntimeConfig(inputs: DesktopBuildInputs = {}) {
 			staticUrl: inputs.staticUpdateUrl ?? null,
 			channels: [...updates.channels],
 			defaultChannel: updates.defaultChannel,
-			pubkey: inputs.updaterPubkey ?? null,
+			pubkey: (!inputs.updatesViaPackage && inputs.updaterPubkey) || null,
 			checkIntervalHours: updates.checkIntervalHours,
+			viaPackage: inputs.updatesViaPackage ?? false,
 		},
 	};
 }
@@ -121,7 +124,7 @@ export function desktopRuntimeConfig(inputs: DesktopBuildInputs = {}) {
  * here is the default channel's; the app sets the real one per check.
  */
 export function updaterPluginConfig(inputs: DesktopBuildInputs, dev: boolean) {
-	if (!inputs.updaterPubkey) return null;
+	if (!inputs.updaterPubkey || inputs.updatesViaPackage) return null;
 	const updates = desktopConfig.updates;
 	const endpoint =
 		updates.source === "static"

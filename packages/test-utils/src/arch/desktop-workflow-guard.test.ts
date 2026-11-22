@@ -48,4 +48,22 @@ describe.skipIf(!hasWorkflow)("desktop release workflow", () => {
 	it("keeps build telemetry on", () => {
 		expect(yaml).not.toMatch(/^\s*FUUTU_TELEMETRY_DISABLED\s*:/m);
 	});
+
+	it("takes the Linux runner, apt packages and bundles from the app, not from this file", () => {
+		// App-owned inputs (apps/desktop/scripts/lib/app-ci.mjs) via the gate.
+		expect(yaml).toContain("node apps/desktop/scripts/ci-inputs.mjs");
+		expect(yaml).toMatch(
+			/runs-on: \$\{\{ needs\.gate\.outputs\.linux_runner \}\}/,
+		);
+		expect(yaml).toMatch(/os: \$\{\{ needs\.gate\.outputs\.linux_runner \}\}/);
+		const apt = steps().filter((s) => s.includes("apt-get install"));
+		expect(apt.length).toBeGreaterThan(0);
+		for (const step of apt) {
+			expect(step).toContain("needs.gate.outputs.linux_packages");
+			expect(step).toContain("$LINUX_APT_PACKAGES");
+		}
+		// Linux bundles follow desktopConfig.release.linuxFormats (scripts/run.ts).
+		expect(yaml).not.toMatch(/--bundles [^\n]*(appimage|deb|rpm)/);
+		expect(yaml).not.toMatch(/ubuntu-2\d\.04/);
+	});
 });

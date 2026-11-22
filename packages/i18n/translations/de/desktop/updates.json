@@ -1,6 +1,7 @@
 {
 	"title": "Updates",
 	"unavailable": "Dieser Build aktualisiert sich nicht selbst.",
+	"viaPackage": "Updates für diese App kommen über die Paketverwaltung deines Systems.",
 	"channel": "Update-Kanal",
 	"channels": {
 		"stable": "Stabil",
