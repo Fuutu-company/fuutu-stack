@@ -23,7 +23,13 @@ vi.mock("../../../../apps/saas/src/app-main-nav", () => mainExtras);
 
 // Kit demo flags, fixed: an app that switches the demo modules off keeps
 // these tests meaningful.
-const flags = vi.hoisted(() => ({ aiChat: true, crm: true, webhooks: true }));
+const flags = vi.hoisted(() => ({
+	aiChat: true,
+	crm: true,
+	webhooks: true,
+	// Pinned: an app may ship organizations off (no CRM item then).
+	organizationsMode: "on" as "off" | "on" | "forced",
+}));
 vi.mock("@fuutu/config", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@fuutu/config")>();
 	return {
@@ -53,6 +59,7 @@ beforeEach(() => {
 	flags.aiChat = true;
 	flags.crm = true;
 	flags.webhooks = true;
+	flags.organizationsMode = "on";
 	mainExtras.appMainNavItems = [];
 	extras.appOrgSettingsNavItems = [];
 	extras.appAccountNavItems = [];
@@ -83,6 +90,15 @@ describe("main nav (Platform group)", () => {
 			"/organizations/acme/chat",
 			"/organizations/acme/crm",
 			"/notifications",
+		]);
+	});
+
+	it("has no CRM item without organizations (its contacts need one)", () => {
+		flags.organizationsMode = "off";
+		expect(keys(nav.getMainItems(null))).toEqual([
+			"dashboard",
+			"aiChat",
+			"notifications",
 		]);
 	});
 
