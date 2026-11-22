@@ -53,11 +53,13 @@ impl Keychain {
 
     pub fn get(&self, name: &str) -> Result<Option<String>, String> {
         match &self.backend {
-            Backend::Keychain { service } => match entry(service, name)?.get_password() {
-                Ok(value) => Ok(Some(value)),
-                Err(Error::NoEntry) => Ok(None),
-                Err(err) => Err(format!("keychain read failed: {err}")),
-            },
+            Backend::Keychain { service } => {
+                off_async_runtime(|| match entry(service, name)?.get_password() {
+                    Ok(value) => Ok(Some(value)),
+                    Err(Error::NoEntry) => Ok(None),
+                    Err(err) => Err(format!("keychain read failed: {err}")),
+                })
+            }
             Backend::File { path, lock } => {
                 let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
                 Ok(read_file(path).remove(name))
@@ -67,9 +69,11 @@ impl Keychain {
 
     pub fn set(&self, name: &str, value: &str) -> Result<(), String> {
         match &self.backend {
-            Backend::Keychain { service } => entry(service, name)?
-                .set_password(value)
-                .map_err(|err| format!("keychain write failed: {err}")),
+            Backend::Keychain { service } => off_async_runtime(|| {
+                entry(service, name)?
+                    .set_password(value)
+                    .map_err(|err| format!("keychain write failed: {err}"))
+            }),
             Backend::File { path, lock } => {
                 let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
                 let mut secrets = read_file(path);
@@ -81,10 +85,12 @@ impl Keychain {
 
     pub fn delete(&self, name: &str) -> Result<(), String> {
         match &self.backend {
-            Backend::Keychain { service } => match entry(service, name)?.delete_credential() {
-                Ok(()) | Err(Error::NoEntry) => Ok(()),
-                Err(err) => Err(format!("keychain delete failed: {err}")),
-            },
+            Backend::Keychain { service } => {
+                off_async_runtime(|| match entry(service, name)?.delete_credential() {
+                    Ok(()) | Err(Error::NoEntry) => Ok(()),
+                    Err(err) => Err(format!("keychain delete failed: {err}")),
+                })
+            }
             Backend::File { path, lock } => {
                 let _guard = lock.lock().unwrap_or_else(|p| p.into_inner());
                 let mut secrets = read_file(path);
@@ -95,6 +101,21 @@ impl Keychain {
             }
         }
     }
+}
+
+/// Runs a blocking keychain call where it may block: Linux Secret Service is zbus's blocking
+/// API, which with zbus's `tokio` feature blocks on a multi-thread runtime of its own and panics
+/// on a thread that drives a tokio runtime (any crate in the app may turn that feature on;
+/// without it the call would stall the runtime thread). There it runs on a scoped thread of its
+/// own.
+fn off_async_runtime<T: Send>(f: impl FnOnce() -> T + Send) -> T {
+    if tokio::runtime::Handle::try_current().is_err() {
+        return f();
+    }
+    std::thread::scope(|s| match s.spawn(f).join() {
+        Ok(v) => v,
+        Err(panic) => std::panic::resume_unwind(panic),
+    })
 }
 
 fn entry(service: &str, name: &str) -> Result<Entry, String> {
@@ -129,6 +150,22 @@ fn write_file(path: &PathBuf, secrets: &BTreeMap<String, String>) -> Result<(), 
 mod tests {
     use super::*;
 
+    /// Linux release rehearsal: sign-in state is read on runtime threads; Secret Service
+    /// (zbus 5's blocking API with `tokio`) blocks on a runtime of its own there.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn keychain_calls_may_block_on_a_runtime_of_their_own() {
+        let own = || {
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(1)
+                .build()
+                .unwrap()
+                .block_on(async { 7 })
+        };
+        assert_eq!(off_async_runtime(own), 7);
+        // The old direct call, on this runtime thread: the start crash.
+        assert!(std::panic::catch_unwind(own).is_err());
+    }
+
     #[test]
     fn debug_file_store_round_trips_with_owner_only_permissions() {
         let dir = std::env::temp_dir().join(format!("desktop-store-{}", std::process::id()));
@@ -139,7 +176,10 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(dir.join("dev-secrets.json")).unwrap().permissions().mode();
+            let mode = std::fs::metadata(dir.join("dev-secrets.json"))
+                .unwrap()
+                .permissions()
+                .mode();
             assert_eq!(mode & 0o777, 0o600);
         }
         store.delete(REFRESH_TOKEN).unwrap();
