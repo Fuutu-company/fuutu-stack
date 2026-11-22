@@ -79,6 +79,34 @@ describe("seed demo data guard", () => {
 			expect(seed).toMatch(/recurringGranted:\s*DEMO_AI_TOKENS_GRANTED/);
 		});
 
+		it("the demo plan's API key cap leaves room for the seeded keys and one more", () => {
+			// The seed creates the demo keys only on the priced demo plan
+			// (seed-context.ts seedDemoApiKeys); they count against its cap.
+			const limitsAt = payments.indexOf("export const LIMITS = {");
+			expect(limitsAt, "export const LIMITS not found").toBeGreaterThan(-1);
+			const limits = payments.slice(limitsAt);
+			const plan = limits.slice(
+				limits.search(new RegExp(`^\\t${DEMO_PLAN_ID}:\\s*\\{`, "m")),
+			);
+			const cap = plan
+				.slice(0, plan.indexOf("\n\t},"))
+				.match(/\bapiKeys:\s*("unlimited"|false|[\d_]+)/)?.[1];
+			expect(cap, `LIMITS.${DEMO_PLAN_ID}.apiKeys not found`).toBeDefined();
+			const context = read("packages/db/prisma/seed-context.ts");
+			const names = context.match(
+				/export const DEMO_API_KEY_NAMES = \[([^\]]*)\]/,
+			)?.[1];
+			expect(names, "DEMO_API_KEY_NAMES not found").toBeDefined();
+			const seeded = (names?.match(/"[^"]+"/g) ?? []).length;
+			if (cap !== '"unlimited"') {
+				expect(cap, "the demo plan must allow API keys").not.toBe("false");
+				expect(toNumber(cap)).toBeGreaterThan(seeded);
+			}
+			expect(seed).toMatch(
+				/seedDemoApiKeys\(appSeedConfig, \{\s*demoPlanPriced: acmeOnPro/,
+			);
+		});
+
 		it("Acme's seeded purchase uses the demo plan's price id the app resolves plans from", () => {
 			const envVar = demoPlanEnvVar();
 			expect(

@@ -4,6 +4,10 @@ import { featureOff, orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 import { apiKeyScopeLabel, defaultApiKeyScopes } from "./kit-catalog";
 
+// The key-creating tests share the plan's key cap (`LIMITS.<plan>.apiKeys`,
+// as low as 2): this file's tests run one after another, never in parallel.
+test.describe.configure({ mode: "default" });
+
 type ApiKeyItem = {
 	id: string;
 	name: string;
@@ -164,6 +168,53 @@ async function deleteKeysNamed(request: APIRequestContext, name: string) {
 	}
 }
 
+/**
+ * Room under the plan's API key cap (`LIMITS.<plan>.apiKeys`, from the
+ * dashboard overview) for the caller's keys, counted like apiKeys.create.
+ */
+async function apiKeyRoom(
+	request: APIRequestContext,
+	organizationId?: string,
+): Promise<{ total: number; limit: number | "unlimited" | false }> {
+	const query = organizationId ? `?organizationId=${organizationId}` : "";
+	const overview = await request.get(`/api/dashboard/overview${query}`);
+	expect(overview.ok(), await overview.text()).toBe(true);
+	const { api } = (await overview.json()) as {
+		api: { apiKeyLimit: number | "unlimited" | false } | null;
+	};
+	expect(api, "the admin sees the API usage").not.toBeNull();
+	const scope = organizationId ? `organizationId=${organizationId}&` : "";
+	const list = await request.get(`/api/api-keys?${scope}limit=1`);
+	expect(list.ok(), await list.text()).toBe(true);
+	const { total } = (await list.json()) as { total: number };
+	return { total, limit: api?.apiKeyLimit ?? false };
+}
+
+test.describe("API keys — seeded keys and the plan cap", () => {
+	test("the seed leaves room for a new key under the plan's cap", async ({
+		request,
+	}) => {
+		// Regression: with demoPurchase off the seed's three demo keys
+		// filled a 2-key plan, so no spec (and no user) could create a key.
+		const scopes: (string | undefined)[] = [undefined];
+		if (!personalKeys) {
+			const org = await request.get("/api/organizations/acme");
+			scopes.push(((await org.json()) as { id: string }).id);
+		}
+		for (const organizationId of scopes) {
+			const { total, limit } = await apiKeyRoom(request, organizationId);
+			const where = organizationId ? "Acme" : "personal";
+			expect(limit, `${where}: the plan allows API keys`).not.toBe(false);
+			if (limit !== "unlimited" && limit !== false) {
+				expect(
+					total,
+					`${where}: ${total} keys, plan cap ${limit}`,
+				).toBeLessThan(limit);
+			}
+		}
+	});
+});
+
 test.describe("API keys — created-key dialog", () => {
 	for (const locale of ["en", "de"] as const) {
 		test(`keeps the key and buttons inside at 375px and 1280px (${locale})`, async ({
@@ -260,6 +311,17 @@ test.describe("Webhooks — signing secret", () => {
 		page,
 		request,
 	}) => {
+		// Webhooks are plan-gated (`LIMITS.<plan>.webhooks`): Acme's plan
+		// decides (Pro with the seed's demo purchase).
+		const org = await request.get("/api/organizations/acme");
+		const { id: organizationId } = (await org.json()) as { id: string };
+		const overview = await request.get(
+			`/api/dashboard/overview?organizationId=${organizationId}`,
+		);
+		const { api } = (await overview.json()) as {
+			api: { webhookLimit: number | "unlimited" | false } | null;
+		};
+		test.skip(api?.webhookLimit === false, "Acme's plan has no webhooks");
 		const url = `https://example.com/fuutu-e2e-${Date.now()}`;
 		await page.goto("/organizations/acme/settings/webhooks");
 		await page
@@ -280,16 +342,16 @@ test.describe("Webhooks — signing secret", () => {
 		await dialog.getByRole("button", { name: "I've copied it" }).click();
 		await expect(dialog).toBeHidden();
 
-		const org = await request.get("/api/organizations/acme");
-		const { id } = (await org.json()) as { id: string };
-		const list = await request.get(`/api/webhooks?organizationId=${id}`);
+		const list = await request.get(
+			`/api/webhooks?organizationId=${organizationId}`,
+		);
 		const body = (await list.json()) as
 			| { items?: { id: string; url: string }[] }
 			| { id: string; url: string }[];
 		const items = Array.isArray(body) ? body : (body.items ?? []);
 		for (const hook of items.filter((h) => h.url === url)) {
 			const deleted = await request.delete(`/api/webhooks/${hook.id}`, {
-				data: { organizationId: id },
+				data: { organizationId },
 			});
 			expect(deleted.ok(), await deleted.text()).toBe(true);
 		}
@@ -329,12 +391,15 @@ test.describe("API keys — org settings list", () => {
 		const org = await request.get("/api/organizations/acme");
 		const { id: organizationId } = (await org.json()) as { id: string };
 		const name = `e2e-page-two-${Date.now()}`;
-		const created = await request.post("/api/api-keys", {
-			data: { name, organizationId, scopes: ["api"] },
-		});
-		expect(created.ok(), await created.text()).toBe(true);
 		try {
-			// One key per page, so a second page exists with the seeded keys.
+			// Two own keys, one per page: a second page exists whatever the
+			// seed left (it seeds no keys without the demo plan).
+			for (let i = 0; i < 2; i++) {
+				const created = await request.post("/api/api-keys", {
+					data: { name, organizationId, scopes: ["api"] },
+				});
+				expect(created.ok(), await created.text()).toBe(true);
+			}
 			await page.route("**/api/rpc/apiKeys/list", async (route) => {
 				const body = route.request().postDataJSON() as {
 					json: Record<string, unknown>;
@@ -361,6 +426,7 @@ test.describe("API keys — org settings list", () => {
 	test("a member sees Revoke only on org keys they created", async ({
 		browser,
 		baseURL,
+		request,
 	}) => {
 		const context = await browser.newContext({
 			baseURL,
@@ -371,7 +437,16 @@ test.describe("API keys — org settings list", () => {
 		]);
 		const page = await context.newPage();
 		const name = `e2e-member-own-${Date.now()}`;
+		const adminName = `e2e-admin-org-${Date.now()}`;
 		try {
+			// An org key the admin created (the seed may have none).
+			const org = await request.get("/api/organizations/acme");
+			const { id: organizationId } = (await org.json()) as { id: string };
+			const adminKey = await request.post("/api/api-keys", {
+				data: { name: adminName, organizationId, scopes: ["api"] },
+			});
+			expect(adminKey.ok(), await adminKey.text()).toBe(true);
+
 			await page.goto("/auth/sign-in");
 			await page.getByLabel("Email").fill("member@fuutu.local");
 			await page.getByLabel("Password").fill("DevPassword!2345");
@@ -381,8 +456,8 @@ test.describe("API keys — org settings list", () => {
 			const dialog = await createOrgKey(page, name);
 			await dialog.getByRole("button", { name: "I've copied it" }).click();
 
-			// Seeded by the admin: visible, but not revocable by a member.
-			const adminRow = page.getByRole("row", { name: /Acme CI\/CD/ });
+			// Created by the admin: visible, but not revocable by a member.
+			const adminRow = page.getByRole("row", { name: new RegExp(adminName) });
 			await expect(adminRow).toBeVisible();
 			await expect(
 				adminRow.getByRole("button", { name: "Revoke" }),
@@ -397,6 +472,7 @@ test.describe("API keys — org settings list", () => {
 			await expect(ownRow).toBeHidden();
 		} finally {
 			await deleteKeysNamed(context.request, name);
+			await deleteKeysNamed(request, adminName);
 			await context.close();
 		}
 	});

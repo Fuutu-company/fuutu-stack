@@ -48,3 +48,48 @@ export function seedInvoiceCurrency(config: AppSeedConfig): string {
 export function seedsDemoPurchase(config: AppSeedConfig): boolean {
 	return config.demoPurchase ?? true;
 }
+
+/** Names of the kit seed's demo API keys (all the admin's). */
+export const DEMO_API_KEY_NAMES = [
+	"Acme CI/CD",
+	"Personal CLI",
+	"Expired Webhook Listener",
+];
+
+export type DemoApiKey = {
+	name: string;
+	/** Scoped to Acme (else personal). */
+	org: boolean;
+	/** Expired a week before the seed. */
+	expired: boolean;
+};
+
+/**
+ * The demo API keys — one org-scoped, one personal, one expired. They
+ * count against the plan cap of whoever holds them (`LIMITS.<plan>.apiKeys`;
+ * a user's personal count includes the org keys they created), which the
+ * seed cannot read (@fuutu/payments depends on @fuutu/db). Only the priced
+ * demo plan is known to leave room (seed-demo-data-guard checks
+ * `LIMITS.<DEMO_PLAN_ID>.apiKeys`), so keys go only where it lies:
+ *
+ * - `demoPlanOwner: "admin"` (organizations off): all three;
+ * - `"acme"`: Acme's key only — the admin's personal plan is unknown;
+ * - no demo purchase, or no price for it: none.
+ */
+export function seedDemoApiKeys(
+	config: AppSeedConfig,
+	{
+		demoPlanPriced,
+		demoPlanOwner,
+	}: { demoPlanPriced: boolean; demoPlanOwner: "admin" | "acme" },
+): DemoApiKey[] {
+	if (!seedsDemoPurchase(config) || !demoPlanPriced) return [];
+	const [orgKey = "", personalKey = "", expiredKey = ""] = DEMO_API_KEY_NAMES;
+	const acme: DemoApiKey = { name: orgKey, org: true, expired: false };
+	if (demoPlanOwner === "acme") return [acme];
+	return [
+		acme,
+		{ name: personalKey, org: false, expired: false },
+		{ name: expiredKey, org: false, expired: true },
+	];
+}
