@@ -1,6 +1,6 @@
 import { paymentsConfig } from "@fuutu/payments/config";
 import type { Page } from "@playwright/test";
-import { featureOff } from "./features";
+import { featureOff, orgsOff } from "./features";
 import {
 	expect,
 	expectVisual,
@@ -104,6 +104,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("organizations list matches baseline", async ({ page }) => {
+		test.skip(...orgsOff());
 		await page.goto("/organizations");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "core--organizations.png", {
@@ -265,6 +266,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("org dashboard matches baseline", async ({ page }) => {
+		test.skip(...orgsOff());
 		// /organizations/acme redirects to /organizations/acme/dashboard
 		await page.goto("/organizations/acme");
 		await page.waitForLoadState("domcontentloaded");
@@ -275,6 +277,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("org settings general matches baseline", async ({ page }) => {
+		test.skip(...orgsOff());
 		await page.goto("/organizations/acme/settings/general");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "org--general.png", {
@@ -283,6 +286,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("org settings members matches baseline", async ({ page }) => {
+		test.skip(...orgsOff());
 		await page.goto("/organizations/acme/settings/members");
 		await page.waitForLoadState("domcontentloaded");
 		// Member list loads client-side — wait for a seeded member row.
@@ -298,6 +302,7 @@ test.describe("visual regression — app pages", () => {
 	});
 
 	test("org invoices matches baseline", async ({ page }) => {
+		test.skip(...orgsOff());
 		await page.goto("/organizations/acme/invoices");
 		await page.waitForLoadState("domcontentloaded");
 		await expectVisual(page, "org--invoices.png", {
@@ -308,6 +313,7 @@ test.describe("visual regression — app pages", () => {
 
 test.describe("visual regression — overlays", () => {
 	test("webhook create dialog matches baseline", async ({ page }) => {
+		test.skip(...orgsOff());
 		test.skip(...featureOff("webhooks"));
 		await page.goto("/organizations/acme/settings/webhooks");
 		await page.waitForLoadState("domcontentloaded");
@@ -340,6 +346,7 @@ test.describe("visual regression — overlays", () => {
 	});
 
 	test("org switcher dropdown matches baseline", async ({ page, isMobile }) => {
+		test.skip(...orgsOff());
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/dashboard");
 		await page.waitForLoadState("domcontentloaded");

@@ -7,9 +7,13 @@ import { paymentsConfig } from "@fuutu/payments/config";
  * when it is off, so an app that ships it off needs no `app-excluded`
  * entry.
  */
+const orgsOn = config.features.organizationsMode !== "off";
+
 const FEATURES = {
 	aiChat: { enabled: config.features.aiChat, routes: ["/chat"] },
-	crm: { enabled: config.features.crm, routes: ["/crm"] },
+	// CRM contacts belong to an organization: without organizations the
+	// page only says so.
+	crm: { enabled: config.features.crm && orgsOn, routes: ["/crm"] },
 	credits: {
 		enabled: paymentsConfig.creditsEnabled,
 		routes: ["/settings/credits"],
@@ -47,9 +51,11 @@ const ORG_PREFIX = /^\/organizations\/[^/]+(?=\/)/;
 
 /**
  * `test.skip` arguments for a route: skipped when a switched-off module
- * owns it (personal or `/organizations/<slug>/…`).
+ * owns it (personal or `/organizations/<slug>/…`), and for every
+ * `/organizations…` route without organizations.
  */
 export function routeOff(route: string): [boolean, string] {
+	if (!orgsOn && /^\/organizations(\/|$|\?)/.test(route)) return orgsOff();
 	const path = route.split("?")[0]?.replace(ORG_PREFIX, "") ?? route;
 	for (const feature of Object.keys(FEATURES) as GatedFeature[]) {
 		const owns = FEATURES[feature].routes.some(

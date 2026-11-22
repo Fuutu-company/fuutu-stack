@@ -1,3 +1,4 @@
+import { orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 
 const MEMBER_EMAIL = "member@fuutu.local";
@@ -283,7 +284,10 @@ test.describe("admin user management", () => {
 		// The API refuses these (denyImpersonation) — the UI says so before
 		// anyone clicks, instead of a generic "Checkout failed".
 		const reason = /not available while you're signed in as this user/i;
-		await page.goto("/organizations/acme/settings/billing");
+		// Without organizations the user buys a plan on /choose-plan.
+		await page.goto(
+			orgsOff()[0] ? "/choose-plan" : "/organizations/acme/settings/billing",
+		);
 		await expect(page.getByText(reason).first()).toBeVisible({
 			timeout: 10_000,
 		});
@@ -412,6 +416,7 @@ test.describe("admin organizations", () => {
 	});
 
 	test("admin resends and cancels a pending invitation", async ({ page }) => {
+		test.skip(...orgsOff());
 		const inviteEmail = `admin-e2e-${Date.now()}@fuutu.local`;
 
 		// A pending invitation through the regular organization flow.

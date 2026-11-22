@@ -1,4 +1,5 @@
 import { config } from "@fuutu/config";
+import { orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 
 const SEEDED_ADMIN_NAME = "Admin User";
@@ -48,6 +49,7 @@ test.describe("onboarding flow", () => {
 	test("onboarding profile step transitions to org step on continue", async ({
 		page,
 	}) => {
+		test.skip(...orgsOff());
 		await page.goto("/onboarding");
 		await expect(page).not.toHaveURL(/\/auth\/sign-in/);
 
@@ -68,9 +70,28 @@ test.describe("onboarding flow", () => {
 		).toBeVisible({ timeout: 10_000 });
 	});
 
+	test("without organizations the profile step leads straight to done", async ({
+		page,
+	}) => {
+		test.skip(!orgsOff()[0], "organizations are on (org step shown)");
+		await page.goto("/onboarding");
+		const nameInput = page.getByLabel(/full name/i);
+		await expect(nameInput).toBeVisible({ timeout: 10_000 });
+		await nameInput.fill("Test Onboarding User");
+		await page.getByRole("button", { name: /continue/i }).click();
+
+		await expect(
+			page.getByRole("button", { name: /go to dashboard/i }),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page.getByRole("button", { name: /skip for now/i }),
+		).toHaveCount(0);
+	});
+
 	test("onboarding org step can be skipped to reach done step", async ({
 		page,
 	}) => {
+		test.skip(...orgsOff());
 		await page.goto("/onboarding");
 		await expect(page).not.toHaveURL(/\/auth\/sign-in/);
 

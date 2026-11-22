@@ -1,3 +1,4 @@
+import { orgsOff, routeOff } from "./features";
 import { expect, test } from "./fixtures";
 
 test.describe("sidebar navigation", () => {
@@ -46,6 +47,7 @@ test.describe("sidebar navigation", () => {
 	});
 
 	test("nav links navigate to correct pages", async ({ page, isMobile }) => {
+		test.skip(...orgsOff());
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/dashboard");
 
@@ -126,6 +128,7 @@ test.describe("sidebar navigation", () => {
 		page,
 		isMobile,
 	}) => {
+		test.skip(...orgsOff());
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/organizations/acme/dashboard");
 
@@ -211,7 +214,7 @@ test.describe("sidebar navigation", () => {
 			"/organizations/acme/settings/billing",
 			"/organizations/acme/settings/api-keys",
 		];
-		for (const url of urls) {
+		for (const url of urls.filter((u) => !routeOff(u)[0])) {
 			await page.goto(url);
 			await expect(page.getByRole("heading").first()).toBeVisible({
 				timeout: 10_000,
@@ -279,6 +282,7 @@ test.describe("sidebar navigation", () => {
 		page,
 		isMobile,
 	}) => {
+		test.skip(...orgsOff());
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/organizations/acme/settings/members");
 

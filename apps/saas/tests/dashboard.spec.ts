@@ -1,4 +1,6 @@
+import { paymentsConfig } from "@fuutu/payments/config";
 import type { Page } from "@playwright/test";
+import { orgsOff } from "./features";
 import { expect, test } from "./fixtures";
 
 const AREAS = ["users", "billing", "ai", "api"] as const;
@@ -8,6 +10,8 @@ for (const mode of [
 	{ name: "org mode", path: "/organizations/acme/dashboard", org: true },
 ]) {
 	test.describe(`dashboard page — ${mode.name}`, () => {
+		if (mode.org) test.skip(...orgsOff());
+
 		test("loads without auth redirect and greets the user", async ({
 			page,
 		}) => {
@@ -133,12 +137,23 @@ for (const mode of [
 						ai: "/organizations/acme/settings/credits",
 						api: "/organizations/acme/settings/api-keys",
 					}
-				: {
-						users: "/organizations",
-						billing: "/organizations",
-						ai: "/settings?tab=credits",
-						api: "/settings/api-keys",
-					};
+				: orgsOff()[0]
+					? {
+							// Without organizations: profile, and the account's billing.
+							users: "/settings?tab=profile",
+							billing:
+								paymentsConfig.billingAttachedTo === "user"
+									? "/settings?tab=billing"
+									: "/choose-plan",
+							ai: "/settings?tab=credits",
+							api: "/settings/api-keys",
+						}
+					: {
+							users: "/organizations",
+							billing: "/organizations",
+							ai: "/settings?tab=credits",
+							api: "/settings/api-keys",
+						};
 			for (const area of AREAS) {
 				const link = page.getByRole("link").filter({
 					has: page.locator(`[data-slot="area-tile"][data-area="${area}"]`),
@@ -254,6 +269,7 @@ test.describe("dashboard page — overview load failure", () => {
 		test(`${mode.name}: the error card's Try again reloads the overview`, async ({
 			page,
 		}) => {
+			if (mode.name === "org") test.skip(...orgsOff());
 			test.setTimeout(60_000);
 			const pageErrors: Error[] = [];
 			page.on("pageerror", (err) => pageErrors.push(err));
@@ -303,6 +319,7 @@ test.describe("dashboard page — overview load failure", () => {
 
 test.describe("dashboard page — header actions", () => {
 	test("personal dashboard offers View organizations", async ({ page }) => {
+		test.skip(...orgsOff());
 		await page.goto("/dashboard");
 		await expect(
 			page.getByRole("link", { name: /view organizations/i }),
@@ -310,6 +327,7 @@ test.describe("dashboard page — header actions", () => {
 	});
 
 	test("org dashboard offers Invite member for admins", async ({ page }) => {
+		test.skip(...orgsOff());
 		await page.goto("/organizations/acme/dashboard");
 		await expect(
 			page.getByRole("link", { name: /invite member/i }),
