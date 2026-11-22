@@ -206,7 +206,8 @@ export function getMainItems(
 			icon: MessageSquare,
 		});
 	}
-	if (config.features.crm) {
+	// CRM contacts belong to an organization: no CRM without organizations.
+	if (config.features.crm && config.features.organizationsMode !== "off") {
 		items.push({ titleKey: "crm", url: `${base}/crm`, icon: Users });
 	}
 	items.push({ titleKey: "notifications", url: "/notifications", icon: Bell });

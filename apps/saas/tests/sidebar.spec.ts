@@ -23,6 +23,24 @@ test.describe("sidebar navigation", () => {
 		).toBeVisible({ timeout: 10_000 });
 	});
 
+	test("without organizations the sidebar has no CRM and /crm answers 404", async ({
+		page,
+		isMobile,
+	}) => {
+		// CRM contacts belong to an organization (config.features.crm alone
+		// would show a page that only says so).
+		test.skip(!orgsOff()[0], "organizations are on");
+		test.skip(isMobile, "Sidebar navigation works differently on mobile");
+		await page.goto("/dashboard");
+		const sidebar = page.locator("[data-sidebar='sidebar']");
+		await expect(
+			sidebar.getByRole("link", { name: /dashboard/i }).first(),
+		).toBeVisible({ timeout: 10_000 });
+		await expect(sidebar.getByRole("link", { name: /^crm$/i })).toHaveCount(0);
+		const crm = await page.request.get("/crm");
+		expect(crm.status()).toBe(404);
+	});
+
 	test("sidebar trigger toggles sidebar", async ({ page, isMobile }) => {
 		test.skip(isMobile, "Sidebar navigation works differently on mobile");
 		await page.goto("/dashboard");

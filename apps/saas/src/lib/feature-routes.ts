@@ -10,7 +10,12 @@ import { notFound } from "next/navigation";
  */
 const FEATURE_ROUTES = {
 	aiChat: { enabled: () => config.features.aiChat, routes: ["/chat"] },
-	crm: { enabled: () => config.features.crm, routes: ["/crm"] },
+	// CRM contacts belong to an organization: off without organizations.
+	crm: {
+		enabled: () =>
+			config.features.crm && config.features.organizationsMode !== "off",
+		routes: ["/crm"],
+	},
 	credits: {
 		enabled: () => paymentsConfig.creditsEnabled,
 		routes: ["/settings/credits"],

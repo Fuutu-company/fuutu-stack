@@ -24,6 +24,8 @@ const flags = vi.hoisted(() => ({
 	designSystem: true,
 	webhooks: true,
 	desktop: true,
+	// Pinned: an app may ship organizations off (CRM then counts as off).
+	organizationsMode: "on" as "off" | "on" | "forced",
 }));
 
 vi.mock("@fuutu/config", async (importOriginal) => {
@@ -65,6 +67,7 @@ afterEach(() => {
 	flags.designSystem = true;
 	flags.webhooks = true;
 	flags.desktop = true;
+	flags.organizationsMode = "on";
 	paymentsConfig.creditsEnabled = creditsEnabled;
 	paymentsConfig.billingAttachedTo = billingAttachedTo;
 });
@@ -99,6 +102,13 @@ const ROUTES = {
 } as const;
 
 describe("disabledFeatureForPath", () => {
+	it("treats CRM as off without organizations (its contacts need one)", () => {
+		flags.organizationsMode = "off";
+		expect(disabledFeatureForPath("/crm")).toBe("crm");
+		flags.organizationsMode = "forced";
+		expect(disabledFeatureForPath("/crm")).toBeNull();
+	});
+
 	for (const [feature, paths] of Object.entries(ROUTES) as [
 		keyof typeof ROUTES,
 		readonly string[],
