@@ -1,3 +1,4 @@
+import { paymentsConfig } from "@fuutu/payments/config";
 import { orgsOff, paymentsUnconfigured } from "./features";
 import { expect, test } from "./fixtures";
 import {
@@ -16,6 +17,35 @@ test.describe("billing & checkout flows", () => {
 	test("choose-plan page renders", async ({ page }) => {
 		await page.goto("/choose-plan");
 		expect(page.url()).not.toMatch(/\/auth\/sign-in/);
+	});
+
+	test("choose-plan with personal billing calls no organization endpoint", async ({
+		page,
+	}) => {
+		// organizationsMode "off" bills the user and has no organization
+		// plugin, so the page must not ask for an active org.
+		test.skip(
+			paymentsConfig.billingAttachedTo !== "user",
+			"billing is attached to organizations",
+		);
+		// Without the organization client plugin, Better Auth's proxy turns
+		// `useActiveOrganization()` into a request to a route that is not
+		// there (`/api/auth/use-active-organization`, 404).
+		const orgCalls: string[] = [];
+		page.on("response", (response) => {
+			const url = response.url();
+			if (
+				url.includes("/api/auth/") &&
+				(/organization/i.test(url) || response.status() === 404)
+			)
+				orgCalls.push(`${response.status()} ${url}`);
+		});
+		await page.goto("/choose-plan");
+		await expect(
+			page.locator("[data-slot='pricing-tier']").first(),
+		).toBeVisible({ timeout: 10_000 });
+		await page.waitForLoadState("networkidle");
+		expect(orgCalls).toEqual([]);
 	});
 
 	for (const width of [1280, 375]) {
