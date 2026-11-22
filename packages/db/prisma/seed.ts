@@ -23,7 +23,8 @@
  *     without it the Pro plan and the demo AI-token balance do not appear.
  *     Databases seeded before this change keep the old balance — reset and
  *     re-seed (prisma migrate reset, then `pnpm db:seed`))
- *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org
+ *   - 1 active Purchase (SUBSCRIPTION, provider=creem) for the org — for
+ *     the admin with organizationsMode "off" (billing is per user there)
  *   - 3 demo API keys for the admin (org-scoped, user-scoped, expired)
  *   - 4 demo invoices for the acme org (2 paid, 1 open, 1 void)
  *   - 2 demo webhooks for the acme org (active + inactive)
@@ -37,6 +38,7 @@
  */
 import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "@better-auth/utils/password";
+import { config } from "@fuutu/config";
 import { env } from "@fuutu/env/saas";
 import { sha256 } from "@fuutu/utils/hash";
 import { appSeed, appSeedConfig } from "./app-seed";
@@ -388,6 +390,12 @@ async function main() {
 	}
 
 	// Sample purchase — pretend the org bought the "pro" plan (see proPriceId).
+	// Without organizations billing is per user (`billingAttachedTo` "user"),
+	// so the admin holds it; a re-seed after switching the mode moves it.
+	const purchaseOwner =
+		config.features.organizationsMode === "off"
+			? { userId: admin.id, organizationId: null }
+			: { userId: null, organizationId: acme.id };
 	await db.purchase.upsert({
 		where: {
 			provider_subscriptionId: {
@@ -395,7 +403,7 @@ async function main() {
 				subscriptionId: "seed_sub_pro_org",
 			},
 		},
-		update: { priceId: proPriceId, productId: proPriceId },
+		update: { priceId: proPriceId, productId: proPriceId, ...purchaseOwner },
 		create: {
 			type: "SUBSCRIPTION",
 			status: "ACTIVE",
@@ -405,7 +413,7 @@ async function main() {
 			subscriptionId: "seed_sub_pro_org",
 			customerId: "seed_customer_acme",
 			quantity: 2,
-			organizationId: acme.id,
+			...purchaseOwner,
 		},
 	});
 

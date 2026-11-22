@@ -72,8 +72,9 @@ test.describe("MCP endpoint — anonymous", () => {
 
 test.describe("MCP endpoint — org API key with mcp scope", () => {
 	test("unlocks authenticated tools for the key owner", async ({ request }) => {
-		// An org key; without organizations the seeded admin is on Free with
-		// its personal key cap reached (the OAuth flow below covers that mode).
+		// MCP over an API key needs its "mcp" scope, and scopes exist on
+		// organization keys only; without organizations MCP clients use
+		// OAuth (covered below).
 		test.skip(...orgsOff());
 		const org = await request.get("/api/organizations/acme");
 		expect(org.ok()).toBe(true);
