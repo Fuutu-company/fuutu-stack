@@ -100,10 +100,11 @@ vi.mock("@fuutu/credits", () => ({
 }));
 
 const mockLogError = vi.hoisted(() => vi.fn());
+const mockLogWarn = vi.hoisted(() => vi.fn());
 vi.mock("@fuutu/logs", () => ({
 	createLogger: () => ({
 		info: vi.fn(),
-		warn: vi.fn(),
+		warn: mockLogWarn,
 		error: mockLogError,
 		debug: vi.fn(),
 	}),
@@ -405,6 +406,42 @@ describe("plan resolution with a stacked add-on", () => {
 
 	it("one-time plan price ids skip add-ons", () => {
 		expect(getOneTimePlanPriceIds()).toEqual(["price_lifetime"]);
+	});
+
+	it("an unmapped active subscription never shadows a lifetime licence", async () => {
+		// E.g. the dev seed's demo purchase in an app whose PLANS have no
+		// "pro": the subscription's product maps to no plan.
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue(
+			stored("sub_unknown", "seed_product_pro"),
+		);
+		mockGetActiveSubscriptionsForOwner.mockResolvedValue([
+			stored("sub_unknown", "seed_product_pro"),
+		]);
+		mockGetActiveOneTimePlanPurchase.mockResolvedValue({
+			...stored("licence", "price_lifetime"),
+			type: "ONE_TIME",
+		});
+
+		expect(await getActivePlanId(null, ORG)).toBe("price_lifetime");
+		expect(await resolveActivePlan(null, ORG)).toMatchObject({
+			planId: "lifetime",
+		});
+		expect(mockLogWarn).toHaveBeenCalledWith(
+			expect.stringContaining("maps to no plan"),
+			expect.objectContaining({ productId: "seed_product_pro" }),
+		);
+	});
+
+	it("an unmapped active subscription alone grants no plan", async () => {
+		mockGetActiveSubscriptionForOrganization.mockResolvedValue(
+			stored("sub_unknown", "seed_product_pro"),
+		);
+		mockGetActiveSubscriptionsForOwner.mockResolvedValue([
+			stored("sub_unknown", "seed_product_pro"),
+		]);
+		mockGetActiveOneTimePlanPurchase.mockResolvedValue(null);
+
+		expect(await getActivePlanId(null, ORG)).toBeNull();
 	});
 
 	it("does not look further when the newest subscription is a plan", async () => {

@@ -26,6 +26,14 @@ export interface AppSeedConfig {
 	 * `seed-currency-guard`. Default `KIT_SEED_INVOICE_CURRENCY`.
 	 */
 	invoiceCurrency?: string;
+	/**
+	 * The demo purchase: an active Pro subscription (`PAYMENTS_PRO_PRICE_ID`)
+	 * for Acme, or for the admin with `organizationsMode: "off"`. Set `false`
+	 * when your PLANS have no such plan or your `appSeed` seeds its own
+	 * purchases; a re-seed then removes an earlier demo purchase. Default
+	 * `true`.
+	 */
+	demoPurchase?: boolean;
 }
 
 /** Demo invoice currency of the kit catalog (`BILLING_CURRENCY = "usd"`). */
@@ -34,4 +42,9 @@ export const KIT_SEED_INVOICE_CURRENCY = "USD";
 /** The demo invoices' currency: the app's, else the kit's — upper case. */
 export function seedInvoiceCurrency(config: AppSeedConfig): string {
 	return (config.invoiceCurrency ?? KIT_SEED_INVOICE_CURRENCY).toUpperCase();
+}
+
+/** Whether the kit seed writes its demo purchase (`demoPurchase`, default on). */
+export function seedsDemoPurchase(config: AppSeedConfig): boolean {
+	return config.demoPurchase ?? true;
 }

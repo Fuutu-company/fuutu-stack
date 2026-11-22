@@ -1314,7 +1314,17 @@ export async function getActivePlanId(
 
 	// Add-on subscriptions (`Plan.addonOf`) never stand for the plan.
 	const subscription = await getPlanSubscription(owner);
-	if (subscription) return subscription.productId ?? subscription.priceId;
+	if (subscription) {
+		const productId = subscription.productId ?? subscription.priceId;
+		// A product outside PLANS (a removed plan, a stale price id, the dev
+		// seed's demo purchase in an app without its plan) stands for no
+		// plan, so it must not shadow a lifetime licence below.
+		if (productId && getPlanIdForProductId(productId)) return productId;
+		log.warn("active subscription maps to no plan; ignored for the plan", {
+			purchaseId: subscription.id,
+			productId,
+		});
+	}
 
 	const lifetime = await getLifetimePurchase(owner);
 	return lifetime ? (lifetime.productId ?? lifetime.priceId) : null;
