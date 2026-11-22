@@ -163,6 +163,8 @@ test.describe("admin user management", () => {
 		page,
 	}) => {
 		// Regression: the tab said "No purchases" for the owner of a paid org.
+		// Without organizations the seeded purchase is the admin's own.
+		test.skip(...orgsOff());
 		await page.goto("/admin/users?q=admin@");
 		await page.getByRole("link", { name: /admin@fuutu\.local/ }).click();
 		await expect(page).toHaveURL(/\/admin\/users\/[^/]+$/);
@@ -250,10 +252,16 @@ test.describe("admin user management", () => {
 			}
 		});
 		await page.goto("/onboarding");
-		await expect(
-			page.getByText(/can't change this user's name while impersonating/i),
-		).toBeVisible({ timeout: 10_000 });
-		await expect(page.getByLabel(/full name/i)).toBeDisabled();
+		// By role, not text: while React streams the page, a finished
+		// Suspense segment waits in a hidden <div id="S:…"> next to the
+		// visible copy, and text locators count both (strict-mode flake
+		// under load). Role locators see the accessible tree only.
+		const nameInput = page.getByRole("textbox", { name: /full name/i });
+		await expect(nameInput).toHaveAccessibleDescription(
+			/can't change this user's name while impersonating/i,
+			{ timeout: 10_000 },
+		);
+		await expect(nameInput).toBeDisabled();
 		await expect(
 			page.getByRole("button", { name: /continue/i }),
 		).toBeDisabled();
