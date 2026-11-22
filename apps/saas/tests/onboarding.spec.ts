@@ -27,7 +27,8 @@ test.describe("onboarding flow", () => {
 		await expect(page).not.toHaveURL(/\/auth\/sign-in/);
 
 		await expect(
-			page.getByRole("heading", { name: /welcome to fuutu/i }),
+			// "Welcome to {appName}" — the app's own name, not the kit's.
+			page.getByRole("heading", { name: `Welcome to ${config.app.name}` }),
 		).toBeVisible({ timeout: 10_000 });
 	});
 
