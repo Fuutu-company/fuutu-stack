@@ -1,4 +1,4 @@
-import { orgsOff, routeOff } from "./features";
+import { featureOn, orgsOff, routeOff } from "./features";
 import { expect, test } from "./fixtures";
 
 test.describe("sidebar navigation", () => {
@@ -17,10 +17,13 @@ test.describe("sidebar navigation", () => {
 		await expect(
 			page.getByRole("link", { name: /dashboard/i }).first(),
 		).toBeVisible({ timeout: 10_000 });
-		// AI Chat is a direct link (personal mode)
-		await expect(
-			page.getByRole("link", { name: /ai chat/i }).first(),
-		).toBeVisible({ timeout: 10_000 });
+		// AI Chat is a direct link (personal mode) — when the module is on
+		const aiChat = page.getByRole("link", { name: /ai chat/i });
+		if (featureOn("aiChat")) {
+			await expect(aiChat.first()).toBeVisible({ timeout: 10_000 });
+		} else {
+			await expect(aiChat).toHaveCount(0);
+		}
 	});
 
 	test("without organizations the sidebar has no CRM and /crm answers 404", async ({
