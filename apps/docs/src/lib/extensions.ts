@@ -127,4 +127,9 @@ export interface AppDocs {
 	 * search, theme and language stay the kit's). Unset: the kit hero.
 	 */
 	Home?: ComponentType<{ locale: string }>;
+	/**
+	 * Replaces the logo mark next to the app name in the docs nav (kit:
+	 * `BrandLogo` inverted in dark mode), e.g. a mark that keeps its colours.
+	 */
+	Logo?: ComponentType;
 }

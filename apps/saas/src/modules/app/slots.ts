@@ -36,6 +36,11 @@ export interface AppSlots {
 	 * be a server component; the mobile header shows nothing here.
 	 */
 	headerActions?: ComponentType;
+	/**
+	 * Auth pages (sign-in, sign-up, …): REPLACES the logo mark next to the
+	 * app name above the card (kit: `BrandLogo` inverted in dark mode).
+	 */
+	authLogo?: ComponentType;
 }
 
 /**

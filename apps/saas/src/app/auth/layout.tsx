@@ -1,9 +1,11 @@
+import { renderSlot } from "@app/slots";
 import { PrivacySettingsButton } from "@fuutu/analytics/consent";
 import { config } from "@fuutu/config";
 import { AreaBackdrop, BrandLogo } from "@fuutu/ui";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { appSlots } from "@/app-slots";
 import { getLegalLinks } from "@/lib/legal-links";
 
 const FOOTER_LINK_CLASS =
@@ -28,7 +30,11 @@ export default async function AuthLayout({
 						href="/"
 						className="flex items-center gap-2.5 self-center font-extrabold font-heading text-lg tracking-heading"
 					>
-						<BrandLogo size="lg" className="dark:invert" />
+						{renderSlot(
+							appSlots.authLogo,
+							{},
+							<BrandLogo size="lg" className="dark:invert" />,
+						)}
 						{config.app.name}
 					</a>
 					{children}

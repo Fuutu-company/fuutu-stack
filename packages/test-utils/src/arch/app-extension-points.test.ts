@@ -206,7 +206,8 @@ const EXTENSION_POINTS: {
 		wiredInto: [
 			{
 				file: "apps/docs/source.config.ts",
-				import: /\{ appDocsSource \} from "\.\/app-docs-source"/,
+				// Imported under an alias and widened to `AppDocsSource` there.
+				import: /\{ appDocsSource(?: as \w+)? \} from "\.\/app-docs-source"/,
 			},
 			{
 				file: "apps/docs/src/lib/app-docs-hooks.ts",

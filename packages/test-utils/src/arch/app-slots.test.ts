@@ -123,3 +123,19 @@ describe("host pages", () => {
 		});
 	}
 });
+
+describe("appSlots.authLogo (auth pages)", () => {
+	const layout = readFileSync(join(SAAS, "src/app/auth/layout.tsx"), "utf8");
+
+	it("replaces the logo mark above the card; the kit logo is the fallback", () => {
+		expect(layout).toMatch(
+			/renderSlot\(\s*appSlots\.authLogo,\s*\{\},\s*<BrandLogo size="lg" className="dark:invert" \/>,?\s*\)/,
+		);
+		expect(layout.match(/<BrandLogo\b/g)).toHaveLength(1);
+	});
+
+	it("is declared as an optional component slot", () => {
+		const slots = readFileSync(join(SAAS, "src/modules/app/slots.ts"), "utf8");
+		expect(slots).toMatch(/\bauthLogo\?: ComponentType;/);
+	});
+});

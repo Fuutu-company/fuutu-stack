@@ -5,8 +5,16 @@ import {
 	metaSchema,
 } from "fumadocs-mdx/config";
 import { z } from "zod";
-import { appDocsSource } from "./app-docs-source";
-import { docsContentDir, docsMdxOptions } from "./src/lib/docs-source-config";
+import { appDocsSource as appSource } from "./app-docs-source";
+import {
+	type AppDocsSource,
+	docsContentDir,
+	docsMdxOptions,
+} from "./src/lib/docs-source-config";
+
+// Widened to the contract: `satisfies` in app-docs-source.ts keeps only the
+// fields the app set, and every optional field is read below.
+const appDocsSource: AppDocsSource = appSource;
 
 export const docs = defineDocs({
 	dir: docsContentDir(appDocsSource),
@@ -20,9 +28,11 @@ export const docs = defineDocs({
 		postprocess: {
 			includeProcessedMarkdown: true,
 		},
+		...(appDocsSource.files?.docs ? { files: appDocsSource.files.docs } : {}),
 	},
 	meta: {
 		schema: metaSchema,
+		...(appDocsSource.files?.meta ? { files: appDocsSource.files.meta } : {}),
 	},
 });
 

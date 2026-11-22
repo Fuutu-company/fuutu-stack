@@ -23,6 +23,13 @@ export interface AppDocsSource {
 	 * defaults (`github-light` / `github-dark`).
 	 */
 	codeThemes?: { light: CodeTheme; dark: CodeTheme };
+	/**
+	 * Glob patterns (relative to the content folder) of the page and
+	 * navigation files to load — for example only the enabled locales'
+	 * folders, so a dormant locale's pages are not served under the default
+	 * locale. Unset: every file (the fumadocs default).
+	 */
+	files?: { docs?: string[]; meta?: string[] };
 }
 
 /** The multi-theme (`themes`) variant of the fumadocs rehype-code options. */

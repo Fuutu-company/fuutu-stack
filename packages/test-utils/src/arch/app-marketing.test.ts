@@ -162,6 +162,7 @@ type SiteLinksModule = {
 	FOOTER_ACTIONS: { key: string; column: string }[];
 	FOOTER_TAGLINE_KEY: string;
 	FOOTER_AREA_LINE: { textKey: string; Mark: unknown } | null;
+	FOOTER_LOGO: unknown;
 	HEADER_BRAND: { Brand?: unknown };
 };
 
@@ -373,6 +374,24 @@ describe("site links", () => {
 			textKey: "footer.areas",
 			Mark: null,
 		});
+	});
+
+	it("keeps the kit footer logo unless the app sets appFooter.Logo", async () => {
+		expect((await load()).FOOTER_LOGO).toBeUndefined();
+		vi.resetModules();
+		const Logo = () => null;
+		app.appFooter = { Logo };
+		expect((await load()).FOOTER_LOGO).toBe(Logo);
+	});
+
+	it("the footer renders FOOTER_LOGO in place of the kit logo", () => {
+		const footer = readFileSync(
+			join(ROOT, "apps/marketing/src/modules/marketing/components/footer.tsx"),
+			"utf8",
+		);
+		expect(footer).toMatch(
+			/\{FOOTER_LOGO \?\s*\(?\s*<FOOTER_LOGO \/>\s*\)?\s*:\s*\(?\s*<BrandLogo size="md" className="dark:invert" \/>/,
+		);
 	});
 
 	it("removes the footer area line with areaLine: false", async () => {

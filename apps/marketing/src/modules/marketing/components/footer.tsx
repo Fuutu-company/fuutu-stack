@@ -6,6 +6,7 @@ import {
 	FOOTER_ACTIONS,
 	FOOTER_AREA_LINE,
 	FOOTER_COLUMNS,
+	FOOTER_LOGO,
 	FOOTER_TAGLINE_KEY,
 } from "@/lib/site-links";
 import { Link } from "@/navigation";
@@ -40,7 +41,11 @@ export function MarketingFooter() {
 				<div className="grid gap-10 border-border border-t py-14 sm:grid-cols-2 md:grid-cols-4">
 					<div className="flex flex-col gap-4">
 						<div className="flex items-center gap-2.5">
-							<BrandLogo size="md" className="dark:invert" />
+							{FOOTER_LOGO ? (
+								<FOOTER_LOGO />
+							) : (
+								<BrandLogo size="md" className="dark:invert" />
+							)}
 							<p className="font-extrabold font-heading text-base tracking-heading">
 								{config.app.name}
 							</p>

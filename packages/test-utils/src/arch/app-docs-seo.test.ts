@@ -281,6 +281,79 @@ describe("docs code themes", () => {
 	});
 });
 
+describe("docs nav brand (appDocs.Logo) and repository link", () => {
+	type Node = {
+		type: unknown;
+		props?: { children?: unknown } & Record<string, unknown>;
+	};
+	const find = (node: unknown, match: (n: Node) => boolean): Node[] => {
+		if (!node || typeof node !== "object") return [];
+		if (Array.isArray(node)) return node.flatMap((n) => find(n, match));
+		const n = node as Node;
+		return [...(match(n) ? [n] : []), ...find(n.props?.children, match)];
+	};
+	const load = async () => {
+		vi.resetModules();
+		// Non-literal path: layout.shared is `.tsx`, which this package's tsc
+		// must not follow.
+		const shared = (await import(
+			/* @vite-ignore */ join(ROOT, "apps/docs/src/lib/layout.shared.tsx")
+		)) as {
+			baseOptions: () => { nav?: { title?: unknown }; githubUrl?: string };
+		};
+		return shared.baseOptions();
+	};
+	const brandLogos = (title: unknown) =>
+		find(
+			title,
+			(n) =>
+				typeof n.props?.className === "string" &&
+				/\bdark:invert\b/.test(n.props.className as string),
+		);
+
+	afterEach(() => {
+		app.appDocs = {};
+	});
+
+	it("keeps the kit logo (inverted in dark mode) without a hook", async () => {
+		const options = await load();
+		expect(brandLogos(options.nav?.title)).toHaveLength(1);
+	});
+
+	it("renders the app's Logo in place of the kit logo", async () => {
+		const Logo = () => null;
+		app.appDocs = { Logo };
+		const options = await load();
+		expect(find(options.nav?.title, (n) => n.type === Logo)).toHaveLength(1);
+		expect(brandLogos(options.nav?.title)).toHaveLength(0);
+	});
+
+	it("links the app's repository (config.app.contact.githubUrl), none when empty", async () => {
+		expect((await load()).githubUrl).toBe(
+			kitConfig.app.contact.githubUrl || undefined,
+		);
+	});
+});
+
+describe("docs content files (appDocsSource.files)", () => {
+	const source = read("apps/docs/source.config.ts");
+
+	it("source.config.ts limits the docs and meta collections only when the app sets them", () => {
+		expect(source).toMatch(
+			/\.\.\.\(appDocsSource\.files\?\.docs \? \{ files: appDocsSource\.files\.docs \} : \{\}\)/,
+		);
+		expect(source).toMatch(
+			/\.\.\.\(appDocsSource\.files\?\.meta \? \{ files: appDocsSource\.files\.meta \} : \{\}\)/,
+		);
+	});
+
+	it("is an optional field of AppDocsSource", () => {
+		expect(read("apps/docs/src/lib/docs-source-config.ts")).toMatch(
+			/\bfiles\?: \{ docs\?: string\[\]; meta\?: string\[\] \};/,
+		);
+	});
+});
+
 describe("docs sitemap", () => {
 	const NOW = new Date("2026-11-14T00:00:00.000Z");
 	const languages = (path: string) => ({

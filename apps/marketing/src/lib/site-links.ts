@@ -94,6 +94,8 @@ export type AppFooter = {
 	areaLine?: false | { textKey?: string; Mark?: ComponentType | null };
 	/** Footer entries that open UI (a dialog) instead of navigating. */
 	actions?: readonly AppFooterAction[];
+	/** Replaces the logo mark next to the app name (a client-safe component). */
+	Logo?: ComponentType;
 };
 
 /**
@@ -150,6 +152,9 @@ export const NAV_ORDER: NavEntry[] = [];
 
 /** Translation key of the footer tagline. */
 export const FOOTER_TAGLINE_KEY = appFooter.taglineKey ?? "footer.tagline";
+
+/** Footer logo mark: the app's (`appFooter.Logo`), else the kit logo. */
+export const FOOTER_LOGO: ComponentType | undefined = appFooter.Logo;
 
 /** Footer bottom-row area line; `null` when the app removed it. */
 export const FOOTER_AREA_LINE: FooterAreaLine | null =
