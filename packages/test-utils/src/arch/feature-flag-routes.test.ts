@@ -80,9 +80,11 @@ const off = (
 		| "webhooks"
 		| "desktop"
 		| "credits"
-		| "personalBilling",
+		| "personalBilling"
+		| "organizations",
 ) => {
 	if (feature === "credits") paymentsConfig.creditsEnabled = false;
+	else if (feature === "organizations") flags.organizationsMode = "off";
 	else if (feature === "personalBilling") {
 		paymentsConfig.billingAttachedTo = "organization";
 	} else flags[feature] = false;
@@ -99,6 +101,12 @@ const ROUTES = {
 	],
 	personalBilling: ["/settings/billing"],
 	desktop: ["/settings/desktop", "/settings/desktop/x"],
+	organizations: [
+		"/organizations",
+		"/organizations/acme",
+		"/organizations/acme/dashboard",
+		"/organizations/acme/settings/members",
+	],
 } as const;
 
 describe("disabledFeatureForPath", () => {
@@ -126,7 +134,9 @@ describe("disabledFeatureForPath", () => {
 
 	it("never matches other routes, even with every flag off", () => {
 		for (const feature of Object.keys(ROUTES) as (keyof typeof ROUTES)[]) {
-			off(feature);
+			// Without organizations every /organizations… path is off — the
+			// org paths below are checked with organizations on.
+			if (feature !== "organizations") off(feature);
 		}
 		for (const path of [
 			"/",
@@ -144,6 +154,22 @@ describe("disabledFeatureForPath", () => {
 			"/organizations/chat",
 			"/organizations/acme/settings/desktop",
 			"/settings/desktop-export",
+			"/notifications",
+		]) {
+			expect(disabledFeatureForPath(path), path).toBeNull();
+		}
+	});
+});
+
+describe("disabledFeatureForPath — organizations off", () => {
+	it("maps only /organizations… paths", () => {
+		off("organizations");
+		for (const path of [
+			"/",
+			"/dashboard",
+			"/settings",
+			"/settings/billing",
+			"/organizations-export",
 			"/notifications",
 		]) {
 			expect(disabledFeatureForPath(path), path).toBeNull();
