@@ -43,6 +43,7 @@ import {
 	readProject,
 	slotEnv,
 } from "../ports/index.mjs";
+import { collectOpenWork } from "./open-work.mjs";
 
 const ROOT = findRoot(dirname(fileURLToPath(import.meta.url)));
 const STATE_DIR = join(ROOT, ".fuutu/session");
@@ -355,8 +356,11 @@ async function start() {
 }
 
 if (command === "ensure") {
-	// Opt out per machine/shell with FUUTU_DEV_SESSION=0; never in CI.
-	if (process.env.FUUTU_DEV_SESSION === "0" || process.env.CI) process.exit(0);
+	if (process.env.CI) process.exit(0);
+	// SessionStart output reaches the agent: list open work to close.
+	process.stdout.write(collectOpenWork(ROOT));
+	// Opt out per machine/shell with FUUTU_DEV_SESSION=0.
+	if (process.env.FUUTU_DEV_SESSION === "0") process.exit(0);
 	// SessionStart hook: never block the agent — run `start` detached.
 	mkdirSync(STATE_DIR, { recursive: true });
 	const out = openSync(join(STATE_DIR, "ensure.log"), "a");

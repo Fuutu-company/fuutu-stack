@@ -25,4 +25,4 @@ Result: PASS | FAIL
 - /de/pricing (signed out) → renders, console clean
 Failures: <command, output excerpt, likely owner file>
 ```
-Never round a failure up to a pass. If a step cannot run (e.g. no database), say so explicitly.
+Keep the report ≤ ~20 lines; full failing output goes to `.fuutu/reports/qa-<topic>.log` — give the path. Never round a failure up to a pass. If a step cannot run (e.g. no database), say so explicitly.

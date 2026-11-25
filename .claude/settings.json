@@ -20,7 +20,8 @@
 			"Bash(git push *)",
 			"Bash(git commit *)",
 			"Bash(pnpm db:migrate *)",
-			"Bash(pnpm db:push *)"
+			"Bash(pnpm db:push *)",
+			"Bash(pnpm dev:session stop*)"
 		]
 	},
 	"plansDirectory": "./docs/plans",
@@ -32,6 +33,15 @@
 					{
 						"type": "command",
 						"command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-generated.mjs\""
+					}
+				]
+			},
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-main.mjs\""
 					}
 				]
 			}

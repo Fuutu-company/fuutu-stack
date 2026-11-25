@@ -18,4 +18,5 @@ The full, provider-specific guide is served by the **Fuutu MCP** server (Fuutu P
 1. Read the domain's provider interface (`packages/<domain>/src/types.ts`) and an existing implementation (usually `packages/<domain>/src/providers/`).
 2. Select the provider in `packages/<domain>/src/config.ts` (mail: `src/config/` + `resolve.ts`) — callers keep importing from `@fuutu/<domain>` only.
 3. New env vars go through `packages/env/src/` (Zod) and `.env.example` — never `process.env` directly.
-4. Tests in `packages/<domain>/src/__tests__/`, then `pnpm check && pnpm check-types && pnpm test`.
+4. `db` has no provider switch: reimplement its query functions in `packages/db/prisma/queries/`.
+5. Tests in `packages/<domain>/src/__tests__/`, then `pnpm check && pnpm check-types && pnpm test`.
