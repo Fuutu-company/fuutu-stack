@@ -13,6 +13,9 @@
  * `command` is what to run instead of a hand edit.
  */
 
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+
 /** Version of the `--json` object. Bump only for breaking changes. */
 export const SCHEMA_VERSION = 1;
 
@@ -105,7 +108,18 @@ export function generatedRulesJson() {
 	};
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+/** Run as a script — robust to spaces and symlinks in the path (unlike a `file://` string compare). */
+const isMain = () => {
+	try {
+		return (
+			import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+		);
+	} catch {
+		return false;
+	}
+};
+
+if (isMain()) {
 	const args = process.argv.slice(2);
 	if (args.length !== 1 || args[0] !== "--json") {
 		process.stdout.write(

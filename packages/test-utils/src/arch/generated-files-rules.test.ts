@@ -1,4 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -113,6 +115,20 @@ describe("generated-file rules (tooling/generated-files)", () => {
 			"lockfile",
 		);
 		expect(lib.matchGeneratedCommand("cat pnpm-lock.yaml")).toBeNull();
+	});
+
+	it("--json also works from a path with spaces (entry check via realpath)", () => {
+		const dir = mkdtempSync(join(tmpdir(), "generated files "));
+		try {
+			const copy = join(dir, "index.mjs");
+			copyFileSync(MODULE, copy);
+			const out = execFileSync(process.execPath, [copy, "--json"], {
+				encoding: "utf8",
+			});
+			expect(JSON.parse(out).schemaVersion).toBe(1);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	it("the CLI refuses anything but --json", () => {
