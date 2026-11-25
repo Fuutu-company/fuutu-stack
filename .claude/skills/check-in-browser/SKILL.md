@@ -12,7 +12,7 @@ Green tests do not prove the UI works: hydration errors, blank renders, missing 
 
 ## The session browser
 
-Every coding session has one visible browser the developer watches: `pnpm dev:session` (started automatically by the Claude Code `SessionStart` hook) runs DB, migrations and all three apps on this project's port slot (`pnpm ports`; slot 0 = SaaS :3000, Marketing :3001, Docs :4000) and opens Chromium with remote debugging on the slot's browser port. The Playwright MCP connects to it (`--cdp-endpoint`), so every browser action happens where the developer can see it.
+Every coding session has one visible browser the developer watches: `pnpm dev:session` (started automatically by the Claude Code `SessionStart` hook) runs DB, migrations and all three apps on this project's port slot (`pnpm ports`; slot 0 = SaaS :3000, Marketing :3001, Docs :4000) and opens Chromium with remote debugging on the slot's browser port. The Playwright MCP connects to it (`--cdp-endpoint`), so every browser action happens where the developer can see it. Opt out per shell with `FUUTU_DEV_SESSION=0`; a team pins its slot with `pnpm ports pin`.
 
 - **Session tabs** (Marketing, Docs, SaaS signed in as `admin@fuutu.local`): only the main session navigates them, and they are never closed.
 - **Your own tab:** open a new tab for your work and mark it with your role right after each full page load, so the developer knows who works where:

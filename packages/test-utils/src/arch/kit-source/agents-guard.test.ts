@@ -11,7 +11,8 @@ import { describe, expect, it } from "vitest";
  *   docs.fuutustack.com/docs/coding-agents/other-tools.
  * - Preloaded `skills` must exist in `.claude/skills/`.
  * - Read-only roles must not be granted write tools.
- * - Every agent is listed in the AGENTS.md team table.
+ * - Every agent is listed in the team table of the `delegate-tasks` skill,
+ *   with its tier and model.
  */
 
 const REPO_ROOT = join(import.meta.dirname, "../../../../../");
@@ -37,7 +38,10 @@ function frontmatter(source: string): Record<string, string> {
 }
 
 const agentFiles = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".md"));
-const agentsMd = readFileSync(join(REPO_ROOT, "AGENTS.md"), "utf8");
+const teamTable = readFileSync(
+	join(SKILLS_DIR, "delegate-tasks", "SKILL.md"),
+	"utf8",
+);
 
 describe("team agents guard", () => {
 	it("ships the team", () => {
@@ -75,8 +79,15 @@ describe("team agents guard", () => {
 				});
 			}
 
-			it("is listed in the AGENTS.md team table", () => {
-				expect(agentsMd).toContain(`| \`${name}\` |`);
+			it("is listed in the delegate-tasks team table with its tier", () => {
+				const row = teamTable
+					.split("\n")
+					.find((line) => line.startsWith(`| \`${name}\` |`));
+				expect(
+					row,
+					`add \`${name}\` to the delegate-tasks team table`,
+				).toBeDefined();
+				expect(row).toContain(`${fields.tier} → ${fields.model}`);
 			});
 		});
 	}

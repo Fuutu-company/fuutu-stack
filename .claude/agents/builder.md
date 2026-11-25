@@ -26,5 +26,5 @@ Status: DONE | BLOCKED
 Task: <id>
 Files changed: <list>
 Tests: <command> → <result>
-Notes: <decisions you made, anything the reviewer should look at>
+Notes: <decisions you made, for the lead — max 5 lines>
 ```
