@@ -14,7 +14,7 @@ Work through a saved plan task by task without losing state, and finish with evi
 
 1. Read the plan and its `Spec:` completely. Raise contradictions or gaps **now**, not halfway through.
 2. Confirm the baseline is green: `pnpm check-types` and the tests of the packages you will touch. Report pre-existing failures by name before you start.
-3. Create a progress file next to the plan: `docs/plans/<plan-name>.progress.md` — a checklist of task titles plus a "Rulings" section. It survives context compaction; re-read it after any interruption.
+3. Create a progress file next to the plan: `docs/plans/<plan-name>.progress.md` — a header (`Branch:`, `Worktree:`, `Slot:` from `pnpm ports`), a checklist of task titles and a "Rulings" section. It survives context compaction and is the on-disk record of open work (session start lists it); re-read it after any interruption, delete it in `close-work`.
 
 ## Per task
 
@@ -35,4 +35,4 @@ When the plan is silent or wrong, decide yourself if the choice is reversible an
 2. Full gates: `pnpm check && pnpm check-types && pnpm test` (+ E2E for touched flows).
 3. UI touched → `check-in-browser`.
 4. Review the complete diff once with fresh eyes (or have a subagent do it with `review-code`).
-5. Report: what was built, rulings made, follow-up risks. Then `propose-commit`.
+5. Report: what was built, rulings made, follow-up risks. Then `propose-commit`; once the user accepts the work, `close-work`.

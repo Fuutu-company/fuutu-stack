@@ -49,7 +49,7 @@ Commit? (yes / no / edit)
 
 ## Finishing a branch
 
-When the user wants to wrap up a branch: confirm the base branch (don't assume `main`), run the full gates on the final tree, then offer the options — merge locally, push and open a PR (they run it or explicitly ask you to), or keep the branch. Never use `--force`; if a push is rejected because the remote moved, stop and report.
+When the user wants to wrap up a branch: confirm the base branch (don't assume `main`), run the full gates on the final tree, then offer the options — merge locally, push and open a PR (they run it or explicitly ask you to), or keep the branch. Never use `--force`; if a push is rejected because the remote moved, stop and report. Once the branch is merged or dropped, `close-work`.
 
 ## Never
 
