@@ -34,14 +34,16 @@ This skill uses the design that exists. Deriving a new one (more than one coordi
 - Content sits on `Card` surfaces; cards have no borders. A table goes inside `Card className="overflow-hidden py-0"`.
 - Facts on dashboards and landing pages are `AreaTile`s; a row of tiles passes `aligned`.
 - One column on phones, grids from `md`.
+- SaaS routes are flat (`/dashboard`, `/settings`); `(app)` is a route group, not a URL segment.
 
 ## Components
 
 - Use the `@fuutu/ui` component instead of re-assembling its classes; shape, height and padding live in the component.
 - Variants by intent: `default` for the one primary action per view, `secondary` / `outline` for the rest, `ghost` in toolbars, `destructive` only for irreversible actions behind an alert dialog.
-- Lucide icons, `size-4` inside controls; icon-only buttons get an `aria-label` from the translations. Icons are plain strokes in a text role or area ink, never on a round or filled chip (`AreaIcon` for area-coloured icons). Icons are plain strokes in a text role or area ink, never on a round or filled chip (`AreaIcon` for area-coloured icons).
+- Lucide icons, `size-4` inside controls; icon-only buttons get an `aria-label` from the translations. Icons are plain strokes in a text role or area ink, never on a round or filled chip (`AreaIcon` for area-coloured icons).
 - Motion only through the utilities the components already carry, and it must respect `prefers-reduced-motion`.
-- Every label, title and placeholder is a translation key in every locale; no literal strings in JSX.
+- Every label, title and placeholder is a translation key in every locale (`packages/i18n/translations/<locale>/`), added in the same change; ICU for plurals and params; app-owned strings and kit-string overrides in `translations/<locale>/app/index.ts`. No literal strings in JSX. `pnpm check-translations` proves it.
+- `@fuutu/ui` stays framework-agnostic: no `next/*` imports — the app passes Link, Image or router in. One `cn`, from `@fuutu/utils/cn`.
 
 ## Adding a component
 
