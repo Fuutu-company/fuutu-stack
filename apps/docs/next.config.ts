@@ -70,6 +70,12 @@ const nextConfig: NextConfig = {
 	// root so workspace packages (packages/*) land in .next/standalone.
 	output: "standalone",
 	outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
+	// Read at runtime, invisible to the tracer: the OpenAPI spec
+	// (src/lib/openapi.ts reads it by path) and evlog, which
+	// src/instrumentation.ts loads through a non-literal import().
+	outputFileTracingIncludes: {
+		"/**/*": ["./content/openapi/**/*", "./node_modules/evlog/**/*"],
+	},
 	transpilePackages: ["shiki", "@fuutu/ui", "@fuutu/i18n", "@fuutu/analytics"],
 	async headers() {
 		return [

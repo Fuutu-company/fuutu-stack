@@ -8,7 +8,8 @@
 				"node packages/telemetry/bin/ping.mjs || true",
 				"SKIP_ENV_VALIDATION=1 pnpm --filter @fuutu/saas build",
 				"cp -r apps/saas/.next/static apps/saas/.next/standalone/apps/saas/.next/static",
-				"cp -r apps/saas/public apps/saas/.next/standalone/apps/saas/public"
+				"cp -r apps/saas/public apps/saas/.next/standalone/apps/saas/public",
+				"node tooling/deploy/bundle-migrate.mjs apps/saas/.next/standalone/migrate"
 			]
 		}
 	},
@@ -24,9 +25,12 @@
 					"/root/.local/state/mise"
 				]
 			},
-			{ "step": "build", "include": ["apps/saas/.next/standalone"] }
+			{
+				"step": "build",
+				"include": ["apps/saas/.next/standalone", "tooling/deploy"]
+			}
 		],
-		"startCommand": "node apps/saas/.next/standalone/apps/saas/server.js",
+		"startCommand": "node tooling/deploy/start-with-migrate.mjs apps/saas/.next/standalone/migrate apps/saas/.next/standalone/apps/saas/server.js",
 		"variables": {
 			"HOSTNAME": "0.0.0.0",
 			"PORT": "3000",
