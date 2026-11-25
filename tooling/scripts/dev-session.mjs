@@ -6,6 +6,8 @@
  *   pnpm dev:session            start (or reuse) DB, apps and the session browser
  *   pnpm dev:session ensure     same, detached — returns immediately (SessionStart hook)
  *   pnpm dev:session status     what is running
+ *     --json                    the same as one JSON object (schemaVersion 1)
+ *                               for editor tooling
  *   pnpm dev:session stop       stop the apps and close the session browser
  *   pnpm dev:session reset      restart the apps with an empty Turbopack dev
  *                               cache (endless reloads or stale builds that
@@ -39,8 +41,11 @@ import { fileURLToPath } from "node:url";
 import {
 	ensureSlot,
 	findRoot,
+	parseArgs,
 	readDotEnv,
 	readProject,
+	sessionApps,
+	sessionStatus,
 	slotEnv,
 } from "../ports/index.mjs";
 
@@ -50,7 +55,26 @@ const PROFILE_DIR = join(ROOT, ".fuutu/browser/session");
 const DEV_LOG = join(STATE_DIR, "dev.log");
 const PID_FILE = join(STATE_DIR, "dev.pid");
 
-const command = process.argv[2] ?? "start";
+let args;
+try {
+	args = parseArgs(process.argv.slice(2), {
+		defaultCommand: "start",
+		knownFlags: ["--json"],
+	});
+} catch (err) {
+	process.stdout.write(`[dev-session] ${err.message}\n`);
+	process.exit(1);
+}
+const { command, flags } = args;
+if (flags.has("--json")) {
+	if (command !== "status") {
+		process.stdout.write("[dev-session] --json works with `status` only\n");
+		process.exit(1);
+	}
+	const status = await sessionStatus(ROOT, readProject(ROOT));
+	process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+	process.exit(0);
+}
 const PROJECT =
 	command === "start" ? await ensureSlot(ROOT) : readProject(ROOT);
 if (!PROJECT && command !== "ensure") {
@@ -61,25 +85,7 @@ if (!PROJECT && command !== "ensure") {
 }
 if (PROJECT?.notice) process.stdout.write(`[dev-session] ${PROJECT.notice}\n`);
 const CDP_PORT = PROJECT?.ports.browser;
-const APPS = PROJECT
-	? [
-			{
-				name: "Marketing",
-				url: PROJECT.urls.marketing,
-				port: PROJECT.ports.marketing,
-			},
-			{
-				name: "Docs",
-				url: `${PROJECT.urls.docs}/docs`,
-				port: PROJECT.ports.docs,
-			},
-			{
-				name: "SaaS",
-				url: `${PROJECT.urls.saas}/dashboard`,
-				port: PROJECT.ports.saas,
-			},
-		]
-	: [];
+const APPS = PROJECT ? sessionApps(PROJECT) : [];
 /** Env with this slot's database, URLs and buckets for every child command. */
 const ENV = PROJECT
 	? (() => {

@@ -4,76 +4,27 @@
  * command, never written by hand. Blocks Write/Edit/MultiEdit on generated
  * paths and Bash commands that write into them, and tells the agent which
  * command to run instead. Reading and the generator commands stay allowed.
+ *
+ * The rules live in tooling/generated-files — add yours there.
  */
 import { readFileSync } from "node:fs";
+import {
+	GENERATED,
+	matchGeneratedCommand,
+	matchGeneratedPath,
+} from "../../tooling/generated-files/index.mjs";
 
-export const GENERATED = [
-	{
-		pattern: /(^|[\s/"'=])packages\/db\/prisma\/migrations\//,
-		label: "Prisma migrations",
-		command:
-			"pnpm --filter @fuutu/db db:migrate --name <change> (add --create-only to review first). Never write or edit migration SQL; change the schema in packages/db/prisma/schema/ and regenerate. If a migration needs custom SQL, stop and ask the human.",
-	},
-	{
-		pattern: /(^|[\s/"'=])packages\/db\/prisma\/(generated|zod)\//,
-		label: "Prisma client / Zod schemas",
-		command: "pnpm db:generate",
-	},
-	{
-		pattern: /(^|[\s/"'=])\.fuutu\/project\.json(?=$|[\s"';&|])/,
-		label: "the port-slot project file",
-		command: "pnpm ports set <slot> / pnpm ports reassign",
-	},
-	{
-		pattern: /(^|[\s/"'=])pnpm-lock\.yaml(?=$|[\s"';&|])/,
-		label: "the lockfile",
-		command: "pnpm add / pnpm remove / pnpm install",
-	},
-	{
-		pattern:
-			/(^|[\s/"'=])next-env\.d\.ts(?=$|[\s"';&|])|(^|[\s/"'=])\.source\//,
-		label: "Next.js / Fumadocs generated types",
-		command: "pnpm check-types (runs next typegen and fumadocs-mdx)",
-	},
-];
-
-/** Commands that modify every file named in the same command segment. */
-const MODIFIES =
-	/\btee\b|\bsed\s+(-[a-zA-Z]*i|--in-place)|\bperl\s+-[a-zA-Z]*i|\b(mv|rm|touch|truncate)\s/;
-/** Commands that only modify their last argument (the destination). */
-const COPIES = /\b(cp|install|ln)\s/;
-
-/** Heredoc bodies are data (file content), not targets — drop them. */
-const stripHeredocs = (command) =>
-	command.replace(
-		/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\n|$)/g,
-		"<<HEREDOC",
-	);
-
-function bashTarget(command) {
-	const segments = stripHeredocs(command).split(/\n|;|&&|\|\|?/);
-	for (const segment of segments) {
-		for (const g of GENERATED) {
-			// `> path` / `>> path` redirect into a generated file
-			for (const m of segment.matchAll(/>>?\s*(\S+)/g)) {
-				if (g.pattern.test(` ${m[1]}`)) return g;
-			}
-			if (MODIFIES.test(segment) && g.pattern.test(segment)) return g;
-			if (COPIES.test(segment)) {
-				const destination = segment.trim().split(/\s+/).at(-1) ?? "";
-				if (g.pattern.test(` ${destination}`)) return g;
-			}
-		}
-	}
-	return null;
-}
+export { GENERATED };
 
 export function check(toolName, input) {
 	if (["Write", "Edit", "MultiEdit", "NotebookEdit"].includes(toolName)) {
-		const path = String(input.file_path ?? input.notebook_path ?? "");
-		return GENERATED.find((g) => g.pattern.test(path)) ?? null;
+		return matchGeneratedPath(
+			String(input.file_path ?? input.notebook_path ?? ""),
+		);
 	}
-	if (toolName === "Bash") return bashTarget(String(input.command ?? ""));
+	if (toolName === "Bash") {
+		return matchGeneratedCommand(String(input.command ?? ""));
+	}
 	return null;
 }
 

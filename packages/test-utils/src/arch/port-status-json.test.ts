@@ -176,6 +176,15 @@ describe("pnpm dev:session status --json", () => {
 		});
 	});
 
+	it("the CLI prints valid JSON with schemaVersion 1", () => {
+		const out = execFileSync(
+			process.execPath,
+			[join(REPO_ROOT, "tooling/scripts/dev-session.mjs"), "status", "--json"],
+			{ cwd: REPO_ROOT, encoding: "utf8", env: { ...process.env, CI: "1" } },
+		);
+		expect(JSON.parse(out).schemaVersion).toBe(1);
+	});
+
 	it("parseArgs takes the caller's default command and flags", () => {
 		expect(
 			lib.parseArgs([], { defaultCommand: "start", knownFlags: ["--json"] }),
