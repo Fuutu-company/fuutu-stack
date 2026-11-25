@@ -705,29 +705,159 @@ export function planKeptDrop(
 	};
 }
 
-const KNOWN_FLAGS = new Set(["--yes", "--keep-data", "--drop-data"]);
+const KNOWN_FLAGS = new Set(["--yes", "--keep-data", "--drop-data", "--json"]);
 
 /**
  * `ports` command line → command, path argument, flags. A flag is never a
  * path, and an unknown one (a typo like `--drop-dta`) is an error rather than
- * silently ignored.
+ * silently ignored. `dev:session` passes its own default command and flags.
  */
-export function parseArgs(argv) {
+export function parseArgs(
+	argv,
+	{ defaultCommand = "list", knownFlags = KNOWN_FLAGS } = {},
+) {
+	const known = new Set(knownFlags);
 	const flags = new Set();
 	const positional = [];
 	for (const a of argv) {
 		if (!a.startsWith("-")) {
 			positional.push(a);
-		} else if (KNOWN_FLAGS.has(a)) {
+		} else if (known.has(a)) {
 			flags.add(a);
 		} else {
-			throw new Error(
-				`unknown flag ${a} — known: ${[...KNOWN_FLAGS].join(", ")}`,
-			);
+			throw new Error(`unknown flag ${a} — known: ${[...known].join(", ")}`);
 		}
 	}
-	const [command = "list", arg] = positional;
+	const [command = defaultCommand, arg] = positional;
 	return { command, arg, flags };
+}
+
+// ── machine-readable status (`--json`) ──────────────────────────────────
+
+/**
+ * Version of the `--json` objects below. Bump the major only for breaking
+ * changes (removed or retyped fields); adding fields keeps it.
+ */
+export const STATUS_SCHEMA_VERSION = 1;
+
+/**
+ * `pnpm ports status --json`: this project's slot and every project on the
+ * machine. Read-only — unlike the human `list`, it never assigns a slot
+ * (`project` is null until `pnpm ports` / `pnpm dev` ran once).
+ */
+export async function portsStatus(
+	root,
+	{ busy = isPortBusy, registry = readRegistry() } = {},
+) {
+	const p = readProject(root);
+	const project =
+		p && Number.isInteger(p.slot)
+			? {
+					name: p.name,
+					root: p.root ?? root,
+					slot: p.slot,
+					ports: p.ports,
+					urls: p.urls,
+					database: p.database,
+					listening: Object.fromEntries(
+						await Promise.all(
+							Object.entries(p.ports).map(async ([key, port]) => [
+								key,
+								await busy(port),
+							]),
+						),
+					),
+				}
+			: null;
+	const stale = new Set(staleProjects(registry).map((e) => e.path));
+	const projects = Object.entries(registry.projects)
+		.sort((a, b) => a[1].slot - b[1].slot)
+		.map(([path, e]) => {
+			const gone = projectGone(path);
+			return {
+				path,
+				name: e.name,
+				slot: e.slot,
+				kind: existsSync(path) ? checkoutKind(path) : "gone",
+				current: path === root,
+				database: e.database ?? null,
+				lastStarted: e.lastStarted ?? null,
+				gone,
+				stale: stale.has(path),
+			};
+		});
+	const preferred = readPreferredSlot(root);
+	return {
+		schemaVersion: STATUS_SCHEMA_VERSION,
+		root,
+		project,
+		preferredSlot: preferred ?? null,
+		projects,
+		keptData: keptSlots(registry),
+	};
+}
+
+/** The apps a dev session runs, with the URL its tab opens. */
+export function sessionApps(project) {
+	return [
+		{
+			id: "marketing",
+			name: "Marketing",
+			url: project.urls.marketing,
+			port: project.ports.marketing,
+		},
+		{
+			id: "docs",
+			name: "Docs",
+			url: `${project.urls.docs}/docs`,
+			port: project.ports.docs,
+		},
+		{
+			id: "saas",
+			name: "SaaS",
+			url: `${project.urls.saas}/dashboard`,
+			port: project.ports.saas,
+		},
+	];
+}
+
+/** Local Postgres port the session starts (`pnpm db:start`). */
+export const SESSION_DB_PORT = 5432;
+
+/**
+ * `pnpm dev:session status --json`: per app running or not, the database
+ * and the session browser's CDP endpoint. `project` null = no slot yet.
+ */
+export async function sessionStatus(root, project, { busy = isPortBusy } = {}) {
+	const base = {
+		schemaVersion: STATUS_SCHEMA_VERSION,
+		root,
+		log: join(root, ".fuutu/session/dev.log"),
+	};
+	if (!project) {
+		return { ...base, project: null, apps: [], database: null, browser: null };
+	}
+	const apps = await Promise.all(
+		sessionApps(project).map(async (app) => ({
+			...app,
+			running: await busy(app.port),
+		})),
+	);
+	return {
+		...base,
+		project: { name: project.name, slot: project.slot },
+		apps,
+		database: {
+			name: project.database,
+			port: SESSION_DB_PORT,
+			running: await busy(SESSION_DB_PORT),
+		},
+		browser: {
+			cdpUrl: project.urls.browserCdp,
+			port: project.ports.browser,
+			running: await busy(project.ports.browser),
+		},
+	};
 }
 
 /**

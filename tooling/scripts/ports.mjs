@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 /**
  * pnpm ports                 this project's slot + every project on this machine
+ * pnpm ports status          same as `pnpm ports`
+ *   --json                   the same as one JSON object (schemaVersion 1) for
+ *                            editor tooling — read-only, never assigns a slot
  * pnpm ports ensure          assign a slot if missing (runs before every `pnpm dev`)
  * pnpm ports set <slot>      move this project to a specific slot
  * pnpm ports reassign        move this project to the next free slot
@@ -45,6 +48,7 @@ import {
 	parseArgs,
 	pinSlot,
 	planKeptDrop,
+	portsStatus,
 	pruneRegistry,
 	readPreferredSlot,
 	readProject,
@@ -331,6 +335,7 @@ async function list() {
 
 const commands = {
 	list,
+	status: list,
 	ensure: async () => {
 		const p = await ensureSlot(root);
 		if (p.notice) out(`[ports] ${p.notice}`);
@@ -401,9 +406,17 @@ const commands = {
 	},
 };
 
+if (flags.has("--json")) {
+	if (command !== "list" && command !== "status") {
+		out("[ports] --json works with `status` (or no command) only");
+		process.exit(1);
+	}
+	commands[command] = async () =>
+		out(JSON.stringify(await portsStatus(root), null, 2));
+}
 if (!commands[command]) {
 	out(
-		`unknown command "${command}" — use list | ensure | set <slot> | reassign | pin [slot] | unpin | release [path] | prune [--yes]`,
+		`unknown command "${command}" — use list | status [--json] | ensure | set <slot> | reassign | pin [slot] | unpin | release [path] | prune [--yes]`,
 	);
 	process.exit(1);
 }

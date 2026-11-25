@@ -1,0 +1,500 @@
+{
+	"$comment": "Kit-owned: which files are yours. extensionPoints and appOwned files carry the App-owned header — the kit never changes their content after release, customise there. Every other file is kit-owned: edits may conflict when you merge a kit update. Generated files: tooling/generated-files. Checked by packages/test-utils/src/arch/app-extension-points.test.ts; read by editor tooling (schemaVersion 1).",
+	"schemaVersion": 1,
+	"header": "App-owned — the kit never changes this file's content after release; fill it for your app.",
+	"docs": "https://docs.fuutustack.com/docs/concepts/extend-without-forking",
+	"extensionPoints": [
+		{
+			"file": "apps/saas/src/app-navigation.ts",
+			"exports": [
+				"appOrgSettingsNavItems",
+				"appAccountNavItems",
+				"appAdminNavItems",
+				"appBreadcrumbLabels"
+			],
+			"purpose": "Extra SaaS sidebar items (org settings, account, admin) and breadcrumb labels",
+			"wiredInto": [
+				{
+					"file": "apps/saas/src/modules/app/components/nav-config.ts",
+					"import": {
+						"source": "from \"\\.\\.\\/\\.\\.\\/\\.\\.\\/app-navigation\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/saas/src/modules/app/components/breadcrumbs.ts",
+					"import": {
+						"source": "from \"\\.\\.\\/\\.\\.\\/\\.\\.\\/app-navigation\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/saas/src/app-main-nav.ts",
+			"exports": ["appMainNavItems"],
+			"purpose": "Top-level SaaS sidebar items next to Dashboard",
+			"wiredInto": [
+				{
+					"file": "apps/saas/src/modules/app/components/nav-config.ts",
+					"import": {
+						"source": "\\{ appMainNavItems \\} from \"\\.\\.\\/\\.\\.\\/\\.\\.\\/app-main-nav\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/saas/src/app-admin.tsx",
+			"exports": ["appAdminUserSections", "appAdminOrganizationSections"],
+			"purpose": "Extra tabs on the system-admin user and organization detail pages",
+			"wiredInto": [
+				{
+					"file": "apps/saas/src/modules/app/admin/user-detail/admin-user-detail.tsx",
+					"import": {
+						"source": "\\{ appAdminUserSections \\} from \"@\\/app-admin\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/saas/src/modules/app/admin/org-detail/admin-organization-detail.tsx",
+					"import": {
+						"source": "\\{ appAdminOrganizationSections \\} from \"@\\/app-admin\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/saas/src/app-onboarding.tsx",
+			"exports": ["appOnboardingSteps"],
+			"purpose": "Your onboarding wizard steps, merged into the kit steps",
+			"wiredInto": [
+				{
+					"file": "apps/saas/src/modules/app/onboarding/onboarding-wizard.tsx",
+					"import": {
+						"source": "\\{ appOnboardingSteps \\} from \"@\\/app-onboarding\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/saas/src/app-onboarding.server.ts",
+			"exports": ["appCanCompleteOnboarding"],
+			"purpose": "Server-side gate for finishing onboarding",
+			"wiredInto": [
+				{
+					"file": "apps/saas/src/modules/app/onboarding/actions.ts",
+					"import": {
+						"source": "\\{ appCanCompleteOnboarding \\} from \"@\\/app-onboarding\\.server\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/saas/src/app-slots.tsx",
+			"exports": ["appSlots"],
+			"purpose": "Your UI at fixed places in the kit's SaaS pages (dashboards, settings, billing)",
+			"wiredInto": [
+				{
+					"file": "apps/saas/src/app/(app)/settings/page.tsx",
+					"import": {
+						"source": "\\{ appSlots \\} from \"@\\/app-slots\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/saas/src/app/(app)/organizations/[slug]/settings/billing/page.tsx",
+					"import": {
+						"source": "\\{ appSlots \\} from \"@\\/app-slots\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/saas/src/app/(app)/dashboard/page.tsx",
+					"import": {
+						"source": "\\{ appSlots \\} from \"@\\/app-slots\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/saas/src/app/(app)/organizations/[slug]/dashboard/page.tsx",
+					"import": {
+						"source": "\\{ appSlots \\} from \"@\\/app-slots\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/saas/src/server-init.ts",
+			"exports": ["registerApp"],
+			"purpose": "Server startup hook for process-wide extensions (instead of instrumentation.ts)",
+			"wiredInto": [
+				{
+					"file": "apps/saas/src/instrumentation.ts",
+					"import": {
+						"source": "\\{ registerApp \\} = await import\\(\"\\.\\/server-init\"\\)",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/env/src/app-env.ts",
+			"exports": ["appServerEnv", "appClientEnv", "appClientRuntimeEnv"],
+			"purpose": "Your app's env vars, merged into the kit env schemas",
+			"wiredInto": [
+				{
+					"file": "packages/env/src/saas.ts",
+					"import": {
+						"source": "from \"\\.\\/app-env\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "packages/env/src/public.ts",
+					"import": {
+						"source": "from \"\\.\\/app-env\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/content/src/app-content.ts",
+			"exports": ["appContent"],
+			"purpose": "Changes to the kit's content collections (e.g. hide demo blog posts)",
+			"wiredInto": [
+				{
+					"file": "packages/content/src/index.tsx",
+					"import": {
+						"source": "\\{ appContent \\} from \"\\.\\/app-content\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/content/src/app-changelog.ts",
+			"exports": ["appChangelog"],
+			"purpose": "Your changelog entries (frontmatter only)",
+			"wiredInto": [
+				{
+					"file": "packages/content/src/changelog-meta.ts",
+					"import": {
+						"source": "\\{ appChangelog \\} from \"\\.\\/app-changelog\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/content/src/app-changelog-bodies.tsx",
+			"exports": ["appChangelogBodies"],
+			"purpose": "Body components for your changelog entries",
+			"wiredInto": [
+				{
+					"file": "packages/content/src/index.tsx",
+					"import": {
+						"source": "\\{ appChangelogBodies \\} from \"\\.\\/app-changelog-bodies\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/api/src/app-api-policy.ts",
+			"exports": [
+				"appSensitiveProcedurePrefixes",
+				"appProcedurePolicyExceptions",
+				"appRoutePolicies"
+			],
+			"purpose": "Your API security policy, merged with the kit's",
+			"wiredInto": [
+				{
+					"file": "packages/api/src/api-policy.ts",
+					"import": {
+						"source": "from \"\\.\\/app-api-policy\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/cron/src/app-jobs.ts",
+			"exports": ["appJobs"],
+			"purpose": "Your scheduled jobs, registered next to the kit jobs",
+			"wiredInto": [
+				{
+					"file": "packages/cron/src/jobs/index.ts",
+					"import": {
+						"source": "\\{ appJobs \\} from \"\\.\\.\\/app-jobs\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/mail/src/app-mail.ts",
+			"exports": ["appMail"],
+			"purpose": "Extensions for the transactional email templates (e.g. legal footer)",
+			"wiredInto": [
+				{
+					"file": "packages/mail/src/templates/layout.ts",
+					"import": {
+						"source": "\\{ appMail \\} from \"\\.\\.\\/app-mail\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/docs/src/app-docs.tsx",
+			"exports": ["appDocs"],
+			"purpose": "Docs app extensions: MDX components, layout and page additions",
+			"wiredInto": [
+				{
+					"file": "apps/docs/src/mdx-components.tsx",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/app/[locale]/docs/layout.tsx",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/app/[locale]/docs/[[...slug]]/page.tsx",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/app/llms.mdx/[locale]/docs/[[...slug]]/route.ts",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/app/llms-full.txt/route.ts",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/app/og/docs/[...slug]/route.tsx",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/app/sitemap.ts",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/app/robots.ts",
+					"import": {
+						"source": "\\{ appDocs \\} from \"(\\.\\/|@\\/)app-docs\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/docs/app-docs-source.ts",
+			"exports": ["appDocsSource"],
+			"purpose": "Config-time docs extensions (content folder, source config)",
+			"wiredInto": [
+				{
+					"file": "apps/docs/source.config.ts",
+					"import": {
+						"source": "\\{ appDocsSource \\} from \"\\.\\/app-docs-source\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/docs/src/lib/app-docs-hooks.ts",
+					"import": {
+						"source": "\\{ appDocsSource \\} from \"\\.\\.\\/\\.\\.\\/app-docs-source\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/marketing/src/app-marketing.tsx",
+			"exports": ["appMarketing"],
+			"purpose": "Marketing site extensions: home sections, pricing, SEO",
+			"wiredInto": [
+				{
+					"file": "apps/marketing/src/app/(marketing)/[locale]/page.tsx",
+					"import": {
+						"source": "\\{ appMarketing \\} from \"@\\/app-marketing\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/marketing/src/app/(marketing)/[locale]/layout.tsx",
+					"import": {
+						"source": "\\{ appMarketing \\} from \"@\\/app-marketing\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/marketing/src/app/(marketing)/[locale]/pricing/page.tsx",
+					"import": {
+						"source": "\\{ appMarketing \\} from \"@\\/app-marketing\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/marketing/src/modules/marketing/pricing/index.ts",
+					"import": {
+						"source": "\\{ appMarketing \\} from \"@\\/app-marketing\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/marketing/src/app/sitemap.ts",
+					"import": {
+						"source": "\\{ appMarketing \\} from \"@\\/app-marketing\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/marketing/src/app/robots.ts",
+					"import": {
+						"source": "\\{ appMarketing \\} from \"@\\/app-marketing\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/marketing/src/app-site-links.ts",
+			"exports": [
+				"appNavItems",
+				"appNavDropdownItems",
+				"appFooterColumns",
+				"appHeaderBrand",
+				"appKitRoutes"
+			],
+			"purpose": "Extra marketing navbar items and footer columns",
+			"wiredInto": [
+				{
+					"file": "apps/marketing/src/lib/site-links.ts",
+					"import": {
+						"source": "from \"\\.\\.\\/app-site-links\"",
+						"flags": ""
+					}
+				},
+				{
+					"file": "apps/marketing/src/lib/kit-routes.ts",
+					"import": {
+						"source": "\\{ appKitRoutes \\} from \"\\.\\.\\/app-site-links\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/marketing/src/app-urls.ts",
+			"exports": ["appUrls"],
+			"purpose": "Extra or replaced marketing URLs",
+			"wiredInto": [
+				{
+					"file": "apps/marketing/src/lib/urls.ts",
+					"import": {
+						"source": "\\{ appUrls \\} from \"\\.\\.\\/app-urls\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "packages/db/prisma/app-seed.ts",
+			"exports": ["appSeed", "appSeedConfig"],
+			"purpose": "Demo data for your own models, run after the kit seed",
+			"wiredInto": [
+				{
+					"file": "packages/db/prisma/seed.ts",
+					"import": {
+						"source": "\\{ appSeed, appSeedConfig \\} from \"\\.\\/app-seed\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/saas/tests/app-excluded.ts",
+			"exports": ["appExcludedTests"],
+			"purpose": "Kit E2E tests the SaaS app does not run",
+			"wiredInto": [
+				{
+					"file": "apps/saas/playwright.config.ts",
+					"import": {
+						"source": "\\{ appExcludedTests \\} from \"\\.\\/tests\\/app-excluded\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/marketing/tests/app-excluded.ts",
+			"exports": ["appExcludedTests"],
+			"purpose": "Kit E2E tests the marketing app does not run",
+			"wiredInto": [
+				{
+					"file": "apps/marketing/playwright.config.ts",
+					"import": {
+						"source": "\\{ appExcludedTests \\} from \"\\.\\/tests\\/app-excluded\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/docs/tests/app-excluded.ts",
+			"exports": ["appExcludedTests"],
+			"purpose": "Kit E2E tests the docs app does not run",
+			"wiredInto": [
+				{
+					"file": "apps/docs/playwright.config.ts",
+					"import": {
+						"source": "\\{ appExcludedTests \\} from \"\\.\\/tests\\/app-excluded\"",
+						"flags": ""
+					}
+				}
+			]
+		},
+		{
+			"file": "apps/docs/app-redirects.ts",
+			"exports": ["appRedirects"],
+			"purpose": "Redirects for the docs app",
+			"wiredInto": [
+				{
+					"file": "apps/docs/next.config.ts",
+					"import": {
+						"source": "\\{ appRedirects \\} from \"\\.\\/app-redirects\"",
+						"flags": ""
+					}
+				}
+			]
+		}
+	],
+	"appOwned": ["packages/i18n/translations/*/app/index.ts"]
+}

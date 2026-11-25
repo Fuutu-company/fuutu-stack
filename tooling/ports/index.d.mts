@@ -120,11 +120,74 @@ export function planKeptDrop(
 	buckets: string[];
 	empty: boolean;
 };
-export function parseArgs(argv: string[]): {
+export function parseArgs(
+	argv: string[],
+	opts?: { defaultCommand?: string; knownFlags?: Iterable<string> },
+): {
 	command: string;
 	arg: string | undefined;
 	flags: Set<string>;
 };
+export const STATUS_SCHEMA_VERSION: 1;
+/** `pnpm ports status --json` (schemaVersion 1). */
+export type PortsStatus = {
+	schemaVersion: 1;
+	root: string;
+	/** null until the project got a slot (`pnpm ports` / `pnpm dev`). */
+	project: {
+		name: string;
+		root: string;
+		slot: number;
+		ports: SlotPorts;
+		urls: Project["urls"];
+		database: string;
+		/** Per port: something listens on 127.0.0.1. */
+		listening: Record<keyof SlotPorts, boolean>;
+	} | null;
+	preferredSlot: number | null;
+	projects: Array<{
+		path: string;
+		name: string;
+		slot: number;
+		kind: "main" | "worktree" | "gone";
+		current: boolean;
+		database: string | null;
+		lastStarted: string | null;
+		gone: PruneCandidate["reason"] | null;
+		stale: boolean;
+	}>;
+	keptData: { slot: number; path: string; database: string | null }[];
+};
+export function portsStatus(
+	root: string,
+	opts?: {
+		busy?: (port: number) => Promise<boolean>;
+		registry?: ReturnType<typeof readRegistry>;
+	},
+): Promise<PortsStatus>;
+export type SessionApp = {
+	id: "marketing" | "docs" | "saas";
+	name: string;
+	url: string;
+	port: number;
+};
+export function sessionApps(project: Project): SessionApp[];
+export const SESSION_DB_PORT: number;
+/** `pnpm dev:session status --json` (schemaVersion 1). */
+export type SessionStatus = {
+	schemaVersion: 1;
+	root: string;
+	log: string;
+	project: { name: string; slot: number } | null;
+	apps: Array<SessionApp & { running: boolean }>;
+	database: { name: string; port: number; running: boolean } | null;
+	browser: { cdpUrl: string; port: number; running: boolean } | null;
+};
+export function sessionStatus(
+	root: string,
+	project: Project | null,
+	opts?: { busy?: (port: number) => Promise<boolean> },
+): Promise<SessionStatus>;
 export function mainCheckoutRoot(root: string): string | null;
 export function serviceEnv(
 	root: string,
