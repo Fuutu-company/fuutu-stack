@@ -53,7 +53,7 @@ packages/*              domain logic — config, env, db, auth, api, ui, i18n, m
                         utils, content, license, telemetry, webhooks, mcp, ai, test-utils
 ```
 
-\* Slot 0. Every project and git worktree on a machine gets its own **port slot** (ports, local DB, buckets, login cookie, session browser) — `pnpm ports` shows them, `.fuutu/project.json` holds them; a team pins one with `pnpm ports pin` (`fuutu.preferredSlot` in `package.json`). A main checkout keeps its slot for good; a worktree's slot is temporary — once the worktree is merged, run `pnpm dev:session stop && pnpm ports release --drop-data` in it, then `git worktree remove` (`pnpm ports prune` catches the ones already removed). Never hard-code a port: apps start through `tooling/scripts/next.mjs`, URLs follow the slot.
+\* Slot 0. Every project and git worktree gets its own **port slot** (ports, local DB, buckets, login cookie, session browser) — `pnpm ports` shows it; a team pins one with `pnpm ports pin`. Never hard-code a port: apps start through `tooling/scripts/next.mjs`. A worktree's slot is temporary — `close-work` releases it.
 
 ## 5 · Commands
 
@@ -68,20 +68,22 @@ pnpm db:start | db:migrate | db:push | db:seed | db:studio
 
 `pnpm check && pnpm check-types && pnpm test` must be green before every commit.
 
-**Live session:** `pnpm dev:session` keeps DB, all three apps and one visible browser (Chromium on the slot's browser port, SaaS tab signed in as `admin@fuutu.local`) running for the whole coding session; Claude Code starts it via the `SessionStart` hook (opt out: `FUUTU_DEV_SESSION=0`). Agents drive that browser through the Playwright MCP, work in their own role-prefixed tabs (`[qa] …`) and never stop the apps or the browser — the developer watches and reviews. Details: `check-in-browser` skill.
+**Live session:** `pnpm dev:session` keeps DB, apps and one visible browser running (Claude Code starts it at session start; opt out: `FUUTU_DEV_SESSION=0`). Agents use their own role-prefixed tabs and never stop it — `check-in-browser`.
 
 ## 6 · Code patterns
 
-- **TypeScript**: strict, no `any`, no `console.log` (use `createLogger({ scope })` from `@fuutu/logs`).
-- **Env**: only via `@fuutu/env/saas` | `/marketing` | `/docs` — never `process.env.*`. New vars: Zod schema + `.env.example`.
-- **DB**: only exported query functions from `@fuutu/db` (`packages/db/prisma/queries/`) — never the raw client outside `packages/db`.
-- **Generated files — only via their command, never by hand** (no creating, editing or deleting; reading is fine): migrations → edit `packages/db/prisma/schema/`, then `pnpm --filter @fuutu/db db:migrate --name <change>` (`--create-only` to review) · Prisma client + Zod (`prisma/generated`, `prisma/zod`) → `pnpm db:generate` · `pnpm-lock.yaml` → `pnpm add/remove/install` · shadcn components → `pnpm dlx shadcn@4.21.4 add` · `next-env.d.ts`, `.source/` → `pnpm check-types`. A migration needing custom SQL → stop and ask. Claude Code blocks hand edits (`.claude/hooks/protect-generated.mjs`); CI fails on schema/migration drift.
-- **API**: oRPC procedure with Zod input; `authProcedure({ systemPermission | org: { permission } })` from `packages/api/src/orpc/procedures.ts` for protected data (`systemAdminProcedure(permission)` for system-admin procedures); rate-limit every mutation; payments, API-key, webhook and org mutations use `denyImpersonation`; register in `packages/api/src/orpc/router.ts`.
+Most rules below are machine-checked — Biome, `pnpm test` (arch guards in `packages/test-utils/src/arch/`, API router policy), `pnpm check-translations`, `.claude/hooks/` — and the failing check names the fix.
+
+- **TypeScript**: strict, no `any`, no `console.*` — `createLogger({ scope })` from `@fuutu/logs`.
+- **Env**: only via `@fuutu/env/saas` | `/marketing` | `/docs`, never `process.env`. New vars: Zod schema + `.env.example`.
+- **DB**: only the query functions exported by `@fuutu/db` — never the raw client outside `packages/db`.
+- **Generated files** (migrations, Prisma client + Zod, lockfile, shadcn components, `next-env.d.ts`, `.source/`): only via their command, never by hand — the hook names the command. Schema changes: edit `packages/db/prisma/schema/`, then `pnpm --filter @fuutu/db db:migrate --name <change>`; shadcn: `pnpm dlx shadcn@4.21.4 add`. A migration needing custom SQL → stop and ask.
+- **API**: oRPC procedure with Zod input, `authProcedure` / `systemAdminProcedure` for protected data, rate limit on every mutation, `denyImpersonation` on money/credential/org mutations, registered in `packages/api/src/orpc/router.ts` — `add-api-endpoint`.
 - **MCP tools**: `defineMcpTool` (`@fuutu/mcp`) with `access: "public" | "authenticated" | (principal) => boolean`; register in `packages/api/src/mcp/index.ts`.
 - **Auth guards**: server-side in layouts (`requireAuth()` / `requireOnboarded()` from `apps/saas/src/lib/auth-server.ts`); `proxy.ts` is an optimistic pre-check only.
 - **Redirects**: `getSafeRedirect()` from `@fuutu/utils/redirect`.
 - **i18n**: zero literal strings in JSX; keys in every locale under `packages/i18n/translations/<locale>/` in the same change; ICU for plurals/params; `pnpm check-translations`.
-- **UI**: `@fuutu/ui` stays framework-agnostic (no `next/*` imports); single `cn` from `@fuutu/utils/cn`; colors only via semantic tokens (`DESIGN.md`) — edit `brand.css`, never `theme.css`; follow `build-ui`.
+- **UI**: `@fuutu/ui` imports no `next/*`; one `cn` from `@fuutu/utils/cn`; semantic color tokens only (`DESIGN.md`) — edit `brand.css`, never `theme.css`; `build-ui`.
 - **Routes** (saas): flat (`/dashboard`, `/settings`) — `(app)` is a route group.
 - **Naming**: camelCase vars/functions · PascalCase types · UPPER_SNAKE constants · kebab-case files.
 
@@ -115,31 +117,23 @@ Skills live in `.claude/skills/` (mirrored at `.agents/skills/`), listed in `fuu
 | About to claim done | `verify-before-done` (+ `check-in-browser` for UI) |
 | Review comments received | `handle-review-feedback` |
 | Work verified, changes exist | `propose-commit` — conventional messages drive the app version; never commit/push without approval |
+| Work accepted, merged or dropped; session start lists open work | `close-work` |
 | Building or changing UI: pages, components, styles, a single-token tweak | `build-ui` (+ `check-in-browser`) |
 | Rebrand: colors, fonts, radius, density | `setup-brand` (full version via Fuutu MCP) |
 | New entity / API endpoint / provider swap / payments / code review | `add-entity` · `add-api-endpoint` · `swap-provider` · `connect-payments` · `review-code` (full versions via Fuutu MCP) |
 
-### Team (Claude Code)
+### Team and lifecycle
 
-The main session is the **lead**: it talks to the user, plans, routes and verifies (`delegate-tasks`). Small work (≤ ~3 files, obvious change) it does itself. Team agents in `.claude/agents/`:
+The main session is the **lead**: it talks to the user, plans, routes and verifies; small work (≤ ~3 files, obvious change) it does itself. Team agents live in `.claude/agents/` — routing, tiers and models in `delegate-tasks`. One writer per task; only the lead spawns agents.
 
-| Agent | Use for | Tier → Claude model |
-|---|---|---|
-| `scout` | finding code, patterns, usages (read-only, parallel) | fast → haiku |
-| `architect` | design → plan; schema, auth, payments, cross-package decisions | strong → opus |
-| `builder` | one low-risk task from the plan | balanced → sonnet |
-| `senior-builder` | high-risk task (auth, payments, webhooks, RBAC, migrations, secrets) or after two failures | strong → opus |
-| `reviewer` | after every task + final diff (read-only) | balanced → sonnet |
-| `qa` | all gates, E2E, browser check | balanced → sonnet |
-| `security` | diffs touching auth, permissions, payments, webhooks, keys, MCP, env (read-only) | strong → opus |
-| `scribe` | docs, changelog, translations, commit draft | fast → haiku |
+Open work is on disk — plan progress files in `docs/plans/` and worktrees, listed at session start; close it on acceptance with `close-work`.
 
-One writer at a time; only the lead spawns agents; every brief is self-contained. Other tools: [docs.fuutustack.com/docs/coding-agents/other-tools](https://docs.fuutustack.com/docs/coding-agents/other-tools).
+**Memory** (notes, memory files, the "Your project" block): keep only decisions with their reason, verified rules and open items, each with date and source. Never transcripts, logs or anything the code or git history shows. Prune what a closed piece of work made stale.
 
 ## 11 · Boundaries
 
 - **Ask first**: new runtime dependencies · DB schema changes beyond the task · `turbo.json`, `pnpm-workspace.yaml`, root scripts, `next.config.ts`, `biome.json` · breaking package exports.
-- **Never**: commit secrets or `.env` · hand-edit generated files (§6; also `node_modules`, `.next`, `dist`, `.turbo`) · force-push `main` · touch §8.
+- **Never**: commit secrets or `.env` · hand-edit generated files (§6; also `node_modules`, `.next`, `dist`, `.turbo`) · force-push `main` (Claude Code: `.claude/hooks/protect-main.mjs`) · touch §8.
 
 Behave like a senior engineer: smallest correct change, verify APIs in code before using them, state open questions and follow-up risks explicitly.
 
