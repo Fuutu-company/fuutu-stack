@@ -78,7 +78,7 @@ Most rules below are machine-checked — Biome, `pnpm test` (arch guards in `pac
 - **Env**: only via `@fuutu/env/saas` | `/marketing` | `/docs`, never `process.env`. New vars: Zod schema + `.env.example`.
 - **DB**: only the query functions exported by `@fuutu/db` — never the raw client outside `packages/db`.
 - **Generated files** (migrations, Prisma client + Zod, lockfile, shadcn components, `next-env.d.ts`, `.source/`): only via their command, never by hand — the hook names the command. Schema changes: edit `packages/db/prisma/schema/`, then `pnpm --filter @fuutu/db db:migrate --name <change>`; shadcn: `pnpm dlx shadcn@4.21.4 add`. A migration needing custom SQL → stop and ask.
-- **API**: oRPC procedure with Zod input, `authProcedure` / `systemAdminProcedure` for protected data, rate limit on every mutation, `denyImpersonation` on money/credential/org mutations, registered in `packages/api/src/orpc/router.ts` — `add-api-endpoint`.
+- **API**: oRPC procedure with Zod input; `authProcedure({ systemPermission | org: { permission } })` / `systemAdminProcedure(permission)` from `packages/api/src/orpc/procedures.ts` for protected data; rate limit on every mutation; `denyImpersonation` on payments, API-key, webhook and org mutations; register in `packages/api/src/orpc/router.ts` — `add-api-endpoint`.
 - **MCP tools**: `defineMcpTool` (`@fuutu/mcp`) with `access: "public" | "authenticated" | (principal) => boolean`; register in `packages/api/src/mcp/index.ts`.
 - **Auth guards**: server-side in layouts (`requireAuth()` / `requireOnboarded()` from `apps/saas/src/lib/auth-server.ts`); `proxy.ts` is an optimistic pre-check only.
 - **Redirects**: `getSafeRedirect()` from `@fuutu/utils/redirect`.

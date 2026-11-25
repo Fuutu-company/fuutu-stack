@@ -38,6 +38,10 @@ const git = (cwd: string, ...args: string[]) => {
 	return r.stdout;
 };
 
+const AUTHOR = ["-c", "user.name=t", "-c", "user.email=t@t"];
+const commit = (cwd: string, message: string) =>
+	git(cwd, ...AUTHOR, "commit", "-q", "--allow-empty", "-m", message);
+
 describe("open work", () => {
 	it("prints nothing when nothing is open", () => {
 		expect(formatOpenWork({ progress: [], worktrees: [], base: "main" })).toBe(
@@ -57,53 +61,37 @@ describe("open work", () => {
 
 	it("lists progress files and worktrees, merged ones flagged", () => {
 		const repo = join(sandbox, "repo");
+		const wt = (name: string) => join(sandbox, name);
 		mkdirSync(join(repo, "docs/plans"), { recursive: true });
 		git(repo, "init", "-q", "-b", "main");
-		git(
-			repo,
-			"-c",
-			"user.name=t",
-			"-c",
-			"user.email=t@t",
-			"commit",
-			"-q",
-			"--allow-empty",
-			"-m",
-			"init",
-		);
-		git(repo, "branch", "feat/done");
-		git(repo, "worktree", "add", "-q", join(sandbox, "wt-done"), "feat/done");
-		git(
-			repo,
-			"worktree",
-			"add",
-			"-q",
-			"-b",
-			"feat/open",
-			join(sandbox, "wt-open"),
-		);
-		git(
-			join(sandbox, "wt-open"),
-			"-c",
-			"user.name=t",
-			"-c",
-			"user.email=t@t",
-			"commit",
-			"-q",
-			"--allow-empty",
-			"-m",
-			"wip",
-		);
+		commit(repo, "init");
+		// finished: own commit, merged into main
+		git(repo, "worktree", "add", "-q", "-b", "feat/done", wt("wt-done"));
+		commit(wt("wt-done"), "done");
+		git(repo, ...AUTHOR, "merge", "-q", "--no-ff", "-m", "merge", "feat/done");
+		// in progress: own commit, not merged
+		git(repo, "worktree", "add", "-q", "-b", "feat/open", wt("wt-open"));
+		commit(wt("wt-open"), "wip");
+		// fresh: still at main's HEAD — new work, never "merged"
+		git(repo, "worktree", "add", "-q", "-b", "feat/fresh", wt("wt-fresh"));
 		writeFileSync(
 			join(repo, "docs/plans/2026-11-25-x.progress.md"),
 			"- [ ] task\n",
 		);
 
 		const out = collectOpenWork(repo);
-		expect(out).toContain("3 open item(s)");
+		expect(out).toContain("4 open item(s)");
 		expect(out).toMatch(/wt-done \(feat\/done\) — merged into main, close it/);
 		expect(out).toMatch(/wt-open \(feat\/open\)\n/);
+		expect(out).toMatch(/wt-fresh \(feat\/fresh\)\n/);
 		expect(out).toContain("plan docs/plans/2026-11-25-x.progress.md");
+	});
+
+	it("never throws — a broken docs/plans prints nothing", () => {
+		const repo = join(sandbox, "broken");
+		mkdirSync(join(repo, "docs"), { recursive: true });
+		writeFileSync(join(repo, "docs/plans"), "not a folder");
+		expect(() => collectOpenWork(repo)).not.toThrow();
 	});
 
 	it("is printed by the SessionStart entry point", async () => {

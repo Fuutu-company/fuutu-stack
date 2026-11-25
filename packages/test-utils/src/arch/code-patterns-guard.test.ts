@@ -4,8 +4,9 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Guard test: the code patterns of AGENTS.md §6 that a scan can prove.
- * Scans app and package source (`apps/<app>/src`, `packages/<pkg>/src`),
- * never tests or scripts. Each rule's message carries the fix; an exception
+ * Scans app and package source (`apps/<app>/src`, `packages/<pkg>/src`,
+ * the source-less `packages/config`, the DB query layer), never tests,
+ * scripts or `*.config.ts`. Each rule's message carries the fix; an exception
  * goes into the rule's `allow` list with a reason.
  */
 
@@ -24,7 +25,7 @@ type Rule = {
 const RULES: Rule[] = [
 	{
 		id: "no-console",
-		pattern: /\bconsole\.(log|info|debug|warn|error|trace)\s*\(/,
+		pattern: /\bconsole\.\w+\s*\(/,
 		allow: {
 			"packages/logs/": "the logger itself mirrors to the console",
 			"*/instrumentation.ts":
@@ -47,8 +48,7 @@ const RULES: Rule[] = [
 	},
 	{
 		id: "ui-framework-agnostic",
-		pattern:
-			/from\s*["']next(\/[^"']*)?["']|import\s*\(\s*["']next(\/[^"']*)?["']/,
+		pattern: /\b(from|import)\s*\(?\s*["']next(\/[^"']*)?["']/,
 		only: ["packages/ui/"],
 		allow: {},
 		fix: "`@fuutu/ui` stays framework-agnostic — take the Next.js piece (Link, Image, router) as a prop or slot from the app",
@@ -74,7 +74,7 @@ const SKIP_DIRS = new Set([
 	"tests",
 ]);
 const SOURCE_FILE = /\.(ts|tsx)$/;
-const TEST_FILE = /\.(test|spec)\.(ts|tsx)$|\.d\.ts$/;
+const TEST_FILE = /\.(test|spec|config)\.(ts|tsx)$|\.d\.ts$/;
 
 function walk(dir: string, out: string[] = []): string[] {
 	let entries: import("node:fs").Dirent[];
@@ -100,6 +100,10 @@ function sourceRoots(): string[] {
 			roots.push(join(REPO_ROOT, parent, name, "src"));
 		}
 	}
+	roots.push(
+		join(REPO_ROOT, "packages", "config"),
+		join(REPO_ROOT, "packages", "db", "prisma", "queries"),
+	);
 	return roots;
 }
 
@@ -146,6 +150,8 @@ describe("code patterns guard", () => {
 			'import Link from "next/link";',
 			"ui-framework-agnostic",
 		],
+		["packages/ui/src/x.tsx", 'import "next/font";', "ui-framework-agnostic"],
+		["packages/config/index.ts", "console.table(rows);", "no-console"],
 		[
 			"apps/saas/src/x.tsx",
 			'import { twMerge } from "tailwind-merge";',

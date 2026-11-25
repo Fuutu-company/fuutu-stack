@@ -3,7 +3,8 @@
  * ensure`) so the lead sees what is still open and closes finished items
  * (`close-work` skill). Sources are what already lives on disk — no ledger:
  * progress files of running plans (`docs/plans/*.progress.md`) and linked
- * git worktrees, flagged when their branch is merged into this checkout's HEAD.
+ * git worktrees, flagged when their branch is merged into this checkout's HEAD
+ * (a branch still at HEAD counts as fresh, not merged).
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
@@ -43,21 +44,34 @@ export function formatOpenWork({ progress, worktrees, base }) {
 }
 
 export function collectOpenWork(root) {
+	try {
+		return collect(root);
+	} catch {
+		return ""; // never break session start
+	}
+}
+
+function collect(root) {
 	const plans = join(root, "docs/plans");
 	const progress = existsSync(plans)
 		? readdirSync(plans)
 				.filter((f) => f.endsWith(".progress.md"))
 				.map((f) => relative(root, join(plans, f)))
 		: [];
+	// merged = its commits are in HEAD and it has commits of its own; a fresh
+	// branch still pointing at HEAD is new work, not finished work
+	const head = git(root, ["rev-parse", "HEAD"]).trim();
 	const merged = new Set(
 		git(root, [
 			"for-each-ref",
 			"--merged=HEAD",
-			"--format=%(refname:short)",
+			"--format=%(refname:short) %(objectname)",
 			"refs/heads",
 		])
 			.split("\n")
-			.filter(Boolean),
+			.map((line) => line.split(" "))
+			.filter(([, sha]) => sha && sha !== head)
+			.map(([name]) => name),
 	);
 	const worktrees = parseWorktrees(
 		git(root, ["worktree", "list", "--porcelain"]),
