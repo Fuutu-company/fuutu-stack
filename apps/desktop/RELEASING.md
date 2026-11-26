@@ -373,15 +373,19 @@ A stylesheet your route group's layout imports stays loaded after a
 client navigation away from the group, so unscoped rules would leak into
 the kit's pages. Scope everything under a root class your layout sets on
 `<html>` while the route is open (and removes on unmount), with
-`:where(html.<app>)` so the scope adds no specificity. Reference the
-kit theme (its tokens, so `bg-primary` or `text-foreground` work, and no
-preflight or `:root` defaults of its own) and generate the utilities
-inside the scope, from your folder only:
+`:where(html.<app>)` so the scope adds no specificity. Reference
+Tailwind's default theme (spacing, type scale, colors, breakpoints) and
+the kit's tokens (`bg-primary`, `text-foreground`); a reference emits no
+preflight and no `:root` variables. Then generate the utilities inside
+the scope, from your folder only:
 
 ```css
 /* src/app/(editor)/editor.css, imported by (editor)/layout.tsx */
+@reference "tailwindcss/theme.css";
 @reference "@fuutu/config/theme.css";
-/* @reference also brings the theme's @source lines; drop them here. */
+/* Only if you use its classes (animate-in, fade-in, …): */
+@reference "tw-animate-css";
+/* @reference also brings the kit theme's @source lines; drop them here. */
 @source not "../../../../../packages/ui/src";
 @source not "../../../../../packages/mail/src";
 @source not "../../../../../packages/analytics/src";
@@ -395,8 +399,9 @@ Reference `@fuutu/config/theme.css`, not `../globals.css`: a referenced
 file brings its `@source` lines along, and the `@source not` for your
 folder in `globals.css` (below) would then drop your own classes. Without
 the three `@source not` lines the stylesheet repeats the kit's utilities
-for the shared packages under your scope. (`@source` paths are relative
-to the file they are in.)
+for the shared packages under your scope. Keep one `@source not` per
+`@source` in `packages/config/theme.css`, and re-check that list after a
+kit update. (`@source` paths are relative to the file they are in.)
 
 Keep the code that uses these classes in that folder (`src/editor/`).
 The layout sets the class:
