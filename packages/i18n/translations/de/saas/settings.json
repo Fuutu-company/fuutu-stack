@@ -77,7 +77,8 @@
 			"current": "Aktuell",
 			"revoke": "Beenden",
 			"revokeAll": "Alle anderen Sitzungen beenden",
-			"none": "Keine aktiven Sitzungen."
+			"none": "Keine aktiven Sitzungen.",
+			"failed": "Sitzung konnte nicht beendet werden."
 		},
 		"connectedApps": {
 			"title": "Verbundene Apps",

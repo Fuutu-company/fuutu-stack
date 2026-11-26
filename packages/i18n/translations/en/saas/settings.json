@@ -77,7 +77,8 @@
 			"current": "Current",
 			"revoke": "Revoke",
 			"revokeAll": "Revoke all other sessions",
-			"none": "No active sessions."
+			"none": "No active sessions.",
+			"failed": "Could not revoke session."
 		},
 		"connectedApps": {
 			"title": "Connected apps",
