@@ -367,6 +367,43 @@ export const APP_TAURI_CONFIG: AppTauriConfig = {
 };
 ```
 
+#### Own stylesheet on full-window routes
+
+A stylesheet your route group's layout imports stays loaded after a
+client navigation away from the group, so unscoped rules would leak into
+the kit's pages. Scope everything under a root class your layout sets on
+`<html>` while the route is open (and removes on unmount), with
+`:where(html.<app>)` so the scope adds no specificity. Use Tailwind
+without its preflight (the kit already ships one) and generate the
+utilities inside the scope, from your folder only:
+
+```css
+/* src/app/(editor)/editor.css, imported by (editor)/layout.tsx */
+@import "tailwindcss/theme.css" layer(theme);
+
+:where(html.editor) {
+	@tailwind utilities source("../../editor");
+}
+```
+
+Keep the code that uses these classes in that folder (`src/editor/`).
+The layout sets the class:
+
+```tsx
+useEffect(() => {
+	document.documentElement.classList.add("editor");
+	return () => document.documentElement.classList.remove("editor");
+}, []);
+```
+
+Utilities come out as `:where(html.editor) .flex { … }`. So the kit's
+Tailwind does not also emit them unscoped, append your folder to the
+kit's `src/app/globals.css` (appending to this kit file is fine):
+
+```css
+@source not "../editor";
+```
+
 ### Local media
 
 The asset protocol (`convertFileSrc`, `app.security.assetProtocol`) and an
@@ -397,14 +434,15 @@ The webview paints white until the first frame of your page. To open the
 window only once its page has loaded:
 
 1. Set `visible: false` on the `main` window in `APP_TAURI_CONFIG`
-   (repeat the whole window, see above). Optionally set `backgroundColor`
-   (e.g. `"#1c1917"`) so the window and webview start in your background
+   (repeat the whole window, see above). Optional: `backgroundColor`
+   (e.g. `"#1c1917"`), so the window and webview start in your background
    color.
-2. Show the window from Rust when the page has loaded (recommended). It
-   works with the kit's `(main)` layout and `auth: "required"` (the
-   sign-in card shows too) and needs no capability. A plugin without
-   commands needs no crate or build script of its own: put it in
-   `app_plugins.rs` and add it in `register`
+2. Show the window from Rust when the page has loaded. The first frame
+   is the kit's loading screen (the access gate while the account
+   loads), so this fits apps that keep the kit's look. It works with the
+   kit's `(main)` layout and `auth: "required"` and needs no capability.
+   A plugin without commands needs no crate or build script of its own:
+   put it in `app_plugins.rs` and add it in `register`
    (`builder.plugin(show_main_on_load())`):
 
    ```rust
@@ -421,15 +459,29 @@ window only once its page has loaded:
    }
    ```
 
-   Or from the webview: grant `core:window:allow-show` to the `main`
-   window in `app-capabilities.ts` and call `getCurrentWindow().show()`
-   (`@tauri-apps/api/window`) directly in a `useEffect`, not inside
-   `requestAnimationFrame` (WebKit may pause animation frames of a page
-   that was never shown, so the window would stay hidden). Put it in your
-   own route group's layout, outside `AccessGate`: the kit's `(main)`
-   layout has no slot outside the access gate (`appShellSlots.global`
-   renders only once the gate opens and the setup steps are done), so with
-   `auth: "required"` a signed-out start would stay hidden.
+   Or show it from the webview once the account is known, so the first
+   frame is already the sign-in card or your page: grant
+   `core:window:allow-show` to the `main` window in `app-capabilities.ts`
+   and render this component in your own route group's layout, inside
+   `AccountProvider` and outside `AccessGate`:
+
+   ```tsx
+   function ShowWindowWhenReady() {
+   	const { decision } = useAccount();
+   	useEffect(() => {
+   		if (decision !== undefined) void getCurrentWindow().show();
+   	}, [decision]);
+   	return null;
+   }
+   ```
+
+   (`useAccount` from `@/components/account-provider`, `getCurrentWindow`
+   from `@tauri-apps/api/window`.) Call `show()` directly, never inside
+   `requestAnimationFrame`: WebKit may pause animation frames of a page
+   that was never shown, so the window would stay hidden. The kit's
+   `(main)` layout has no slot outside the access gate
+   (`appShellSlots.global` renders only once the gate opens and the setup
+   steps are done), so this variant needs your own route group.
 
 With `desktopConfig.shell.singleInstance` or `shell.tray` on, a second
 launch or the tray's "Show" also shows the window.
