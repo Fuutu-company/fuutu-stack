@@ -87,6 +87,12 @@ export type DesktopBuildInputs = {
 	staticUpdateUrl?: string;
 	/** Linux build without an AppImage: updates come through the package. */
 	updatesViaPackage?: boolean;
+	/**
+	 * Port slot of this checkout (dev only): the dev identifier becomes
+	 * `<bundleId>.dev.s<slot>`, so single-instance and the app data folder
+	 * are per worktree and never the installed app's.
+	 */
+	devSlot?: number;
 };
 
 /**
@@ -166,7 +172,9 @@ export function buildTauriConfig(input: TauriConfigInput) {
 	const config = {
 		productName: id.productName,
 		version: input.appVersion,
-		identifier: id.bundleId,
+		identifier: dev
+			? `${id.bundleId}.dev${input.devSlot === undefined ? "" : `.s${input.devSlot}`}`
+			: id.bundleId,
 		build: dev
 			? { devUrl: input.devUrl, beforeDevCommand: "" }
 			: { beforeBuildCommand: "" },

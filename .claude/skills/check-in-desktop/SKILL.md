@@ -14,7 +14,7 @@ Green tests and a working web page do not prove the desktop app works: the stati
 
 ## The desktop session
 
-- **Start it** (once per coding session, in the background): `pnpm dev:desktop`. It runs the Next dev server on the slot's `desktop` port and a **debug** Tauri build with the automation bridge on the slot's `desktopBridge` port (`pnpm ports`). First start compiles Rust (minutes); later starts take seconds. `pnpm dev:session status` shows whether the bridge is up.
+- **Start it** (once per coding session, in the background): `pnpm dev:desktop`. It runs the Next dev server on the slot's `desktop` port and a **debug** Tauri build with the automation bridge on the slot's `desktopBridge` port (`pnpm ports`). First start compiles Rust (minutes); later starts take seconds. `pnpm dev:session status` shows whether the bridge is up. Each slot runs as its own app (identifier `<bundleId>.dev.s<slot>`): worktrees run side by side, each has its own dev data folder (sign in once per worktree) and never the installed app's; on Linux/Windows the deep-link fallback reaches the dev app started last. App data under `app_data_dir` is per slot, so large downloads belong in a fixed folder.
 - **The bridge** exists only in debug builds (`devtools` cargo feature + `cfg(debug_assertions)`), listens on 127.0.0.1 only and refuses clients without the per-checkout token (`.fuutu/desktop-bridge.json`) or with an `Origin` header. Never copy the token anywhere else.
 - **Never stop** the app at the end — the developer reviews afterwards.
 

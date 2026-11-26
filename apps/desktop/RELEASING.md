@@ -167,6 +167,23 @@ Updates.
   5-minute installer URL; with `desktopConfig.auth: "required"` only for a
   signed-in browser (others sign in first).
 
+## Dev builds and worktrees
+
+`pnpm dev:desktop` builds with the identifier `<bundleId>.dev.s<slot>`
+(the checkout's port slot, `pnpm ports`); release builds and CI keep the
+bundle id. So:
+
+- Worktrees run side by side: single-instance locks per identifier, and
+  a second checkout's dev app no longer hands over to the first and exits.
+- Each slot has its own app data folder (dev sign-in, `dev-secrets.json`,
+  window state, your app's data under `app_data_dir`), and dev never
+  touches the installed app's. Sign in once per worktree.
+- On Linux and Windows the deep-link fallback (`<scheme>://…`) reaches
+  the dev app started last; sign-in normally uses the loopback redirect.
+- Data your app keeps under `app_data_dir` is per slot in dev. Keep large
+  downloads (e.g. models) in a fixed folder instead, so every worktree
+  finds them.
+
 ## Building by hand
 
 ```bash

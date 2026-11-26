@@ -308,6 +308,7 @@ async function main() {
 			mode === "build" &&
 			process.platform === "linux" &&
 			!linuxSelfUpdates(desktopConfig.release.linuxFormats),
+		devSlot: mode === "dev" ? project.slot : undefined,
 	};
 	if (mode === "build") {
 		const check = offlineKeyCheck({
