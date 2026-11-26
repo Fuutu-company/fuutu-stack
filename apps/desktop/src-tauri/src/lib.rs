@@ -17,6 +17,8 @@ mod updates;
 #[cfg(all(debug_assertions, feature = "devtools"))]
 mod devtools;
 
+// Silences cargo's unused-dependency warning while app-ext is still empty.
+use app_ext as _;
 use config::RuntimeConfig;
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
