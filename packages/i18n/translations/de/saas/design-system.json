@@ -354,7 +354,6 @@
 					"do": "Komponenten verlangen <code>bg-primary</code>. Ein Rebranding ändert eine einzige Datei.",
 					"dont": "Eine Palettenfarbe wie <code>bg-indigo-600</code> ignoriert Dark Mode und jedes künftige Theme.",
 					"doSample": "Aktiv",
-					"dontSample": "Fest verdrahtete Farbe",
 					"doCode": "bg-primary",
 					"dontCode": "bg-indigo-600"
 				},

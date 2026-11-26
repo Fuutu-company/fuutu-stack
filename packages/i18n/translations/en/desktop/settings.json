@@ -1,6 +1,5 @@
 {
 	"title": "Settings",
-	"description": "Appearance, language and startup.",
 	"appearance": {
 		"title": "Appearance",
 		"theme": "Theme",

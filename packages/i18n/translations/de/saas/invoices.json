@@ -19,7 +19,6 @@
 			"draft": "Entwurf"
 		},
 		"filter": {
-			"label": "Filter",
 			"all": "Gesamter Zeitraum",
 			"last30": "Letzte 30 Tage",
 			"last90": "Letzte 90 Tage"

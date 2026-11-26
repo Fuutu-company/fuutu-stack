@@ -5,12 +5,8 @@
 		"success": "Erfolg",
 		"cancel": "Abbrechen",
 		"close": "Schließen",
-		"play": "Abspielen",
-		"pause": "Pause",
-		"video": "Video",
 		"save": "Speichern",
 		"saving": "Speichert…",
-		"submit": "Absenden",
 		"notAvailable": "—",
 		"errors": {
 			"somethingWentWrong": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",

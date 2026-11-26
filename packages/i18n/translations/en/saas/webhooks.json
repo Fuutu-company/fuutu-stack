@@ -5,14 +5,8 @@
 		"creating": "Creating…",
 		"empty": "No webhooks yet",
 		"emptyDescription": "Add a webhook endpoint to receive event notifications.",
-		"emptyCta": "Add webhook",
 		"col": {
-			"url": "URL",
-			"events": "Events",
-			"active": "Active",
-			"lastDelivery": "Last delivery",
-			"createdAt": "Created",
-			"actions": "Actions"
+			"active": "Active"
 		},
 		"events": {
 			"subscription": {
@@ -67,7 +61,6 @@
 			"confirm": "Delete"
 		},
 		"deliveries": {
-			"title": "Delivery history",
 			"status": {
 				"success": "Success",
 				"failed": "Failed",
@@ -85,16 +78,11 @@
 			"hide": "Hide"
 		},
 		"edit": "Edit",
-		"delete": "Delete",
 		"deleteAria": "Delete webhook",
 		"yes": "Yes",
 		"no": "No",
-		"never": "Never",
 		"loading": "Loading webhooks…",
 		"failed": "Could not perform this action.",
-		"created": "Webhook created.",
-		"updated": "Webhook updated.",
-		"deleted": "Webhook deleted.",
 		"deleteError": "Failed to delete webhook. Please try again.",
 		"updateError": "Failed to update webhook. Please try again."
 	}

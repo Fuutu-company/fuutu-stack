@@ -52,27 +52,123 @@ export async function loadLocaleKeys(locale) {
 	return { keys, appKeys };
 }
 
-const USAGE_PATTERNS = [
+// Generic patterns for calls whose translator is not bound in the file
+// (a `t` passed in as a prop or argument): the key is relative to an
+// unknown namespace, so only a full key path can match. The namespace
+// itself is counted where the translator leaves its file (see below).
+const UNBOUND_PATTERNS = [
 	// Static: t("key"), t('key'), t(`key`) — plus t.has()/t.raw()/t.rich()
-	/\bt(?:\.(?:has|raw|rich))?\(["'`]([^"'`]+)["'`]/g,
-	/\bgetTranslations\(["'`]([^"'`]+)["'`]\)/g,
-	/\bgetTranslations\(\{[^}]*namespace:\s*["'`]([^"'`]+)["'`]/g,
-	/\buseTranslations\(["'`]([^"'`]+)["'`]\)/g,
-	// Template literals: t(`prefix.${var}`) → extract "prefix" as a used
-	// namespace. Fully dynamic keys (e.g. t.has(`source.${e}`) for
-	// credits.source.*) can only be resolved to their prefix — the leaf
-	// is unknowable statically, so unused-key stays warn-only.
-	/\bt(?:\.(?:has|raw|rich))?\(`([^`${}]+)\.\$\{[^}]+\}`/g,
+	/\bt(?:\.(?:has|raw|rich|markup))?\(["'`]([^"'`]+)["'`]/g,
+	// Template literals: t(`prefix.${var}`) → "prefix".
+	/\bt(?:\.(?:has|raw|rich|markup))?\(`([^`${}]+)\.\$\{[^}]+\}`/g,
 	// Property access: messages.cron.subscriptionReminder.title, messages.nav.docs
 	/\bmessages\.([a-zA-Z0-9_.]+)/g,
 	// labelKey: "key" pattern in footer/navbar
 	/\blabelKey:\s*["'`]([^"'`]+)["'`]/g,
 ];
 
-/** Keys and namespaces a source file references (added to `into`). */
+// `useTranslations("ns")` / `getTranslations("ns")` /
+// `getTranslations({ …, namespace: "ns" })` / no namespace (full keys).
+const TRANSLATOR_CALL =
+	/\b(?:useTranslations|getTranslations)\(\s*(?:(["'`])([^"'`$]*)\1|\{[^}]*?\bnamespace:\s*(["'`])([^"'`$]*)\3[^}]*\}|\{[^}]*\})?\s*\)/g;
+
+// `const tX = (await) useTranslations(…)` — a translator bound to a name.
+const BINDING = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?$/;
+
+const METHOD = String.raw`(?:\.(?:rich|raw|has|markup))?`;
+
+const DOTTED_LITERAL = /(["'`])([A-Za-z][\w-]*(?:\.[\w-]+)+)\1/g;
+
+const join = (ns, key) => (ns ? `${ns}.${key}` : key);
+
+/**
+ * What one use of a bound translator marks: `t("k")` → `ns.k`;
+ * `t(\`rows.${id}\`)` → `ns.rows`; any other argument, or the translator
+ * leaving the call position (prop, argument, return) → the whole `ns`.
+ */
+function markUse(rest, ns, into, content) {
+	const call = rest.match(new RegExp(`^\\s*${METHOD}\\(\\s*`));
+	if (!call) {
+		if (ns) into.add(ns);
+		// A namespace-less translator handed to a helper takes full keys
+		// along with it (`planGateMessage(e, t, "webhooks.failed")`): count
+		// the file's dotted string literals.
+		else for (const m of content.matchAll(DOTTED_LITERAL)) into.add(m[2]);
+		return;
+	}
+	const arg = rest.slice(call[0].length);
+	const literal = arg.match(/^(["'])([^"'\n]*)\1\s*[,)]/);
+	if (literal) {
+		into.add(join(ns, literal[2]));
+		return;
+	}
+	const template = arg.match(/^`([^`]*)`/);
+	if (template) {
+		const text = template[1];
+		const dynamic = text.indexOf("${");
+		if (dynamic === -1) {
+			into.add(join(ns, text));
+			return;
+		}
+		const fixed = text.slice(0, dynamic);
+		const lastDot = fixed.lastIndexOf(".");
+		if (lastDot > 0) into.add(join(ns, fixed.slice(0, lastDot)));
+		else if (ns) into.add(ns);
+		return;
+	}
+	// t(key), t(cond ? "a" : "b"), … — the key is not static.
+	if (ns) into.add(ns);
+}
+
+/**
+ * Keys and namespaces a source file references (added to `into`).
+ *
+ * A translator bound to a name (`const tFooter = useTranslations("footer")`)
+ * marks only the keys it is called with (`footer.<key>`), paired with the
+ * nearest binding of that name before the call. Its whole namespace counts
+ * as used only when it gets a dynamic key (a template literal marks its
+ * static prefix) or leaves the file (passed as prop or argument). A
+ * `useTranslations("ns")` that is not bound to a name counts for all of
+ * `ns`. A namespace-less translator (`useTranslations()`) that escapes
+ * marks nothing: where it goes, its calls use full keys, which the
+ * unbound patterns catch.
+ */
 export function usedKeysIn(content, into = new Set()) {
-	for (const pattern of USAGE_PATTERNS) {
+	for (const pattern of UNBOUND_PATTERNS) {
 		for (const match of content.matchAll(pattern)) into.add(match[1]);
+	}
+
+	/** name → [{ at, end, ns }] in source order */
+	const bindings = new Map();
+	for (const match of content.matchAll(TRANSLATOR_CALL)) {
+		const ns = match[2] ?? match[4] ?? "";
+		const before = content.slice(Math.max(0, match.index - 120), match.index);
+		const bound = before.match(BINDING);
+		if (!bound) {
+			if (ns) into.add(ns);
+			continue;
+		}
+		const name = bound[1];
+		const list = bindings.get(name) ?? [];
+		list.push({ at: match.index, end: match.index + match[0].length, ns });
+		bindings.set(name, list);
+	}
+
+	for (const [name, list] of bindings) {
+		const uses = new RegExp(
+			`(?<![\\w$.])${name.replace(/\$/g, "\\$")}(?![\\w$])`,
+			"g",
+		);
+		for (const use of content.matchAll(uses)) {
+			const binding = list.filter((b) => b.at <= use.index).at(-1);
+			if (!binding) continue; // used before any binding: another scope
+			// The name in its own `const name =` declaration.
+			const rest = content.slice(use.index + name.length);
+			if (/^\s*=(?!=)/.test(rest)) continue;
+			// A property key or type annotation named like the translator
+			// (`{ t: … }`) counts as the translator leaving.
+			markUse(rest, binding.ns, into, content);
+		}
 	}
 	return into;
 }
