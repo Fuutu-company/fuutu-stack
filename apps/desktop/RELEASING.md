@@ -170,8 +170,8 @@ Updates.
 ## Dev builds and worktrees
 
 `pnpm dev:desktop` builds with the identifier `<bundleId>.dev.s<slot>`
-(the checkout's port slot, `pnpm ports`); release builds and CI keep the
-bundle id. So:
+(the checkout's port slot, `pnpm ports`); release builds (local and in CI)
+keep the bundle id. So:
 
 - Worktrees run side by side: single-instance locks per identifier, and
   a second checkout's dev app no longer hands over to the first and exits.
