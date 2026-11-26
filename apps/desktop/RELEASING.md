@@ -421,6 +421,35 @@ kit's `src/app/globals.css` (appending to this kit file is fine):
 @source not "../editor";
 ```
 
+**Theme values and your own tokens.** The kit build writes a theme
+variable (`--radius-md`, `--ease-in`, …) only when it sees it used, and
+your folder is excluded from it, so `var(--radius-md)` in your CSS or
+`max-w-[var(--container-xl)]` in a class can resolve to nothing, without
+an error. In your CSS write `--theme(--radius-md)` (→
+`calc(var(--radius) - 2px)`) or `--theme(--ease-in inline)` (→ the
+literal value); in class names use the named utilities (`rounded-md`,
+`max-w-xl`). A variable that must exist at runtime is declared under
+the scope (`:where(html.editor) { --editor-gutter: 2rem; }`). Your own
+tokens go in `@theme inline { … }` after the `@reference` lines, so
+utilities such as `bg-paper` get the literal value; a plain `@theme`
+makes them read variables nothing defines (and Biome 2.5 does not parse
+`@theme inline reference`). Keeping the tokens in a separate file you
+`@reference "./theme.css"` works too, but is not required:
+
+```css
+@theme inline {
+	--color-paper: #f5ecd7;
+}
+
+:where(html.editor) {
+	@tailwind utilities source("../../editor");
+	.page {
+		border-radius: --theme(--radius-md);
+		transition-timing-function: --theme(--ease-in inline);
+	}
+}
+```
+
 ### Local media
 
 The asset protocol (`convertFileSrc`, `app.security.assetProtocol`) and an
