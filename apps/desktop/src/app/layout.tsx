@@ -9,6 +9,8 @@ export const metadata = {
 	// (LICENSE.md §6(5), §7) — the static export keeps it in every page.
 	generator: KIT_GENERATOR_META,
 	title: config.app.name,
+	// public/logo.svg (pnpm assets:sync); without it the webview asks for /favicon.ico.
+	icons: { icon: { url: "/logo.svg", type: "image/svg+xml" } },
 };
 
 /**
