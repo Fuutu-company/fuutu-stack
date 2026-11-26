@@ -19,5 +19,9 @@ fn main() {
 }
 ```
 
-Without both, the plugin generates no permissions and `app-ext/build.rs`
-has nothing to forward: its commands are refused at runtime.
+If one is missing:
+
+- no build script: no permissions are generated, `app-ext/build.rs` has
+  nothing to forward, and the commands are refused at runtime;
+- a build script without `links`: the build fails (`LinksMissing`);
+- `links` without a build script: cargo refuses the crate.

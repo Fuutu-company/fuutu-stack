@@ -294,6 +294,21 @@ when a build leaves the file changed ("Kit Cargo.toml unchanged"). If your
 own code in app-ext calls such APIs, declare the feature on app-ext's
 `tauri` dependency; plain `cargo check` then compiles them too.
 
+**Generated files in your folders.** Files your tools generate (e.g.
+TypeScript bindings of your Rust commands) do not have to pass Biome. Put
+a nested `biome.json` in that folder instead of editing the root one:
+
+```json
+{
+	"root": false,
+	"extends": "//",
+	"files": { "includes": ["!**/*.ts"] }
+}
+```
+
+`"extends": "//"` keeps the root config for everything else in the folder;
+the pattern excludes the generated `.ts` files only.
+
 ### Full-window routes and start route
 
 A page without the sidebar and header (an editor, a reader, a game view)
@@ -345,7 +360,7 @@ export const APP_TAURI_CONFIG: AppTauriConfig = {
 				height: 720,
 				minWidth: 800,
 				minHeight: 480,
-				url: "book/",
+				url: "editor/",
 			},
 		],
 	},
@@ -379,31 +394,45 @@ maximized, fullscreen and decorations of every window but About. It never
 restores visibility: restoring it would call `show()` on every start.
 
 The webview paints white until the first frame of your page. To open the
-window only once it is painted:
+window only once its page has loaded:
 
 1. Set `visible: false` on the `main` window in `APP_TAURI_CONFIG`
    (repeat the whole window, see above). Optionally set `backgroundColor`
    (e.g. `"#1c1917"`) so the window and webview start in your background
    color.
-2. Grant `core:window:allow-show` to the `main` window in
-   `app-capabilities.ts`.
-3. Show the window after the first paint, e.g. in a component of your own
-   route group's layout, outside `AccessGate` (so the sign-in card shows
-   too):
+2. Show the window from Rust when the page has loaded (recommended). It
+   works with the kit's `(main)` layout and `auth: "required"` (the
+   sign-in card shows too) and needs no capability. A plugin without
+   commands needs no crate or build script of its own: put it in
+   `app_plugins.rs` and add it in `register`
+   (`builder.plugin(show_main_on_load())`):
 
-   ```tsx
-   useEffect(() => {
-   	requestAnimationFrame(() => void getCurrentWindow().show());
-   }, []);
+   ```rust
+   use tauri::{plugin::{Builder, TauriPlugin}, webview::PageLoadEvent, Runtime};
+
+   pub fn show_main_on_load<R: Runtime>() -> TauriPlugin<R> {
+       Builder::new("show-main")
+           .on_page_load(|webview, payload| {
+               if payload.event() == PageLoadEvent::Finished && webview.label() == "main" {
+                   let _ = webview.window().show();
+               }
+           })
+           .build()
+   }
    ```
 
-   (`getCurrentWindow` from `@tauri-apps/api/window`.) The kit's
-   `(main)` layout has no slot outside the access gate: a slot such as
-   `appShellSlots.global` renders only once the gate opens and the setup
-   steps are done, so with
-   `auth: "required"` a signed-out start would stay hidden. With
-   `desktopConfig.shell.singleInstance` or `shell.tray` on, a second launch
-   or the tray's "Show" still shows the window.
+   Or from the webview: grant `core:window:allow-show` to the `main`
+   window in `app-capabilities.ts` and call `getCurrentWindow().show()`
+   (`@tauri-apps/api/window`) directly in a `useEffect`, not inside
+   `requestAnimationFrame` (WebKit may pause animation frames of a page
+   that was never shown, so the window would stay hidden). Put it in your
+   own route group's layout, outside `AccessGate`: the kit's `(main)`
+   layout has no slot outside the access gate (`appShellSlots.global`
+   renders only once the gate opens and the setup steps are done), so with
+   `auth: "required"` a signed-out start would stay hidden.
+
+With `desktopConfig.shell.singleInstance` or `shell.tray` on, a second
+launch or the tray's "Show" also shows the window.
 
 ## Before the first release
 
