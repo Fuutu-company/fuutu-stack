@@ -45,7 +45,8 @@
 			"!**/*-snapshots",
 			"!**/tests/.auth",
 			"!**/.evlog",
-			"!**/*.svg"
+			"!**/*.svg",
+			"!**/.fuutu/desktop-*"
 		]
 	},
 	"formatter": {
