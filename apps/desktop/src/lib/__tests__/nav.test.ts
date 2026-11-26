@@ -36,6 +36,38 @@ describe("desktop nav (app-nav.ts → buildNav)", () => {
 		]);
 	});
 
+	it("drops the account item when desktopConfig.auth is off", () => {
+		expect(buildNav([], { auth: "off" }).map((i) => i.titleKey)).toEqual([
+			"home",
+			"settings",
+		]);
+		expect(buildNav([], { auth: "optional" }).map((i) => i.titleKey)).toContain(
+			"account",
+		);
+	});
+
+	it("appends items placed after account when auth is off", () => {
+		const nav = buildNav(
+			[
+				item("billing", { after: "account" }),
+				item("projects", { after: "home" }),
+			],
+			{ auth: "off" },
+		);
+		expect(nav.map((i) => i.titleKey)).toEqual([
+			"home",
+			"projects",
+			"settings",
+			"billing",
+		]);
+	});
+
+	it("keeps account reserved when auth is off", () => {
+		expect(() => buildNav([item("account")], { auth: "off" })).toThrow(
+			/duplicate/,
+		);
+	});
+
 	it("refuses a duplicate key or a href outside the app", () => {
 		expect(() => buildNav([item("settings")])).toThrow(/duplicate/);
 		expect(() => buildNav([item("a"), item("a")])).toThrow(/duplicate/);

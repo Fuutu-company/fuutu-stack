@@ -1,5 +1,6 @@
 "use client";
 
+import { desktopConfig } from "@fuutu/desktop/config";
 import { SidebarInset, SidebarProvider } from "@fuutu/ui";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -12,7 +13,7 @@ import { AppHeader } from "./shell/app-header";
 import { AppSidebar } from "./shell/app-sidebar";
 
 // Kit items + yours (src/app-nav.ts); throws on a duplicate key.
-const NAV = buildNav(appNavItems);
+const NAV = buildNav(appNavItems, { auth: desktopConfig.auth });
 const {
 	sidebarTop: SidebarTop,
 	sidebarBottom: SidebarBottom,

@@ -25,6 +25,15 @@ use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 /// 5 MB per log file, the last few kept (`<app log dir>/<bundle id>.log`).
 const LOG_FILE_MAX_BYTES: u128 = 5 * 1024 * 1024;
 
+/// Window state the kit saves and restores: everything but visibility.
+/// Restoring VISIBLE calls show() + set_focus() on every start, so a window
+/// configured `visible: false` (shown by the app after its first paint)
+/// would flash white.
+fn window_state_flags() -> tauri_plugin_window_state::StateFlags {
+    use tauri_plugin_window_state::StateFlags;
+    StateFlags::all() & !StateFlags::VISIBLE
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let config = RuntimeConfig::embedded();
@@ -52,6 +61,7 @@ pub fn run() {
         )
         .plugin(
             tauri_plugin_window_state::Builder::new()
+                .with_state_flags(window_state_flags())
                 .with_denylist(&["about"])
                 .build(),
         )
@@ -137,4 +147,25 @@ fn setup_deep_links(app: &tauri::AppHandle) {
             auth::handle_deep_link(&handle, &url);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::window_state_flags;
+    use tauri_plugin_window_state::StateFlags;
+
+    #[test]
+    fn window_state_never_restores_visibility() {
+        // Restoring VISIBLE calls show() + set_focus() on every start, so a
+        // window configured `visible: false` would flash before its first paint.
+        let flags = window_state_flags();
+        assert!(!flags.contains(StateFlags::VISIBLE));
+        assert!(flags.contains(
+            StateFlags::SIZE
+                | StateFlags::POSITION
+                | StateFlags::MAXIMIZED
+                | StateFlags::DECORATIONS
+                | StateFlags::FULLSCREEN
+        ));
+    }
 }

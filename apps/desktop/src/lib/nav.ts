@@ -1,3 +1,4 @@
+import type { DesktopAuthMode } from "@fuutu/desktop/config";
 import { House, type LucideIcon, Settings, UserRound } from "lucide-react";
 
 /** Kit sidebar items (keys under `desktop.shell.nav`). */
@@ -10,7 +11,10 @@ export type AppNavItem = {
 	/** Route of your page, with the trailing slash (`/projects/`). */
 	href: `/${string}`;
 	icon: LucideIcon;
-	/** Place directly after this kit item; omitted → appended. */
+	/**
+	 * Place directly after this kit item; omitted → appended. Also appended
+	 * when that item is hidden (`account` with `desktopConfig.auth: "off"`).
+	 */
 	after?: KitNavKey;
 	/** Active only on `href` itself, not on its subpaths. */
 	exact?: boolean;
@@ -29,10 +33,24 @@ const KIT_NAV: (NavItem & { titleKey: KitNavKey })[] = [
 	{ href: "/settings/account/", titleKey: "account", icon: UserRound },
 ];
 
+export type BuildNavOptions = {
+	/**
+	 * `desktopConfig.auth`. With `"off"` the account item is left out (its
+	 * route stays and shows the "off" text); app items with
+	 * `after: "account"` are then appended. `"account"` stays a reserved key.
+	 */
+	auth?: DesktopAuthMode;
+};
+
 /** Kit items plus the app's (`appNavItems`), in order. */
-export function buildNav(app: readonly AppNavItem[]): NavItem[] {
-	const nav: NavItem[] = [...KIT_NAV];
-	const keys = new Set(nav.map((item) => item.titleKey));
+export function buildNav(
+	app: readonly AppNavItem[],
+	options: BuildNavOptions = {},
+): NavItem[] {
+	const keys = new Set<string>(KIT_NAV.map((item) => item.titleKey));
+	const nav: NavItem[] = KIT_NAV.filter(
+		(item) => !(options.auth === "off" && item.titleKey === "account"),
+	);
 	const tail: NavItem[] = [];
 	for (const item of app) {
 		if (keys.has(item.titleKey)) {
