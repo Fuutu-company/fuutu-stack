@@ -254,7 +254,7 @@ another start route: [Full-window routes and start route](#full-window-routes-an
 | `src-tauri/app-ext/Cargo.toml`, `src-tauri/app-ext/src/lib.rs`, `src-tauri/app-ext/build.rs` | `app-ext`: your Rust dependencies and code. The kit crate depends on it, so you never edit the kit's `Cargo.toml`. Keep the package name, `links = "app-ext"` and the forwarding call in `build.rs`; more crates go in `crates/`. |
 | `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …). `tray_items(app, &RuntimeConfig)`: your tray menu entries (`TrayItem::new(id, label)`, `.disabled()`), shown between the kit's "Show" and "Quit" and rebuilt with the menu (start, UI language change). `on_tray_menu(app, id)`: clicks on them. The ids `show` and `quit` are the kit's; a reserved, empty or duplicate id is skipped and logged. |
 | `src-tauri/app_build.rs` | `run()`: build-script steps (e.g. `cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift`), called by the kit's `build.rs` |
-| `src-tauri/deny.app.toml` | cargo-deny exceptions (`[[licenses.exceptions]]`, `[[advisories.ignore]]`, `[[bans.skip]]`), appended to the kit policy by `node scripts/cargo-deny.mjs` (CI runs it). The policy itself stays the kit's. |
+| `src-tauri/deny.app.toml` | cargo-deny exceptions (`[[licenses.exceptions]]`, `[[advisories.ignore]]`, `[[bans.skip]]`), appended to the kit policy by `node scripts/cargo-deny.mjs` (CI runs it). The policy itself stays the kit's. Locally, install cargo-deny first (`cargo install cargo-deny --locked`); the script calls `cargo deny`. |
 
 Register every plugin on the builder in `register`. Never register a
 plugin from inside another plugin's `setup`, because that deadlocks the
@@ -279,7 +279,8 @@ registered in `register`. The webview calls `invoke("plugin:<name>|my_cmd")`.
 The plugin's `build.rs` generates the permissions `<name>:allow-<cmd>`
 (underscores become hyphens; no `default` permission unless you write
 `permissions/default.toml`), and `app-ext/build.rs` forwards them like any
-plugin's; grant them in `app-capabilities.ts`. Plugin commands are always
+plugin's (without `links` and that build script there is nothing to
+forward; `src-tauri/crates/README.md`); grant them in `app-capabilities.ts`. Plugin commands are always
 checked against the capabilities, so a command without a granted
 permission is refused. `tauri::ipc::Channel` arguments work unchanged.
 
@@ -435,6 +436,7 @@ window only once it is painted:
 - [ ] One full round on a test channel: install `vX.Y.Z-beta.1`, publish
       `-beta.2`, the app offers it, installs it and restarts.
 - [ ] `/download` (marketing) and Settings → Desktop app list your installers.
-- [ ] Third-party notices (About → Licences) complete; `node apps/desktop/scripts/cargo-deny.mjs` green.
+- [ ] Third-party notices (About → Licences) complete; `node apps/desktop/scripts/cargo-deny.mjs` green
+      (needs `cargo install cargo-deny --locked`).
 - [ ] Build telemetry stays on (LICENSE.md §7) — never set
       `FUUTU_TELEMETRY_DISABLED` in the release workflow.
