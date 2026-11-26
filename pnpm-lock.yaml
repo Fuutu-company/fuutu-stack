@@ -1323,6 +1323,9 @@ importers:
       '@fuutu/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
