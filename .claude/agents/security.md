@@ -22,4 +22,4 @@ Report:
 Verdict: OK | ISSUES
 - [critical|high|medium|low] path:line — risk — exploit scenario — fix
 ```
-No speculative findings without a concrete scenario.
+No speculative findings without a concrete scenario; no style remarks. At most ~20 lines.

@@ -44,12 +44,12 @@ Version effect: minor (0.3.2 → 0.4.0 on next release)
 Commit? (yes / no / edit)
 ```
 
-6. **Yes** → stage exactly those paths (`git add <paths>`, never `-A` or `.`), commit, show `git log -1 --stat`. A yes covers this one commit only.
+6. **Yes** → stage exactly those paths (`git add <paths>`, never `-A` or `.`), commit on the current branch, show `git log -1 --stat`. A yes covers this one commit only. A small change (AGENTS.md → "Branch or not") ends here: say "ready, you can push", or push after an explicit yes — no new branch, no PR.
 7. **No / edit** → adjust and ask again.
 
 ## Finishing a branch
 
-When the user wants to wrap up a branch: confirm the base branch (don't assume `main`), run the full gates on the final tree, then offer the options — merge locally, push and open a PR (they run it or explicitly ask you to), or keep the branch. Never use `--force`; if a push is rejected because the remote moved, stop and report.
+When the user wants to wrap up a branch: confirm the base branch (don't assume `main`), run the full gates on the final tree, then offer the options — merge locally, push and open a PR (they run it or explicitly ask you to), or keep the branch. Never use `--force`; if a push is rejected because the remote moved, stop and report. Once the branch is merged or dropped, `close-work`.
 
 ## Never
 

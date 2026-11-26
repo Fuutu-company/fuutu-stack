@@ -5,7 +5,8 @@
  * paths and Bash commands that write into them, and tells the agent which
  * command to run instead. Reading and the generator commands stay allowed.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 export const GENERATED = [
 	{
@@ -77,7 +78,18 @@ export function check(toolName, input) {
 	return null;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+/** True when this file is the process entry point (paths with spaces, symlinks). */
+const isMain = () => {
+	try {
+		return (
+			import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+		);
+	} catch {
+		return false;
+	}
+};
+
+if (isMain()) {
 	let event = {};
 	try {
 		event = JSON.parse(readFileSync(0, "utf8") || "{}");

@@ -1,4 +1,12 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+	copyFileSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -64,6 +72,22 @@ describe("generated files guard", () => {
 			expect(check(tool, input)).toBeNull();
 		},
 	);
+
+	it("blocks when run as a hook, also from a path with spaces", () => {
+		const dir = mkdtempSync(join(tmpdir(), "hook dir "));
+		const copy = join(dir, "protect-generated.mjs");
+		copyFileSync(HOOK, copy);
+		const result = spawnSync("node", [copy], {
+			input: JSON.stringify({
+				tool_name: "Edit",
+				tool_input: { file_path: "/r/pnpm-lock.yaml" },
+			}),
+			encoding: "utf8",
+		});
+		rmSync(dir, { recursive: true, force: true });
+		expect(result.status).toBe(2);
+		expect(result.stderr).toContain("pnpm add");
+	});
 
 	it("every migration folder looks like `prisma migrate dev` created it", () => {
 		const dir = join(REPO_ROOT, "packages", "db", "prisma", "migrations");

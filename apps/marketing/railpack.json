@@ -23,7 +23,10 @@
 					"/root/.local/state/mise"
 				]
 			},
-			{ "step": "build", "include": ["apps/marketing/.next/standalone"] }
+			{
+				"step": "build",
+				"include": ["apps/marketing/.next/standalone", "tooling/deploy"]
+			}
 		],
 		"startCommand": "node apps/marketing/.next/standalone/apps/marketing/server.js",
 		"variables": {

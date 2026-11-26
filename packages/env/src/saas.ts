@@ -176,6 +176,10 @@ const kitServerEnv = {
 	FUUTU_TELEMETRY_ENDPOINT: z.url().optional(),
 	FUUTU_TELEMETRY_DISABLED: z.stringbool().optional(),
 	FUUTU_DISABLE_RATE_LIMIT: strictFlag().optional(),
+	// Deploy start command (tooling/deploy/start-with-migrate.mjs) runs
+	// `prisma migrate deploy` before the server; 0 skips it (migrations
+	// run from CI). The script reads it before this schema loads.
+	MIGRATE_ON_START: strictFlag().optional(),
 	// Trust X-Forwarded-For / X-Real-IP for per-IP rate limiting — only
 	// behind a reverse proxy that overwrites them (Traefik, nginx, LB).
 	// Required in production (0 or 1): left unset, every client would
@@ -326,6 +330,7 @@ export const env = createEnv({
 		FUUTU_TELEMETRY_ENDPOINT: process.env.FUUTU_TELEMETRY_ENDPOINT,
 		FUUTU_TELEMETRY_DISABLED: process.env.FUUTU_TELEMETRY_DISABLED,
 		FUUTU_DISABLE_RATE_LIMIT: process.env.FUUTU_DISABLE_RATE_LIMIT,
+		MIGRATE_ON_START: process.env.MIGRATE_ON_START,
 		TRUST_PROXY_HEADERS: process.env.TRUST_PROXY_HEADERS,
 		TRUSTED_CLIENT_IP_HEADER: process.env.TRUSTED_CLIENT_IP_HEADER,
 		FUUTU_AUTH_COOKIE_PREFIX: process.env.FUUTU_AUTH_COOKIE_PREFIX,

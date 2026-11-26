@@ -57,6 +57,11 @@
 			"category": "workflow"
 		},
 		{
+			"name": "close-work",
+			"source": "repo",
+			"category": "workflow"
+		},
+		{
 			"name": "add-entity",
 			"source": "mcp",
 			"category": "blueprint"

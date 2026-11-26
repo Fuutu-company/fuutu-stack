@@ -19,7 +19,7 @@
 import { createHash } from "node:crypto";
 
 const KIT_NAME = "Fuutu-Stack";
-const KIT_VERSION = "1.2.0";
+const KIT_VERSION = "1.3.2";
 const DEFAULT_ENDPOINT = "https://app.fuutustack.com/api/telemetry/ping";
 const TIMEOUT_MS = 5_000;
 
