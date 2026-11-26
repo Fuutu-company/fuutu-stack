@@ -96,7 +96,12 @@ export function NavAccount() {
 							<SidebarMenuButton size="lg" className={OPEN_CLASS}>
 								<Avatar className="size-8 rounded-lg">
 									<AvatarFallback className="rounded-lg">
-										<LogIn className="size-4" />
+										{canSignIn ? (
+											<LogIn className="size-4" />
+										) : (
+											// No sign-in here: the app's initial, not a sign-in icon.
+											(app.trim()[0] ?? "?").toUpperCase()
+										)}
 									</AvatarFallback>
 								</Avatar>
 								<div className="grid flex-1 text-left text-sm leading-tight">
