@@ -92,6 +92,8 @@ Use the matching skill (`.claude/skills/`, mirrored at `.agents/skills/`, listed
 
 The main session is the **lead**: it talks to the user, does small work itself and routes the rest to `.claude/agents/` (`delegate-tasks`; other tools: [tier mapping](https://docs.fuutustack.com/docs/coding-agents/other-tools)). One writer per task; only the lead spawns agents. Open work (progress files in `docs/plans/`, worktrees) is listed at session start.
 
+**Branch or not** — judge size and risk before the first edit and say the choice in one line ("small change, doing it directly on `develop`" / "own branch because …"). Small, low-risk changes (docs, notes, typos, config text, a one-file fix) go into the current checkout on the current branch: no worktree, no feature branch, no PR. A branch only for multi-file features, risky areas (auth, payments, migrations, secrets), work that must pass a PR (protected branch) or when the user asks; a worktree only when parallel agents or sessions would otherwise collide.
+
 **Memory**: keep only decisions with their reason, verified rules and open items, each with date and source — never transcripts, logs or what code and git show. Prune what closed work made stale.
 
 ## 11 · Boundaries
