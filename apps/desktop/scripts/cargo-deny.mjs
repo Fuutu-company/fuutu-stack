@@ -49,7 +49,23 @@ export function denyConfig(kit, app) {
 	return `${kit.trimEnd()}\n\n# --- deny.app.toml (app-owned) ---\n${app.trim()}\n`;
 }
 
+/**
+ * Message when `cargo deny` is not installed (`run` probes
+ * `cargo deny --version`), else null.
+ */
+export function cargoDenyMissing(
+	run = () => spawnSync("cargo", ["deny", "--version"], { stdio: "ignore" }),
+) {
+	if (run().status === 0) return null;
+	return "cargo-deny is not installed. Install it with: cargo install cargo-deny --locked";
+}
+
 function main() {
+	const missing = cargoDenyMissing();
+	if (missing) {
+		process.stderr.write(`${missing}\n`);
+		process.exit(1);
+	}
 	const kit = readFileSync(join(tauriDir, "deny.toml"), "utf8");
 	const appFile = join(tauriDir, "deny.app.toml");
 	const app = existsSync(appFile) ? readFileSync(appFile, "utf8") : "";
