@@ -139,8 +139,8 @@ impl Listener {
             }
         }
         let head = String::from_utf8_lossy(&buffer);
-        let callback = request_url(&head, self.port)
-            .and_then(|url| parse_callback(&url, expected_state));
+        let callback =
+            request_url(&head, self.port).and_then(|url| parse_callback(&url, expected_state));
         let response = match &callback {
             Some(_) => respond("200 OK", &page.html()),
             None => respond("404 Not Found", ""),
@@ -220,7 +220,11 @@ mod tests {
         let server = tokio::spawn(async move { listener.wait("s1", &page).await });
         // A connection that never sends anything only costs its timeout.
         let _idle = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-        for target in ["/other", "/callback?code=x&state=bad", "/callback?code=good&state=s1"] {
+        for target in [
+            "/other",
+            "/callback?code=x&state=bad",
+            "/callback?code=good&state=s1",
+        ] {
             let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
             stream
                 .write_all(format!("GET {target} HTTP/1.1\r\nHost: x\r\n\r\n").as_bytes())
