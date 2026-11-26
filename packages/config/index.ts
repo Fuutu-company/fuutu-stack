@@ -24,7 +24,7 @@
  *   - Telemetry ping (build-time + runtime)
  *   - `X-Framework` response header (`Fuutu-Stack/<version>`)
  */
-export const KIT_VERSION = "1.3.1" as const;
+export const KIT_VERSION = "1.3.2" as const;
 export const KIT_NAME = "Fuutu-Stack" as const;
 
 /**

@@ -12,8 +12,7 @@ You are the **lead** — the only one who talks to the user, decides, and owns t
 
 ## When NOT to delegate
 
-Do it yourself when the work is small: a question, a one-file fix, ≤ ~3 files with an obvious change, a config tweak. Delegation costs tokens and loses context; it pays off for separable work, parallel read-heavy searches and a fresh-eyes review — never "for a better answer".
-
+Do it yourself when the work is small: a question, a one-file fix, ≤ ~3 files with an obvious change, a config tweak. Delegation costs tokens and loses context; it pays off for separable work, parallel read-heavy searches and a fresh-eyes review — never "for a better answer". Small work also stays in the current checkout and branch — no worktree, branch or PR (AGENTS.md → "Branch or not").
 ## The team
 
 `tier` in each agent's frontmatter is the vendor-neutral source of truth; other tools map it via [docs.fuutustack.com/docs/coding-agents/other-tools](https://docs.fuutustack.com/docs/coding-agents/other-tools).

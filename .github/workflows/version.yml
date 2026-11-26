@@ -6,7 +6,8 @@ run-name: ${{ vars.FUUTU_VERSIONING_ENABLED == 'true' && 'Version' || 'Versionin
 # setting the repository variable FUUTU_VERSIONING_ENABLED=true, plus:
 #   variable FUUTU_VERSIONING_API_URL  — e.g. https://app.fuutustack.com
 #   secret   FUUTU_VERSIONING_API_KEY  — org key with `versioning` scope
-# (Settings → Secrets and variables → Actions).
+# (Settings → Secrets and variables → Actions). While disabled no job
+# requests a runner, so the run ends "skipped" — see ci.yml.
 #
 # On every push to main the conventional-commit subjects since the last
 # git tag are sent to POST <FUUTU_VERSIONING_API_URL>/api/versioning/next;
@@ -42,27 +43,6 @@ permissions:
   contents: write # release commit + tag push
 
 jobs:
-  # Explains itself in the run summary while versioning is disabled — see ci.yml.
-  enable-versioning:
-    name: ℹ️ Versioning disabled — how to enable
-    runs-on: ubuntu-latest
-    if: vars.FUUTU_VERSIONING_ENABLED != 'true'
-    steps:
-      - run: |
-          {
-            echo "## Fuutu Stack versioning is disabled"
-            echo ""
-            echo "Automated releases require a **Fuutu versioning API key** (Fuutu Pro / Enterprise)."
-            echo ""
-            echo "**To enable versioning on this repository:**"
-            echo "1. Create the variable \`FUUTU_VERSIONING_ENABLED\` = \`true\`"
-            echo "2. Create the variable \`FUUTU_VERSIONING_API_URL\` (e.g. \`https://app.fuutustack.com\`)"
-            echo "3. Create the secret \`FUUTU_VERSIONING_API_KEY\` (org key with \`versioning\` scope)"
-            echo ""
-            echo "Under **Settings → Secrets and variables → Actions**, then push to main."
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "::notice::Fuutu Stack versioning is disabled — set repository variable FUUTU_VERSIONING_ENABLED=true to activate it (see run summary)."
-
   version:
     runs-on: ubuntu-latest
     timeout-minutes: 10

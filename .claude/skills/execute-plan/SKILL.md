@@ -13,8 +13,9 @@ Work through a saved plan task by task without losing state, and finish with evi
 ## Before the first task
 
 1. Read the plan and its `Spec:` completely. Raise contradictions or gaps **now**, not halfway through.
-2. Confirm the baseline is green: `pnpm check-types` and the tests of the packages you will touch. Report pre-existing failures by name before you start.
-3. Create a progress file next to the plan: `docs/plans/<plan-name>.progress.md` — a header (`Branch:`, `Worktree:`, `Slot:` from `pnpm ports`), a checklist of task titles and a "Rulings" section. It survives context compaction and is the on-disk record of open work (session start lists it); re-read it after any interruption, delete it in `close-work`.
+2. Decide where the work runs (AGENTS.md → "Branch or not") and say it in one line: a plan usually earns its own branch; a worktree only if other writers run in parallel.
+3. Confirm the baseline is green: `pnpm check-types` and the tests of the packages you will touch. Report pre-existing failures by name before you start.
+4. Create a progress file next to the plan: `docs/plans/<plan-name>.progress.md` — a header (`Branch:`, `Worktree:` or `none`, `Slot:` from `pnpm ports`), a checklist of task titles and a "Rulings" section. It survives context compaction and is the on-disk record of open work (session start lists it); re-read it after any interruption, delete it in `close-work`.
 
 ## Per task
 
