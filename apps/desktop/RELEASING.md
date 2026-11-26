@@ -227,11 +227,12 @@ kit files. A kit update leaves their content alone. Each one ships empty
 
 **UI** (`src/`). Your pages are new route files,
 `src/app/(main)/<route>/page.tsx`, inside the shell and the access gate.
-The kit owns only home, settings and about.
+The kit owns only home, settings and about. Pages without the shell and
+another start route: [Full-window routes and start route](#full-window-routes-and-start-route).
 
 | File | What it adds |
 |---|---|
-| `src/app-nav.ts` | `appNavItems`: sidebar items (`titleKey` under `desktop.shell.nav`, `href`, `icon`, `after`). Labels go in the `desktop` section of `packages/i18n/translations/<locale>/app/index.ts`. |
+| `src/app-nav.ts` | `appNavItems`: sidebar items (`titleKey` under `desktop.shell.nav`, `href`, `icon`, `after`). Labels go in the `desktop` section of `packages/i18n/translations/<locale>/app/index.ts`. With `desktopConfig.auth: "off"` the sidebar has no Account item, so items with `after: "account"` are appended. |
 | `src/app-home.tsx` | `appHome`: the home page content |
 | `src/app-about.tsx` | `appAboutSection`: a section of the About window, above the notices |
 | `src/app-shell-slot.tsx` | `appShellSlots`: `sidebarTop`, `sidebarBottom`, `contentTop`, `global` (dialogs, listeners) |
@@ -266,6 +267,22 @@ direct dependencies of the app crate. `app-ext/build.rs` re-exports them
 under `links = "app-ext"`, and the kit `build.rs` restores the original
 names (`src-tauri/build_forward.rs`).
 
+**Your own commands.** `lib.rs` owns the app's only `invoke_handler`; a
+handler you set on the builder in `app_plugins::register` is silently
+replaced by the kit's. Ship your commands as a plugin instead: a crate
+under `crates/<name>/` (`links = "tauri-plugin-<name>"`, `tauri-plugin`
+with the `build` feature as build-dependency, a `build.rs` with
+`tauri_plugin::Builder::new(&["my_cmd"]).build()`), depended on from
+`app-ext/Cargo.toml`. Its `init()` returns
+`tauri::plugin::Builder::new("<name>").invoke_handler(tauri::generate_handler![my_cmd]).build()`,
+registered in `register`. The webview calls `invoke("plugin:<name>|my_cmd")`.
+The plugin's `build.rs` generates the permissions `<name>:allow-<cmd>`
+(underscores become hyphens; no `default` permission unless you write
+`permissions/default.toml`), and `app-ext/build.rs` forwards them like any
+plugin's; grant them in `app-capabilities.ts`. Plugin commands are always
+checked against the capabilities, so a command without a granted
+permission is refused. `tauri::ipc::Channel` arguments work unchanged.
+
 **Tauri features in the kit Cargo.toml.** `tauri dev` / `tauri build`
 rewrite the kit `Cargo.toml`'s `tauri` features to match the config
 (`app.macOSPrivateApi` → `macos-private-api`, also `protocol-asset`,
@@ -275,6 +292,117 @@ when the CLI exits, and at the next start after a crash
 when a build leaves the file changed ("Kit Cargo.toml unchanged"). If your
 own code in app-ext calls such APIs, declare the feature on app-ext's
 `tauri` dependency; plain `cargo check` then compiles them too.
+
+### Full-window routes and start route
+
+A page without the sidebar and header (an editor, a reader, a game view)
+lives in your own route group next to the kit's `(main)`:
+`src/app/(<group>)/layout.tsx` with `src/app/(<group>)/<route>/page.tsx`.
+`(main)/layout.tsx` stays the kit's. Your layout must keep the account,
+the access gate and the update dialog, or the route opens without sign-in
+or plan checks:
+
+```tsx
+import type { PropsWithChildren } from "react";
+import { AccessGate, AccessNotice } from "@/components/access-gate";
+import { AccountProvider } from "@/components/account-provider";
+import { UpdateDialog } from "@/components/update-dialog";
+
+export default function FullWindowLayout({ children }: PropsWithChildren) {
+	return (
+		<AccountProvider>
+			<AccessGate>
+				<AccessNotice />
+				{children}
+				<UpdateDialog />
+			</AccessGate>
+		</AccountProvider>
+	);
+}
+```
+
+`AccessNotice` (offline grace, trial end) sits in the kit shell's content
+column; outside the shell you place it yourself. Route paths must not
+collide with the kit's (`/`, `/settings/…`, `/about/`).
+
+The window opens on `/` (home). To start on another route, set the `main`
+window's `url` in `APP_TAURI_CONFIG`. Arrays replace the kit's, so repeat
+the whole window: the label `main`, the title and the kit's sizes, plus
+anything else you set (e.g. `visible`). The `url` is relative to the app
+and keeps the trailing slash (the static export writes `<route>/index.html`):
+
+```ts
+import { desktopIdentity } from "@fuutu/desktop/identity";
+
+export const APP_TAURI_CONFIG: AppTauriConfig = {
+	app: {
+		windows: [
+			{
+				label: "main",
+				title: desktopIdentity.productName,
+				width: 1100,
+				height: 720,
+				minWidth: 800,
+				minHeight: 480,
+				url: "book/",
+			},
+		],
+	},
+};
+```
+
+### Local media
+
+The asset protocol (`convertFileSrc`, `app.security.assetProtocol`) and an
+app CSP are refused on purpose: an asset scope exposes that file tree to
+any script that runs in the webview, injected script included. Hand files
+to the webview as bytes instead:
+
+- **Images**: a command returns `tauri::ipc::Response::new(bytes)`; the
+  webview gets an `ArrayBuffer`, wraps it in a `Blob` with the right type
+  and shows `URL.createObjectURL(blob)` (revoke it when the image goes).
+  The release CSP allows `img-src 'self' data: blob: https:`.
+- **Audio**: the release CSP has no `media-src`, so `default-src 'self'`
+  blocks `<audio src="blob:…">`. Decode the IPC bytes with Web Audio
+  (`AudioContext.decodeAudioData(buffer)`, played through an
+  `AudioBufferSourceNode`), or play the sound natively in Rust.
+
+Dev builds run with `csp: null`, so a URL the release CSP blocks works in
+`pnpm dev:desktop` and breaks only in a release build. Check media in a
+release build before you ship.
+
+### Window state and a launch without a white flash
+
+The kit's window-state plugin saves and restores size, position,
+maximized, fullscreen and decorations of every window but About. It never
+restores visibility: restoring it would call `show()` on every start.
+
+The webview paints white until the first frame of your page. To open the
+window only once it is painted:
+
+1. Set `visible: false` on the `main` window in `APP_TAURI_CONFIG`
+   (repeat the whole window, see above). Optionally set `backgroundColor`
+   (e.g. `"#1c1917"`) so the window and webview start in your background
+   color.
+2. Grant `core:window:allow-show` to the `main` window in
+   `app-capabilities.ts`.
+3. Show the window after the first paint, e.g. in a component of your own
+   route group's layout, outside `AccessGate` (so the sign-in card shows
+   too):
+
+   ```tsx
+   useEffect(() => {
+   	requestAnimationFrame(() => void getCurrentWindow().show());
+   }, []);
+   ```
+
+   (`getCurrentWindow` from `@tauri-apps/api/window`.) The kit's
+   `(main)` layout has no slot outside the access gate: a slot such as
+   `appShellSlots.global` renders only once the gate opens and the setup
+   steps are done, so with
+   `auth: "required"` a signed-out start would stay hidden. With
+   `desktopConfig.shell.singleInstance` or `shell.tray` on, a second launch
+   or the tray's "Show" still shows the window.
 
 ## Before the first release
 
