@@ -199,6 +199,11 @@ pnpm build:desktop --target universal-apple-darwin
 It sends one build telemetry ping with surface `desktop`
 (LICENSE.md §7). Signing keys come from your `.env`.
 
+Release builds link with fat LTO, so a link error can show up only there:
+the PR build of `desktop.yml` catches it before a tag. Native code you link
+(Objective-C or C) may use `@available`; on macOS the kit's `build.rs`
+links clang's runtime, which provides the symbol it needs.
+
 ### Signing secrets
 
 `TAURI_SIGNING_*`, `APPLE_*` and `WINDOWS_CERTIFICATE*` reach **only**
