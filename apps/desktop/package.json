@@ -8,7 +8,7 @@
 		"web:dev": "next dev",
 		"web:build": "next build",
 		"tauri": "tauri",
-		"check-types": "next typegen && tsc --noEmit",
+		"check-types": "next typegen && tsc --noEmit --incremental false",
 		"test": "vitest run",
 		"smoke": "node tests/smoke.mcp.mjs"
 	},
