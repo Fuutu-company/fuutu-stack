@@ -86,6 +86,12 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(pubkey).build());
     }
 
+    // macOS: WKWebView skips plain links on Tab by default.
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.plugin(shell::tab_focuses_links());
+    }
+
     // Your plugins (app-owned src/app_plugins.rs), with the runtime config.
     builder = app_plugins::register(builder, &config);
 

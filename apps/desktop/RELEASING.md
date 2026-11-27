@@ -246,6 +246,9 @@ kit files. A kit update leaves their content alone. Each one ships empty
 `src/app/(main)/<route>/page.tsx`, inside the shell and the access gate.
 The kit owns only home, settings and about. Pages without the shell and
 another start route: [Full-window routes and start route](#full-window-routes-and-start-route).
+Tab reaches links (`<a href>`) on every platform: on macOS the kit turns
+on WKWebView's `tabFocusesLinks` (off by default there), so links need no
+`tabIndex` of their own.
 
 | File | What it adds |
 |---|---|
