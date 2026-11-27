@@ -109,7 +109,10 @@ mod tests {
         let set = imports(
             vars(&[
                 ("DEP_APP_EXT_TAURI_PLUGIN_FS_PERMISSION_FILES_PATH", "/o/fs"),
-                ("DEP_APP_EXT_TAURI_PLUGIN_OPENER_PERMISSION_FILES_PATH", "/o/op2"),
+                (
+                    "DEP_APP_EXT_TAURI_PLUGIN_OPENER_PERMISSION_FILES_PATH",
+                    "/o/op2",
+                ),
                 ("DEP_APP_EXT_OTHER", "x"),
             ]),
             |key| key == "DEP_TAURI_PLUGIN_OPENER_PERMISSION_FILES_PATH",

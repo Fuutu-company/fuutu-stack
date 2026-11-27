@@ -3,7 +3,8 @@
  * Translation completeness checker.
  *
  * 1. Verifies every ENABLED locale (`i18nConfig.locales` in config.ts) contains
- *    every key. Folders under translations/ that are not enabled are dormant:
+ *    every key — key paths of the merged tree the apps load at runtime
+ *    (`./locale-keys.mjs`), not of the raw JSON files. Folders under translations/ that are not enabled are dormant:
  *    reported as info, never checked, never an error.
  * 2. Warns about keys in translation files that are never referenced in source code.
  * 3. Cross-checks FEATURE_CATALOG IDs against payments.features translation keys,
@@ -18,6 +19,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { findUnusedKeys, loadLocaleKeys, usedKeysIn } from "./locale-keys.mjs";
 import { parseConfiguredLocales, partitionLocaleDirs } from "./locales.mjs";
 import {
 	extractVisiblePlanFeatures,
@@ -48,35 +50,6 @@ function collectJsonFiles(dir) {
 		}
 	}
 	return results;
-}
-
-function flattenKeys(obj, prefix = "") {
-	const keys = new Map();
-	for (const [key, value] of Object.entries(obj)) {
-		const fullKey = prefix ? `${prefix}.${key}` : key;
-		if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-			const nested = flattenKeys(value, fullKey);
-			for (const [k, v] of nested) keys.set(k, v);
-		} else {
-			keys.set(
-				fullKey,
-				typeof value === "string" ? value : JSON.stringify(value),
-			);
-		}
-	}
-	return keys;
-}
-
-function loadLocaleKeys(locale) {
-	const localeDir = join(translationsDir, locale);
-	const files = collectJsonFiles(localeDir);
-	const merged = new Map();
-	for (const file of files) {
-		const content = JSON.parse(readFileSync(file, "utf-8"));
-		const flat = flattenKeys(content);
-		for (const [k, v] of flat) merged.set(k, v);
-	}
-	return merged;
 }
 
 // ─── Scan source files for translation key usage ──────────────────────────────
@@ -129,34 +102,9 @@ function collectSourceDirs() {
 
 function extractUsedKeys() {
 	const keys = new Set();
-	const sourceDirs = collectSourceDirs();
-	const patterns = [
-		// Static: t("key"), t('key'), t(`key`) — plus t.has()/t.raw()/t.rich()
-		/\bt(?:\.(?:has|raw|rich))?\(["'`]([^"'`]+)["'`]/g,
-		/\bgetTranslations\(["'`]([^"'`]+)["'`]\)/g,
-		/\bgetTranslations\(\{[^}]*namespace:\s*["'`]([^"'`]+)["'`]/g,
-		/\buseTranslations\(["'`]([^"'`]+)["'`]\)/g,
-		// Template literals: t(`prefix.${var}`) → extract "prefix" as a used
-		// namespace. Fully dynamic keys (e.g. t.has(`source.${e}`) for
-		// credits.source.*) can only be resolved to their prefix — the leaf
-		// is unknowable statically, so unused-key stays warn-only.
-		/\bt(?:\.(?:has|raw|rich))?\(`([^`${}]+)\.\$\{[^}]+\}`/g,
-		// Property access: messages.cron.subscriptionReminder.title, messages.nav.docs
-		/\bmessages\.([a-zA-Z0-9_.]+)/g,
-		// labelKey: "key" pattern in footer/navbar
-		/\blabelKey:\s*["'`]([^"'`]+)["'`]/g,
-	];
-	for (const dir of sourceDirs) {
-		const files = scanTsFiles(dir);
-		for (const file of files) {
-			const content = readFileSync(file, "utf-8");
-			for (const pattern of patterns) {
-				let match = pattern.exec(content);
-				while (match !== null) {
-					keys.add(match[1]);
-					match = pattern.exec(content);
-				}
-			}
+	for (const dir of collectSourceDirs()) {
+		for (const file of scanTsFiles(dir)) {
+			usedKeysIn(readFileSync(file, "utf-8"), keys);
 		}
 	}
 	return keys;
@@ -199,16 +147,22 @@ if (dormantLocales.length > 0) {
 		`ℹ️  Dormant locales (in translations/, not enabled in i18nConfig.locales) — not checked: ${dormantLocales.join(", ")}`,
 	);
 }
-const localeKeys = new Map(locales.map((l) => [l, loadLocaleKeys(l)]));
+// Keys where the apps see them: the merged tree each locale loads at
+// runtime (bundles mounted by their index.ts + the app overlay).
+const localeKeys = new Map(
+	await Promise.all(locales.map(async (l) => [l, await loadLocaleKeys(l)])),
+);
 
 // Union of all keys across locales — every locale must contain every key.
 const allKnownKeys = new Set();
-for (const keys of localeKeys.values()) {
+const allAppKeys = new Set();
+for (const { keys, appKeys } of localeKeys.values()) {
 	for (const k of keys.keys()) allKnownKeys.add(k);
+	for (const k of appKeys) allAppKeys.add(k);
 }
 
 // 1. Check every locale has all keys
-for (const [locale, keys] of localeKeys) {
+for (const [locale, { keys }] of localeKeys) {
 	const missing = [...allKnownKeys].filter((k) => !keys.has(k));
 	if (missing.length > 0) {
 		hasErrors = true;
@@ -219,20 +173,7 @@ for (const [locale, keys] of localeKeys) {
 
 // 2. Check for unused keys
 const usedKeys = extractUsedKeys();
-const allKeys = allKnownKeys;
-const unused = [];
-for (const key of allKeys) {
-	const parts = key.split(".");
-	let found = false;
-	for (let i = parts.length; i >= 1; i--) {
-		const candidate = parts.slice(0, i).join(".");
-		if (usedKeys.has(candidate)) {
-			found = true;
-			break;
-		}
-	}
-	if (!found) unused.push(key);
-}
+const unused = findUnusedKeys(allAppKeys, usedKeys);
 
 if (unused.length > 0) {
 	console.warn(`\n⚠️  Potentially unused translation keys (${unused.length}):`);
@@ -620,7 +561,7 @@ if (creditWarnings.length > 0) {
 const totalKeys = allKnownKeys.size;
 
 console.log("\n📊 Translation summary:");
-for (const [locale, keys] of localeKeys) {
+for (const [locale, { keys }] of localeKeys) {
 	const coverage =
 		totalKeys > 0 ? Math.floor((keys.size / totalKeys) * 100) : 100;
 	console.log(

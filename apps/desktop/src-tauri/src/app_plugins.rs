@@ -12,8 +12,14 @@
 //! }
 //! ```
 //!
-//! Add the crates to `../Cargo.toml` (your own ones under `crates/`) and
-//! their permissions to `scripts/lib/app-capabilities.ts`.
+//! Add the crates to `app-ext/Cargo.toml` (your own ones under `crates/`,
+//! depended on from there; never the kit's `Cargo.toml`) and their
+//! permissions to `scripts/lib/app-capabilities.ts`.
+//!
+//! Your own commands: `lib.rs` owns the only `invoke_handler`, and one set
+//! on the builder here is silently replaced. Ship them as a plugin
+//! (`tauri::plugin::Builder::new("<name>").invoke_handler(...)`), called as
+//! `invoke("plugin:<name>|<cmd>")` — see RELEASING.md, "Your own commands".
 //!
 //! Never register another plugin from inside a plugin's own `setup`
 //! (e.g. `app.plugin(...)` in `Builder::setup` of your plugin): it

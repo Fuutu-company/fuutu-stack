@@ -168,6 +168,22 @@ describe("buildTauriConfig", () => {
 		);
 	});
 
+	it("gives each dev slot its own identifier, release keeps the bundle id", () => {
+		// single-instance locks by identifier and app_data_dir derives from
+		// it: two worktrees (or a dev build and the installed app) must
+		// never share either.
+		const dev = (devSlot: number) =>
+			buildTauriConfig({ mode: "dev", appVersion: "1.0.0", devSlot })
+				.identifier;
+		expect(dev(106)).toBe(`${desktopIdentity.bundleId}.dev.s106`);
+		expect(dev(105)).toBe(`${desktopIdentity.bundleId}.dev.s105`);
+		expect(dev(105)).not.toBe(dev(106));
+		expect(
+			buildTauriConfig({ mode: "build", appVersion: "1.0.0", devSlot: 106 })
+				.identifier,
+		).toBe(desktopIdentity.bundleId);
+	});
+
 	it("registers the deep-link scheme from the identity", () => {
 		const config = buildTauriConfig({ mode: "build", appVersion: "1.0.0" });
 		expect(config.plugins["deep-link"].desktop.schemes).toEqual([

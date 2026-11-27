@@ -140,6 +140,32 @@ pub fn hide_on_close<R: Runtime>(window: &tauri::Window<R>, event: &WindowEvent)
     }
 }
 
+/// macOS: WKWebView's `tabFocusesLinks` defaults to NO, so Tab skips
+/// plain links (`<a href>`: sidebar, home tiles, About). Turn it on for
+/// every webview the app creates, like Safari's "Press Tab to highlight
+/// each item". The preferences object is shared with the live webview, so
+/// setting it after creation takes effect.
+#[cfg(target_os = "macos")]
+pub fn tab_focuses_links<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    tauri::plugin::Builder::new("kit-tab-focus")
+        .on_webview_ready(|webview| {
+            let result = webview.with_webview(|platform| {
+                let view = platform.inner().cast::<objc2_web_kit::WKWebView>();
+                // SAFETY: on macOS `inner()` is the live WKWebView, and
+                // with_webview runs this on the main thread.
+                unsafe {
+                    if let Some(view) = view.as_ref() {
+                        view.configuration().preferences().setTabFocusesLinks(true);
+                    }
+                }
+            });
+            if let Err(err) = result {
+                log::warn!("tabFocusesLinks not set: {err}");
+            }
+        })
+        .build()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

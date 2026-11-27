@@ -49,7 +49,28 @@ export function denyConfig(kit, app) {
 	return `${kit.trimEnd()}\n\n# --- deny.app.toml (app-owned) ---\n${app.trim()}\n`;
 }
 
+/**
+ * Message when `cargo deny` cannot run (`run` probes
+ * `cargo deny --version`), else null: cargo itself missing (spawn error,
+ * no exit status) or the cargo-deny subcommand missing.
+ */
+export function cargoDenyMissing(
+	run = () => spawnSync("cargo", ["deny", "--version"], { stdio: "ignore" }),
+) {
+	const result = run();
+	if (result.status === 0) return null;
+	if (result.error || result.status === null) {
+		return "cargo not found on PATH (install Rust via rustup, or add ~/.cargo/bin to PATH)";
+	}
+	return "cargo-deny is not installed. Install it with: cargo install cargo-deny --locked";
+}
+
 function main() {
+	const missing = cargoDenyMissing();
+	if (missing) {
+		process.stderr.write(`${missing}\n`);
+		process.exit(1);
+	}
 	const kit = readFileSync(join(tauriDir, "deny.toml"), "utf8");
 	const appFile = join(tauriDir, "deny.app.toml");
 	const app = existsSync(appFile) ? readFileSync(appFile, "utf8") : "";

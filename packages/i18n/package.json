@@ -19,6 +19,7 @@
 	},
 	"devDependencies": {
 		"@fuutu/tsconfig": "workspace:*",
+		"tsx": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:"
 	}

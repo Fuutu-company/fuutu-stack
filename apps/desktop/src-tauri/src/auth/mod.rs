@@ -112,7 +112,11 @@ pub fn api_url(saas: &Url, path: &str) -> Result<Url> {
     // No percent-encoding in the path: the server decodes `%61uth` → `auth`
     // after this check would have passed.
     let path_part = path.split('?').next().unwrap_or_default();
-    if !path.starts_with("/api/") || path.contains('\\') || path.contains('#') || path_part.contains('%') {
+    if !path.starts_with("/api/")
+        || path.contains('\\')
+        || path.contains('#')
+        || path_part.contains('%')
+    {
         return Err(invalid());
     }
     let url = saas.join(path).map_err(|_| invalid())?;
@@ -178,7 +182,9 @@ pub struct ApiResponse {
 pub enum SessionResult {
     SignedOut,
     /// Fresh `desktop.session` response.
-    Online { session: Value },
+    Online {
+        session: Value,
+    },
     /// Backend unreachable, offline grace valid. `session` is the last
     /// cached response (display only — decide access from `claim`).
     Offline {
@@ -186,7 +192,9 @@ pub enum SessionResult {
         claim: OfflineClaim,
     },
     /// Backend unreachable and no valid offline claim.
-    Unreachable { reason: String },
+    Unreachable {
+        reason: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -262,7 +270,8 @@ impl AuthState {
             Some(seed) => seed,
             None => {
                 let seed: [u8; 32] = rand::random();
-                self.keychain.set(INSTALL_KEY, &URL_SAFE_NO_PAD.encode(seed))?;
+                self.keychain
+                    .set(INSTALL_KEY, &URL_SAFE_NO_PAD.encode(seed))?;
                 seed
             }
         };
@@ -285,7 +294,10 @@ impl AuthState {
         }
     }
 
-    fn verify_offline(&self, proof: &OfflineProof) -> std::result::Result<OfflineClaim, &'static str> {
+    fn verify_offline(
+        &self,
+        proof: &OfflineProof,
+    ) -> std::result::Result<OfflineClaim, &'static str> {
         let install_key = self.install_public_key().map_err(|_| "no install key")?;
         let issuer = self
             .saas
@@ -311,8 +323,17 @@ impl AuthState {
     }
 
     async fn token_request(&self, form: &[(&str, &str)]) -> Result<TokenResponse> {
-        let url = self.saas()?.join("/api/auth/oauth2/token").map_err(network)?;
-        let res = self.http.post(url).form(form).send().await.map_err(network)?;
+        let url = self
+            .saas()?
+            .join("/api/auth/oauth2/token")
+            .map_err(network)?;
+        let res = self
+            .http
+            .post(url)
+            .form(form)
+            .send()
+            .await
+            .map_err(network)?;
         let status = res.status();
         if status.is_success() {
             return res.json().await.map_err(network);
@@ -332,7 +353,9 @@ impl AuthState {
 
     fn store_tokens(&self, tokens: &TokenResponse) -> Result<AccessToken> {
         if let Some(refresh) = &tokens.refresh_token {
-            self.keychain.set(REFRESH_TOKEN, refresh).map_err(AuthError::Keychain)?;
+            self.keychain
+                .set(REFRESH_TOKEN, refresh)
+                .map_err(AuthError::Keychain)?;
         }
         Ok(AccessToken {
             token: tokens.access_token.clone(),
@@ -384,8 +407,17 @@ impl AuthState {
         }
     }
 
-    async fn send(&self, url: Url, method: Method, token: Option<&str>, body: Option<&str>) -> Result<reqwest::Response> {
-        let mut request = self.http.request(method, url).header("accept", "application/json");
+    async fn send(
+        &self,
+        url: Url,
+        method: Method,
+        token: Option<&str>,
+        body: Option<&str>,
+    ) -> Result<reqwest::Response> {
+        let mut request = self
+            .http
+            .request(method, url)
+            .header("accept", "application/json");
         if let Some(token) = token {
             request = request.bearer_auth(token);
         }
@@ -399,9 +431,19 @@ impl AuthState {
 
     /// Calls `<saas><path>` with the bearer (anonymous when signed out);
     /// one refresh + retry on 401.
-    async fn fetch(&self, app: &AppHandle, request: &ApiRequest) -> Result<(StatusCode, String, bool)> {
+    async fn fetch(
+        &self,
+        app: &AppHandle,
+        request: &ApiRequest,
+    ) -> Result<(StatusCode, String, bool)> {
         let url = api_url(self.saas()?, &request.path)?;
-        let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+        let method = match request
+            .method
+            .as_deref()
+            .unwrap_or("GET")
+            .to_ascii_uppercase()
+            .as_str()
+        {
             "GET" => Method::GET,
             "POST" => Method::POST,
             "PUT" => Method::PUT,
@@ -415,7 +457,9 @@ impl AuthState {
             Err(err) => return Err(err),
         };
         let body = request.body.as_deref();
-        let mut res = self.send(url.clone(), method.clone(), token.as_deref(), body).await?;
+        let mut res = self
+            .send(url.clone(), method.clone(), token.as_deref(), body)
+            .await?;
         if res.status() == StatusCode::UNAUTHORIZED {
             if let Some(failed) = token.take() {
                 match self.access_token(app, Some(&failed)).await {
@@ -454,11 +498,27 @@ impl AuthState {
             return;
         };
         let result: std::result::Result<(), String> = async {
-            let url = self.saas().map_err(|e| format!("{e:?}"))?.join("/api/auth/jwks").map_err(|e| e.to_string())?;
-            let jwks = self.http.get(url).send().await.map_err(|e| e.to_string())?.text().await.map_err(|e| e.to_string())?;
+            let url = self
+                .saas()
+                .map_err(|e| format!("{e:?}"))?
+                .join("/api/auth/jwks")
+                .map_err(|e| e.to_string())?;
+            let jwks = self
+                .http
+                .get(url)
+                .send()
+                .await
+                .map_err(|e| e.to_string())?
+                .text()
+                .await
+                .map_err(|e| e.to_string())?;
             let kid = offline::token_kid(token);
-            let key = offline::key_from_jwks(&jwks, kid.as_deref()).ok_or("signing key not in JWKS")?;
-            let proof = OfflineProof { token: token.to_owned(), key };
+            let key =
+                offline::key_from_jwks(&jwks, kid.as_deref()).ok_or("signing key not in JWKS")?;
+            let proof = OfflineProof {
+                token: token.to_owned(),
+                key,
+            };
             self.verify_offline(&proof)?;
             self.store_proof(&proof)?;
             self.mark_offline_seen(now());
@@ -471,7 +531,9 @@ impl AuthState {
     }
 
     fn cache_session(&self, session: &Value) {
-        let Some(file) = &self.session_file else { return };
+        let Some(file) = &self.session_file else {
+            return;
+        };
         let mut display = session.clone();
         if let Some(object) = display.as_object_mut() {
             object.remove("offline");
@@ -490,7 +552,9 @@ impl AuthState {
             _ => None,
         };
         let Some(proof) = proof else {
-            return SessionResult::Unreachable { reason: "no offline grace".into() };
+            return SessionResult::Unreachable {
+                reason: "no offline grace".into(),
+            };
         };
         let refresh_stored = matches!(self.keychain.get(REFRESH_TOKEN), Ok(Some(_)));
         let cached = self
@@ -498,22 +562,29 @@ impl AuthState {
             .as_ref()
             .and_then(|file| std::fs::read_to_string(file).ok())
             .and_then(|raw| serde_json::from_str::<Value>(&raw).ok());
-        let granted = self
-            .verify_offline(&proof)
-            .and_then(|claim| offline_account(refresh_stored, cached, &claim.sub).map(|session| (session, claim)));
+        let granted = self.verify_offline(&proof).and_then(|claim| {
+            offline_account(refresh_stored, cached, &claim.sub).map(|session| (session, claim))
+        });
         match granted {
             Ok((session, claim)) => {
                 self.mark_offline_seen(now());
-                SessionResult::Offline { session: Some(session), claim }
+                SessionResult::Offline {
+                    session: Some(session),
+                    claim,
+                }
             }
-            Err(reason) => SessionResult::Unreachable { reason: reason.into() },
+            Err(reason) => SessionResult::Unreachable {
+                reason: reason.into(),
+            },
         }
     }
 
     /// Hands a deep-link redirect to the waiting sign-in.
     fn deliver(&self, url: &Url) -> bool {
         let mut pending = self.pending.lock().unwrap_or_else(|p| p.into_inner());
-        let Some(current) = pending.as_ref() else { return false };
+        let Some(current) = pending.as_ref() else {
+            return false;
+        };
         let Some(callback) = loopback::parse_callback(url, &current.state) else {
             return false;
         };
@@ -552,12 +623,19 @@ pub async fn auth_status(state: State<'_, AuthState>) -> Result<AuthStatus> {
 /// OAuth errors after which the refresh token is gone for good — anything
 /// else (rate limit, invalid_request) keeps the user signed in.
 fn is_dead_grant(error: &str) -> bool {
-    matches!(error, "invalid_grant" | "invalid_client" | "unauthorized_client")
+    matches!(
+        error,
+        "invalid_grant" | "invalid_client" | "unauthorized_client"
+    )
 }
 
 /// Opens the sign-in in the system browser and waits for the redirect.
 #[tauri::command]
-pub async fn auth_sign_in(app: AppHandle, state: State<'_, AuthState>, page: CallbackPage) -> Result<()> {
+pub async fn auth_sign_in(
+    app: AppHandle,
+    state: State<'_, AuthState>,
+    page: CallbackPage,
+) -> Result<()> {
     let saas = state.saas()?.clone();
     let (verifier, challenge) = pkce::pair();
     let csrf = pkce::random_token();
@@ -596,7 +674,9 @@ pub async fn auth_sign_in(app: AppHandle, state: State<'_, AuthState>, page: Cal
         if let Some(task) = server {
             task.abort();
         }
-        return Err(AuthError::Unavailable(format!("cannot open the browser: {err}")));
+        return Err(AuthError::Unavailable(format!(
+            "cannot open the browser: {err}"
+        )));
     }
 
     let outcome = tokio::time::timeout(SIGN_IN_TIMEOUT, rx).await;
@@ -605,7 +685,11 @@ pub async fn auth_sign_in(app: AppHandle, state: State<'_, AuthState>, page: Cal
     }
     let code = match outcome {
         Err(_) => {
-            state.pending.lock().unwrap_or_else(|p| p.into_inner()).take();
+            state
+                .pending
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .take();
             return Err(AuthError::Timeout);
         }
         Ok(Err(_)) => return Err(AuthError::Cancelled),
@@ -661,7 +745,11 @@ fn open_sign_in(app: &AppHandle, url: &Url) -> std::result::Result<(), String> {
 #[tauri::command]
 pub async fn auth_cancel_sign_in(state: State<'_, AuthState>) -> Result<()> {
     // Dropping the sender ends the waiting sign-in with `Cancelled`.
-    state.pending.lock().unwrap_or_else(|p| p.into_inner()).take();
+    state
+        .pending
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .take();
     Ok(())
 }
 
@@ -689,7 +777,11 @@ pub async fn auth_sign_out(app: AppHandle, state: State<'_, AuthState>) -> Resul
 
 /// API call from the webview through the signed-in account.
 #[tauri::command]
-pub async fn auth_api_fetch(app: AppHandle, state: State<'_, AuthState>, request: ApiRequest) -> Result<ApiResponse> {
+pub async fn auth_api_fetch(
+    app: AppHandle,
+    state: State<'_, AuthState>,
+    request: ApiRequest,
+) -> Result<ApiResponse> {
     let (status, body, _) = state.fetch(&app, &request).await?;
     Ok(ApiResponse {
         status: status.as_u16(),
@@ -744,7 +836,8 @@ pub async fn auth_session(
     if !status.is_success() {
         return Err(AuthError::Rejected(format!("desktop.session: {status}")));
     }
-    let session: Value = serde_json::from_str(&text).map_err(|e| AuthError::Invalid(e.to_string()))?;
+    let session: Value =
+        serde_json::from_str(&text).map_err(|e| AuthError::Invalid(e.to_string()))?;
     state.keep_offline_proof(&session).await;
     state.cache_session(&session);
     Ok(SessionResult::Online { session })
@@ -785,8 +878,14 @@ mod tests {
         let cached = || Some(serde_json::json!({ "user": { "id": "u1" } }));
         assert!(offline_account(true, cached(), "u1").is_ok());
         assert_eq!(offline_account(false, cached(), "u1"), Err("signed out"));
-        assert_eq!(offline_account(true, cached(), "u2"), Err("claim is for another account"));
-        assert_eq!(offline_account(true, None, "u1"), Err("claim is for another account"));
+        assert_eq!(
+            offline_account(true, cached(), "u2"),
+            Err("claim is for another account")
+        );
+        assert_eq!(
+            offline_account(true, None, "u1"),
+            Err("claim is for another account")
+        );
     }
 
     fn saas() -> Url {
@@ -819,7 +918,13 @@ mod tests {
 
     #[test]
     fn authorize_url_carries_pkce_state_and_the_desktop_audience() {
-        let url = authorize_url(&saas(), "acme-desktop", "http://127.0.0.1:5000/callback", "ch", "st");
+        let url = authorize_url(
+            &saas(),
+            "acme-desktop",
+            "http://127.0.0.1:5000/callback",
+            "ch",
+            "st",
+        );
         assert_eq!(url.path(), "/api/auth/oauth2/authorize");
         let query: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
         assert_eq!(query["client_id"], "acme-desktop");

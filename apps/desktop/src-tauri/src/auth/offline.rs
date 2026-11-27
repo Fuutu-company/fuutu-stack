@@ -180,7 +180,9 @@ pub fn verify(
         return Err("bad signature");
     }
 
-    let raw = URL_SAFE_NO_PAD.decode(payload).map_err(|_| "malformed payload")?;
+    let raw = URL_SAFE_NO_PAD
+        .decode(payload)
+        .map_err(|_| "malformed payload")?;
     let value: serde_json::Value = serde_json::from_slice(&raw).map_err(|_| "malformed payload")?;
     let audience_ok = match value.get("aud") {
         Some(serde_json::Value::String(aud)) => aud == audience,
@@ -278,9 +280,15 @@ mod tests {
 
     #[test]
     fn rejects_expired_wrong_audience_and_alg() {
-        assert_eq!(check(&proof(sign("EdDSA", claim(AUD, 900), &key())), 1000), Err("expired"));
         assert_eq!(
-            check(&proof(sign("EdDSA", claim("acme-desktop", 2000), &key())), 1000),
+            check(&proof(sign("EdDSA", claim(AUD, 900), &key())), 1000),
+            Err("expired")
+        );
+        assert_eq!(
+            check(
+                &proof(sign("EdDSA", claim("acme-desktop", 2000), &key())),
+                1000
+            ),
             Err("wrong audience")
         );
         assert_eq!(
@@ -308,17 +316,28 @@ mod tests {
     fn rejects_wrong_issuer_and_overlong_lifetime() {
         let mut payload = claim(AUD, 2000);
         payload["iss"] = "https://evil.example".into();
-        assert_eq!(check(&proof(sign("EdDSA", payload, &key())), 1000), Err("wrong issuer"));
+        assert_eq!(
+            check(&proof(sign("EdDSA", payload, &key())), 1000),
+            Err("wrong issuer")
+        );
         let mut payload = claim(AUD, 10_000_000);
         payload["iat"] = 1.into();
-        assert_eq!(check(&proof(sign("EdDSA", payload, &key())), 1000), Err("lifetime too long"));
+        assert_eq!(
+            check(&proof(sign("EdDSA", payload, &key())), 1000),
+            Err("lifetime too long")
+        );
     }
 
     #[test]
     fn only_build_time_keys_when_embedded() {
         let token = sign("EdDSA", claim(AUD, 2000), &key());
-        let other = b64(SigningKey::from_bytes(&[9u8; 32]).verifying_key().as_bytes());
-        assert_eq!(verify(&proof(token.clone()), &policy(&[other]), 1000, 0), Err("bad signature"));
+        let other = b64(SigningKey::from_bytes(&[9u8; 32])
+            .verifying_key()
+            .as_bytes());
+        assert_eq!(
+            verify(&proof(token.clone()), &policy(&[other]), 1000, 0),
+            Err("bad signature")
+        );
         let own = b64(key().verifying_key().as_bytes());
         assert!(verify(&proof(token), &policy(&[own]), 1000, 0).is_ok());
     }
@@ -333,13 +352,19 @@ mod tests {
             key: b64(attacker.verifying_key().as_bytes()),
         };
         let backend = b64(key().verifying_key().as_bytes());
-        assert_eq!(verify(&forged, &policy(&[backend]), 1000, 0), Err("bad signature"));
+        assert_eq!(
+            verify(&forged, &policy(&[backend]), 1000, 0),
+            Err("bad signature")
+        );
     }
 
     #[test]
     fn release_builds_without_embedded_keys_grant_nothing() {
         let p = proof(sign("EdDSA", claim(AUD, 2000), &key()));
-        let release = Policy { allow_stored_key: false, ..policy(&[]) };
+        let release = Policy {
+            allow_stored_key: false,
+            ..policy(&[])
+        };
         assert_eq!(verify(&p, &release, 1000, 0), Err("no trusted keys"));
     }
 
@@ -347,16 +372,25 @@ mod tests {
     fn a_claim_for_another_install_grants_nothing() {
         let mut payload = claim(AUD, 2000);
         payload["cnf"]["jwk"]["x"] = "b3RoZXItaW5zdGFsbC1rZXktMDAwMDAwMDAwMDAwMDA".into();
-        assert_eq!(check(&proof(sign("EdDSA", payload, &key())), 1000), Err("bound to another install"));
+        assert_eq!(
+            check(&proof(sign("EdDSA", payload, &key())), 1000),
+            Err("bound to another install")
+        );
         let mut payload = claim(AUD, 2000);
         payload.as_object_mut().unwrap().remove("cnf");
-        assert_eq!(check(&proof(sign("EdDSA", payload, &key())), 1000), Err("bound to another install"));
+        assert_eq!(
+            check(&proof(sign("EdDSA", payload, &key())), 1000),
+            Err("bound to another install")
+        );
     }
 
     #[test]
     fn a_clock_turned_back_ends_the_grace() {
         let p = proof(sign("EdDSA", claim(AUD, 900_000), &key()));
-        assert_eq!(verify(&p, &policy(&[]), 1000, 500_000), Err("clock turned back"));
+        assert_eq!(
+            verify(&p, &policy(&[]), 1000, 500_000),
+            Err("clock turned back")
+        );
         assert!(verify(&p, &policy(&[]), 499_000, 500_000).is_ok());
     }
 
@@ -364,7 +398,10 @@ mod tests {
     fn rejects_claim_without_access() {
         let mut payload = claim(AUD, 2000);
         payload["access"] = "missing".into();
-        assert_eq!(check(&proof(sign("EdDSA", payload, &key())), 1000), Err("no access"));
+        assert_eq!(
+            check(&proof(sign("EdDSA", payload, &key())), 1000),
+            Err("no access")
+        );
     }
 
     #[test]

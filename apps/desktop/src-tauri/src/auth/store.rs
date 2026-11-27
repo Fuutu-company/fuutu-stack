@@ -26,9 +26,14 @@ pub const OFFLINE_SEEN: &str = "offline-seen";
 pub const INSTALL_KEY: &str = "install-key";
 
 enum Backend {
-    Keychain { service: String },
+    Keychain {
+        service: String,
+    },
     /// Debug builds only.
-    File { path: PathBuf, lock: Mutex<()> },
+    File {
+        path: PathBuf,
+        lock: Mutex<()>,
+    },
 }
 
 pub struct Keychain {
@@ -37,8 +42,8 @@ pub struct Keychain {
 
 impl Keychain {
     pub fn new(service: &str, data_dir: Option<PathBuf>) -> Self {
-        let use_file = cfg!(debug_assertions)
-            && std::env::var("FUUTU_DESKTOP_KEYCHAIN").as_deref() != Ok("1");
+        let use_file =
+            cfg!(debug_assertions) && std::env::var("FUUTU_DESKTOP_KEYCHAIN").as_deref() != Ok("1");
         let backend = match data_dir {
             Some(dir) if use_file => Backend::File {
                 path: dir.join("dev-secrets.json"),

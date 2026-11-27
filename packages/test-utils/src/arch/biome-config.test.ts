@@ -15,4 +15,11 @@ describe("biome config", () => {
 		expect(includes).toContain("!.claude/worktrees");
 		expect(includes).not.toContain("!**/.claude/worktrees");
 	});
+
+	// The desktop dev bridge writes .fuutu/desktop-bridge.json (0600 token),
+	// desktop-shots/ and desktop-signin-url; `pnpm check` (--write) must
+	// never rewrite them.
+	it("excludes the desktop dev files under .fuutu", () => {
+		expect(includes).toContain("!**/.fuutu/desktop-*");
+	});
 });

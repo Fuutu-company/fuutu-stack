@@ -27,3 +27,5 @@ Unit tests: `fuutu_auth_tests` in `src/websocket.rs`.
 Replace the directory with the new crate version from crates.io, re-apply
 the patch, run `cargo test -p tauri-plugin-mcp-bridge`, bump the npm
 `@hypothesi/tauri-mcp-server` devDependency to the same version.
+Keep `rustfmt.toml` (`disable_all_formatting = true`): it keeps
+`cargo fmt --all` from reformatting this vendored crate in apps' trees.

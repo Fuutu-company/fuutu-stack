@@ -17,6 +17,7 @@
 			"!**/.fuutu/visual-report",
 			"!**/.fuutu/visual-local",
 			"!**/.fuutu/project.json",
+			"!**/.fuutu/desktop-*",
 			"!**/dist",
 			"!**/out",
 			"!**/.turbo",

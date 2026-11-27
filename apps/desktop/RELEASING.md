@@ -167,6 +167,28 @@ Updates.
   5-minute installer URL; with `desktopConfig.auth: "required"` only for a
   signed-in browser (others sign in first).
 
+## Dev builds and worktrees
+
+`pnpm dev:desktop` builds with the identifier `<bundleId>.dev.s<slot>`
+(the checkout's port slot, `pnpm ports`); release builds (local and in CI)
+keep the bundle id. So:
+
+- Worktrees run side by side: single-instance locks per identifier, and
+  a second checkout's dev app no longer hands over to the first and exits.
+- Each slot has its own app data folder (dev sign-in, `dev-secrets.json`,
+  window state, your app's data under `app_data_dir`), and dev never
+  touches the installed app's. Sign in once per worktree.
+- On Linux and Windows the deep-link fallback (`<scheme>://…`) reaches
+  the dev app started last; sign-in normally uses the loopback redirect.
+- Data your app keeps under `app_data_dir` is per slot in dev. Keep large
+  downloads (e.g. models) in a fixed folder instead, so every worktree
+  finds them.
+
+A plain browser on the dev port (`http://localhost:<desktop port>`) runs
+the web layer without the Rust core: there is no Tauri IPC. If your app
+falls back to fakes there, mark them visibly, so nobody mistakes the
+browser for the app.
+
 ## Building by hand
 
 ```bash
@@ -176,6 +198,11 @@ pnpm build:desktop --target universal-apple-darwin
 
 It sends one build telemetry ping with surface `desktop`
 (LICENSE.md §7). Signing keys come from your `.env`.
+
+Release builds link with fat LTO, so a link error can show up only there:
+the PR build of `desktop.yml` catches it before a tag. Native code you link
+(Objective-C or C) may use `@available`; on macOS the kit's `build.rs`
+links clang's runtime, which provides the symbol it needs.
 
 ### Signing secrets
 
@@ -227,11 +254,15 @@ kit files. A kit update leaves their content alone. Each one ships empty
 
 **UI** (`src/`). Your pages are new route files,
 `src/app/(main)/<route>/page.tsx`, inside the shell and the access gate.
-The kit owns only home, settings and about.
+The kit owns only home, settings and about. Pages without the shell and
+another start route: [Full-window routes and start route](#full-window-routes-and-start-route).
+Tab reaches links (`<a href>`) on every platform: on macOS the kit turns
+on WKWebView's `tabFocusesLinks` (off by default there), so links need no
+`tabIndex` of their own.
 
 | File | What it adds |
 |---|---|
-| `src/app-nav.ts` | `appNavItems`: sidebar items (`titleKey` under `desktop.shell.nav`, `href`, `icon`, `after`). Labels go in the `desktop` section of `packages/i18n/translations/<locale>/app/index.ts`. |
+| `src/app-nav.ts` | `appNavItems`: sidebar items (`titleKey` under `desktop.shell.nav`, `href`, `icon`, `after`). Labels go in the `desktop` section of `packages/i18n/translations/<locale>/app/index.ts`. With `desktopConfig.auth: "off"` the sidebar has no Account item, so items with `after: "account"` are appended. |
 | `src/app-home.tsx` | `appHome`: the home page content |
 | `src/app-about.tsx` | `appAboutSection`: a section of the About window, above the notices |
 | `src/app-shell-slot.tsx` | `appShellSlots`: `sidebarTop`, `sidebarBottom`, `contentTop`, `global` (dialogs, listeners) |
@@ -253,7 +284,7 @@ The kit owns only home, settings and about.
 | `src-tauri/app-ext/Cargo.toml`, `src-tauri/app-ext/src/lib.rs`, `src-tauri/app-ext/build.rs` | `app-ext`: your Rust dependencies and code. The kit crate depends on it, so you never edit the kit's `Cargo.toml`. Keep the package name, `links = "app-ext"` and the forwarding call in `build.rs`; more crates go in `crates/`. |
 | `src-tauri/src/app_plugins.rs` | `register(builder, &RuntimeConfig)`: your Tauri plugins. `lib.rs` calls it once, after the kit's plugins, with the runtime config (`saas_url`, `identity`, …). `tray_items(app, &RuntimeConfig)`: your tray menu entries (`TrayItem::new(id, label)`, `.disabled()`), shown between the kit's "Show" and "Quit" and rebuilt with the menu (start, UI language change). `on_tray_menu(app, id)`: clicks on them. The ids `show` and `quit` are the kit's; a reserved, empty or duplicate id is skipped and logged. |
 | `src-tauri/app_build.rs` | `run()`: build-script steps (e.g. `cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift`), called by the kit's `build.rs` |
-| `src-tauri/deny.app.toml` | cargo-deny exceptions (`[[licenses.exceptions]]`, `[[advisories.ignore]]`, `[[bans.skip]]`), appended to the kit policy by `node scripts/cargo-deny.mjs` (CI runs it). The policy itself stays the kit's. |
+| `src-tauri/deny.app.toml` | cargo-deny exceptions (`[[licenses.exceptions]]`, `[[advisories.ignore]]`, `[[bans.skip]]`), appended to the kit policy by `node scripts/cargo-deny.mjs` (CI runs it). The policy itself stays the kit's. Locally, install cargo-deny first (`cargo install cargo-deny --locked`); the script calls `cargo deny`. |
 
 Register every plugin on the builder in `register`. Never register a
 plugin from inside another plugin's `setup`, because that deadlocks the
@@ -266,6 +297,23 @@ direct dependencies of the app crate. `app-ext/build.rs` re-exports them
 under `links = "app-ext"`, and the kit `build.rs` restores the original
 names (`src-tauri/build_forward.rs`).
 
+**Your own commands.** `lib.rs` owns the app's only `invoke_handler`; a
+handler you set on the builder in `app_plugins::register` is silently
+replaced by the kit's. Ship your commands as a plugin instead: a crate
+under `crates/<name>/` (`links = "tauri-plugin-<name>"`, `tauri-plugin`
+with the `build` feature as build-dependency, a `build.rs` with
+`tauri_plugin::Builder::new(&["my_cmd"]).build()`), depended on from
+`app-ext/Cargo.toml`. Its `init()` returns
+`tauri::plugin::Builder::new("<name>").invoke_handler(tauri::generate_handler![my_cmd]).build()`,
+registered in `register`. The webview calls `invoke("plugin:<name>|my_cmd")`.
+The plugin's `build.rs` generates the permissions `<name>:allow-<cmd>`
+(underscores become hyphens; no `default` permission unless you write
+`permissions/default.toml`), and `app-ext/build.rs` forwards them like any
+plugin's (without `links` and that build script there is nothing to
+forward; `src-tauri/crates/README.md`); grant them in `app-capabilities.ts`. Plugin commands are always
+checked against the capabilities, so a command without a granted
+permission is refused. `tauri::ipc::Channel` arguments work unchanged.
+
 **Tauri features in the kit Cargo.toml.** `tauri dev` / `tauri build`
 rewrite the kit `Cargo.toml`'s `tauri` features to match the config
 (`app.macOSPrivateApi` → `macos-private-api`, also `protocol-asset`,
@@ -275,6 +323,244 @@ when the CLI exits, and at the next start after a crash
 when a build leaves the file changed ("Kit Cargo.toml unchanged"). If your
 own code in app-ext calls such APIs, declare the feature on app-ext's
 `tauri` dependency; plain `cargo check` then compiles them too.
+
+**Generated files in your folders.** Files your tools generate (e.g.
+TypeScript bindings of your Rust commands) do not have to pass Biome. Put
+a nested `biome.json` in that folder instead of editing the root one:
+
+```json
+{
+	"root": false,
+	"extends": "//",
+	"files": { "includes": ["!**/*.ts"] }
+}
+```
+
+`"extends": "//"` keeps the root config for everything else in the folder;
+the pattern excludes the generated `.ts` files only.
+
+### Full-window routes and start route
+
+A page without the sidebar and header (an editor, a reader, a game view)
+lives in your own route group next to the kit's `(main)`:
+`src/app/(<group>)/layout.tsx` with `src/app/(<group>)/<route>/page.tsx`.
+`(main)/layout.tsx` stays the kit's. Your layout must keep the account,
+the access gate and the update dialog, or the route opens without sign-in
+or plan checks:
+
+```tsx
+import type { PropsWithChildren } from "react";
+import { AccessGate, AccessNotice } from "@/components/access-gate";
+import { AccountProvider } from "@/components/account-provider";
+import { UpdateDialog } from "@/components/update-dialog";
+
+export default function FullWindowLayout({ children }: PropsWithChildren) {
+	return (
+		<AccountProvider>
+			<AccessGate>
+				<AccessNotice />
+				{children}
+				<UpdateDialog />
+			</AccessGate>
+		</AccountProvider>
+	);
+}
+```
+
+`AccessNotice` (offline grace, trial end) sits in the kit shell's content
+column; outside the shell you place it yourself. Route paths must not
+collide with the kit's (`/`, `/settings/…`, `/about/`).
+
+The window opens on `/` (home). To start on another route, set the `main`
+window's `url` in `APP_TAURI_CONFIG`. Arrays replace the kit's, so repeat
+the whole window: the label `main`, the title and the kit's sizes, plus
+anything else you set (e.g. `visible`). The `url` is relative to the app
+and keeps the trailing slash (the static export writes `<route>/index.html`):
+
+```ts
+import { desktopIdentity } from "@fuutu/desktop/identity";
+
+export const APP_TAURI_CONFIG: AppTauriConfig = {
+	app: {
+		windows: [
+			{
+				label: "main",
+				title: desktopIdentity.productName,
+				width: 1100,
+				height: 720,
+				minWidth: 800,
+				minHeight: 480,
+				url: "editor/",
+			},
+		],
+	},
+};
+```
+
+#### Own stylesheet on full-window routes
+
+A stylesheet your route group's layout imports stays loaded after a
+client navigation away from the group, so unscoped rules would leak into
+the kit's pages. Scope everything under a root class your layout sets on
+`<html>` while the route is open (and removes on unmount), with
+`:where(html.<app>)` so the scope adds no specificity. Reference
+Tailwind's default theme (spacing, type scale, colors, breakpoints) and
+the kit's tokens (`bg-primary`, `text-foreground`); a reference emits no
+preflight and no `:root` variables. Then generate the utilities inside
+the scope, from your folder only:
+
+```css
+/* src/app/(editor)/editor.css, imported by (editor)/layout.tsx */
+@reference "tailwindcss/theme.css";
+@reference "@fuutu/config/theme.css";
+/* Only if you use its classes (animate-in, fade-in, …): */
+@reference "tw-animate-css";
+/* @reference also brings the kit theme's @source lines; drop them here. */
+@source not "../../../../../packages/ui/src";
+@source not "../../../../../packages/mail/src";
+@source not "../../../../../packages/analytics/src";
+
+:where(html.editor) {
+	@tailwind utilities source("../../editor");
+}
+```
+
+Reference `@fuutu/config/theme.css`, not `../globals.css`: a referenced
+file brings its `@source` lines along, and the `@source not` for your
+folder in `globals.css` (below) would then drop your own classes. Without
+the three `@source not` lines the stylesheet repeats the kit's utilities
+for the shared packages under your scope. Keep one `@source not` per
+`@source` in `packages/config/theme.css`, and re-check that list after a
+kit update. (`@source` paths are relative to the file they are in.)
+
+Keep the code that uses these classes in that folder (`src/editor/`).
+The layout sets the class:
+
+```tsx
+useEffect(() => {
+	document.documentElement.classList.add("editor");
+	return () => document.documentElement.classList.remove("editor");
+}, []);
+```
+
+Utilities come out as `:where(html.editor) .flex { … }`. So the kit's
+Tailwind does not also emit them unscoped, append your folder to the
+kit's `src/app/globals.css` (appending to this kit file is fine):
+
+```css
+@source not "../editor";
+```
+
+**Theme values and your own tokens.** The kit build writes a theme
+variable (`--radius-md`, `--ease-in`, …) only when it sees it used, and
+your folder is excluded from it, so `var(--radius-md)` in your CSS or
+`max-w-[var(--container-xl)]` in a class can resolve to nothing, without
+an error. In your CSS write `--theme(--radius-md)` (→
+`calc(var(--radius) - 2px)`) or `--theme(--ease-in inline)` (→ the
+literal value); in class names use the named utilities (`rounded-md`,
+`max-w-xl`). A variable that must exist at runtime is declared under
+the scope (`:where(html.editor) { --editor-gutter: 2rem; }`). Your own
+tokens go in `@theme inline { … }` after the `@reference` lines, so
+utilities such as `bg-paper` get the literal value; a plain `@theme`
+makes them read variables nothing defines (and Biome 2.5 does not parse
+`@theme inline reference`). Keeping the tokens in a separate file you
+`@reference "./theme.css"` works too, but is not required:
+
+```css
+@theme inline {
+	--color-paper: #f5ecd7;
+}
+
+:where(html.editor) {
+	@tailwind utilities source("../../editor");
+	.page {
+		border-radius: --theme(--radius-md);
+		transition-timing-function: --theme(--ease-in inline);
+	}
+}
+```
+
+### Local media
+
+The asset protocol (`convertFileSrc`, `app.security.assetProtocol`) and an
+app CSP are refused on purpose: an asset scope exposes that file tree to
+any script that runs in the webview, injected script included. Hand files
+to the webview as bytes instead:
+
+- **Images**: a command returns `tauri::ipc::Response::new(bytes)`; the
+  webview gets an `ArrayBuffer`, wraps it in a `Blob` with the right type
+  and shows `URL.createObjectURL(blob)` (revoke it when the image goes).
+  The release CSP allows `img-src 'self' data: blob: https:`.
+- **Audio**: the release CSP has no `media-src`, so `default-src 'self'`
+  blocks `<audio src="blob:…">`. Decode the IPC bytes with Web Audio
+  (`AudioContext.decodeAudioData(buffer)`, played through an
+  `AudioBufferSourceNode`), or play the sound natively in Rust.
+
+Dev builds run with `csp: null`, so a URL the release CSP blocks works in
+`pnpm dev:desktop` and breaks only in a release build. Check media in a
+release build before you ship.
+
+### Window state and a launch without a white flash
+
+The kit's window-state plugin saves and restores size, position,
+maximized, fullscreen and decorations of every window but About. It never
+restores visibility: restoring it would call `show()` on every start.
+
+The webview paints white until the first frame of your page. To open the
+window only once its page has loaded:
+
+1. Set `visible: false` on the `main` window in `APP_TAURI_CONFIG`
+   (repeat the whole window, see above). Optional: `backgroundColor`
+   (e.g. `"#1c1917"`), so the window and webview start in your background
+   color.
+2. Show the window from Rust when the page has loaded. The first frame
+   is the kit's loading screen (the access gate while the account
+   loads), so this fits apps that keep the kit's look. It works with the
+   kit's `(main)` layout and `auth: "required"` and needs no capability.
+   A plugin without commands needs no crate or build script of its own:
+   put it in `app_plugins.rs` and add it in `register`
+   (`builder.plugin(show_main_on_load())`):
+
+   ```rust
+   use tauri::{plugin::{Builder, TauriPlugin}, webview::PageLoadEvent, Runtime};
+
+   pub fn show_main_on_load<R: Runtime>() -> TauriPlugin<R> {
+       Builder::new("show-main")
+           .on_page_load(|webview, payload| {
+               if payload.event() == PageLoadEvent::Finished && webview.label() == "main" {
+                   let _ = webview.window().show();
+               }
+           })
+           .build()
+   }
+   ```
+
+   Or show it from the webview once the account is known, so the first
+   frame is already the sign-in card or your page: grant
+   `core:window:allow-show` to the `main` window in `app-capabilities.ts`
+   and render this component in your own route group's layout, inside
+   `AccountProvider` and outside `AccessGate`:
+
+   ```tsx
+   function ShowWindowWhenReady() {
+   	const { decision } = useAccount();
+   	useEffect(() => {
+   		if (decision !== undefined) void getCurrentWindow().show();
+   	}, [decision]);
+   	return null;
+   }
+   ```
+
+   (`useAccount` from `@/components/account-provider`, `getCurrentWindow`
+   from `@tauri-apps/api/window`.) Call `show()` directly, never inside
+   `requestAnimationFrame`: WebKit may pause animation frames of a page
+   that was never shown, so the window would stay hidden. The kit's
+   `(main)` layout has no slot outside the access gate
+   (`appShellSlots.global` renders only once the gate opens and the setup
+   steps are done), so this variant needs your own route group.
+
+With `desktopConfig.shell.singleInstance` or `shell.tray` on, a second
+launch or the tray's "Show" also shows the window.
 
 ## Before the first release
 
@@ -307,6 +593,7 @@ own code in app-ext calls such APIs, declare the feature on app-ext's
 - [ ] One full round on a test channel: install `vX.Y.Z-beta.1`, publish
       `-beta.2`, the app offers it, installs it and restarts.
 - [ ] `/download` (marketing) and Settings → Desktop app list your installers.
-- [ ] Third-party notices (About → Licences) complete; `node apps/desktop/scripts/cargo-deny.mjs` green.
+- [ ] Third-party notices (About → Licences) complete; `node apps/desktop/scripts/cargo-deny.mjs` green
+      (needs `cargo install cargo-deny --locked`).
 - [ ] Build telemetry stays on (LICENSE.md §7) — never set
       `FUUTU_TELEMETRY_DISABLED` in the release workflow.

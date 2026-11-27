@@ -128,7 +128,11 @@ mod tests {
 
     #[test]
     fn updates_via_package_is_off_unless_the_build_says_so() {
-        assert!(!RuntimeConfig::parse(Some(r#"{"updates":{"pubkey":"pk"}}"#)).updates.via_package);
+        assert!(
+            !RuntimeConfig::parse(Some(r#"{"updates":{"pubkey":"pk"}}"#))
+                .updates
+                .via_package
+        );
         let linux = RuntimeConfig::parse(Some(r#"{"updates":{"viaPackage":true}}"#));
         assert!(linux.updates.via_package);
         assert!(linux.updates.pubkey.is_none());

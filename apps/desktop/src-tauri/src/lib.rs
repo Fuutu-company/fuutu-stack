@@ -6,10 +6,10 @@ compile_error!("the `devtools` feature is for debug builds only (pnpm dev:deskto
 
 mod app_plugins;
 // Unit tests of the build scripts' plugin-permission forwarding.
+mod auth;
 #[cfg(test)]
 #[path = "../build_forward.rs"]
 mod build_forward;
-mod auth;
 pub mod config;
 mod shell;
 mod updates;
@@ -17,6 +17,8 @@ mod updates;
 #[cfg(all(debug_assertions, feature = "devtools"))]
 mod devtools;
 
+// Silences cargo's unused-dependency warning while app-ext is still empty.
+use app_ext as _;
 use config::RuntimeConfig;
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
@@ -24,6 +26,15 @@ use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 /// 5 MB per log file, the last few kept (`<app log dir>/<bundle id>.log`).
 const LOG_FILE_MAX_BYTES: u128 = 5 * 1024 * 1024;
+
+/// Window state the kit saves and restores: everything but visibility.
+/// Restoring VISIBLE calls show() + set_focus() on every start, so a window
+/// configured `visible: false` (shown by the app after its first paint)
+/// would flash white.
+fn window_state_flags() -> tauri_plugin_window_state::StateFlags {
+    use tauri_plugin_window_state::StateFlags;
+    StateFlags::all() & !StateFlags::VISIBLE
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -52,6 +63,7 @@ pub fn run() {
         )
         .plugin(
             tauri_plugin_window_state::Builder::new()
+                .with_state_flags(window_state_flags())
                 .with_denylist(&["about"])
                 .build(),
         )
@@ -72,6 +84,12 @@ pub fn run() {
     // Signed updates — only in builds with an updater key.
     if let Some(pubkey) = config.updates.pubkey.clone() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(pubkey).build());
+    }
+
+    // macOS: WKWebView skips plain links on Tab by default.
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.plugin(shell::tab_focuses_links());
     }
 
     // Your plugins (app-owned src/app_plugins.rs), with the runtime config.
@@ -137,4 +155,25 @@ fn setup_deep_links(app: &tauri::AppHandle) {
             auth::handle_deep_link(&handle, &url);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::window_state_flags;
+    use tauri_plugin_window_state::StateFlags;
+
+    #[test]
+    fn window_state_never_restores_visibility() {
+        // Restoring VISIBLE calls show() + set_focus() on every start, so a
+        // window configured `visible: false` would flash before its first paint.
+        let flags = window_state_flags();
+        assert!(!flags.contains(StateFlags::VISIBLE));
+        assert!(flags.contains(
+            StateFlags::SIZE
+                | StateFlags::POSITION
+                | StateFlags::MAXIMIZED
+                | StateFlags::DECORATIONS
+                | StateFlags::FULLSCREEN
+        ));
+    }
 }

@@ -55,6 +55,11 @@ tauri-plugin-mcp-bridge = { path = "vendor/tauri-plugin-mcp-bridge", optional = 
 # Your dependencies and code (app-owned app-ext/Cargo.toml).
 app-ext = { path = "app-ext" }
 
+# macOS: let Tab reach links in the webview (WKPreferences.tabFocusesLinks),
+# same version as wry's.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-web-kit = { version = "0.3.2", default-features = false, features = ["std", "objc2-app-kit", "WKWebView", "WKWebViewConfiguration", "WKPreferences"] }
+
 [profile.release]
 codegen-units = 1
 lto = true

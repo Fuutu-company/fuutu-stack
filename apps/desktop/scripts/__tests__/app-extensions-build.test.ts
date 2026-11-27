@@ -221,6 +221,28 @@ describe("cargo-deny exceptions (src-tauri/deny.app.toml)", () => {
 		);
 	});
 
+	it("names the install command when cargo-deny is missing", async () => {
+		const { cargoDenyMissing } = await import("../cargo-deny.mjs");
+		const missing = cargoDenyMissing(() => ({ status: 101 }));
+		expect(missing).toMatch(/cargo install cargo-deny --locked/);
+		expect(cargoDenyMissing(() => ({ status: 0 }))).toBeNull();
+	});
+
+	it("says when cargo itself is missing", async () => {
+		const { cargoDenyMissing } = await import("../cargo-deny.mjs");
+		const noCargo =
+			/cargo not found on PATH \(install Rust via rustup, or add ~\/\.cargo\/bin to PATH\)/;
+		expect(
+			cargoDenyMissing(() => ({
+				status: null,
+				error: Object.assign(new Error("spawn cargo ENOENT"), {
+					code: "ENOENT",
+				}),
+			})),
+		).toMatch(noCargo);
+		expect(cargoDenyMissing(() => ({ status: null }))).toMatch(noCargo);
+	});
+
 	it("refuses anything but exception tables (the policy stays the kit's)", async () => {
 		const { denyConfig } = await import("../cargo-deny.mjs");
 		for (const extra of [

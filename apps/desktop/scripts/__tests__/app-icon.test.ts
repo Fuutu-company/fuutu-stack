@@ -60,3 +60,23 @@ describe("app icon (logo on the brand backdrop, pnpm assets:sync)", () => {
 		expect(svg).toContain('clip-path="url(#body)"');
 	});
 });
+
+describe("window favicon (no /favicon.ico 404 in the webview)", () => {
+	it("points the root layout at the logo that assets:sync copies to public/", () => {
+		const layout = readFileSync(
+			join(ROOT, "apps/desktop/src/app/layout.tsx"),
+			"utf8",
+		);
+		expect(layout).toMatch(
+			/icons: \{ icon: \{ url: "\/logo\.svg", type: "image\/svg\+xml" \} \}/,
+		);
+		expect(
+			readFileSync(join(ROOT, "apps/desktop/public/logo.svg"), "utf8"),
+		).toMatch(/<svg/);
+		const sync = readFileSync(
+			join(ROOT, "tooling/scripts/assets-sync.mjs"),
+			"utf8",
+		);
+		expect(sync).toMatch(/LOGO_ONLY_APPS[\s\S]{0,80}\["desktop"\]/);
+	});
+});
