@@ -32,6 +32,8 @@ fn link_clang_rt_on_macos() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos") {
         return;
     }
+    // Switching Xcode (xcode-select or DEVELOPER_DIR) moves the runtime folder.
+    println!("cargo:rerun-if-env-changed=DEVELOPER_DIR");
     let Ok(out) = std::process::Command::new("xcrun")
         .args(["clang", "-print-runtime-dir"])
         .output()
@@ -50,6 +52,9 @@ fn link_clang_rt_on_macos() {
         println!("cargo:warning=libclang_rt.osx.a not found; a release link may miss __isPlatformVersionAtLeast");
         return;
     }
+    // Rerun when an Xcode update moves or removes the archive, so the cached
+    // link-search path never points at a folder that is gone.
+    println!("cargo:rerun-if-changed={dir}/libclang_rt.osx.a");
     println!("cargo:rustc-link-search=native={dir}");
     println!("cargo:rustc-link-lib=static=clang_rt.osx");
 }
