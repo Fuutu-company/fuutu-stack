@@ -20,6 +20,8 @@ Green tests and a working web page do not prove the desktop app works: the stati
 
 ## Driving it
 
+Review behaviour in the Tauri window (bridge screenshots or the real app), never in a browser tab on the dev port: a browser has no Rust core and no Tauri IPC.
+
 The `desktop` MCP server (`.mcp.json` → `tooling/scripts/desktop-mcp.mjs`) has the tools. Always start with `driver_session` `{ "action": "start", "port": <desktopBridge> }`, then:
 
 | Need | Tool |

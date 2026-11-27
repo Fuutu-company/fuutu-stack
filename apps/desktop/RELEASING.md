@@ -184,6 +184,11 @@ keep the bundle id. So:
   downloads (e.g. models) in a fixed folder instead, so every worktree
   finds them.
 
+A plain browser on the dev port (`http://localhost:<desktop port>`) runs
+the web layer without the Rust core: there is no Tauri IPC. If your app
+falls back to fakes there, mark them visibly, so nobody mistakes the
+browser for the app.
+
 ## Building by hand
 
 ```bash
