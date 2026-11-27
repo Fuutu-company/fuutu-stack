@@ -19,7 +19,6 @@
 			"draft": "Draft"
 		},
 		"filter": {
-			"label": "Filter",
 			"all": "All time",
 			"last30": "Last 30 days",
 			"last90": "Last 90 days"

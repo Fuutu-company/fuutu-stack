@@ -354,7 +354,6 @@
 					"do": "Components ask for <code>bg-primary</code>. Rebranding changes one file.",
 					"dont": "A palette color like <code>bg-indigo-600</code> ignores dark mode and every future theme.",
 					"doSample": "Active",
-					"dontSample": "Hard-coded color",
 					"doCode": "bg-primary",
 					"dontCode": "bg-indigo-600"
 				},

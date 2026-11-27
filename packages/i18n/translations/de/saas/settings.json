@@ -1,18 +1,6 @@
 {
 	"settings": {
-		"title": "Einstellungen",
 		"heading": "Einstellungen: {tab}",
-		"account": {
-			"title": "Konto",
-			"language": {
-				"title": "Sprache",
-				"description": "Wähle deine bevorzugte Sprache",
-				"notifications": {
-					"success": "Sprache erfolgreich aktualisiert",
-					"error": "Sprache konnte nicht aktualisiert werden"
-				}
-			}
-		},
 		"tabs": {
 			"profile": "Profil",
 			"security": "Sicherheit",

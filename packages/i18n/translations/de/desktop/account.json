@@ -1,6 +1,5 @@
 {
 	"title": "Konto",
-	"description": "Dein Konto, deine Organisation und dein Plan.",
 	"off": "Dieser Build funktioniert ohne Konto.",
 	"signedOut": {
 		"title": "Nicht angemeldet",

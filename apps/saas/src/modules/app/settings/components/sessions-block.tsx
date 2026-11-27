@@ -1,10 +1,13 @@
 "use client";
 
 import { authClient } from "@fuutu/auth/client";
+import { createLogger } from "@fuutu/logs";
 import { Badge, Button } from "@fuutu/ui";
 import { Monitor, Smartphone } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+
+const log = createLogger({ scope: "settings-sessions" });
 
 type Session = {
 	id: string;
@@ -24,6 +27,7 @@ export function SessionsBlock() {
 	const [sessions, setSessions] = useState<Session[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [revoking, setRevoking] = useState<string | null>(null);
+	const [failed, setFailed] = useState(false);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -46,24 +50,32 @@ export function SessionsBlock() {
 		void load();
 	}, [load]);
 
-	async function revoke(token: string) {
-		setRevoking(token);
+	// Better Auth returns errors instead of throwing: a failed revoke must
+	// not look like a success (the session would stay signed in).
+	async function runRevoke(
+		key: string,
+		call: () => Promise<{ error: unknown }>,
+	): Promise<void> {
+		setRevoking(key);
+		setFailed(false);
 		try {
-			await authClient.revokeSession({ token });
+			const res = await call();
+			if (res.error) setFailed(true);
 			await load();
+		} catch (err) {
+			log.error("failed to revoke session", { err });
+			setFailed(true);
 		} finally {
 			setRevoking(null);
 		}
 	}
 
-	async function revokeAllOthers() {
-		setRevoking("__all__");
-		try {
-			await authClient.revokeOtherSessions();
-			await load();
-		} finally {
-			setRevoking(null);
-		}
+	function revoke(token: string) {
+		return runRevoke(token, () => authClient.revokeSession({ token }));
+	}
+
+	function revokeAllOthers() {
+		return runRevoke("__all__", () => authClient.revokeOtherSessions());
 	}
 
 	return (
@@ -86,6 +98,11 @@ export function SessionsBlock() {
 					{t("settings.sessions.revokeAll")}
 				</Button>
 			</div>
+			{failed && (
+				<p className="text-destructive text-sm" role="alert">
+					{t("settings.sessions.failed")}
+				</p>
+			)}
 			{loading ? (
 				<p className="text-muted-foreground text-sm">{t("common.loading")}</p>
 			) : sessions.length === 0 ? (

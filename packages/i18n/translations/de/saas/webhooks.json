@@ -5,14 +5,8 @@
 		"creating": "Erstelle…",
 		"empty": "Noch keine Webhooks",
 		"emptyDescription": "Füge einen Webhook-Endpunkt hinzu, um Ereignisbenachrichtigungen zu erhalten.",
-		"emptyCta": "Webhook hinzufügen",
 		"col": {
-			"url": "URL",
-			"events": "Ereignisse",
-			"active": "Aktiv",
-			"lastDelivery": "Letzte Zustellung",
-			"createdAt": "Erstellt",
-			"actions": "Aktionen"
+			"active": "Aktiv"
 		},
 		"events": {
 			"subscription": {
@@ -67,7 +61,6 @@
 			"confirm": "Löschen"
 		},
 		"deliveries": {
-			"title": "Zustellungsverlauf",
 			"status": {
 				"success": "Erfolgreich",
 				"failed": "Fehlgeschlagen",
@@ -85,16 +78,11 @@
 			"hide": "Ausblenden"
 		},
 		"edit": "Bearbeiten",
-		"delete": "Löschen",
 		"deleteAria": "Webhook löschen",
 		"yes": "Ja",
 		"no": "Nein",
-		"never": "Nie",
 		"loading": "Webhooks werden geladen…",
 		"failed": "Aktion konnte nicht durchgeführt werden.",
-		"created": "Webhook erstellt.",
-		"updated": "Webhook aktualisiert.",
-		"deleted": "Webhook gelöscht.",
 		"deleteError": "Webhook konnte nicht gelöscht werden. Bitte erneut versuchen.",
 		"updateError": "Webhook konnte nicht aktualisiert werden. Bitte erneut versuchen."
 	}
