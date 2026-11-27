@@ -50,13 +50,18 @@ export function denyConfig(kit, app) {
 }
 
 /**
- * Message when `cargo deny` is not installed (`run` probes
- * `cargo deny --version`), else null.
+ * Message when `cargo deny` cannot run (`run` probes
+ * `cargo deny --version`), else null: cargo itself missing (spawn error,
+ * no exit status) or the cargo-deny subcommand missing.
  */
 export function cargoDenyMissing(
 	run = () => spawnSync("cargo", ["deny", "--version"], { stdio: "ignore" }),
 ) {
-	if (run().status === 0) return null;
+	const result = run();
+	if (result.status === 0) return null;
+	if (result.error || result.status === null) {
+		return "cargo not found on PATH (install Rust via rustup, or add ~/.cargo/bin to PATH)";
+	}
 	return "cargo-deny is not installed. Install it with: cargo install cargo-deny --locked";
 }
 
