@@ -22,5 +22,5 @@ The full, step-by-step guide is served by the **Fuutu MCP** server (Fuutu Pro).
 3. Logo in dark mode: the brand mark carries `logo-dark`, which inverts it (right for a dark monochrome mark). A coloured logo, or one that adapts through CSS inside the SVG, sets `:root { --logo-dark-filter: none; }` in `brand.css` (block 4); never use `dark:invert` on the logo.
 4. Mirror the new values in the `DESIGN.md` frontmatter and its Colors section.
 5. `pnpm -F @fuutu/ui test` — the contrast audit (area pairs included) and `DESIGN.md` sync must pass.
-6. Email and OG colors are hex literals: update `packages/mail/src/templates/colors.ts`, re-render `packages/config/assets/og-image.html` (then `pnpm assets:sync`) and the blog `opengraph-image.tsx`.
+6. Email and OG colors are hex literals: update `packages/mail/src/templates/colors.ts`, re-render `packages/config/assets/og-image.html` (then `pnpm assets:sync`) and the blog `opengraph-image.tsx`. Asset files you made by hand (e.g. your own `app-icon.png` or `favicon.svg`) go in `packages/config/assets/keep.txt`, one filename per line: `pnpm assets:sync` then leaves them alone (logged `KEEP`).
 7. Open `/design` in light and dark at 375 and 1280 px; fix anything the page flags.
