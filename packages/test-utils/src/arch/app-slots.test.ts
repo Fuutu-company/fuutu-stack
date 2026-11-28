@@ -129,7 +129,7 @@ describe("appSlots.authLogo (auth pages)", () => {
 
 	it("replaces the logo mark above the card; the kit logo is the fallback", () => {
 		expect(layout).toMatch(
-			/renderSlot\(\s*appSlots\.authLogo,\s*\{\},\s*<BrandLogo size="lg" className="dark:invert" \/>,?\s*\)/,
+			/renderSlot\(\s*appSlots\.authLogo,\s*\{\},\s*<BrandLogo size="lg" className="logo-dark" \/>,?\s*\)/,
 		);
 		expect(layout.match(/<BrandLogo\b/g)).toHaveLength(1);
 	});

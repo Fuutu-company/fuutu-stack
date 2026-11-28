@@ -29,6 +29,8 @@
  *
  * --skip= accepts a comma-separated list of filenames (as they appear in
  * packages/config/assets/). Skipped files are neither generated nor distributed.
+ * Files to leave alone on every run go in the app-owned
+ * packages/config/assets/keep.txt (one filename per line, # comments).
  */
 
 import { execFileSync } from "node:child_process";
@@ -47,6 +49,7 @@ import {
 	iconBackdropSvg,
 	LOGO_SIZE,
 } from "./lib/app-icon.mjs";
+import { assetSkips } from "./lib/asset-skips.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "../..");
@@ -88,19 +91,16 @@ function destDir(file) {
 }
 
 // ---------------------------------------------------------------------------
-// CLI: --skip
+// CLI: --skip, plus the app-owned keep.txt
 // ---------------------------------------------------------------------------
 
-const skipArg = process.argv.find((a) => a.startsWith("--skip="));
-const skipSet = new Set(
-	skipArg
-		? skipArg
-				.slice("--skip=".length)
-				.split(",")
-				.map((s) => s.trim())
-				.filter(Boolean)
-		: [],
-);
+const keepFile = join(assets, "keep.txt");
+/** filename → "--skip" | "keep.txt" */
+const skips = assetSkips({
+	argv: process.argv,
+	keepText: existsSync(keepFile) ? readFileSync(keepFile, "utf8") : null,
+});
+const skipSet = new Set(skips.keys());
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -114,9 +114,14 @@ function isSkipped(file) {
 	return skipSet.has(file);
 }
 
+function logSkip(file) {
+	if (skips.get(file) === "keep.txt") log("KEEP", `${file} (keep.txt)`);
+	else log("SKIP", `${file} (--skip)`);
+}
+
 function copyToApps(file) {
 	if (isSkipped(file)) {
-		log("SKIP", `${file} (--skip)`);
+		logSkip(file);
 		return;
 	}
 	const src = join(assets, file);
@@ -153,7 +158,7 @@ async function generate() {
 	// favicon.svg = copy of logo.svg
 	for (const file of GENERATED_SVGS) {
 		if (isSkipped(file)) {
-			log("SKIP", `${file} (--skip)`);
+			logSkip(file);
 			continue;
 		}
 		const dest = join(assets, file);
@@ -165,7 +170,7 @@ async function generate() {
 	const sharp = (await import("sharp")).default;
 	for (const { file, size } of GENERATED_PNGS) {
 		if (isSkipped(file)) {
-			log("SKIP", `${file} (--skip)`);
+			logSkip(file);
 			continue;
 		}
 		const dest = join(assets, file);
@@ -212,7 +217,7 @@ async function desktopIcon() {
 	if (LOGO_ONLY_APPS.length === 0) return;
 	console.log("\n\u{1F5A5}\uFE0F  Desktop app icon\n");
 	if (isSkipped(APP_ICON)) {
-		log("SKIP", `${APP_ICON} (--skip)`);
+		logSkip(APP_ICON);
 		return;
 	}
 	const logoSrc = join(assets, SOURCE_SVG);

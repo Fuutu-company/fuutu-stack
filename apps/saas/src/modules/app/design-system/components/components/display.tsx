@@ -150,7 +150,7 @@ export async function Display() {
 							<AvatarImage
 								src="/logo.svg"
 								alt={t("avatar.alt")}
-								className="dark:invert"
+								className="logo-dark"
 							/>
 							<AvatarFallback>{t("avatar.fallback")}</AvatarFallback>
 						</Avatar>
@@ -223,7 +223,7 @@ export async function Display() {
 					<div className="flex flex-wrap items-end gap-4">
 						{LOGO_SIZES.map((size) => (
 							<div key={size} className="flex flex-col items-center gap-2">
-								<BrandLogo size={size} className="dark:invert" />
+								<BrandLogo size={size} className="logo-dark" />
 								<code className="font-mono text-muted-foreground text-xs">
 									{size}
 								</code>

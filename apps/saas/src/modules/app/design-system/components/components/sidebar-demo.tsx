@@ -63,7 +63,7 @@ export function SidebarDemo() {
 				>
 					<SidebarHeader className="gap-3 p-3">
 						<div className="flex items-center gap-2 px-1">
-							<BrandLogo size="sm" className="dark:invert" />
+							<BrandLogo size="sm" className="logo-dark" />
 							<span className="font-semibold text-sm">{t("brand")}</span>
 						</div>
 						<SidebarInput aria-label={t("search")} placeholder={t("search")} />

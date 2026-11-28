@@ -50,7 +50,7 @@ export default function AboutPage() {
 	return (
 		<main className="flex h-screen flex-col gap-6 overflow-y-auto bg-background p-6">
 			<header className="flex items-center gap-3">
-				<BrandLogo size="xl" className="dark:invert" />
+				<BrandLogo size="xl" className="logo-dark" />
 				<div className="min-w-0 space-y-0.5">
 					<h1 className="font-extrabold font-heading text-xl tracking-heading">
 						{t("title", { appName: config.app.name })}

@@ -44,7 +44,7 @@ export function MarketingFooter() {
 							{FOOTER_LOGO ? (
 								<FOOTER_LOGO />
 							) : (
-								<BrandLogo size="md" className="dark:invert" />
+								<BrandLogo size="md" className="logo-dark" />
 							)}
 							<p className="font-extrabold font-heading text-base tracking-heading">
 								{config.app.name}

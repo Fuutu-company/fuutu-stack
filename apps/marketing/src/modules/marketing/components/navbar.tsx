@@ -373,7 +373,7 @@ function NavbarHeader() {
 							<BrandLogo
 								size="xl"
 								alt={config.app.name}
-								className="size-[1.625rem] dark:invert"
+								className="logo-dark size-[1.625rem]"
 							/>
 							<span className="font-extrabold font-heading text-[1.0625rem] text-foreground tracking-heading">
 								{config.app.name}

@@ -33,7 +33,7 @@ export default async function AuthLayout({
 						{renderSlot(
 							appSlots.authLogo,
 							{},
-							<BrandLogo size="lg" className="dark:invert" />,
+							<BrandLogo size="lg" className="logo-dark" />,
 						)}
 						{config.app.name}
 					</a>

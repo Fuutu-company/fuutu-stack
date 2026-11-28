@@ -362,3 +362,12 @@
 	opacity: 0.35;
 	animation: mg-drift-3 calc(var(--mg-speed) * 0.9) ease-in-out infinite;
 }
+
+/* Brand mark in dark mode (`logo-dark` on the logo). Default: invert a dark
+ * monochrome mark. A coloured logo sets `--logo-dark-filter: none` (or its
+ * own filter) in brand.css; inverting would turn it into its negative. */
+@utility logo-dark {
+	@variant dark {
+		filter: var(--logo-dark-filter, invert(1));
+	}
+}

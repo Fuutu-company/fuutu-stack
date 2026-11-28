@@ -163,3 +163,13 @@
 	--area-api: oklch(0.35 0.06 90);
 	--area-api-foreground: oklch(0.9 0.09 95);
 }
+
+/* ━━ Block 4 · Brand mark in dark mode (optional) ━━━━━━━━━━━━━━━━━━━━━
+ * The logo carries `logo-dark`: in dark mode it gets
+ * `filter: var(--logo-dark-filter, invert(1))`, right for a dark
+ * monochrome mark. A coloured logo (or one that already adapts through
+ * CSS inside the SVG) keeps its colours with:
+ *
+ *   :root { --logo-dark-filter: none; }
+ *
+ * Any CSS filter works, e.g. `brightness(1.15)`. */
