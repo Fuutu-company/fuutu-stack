@@ -390,7 +390,7 @@ describe("site links", () => {
 			"utf8",
 		);
 		expect(footer).toMatch(
-			/\{FOOTER_LOGO \?\s*\(?\s*<FOOTER_LOGO \/>\s*\)?\s*:\s*\(?\s*<BrandLogo size="md" className="dark:invert" \/>/,
+			/\{FOOTER_LOGO \?\s*\(?\s*<FOOTER_LOGO \/>\s*\)?\s*:\s*\(?\s*<BrandLogo size="md" className="logo-dark" \/>/,
 		);
 	});
 

@@ -16,7 +16,7 @@ export function MobileHeader() {
 				<BrandLogo
 					size="md"
 					alt={config.app.name}
-					className="size-7 dark:invert"
+					className="logo-dark size-7"
 				/>
 				<span className="font-bold font-heading text-foreground text-sm tracking-heading">
 					{config.app.name}

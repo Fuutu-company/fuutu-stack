@@ -308,7 +308,7 @@ describe("docs nav brand (appDocs.Logo) and repository link", () => {
 			title,
 			(n) =>
 				typeof n.props?.className === "string" &&
-				/\bdark:invert\b/.test(n.props.className as string),
+				/\blogo-dark\b/.test(n.props.className as string),
 		);
 
 	afterEach(() => {

@@ -19,7 +19,8 @@ The full, step-by-step guide is served by the **Fuutu MCP** server (Fuutu Pro).
 
 1. Edit `packages/config/brand.css`, or paste a tweakcn / `/create` export (`:root` + `.dark` block) over it. Keep the kit status block and the kit area block (`--area-users`, `-billing`, `-ai`, `-api`, each with a `-foreground` ink); never edit `theme.css`.
 2. Fonts: change the three font loaders (`next/font/google`, or `next/font/local` for self-hosted files) in `apps/{saas,marketing,docs}/src/app/fonts.ts` (keep the files identical) and match `--font-sans`, `--font-heading` and `--font-mono` in `brand.css`.
-3. Mirror the new values in the `DESIGN.md` frontmatter and its Colors section.
-4. `pnpm -F @fuutu/ui test` — the contrast audit (area pairs included) and `DESIGN.md` sync must pass.
-5. Email and OG colors are hex literals: update `packages/mail/src/templates/colors.ts`, re-render `packages/config/assets/og-image.html` (then `pnpm assets:sync`) and the blog `opengraph-image.tsx`.
-6. Open `/design` in light and dark at 375 and 1280 px; fix anything the page flags.
+3. Logo in dark mode: the brand mark carries `logo-dark`, which inverts it (right for a dark monochrome mark). A coloured logo, or one that adapts through CSS inside the SVG, sets `:root { --logo-dark-filter: none; }` in `brand.css` (block 4); never use `dark:invert` on the logo.
+4. Mirror the new values in the `DESIGN.md` frontmatter and its Colors section.
+5. `pnpm -F @fuutu/ui test` — the contrast audit (area pairs included) and `DESIGN.md` sync must pass.
+6. Email and OG colors are hex literals: update `packages/mail/src/templates/colors.ts`, re-render `packages/config/assets/og-image.html` (then `pnpm assets:sync`) and the blog `opengraph-image.tsx`.
+7. Open `/design` in light and dark at 375 and 1280 px; fix anything the page flags.

@@ -19,7 +19,7 @@ export function baseOptions(): BaseLayoutProps {
 						<BrandLogo
 							size="md"
 							alt={config.app.name}
-							className="size-6 dark:invert"
+							className="logo-dark size-6"
 						/>
 					)}
 					<span className="font-semibold text-sm tracking-tight">

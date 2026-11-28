@@ -37,7 +37,7 @@ export function AppSidebar({ nav, top: Top, bottom: Bottom }: AppSidebarProps) {
 					<BrandLogo
 						size="md"
 						alt={config.app.name}
-						className="size-7 dark:invert"
+						className="logo-dark size-7"
 					/>
 					<span className="font-semibold text-foreground text-sm tracking-tight group-data-[collapsible=icon]:hidden">
 						{config.app.name}
