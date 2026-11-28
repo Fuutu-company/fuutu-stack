@@ -10,6 +10,7 @@ import {
 	DEVTOOLS_CAPABILITY,
 	desktopRuntimeConfig,
 	ed25519Keys,
+	iconComposerFolder,
 	offlineKeyCheck,
 	splitSigningEnv,
 } from "../lib/tauri-config";
@@ -182,6 +183,31 @@ describe("buildTauriConfig", () => {
 			buildTauriConfig({ mode: "build", appVersion: "1.0.0", devSlot: 106 })
 				.identifier,
 		).toBe(desktopIdentity.bundleId);
+	});
+
+	it("adds exactly one Icon Composer folder (src-tauri/icons/*.icon) to the bundle icons", () => {
+		const kitIcons: string[] = JSON.parse(
+			readFileSync(
+				join(import.meta.dirname, "../../src-tauri/tauri.conf.json"),
+				"utf8",
+			),
+		).bundle.icon;
+		const icons = (iconFolders: string[]) =>
+			(
+				buildTauriConfig({ mode: "build", appVersion: "1.0.0", iconFolders })
+					.bundle as { icon?: string[] } | undefined
+			)?.icon;
+		// None: the kit's list from tauri.conf.json stays as it is.
+		expect(icons([])).toBeUndefined();
+		expect(iconComposerFolder([])).toEqual({ folder: null, warning: null });
+		// One: appended after the kit's files (icon.icns stays the fallback).
+		expect(icons(["App.icon"])).toEqual([...kitIcons, "icons/App.icon"]);
+		// Two: ambiguous — none added, and a warning.
+		expect(icons(["A.icon", "B.icon"])).toBeUndefined();
+		expect(iconComposerFolder(["A.icon", "B.icon"])).toEqual({
+			folder: null,
+			warning: expect.stringMatching(/A\.icon.*B\.icon/),
+		});
 	});
 
 	it("registers the deep-link scheme from the identity", () => {

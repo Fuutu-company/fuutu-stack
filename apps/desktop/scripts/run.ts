@@ -16,7 +16,9 @@ import {
 	chmodSync,
 	existsSync,
 	mkdirSync,
+	readdirSync,
 	readFileSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -47,6 +49,7 @@ import {
 	type DesktopBuildInputs,
 	desktopRuntimeConfig,
 	ed25519Keys,
+	iconComposerFolder,
 	NO_OFFLINE_KEYS_ENV,
 	offlineKeyCheck,
 	splitSigningEnv,
@@ -287,6 +290,15 @@ function checkIdentity(mode: TauriConfigMode) {
 	);
 }
 
+/** `*.icon` folders (Icon Composer) in src-tauri/icons. */
+function iconComposerFolders(): string[] {
+	const dir = join(tauriDir, "icons");
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir).filter(
+		(name) => name.endsWith(".icon") && statSync(join(dir, name)).isDirectory(),
+	);
+}
+
 async function main() {
 	const [mode, ...rest] = process.argv.slice(2) as [
 		TauriConfigMode,
@@ -309,7 +321,10 @@ async function main() {
 			process.platform === "linux" &&
 			!linuxSelfUpdates(desktopConfig.release.linuxFormats),
 		devSlot: mode === "dev" ? project.slot : undefined,
+		iconFolders: mode === "build" ? iconComposerFolders() : undefined,
 	};
+	const icons = iconComposerFolder(inputs.iconFolders ?? []);
+	if (icons.warning) process.stderr.write(`warning: ${icons.warning}\n`);
 	if (mode === "build") {
 		const check = offlineKeyCheck({
 			auth: desktopConfig.auth,

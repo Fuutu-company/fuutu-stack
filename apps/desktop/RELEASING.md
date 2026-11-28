@@ -574,6 +574,11 @@ launch or the tray's "Show" also shows the window.
       the sign-in backdrop (light area colors from `brand.css`) into
       `src-tauri/icons`. Own artwork: `pnpm assets:sync --skip=app-icon.png`,
       then `pnpm -F @fuutu/desktop-app exec tauri icon <1024px.png>`.
+      For macOS 26+, put one Icon Composer folder (`<Name>.icon`) in
+      `src-tauri/icons/`: release builds add it to `bundle.icon`, and the
+      bundler compiles it into Assets.car (Xcode 26+ `actool`, run from a
+      logged-in macOS session); `icon.icns` stays the fallback. With more
+      than one `.icon` folder the build warns and adds none.
 - [ ] Updater key pair created, private key backed up outside GitHub (§1).
 - [ ] macOS Developer ID + notarisation secrets set (§2); a release build
       opens on a second Mac without a Gatekeeper warning.

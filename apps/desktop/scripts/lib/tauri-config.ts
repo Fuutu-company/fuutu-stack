@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { type DesktopAuthMode, desktopConfig } from "@fuutu/desktop/config";
 import {
 	type DesktopIdentity,
@@ -93,7 +94,39 @@ export type DesktopBuildInputs = {
 	 * are per worktree and never the installed app's.
 	 */
 	devSlot?: number;
+	/**
+	 * Icon Composer folders in `src-tauri/icons/` (`*.icon`, release
+	 * builds). Exactly one is added to `bundle.icon`: the bundler compiles
+	 * it into Assets.car (Xcode 26+), so macOS 26+ draws the icon in its own
+	 * shape and light; icon.icns stays the fallback.
+	 */
+	iconFolders?: string[];
 };
+
+/** The Icon Composer folder to bundle: one, or none (with a warning for more). */
+export function iconComposerFolder(folders: readonly string[]): {
+	folder: string | null;
+	warning: string | null;
+} {
+	if (folders.length === 1)
+		return { folder: folders[0] ?? null, warning: null };
+	if (folders.length === 0) return { folder: null, warning: null };
+	return {
+		folder: null,
+		warning: `src-tauri/icons has more than one Icon Composer folder (${[...folders].sort().join(", ")}); none is bundled — keep exactly one`,
+	};
+}
+
+/** `bundle.icon` of src-tauri/tauri.conf.json (the files `tauri icon` writes). */
+function kitBundleIcons(): string[] {
+	const conf = JSON.parse(
+		readFileSync(
+			new URL("../../src-tauri/tauri.conf.json", import.meta.url),
+			"utf8",
+		),
+	) as { bundle?: { icon?: string[] } };
+	return conf.bundle?.icon ?? [];
+}
 
 /**
  * Desktop behaviour the Rust side needs at startup — embedded at compile
@@ -355,6 +388,7 @@ function merge(base: unknown, override: unknown): unknown {
 }
 
 type BundleConfig = {
+	icon?: string[];
 	createUpdaterArtifacts?: boolean;
 	externalBin?: string[];
 	windows?: {
@@ -365,7 +399,10 @@ type BundleConfig = {
 };
 
 function bundleConfig(input: TauriConfigInput): { bundle?: BundleConfig } {
+	// `tauri --config` replaces arrays, so repeat the kit's icon list.
+	const { folder } = iconComposerFolder(input.iconFolders ?? []);
 	const bundle: BundleConfig = {
+		...(folder && { icon: [...kitBundleIcons(), `icons/${folder}`] }),
 		...(input.signUpdates && { createUpdaterArtifacts: true }),
 		...(input.externalBin?.length && { externalBin: [...input.externalBin] }),
 		...(input.windowsCertificateThumbprint && {
